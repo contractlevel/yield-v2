@@ -1,6 +1,6 @@
 # Yieldcoin v2
 
-Yieldcoin v2 is modular infrastructure for securely optimizing compliant, low-risk yield.
+Yieldcoin v2 is compliance-ready yield infrastructure with Chainlink CRE, ACE & CCIP.
 
 ## License
 
