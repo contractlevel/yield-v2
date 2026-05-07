@@ -380,8 +380,9 @@ contract ParentVault is BaseVault, IParentVault {
                 bool isLocalStrategy = activeAdapter != address(0);
                 /// @dev active strategy is local
                 if (isLocalStrategy) {
-                    bool success = _executeDeposit(uint256(netFlow), true);
-                    if (success) emit DepositToStrategySuccess(epochNonce, uint256(netFlow));
+                    /// @dev true for revertOnFail because this is local
+                    _executeDeposit(uint256(netFlow), true);
+                    emit DepositToStrategySuccess(epochNonce, uint256(netFlow));
                 }
                 /// @dev active stategy is remote
                 else {
@@ -403,6 +404,7 @@ contract ParentVault is BaseVault, IParentVault {
             /// @dev active strategy is local
             if (isLocalStrategy) {
                 // local strategy: withdraw directly and finalise immediately
+                /// @dev true for revertOnFail because this is local
                 uint256 amountOut = _executeWithdraw(netWithdrawAmount, true);
                 epoch.totalWithdrawClaimAmount = epoch.totalDepositAmount + amountOut;
                 emit WithdrawFromStrategySuccess(epochNonce, amountOut);

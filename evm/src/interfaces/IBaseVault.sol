@@ -122,7 +122,7 @@ interface IBaseVault is IPauseable {
                                RECOVERY
     //////////////////////////////////////////////////////////////*/
     // @review add natspec for all functions
-    function emergencyDrain() external;
+    function emergencyDrain(bool revertOnFailure) external;
 
     /*//////////////////////////////////////////////////////////////
                            CONFIG SETTERS

@@ -5,5 +5,13 @@ emergencyDrain
       ├── when the emergency drain delay has not been met
       │   └── it should revert
       └── when the emergency drain delay has been met
-          ├── it should transfer all USDC to the caller
-          └── it should emit an EmergencyDrainExecuted event
+          ├── when the TVL is zero
+          │   ├── it should not withdraw from the strategy
+          │   ├── it should transfer all USDC to the caller
+          │   └── it should emit an EmergencyDrainExecuted event
+          └── when the TVL is greater than zero
+              ├── it should withdraw all funds from the strategy
+              ├── when the withdraw fails and revertOnFailure is true
+              │   └── it should revert with BaseVault__WithdrawFailed
+              └── when the withdraw fails and revertOnFailure is false
+                  └── it should transfer all USDC to the caller

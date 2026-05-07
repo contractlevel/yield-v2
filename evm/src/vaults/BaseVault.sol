@@ -344,12 +344,16 @@ abstract contract BaseVault is
     /// @dev Precondition: Caller must have the EMERGENCY_DRAINER_ROLE
     /// @dev Precondition: Vault must have been paused for at least EMERGENCY_DRAIN_DELAY
     /// @dev Withdraws all USDC from the vault to the emergency drainer
-    function emergencyDrain() external onlyRole(Roles.EMERGENCY_DRAINER_ROLE) {
+    /// @param revertOnFailure Whether to revert if the withdraw from strategy fails
+    /// @notice If the vault has the TVL, it will be withdrawn from the strategy and transferred to the emergency drainer
+    function emergencyDrain(bool revertOnFailure) external onlyRole(Roles.EMERGENCY_DRAINER_ROLE) {
         //slither-disable-next-line timestamp
         if (block.timestamp - s_pausedAt < EMERGENCY_DRAIN_DELAY) revert BaseVault__EmergencyDrainDelayNotMet();
 
+        if (_getTVL() > 0) _executeWithdraw(type(uint256).max, revertOnFailure);
+
         uint256 balance = IERC20(i_usdc).balanceOf(address(this));
-        IERC20(i_usdc).safeTransfer(msg.sender, balance);
+        IERC20(i_usdc).safeTransfer(msg.sender, balance); // @review instead of sending to msg.sender, send to a specific address?
         emit EmergencyDrainExecuted(msg.sender, balance);
     }
 
