@@ -125,7 +125,6 @@ contract ChildVault_RecoveryInternalsUnitTest is BaseUnitTest {
             link: address(s_mockLink),
             usdc: address(s_mockUsdc),
             share: address(s_yieldcoin),
-            treasury: address(i_treasury),
             ccipRouter: address(s_mockCcipRouter),
             defaultAdmin: address(i_owner),
             pauser: address(i_pauser),

@@ -63,24 +63,36 @@ contract ParentVault is BaseVault, IParentVault {
     /// @dev Whether the initial active protocol adapter has been set
     bool internal s_initialActiveProtocolAdapterSet;
 
+    // @review order of state variables
+    /// @dev Treasury address for collecting fees. This should be the protocol operator's multisig.
+    address internal s_treasury;
+
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
     /// @param params BaseVault Constructor parameters
+    /// @param treasury The address of the operator multisig for protocol fees
     /// @dev The initial active protocol adapter is set after deployment with setInitialActiveProtocolAdapter.
     ///      Deployment order: deploy vault, deploy adapter with vault address, register adapter, then call setter.
-    constructor(BaseVault.ConstructorParams memory params) BaseVault(params) {
+    constructor(BaseVault.ConstructorParams memory params, address treasury) BaseVault(params) {
         s_epochNonce = 1;
         s_epochs[1].status = Types.EpochStatus.OPEN;
         s_epochs[1].openedAtTimestamp = block.timestamp;
         s_rebalance.nonce = 1;
         s_rebalance.lastRebalanceCompletedTimestamp = block.timestamp;
+        s_treasury = treasury;
     }
 
     /*//////////////////////////////////////////////////////////////
                                 SETTERS
     //////////////////////////////////////////////////////////////*/
     /// @inheritdoc IParentVault
+    /// @notice Sets the initial active protocol adapter after deployment
+    /// @param protocolId The protocol ID of the initial active strategy
+    /// @dev This is called once after the adapter is deployed and registered inside the *same deploy script*, before operational use.
+    /// @dev Precondition: Caller must have the DEFAULT_ADMIN_ROLE
+    /// @dev Precondition: the initial active protocol adapter must not already be set
+    /// @dev Precondition: the protocol ID must have a registered adapter
     function setInitialActiveProtocolAdapter(bytes32 protocolId) external onlyRole(Roles.DEFAULT_ADMIN_ROLE) {
         if (s_initialActiveProtocolAdapterSet) revert ParentVault__InitialActiveProtocolAdapterAlreadySet();
 
@@ -93,6 +105,15 @@ contract ParentVault is BaseVault, IParentVault {
         s_activeProtocolAdapter = adapter;
 
         emit InitialActiveProtocolAdapterSet(protocolId, adapter);
+    }
+
+    /// @notice Sets the treasury address
+    /// @param treasury The address of the treasury
+    /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
+    //slither-disable-next-line missing-zero-check
+    function setTreasury(address treasury) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
+        s_treasury = treasury;
+        emit TreasurySet(treasury);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -118,7 +139,7 @@ contract ParentVault is BaseVault, IParentVault {
         s_epochs[epochNonce].totalDepositAmount += netAmount;
 
         IERC20(i_usdc).safeTransferFrom(msg.sender, address(this), amount);
-        IERC20(i_usdc).safeTransfer(i_treasury, fee);
+        IERC20(i_usdc).safeTransfer(s_treasury, fee);
         emit DepositFeeCollected(epochNonce, msg.sender, fee);
         emit DepositSubmitted(epochNonce, msg.sender, netAmount);
     }
@@ -211,7 +232,7 @@ contract ParentVault is BaseVault, IParentVault {
 
         emit WithdrawClaimed(epochNonce, msg.sender, netAmount);
         IERC20(i_usdc).safeTransfer(msg.sender, netAmount);
-        IERC20(i_usdc).safeTransfer(i_treasury, fee);
+        IERC20(i_usdc).safeTransfer(s_treasury, fee);
         emit WithdrawFeeCollected(epochNonce, msg.sender, fee);
     }
 
@@ -529,7 +550,7 @@ contract ParentVault is BaseVault, IParentVault {
     //////////////////////////////////////////////////////////////*/
     /// @notice Calculates and collects the management fee based on time elapsed since the last rebalance completed
     /// @notice Roughly 1% of the TVL is taken annually. The actual amount is proportional to time elapsed and current total shares
-    /// @notice The management fee is taken in Yieldcoin share tokens and minted to i_treasury
+    /// @notice The management fee is taken in Yieldcoin share tokens and minted to s_treasury
     /// @param lastRebalanceCompletedTimestamp The timestamp when the rebalance last completed
     function _collectManagementFee(uint256 lastRebalanceCompletedTimestamp) internal {
         uint256 elapsed = block.timestamp - lastRebalanceCompletedTimestamp;
@@ -538,7 +559,7 @@ contract ParentVault is BaseVault, IParentVault {
         uint256 feeShares = (totalShares * MANAGEMENT_FEE_BPS * elapsed + denominator - 1) / denominator;
         if (feeShares != 0) {
             s_totalShares = totalShares + feeShares;
-            IShare(i_share).mint(i_treasury, feeShares);
+            IShare(i_share).mint(s_treasury, feeShares);
             emit ManagementFeeCollected(feeShares);
         }
     }
@@ -623,5 +644,11 @@ contract ParentVault is BaseVault, IParentVault {
     /// @inheritdoc IParentVault
     function getInitialActiveProtocolAdapterSet() external view returns (bool initialActiveProtocolAdapterSet) {
         initialActiveProtocolAdapterSet = s_initialActiveProtocolAdapterSet;
+    }
+
+    /// @notice Gets the operator multisig for protocol fees
+    /// @return treasury The address of the operator multisig for protocol fees
+    function getTreasury() external view returns (address treasury) {
+        treasury = s_treasury;
     }
 }

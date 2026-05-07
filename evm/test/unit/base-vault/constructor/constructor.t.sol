@@ -16,7 +16,6 @@ abstract contract BaseVault_ConstructorUnitTest is BaseUnitTest {
         assertEq(address(s_vault.getLink()), address(s_mockLink));
         assertEq(address(s_vault.getUsdc()), address(s_mockUsdc));
         assertEq(address(s_vault.getShare()), address(s_yieldcoin));
-        assertEq(address(s_vault.getTreasury()), address(i_treasury));
         assertEq(address(s_vault.getRouter()), address(s_mockCcipRouter));
         assertEq(address(s_vault.getPolicyEngine()), address(s_mockPolicyEngine));
         assertEq(address(s_vault.getAdapterRegistry()), address(s_adapterRegistry));

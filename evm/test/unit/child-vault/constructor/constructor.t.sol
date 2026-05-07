@@ -12,7 +12,6 @@ contract ChildVault_ConstructorUnitTest is BaseUnitTest {
         assertEq(address(s_childVault.getLink()), address(s_mockLink));
         assertEq(address(s_childVault.getUsdc()), address(s_mockUsdc));
         assertEq(address(s_childVault.getShare()), address(s_yieldcoin));
-        assertEq(address(s_childVault.getTreasury()), address(i_treasury));
         assertEq(address(s_childVault.getRouter()), address(s_mockCcipRouter));
         assertEq(address(s_childVault.getPolicyEngine()), address(s_mockPolicyEngine));
         assertEq(address(s_childVault.getAdapterRegistry()), address(s_adapterRegistry));

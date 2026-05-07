@@ -131,6 +131,10 @@ interface IParentVault is IBaseVault {
     /// @param adapter The registered adapter for the protocol ID
     event InitialActiveProtocolAdapterSet(bytes32 indexed protocolId, address indexed adapter);
 
+    /// @notice Emitted when the treasury address is set
+    /// @param treasury The address of the treasury
+    event TreasurySet(address indexed treasury);
+
     /*//////////////////////////////////////////////////////////////
                               SETTERS
     //////////////////////////////////////////////////////////////*/
@@ -141,6 +145,11 @@ interface IParentVault is IBaseVault {
     /// @dev Precondition: the initial active protocol adapter must not already be set
     /// @dev Precondition: the protocol ID must have a registered adapter
     function setInitialActiveProtocolAdapter(bytes32 protocolId) external;
+
+    /// @notice Sets the treasury address
+    /// @param treasury The address of the treasury
+    /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
+    function setTreasury(address treasury) external;
 
     /*//////////////////////////////////////////////////////////////
                                RECOVERY

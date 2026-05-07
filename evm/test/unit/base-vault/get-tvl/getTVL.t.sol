@@ -10,11 +10,10 @@ abstract contract BaseVault_GetTVLUnitTest is BaseUnitTest {
 
     uint256 internal constant TVL = 1_000 * 1e6;
 
-    function test_BaseVault_getTVL_RevertWhen_NoActiveAdapter() external {
+    function test_BaseVault_getTVL_ReturnsZeroWhen_NoActiveAdapter() external {
         _clearActiveAdapter();
 
-        vm.expectRevert(IBaseVault.BaseVault__NoActiveAdapter.selector);
-        s_vault.getTVL();
+        assertEq(s_vault.getTVL(), 0);
     }
 
     function test_BaseVault_getTVL_Success() external {

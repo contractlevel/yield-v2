@@ -48,7 +48,7 @@ abstract contract BaseUnitTest is BaseTest {
         BaseVault.ConstructorParams memory params = _baseVaultParams(PARENT_CHAIN_SELECTOR);
 
         s_adapterRegistry.setAdapter(AAVE_V3_PROTOCOL_ID, address(s_mockProtocolAdapter));
-        s_parentVault = new ParentVault(params);
+        s_parentVault = new ParentVault(params, i_treasury);
         s_parentVault.setInitialActiveProtocolAdapter(AAVE_V3_PROTOCOL_ID);
 
         params.thisChainSelector = CHILD_CHAIN_SELECTOR;
@@ -92,7 +92,6 @@ abstract contract BaseUnitTest is BaseTest {
             link: address(s_mockLink),
             usdc: address(s_mockUsdc),
             share: address(s_yieldcoin),
-            treasury: address(i_treasury),
             ccipRouter: address(s_mockCcipRouter),
             defaultAdmin: address(i_owner),
             pauser: address(i_pauser),

@@ -12,7 +12,7 @@ contract ParentVault_SetInitialActiveProtocolAdapterUnitTest is BaseUnitTest {
 
     function setUp() public {
         _changePrank(i_owner);
-        s_uninitializedParentVault = new ParentVault(_baseVaultParams(PARENT_CHAIN_SELECTOR));
+        s_uninitializedParentVault = new ParentVault(_baseVaultParams(PARENT_CHAIN_SELECTOR), i_treasury);
     }
 
     function test_ParentVault_setInitialActiveProtocolAdapter_RevertWhen_CallerDoesNotHaveDEFAULT_ADMIN_ROLE()

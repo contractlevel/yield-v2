@@ -143,7 +143,6 @@ interface IBaseVault is IPauseable {
     function getLink() external view returns (address link);
     function getUsdc() external view returns (address usdc);
     function getShare() external view returns (address share);
-    function getTreasury() external view returns (address treasury);
     function getThisChainSelector() external view returns (uint64 thisChainSelector);
     function getAdapterRegistry() external view returns (address adapterRegistry);
     function getWorkflowRouter() external view returns (address workflowRouter);

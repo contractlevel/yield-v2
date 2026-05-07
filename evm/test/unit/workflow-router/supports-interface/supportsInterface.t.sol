@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 import {BaseWorkflowRouterUnitTest} from "../BaseWorkflowRouterUnitTest.t.sol";
 
-import {IReceiver} from "@chainlink/contracts/src/v0.8/keystone/interfaces/IReceiver.sol";
+import {IReceiver} from "@chainlink/contracts/src/v0.8/shared/interfaces/IReceiver.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 contract WorkflowRouter_SupportsInterfaceUnitTest is BaseWorkflowRouterUnitTest {

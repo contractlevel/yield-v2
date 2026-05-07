@@ -9,7 +9,7 @@ import {Types} from "../../../../src/libraries/Types.sol";
 
 contract ParentVault_ConstructorUnitTest is BaseUnitTest {
     function test_ParentVault_constructor() public {
-        ParentVault parentVault = new ParentVault(_baseVaultParams(PARENT_CHAIN_SELECTOR));
+        ParentVault parentVault = new ParentVault(_baseVaultParams(PARENT_CHAIN_SELECTOR), i_treasury);
         assertEq(parentVault.getThisChainSelector(), PARENT_CHAIN_SELECTOR);
         assertEq(address(parentVault.getLink()), address(s_mockLink));
         assertEq(address(parentVault.getUsdc()), address(s_mockUsdc));

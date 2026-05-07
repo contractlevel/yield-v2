@@ -58,8 +58,6 @@ abstract contract BaseVault is
     address internal immutable i_usdc;
     /// @dev Yieldcoin (YIELD) share token
     address internal immutable i_share;
-    /// @dev Operator multisig to collect fees
-    address internal immutable i_treasury;
     /// @dev Registry contract for strategy protocol adapters
     address internal immutable i_adapterRegistry;
 
@@ -115,7 +113,6 @@ abstract contract BaseVault is
     /// @param link The address of the Chainlink LINK token
     /// @param usdc The address of the USDC token
     /// @param share The address of the Yieldcoin share token. This is the Vault Share CCT.
-    /// @param treasury The address of the operator multisig for protocol fees
     /// @param ccipRouter The address of the CCIP router
     /// @param defaultAdmin The address of the default admin for setting roles - trusted actor in the system
     /// @param pauser The address of the pauser for pausing the vault - trusted actor in the system
@@ -129,7 +126,6 @@ abstract contract BaseVault is
         address link;
         address usdc;
         address share;
-        address treasury;
         address ccipRouter;
         address defaultAdmin;
         address pauser;
@@ -151,7 +147,6 @@ abstract contract BaseVault is
         i_link = params.link;
         i_usdc = params.usdc;
         i_share = params.share;
-        i_treasury = params.treasury;
         i_adapterRegistry = params.adapterRegistry;
         _grantRole(Roles.PAUSER_ROLE, params.pauser);
         _grantRole(Roles.UNPAUSER_ROLE, params.unpauser);
@@ -369,14 +364,14 @@ abstract contract BaseVault is
         return gasLimit != 0 ? gasLimit : s_defaultCcipGasLimit;
     }
 
-    /// @notice Gets the Yieldcoin TVL
+    /// @notice Gets the Yieldcoin TVL if this chain is the active strategy chain
+    ///         Returns 0 if this chain is not the active strategy chain
     /// @return tvl The Yieldcoin TVL
-    /// @dev Precondition: Active protocol adapter must not be the zero address - that means this chain is the active strategy chain
     function _getTVL() internal view returns (uint256 tvl) {
         address activeProtocolAdapter = s_activeProtocolAdapter;
-        // @review is reverting best practice here? It indicates the TVL is not on this chain. but maybe we should return 0 in the case instead
-        if (activeProtocolAdapter == address(0)) revert BaseVault__NoActiveAdapter();
-        tvl = IProtocolAdapter(activeProtocolAdapter).getTVL();
+        // @review order of these, which one is used more often?
+        if (activeProtocolAdapter == address(0)) tvl = 0;
+        else tvl = IProtocolAdapter(activeProtocolAdapter).getTVL();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -482,12 +477,6 @@ abstract contract BaseVault is
     /// @return share The address of the Yieldcoin share token
     function getShare() external view returns (address share) {
         share = i_share;
-    }
-
-    /// @notice Gets the operator multisig for protocol fees
-    /// @return treasury The address of the operator multisig for protocol fees
-    function getTreasury() external view returns (address treasury) {
-        treasury = i_treasury;
     }
 
     /// @notice Gets the CCIP selector for this chain

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {IReceiver, IERC165} from "@chainlink/contracts/src/v0.8/keystone/interfaces/IReceiver.sol";
+import {IReceiver, IERC165} from "@chainlink/contracts/src/v0.8/shared/interfaces/IReceiver.sol";
 import {
     AccessControlDefaultAdminRules,
     IAccessControlDefaultAdminRules
@@ -35,6 +35,7 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
     /// @dev Mapping of workflow IDs to metadata
     mapping(bytes32 workflowId => WorkflowMetadata) internal s_workflowMetadata;
     /// @dev Mapping of workflow IDs to allowed function selectors
+    /// @dev Function selector clash should be double checked! // @review selector clash
     mapping(bytes32 workflowId => mapping(bytes4 selector => bool isAllowlisted)) internal s_workflowSelectors;
 
     /*//////////////////////////////////////////////////////////////

@@ -42,7 +42,6 @@ contract DeployParentVault is Script {
             link: networkConfig.tokens.link,
             usdc: networkConfig.tokens.usdc,
             share: address(yieldcoin),
-            treasury: networkConfig.treasury,
             ccipRouter: networkConfig.ccipRouter,
             defaultAdmin: networkConfig.defaultAdmin,
             pauser: networkConfig.pauser,
@@ -54,7 +53,7 @@ contract DeployParentVault is Script {
             thisChainSelector: networkConfig.thisChainSelector
         });
         bytes32 aaveV3ProtocolId = keccak256("aave-v3");
-        ParentVault parentVault = new ParentVault(baseVaultParams);
+        ParentVault parentVault =  new ParentVault(baseVaultParams, networkConfig.treasury);
         AaveV3Adapter aaveV3Adapter = new AaveV3Adapter(
             address(parentVault), networkConfig.tokens.usdc, networkConfig.protocols.aaveV3PoolAddressesProvider
         );
