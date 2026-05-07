@@ -1,0 +1,21 @@
+ParentVault_initiateRebalance
+├── when caller does not have REBALANCE_OPERATOR_ROLE
+│   └── it should revert
+├── when rebalance is already in progress
+│   └── it should revert with ParentVault__RebalanceInProgress
+├── when new strategy is the active strategy
+│   └── it should revert with ParentVault__SameStrategy
+├── when prior epoch is executing
+│   └── it should revert with ParentVault__EpochExecuting
+├── when parent rebalances local to local
+│   ├── it should withdraw from the old adapter
+│   ├── it should deposit into the new adapter
+│   └── it should finalize the rebalance
+├── when parent rebalances local to child
+│   ├── it should withdraw from the old adapter
+│   ├── it should bridge to the child
+│   └── it should leave the rebalance pending
+└── when local adapter fails
+    ├── it should revert when withdraw reverts
+    ├── it should revert when withdraw returns zero
+    └── it should revert when local deposit reverts

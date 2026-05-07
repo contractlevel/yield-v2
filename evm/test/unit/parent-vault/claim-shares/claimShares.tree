@@ -1,0 +1,12 @@
+ParentVault_claimShares
+├── when the contract is paused
+│   └── it should revert with EnforcedPause
+├── when the epoch is not claimable
+│   └── it should revert with ParentVault__EpochNotClaimable
+├── when the user has no deposit for the epoch
+│   └── it should revert with ParentVault__NoDeposit
+└── when the claim is valid
+    ├── it should mint the correct number of shares to the depositor
+    ├── it should delete the depositor's deposit mapping entry
+    ├── it should return the correct share mint amount
+    └── it should emit DepositClaimed

@@ -1,0 +1,14 @@
+ChildVault_recoverFailedEpochDeposit
+├── when caller does not have RECOVERY_OPERATOR_ROLE
+│   └── it should revert
+├── when there is no pending recovery
+│   └── it should revert with BaseVault__NoPendingRecovery
+├── when there is no active adapter
+│   └── it should revert with BaseVault__NoActiveAdapter
+├── when adapter deposit reverts
+│   └── it should revert with BaseVault__DepositFailed
+└── when recovery succeeds
+    ├── it should deposit into the active adapter
+    ├── it should clear recovery state
+    ├── it should emit DepositToStrategySuccess
+    └── it should emit EpochDepositRecoveryCleared

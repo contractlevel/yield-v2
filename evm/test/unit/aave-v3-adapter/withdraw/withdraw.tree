@@ -1,0 +1,15 @@
+AaveV3Adapter_withdraw
+  ├── when the caller is not the vault
+  │   └── it should revert
+  ├── when the amount is type(uint256).max
+  │   ├── when the actual withdrawn amount is less than the TVL
+  │   │   └── it should revert
+  │   └── when the actual withdrawn amount is gte the TVL
+  │       ├── it should emit a Withdraw event
+  │       └── it should transfer USDC to the vault
+  └── when the amount is a specific amount
+      ├── when the actual withdrawn amount is less than the requested amount
+      │   └── it should revert
+      └── when the actual withdrawn amount is gte the requested amount
+          ├── it should emit a Withdraw event
+          └── it should transfer USDC to the vault

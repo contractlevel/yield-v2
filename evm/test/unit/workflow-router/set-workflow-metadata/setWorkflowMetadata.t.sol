@@ -1,0 +1,43 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.28;
+
+import {BaseWorkflowRouterUnitTest, Vm} from "../BaseWorkflowRouterUnitTest.t.sol";
+
+import {WorkflowRouter} from "../../../../src/modules/WorkflowRouter.sol";
+import {IWorkflowRouter} from "../../../../src/interfaces/IWorkflowRouter.sol";
+import {Roles} from "../../../../src/libraries/Roles.sol";
+
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+
+contract WorkflowRouter_SetWorkflowMetadataUnitTest is BaseWorkflowRouterUnitTest {
+    bytes32 internal constant WORKFLOW_ID = keccak256("workflow-1");
+
+    function setUp() public {
+        _changePrank(i_configOperator);
+    }
+
+    function test_WorkflowRouter_setWorkflowMetadata_RevertWhen_CallerDoesNotHaveConfigOperatorRole() external {
+        _changePrank(i_nonOwner);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, i_nonOwner, Roles.CONFIG_OPERATOR_ROLE
+            )
+        );
+        s_workflowRouter.setWorkflowMetadata(WORKFLOW_ID, s_workflowName, i_owner);
+    }
+
+    function test_WorkflowRouter_setWorkflowMetadata_Success_SetsWorkflowMetadata() external {
+        vm.recordLogs();
+        s_workflowRouter.setWorkflowMetadata(WORKFLOW_ID, s_workflowName, i_owner);
+
+        WorkflowRouter.WorkflowMetadata memory metadata = s_workflowRouter.getWorkflowMetadata(WORKFLOW_ID);
+        assertEq(metadata.owner, i_owner);
+        assertEq(metadata.name, s_workflowName);
+
+        Vm.Log memory log =
+            _assertEmittedBy(keccak256("WorkflowMetadataSet(bytes32,bytes10,address)"), address(s_workflowRouter));
+        assertEq(log.topics[1], WORKFLOW_ID);
+        assertEq(log.topics[2], bytes32(s_workflowName));
+        assertEq(log.topics[3], bytes32(uint256(uint160(i_owner))));
+    }
+}

@@ -1,0 +1,14 @@
+ParentVault_completeRebalance
+  ├── when caller does not have REBALANCE_OPERATOR_ROLE
+  │   └── it should revert
+  ├── when no rebalance is in progress
+  │   └── it should revert with ParentVault__NoRebalanceInProgress
+  ├── when rebalance nonce is invalid
+  │   └── it should revert with ParentVault__InvalidRebalanceNonce
+  ├── it should set rebalance state to NONE
+  ├── it should increment the rebalance nonce
+  ├── it should update lastRebalanceCompletedTimestamp to block.timestamp
+  └── when fee shares are non-zero
+      ├── it should mint fee shares to treasury
+      ├── it should increment totalShares by fee shares
+      └── it should emit ManagementFeeCollected

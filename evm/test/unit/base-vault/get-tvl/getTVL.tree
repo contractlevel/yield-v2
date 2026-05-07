@@ -1,0 +1,5 @@
+BaseVault_getTVL
+├── when there is no active adapter
+│   └── it should revert with BaseVault__NoActiveAdapter
+└── when there is an active adapter
+    └── it should return the adapter TVL

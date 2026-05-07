@@ -1,0 +1,76 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.28;
+
+import {BaseUnitTest, Vm} from "../../BaseUnitTest.t.sol";
+
+import {BaseVault, IBaseVault} from "../../../../src/vaults/BaseVault.sol";
+import {Roles} from "../../../../src/libraries/Roles.sol";
+
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+
+abstract contract BaseVault_EmergencyDrainUnitTest is BaseUnitTest {
+    BaseVault internal s_vault;
+
+    uint256 internal constant USDC_AMOUNT = 1000 * 1e6; // 1000 USDC
+
+    function _setUpVault() internal {
+        _changePrank(i_owner);
+        s_vault.grantRole(Roles.EMERGENCY_DRAINER_ROLE, i_recoveryOperator);
+        _changePrank(i_recoveryOperator);
+    }
+
+    function test_BaseVault_emergencyDrain_RevertWhen_CallerDoesNotHaveEMERGENCY_DRAINER_ROLE()
+        external
+        whenCallerIsNotAdmin
+    {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, i_nonOwner, Roles.EMERGENCY_DRAINER_ROLE
+            )
+        );
+        s_vault.emergencyDrain();
+    }
+
+    function test_BaseVault_emergencyDrain_RevertWhen_DelayNotMet() external {
+        _changePrank(i_pauser);
+        s_vault.pause();
+
+        _changePrank(i_recoveryOperator);
+        vm.expectRevert(IBaseVault.BaseVault__EmergencyDrainDelayNotMet.selector);
+        s_vault.emergencyDrain();
+    }
+
+    function test_BaseVault_emergencyDrain_Success() external {
+        _changePrank(i_pauser);
+        s_vault.pause();
+
+        vm.warp(block.timestamp + 1 days);
+
+        deal(address(s_mockUsdc), address(s_vault), USDC_AMOUNT);
+
+        _changePrank(i_recoveryOperator);
+        vm.recordLogs();
+        s_vault.emergencyDrain();
+
+        assertEq(s_mockUsdc.balanceOf(i_recoveryOperator), USDC_AMOUNT);
+        assertEq(s_mockUsdc.balanceOf(address(s_vault)), 0);
+
+        Vm.Log memory log = _assertEmittedBy(keccak256("EmergencyDrainExecuted(address,uint256)"), address(s_vault));
+        assertEq(address(uint160(uint256(log.topics[1]))), i_recoveryOperator);
+        assertEq(uint256(log.topics[2]), USDC_AMOUNT);
+    }
+}
+
+contract ParentVault_EmergencyDrainUnitTest is BaseVault_EmergencyDrainUnitTest {
+    function setUp() public {
+        s_vault = s_parentVault;
+        _setUpVault();
+    }
+}
+
+contract ChildVault_EmergencyDrainUnitTest is BaseVault_EmergencyDrainUnitTest {
+    function setUp() public {
+        s_vault = s_childVault;
+        _setUpVault();
+    }
+}

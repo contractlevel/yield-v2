@@ -1,0 +1,7 @@
+supportsInterface
+  ├── when the interface is IReceiver
+  │   └── it should return true
+  ├── when the interface is IAccessControl
+  │   └── it should return true
+  └── when the interface is unknown
+      └── it should return false

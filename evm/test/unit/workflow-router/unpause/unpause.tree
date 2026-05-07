@@ -1,0 +1,6 @@
+unpause
+  ├── when the caller does not have the UNPAUSER_ROLE
+  │   └── it should revert
+  └── when the caller has the UNPAUSER_ROLE
+      ├── it should unpause the contract
+      └── it should emit an Unpaused event

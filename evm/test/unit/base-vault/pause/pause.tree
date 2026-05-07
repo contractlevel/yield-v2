@@ -1,0 +1,6 @@
+pause
+  ├── when the caller does not have the PAUSER_ROLE
+  │   └── it should revert
+  └── when the caller has the PAUSER_ROLE
+      ├── it should pause the contract
+      └── it should emit a Paused event

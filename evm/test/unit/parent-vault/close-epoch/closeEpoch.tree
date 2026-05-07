@@ -1,0 +1,35 @@
+ParentVault_closeEpoch
+├── when caller does not have EPOCH_OPERATOR_ROLE
+│   └── it should revert
+├── when rebalance is in progress
+│   └── it should revert with ParentVault__RebalanceInProgress
+├── when epoch is not open
+│   └── it should revert with ParentVault__EpochNotOpen
+├── when epoch period is too short
+│   └── it should revert with ParentVault__EpochTooShort
+├── when epoch has no deposits and no withdrawals
+│   └── it should revert with ParentVault__EmptyEpoch
+├── it should store pricePerShare on the epoch
+├── it should store totalWithdrawClaimAmount on the epoch
+├── it should store closedAtTimestamp on the epoch
+├── it should update totalShares
+├── it should make the epoch claimable
+├── it should open the next epoch
+├── when local strategy has net deposit
+│   ├── it should deposit net flow into the adapter
+│   ├── it should emit EpochClaimable
+│   └── it should emit DepositToStrategySuccess
+├── when local strategy has net withdrawal
+│   ├── it should withdraw net flow from the adapter
+│   ├── it should update totalWithdrawClaimAmount when adapter returns a different amount
+│   ├── it should emit EpochClaimable
+│   └── it should emit WithdrawFromStrategySuccess
+├── when remote strategy has net deposit
+│   ├── it should bridge net flow to the strategy chain
+│   └── it should emit EpochClaimable
+├── when remote strategy has net withdrawal
+│   ├── it should mark the epoch executing
+│   └── it should emit EpochExecuting
+└── when local adapter reverts
+    ├── it should revert on net deposit
+    └── it should revert on net withdrawal

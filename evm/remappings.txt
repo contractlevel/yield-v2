@@ -1,0 +1,15 @@
+@chainlink/contracts/=lib/chainlink-evm/contracts/
+@chainlink/contracts-ccip/=lib/chainlink-ccip/chains/evm/contracts/
+
+@chainlink/policy-management/=lib/chainlink-ace/packages/policy-management/src/
+@chainlink/cross-chain-identity/=lib/chainlink-ace/packages/cross-chain-identity/src/
+
+@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/
+@openzeppelin/contracts/=lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/
+
+@openzeppelin/contracts@4.8.3/=lib/openzeppelin-contracts-4.8.3/contracts/
+@openzeppelin/contracts@5.0.2/=lib/openzeppelin-contracts-5.3.0/contracts/
+@openzeppelin/contracts@5.3.0/=lib/openzeppelin-contracts-5.3.0/contracts/
+
+@aave/v3-origin/=lib/aave-v3-origin/
+@aave/aave-v4/=lib/aave-v4/

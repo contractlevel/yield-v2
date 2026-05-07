@@ -1,0 +1,12 @@
+ParentVault_cancelWithdraw
+├── when the contract is paused
+│   └── it should revert with EnforcedPause
+├── when the epoch is not open
+│   └── it should revert with ParentVault__EpochNotOpen
+├── when caller has no withdraw
+│   └── it should revert with ParentVault__NoWithdraw
+└── when the cancel withdraw is valid
+    ├── it should transfer shares from the vault to the withdrawer
+    ├── it should delete the withdrawer's withdraw mapping
+    ├── it should update the epoch total share burn amount
+    └── it should emit WithdrawCancelled

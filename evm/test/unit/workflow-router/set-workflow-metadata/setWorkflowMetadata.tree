@@ -1,0 +1,6 @@
+setWorkflowMetadata
+  ├── when the caller does not have the CONFIG_OPERATOR_ROLE
+  │   └── it should revert
+  └── when all conditions are met
+      ├── it should set the workflow metadata
+      └── it should emit a WorkflowMetadataSet event

@@ -1,0 +1,19 @@
+WorkflowRouter_onReport
+  ├── when the contract is paused
+  │   └── it should revert
+  ├── when the caller does not have the KEYSTONE_FORWARDER_ROLE
+  │   └── it should revert
+  ├── when the workflow ID is zero
+  │   └── it should revert
+  ├── when the workflow name is zero
+  │   └── it should revert
+  ├── when the workflow owner is zero
+  │   └── it should revert
+  ├── when the workflow metadata does not match
+  │   └── it should revert
+  ├── when the report is too short
+  │   └── it should revert
+  ├── when the selector is not allowlisted
+  │   └── it should revert
+  └── when all conditions are met
+      └── it should succeed

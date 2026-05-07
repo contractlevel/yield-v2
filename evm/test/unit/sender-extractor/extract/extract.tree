@@ -1,0 +1,3 @@
+SenderExtractor_extract
+└── when called with any policy payload
+    └── it should return the encoded payload sender as PARAM_SENDER

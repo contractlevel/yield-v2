@@ -1,0 +1,12 @@
+setWorkflowSelectors
+  ├── when the caller does not have the CONFIG_OPERATOR_ROLE
+  │   └── it should revert
+  ├── when called with a single selector
+  │   ├── when isAllowlisted is true
+  │   │   ├── it should set the selector as allowlisted
+  │   │   └── it should emit a WorkflowSelectorSet event
+  │   └── when isAllowlisted is false
+  │       ├── it should remove the selector from the allowlist
+  │       └── it should emit a WorkflowSelectorSet event
+  └── when called with multiple selectors
+      └── it should set all selectors

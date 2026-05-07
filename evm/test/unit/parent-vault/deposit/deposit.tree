@@ -1,0 +1,14 @@
+ParentVault_deposit
+├── when the contract is paused
+│   └── it should revert with EnforcedPause
+├── when the amount is less than MIN_DEPOSIT_AMOUNT
+│   └── it should revert with ParentVault__AmountTooSmall
+├── when the epoch is not open
+│   └── it should revert with ParentVault__EpochNotOpen
+└── when the deposit is valid
+    ├── it should transfer USDC from the depositor to the vault
+    ├── it should update the depositor's deposit mapping
+    ├── it should update the epoch total deposit amount
+    ├── it should accumulate multiple deposits correctly
+    ├── it should return the current epoch nonce
+    └── it should emit DepositSubmitted

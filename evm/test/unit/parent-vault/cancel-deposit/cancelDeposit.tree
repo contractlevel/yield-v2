@@ -1,0 +1,12 @@
+ParentVault_cancelDeposit
+├── when the contract is paused
+│   └── it should revert with EnforcedPause
+├── when the epoch is not open
+│   └── it should revert with ParentVault__EpochNotOpen
+├── when caller has no deposit
+│   └── it should revert with ParentVault__NoDeposit
+└── when the cancel deposit is valid
+    ├── it should transfer USDC from the vault to the depositor
+    ├── it should delete the depositor's deposit mapping
+    ├── it should update the epoch total deposit amount
+    └── it should emit DepositCancelled

@@ -1,0 +1,22 @@
+ParentVault_constructor
+  ├── it should set i_thisChainSelector
+  ├── it should set i_link
+  ├── it should set i_usdc
+  ├── it should set i_yieldcoinToken
+  ├── it should set i_treasury
+  ├── it should set the CCIP router
+  ├── it should attach the policy engine
+  ├── it should grant DEFAULT_ADMIN_ROLE to defaultAdmin
+  ├── it should grant PAUSER_ROLE to pauser
+  ├── it should grant UNPAUSER_ROLE to unpauser
+  ├── it should grant CONFIG_OPERATOR_ROLE to configOperator
+  ├── it should grant COMPLIANCE_OPERATOR_ROLE to complianceOperator
+  ├── it should set the rebalance nonce to 1
+  ├── it should set the epoch nonce to 1
+  ├── it should set the first epoch to OPEN
+  ├── it should set the first epoch open timestamp to block.timestamp
+  ├── it should set lastRebalanceCompletedTimestamp to block.timestamp
+  ├── it should leave initial active protocol adapter set false
+  ├── it should leave the active strategy protocol ID unset
+  ├── it should leave the active strategy chain selector unset
+  └── it should leave the active strategy protocol adapter unset

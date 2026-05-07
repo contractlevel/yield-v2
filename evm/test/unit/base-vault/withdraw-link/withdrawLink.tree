@@ -1,0 +1,9 @@
+withdrawLink
+  ├── when the caller does not have the LINK_OPERATOR_ROLE
+  │   └── it should revert
+  └── when the caller has the LINK_OPERATOR_ROLE
+      ├── when the amount is zero
+      │   └── it should revert
+      └── when the amount is non-zero
+          ├── it should transfer LINK to the caller
+          └── it should emit a LinkWithdrawn event

@@ -1,0 +1,14 @@
+ParentVault_claimUsdc
+├── when the contract is paused
+│   └── it should revert with EnforcedPause
+├── when the epoch is not claimable
+│   └── it should revert with ParentVault__EpochNotClaimable
+├── when the user has no withdraw intent for the epoch
+│   └── it should revert with ParentVault__NoWithdraw
+└── when the claim is valid
+    ├── it should transfer the correct USDC amount to the withdrawer
+    ├── it should burn the withdrawn shares
+    ├── it should delete the withdrawer's withdraw mapping entry
+    ├── it should return the correct USDC withdraw amount
+    ├── it should use totalWithdrawClaimAmount
+    └── it should emit WithdrawClaimed

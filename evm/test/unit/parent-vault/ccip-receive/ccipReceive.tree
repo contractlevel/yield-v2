@@ -1,0 +1,36 @@
+ParentVault_ccipReceive
+├── when caller is not the CCIPRouter
+│   └── it should revert with InvalidRouter
+├── when sender is not the allowed sender for the source chain
+│   └── it should revert with BaseVault__InvalidSender
+├── when message is a withdraw
+│   ├── when the epoch is not executing
+│   │   └── it should revert with ParentVault__EpochNotExecuting
+│   ├── when the received USDC amount is less than the epoch withdraw obligation
+│   │   ├── it should make the epoch claimable
+│   │   ├── it should emit EpochWithdrawAmountShort
+│   │   └── it should update the withdraw claim amount
+│   ├── when the received USDC amount matches the epoch withdraw obligation
+│   │   ├── it should make the epoch claimable
+│   │   ├── it should update the withdraw claim amount
+│   │   └── it should emit EpochClaimable
+│   └── when the received USDC amount is greater than the epoch withdraw obligation
+│       ├── it should make the epoch claimable
+│       ├── it should update the withdraw claim amount
+│       └── it should emit EpochClaimable
+└── when message is a rebalance
+    ├── when the target protocol adapter is not registered
+    │   └── it should revert with BaseVault__NoAdapterRegistered
+    ├── when the target adapter deposit succeeds
+    │   ├── it should deposit bridged USDC into the target adapter
+    │   ├── it should set the active protocol adapter
+    │   ├── it should finalize the rebalance
+    │   ├── it should emit RebalanceDepositSuccess
+    │   └── it should emit RebalanceCompleted
+    └── when the target adapter deposit reverts
+        ├── it should emit RebalanceDepositFailure
+        ├── it should store rebalance deposit recovery
+        ├── it should emit RebalanceDepositRecoveryStored
+        ├── it should leave the rebalance in progress
+        └── when rebalance deposit recovery already exists
+            └── it should revert with BaseVault__RecoveryAlreadyPending

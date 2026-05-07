@@ -1,0 +1,15 @@
+## Environment variables
+.env
+.env.*
+!.env.example
+cre/.env
+evm/.env
+
+CLAUDE.md
+.notes.md
+lcov.info
+evm/out/
+evm/cache/
+evm/broadcast/
+evm/CLAUDE.md
+evm/report.md

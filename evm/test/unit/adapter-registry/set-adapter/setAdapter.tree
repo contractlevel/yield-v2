@@ -1,0 +1,6 @@
+setAdapter
+  ├── when the caller is not the owner
+  │   └── it should revert
+  └── when the caller is the owner
+      ├── it should set the adapter
+      └── it should emit an AdapterSet event

@@ -1,0 +1,42 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.28;
+
+/// @title Yieldcoin v2 Protocol Adapter Interface
+/// @author @contractlevel
+/// @notice Interface for a protocol adapter
+interface IProtocolAdapter {
+    /*//////////////////////////////////////////////////////////////
+                                 ERRORS
+    //////////////////////////////////////////////////////////////*/
+    /// @dev Thrown when the caller is not the Yieldcoin v2 Vault
+    error ProtocolAdapter__OnlyVault();
+
+    /*//////////////////////////////////////////////////////////////
+                                 EVENTS
+    //////////////////////////////////////////////////////////////*/
+    /// @notice Emitted when a deposit to the protocol is executed
+    /// @param amount The amount of USDC deposited
+    event Deposit(uint256 indexed amount);
+    /// @notice Emitted when a withdrawal from the protocol is executed
+    /// @param amount The amount of USDC withdrawn
+    event Withdraw(uint256 indexed amount);
+
+    /*//////////////////////////////////////////////////////////////
+                               FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+    /// @notice Deposits USDC into the protocol
+    /// @param amount The amount of USDC to deposit
+    /// @dev Precondition: caller must be the Yieldcoin v2 Vault
+    function deposit(uint256 amount) external;
+    /// @notice Withdraws USDC from the protocol
+    /// @param amount The amount of USDC to withdraw
+    /// @return amountOut The actualamount of USDC withdrawn
+    /// @dev Precondition: caller must be the Yieldcoin v2 Vault
+    function withdraw(uint256 amount) external returns (uint256 amountOut);
+    /// @notice Gets the total value locked in the protocol
+    /// @return tvl The total value locked in the protocol
+    function getTVL() external view returns (uint256 tvl);
+    /// @notice Gets the address of the protocol pool
+    /// @return pool The address of the protocol pool
+    function getProtocolPool() external view returns (address pool);
+}
