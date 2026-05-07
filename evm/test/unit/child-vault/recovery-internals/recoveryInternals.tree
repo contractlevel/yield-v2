@@ -1,0 +1,29 @@
+ChildVault_recoveryInternals
+├── storeRebalanceDepositRecovery
+│   └── when amount is zero
+│       └── it should revert with BaseVault__ZeroRecoveryAmount
+├── clearRebalanceDepositRecovery
+│   └── when there is no pending recovery
+│       └── it should revert with BaseVault__NoPendingRecovery
+├── storeEpochDepositRecovery
+│   ├── when amount is zero
+│   │   └── it should revert with BaseVault__ZeroRecoveryAmount
+│   └── when epoch withdraw recovery exists
+│       └── it should revert with BaseVault__RecoveryAlreadyPending
+├── clearEpochDepositRecovery
+│   └── when there is no pending recovery
+│       └── it should revert with BaseVault__NoPendingRecovery
+├── storeEpochWithdrawRecovery
+│   ├── when amount is zero
+│   │   └── it should revert with BaseVault__ZeroRecoveryAmount
+│   └── when epoch deposit recovery exists
+│       └── it should revert with BaseVault__RecoveryAlreadyPending
+├── clearEpochWithdrawRecovery
+│   └── when there is no pending recovery
+│       └── it should revert with BaseVault__NoPendingRecovery
+├── storeRebalanceWithdrawRecovery
+│   └── when strategy chain selector is zero
+│       └── it should revert with ChildVault__InvalidRecoveryStrategy
+└── clearRebalanceWithdrawRecovery
+    └── when there is no pending recovery
+        └── it should revert with BaseVault__NoPendingRecovery
