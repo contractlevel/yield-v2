@@ -17,6 +17,7 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
 
     function setUp() public {
         _setChildCrosschainVault(PARENT_CHAIN_SELECTOR, address(s_parentVault));
+        deal(address(s_mockUsdc), address(s_childVault), BRIDGED_AMOUNT);
         _changePrank(address(s_mockCcipRouter));
     }
 

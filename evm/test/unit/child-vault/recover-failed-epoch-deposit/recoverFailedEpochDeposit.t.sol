@@ -84,6 +84,7 @@ contract ChildVault_RecoverFailedEpochDepositUnitTest is BaseUnitTest {
         s_mockProtocolAdapter.setDepositReverts(true);
 
         _changePrank(address(s_mockCcipRouter));
+        deal(address(s_mockUsdc), address(s_childVault), DEPOSIT_AMOUNT);
         s_childVault.ccipReceive(_depositMessage(EPOCH_NONCE));
 
         s_mockProtocolAdapter.setDepositReverts(false);

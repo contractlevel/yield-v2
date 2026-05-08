@@ -117,6 +117,7 @@ contract ParentVault_RecoverFailedRebalanceDepositUnitTest is BaseUnitTest {
         s_mockProtocolAdapter.setDepositReverts(true);
 
         _changePrank(address(s_mockCcipRouter));
+        deal(address(s_mockUsdc), address(s_parentVault), DEPOSIT_AMOUNT);
         s_parentVault.ccipReceive(_rebalanceMessage(REBALANCE_NONCE, AAVE_V3_PROTOCOL_ID));
 
         s_mockProtocolAdapter.setDepositReverts(false);

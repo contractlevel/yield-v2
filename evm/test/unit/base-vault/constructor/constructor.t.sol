@@ -15,15 +15,12 @@ abstract contract BaseVault_ConstructorUnitTest is BaseUnitTest {
         assertEq(s_vault.getThisChainSelector(), _expectedChainSelector());
         assertEq(address(s_vault.getLink()), address(s_mockLink));
         assertEq(address(s_vault.getUsdc()), address(s_mockUsdc));
-        assertEq(address(s_vault.getShare()), address(s_yieldcoin));
         assertEq(address(s_vault.getRouter()), address(s_mockCcipRouter));
-        assertEq(address(s_vault.getPolicyEngine()), address(s_mockPolicyEngine));
         assertEq(address(s_vault.getAdapterRegistry()), address(s_adapterRegistry));
         assertEq(s_vault.hasRole(Roles.DEFAULT_ADMIN_ROLE, i_owner), true);
         assertEq(s_vault.hasRole(Roles.PAUSER_ROLE, i_pauser), true);
         assertEq(s_vault.hasRole(Roles.UNPAUSER_ROLE, i_unpauser), true);
         assertEq(s_vault.hasRole(Roles.CONFIG_OPERATOR_ROLE, i_configOperator), true);
-        assertEq(s_vault.hasRole(Roles.COMPLIANCE_OPERATOR_ROLE, i_complianceOperator), true);
     }
 }
 

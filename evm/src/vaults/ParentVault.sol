@@ -9,14 +9,21 @@ import {Types} from "../libraries/Types.sol";
 import {Roles} from "../libraries/Roles.sol";
 
 import {Client} from "@chainlink/contracts-ccip/interfaces/IRouterClient.sol";
+import {CCIPReceiver, IAny2EVMMessageReceiver} from "@chainlink/contracts-ccip/applications/CCIPReceiver.sol";
+import {PolicyProtected, IPolicyProtected, Ownable} from "@chainlink/policy-management/core/PolicyProtected.sol";
 
 import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {
+    AccessControlDefaultAdminRules,
+    IAccessControlDefaultAdminRules
+} from "@openzeppelin/contracts/access/extensions/AccessControlDefaultAdminRules.sol";
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 /// @title Yieldcoin v2 ParentVault
 /// @author @contractlevel
 /// @notice Only one ParentVault is deployed on a single chain in the entire Yieldcoin v2 system.
 /// @notice This contract acts as the entry/exit point for users to deposit and withdraw in the Yieldcoin v2 system.
-contract ParentVault is BaseVault, IParentVault {
+contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /*//////////////////////////////////////////////////////////////
                            TYPE DECLARATIONS
     //////////////////////////////////////////////////////////////*/
@@ -42,6 +49,12 @@ contract ParentVault is BaseVault, IParentVault {
     uint256 internal constant SHARE_PRECISION = WAD_PRECISION / USDC_PRECISION;
     /// @dev Minimum deposit amount
     uint256 internal constant MIN_DEPOSIT_AMOUNT = 100 * USDC_PRECISION;
+
+    /*//////////////////////////////////////////////////////////////
+                               IMMUTABLE
+    //////////////////////////////////////////////////////////////*/
+    /// @dev Yieldcoin (YIELD) share token
+    address internal immutable i_share;
 
     /*//////////////////////////////////////////////////////////////
                                  STATE
@@ -72,15 +85,26 @@ contract ParentVault is BaseVault, IParentVault {
     //////////////////////////////////////////////////////////////*/
     /// @param params BaseVault Constructor parameters
     /// @param treasury The address of the operator multisig for protocol fees
+    /// @param share The address of the Yieldcoin (YIELD) share token
+    /// @param complianceOperator The address of the compliance operator for policy management - trusted actor in the system
+    /// @param policyEngine The address of the Yieldcoin v2 PolicyEngine
     /// @dev The initial active protocol adapter is set after deployment with setInitialActiveProtocolAdapter.
     ///      Deployment order: deploy vault, deploy adapter with vault address, register adapter, then call setter.
-    constructor(BaseVault.ConstructorParams memory params, address treasury) BaseVault(params) {
+    constructor(
+        BaseVault.ConstructorParams memory params,
+        address treasury,
+        address share,
+        address complianceOperator,
+        address policyEngine
+    ) BaseVault(params) PolicyProtected(complianceOperator, policyEngine) {
+        i_share = share;
         s_epochNonce = 1;
         s_epochs[1].status = Types.EpochStatus.OPEN;
         s_epochs[1].openedAtTimestamp = block.timestamp;
         s_rebalance.nonce = 1;
         s_rebalance.lastRebalanceCompletedTimestamp = block.timestamp;
         s_treasury = treasury;
+        _grantRole(Roles.COMPLIANCE_OPERATOR_ROLE, complianceOperator);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -652,5 +676,38 @@ contract ParentVault is BaseVault, IParentVault {
     /// @return treasury The address of the operator multisig for protocol fees
     function getTreasury() external view returns (address treasury) {
         treasury = s_treasury;
+    }
+
+    /// @notice Gets the Yieldcoin share token
+    /// @return share The address of the Yieldcoin share token
+    function getShare() external view returns (address share) {
+        share = i_share;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                                OVERRIDE
+    //////////////////////////////////////////////////////////////*/
+    /// @notice Resolves the owner() conflict between Ownable (via PolicyProtected) and
+    ///         AccessControlDefaultAdminRules. Returns the default admin address.
+    function owner() public view override(Ownable,AccessControlDefaultAdminRules) returns (address) {
+        return AccessControlDefaultAdminRules.owner();
+    }
+
+    /// @notice Attaches a policy engine. Restricted to COMPLIANCE_OPERATOR_ROLE instead of
+    ///         Ownable's onlyOwner, so policy management is governed independently of the default admin.
+    function attachPolicyEngine(address policyEngine) external override onlyRole(Roles.COMPLIANCE_OPERATOR_ROLE) {
+        _attachPolicyEngine(policyEngine);
+    }
+
+    function supportsInterface(bytes4 interfaceId)
+        public
+        pure
+        override(BaseVault, PolicyProtected)
+        returns (bool)
+    {
+        return interfaceId == type(IERC165).interfaceId
+            || interfaceId == type(IAccessControlDefaultAdminRules).interfaceId
+            || interfaceId == type(IAny2EVMMessageReceiver).interfaceId
+            || interfaceId == type(IPolicyProtected).interfaceId;
     }
 }

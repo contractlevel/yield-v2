@@ -1,2 +1,117 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
+
+import {ProtocolAdapter} from "../ProtocolAdapter.sol";
+import {ISpoke} from "@aave/aave-v4/src/spoke/interfaces/ISpoke.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+/// @title Yieldcoin v2 Aave v4 Adapter
+/// @author @contractlevel
+/// @notice Adapter for the Aave v4 protocol
+contract AaveV4Adapter is ProtocolAdapter {
+    /*//////////////////////////////////////////////////////////////
+                           TYPE DECLARATIONS
+    //////////////////////////////////////////////////////////////*/
+    using SafeERC20 for IERC20;
+
+    /*//////////////////////////////////////////////////////////////
+                                 ERRORS
+    //////////////////////////////////////////////////////////////*/
+    /// @dev Thrown when the actual withdrawn amount is less than the amount requested
+    error AaveV4Adapter__IncorrectWithdrawAmount();
+
+    /*//////////////////////////////////////////////////////////////
+                               IMMUTABLE
+    //////////////////////////////////////////////////////////////*/
+    /// @notice The address of the Aave v4 Spoke
+    address internal immutable i_spoke;
+    /// @notice The Aave v4 reserve id for USDC on the Spoke
+    uint256 internal immutable i_reserveId;
+
+    /*//////////////////////////////////////////////////////////////
+                              CONSTRUCTOR
+    //////////////////////////////////////////////////////////////*/
+    /// @param vault The address of the Yieldcoin v2 Vault
+    /// @param usdc The address of the USDC token
+    /// @param spoke The address of the Aave v4 Spoke
+    /// @param reserveId The Aave v4 reserve id for USDC on the Spoke
+    //slither-disable-next-line missing-zero-check
+    constructor(address vault, address usdc, address spoke, uint256 reserveId) ProtocolAdapter(vault, usdc) {
+        i_spoke = spoke;
+        i_reserveId = reserveId;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                                EXTERNAL
+    //////////////////////////////////////////////////////////////*/
+    /// @notice Deposits USDC to the Aave v4 Spoke
+    /// @param amount The amount of USDC to deposit
+    /// @dev Deposits USDC into the adapter's own Aave v4 position
+    /// @dev Precondition: caller must be the Yieldcoin v2 Vault
+    function deposit(uint256 amount) external nonReentrant onlyVault {
+        emit Deposit(amount);
+
+        IERC20(i_usdc).safeIncreaseAllowance(i_spoke, amount);
+        ISpoke(i_spoke).supply(i_reserveId, amount, address(this));
+    }
+
+    /// @notice Withdraws USDC from the Aave v4 Spoke
+    /// @param amount The amount of USDC to withdraw (use type(uint256).max to withdraw all)
+    /// @return actualWithdrawnAmount The actual withdrawn amount
+    /// @dev Transfers the actual withdrawn amount to the Yieldcoin v2 Vault
+    /// @dev Precondition: caller must be the Yieldcoin v2 Vault
+    /// @notice We handle 2 withdraw scenarios:
+    /// 1. Rebalance Withdraw - when the amount is type(uint256).max
+    /// 2. User Withdraw - when the amount is a specific amount
+    function withdraw(uint256 amount) external nonReentrant onlyVault returns (uint256 actualWithdrawnAmount) {
+        /// @dev Scenario 1: Rebalance Withdraw - when the amount is type(uint256).max
+        if (amount == type(uint256).max) {
+            uint256 tvl = _getTVL();
+
+            (, actualWithdrawnAmount) = ISpoke(i_spoke).withdraw(i_reserveId, amount, address(this));
+
+            /// @dev Precondition: the actual withdrawn amount must not be less than the TVL
+            if (actualWithdrawnAmount < tvl) revert AaveV4Adapter__IncorrectWithdrawAmount();
+        }
+        /// @dev Scenario 2: User Withdraw - when the amount is a specific amount
+        else {
+            (, actualWithdrawnAmount) = ISpoke(i_spoke).withdraw(i_reserveId, amount, address(this));
+            /// @dev Precondition: the actual withdrawn amount must not be less than the requested amount
+            if (actualWithdrawnAmount < amount) revert AaveV4Adapter__IncorrectWithdrawAmount();
+        }
+        emit Withdraw(actualWithdrawnAmount);
+        IERC20(i_usdc).safeTransfer(i_vault, actualWithdrawnAmount);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                                INTERNAL
+    //////////////////////////////////////////////////////////////*/
+    /// @notice Gets the TVL in the Aave v4 Spoke
+    /// @return tvl The TVL of the Aave v4 position
+    function _getTVL() internal view returns (uint256 tvl) {
+        tvl = ISpoke(i_spoke).getUserSuppliedAssets(i_reserveId, address(this));
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                                 GETTER
+    //////////////////////////////////////////////////////////////*/
+    /// @notice Gets the TVL in the Aave v4 Spoke
+    /// @return tvl The TVL of the Aave v4 position
+    /// @notice This is used for getting the TVL of the Yieldcoin v2 system, if this is the active protocol adapter
+    function getTVL() external view returns (uint256 tvl) {
+        tvl = _getTVL();
+    }
+
+    /// @notice Gets the address of the Aave v4 Spoke
+    /// @return pool The address of the Aave v4 Spoke
+    function getProtocolPool() external view returns (address pool) {
+        pool = i_spoke;
+    }
+
+    /// @notice Gets the Aave v4 reserve id for USDC on the Spoke
+    /// @return reserveId The Aave v4 reserve id
+    function getReserveId() external view returns (uint256 reserveId) {
+        reserveId = i_reserveId;
+    }
+}

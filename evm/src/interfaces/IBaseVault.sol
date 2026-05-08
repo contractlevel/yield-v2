@@ -21,6 +21,8 @@ interface IBaseVault is IPauseable {
 
     /// @dev Thrown when the active protocol adapter is the zero address
     error BaseVault__NoActiveAdapter();
+    /// @dev Thrown when an external self-call helper is called by any address other than this contract
+    error BaseVault__OnlySelf();
     /// @dev Thrown when a strategy adapter deposit fails in a synchronous path
     /// @param amount The amount of USDC that failed to deposit
     error BaseVault__DepositFailed(uint256 amount);
@@ -142,7 +144,6 @@ interface IBaseVault is IPauseable {
     //////////////////////////////////////////////////////////////*/
     function getLink() external view returns (address link);
     function getUsdc() external view returns (address usdc);
-    function getShare() external view returns (address share);
     function getThisChainSelector() external view returns (uint64 thisChainSelector);
     function getAdapterRegistry() external view returns (address adapterRegistry);
     function getWorkflowRouter() external view returns (address workflowRouter);

@@ -16,15 +16,15 @@ contract HelperConfig is Script {
     struct NetworkConfig {
         address initialOwner;
         address treasury;
-        address ccipRouter;
         address defaultAdmin;
         address pauser;
         address unpauser;
         address configOperator;
         address complianceOperator;
-        uint64 thisChainSelector;
+        address kycProvider;
         TokensConfig tokens;
         ProtocolsConfig protocols;
+        CCIPConfig ccip;
     }
 
     struct TokensConfig {
@@ -34,6 +34,12 @@ contract HelperConfig is Script {
 
     struct ProtocolsConfig {
         address aaveV3PoolAddressesProvider;
+    }
+
+    struct CCIPConfig {
+        address router;
+        uint64 thisChainSelector;
+        uint64 parentChainSelector;
     }
 
     NetworkConfig public activeNetworkConfig;
@@ -66,6 +72,7 @@ contract HelperConfig is Script {
         address unpauser = makeAddr("unpauser");
         address configOperator = makeAddr("configOperator");
         address complianceOperator = makeAddr("complianceOperator");
+        address kycProvider = makeAddr("kycProvider");
 
         address aaveV3Pool = address(new MockAaveV3Pool());
         address aaveV3PoolAddressesProvider = address(new MockAaveV3PoolAddressesProvider(aaveV3Pool));
@@ -75,13 +82,13 @@ contract HelperConfig is Script {
             tokens: TokensConfig({link: link, usdc: usdc}),
             protocols: ProtocolsConfig({aaveV3PoolAddressesProvider: aaveV3PoolAddressesProvider}),
             treasury: treasury,
-            ccipRouter: ccipRouter,
             defaultAdmin: defaultAdmin,
             pauser: pauser,
             unpauser: unpauser,
             configOperator: configOperator,
             complianceOperator: complianceOperator,
-            thisChainSelector: 12345
+            kycProvider: kycProvider,
+            ccip: CCIPConfig({router: ccipRouter, thisChainSelector: 12345, parentChainSelector: 12345})
         });
     }
 }

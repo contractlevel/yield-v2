@@ -5,7 +5,6 @@ pragma solidity 0.8.28;
 // import {IERC677Receiver} from "@chainlink/contracts/src/v0.8/shared/interfaces/IERC677Receiver.sol";
 import {CCIPReceiver, IAny2EVMMessageReceiver} from "@chainlink/contracts-ccip/applications/CCIPReceiver.sol";
 import {IRouterClient, Client} from "@chainlink/contracts-ccip/interfaces/IRouterClient.sol";
-import {PolicyProtected, IPolicyProtected, Ownable} from "@chainlink/policy-management/core/PolicyProtected.sol";
 
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {
@@ -26,14 +25,7 @@ import {IProtocolAdapter} from "../interfaces/IProtocolAdapter.sol";
 /// @title Yieldcoin v2 BaseVault
 /// @author @contractlevel
 /// @notice Base contract for Parent and Child Vaults in Yieldcoin v2
-abstract contract BaseVault is
-    Pausable,
-    AccessControlDefaultAdminRules,
-    ReentrancyGuard,
-    CCIPReceiver,
-    PolicyProtected,
-    IBaseVault
-{
+abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, ReentrancyGuard, CCIPReceiver, IBaseVault {
     /*//////////////////////////////////////////////////////////////
                            TYPE DECLARATIONS
     //////////////////////////////////////////////////////////////*/
@@ -56,8 +48,6 @@ abstract contract BaseVault is
     address internal immutable i_link;
     /// @dev USDC token
     address internal immutable i_usdc;
-    /// @dev Yieldcoin (YIELD) share token
-    address internal immutable i_share;
     /// @dev Registry contract for strategy protocol adapters
     address internal immutable i_adapterRegistry;
 
@@ -112,27 +102,21 @@ abstract contract BaseVault is
     /// @notice Parameters to initialize the contract in the constructor.
     /// @param link The address of the Chainlink LINK token
     /// @param usdc The address of the USDC token
-    /// @param share The address of the Yieldcoin share token. This is the Vault Share CCT.
     /// @param ccipRouter The address of the CCIP router
     /// @param defaultAdmin The address of the default admin for setting roles - trusted actor in the system
     /// @param pauser The address of the pauser for pausing the vault - trusted actor in the system
     /// @param unpauser The address of the unpauser for unpausing the vault - trusted actor in the system
     /// @param configOperator The address of the config operator for setters - trusted actor in the system
-    /// @param complianceOperator The address of the compliance operator for policy management - trusted actor in the system
-    /// @param policyEngine The address of the Yieldcoin v2 PolicyEngine
     /// @param adapterRegistry The address of the Yieldcoin v2 AdapterRegistry
     /// @param thisChainSelector The CCIP selector for this chain
     struct ConstructorParams {
         address link;
         address usdc;
-        address share;
         address ccipRouter;
         address defaultAdmin;
         address pauser;
         address unpauser;
         address configOperator;
-        address complianceOperator;
-        address policyEngine;
         address adapterRegistry;
         uint64 thisChainSelector;
     }
@@ -141,17 +125,14 @@ abstract contract BaseVault is
     constructor(ConstructorParams memory params)
         CCIPReceiver(params.ccipRouter)
         AccessControlDefaultAdminRules(INITIAL_DEFAULT_ADMIN_ROLE_TRANSFER_DELAY, params.defaultAdmin)
-        PolicyProtected(params.complianceOperator, params.policyEngine)
     {
         i_thisChainSelector = params.thisChainSelector;
         i_link = params.link;
         i_usdc = params.usdc;
-        i_share = params.share;
         i_adapterRegistry = params.adapterRegistry;
         _grantRole(Roles.PAUSER_ROLE, params.pauser);
         _grantRole(Roles.UNPAUSER_ROLE, params.unpauser);
         _grantRole(Roles.CONFIG_OPERATOR_ROLE, params.configOperator);
-        _grantRole(Roles.COMPLIANCE_OPERATOR_ROLE, params.complianceOperator);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -231,12 +212,19 @@ abstract contract BaseVault is
     function _executeDeposit(uint256 amount, bool revertOnFailure) internal returns (bool success) {
         address activeAdapter = s_activeProtocolAdapter;
         if (activeAdapter == address(0)) revert BaseVault__NoActiveAdapter();
-        try IProtocolAdapter(activeAdapter).deposit(amount) {
+        try this.tryDepositToAdapter(activeAdapter, amount) {
             success = true;
         } catch {
             if (revertOnFailure) revert BaseVault__DepositFailed(amount);
             success = false;
         }
+    }
+
+    function tryDepositToAdapter(address adapter, uint256 amount) external {
+        if (msg.sender != address(this)) revert BaseVault__OnlySelf();
+
+        IERC20(i_usdc).safeTransfer(adapter, amount);
+        IProtocolAdapter(adapter).deposit(amount);
     }
 
     function _executeWithdraw(uint256 amount, bool revertOnFailure) internal returns (uint256 amountOut) {
@@ -477,12 +465,6 @@ abstract contract BaseVault is
         usdc = i_usdc;
     }
 
-    /// @notice Gets the Yieldcoin share token
-    /// @return share The address of the Yieldcoin share token
-    function getShare() external view returns (address share) {
-        share = i_share;
-    }
-
     /// @notice Gets the CCIP selector for this chain
     /// @return thisChainSelector The CCIP selector for this chain
     function getThisChainSelector() external view returns (uint64 thisChainSelector) {
@@ -552,28 +534,16 @@ abstract contract BaseVault is
     /*//////////////////////////////////////////////////////////////
                                 OVERRIDE
     //////////////////////////////////////////////////////////////*/
-    /// @notice Resolves the owner() conflict between Ownable (via PolicyProtected) and
-    ///         AccessControlDefaultAdminRules. Returns the default admin address.
-    function owner() public view override(Ownable, AccessControlDefaultAdminRules) returns (address) {
-        return AccessControlDefaultAdminRules.owner();
-    }
-
-    /// @notice Attaches a policy engine. Restricted to COMPLIANCE_OPERATOR_ROLE instead of
-    ///         Ownable's onlyOwner, so policy management is governed independently of the default admin.
-    function attachPolicyEngine(address policyEngine) external override onlyRole(Roles.COMPLIANCE_OPERATOR_ROLE) {
-        _attachPolicyEngine(policyEngine);
-    }
-
     // @review inheritdoc IERC165
     function supportsInterface(bytes4 interfaceId)
         public
         pure
-        override(CCIPReceiver, AccessControlDefaultAdminRules, PolicyProtected)
+        virtual
+        override(CCIPReceiver, AccessControlDefaultAdminRules)
         returns (bool)
     {
         return interfaceId == type(IERC165).interfaceId
             || interfaceId == type(IAccessControlDefaultAdminRules).interfaceId
-            || interfaceId == type(IAny2EVMMessageReceiver).interfaceId
-            || interfaceId == type(IPolicyProtected).interfaceId;
+            || interfaceId == type(IAny2EVMMessageReceiver).interfaceId;
     }
 }

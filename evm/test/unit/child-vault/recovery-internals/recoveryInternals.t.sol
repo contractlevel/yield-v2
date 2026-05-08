@@ -124,14 +124,11 @@ contract ChildVault_RecoveryInternalsUnitTest is BaseUnitTest {
         params = BaseVault.ConstructorParams({
             link: address(s_mockLink),
             usdc: address(s_mockUsdc),
-            share: address(s_yieldcoin),
             ccipRouter: address(s_mockCcipRouter),
             defaultAdmin: address(i_owner),
             pauser: address(i_pauser),
             unpauser: address(i_unpauser),
             configOperator: address(i_configOperator),
-            complianceOperator: address(i_complianceOperator),
-            policyEngine: address(s_mockPolicyEngine),
             adapterRegistry: address(s_adapterRegistry),
             thisChainSelector: CHILD_CHAIN_SELECTOR
         });

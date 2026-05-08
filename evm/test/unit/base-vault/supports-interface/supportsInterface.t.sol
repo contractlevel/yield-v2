@@ -17,7 +17,6 @@ abstract contract BaseVault_SupportsInterfaceUnitTest is BaseUnitTest {
     function test_BaseVault_supportsInterface() public {
         assertTrue(s_vault.supportsInterface(type(IAccessControlDefaultAdminRules).interfaceId));
         assertTrue(s_vault.supportsInterface(type(IAny2EVMMessageReceiver).interfaceId));
-        assertTrue(s_vault.supportsInterface(type(IPolicyProtected).interfaceId));
         assertTrue(s_vault.supportsInterface(type(IERC165).interfaceId));
     }
 
@@ -30,11 +29,18 @@ contract ParentVault_SupportsInterfaceUnitTest is BaseVault_SupportsInterfaceUni
     function setUp() public {
         s_vault = s_parentVault;
     }
+
+    function test_ParentVault_supportsInterface_IPolicyProtected() public {
+        assertTrue(s_vault.supportsInterface(type(IPolicyProtected).interfaceId));
+    }
 }
 
 contract ChildVault_SupportsInterfaceUnitTest is BaseVault_SupportsInterfaceUnitTest {
     function setUp() public {
         s_vault = s_childVault;
     }
-}
 
+    function test_ChildVault_supportsInterface_ReturnsFalse_ForIPolicyProtected() public {
+        assertFalse(s_vault.supportsInterface(type(IPolicyProtected).interfaceId));
+    }
+}

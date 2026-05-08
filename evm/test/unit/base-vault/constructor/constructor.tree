@@ -2,13 +2,10 @@ constructor
   ├── it should set i_thisChainSelector
   ├── it should set i_link
   ├── it should set i_usdc
-  ├── it should set i_yieldcoinToken
   ├── it should set the CCIP router
-  ├── it should attach the policy engine
   ├── it should grant DEFAULT_ADMIN_ROLE to defaultAdmin
   ├── it should grant PAUSER_ROLE to pauser  
   ├── it should grant UNPAUSER_ROLE to unpauser  
   ├── it should grant CONFIG_OPERATOR_ROLE to configOperator
-  ├── it should grant COMPLIANCE_OPERATOR_ROLE to complianceOperator
   ├── it should set the deposit nonce to 1
   └── it should set the withdraw nonce to 1

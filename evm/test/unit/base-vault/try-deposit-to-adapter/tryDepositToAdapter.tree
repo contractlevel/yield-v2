@@ -1,0 +1,10 @@
+BaseVault_tryDepositToAdapter
+├── when the caller is not the vault itself
+│   └── it should revert with BaseVault__OnlySelf
+├── when the caller is the vault itself
+│   ├── it should transfer USDC to the adapter
+│   └── it should call deposit on the adapter
+└── when the adapter deposit reverts
+    ├── it should revert
+    ├── it should not leave USDC on the adapter
+    └── it should leave USDC in the vault

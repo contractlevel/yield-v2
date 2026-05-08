@@ -11,14 +11,11 @@ contract ChildVault_ConstructorUnitTest is BaseUnitTest {
         assertEq(s_childVault.getParentChainSelector(), PARENT_CHAIN_SELECTOR);
         assertEq(address(s_childVault.getLink()), address(s_mockLink));
         assertEq(address(s_childVault.getUsdc()), address(s_mockUsdc));
-        assertEq(address(s_childVault.getShare()), address(s_yieldcoin));
         assertEq(address(s_childVault.getRouter()), address(s_mockCcipRouter));
-        assertEq(address(s_childVault.getPolicyEngine()), address(s_mockPolicyEngine));
         assertEq(address(s_childVault.getAdapterRegistry()), address(s_adapterRegistry));
         assertEq(s_childVault.hasRole(Roles.DEFAULT_ADMIN_ROLE, address(i_owner)), true);
         assertEq(s_childVault.hasRole(Roles.PAUSER_ROLE, i_pauser), true);
         assertEq(s_childVault.hasRole(Roles.UNPAUSER_ROLE, i_unpauser), true);
         assertEq(s_childVault.hasRole(Roles.CONFIG_OPERATOR_ROLE, address(i_configOperator)), true);
-        assertEq(s_childVault.hasRole(Roles.COMPLIANCE_OPERATOR_ROLE, address(i_complianceOperator)), true);
     }
 }
