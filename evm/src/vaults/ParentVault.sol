@@ -689,7 +689,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     //////////////////////////////////////////////////////////////*/
     /// @notice Resolves the owner() conflict between Ownable (via PolicyProtected) and
     ///         AccessControlDefaultAdminRules. Returns the default admin address.
-    function owner() public view override(Ownable,AccessControlDefaultAdminRules) returns (address) {
+    function owner() public view override(Ownable, AccessControlDefaultAdminRules) returns (address) {
         return AccessControlDefaultAdminRules.owner();
     }
 
@@ -699,12 +699,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         _attachPolicyEngine(policyEngine);
     }
 
-    function supportsInterface(bytes4 interfaceId)
-        public
-        pure
-        override(BaseVault, PolicyProtected)
-        returns (bool)
-    {
+    function supportsInterface(bytes4 interfaceId) public pure override(BaseVault, PolicyProtected) returns (bool) {
         return interfaceId == type(IERC165).interfaceId
             || interfaceId == type(IAccessControlDefaultAdminRules).interfaceId
             || interfaceId == type(IAny2EVMMessageReceiver).interfaceId

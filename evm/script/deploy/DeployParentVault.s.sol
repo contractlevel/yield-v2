@@ -7,6 +7,7 @@
 // import {ParentVault, BaseVault} from "../../src/vaults/ParentVault.sol";
 // import {AdapterRegistry} from "../../src/modules/AdapterRegistry.sol";
 // import {AaveV3Adapter} from "../../src/modules/adapters/AaveV3Adapter.sol";
+// import {AaveV4Adapter} from "../../src/modules/adapters/AaveV4Adapter.sol";
 // import {WorkflowRouter} from "../../src/modules/WorkflowRouter.sol";
 // import {Yieldcoin} from "../../src/token/Yieldcoin.sol"; // @review replace this with compliance-ready token
 
@@ -64,6 +65,11 @@
 //             address(parentVault), networkConfig.tokens.usdc, networkConfig.protocols.aaveV3PoolAddressesProvider
 //         );
 //         adapterRegistry.setAdapter(aaveV3ProtocolId, address(aaveV3Adapter));
+//         bytes32 aaveV4ProtocolId = keccak256("aave-v4");
+//         AaveV4Adapter aaveV4Adapter = new AaveV4Adapter(
+//             address(parentVault), networkConfig.tokens.usdc, networkConfig.protocols.aaveV4Spoke, networkConfig.protocols.aaveV4ReserveId
+//         );
+//         adapterRegistry.setAdapter(aaveV4ProtocolId, address(aaveV4Adapter));
 //         parentVault.setInitialActiveProtocolAdapter(aaveV3ProtocolId);
 
 //         TerminalAllowPolicy terminalAllow = _deployTerminalAllowPolicy(policyEngine);

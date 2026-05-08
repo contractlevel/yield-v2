@@ -8,6 +8,7 @@ import {MockUSDC} from "../test/mocks/MockUSDC.sol";
 import {MockCCIPRouter} from "../test/mocks/MockCCIPRouter.sol";
 import {MockAaveV3Pool} from "../test/mocks/MockAaveV3Pool.sol";
 import {MockAaveV3PoolAddressesProvider} from "../test/mocks/MockAaveV3PoolAddressesProvider.sol";
+import {MockAaveV4Spoke} from "../test/mocks/MockAaveV4Spoke.sol";
 
 contract HelperConfig is Script {
     /*//////////////////////////////////////////////////////////////
@@ -34,6 +35,8 @@ contract HelperConfig is Script {
 
     struct ProtocolsConfig {
         address aaveV3PoolAddressesProvider;
+        address aaveV4Spoke;
+        uint256 aaveV4ReserveId;
     }
 
     struct CCIPConfig {
@@ -62,33 +65,44 @@ contract HelperConfig is Script {
                                  LOCAL
     //////////////////////////////////////////////////////////////*/
     function getOrCreateAnvilEthConfig() public returns (NetworkConfig memory networkConfig) {
-        address link = address(new MockLink());
-        address usdc = address(new MockUSDC());
+        TokensConfig memory tokens = _getMockTokensConfig();
+        ProtocolsConfig memory protocols = _getMockProtocolsConfig(tokens.usdc);
+        CCIPConfig memory ccip = _getMockCcipConfig(tokens.usdc);
 
-        address treasury = makeAddr("treasury");
-        address ccipRouter = address(new MockCCIPRouter(address(usdc)));
-        address defaultAdmin = makeAddr("defaultAdmin");
-        address pauser = makeAddr("pauser");
-        address unpauser = makeAddr("unpauser");
-        address configOperator = makeAddr("configOperator");
-        address complianceOperator = makeAddr("complianceOperator");
-        address kycProvider = makeAddr("kycProvider");
-
-        address aaveV3Pool = address(new MockAaveV3Pool());
-        address aaveV3PoolAddressesProvider = address(new MockAaveV3PoolAddressesProvider(aaveV3Pool));
-
-        networkConfig = NetworkConfig({
+        return NetworkConfig({
             initialOwner: address(1),
-            tokens: TokensConfig({link: link, usdc: usdc}),
-            protocols: ProtocolsConfig({aaveV3PoolAddressesProvider: aaveV3PoolAddressesProvider}),
-            treasury: treasury,
-            defaultAdmin: defaultAdmin,
-            pauser: pauser,
-            unpauser: unpauser,
-            configOperator: configOperator,
-            complianceOperator: complianceOperator,
-            kycProvider: kycProvider,
-            ccip: CCIPConfig({router: ccipRouter, thisChainSelector: 12345, parentChainSelector: 12345})
+            treasury: makeAddr("treasury"),
+            defaultAdmin: makeAddr("defaultAdmin"),
+            pauser: makeAddr("pauser"),
+            unpauser: makeAddr("unpauser"),
+            configOperator: makeAddr("configOperator"),
+            complianceOperator: makeAddr("complianceOperator"),
+            kycProvider: makeAddr("kycProvider"),
+            tokens: tokens,
+            protocols: protocols,
+            ccip: ccip
+        });
+    }
+
+    function _getMockTokensConfig() private returns (TokensConfig memory) {
+        return TokensConfig({link: address(new MockLink()), usdc: address(new MockUSDC())});
+    }
+
+    function _getMockProtocolsConfig(address usdc) private returns (ProtocolsConfig memory) {
+        address aaveV3Pool = address(new MockAaveV3Pool());
+
+        return ProtocolsConfig({
+            aaveV3PoolAddressesProvider: address(new MockAaveV3PoolAddressesProvider(aaveV3Pool)),
+            aaveV4Spoke: address(new MockAaveV4Spoke(usdc)),
+            aaveV4ReserveId: 1
+        });
+    }
+
+    function _getMockCcipConfig(address usdc) private returns (CCIPConfig memory) {
+        return CCIPConfig({
+            router: address(new MockCCIPRouter(usdc)),
+            thisChainSelector: 12345,
+            parentChainSelector: 12345
         });
     }
 }
