@@ -10,6 +10,9 @@ import {AaveV3Adapter} from "../../src/modules/adapters/AaveV3Adapter.sol";
 import {AaveV4Adapter} from "../../src/modules/adapters/AaveV4Adapter.sol";
 import {WorkflowRouter} from "../../src/modules/WorkflowRouter.sol";
 
+/// @title DeployChildVault
+/// @author @contractlevel
+/// @notice Script to deploy the ChildVault and its modules
 contract DeployChildVault is Script {
     /*//////////////////////////////////////////////////////////////
                                   RUN
@@ -21,8 +24,10 @@ contract DeployChildVault is Script {
         HelperConfig.NetworkConfig memory networkConfig = helperConfig.getActiveNetworkConfig();
         address deployer = msg.sender;
 
+        /// @dev Deploy the AdapterRegistry
         AdapterRegistry adapterRegistry = new AdapterRegistry(deployer);
 
+        /// @dev Deploy the ChildVault
         BaseVault.ConstructorParams memory baseVaultParams = BaseVault.ConstructorParams({
             link: networkConfig.tokens.link,
             usdc: networkConfig.tokens.usdc,
@@ -36,12 +41,14 @@ contract DeployChildVault is Script {
         });
         ChildVault childVault = new ChildVault(baseVaultParams, networkConfig.ccip.parentChainSelector);
 
+        /// @dev Deploy the Aave v3 Adapter
         bytes32 aaveV3ProtocolId = keccak256("aave-v3");
         AaveV3Adapter aaveV3Adapter = new AaveV3Adapter(
             address(childVault), networkConfig.tokens.usdc, networkConfig.protocols.aaveV3PoolAddressesProvider
         );
         adapterRegistry.setAdapter(aaveV3ProtocolId, address(aaveV3Adapter));
 
+        /// @dev Deploy the Aave v4 Adapter
         bytes32 aaveV4ProtocolId = keccak256("aave-v4");
         AaveV4Adapter aaveV4Adapter = new AaveV4Adapter(
             address(childVault),
@@ -51,6 +58,8 @@ contract DeployChildVault is Script {
         );
         adapterRegistry.setAdapter(aaveV4ProtocolId, address(aaveV4Adapter));
 
+        /// @dev Transfer ownership of the AdapterRegistry to the initial owner
+        /// @notice The initialOwner address needs to accept the ownership transfer!
         adapterRegistry.transferOwnership(networkConfig.initialOwner);
 
         vm.stopBroadcast();

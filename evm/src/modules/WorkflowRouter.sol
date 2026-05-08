@@ -44,11 +44,13 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
     /// @param initialDelay The initial delay for the default admin role
     /// @param initialOwner The address of the initial owner
     /// @param vault The address of the Yieldcoin v2 Vault
+    /// @param configOperator The address of the config operator for setting configuration state
     //slither-disable-next-line missing-zero-check
-    constructor(uint48 initialDelay, address initialOwner, address vault)
+    constructor(uint48 initialDelay, address initialOwner, address vault, address configOperator)
         AccessControlDefaultAdminRules(initialDelay, initialOwner)
     {
         i_vault = vault;
+        _grantRole(Roles.CONFIG_OPERATOR_ROLE, configOperator);
     }
 
     /*//////////////////////////////////////////////////////////////
