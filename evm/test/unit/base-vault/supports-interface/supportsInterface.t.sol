@@ -14,13 +14,13 @@ import {IPolicyProtected} from "@chainlink/policy-management/core/PolicyProtecte
 abstract contract BaseVault_SupportsInterfaceUnitTest is BaseUnitTest {
     BaseVault internal s_vault;
 
-    function test_BaseVault_supportsInterface() public {
+    function test_BaseVault_supportsInterface() public view {
         assertTrue(s_vault.supportsInterface(type(IAccessControlDefaultAdminRules).interfaceId));
         assertTrue(s_vault.supportsInterface(type(IAny2EVMMessageReceiver).interfaceId));
         assertTrue(s_vault.supportsInterface(type(IERC165).interfaceId));
     }
 
-    function test_BaseVault_supportsInterface_ReturnsFalse_WhenInterfaceIsNotSupported() public {
+    function test_BaseVault_supportsInterface_ReturnsFalse_WhenInterfaceIsNotSupported() public view {
         assertFalse(s_vault.supportsInterface(bytes4(0xdeadbeef)));
     }
 }
@@ -30,7 +30,7 @@ contract ParentVault_SupportsInterfaceUnitTest is BaseVault_SupportsInterfaceUni
         s_vault = s_parentVault;
     }
 
-    function test_ParentVault_supportsInterface_IPolicyProtected() public {
+    function test_ParentVault_supportsInterface_IPolicyProtected() public view {
         assertTrue(s_vault.supportsInterface(type(IPolicyProtected).interfaceId));
     }
 }
@@ -40,7 +40,7 @@ contract ChildVault_SupportsInterfaceUnitTest is BaseVault_SupportsInterfaceUnit
         s_vault = s_childVault;
     }
 
-    function test_ChildVault_supportsInterface_ReturnsFalse_ForIPolicyProtected() public {
+    function test_ChildVault_supportsInterface_ReturnsFalse_ForIPolicyProtected() public view {
         assertFalse(s_vault.supportsInterface(type(IPolicyProtected).interfaceId));
     }
 }

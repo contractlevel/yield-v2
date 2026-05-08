@@ -7,15 +7,15 @@ import {IReceiver} from "@chainlink/contracts/src/v0.8/shared/interfaces/IReceiv
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 contract WorkflowRouter_SupportsInterfaceUnitTest is BaseWorkflowRouterUnitTest {
-    function test_WorkflowRouter_supportsInterface_IReceiver() public {
+    function test_WorkflowRouter_supportsInterface_IReceiver() public view {
         assertEq(s_workflowRouter.supportsInterface(type(IReceiver).interfaceId), true);
     }
 
-    function test_WorkflowRouter_supportsInterface_IAccessControl() public {
+    function test_WorkflowRouter_supportsInterface_IAccessControl() public view {
         assertEq(s_workflowRouter.supportsInterface(type(IAccessControl).interfaceId), true);
     }
 
-    function test_WorkflowRouter_supportsInterface_ReturnsFalseForUnknownInterface() public {
+    function test_WorkflowRouter_supportsInterface_ReturnsFalseForUnknownInterface() public view {
         assertEq(s_workflowRouter.supportsInterface(bytes4(0xdeadbeef)), false);
     }
 }

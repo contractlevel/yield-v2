@@ -111,6 +111,6 @@ contract WorkflowRouter_OnReportUnitTest is BaseWorkflowRouterUnitTest {
     function test_WorkflowRouter_onReport_Success() external {
         vm.recordLogs();
         s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, s_workflowName, i_owner), abi.encodePacked(SELECTOR));
-        Vm.Log memory log = _assertEmittedBy(keccak256("TargetDepositSuccess()"), address(s_target));
+        _assertEmittedBy(keccak256("TargetDepositSuccess()"), address(s_target));
     }
 }

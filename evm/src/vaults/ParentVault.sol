@@ -248,7 +248,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         if (shareBurnAmount == 0) revert ParentVault__NoWithdraw(msg.sender, epochNonce);
         delete s_withdraws[msg.sender][epochNonce];
 
-        IShare(i_share).burn(shareBurnAmount);
+        IShare(i_share).burn(address(this), shareBurnAmount);
 
         usdcWithdrawAmount = shareBurnAmount * epoch.totalWithdrawClaimAmount / epoch.totalShareBurnAmount;
 

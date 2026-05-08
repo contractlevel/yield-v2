@@ -2,7 +2,7 @@
 pragma solidity 0.8.28;
 
 import {ProtocolAdapter} from "../ProtocolAdapter.sol";
-import {ISpoke} from "@aave/aave-v4/src/spoke/interfaces/ISpoke.sol";
+import {IAaveV4Spoke} from "../../interfaces/IAaveV4Spoke.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -53,7 +53,7 @@ contract AaveV4Adapter is ProtocolAdapter {
         emit Deposit(amount);
 
         IERC20(i_usdc).safeIncreaseAllowance(i_spoke, amount);
-        ISpoke(i_spoke).supply(i_reserveId, amount, address(this));
+        IAaveV4Spoke(i_spoke).supply(i_reserveId, amount, address(this));
     }
 
     /// @notice Withdraws USDC from the Aave v4 Spoke
@@ -69,14 +69,14 @@ contract AaveV4Adapter is ProtocolAdapter {
         if (amount == type(uint256).max) {
             uint256 tvl = _getTVL();
 
-            (, actualWithdrawnAmount) = ISpoke(i_spoke).withdraw(i_reserveId, amount, address(this));
+            (, actualWithdrawnAmount) = IAaveV4Spoke(i_spoke).withdraw(i_reserveId, amount, address(this));
 
             /// @dev Precondition: the actual withdrawn amount must not be less than the TVL
             if (actualWithdrawnAmount < tvl) revert AaveV4Adapter__IncorrectWithdrawAmount();
         }
         /// @dev Scenario 2: User Withdraw - when the amount is a specific amount
         else {
-            (, actualWithdrawnAmount) = ISpoke(i_spoke).withdraw(i_reserveId, amount, address(this));
+            (, actualWithdrawnAmount) = IAaveV4Spoke(i_spoke).withdraw(i_reserveId, amount, address(this));
             /// @dev Precondition: the actual withdrawn amount must not be less than the requested amount
             if (actualWithdrawnAmount < amount) revert AaveV4Adapter__IncorrectWithdrawAmount();
         }
@@ -90,7 +90,7 @@ contract AaveV4Adapter is ProtocolAdapter {
     /// @notice Gets the TVL in the Aave v4 Spoke
     /// @return tvl The TVL of the Aave v4 position
     function _getTVL() internal view returns (uint256 tvl) {
-        tvl = ISpoke(i_spoke).getUserSuppliedAssets(i_reserveId, address(this));
+        tvl = IAaveV4Spoke(i_spoke).getUserSuppliedAssets(i_reserveId, address(this));
     }
 
     /*//////////////////////////////////////////////////////////////

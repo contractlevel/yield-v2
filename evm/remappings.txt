@@ -3,6 +3,7 @@
 
 @chainlink/policy-management/=lib/chainlink-ace/packages/policy-management/src/
 @chainlink/cross-chain-identity/=lib/chainlink-ace/packages/cross-chain-identity/src/
+@chainlink/tokens/=lib/chainlink-ace/packages/tokens/
 
 @openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/
 @openzeppelin/contracts/=lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/

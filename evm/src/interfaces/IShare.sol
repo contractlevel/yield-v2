@@ -11,7 +11,8 @@ interface IShare is IERC20 {
     /// @param to The address to mint shares to
     /// @param amount The amount of shares to mint
     function mint(address to, uint256 amount) external;
-    /// @notice Burns shares
+    /// @notice Burns shares from an address
+    /// @param user The address to burn shares from
     /// @param amount The amount of shares to burn
-    function burn(uint256 amount) external;
+    function burn(address user, uint256 amount) external;
 }

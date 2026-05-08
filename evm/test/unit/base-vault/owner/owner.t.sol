@@ -8,7 +8,7 @@ import {BaseVault} from "../../../../src/vaults/BaseVault.sol";
 abstract contract BaseVault_OwnerUnitTest is BaseUnitTest {
     BaseVault internal s_vault;
 
-    function test_BaseVault_owner_Success() external {
+    function test_BaseVault_owner_Success() external view {
         assertEq(s_vault.owner(), address(i_owner));
     }
 }
