@@ -1,3 +1,2 @@
 constructor
-  ├── it should grant CONFIG_OPERATOR_ROLE to configOperator
   └── it should set the vault

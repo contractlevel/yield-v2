@@ -17,9 +17,10 @@ abstract contract BaseWorkflowRouterUnitTest is BaseUnitTest {
     constructor() {
         s_workflowName = _createWorkflowName("workflow-1");
         s_target = new Target();
-        s_workflowRouter = new WorkflowRouter(0, i_owner, address(s_target), i_configOperator);
+        s_workflowRouter = new WorkflowRouter(0, i_owner, address(s_target));
 
         _changePrank(i_owner);
+        s_workflowRouter.grantRole(Roles.CONFIG_OPERATOR_ROLE, i_configOperator);
         s_workflowRouter.grantRole(Roles.PAUSER_ROLE, i_pauser);
         s_workflowRouter.grantRole(Roles.UNPAUSER_ROLE, i_unpauser);
         s_workflowRouter.grantRole(Roles.KEYSTONE_FORWARDER_ROLE, i_keystoneForwarder);

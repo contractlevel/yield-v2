@@ -17,15 +17,22 @@ contract HelperConfig is Script {
     struct NetworkConfig {
         address initialOwner;
         address treasury;
+        address kycProvider;
+        RolesConfig roles;
+        TokensConfig tokens;
+        ProtocolsConfig protocols;
+        CCIPConfig ccip;
+        CREConfig cre;
+    }
+
+    struct RolesConfig {
         address defaultAdmin;
         address pauser;
         address unpauser;
         address configOperator;
         address complianceOperator;
-        address kycProvider;
-        TokensConfig tokens;
-        ProtocolsConfig protocols;
-        CCIPConfig ccip;
+        address emergencyDrainer;
+        address linkOperator;
     }
 
     struct TokensConfig {
@@ -43,6 +50,10 @@ contract HelperConfig is Script {
         address router;
         uint64 thisChainSelector;
         uint64 parentChainSelector;
+    }
+
+    struct CREConfig {
+        address keystoneForwarder;
     }
 
     NetworkConfig public activeNetworkConfig;
@@ -68,19 +79,29 @@ contract HelperConfig is Script {
         TokensConfig memory tokens = _getMockTokensConfig();
         ProtocolsConfig memory protocols = _getMockProtocolsConfig(tokens.usdc);
         CCIPConfig memory ccip = _getMockCcipConfig(tokens.usdc);
+        CREConfig memory cre = _getMockCreConfig();
 
         return NetworkConfig({
             initialOwner: address(1),
             treasury: makeAddr("treasury"),
+            kycProvider: makeAddr("kycProvider"),
+            roles: _getMockRolesConfig(),
+            tokens: tokens,
+            protocols: protocols,
+            ccip: ccip,
+            cre: cre
+        });
+    }
+
+    function _getMockRolesConfig() private returns (RolesConfig memory) {
+        return RolesConfig({
             defaultAdmin: makeAddr("defaultAdmin"),
             pauser: makeAddr("pauser"),
             unpauser: makeAddr("unpauser"),
             configOperator: makeAddr("configOperator"),
             complianceOperator: makeAddr("complianceOperator"),
-            kycProvider: makeAddr("kycProvider"),
-            tokens: tokens,
-            protocols: protocols,
-            ccip: ccip
+            emergencyDrainer: makeAddr("emergencyDrainer"),
+            linkOperator: makeAddr("linkOperator")
         });
     }
 
@@ -104,5 +125,9 @@ contract HelperConfig is Script {
             thisChainSelector: 12345,
             parentChainSelector: 12345
         });
+    }
+
+    function _getMockCreConfig() private returns (CREConfig memory) {
+        return CREConfig({keystoneForwarder: makeAddr("keystoneForwarder")});
     }
 }

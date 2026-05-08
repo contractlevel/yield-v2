@@ -9,6 +9,7 @@ import {AdapterRegistry} from "../../src/modules/AdapterRegistry.sol";
 import {AaveV3Adapter} from "../../src/modules/adapters/AaveV3Adapter.sol";
 import {AaveV4Adapter} from "../../src/modules/adapters/AaveV4Adapter.sol";
 import {WorkflowRouter} from "../../src/modules/WorkflowRouter.sol";
+import {Roles} from "../../src/libraries/Roles.sol";
 
 /// @title DeployChildVault
 /// @author @contractlevel
@@ -32,10 +33,10 @@ contract DeployChildVault is Script {
             link: networkConfig.tokens.link,
             usdc: networkConfig.tokens.usdc,
             ccipRouter: networkConfig.ccip.router,
-            defaultAdmin: networkConfig.defaultAdmin,
-            pauser: networkConfig.pauser,
-            unpauser: networkConfig.unpauser,
-            configOperator: networkConfig.configOperator,
+            defaultAdmin: deployer,
+            pauser: networkConfig.roles.pauser,
+            unpauser: networkConfig.roles.unpauser,
+            configOperator: deployer,
             adapterRegistry: address(adapterRegistry),
             thisChainSelector: networkConfig.ccip.thisChainSelector
         });
@@ -58,9 +59,44 @@ contract DeployChildVault is Script {
         );
         adapterRegistry.setAdapter(aaveV4ProtocolId, address(aaveV4Adapter));
 
-        /// @dev Transfer ownership of the AdapterRegistry to the initial owner
-        /// @notice The initialOwner address needs to accept the ownership transfer!
-        adapterRegistry.transferOwnership(networkConfig.initialOwner);
+        /// @dev Deploy the WorkflowRouter
+        WorkflowRouter workflowRouter = new WorkflowRouter(
+            0, /// @dev Initial delay for the default admin role
+            deployer,
+            address(childVault)
+        );
+        childVault.setWorkflowRouter(address(workflowRouter));
+
+        childVault.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
+        childVault.grantRole(Roles.EPOCH_OPERATOR_ROLE, address(workflowRouter));
+        childVault.grantRole(Roles.REBALANCE_OPERATOR_ROLE, address(workflowRouter));
+        childVault.grantRole(Roles.RECOVERY_OPERATOR_ROLE, address(workflowRouter));
+        childVault.grantRole(Roles.EMERGENCY_DRAINER_ROLE, networkConfig.roles.emergencyDrainer);
+        childVault.grantRole(Roles.LINK_OPERATOR_ROLE, networkConfig.roles.linkOperator);
+
+        workflowRouter.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
+        workflowRouter.grantRole(Roles.PAUSER_ROLE, networkConfig.roles.pauser);
+        workflowRouter.grantRole(Roles.UNPAUSER_ROLE, networkConfig.roles.unpauser);
+        workflowRouter.grantRole(Roles.KEYSTONE_FORWARDER_ROLE, networkConfig.cre.keystoneForwarder);
+
+        childVault.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
+        workflowRouter.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
+
+        /// @dev The deployer remains default admin until the configured default admin accepts this transfer.
+        ///      networkConfig.roles.defaultAdmin should call acceptDefaultAdminTransfer() ASAP.
+        if (deployer != networkConfig.roles.defaultAdmin) {
+            childVault.beginDefaultAdminTransfer(networkConfig.roles.defaultAdmin);
+        }
+
+        /// @dev The deployer remains default admin until the configured default admin accepts this transfer.
+        ///      networkConfig.roles.defaultAdmin should call acceptDefaultAdminTransfer() ASAP.
+        if (deployer != networkConfig.roles.defaultAdmin) {
+            workflowRouter.beginDefaultAdminTransfer(networkConfig.roles.defaultAdmin);
+        }
+
+        /// @dev Transfer ownership of the AdapterRegistry to the config operator.
+        /// @notice The configOperator address needs to accept the ownership transfer.
+        adapterRegistry.transferOwnership(networkConfig.roles.configOperator);
 
         vm.stopBroadcast();
     }

@@ -34,8 +34,9 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /*//////////////////////////////////////////////////////////////
                                CONSTANTS
     //////////////////////////////////////////////////////////////*/
-    /// @dev Constant for the initial default admin role transfer delay
-    uint48 internal constant INITIAL_DEFAULT_ADMIN_ROLE_TRANSFER_DELAY = 259200 seconds; // 3 days
+    /// @dev Initial default admin role transfer delay. Deploy scripts use the deployer as a temporary admin
+    ///      and immediately begin handoff to the configured default admin.
+    uint48 internal constant INITIAL_DEFAULT_ADMIN_ROLE_TRANSFER_DELAY = 0;
 
     /// @dev Delay for emergency draining
     uint256 internal constant EMERGENCY_DRAIN_DELAY = 1 days;
