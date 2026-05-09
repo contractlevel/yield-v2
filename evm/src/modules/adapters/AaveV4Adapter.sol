@@ -62,23 +62,23 @@ contract AaveV4Adapter is ProtocolAdapter {
     /// @dev Transfers the actual withdrawn amount to the Yieldcoin v2 Vault
     /// @dev Precondition: caller must be the Yieldcoin v2 Vault
     /// @notice We handle 2 withdraw scenarios:
-    /// 1. Rebalance Withdraw - when the amount is type(uint256).max
-    /// 2. User Withdraw - when the amount is a specific amount
+    /// 1. Epoch Withdraw - when the amount is a specific amount
+    /// 2. Rebalance Withdraw - when the amount is type(uint256).max
     function withdraw(uint256 amount) external nonReentrant onlyVault returns (uint256 actualWithdrawnAmount) {
-        /// @dev Scenario 1: Rebalance Withdraw - when the amount is type(uint256).max
-        if (amount == type(uint256).max) {
+        /// @dev Scenario 1: Epoch Withdraw - when the amount is a specific amount
+        if (amount != type(uint256).max) {
+            (, actualWithdrawnAmount) = IAaveV4Spoke(i_spoke).withdraw(i_reserveId, amount, address(this));
+            /// @dev Precondition: the actual withdrawn amount must not be less than the requested amount
+            if (actualWithdrawnAmount < amount) revert AaveV4Adapter__IncorrectWithdrawAmount();
+        }
+        /// @dev Scenario 2: Rebalance Withdraw - when the amount is type(uint256).max
+        else {
             uint256 tvl = _getTVL();
 
             (, actualWithdrawnAmount) = IAaveV4Spoke(i_spoke).withdraw(i_reserveId, amount, address(this));
 
             /// @dev Precondition: the actual withdrawn amount must not be less than the TVL
             if (actualWithdrawnAmount < tvl) revert AaveV4Adapter__IncorrectWithdrawAmount();
-        }
-        /// @dev Scenario 2: User Withdraw - when the amount is a specific amount
-        else {
-            (, actualWithdrawnAmount) = IAaveV4Spoke(i_spoke).withdraw(i_reserveId, amount, address(this));
-            /// @dev Precondition: the actual withdrawn amount must not be less than the requested amount
-            if (actualWithdrawnAmount < amount) revert AaveV4Adapter__IncorrectWithdrawAmount();
         }
         emit Withdraw(actualWithdrawnAmount);
         IERC20(i_usdc).safeTransfer(i_vault, actualWithdrawnAmount);

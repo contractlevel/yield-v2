@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 import {BaseTest, Vm} from "../BaseTest.t.sol";
 import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
 
-import {Yieldcoin} from "../../src/token/Yieldcoin.sol";
+import {YieldcoinShare} from "../../src/token/YieldcoinShare.sol";
 import {BaseVault} from "../../src/vaults/BaseVault.sol";
 import {ParentVault} from "../../src/vaults/ParentVault.sol";
 import {ChildVault} from "../../src/vaults/ChildVault.sol";
@@ -20,6 +20,7 @@ import {Roles} from "../../src/libraries/Roles.sol";
 import {Types} from "../../src/libraries/Types.sol";
 
 import {Client} from "@chainlink/contracts-ccip/interfaces/IRouterClient.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 abstract contract BaseUnitTest is BaseTest {
     using stdStorage for StdStorage;
@@ -30,7 +31,7 @@ abstract contract BaseUnitTest is BaseTest {
     MockUSDC internal s_mockUsdc;
     MockCCIPRouter internal s_mockCcipRouter;
 
-    Yieldcoin internal s_yieldcoin;
+    YieldcoinShare internal s_yieldcoin;
     ParentVault internal s_parentVault;
     ChildVault internal s_childVault;
     AdapterRegistry internal s_adapterRegistry;
@@ -43,7 +44,11 @@ abstract contract BaseUnitTest is BaseTest {
         s_mockUsdc = new MockUSDC();
         s_mockCcipRouter = new MockCCIPRouter(address(s_mockUsdc));
 
-        s_yieldcoin = new Yieldcoin();
+        YieldcoinShare yieldcoinImpl = new YieldcoinShare();
+        ERC1967Proxy yieldcoinProxy = new ERC1967Proxy(
+            address(yieldcoinImpl), abi.encodeWithSelector(YieldcoinShare.initialize.selector, address(s_mockPolicyEngine))
+        );
+        s_yieldcoin = YieldcoinShare(address(yieldcoinProxy));
         s_adapterRegistry = new AdapterRegistry(address(i_owner));
         BaseVault.ConstructorParams memory params = _baseVaultParams(PARENT_CHAIN_SELECTOR);
 
@@ -62,9 +67,6 @@ abstract contract BaseUnitTest is BaseTest {
         s_childVault.grantRole(Roles.EPOCH_OPERATOR_ROLE, i_epochOperator);
         s_parentVault.grantRole(Roles.REBALANCE_OPERATOR_ROLE, i_rebalanceOperator);
         s_childVault.grantRole(Roles.REBALANCE_OPERATOR_ROLE, i_rebalanceOperator);
-
-        s_yieldcoin.grantMintRole(address(s_parentVault));
-        s_yieldcoin.grantBurnRole(address(s_parentVault));
 
         vm.label(address(s_parentVault), "ParentVault");
         vm.label(address(s_childVault), "ChildVault");
@@ -156,7 +158,7 @@ abstract contract BaseUnitTest is BaseTest {
     }
 
     function _submitParentWithdraw(uint256 shareAmount) internal {
-        deal(address(s_yieldcoin), i_withdrawer, shareAmount);
+        s_yieldcoin.mint(i_withdrawer, shareAmount);
         _changePrank(i_withdrawer);
         s_yieldcoin.approve(address(s_parentVault), shareAmount);
         s_parentVault.withdraw(shareAmount);
