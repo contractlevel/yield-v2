@@ -86,20 +86,20 @@ It is the source of truth for how authority should be named, assigned, implement
 
 ### YieldcoinShare
 
-| Function or authority                      | Control                                                                       |
-| ------------------------------------------ | ----------------------------------------------------------------------------- |
-| ACE RBAC administration                    | `PolicyEngine` is RBAC `owner()` and holds RBAC `DEFAULT_ADMIN_ROLE`          |
-| `mint` / `burn`                            | ACE RBAC: `ParentVault` holds `MINTER_ROLE` / `BURNER_ROLE`                   |
-| `pause`                                    | ACE RBAC: `PAUSER_ROLE`, optionally also `COMPLIANCE_OPERATOR_ROLE`           |
-| `unpause`                                  | ACE RBAC: `UNPAUSER_ROLE`, optionally also `COMPLIANCE_OPERATOR_ROLE`         |
-| `forcedTransfer` and batch forced transfer | ACE RBAC: `COMPLIANCE_OPERATOR_ROLE`                                          |
-| Freeze/unfreeze functions                  | ACE RBAC: `COMPLIANCE_OPERATOR_ROLE`                                          |
-| Transfers and approvals                    | ACE policy stack for KYC/compliance as needed                                 |
-| Metadata setters                           | ACE RBAC: `CONFIG_OPERATOR_ROLE`                                              |
-| `attachPolicyEngine`                       | Local `POLICY_ENGINE_MANAGER_ROLE`; do not rely on token `owner()`            |
-| `setCCIPAdmin()`                           | ACE RBAC: `CONFIG_OPERATOR_ROLE`                                              |
-| `getCCIPAdmin()`                           | Return stored CCIP admin, e.g. `s_ccipAdmin` or namespaced storage equivalent |
-| `owner()`                                  | Keep only if required by inherited mechanics; do not treat as token admin     |
+| Function or authority                      | Control                                                                                       |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| ACE RBAC administration                    | `PolicyEngine.POLICY_CONFIG_ADMIN_ROLE` is RBAC `owner()` and holds RBAC `DEFAULT_ADMIN_ROLE` |
+| `mint` / `burn`                            | ACE RBAC: `ParentVault` holds `MINTER_ROLE` / `BURNER_ROLE`                                   |
+| `pause`                                    | ACE RBAC: `PAUSER_ROLE`, optionally also `COMPLIANCE_OPERATOR_ROLE`                           |
+| `unpause`                                  | ACE RBAC: `UNPAUSER_ROLE`, optionally also `COMPLIANCE_OPERATOR_ROLE`                         |
+| `forcedTransfer` and batch forced transfer | ACE RBAC: `COMPLIANCE_OPERATOR_ROLE`                                                          |
+| Freeze/unfreeze functions                  | ACE RBAC: `COMPLIANCE_OPERATOR_ROLE`                                                          |
+| Transfers and approvals                    | ACE policy stack for KYC/compliance as needed                                                 |
+| Metadata setters                           | ACE RBAC: `CONFIG_OPERATOR_ROLE`                                                              |
+| `attachPolicyEngine`                       | Local `POLICY_ENGINE_MANAGER_ROLE`; do not rely on token `owner()`                            |
+| `setCCIPAdmin()`                           | ACE RBAC: `CONFIG_OPERATOR_ROLE`                                                              |
+| `getCCIPAdmin()`                           | Return stored CCIP admin, e.g. `s_ccipAdmin` or namespaced storage equivalent                 |
+| `owner()`                                  | Keep only if required by inherited mechanics; do not treat as token admin                     |
 
 ## Chainlink ACE Model
 
