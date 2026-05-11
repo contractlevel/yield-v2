@@ -50,10 +50,13 @@ abstract contract BaseUnitTest is BaseTest {
             abi.encodeWithSelector(YieldcoinShare.initialize.selector, address(s_mockPolicyEngine), i_configOperator)
         );
         s_yieldcoin = YieldcoinShare(address(yieldcoinProxy));
-        s_adapterRegistry = new AdapterRegistry(address(i_owner));
+        s_adapterRegistry = new AdapterRegistry(0, address(i_owner));
         BaseVault.ConstructorParams memory params = _baseVaultParams(PARENT_CHAIN_SELECTOR);
 
+        s_adapterRegistry.grantRole(Roles.CONFIG_OPERATOR_ROLE, i_configOperator);
+        _changePrank(i_configOperator);
         s_adapterRegistry.setAdapter(AAVE_V3_PROTOCOL_ID, address(s_mockProtocolAdapter));
+        _changePrank(i_owner);
         s_parentVault = new ParentVault(
             params, i_treasury, address(s_yieldcoin), i_complianceOperator, address(s_mockPolicyEngine)
         );
@@ -86,7 +89,7 @@ abstract contract BaseUnitTest is BaseTest {
     }
 
     function _registerAdapter(bytes32 protocolId, address adapter) internal {
-        _changePrank(i_owner);
+        _changePrank(i_configOperator);
         s_adapterRegistry.setAdapter(protocolId, adapter);
     }
 

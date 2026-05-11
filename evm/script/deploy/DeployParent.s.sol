@@ -56,7 +56,8 @@
 // ///      WorkflowRouter.PAUSER_ROLE: networkConfig.roles.pauser
 // ///      WorkflowRouter.UNPAUSER_ROLE: networkConfig.roles.unpauser
 // ///      WorkflowRouter.KEYSTONE_FORWARDER_ROLE: networkConfig.cre.keystoneForwarder
-// ///      AdapterRegistry.owner: networkConfig.roles.configOperator
+// ///      AdapterRegistry.DEFAULT_ADMIN_ROLE: deployer/msg.sender, pending transfer to networkConfig.roles.defaultAdmin
+// ///      AdapterRegistry.CONFIG_OPERATOR_ROLE: networkConfig.roles.configOperator
 // ///      YieldcoinShare CCIP admin: networkConfig.roles.configOperator
 // ///      YieldcoinShare CONFIG_OPERATOR_ROLE: networkConfig.roles.configOperator through ACE RBAC
 // ///      YieldcoinShare POLICY_ENGINE_MANAGER_ROLE: networkConfig.roles.policyEngineManager through ACE RBAC
@@ -94,7 +95,11 @@
 
 //         (deploy.policyEngine, deploy.identityRegistry, deploy.credentialRegistry) = _deployACEComponents(deployer);
 
-//         deploy.adapterRegistry = new AdapterRegistry(deployer);
+//         deploy.adapterRegistry = new AdapterRegistry(
+//             0, /// @dev Initial delay for the default admin role
+//             deployer
+//         );
+//         deploy.adapterRegistry.grantRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
 
 //         /// @dev Deploy the YieldcoinShare
 //         YieldcoinShare yieldcoinImpl = new YieldcoinShare();
@@ -178,6 +183,7 @@
 //         );
 
 //         deploy.parentVault.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
+//         deploy.adapterRegistry.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
 //         deploy.parentVault.grantRole(Roles.EPOCH_OPERATOR_ROLE, address(deploy.workflowRouter));
 //         deploy.parentVault.grantRole(Roles.REBALANCE_OPERATOR_ROLE, address(deploy.workflowRouter));
 //         deploy.parentVault.grantRole(Roles.EMERGENCY_DRAINER_ROLE, networkConfig.roles.emergencyDrainer);
@@ -189,6 +195,7 @@
 //         deploy.workflowRouter.grantRole(Roles.KEYSTONE_FORWARDER_ROLE, networkConfig.cre.keystoneForwarder);
 
 //         deploy.parentVault.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
+//         deploy.adapterRegistry.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
 //         deploy.workflowRouter.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
 
 //         /// @dev The deployer remains default admin until the configured default admin accepts this transfer.
@@ -203,9 +210,11 @@
 //             deploy.workflowRouter.beginDefaultAdminTransfer(networkConfig.roles.defaultAdmin);
 //         }
 
-//         /// @dev Transfer ownership of the AdapterRegistry to the config operator.
-//         /// @notice The configOperator address needs to accept the ownership transfer.
-//         deploy.adapterRegistry.transferOwnership(networkConfig.roles.configOperator);
+//         /// @dev The deployer remains default admin until the configured default admin accepts this transfer.
+//         ///      networkConfig.roles.defaultAdmin should call acceptDefaultAdminTransfer() ASAP.
+//         if (deployer != networkConfig.roles.defaultAdmin) {
+//             deploy.adapterRegistry.beginDefaultAdminTransfer(networkConfig.roles.defaultAdmin);
+//         }
 //         _handoffACERoles(
 //             deploy.policyEngine,
 //             deploy.identityRegistry,

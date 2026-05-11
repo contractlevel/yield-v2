@@ -1,6 +1,6 @@
 setAdapter
-  ├── when the caller is not the owner
+  ├── when the caller does not have the CONFIG_OPERATOR_ROLE
   │   └── it should revert
-  └── when the caller is the owner
+  └── when the caller has the CONFIG_OPERATOR_ROLE
       ├── it should set the adapter
       └── it should emit an AdapterSet event

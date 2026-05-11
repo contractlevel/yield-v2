@@ -34,7 +34,11 @@ contract DeployChild is Script {
         address deployer = msg.sender;
 
         /// @dev Deploy the AdapterRegistry
-        AdapterRegistry adapterRegistry = new AdapterRegistry(deployer);
+        AdapterRegistry adapterRegistry = new AdapterRegistry(
+            0, /// @dev Initial delay for the default admin role
+            deployer
+        );
+        adapterRegistry.grantRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
 
         /// @dev Deploy the ChildVault
         BaseVault.ConstructorParams memory baseVaultParams = BaseVault.ConstructorParams({
@@ -76,6 +80,7 @@ contract DeployChild is Script {
         childVault.setWorkflowRouter(address(workflowRouter));
 
         childVault.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
+        adapterRegistry.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
         childVault.grantRole(Roles.EPOCH_OPERATOR_ROLE, address(workflowRouter));
         childVault.grantRole(Roles.REBALANCE_OPERATOR_ROLE, address(workflowRouter));
         childVault.grantRole(Roles.EMERGENCY_DRAINER_ROLE, networkConfig.roles.emergencyDrainer);
@@ -87,6 +92,7 @@ contract DeployChild is Script {
         workflowRouter.grantRole(Roles.KEYSTONE_FORWARDER_ROLE, networkConfig.cre.keystoneForwarder);
 
         childVault.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
+        adapterRegistry.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
         workflowRouter.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
 
         /// @dev The deployer remains default admin until the configured default admin accepts this transfer.
@@ -101,9 +107,11 @@ contract DeployChild is Script {
             workflowRouter.beginDefaultAdminTransfer(networkConfig.roles.defaultAdmin);
         }
 
-        /// @dev Transfer ownership of the AdapterRegistry to the config operator.
-        /// @notice The configOperator address needs to accept the ownership transfer.
-        adapterRegistry.transferOwnership(networkConfig.roles.configOperator);
+        /// @dev The deployer remains default admin until the configured default admin accepts this transfer.
+        ///      networkConfig.roles.defaultAdmin should call acceptDefaultAdminTransfer() ASAP.
+        if (deployer != networkConfig.roles.defaultAdmin) {
+            adapterRegistry.beginDefaultAdminTransfer(networkConfig.roles.defaultAdmin);
+        }
 
         vm.stopBroadcast();
     }

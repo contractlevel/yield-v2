@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {AccessControlDefaultAdminRules} from "@openzeppelin/contracts/access/extensions/AccessControlDefaultAdminRules.sol";
 
 import {IAdapterRegistry} from "../interfaces/IAdapterRegistry.sol";
+import {Roles} from "../libraries/Roles.sol";
 
 /// @title Yieldcoin v2 Adapter Registry
 /// @author @contractlevel
 /// @notice Registry for protocol adapters. This should be deployed on every chain.
-contract AdapterRegistry is IAdapterRegistry, Ownable2Step {
+contract AdapterRegistry is IAdapterRegistry, AccessControlDefaultAdminRules {
     /*//////////////////////////////////////////////////////////////
                                  STATE
     //////////////////////////////////////////////////////////////*/
@@ -23,9 +24,10 @@ contract AdapterRegistry is IAdapterRegistry, Ownable2Step {
     // deploy Vault, passing AdapterRegistry address - if Parent Vault, pass initialActiveProtocolId too
     // deploy ProtocolAdapters
     // point ProtocolAdapters to AdapterRegistry
-    /// @param initialOwner The address of the initial owner
+    /// @param initialDelay The initial delay for the default admin role
+    /// @param initialOwner The address of the initial default admin
     //slither-disable-next-line missing-zero-check
-    constructor(address initialOwner) Ownable(initialOwner) {}
+    constructor(uint48 initialDelay, address initialOwner) AccessControlDefaultAdminRules(initialDelay, initialOwner) {}
 
     /*//////////////////////////////////////////////////////////////
                                  SETTER
@@ -33,9 +35,9 @@ contract AdapterRegistry is IAdapterRegistry, Ownable2Step {
     /// @notice Sets an adapter for a given protocol ID
     /// @param protocolId The ID of the protocol - keccak256("aave-v3") for Aave v3, keccak256("compound-v3") for Compound v3, etc.
     /// @param adapter The address of the adapter
-    /// @dev Precondition: Caller must be the owner
+    /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
     //slither-disable-next-line missing-zero-check
-    function setAdapter(bytes32 protocolId, address adapter) external onlyOwner {
+    function setAdapter(bytes32 protocolId, address adapter) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
         s_adapters[protocolId] = adapter;
         emit AdapterSet(protocolId, adapter);
     }
