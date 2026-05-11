@@ -26,6 +26,8 @@ library Roles {
     bytes32 internal constant EMERGENCY_DRAINER_ROLE = keccak256("EMERGENCY_DRAINER_ROLE");
     /// @notice ChainlinkCRE Keystone Forwarder calls WorkflowRouter::onReport
     bytes32 internal constant KEYSTONE_FORWARDER_ROLE = keccak256("KEYSTONE_FORWARDER_ROLE");
+    /// @notice Policy engine manager role for replacing attached policy engines
+    bytes32 internal constant POLICY_ENGINE_MANAGER_ROLE = keccak256("POLICY_ENGINE_MANAGER_ROLE");
     /// @notice Epoch operator role for managing epochs in the Yieldcoin v2 protocol
     bytes32 internal constant EPOCH_OPERATOR_ROLE = keccak256("EPOCH_OPERATOR_ROLE");
     bytes32 internal constant MINTER_ROLE = keccak256("MINTER_ROLE");

@@ -1,0 +1,6 @@
+YieldcoinShare_initialize
+  └── when initialization succeeds
+      ├── it should set the token metadata
+      ├── it should set the policy engine
+      ├── it should set the CCIP admin
+      └── it should emit a CCIPAdminTransferred event

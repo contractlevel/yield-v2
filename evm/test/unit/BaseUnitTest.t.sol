@@ -46,7 +46,8 @@ abstract contract BaseUnitTest is BaseTest {
 
         YieldcoinShare yieldcoinImpl = new YieldcoinShare();
         ERC1967Proxy yieldcoinProxy = new ERC1967Proxy(
-            address(yieldcoinImpl), abi.encodeWithSelector(YieldcoinShare.initialize.selector, address(s_mockPolicyEngine))
+            address(yieldcoinImpl),
+            abi.encodeWithSelector(YieldcoinShare.initialize.selector, address(s_mockPolicyEngine), i_configOperator)
         );
         s_yieldcoin = YieldcoinShare(address(yieldcoinProxy));
         s_adapterRegistry = new AdapterRegistry(address(i_owner));

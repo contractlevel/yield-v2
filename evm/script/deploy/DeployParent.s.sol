@@ -28,31 +28,84 @@
 // import {SenderExtractor} from "../../src/modules/extractors/SenderExtractor.sol";
 // import {TerminalAllowPolicy} from "../../src/modules/policies/TerminalAllowPolicy.sol";
 
-// /// @title DeployParentVault
+// /// @title DeployParentVault Script
 // /// @author @contractlevel
 // /// @notice Script to deploy the ParentVault and its modules
-// contract DeployParentVault is Script {
+// /// @notice This script's correctness is critical to the security of the Yieldcoin v2 system.
+// /// @dev This script deploys and sets Chainlink ACE components for the ParentVault and the YieldcoinShare token.
+// /// @dev The YieldcoinShare is a ComplianceTokenERC3643, so access control must be run as a policy.
+// /// @dev All user-facing functions for ParentVault and YieldcoinShare require the user to have completed KYC with a registered provider.
+// ///      This includes:
+// ///      ParentVault: deposit, withdraw, claimShares, claimUsdc, cancelDeposit, and cancelWithdraw functions.
+// ///      YieldcoinShare: transfer, transferFrom, approve, and approveAll functions. Transfer recipients must have completed KYC with a registered provider.
+// /// @dev YieldcoinShare mint and burn functions are protected by a RoleBasedAccessControlPolicy.
+// ///      The RoleBasedAccessControlPolicy is configured to grant the MINTER_ROLE and BURNER_ROLE to the ParentVault contract.
+// ///      RoleBasedAccessControlPolicy (as opposed to OZ's AccessControlDefaultAdminRules) is used for YieldcoinShare mint and burn because these functions could not be overridden as a ComplianceTokenERC3643.
+// /// @dev This script assigns roles to contracts/actors in the Yieldcoin v2 system. By the end of this script, roles should be as follows:
+// ///      ParentVault.DEFAULT_ADMIN_ROLE: deployer/msg.sender, pending transfer to networkConfig.roles.defaultAdmin
+// ///      ParentVault.CONFIG_OPERATOR_ROLE: networkConfig.roles.configOperator
+// ///      ParentVault.EPOCH_OPERATOR_ROLE: address(workflowRouter)
+// ///      ParentVault.REBALANCE_OPERATOR_ROLE: address(workflowRouter)
+// ///      ParentVault.RECOVERY_OPERATOR_ROLE: address(workflowRouter)
+// ///      ParentVault.EMERGENCY_DRAINER_ROLE: networkConfig.roles.emergencyDrainer
+// ///      ParentVault.LINK_OPERATOR_ROLE: networkConfig.roles.linkOperator
+// ///      ParentVault.COMPLIANCE_OPERATOR_ROLE: networkConfig.roles.complianceOperator
+// ///      ParentVault.PAUSER_ROLE: networkConfig.roles.pauser
+// ///      ParentVault.UNPAUSER_ROLE: networkConfig.roles.unpauser
+// ///      WorkflowRouter.DEFAULT_ADMIN_ROLE: deployer/msg.sender, pending transfer to networkConfig.roles.defaultAdmin
+// ///      WorkflowRouter.CONFIG_OPERATOR_ROLE: networkConfig.roles.configOperator
+// ///      WorkflowRouter.PAUSER_ROLE: networkConfig.roles.pauser
+// ///      WorkflowRouter.UNPAUSER_ROLE: networkConfig.roles.unpauser
+// ///      WorkflowRouter.KEYSTONE_FORWARDER_ROLE: networkConfig.cre.keystoneForwarder
+// ///      AdapterRegistry.owner: networkConfig.roles.configOperator
+// ///      YieldcoinShare CCIP admin: networkConfig.roles.configOperator
+// ///      YieldcoinShare CONFIG_OPERATOR_ROLE: networkConfig.roles.configOperator through ACE RBAC
+// ///      YieldcoinShare POLICY_ENGINE_MANAGER_ROLE: networkConfig.roles.policyEngineManager through ACE RBAC
+// ///      PolicyEngine.DEFAULT_ADMIN_ROLE: deployer/msg.sender, pending transfer to networkConfig.roles.defaultAdmin
+// ///      PolicyEngine.ADMIN_ROLE: networkConfig.roles.complianceOperator // @review should this be configOperator?
+// ///      PolicyEngine.POLICY_CONFIG_ADMIN_ROLE: networkConfig.roles.complianceOperator
+// /// @notice After running this script, networkConfig.roles.defaultAdmin must call acceptDefaultAdminTransfer() and changeDefaultAdminDelay() on ParentVault, WorkflowRouter, and PolicyEngine ASAP.
+// contract DeployParent is Script {
+//     struct ParentDeploy {
+//         AdapterRegistry adapterRegistry;
+//         YieldcoinShare yieldcoinImpl;
+//         YieldcoinShare yieldcoinProxy;
+//         ParentVault parentVault;
+//         AaveV3Adapter aaveV3Adapter;
+//         AaveV4Adapter aaveV4Adapter;
+//         WorkflowRouter workflowRouter;
+//         PolicyEngine policyEngine;
+//         IdentityRegistry identityRegistry;
+//         CredentialRegistry credentialRegistry;
+//         CredentialRegistryIdentityValidatorPolicy kycPolicy;
+//         RoleBasedAccessControlPolicy shareSupplyPolicy;
+//         OnlyAuthorizedSenderPolicy providerPolicy;
+//         TerminalAllowPolicy terminalAllow;
+//     }
+
 //     /*//////////////////////////////////////////////////////////////
 //                                   RUN
 //     //////////////////////////////////////////////////////////////*/
-//     function run() external {
+//     function run() external returns (ParentDeploy memory deploy) {
 //         HelperConfig helperConfig = new HelperConfig();
 
 //         vm.startBroadcast();
 //         HelperConfig.NetworkConfig memory networkConfig = helperConfig.getActiveNetworkConfig();
 //         address deployer = msg.sender;
 
-//         (PolicyEngine policyEngine, IdentityRegistry identityRegistry, CredentialRegistry credentialRegistry) =
-//             _deployACEComponents(deployer);
+//         (deploy.policyEngine, deploy.identityRegistry, deploy.credentialRegistry) = _deployACEComponents(deployer);
 
-//         AdapterRegistry adapterRegistry = new AdapterRegistry(deployer);
+//         deploy.adapterRegistry = new AdapterRegistry(deployer);
 
 //         /// @dev Deploy the YieldcoinShare
 //         YieldcoinShare yieldcoinImpl = new YieldcoinShare();
 //         ERC1967Proxy yieldcoinProxy = new ERC1967Proxy(
-//             address(yieldcoinImpl), abi.encodeWithSelector(YieldcoinShare.initialize.selector, address(policyEngine))
+//             address(yieldcoinImpl),
+//             abi.encodeWithSelector(
+//                 YieldcoinShare.initialize.selector, address(policyEngine), networkConfig.roles.configOperator
+//             )
 //         );
-//         YieldcoinShare yieldcoin = YieldcoinShare(address(yieldcoinProxy));
+//         deploy.yieldcoin = YieldcoinShare(address(yieldcoinProxy));
 
 //         /// @dev Deploy the ParentVault
 //         BaseVault.ConstructorParams memory baseVaultParams = BaseVault.ConstructorParams({
@@ -66,7 +119,7 @@
 //             adapterRegistry: address(adapterRegistry),
 //             thisChainSelector: networkConfig.ccip.parentChainSelector
 //         });
-//         ParentVault parentVault = new ParentVault(
+//         deploy.parentVault = new ParentVault(
 //             baseVaultParams,
 //             networkConfig.treasury,
 //             address(yieldcoin),
@@ -75,73 +128,90 @@
 //         );
 //         /// @dev Deploy the Aave v3 Adapter
 //         bytes32 aaveV3ProtocolId = keccak256("aave-v3");
-//         AaveV3Adapter aaveV3Adapter = new AaveV3Adapter(
+//         deploy.aaveV3Adapter = new AaveV3Adapter(
 //             address(parentVault), networkConfig.tokens.usdc, networkConfig.protocols.aaveV3PoolAddressesProvider
 //         );
 //         adapterRegistry.setAdapter(aaveV3ProtocolId, address(aaveV3Adapter));
 //         /// @dev Deploy the Aave v4 Adapter
 //         bytes32 aaveV4ProtocolId = keccak256("aave-v4");
-//         AaveV4Adapter aaveV4Adapter = new AaveV4Adapter(
+//         deploy.aaveV4Adapter = new AaveV4Adapter(
 //             address(parentVault),
 //             networkConfig.tokens.usdc,
 //             networkConfig.protocols.aaveV4Spoke,
 //             networkConfig.protocols.aaveV4ReserveId
 //         );
-//         adapterRegistry.setAdapter(aaveV4ProtocolId, address(aaveV4Adapter));
-//         parentVault.setInitialActiveProtocolAdapter(aaveV3ProtocolId);
+//         deploy.adapterRegistry.setAdapter(aaveV4ProtocolId, address(aaveV4Adapter));
+//         deploy.parentVault.setInitialActiveProtocolAdapter(aaveV3ProtocolId);
 
 //         /// @dev Deploy the WorkflowRouter
-//         WorkflowRouter workflowRouter = new WorkflowRouter(
+//         deploy.workflowRouter = new WorkflowRouter(
 //             0, /// @dev Initial delay for the default admin role
 //             deployer,
 //             address(parentVault)
 //         );
-//         parentVault.setWorkflowRouter(address(workflowRouter));
+//         deploy.parentVault.setWorkflowRouter(address(deploy.workflowRouter));
 
-//         TerminalAllowPolicy terminalAllow = _deployTerminalAllowPolicy(policyEngine);
+//         deploy.terminalAllow = _deployTerminalAllowPolicy(deploy.policyEngine);
 
-//         _configureVaultKycPolicies(policyEngine, identityRegistry, credentialRegistry, parentVault, terminalAllow);
+//         _configureVaultKycPolicies(
+//             deploy.policyEngine,
+//             deploy.identityRegistry,
+//             deploy.credentialRegistry,
+//             deploy.parentVault,
+//             deploy.terminalAllow
+//         );
 //         _configureRegistryProviderPolicies(
-//             policyEngine, identityRegistry, credentialRegistry, terminalAllow, networkConfig.kycProvider
+//             deploy.policyEngine,
+//             deploy.identityRegistry,
+//             deploy.credentialRegistry,
+//             deploy.terminalAllow,
+//             networkConfig.kycProvider
 //         );
 
 //         // @review we want to restrict all user functions in the YieldcoinShare to users who have completed KYC
-//         _configureShareSupplyPolicies(policyEngine, yieldcoin, parentVault, deployer, networkConfig.roles.defaultAdmin);
+//         _configureSharePolicies(
+//             deploy.policyEngine,
+//             deploy.yieldcoin,
+//             deploy.parentVault,
+//             deploy.terminalAllow,
+//             networkConfig.roles.configOperator,
+//             networkConfig.roles.policyEngineManager
+//         );
 
-//         parentVault.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
-//         parentVault.grantRole(Roles.EPOCH_OPERATOR_ROLE, address(workflowRouter));
-//         parentVault.grantRole(Roles.REBALANCE_OPERATOR_ROLE, address(workflowRouter));
-//         parentVault.grantRole(Roles.RECOVERY_OPERATOR_ROLE, address(workflowRouter));
-//         parentVault.grantRole(Roles.EMERGENCY_DRAINER_ROLE, networkConfig.roles.emergencyDrainer);
-//         parentVault.grantRole(Roles.LINK_OPERATOR_ROLE, networkConfig.roles.linkOperator);
+//         deploy.parentVault.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
+//         deploy.parentVault.grantRole(Roles.EPOCH_OPERATOR_ROLE, address(deploy.workflowRouter));
+//         deploy.parentVault.grantRole(Roles.REBALANCE_OPERATOR_ROLE, address(deploy.workflowRouter));
+//         deploy.parentVault.grantRole(Roles.RECOVERY_OPERATOR_ROLE, address(deploy.workflowRouter));
+//         deploy.parentVault.grantRole(Roles.EMERGENCY_DRAINER_ROLE, networkConfig.roles.emergencyDrainer);
+//         deploy.parentVault.grantRole(Roles.LINK_OPERATOR_ROLE, networkConfig.roles.linkOperator);
 
-//         workflowRouter.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
-//         workflowRouter.grantRole(Roles.PAUSER_ROLE, networkConfig.roles.pauser);
-//         workflowRouter.grantRole(Roles.UNPAUSER_ROLE, networkConfig.roles.unpauser);
-//         workflowRouter.grantRole(Roles.KEYSTONE_FORWARDER_ROLE, networkConfig.cre.keystoneForwarder);
+//         deploy.workflowRouter.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
+//         deploy.workflowRouter.grantRole(Roles.PAUSER_ROLE, networkConfig.roles.pauser);
+//         deploy.workflowRouter.grantRole(Roles.UNPAUSER_ROLE, networkConfig.roles.unpauser);
+//         deploy.workflowRouter.grantRole(Roles.KEYSTONE_FORWARDER_ROLE, networkConfig.cre.keystoneForwarder);
 
-//         parentVault.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
-//         workflowRouter.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
+//         deploy.parentVault.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
+//         deploy.workflowRouter.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
 
 //         /// @dev The deployer remains default admin until the configured default admin accepts this transfer.
 //         ///      networkConfig.roles.defaultAdmin should call acceptDefaultAdminTransfer() ASAP.
 //         if (deployer != networkConfig.roles.defaultAdmin) {
-//             parentVault.beginDefaultAdminTransfer(networkConfig.roles.defaultAdmin);
+//             deploy.parentVault.beginDefaultAdminTransfer(networkConfig.roles.defaultAdmin);
 //         }
 
 //         /// @dev The deployer remains default admin until the configured default admin accepts this transfer.
 //         ///      networkConfig.roles.defaultAdmin should call acceptDefaultAdminTransfer() ASAP.
 //         if (deployer != networkConfig.roles.defaultAdmin) {
-//             workflowRouter.beginDefaultAdminTransfer(networkConfig.roles.defaultAdmin);
+//             deploy.workflowRouter.beginDefaultAdminTransfer(networkConfig.roles.defaultAdmin);
 //         }
 
 //         /// @dev Transfer ownership of the AdapterRegistry to the config operator.
 //         /// @notice The configOperator address needs to accept the ownership transfer.
-//         adapterRegistry.transferOwnership(networkConfig.roles.configOperator);
+//         deploy.adapterRegistry.transferOwnership(networkConfig.roles.configOperator);
 //         _handoffACERoles(
-//             policyEngine,
-//             identityRegistry,
-//             credentialRegistry,
+//             deploy.policyEngine,
+//             deploy.identityRegistry,
+//             deploy.credentialRegistry,
 //             deployer,
 //             networkConfig.roles.defaultAdmin,
 //             networkConfig.roles.complianceOperator
@@ -259,37 +329,118 @@
 //         }
 //     }
 
-//     function _configureShareSupplyPolicies(
+//     function _configureSharePolicies(
 //         PolicyEngine policyEngine,
 //         YieldcoinShare yieldcoin,
 //         ParentVault parentVault,
-//         address deployer,
-//         address defaultAdmin
+//         TerminalAllowPolicy terminalAllow,
+//         address configOperator,
+//         address policyEngineManager
 //     ) internal {
 //         RoleBasedAccessControlPolicy shareSupplyPolicyImpl = new RoleBasedAccessControlPolicy();
 //         ERC1967Proxy shareSupplyPolicyProxy = new ERC1967Proxy(
 //             address(shareSupplyPolicyImpl),
-//             abi.encodeWithSelector(Policy.initialize.selector, address(policyEngine), deployer, new bytes(0))
+//             abi.encodeWithSelector(
+//                 Policy.initialize.selector, address(policyEngine), address(policyEngine), new bytes(0)
+//             )
 //         );
-//         RoleBasedAccessControlPolicy shareSupplyPolicy =
-//             RoleBasedAccessControlPolicy(address(shareSupplyPolicyProxy));
+//         RoleBasedAccessControlPolicy shareSupplyPolicy = RoleBasedAccessControlPolicy(address(shareSupplyPolicyProxy));
 
-//         shareSupplyPolicy.grantOperationAllowanceToRole(ComplianceTokenERC3643.mint.selector, Roles.MINTER_ROLE);
-//         shareSupplyPolicy.grantOperationAllowanceToRole(ComplianceTokenERC3643.burn.selector, Roles.BURNER_ROLE);
-//         shareSupplyPolicy.grantRole(Roles.MINTER_ROLE, address(parentVault));
-//         shareSupplyPolicy.grantRole(Roles.BURNER_ROLE, address(parentVault));
+//         _configureShareRole(
+//             policyEngine,
+//             shareSupplyPolicy,
+//             ComplianceTokenERC3643.mint.selector,
+//             Roles.MINTER_ROLE,
+//             address(parentVault)
+//         );
+//         _configureShareRole(
+//             policyEngine,
+//             shareSupplyPolicy,
+//             ComplianceTokenERC3643.burn.selector,
+//             Roles.BURNER_ROLE,
+//             address(parentVault)
+//         );
+//         _configureShareRole(
+//             policyEngine,
+//             shareSupplyPolicy,
+//             YieldcoinShare.setCCIPAdmin.selector,
+//             Roles.CONFIG_OPERATOR_ROLE,
+//             configOperator
+//         );
+//         _configureShareRole(
+//             policyEngine,
+//             shareSupplyPolicy,
+//             YieldcoinShare.attachPolicyEngine.selector,
+//             Roles.POLICY_ENGINE_MANAGER_ROLE,
+//             policyEngineManager
+//         );
 
 //         bytes32[] memory noParameters = new bytes32[](0);
-//         policyEngine.addPolicy(
-//             address(yieldcoin), ComplianceTokenERC3643.mint.selector, address(shareSupplyPolicy), noParameters
+//         _addSharePolicyPair(
+//             policyEngine,
+//             yieldcoin,
+//             terminalAllow,
+//             ComplianceTokenERC3643.mint.selector,
+//             address(shareSupplyPolicy),
+//             noParameters
 //         );
-//         policyEngine.addPolicy(
-//             address(yieldcoin), ComplianceTokenERC3643.burn.selector, address(shareSupplyPolicy), noParameters
+//         _addSharePolicyPair(
+//             policyEngine,
+//             yieldcoin,
+//             terminalAllow,
+//             ComplianceTokenERC3643.burn.selector,
+//             address(shareSupplyPolicy),
+//             noParameters
 //         );
+//         _addSharePolicyPair(
+//             policyEngine,
+//             yieldcoin,
+//             terminalAllow,
+//             YieldcoinShare.setCCIPAdmin.selector,
+//             address(shareSupplyPolicy),
+//             noParameters
+//         );
+//         _addSharePolicyPair(
+//             policyEngine,
+//             yieldcoin,
+//             terminalAllow,
+//             YieldcoinShare.attachPolicyEngine.selector,
+//             address(shareSupplyPolicy),
+//             noParameters
+//         );
+//     }
 
-//         if (deployer != defaultAdmin) {
-//             shareSupplyPolicy.transferOwnership(defaultAdmin);
-//         }
+//     function _configureShareRole(
+//         PolicyEngine policyEngine,
+//         RoleBasedAccessControlPolicy policy,
+//         bytes4 selector,
+//         bytes32 role,
+//         address account
+//     ) internal {
+//         policyEngine.setPolicyConfiguration(
+//             address(policy),
+//             policyEngine.getPolicyConfigVersion(address(policy)),
+//             RoleBasedAccessControlPolicy.grantOperationAllowanceToRole.selector,
+//             abi.encode(selector, role)
+//         );
+//         policyEngine.setPolicyConfiguration(
+//             address(policy),
+//             policyEngine.getPolicyConfigVersion(address(policy)),
+//             RoleBasedAccessControlPolicy.grantRole.selector,
+//             abi.encode(role, account)
+//         );
+//     }
+
+//     function _addSharePolicyPair(
+//         PolicyEngine policyEngine,
+//         YieldcoinShare yieldcoin,
+//         TerminalAllowPolicy terminalAllow,
+//         bytes4 selector,
+//         address rbacPolicy,
+//         bytes32[] memory noParameters
+//     ) internal {
+//         policyEngine.addPolicy(address(yieldcoin), selector, rbacPolicy, noParameters);
+//         policyEngine.addPolicy(address(yieldcoin), selector, address(terminalAllow), noParameters);
 //     }
 
 //     function _configureRegistryProviderPolicies(

@@ -11,10 +11,18 @@ import {AaveV4Adapter} from "../../src/modules/adapters/AaveV4Adapter.sol";
 import {WorkflowRouter} from "../../src/modules/WorkflowRouter.sol";
 import {Roles} from "../../src/libraries/Roles.sol";
 
-/// @title DeployChildVault
+/// @title DeployChild Script
 /// @author @contractlevel
 /// @notice Script to deploy the ChildVault and its modules
-contract DeployChildVault is Script {
+contract DeployChild is Script {
+    struct ChildDeployment {
+        AdapterRegistry adapterRegistry;
+        ChildVault childVault;
+        AaveV3Adapter aaveV3Adapter;
+        AaveV4Adapter aaveV4Adapter;
+        WorkflowRouter workflowRouter;
+    }
+
     /*//////////////////////////////////////////////////////////////
                                   RUN
     //////////////////////////////////////////////////////////////*/

@@ -1,0 +1,4 @@
+YieldcoinShare_setCCIPAdmin
+  └── when the policy allows the call
+      ├── it should update the CCIP admin
+      └── it should emit a CCIPAdminTransferred event

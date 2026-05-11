@@ -31,6 +31,7 @@ contract HelperConfig is Script {
         address unpauser;
         address configOperator;
         address complianceOperator;
+        address policyEngineManager;
         address emergencyDrainer;
         address linkOperator;
     }
@@ -100,6 +101,7 @@ contract HelperConfig is Script {
             unpauser: makeAddr("unpauser"),
             configOperator: makeAddr("configOperator"),
             complianceOperator: makeAddr("complianceOperator"),
+            policyEngineManager: makeAddr("policyEngineManager"),
             emergencyDrainer: makeAddr("emergencyDrainer"),
             linkOperator: makeAddr("linkOperator")
         });
@@ -120,11 +122,10 @@ contract HelperConfig is Script {
     }
 
     function _getMockCcipConfig(address usdc) private returns (CCIPConfig memory) {
-        return CCIPConfig({
-            router: address(new MockCCIPRouter(usdc)),
-            thisChainSelector: 12345,
-            parentChainSelector: 12345
-        });
+        return
+            CCIPConfig({
+                router: address(new MockCCIPRouter(usdc)), thisChainSelector: 12345, parentChainSelector: 12345
+            });
     }
 
     function _getMockCreConfig() private returns (CREConfig memory) {

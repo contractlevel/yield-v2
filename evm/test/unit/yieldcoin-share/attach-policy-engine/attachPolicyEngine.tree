@@ -1,0 +1,6 @@
+YieldcoinShare_attachPolicyEngine
+  ├── when the policy engine is the zero address
+  │   └── it should revert
+  └── when the policy allows the call
+      ├── it should update the policy engine
+      └── it should emit a PolicyEngineAttached event
