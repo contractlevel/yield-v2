@@ -158,7 +158,6 @@ contract DeployParent is Script {
             deployer,
             address(deploy.parentVault)
         );
-        deploy.parentVault.setWorkflowRouter(address(deploy.workflowRouter));
 
         deploy.terminalAllow = _deployTerminalAllowPolicy(deploy.policyEngine);
 

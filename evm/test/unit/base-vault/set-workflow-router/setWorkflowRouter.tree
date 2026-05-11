@@ -1,6 +1,0 @@
-setWorkflowRouter                                                                                                                      
-  ├── when the caller does not have the CONFIG_OPERATOR_ROLE
-  │   └── it should revert                                                                                                               
-  └── when the caller has the CONFIG_OPERATOR_ROLE
-      ├── it should update s_workflowRouter
-      └── it should emit a WorkflowRouterSet event

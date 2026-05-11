@@ -86,12 +86,6 @@ interface IBaseVault is IPauseable {
     /// @param ccipTxType The type of CCIP transaction
     event USDCBridged(bytes32 indexed ccipMessageId, uint256 indexed amount, Types.CcipTx indexed ccipTxType);
 
-    /// @notice Emitted when the adapter registry is set by a CONFIG_OPERATOR
-    /// @param adapterRegistry The address of the adapter registry
-    event AdapterRegistrySet(address indexed adapterRegistry);
-    /// @notice Emitted when the workflow router is set by a CONFIG_OPERATOR
-    /// @param workflowRouter The address of the workflow router
-    event WorkflowRouterSet(address indexed workflowRouter);
     /// @notice Emitted when the crosschain vaults are set by a CONFIG_OPERATOR
     /// @param chainSelector The CCIP selectors of the chain
     /// @param vault The addresses of the crosschain vault
@@ -129,7 +123,6 @@ interface IBaseVault is IPauseable {
     /*//////////////////////////////////////////////////////////////
                            CONFIG SETTERS
     //////////////////////////////////////////////////////////////*/
-    function setWorkflowRouter(address workflowRouter) external;
     function setCrosschainVaults(uint64[] calldata chainSelectors, address[] calldata vaults) external;
     function setCcipGasLimit(uint64 chainSelector, uint256 gasLimit) external;
     function setDefaultCcipGasLimit(uint256 gasLimit) external;
@@ -146,7 +139,6 @@ interface IBaseVault is IPauseable {
     function getUsdc() external view returns (address usdc);
     function getThisChainSelector() external view returns (uint64 thisChainSelector);
     function getAdapterRegistry() external view returns (address adapterRegistry);
-    function getWorkflowRouter() external view returns (address workflowRouter);
     function getCrosschainVault(uint64 chainSelector) external view returns (address vault);
     function getCcipGasLimit(uint64 chainSelector) external view returns (uint256 gasLimit);
     function getDefaultCcipGasLimit() external view returns (uint256 defaultCcipGasLimit);

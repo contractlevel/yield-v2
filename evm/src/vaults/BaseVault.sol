@@ -67,8 +67,6 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @dev Active strategy protocol adapter for this chain. If this is address(0), this chain is NOT the active strategy chain
     //slither-disable-next-line uninitialized-state
     address internal s_activeProtocolAdapter;
-    /// @dev WorkflowRouter routes CRE reports to this contract
-    address internal s_workflowRouter;
 
     /// @dev Timestamp when the vault was paused. Deleted when the vault is unpaused.
     /// @notice This is used for emergency recovery modes.
@@ -370,15 +368,6 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /*//////////////////////////////////////////////////////////////
                              CONFIG SETTERS
     //////////////////////////////////////////////////////////////*/
-    /// @notice Sets the workflow router
-    /// @param workflowRouter The address of the workflow router
-    /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
-    //slither-disable-next-line missing-zero-check
-    function setWorkflowRouter(address workflowRouter) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
-        s_workflowRouter = workflowRouter;
-        emit WorkflowRouterSet(workflowRouter);
-    }
-
     /// @notice Pauses the vault
     /// @dev Precondition: Caller must have the PAUSER_ROLE
     /// @dev Precondition: Vault must not be paused
@@ -476,12 +465,6 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @return adapterRegistry The address of the adapter registry
     function getAdapterRegistry() external view returns (address adapterRegistry) {
         adapterRegistry = i_adapterRegistry;
-    }
-
-    /// @notice Gets the workflow router
-    /// @return workflowRouter The address of the workflow router
-    function getWorkflowRouter() external view returns (address workflowRouter) {
-        workflowRouter = s_workflowRouter;
     }
 
     /// @notice Gets the crosschain vault address for a given chain selector

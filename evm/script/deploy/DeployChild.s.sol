@@ -77,7 +77,6 @@ contract DeployChild is Script {
             deployer,
             address(childVault)
         );
-        childVault.setWorkflowRouter(address(workflowRouter));
 
         childVault.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
         adapterRegistry.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
