@@ -547,10 +547,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @param rebalanceNonce The nonce of the failed rebalance deposit
     /// @dev Precondition: rebalance deposit recovery state must exist
     /// @dev Precondition: active strategy adapter must be set
-    function recoverFailedRebalanceDeposit(uint256 rebalanceNonce)
-        external
-        override(BaseVault, IParentVault)
-    {
+    function recoverFailedRebalanceDeposit(uint256 rebalanceNonce) external override(BaseVault, IParentVault) {
         _recoverFailedRebalanceDeposit(rebalanceNonce);
         _finalizeRebalance(rebalanceNonce);
     }

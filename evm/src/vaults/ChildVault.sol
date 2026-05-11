@@ -288,10 +288,7 @@ contract ChildVault is BaseVault, IChildVault {
     /// @param rebalanceNonce The nonce of the failed rebalance deposit
     /// @dev Precondition: rebalance deposit recovery state must exist
     /// @dev Precondition: active strategy adapter must be set
-    function recoverFailedRebalanceDeposit(uint256 rebalanceNonce)
-        external
-        override(BaseVault, IChildVault)
-    {
+    function recoverFailedRebalanceDeposit(uint256 rebalanceNonce) external override(BaseVault, IChildVault) {
         _recoverFailedRebalanceDeposit(rebalanceNonce);
     }
 

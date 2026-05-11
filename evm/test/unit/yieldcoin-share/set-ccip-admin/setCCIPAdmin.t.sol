@@ -16,8 +16,7 @@ contract YieldcoinShare_SetCCIPAdminUnitTest is BaseUnitTest {
         vm.recordLogs();
         s_yieldcoin.setCCIPAdmin(i_newCcipAdmin);
 
-        Vm.Log memory log =
-            _assertEmittedBy(keccak256("CCIPAdminTransferred(address,address)"), address(s_yieldcoin));
+        Vm.Log memory log = _assertEmittedBy(keccak256("CCIPAdminTransferred(address,address)"), address(s_yieldcoin));
         assertEq(address(uint160(uint256(log.topics[1]))), i_configOperator);
         assertEq(address(uint160(uint256(log.topics[2]))), i_newCcipAdmin);
     }

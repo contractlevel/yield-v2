@@ -363,39 +363,127 @@ contract DeployParent is Script {
         RoleBasedAccessControlPolicy shareSupplyPolicy = RoleBasedAccessControlPolicy(address(shareSupplyPolicyProxy));
 
         // Supply
-        _configureShareRole(policyEngine, shareSupplyPolicy, ComplianceTokenERC3643.mint.selector, Roles.MINTER_ROLE, address(parentVault));
-        _configureShareRole(policyEngine, shareSupplyPolicy, ComplianceTokenERC3643.burn.selector, Roles.BURNER_ROLE, address(parentVault));
+        _configureShareRole(
+            policyEngine,
+            shareSupplyPolicy,
+            ComplianceTokenERC3643.mint.selector,
+            Roles.MINTER_ROLE,
+            address(parentVault)
+        );
+        _configureShareRole(
+            policyEngine,
+            shareSupplyPolicy,
+            ComplianceTokenERC3643.burn.selector,
+            Roles.BURNER_ROLE,
+            address(parentVault)
+        );
         // Admin
-        _configureShareRole(policyEngine, shareSupplyPolicy, YieldcoinShare.setCCIPAdmin.selector, Roles.CONFIG_OPERATOR_ROLE, configOperator);
-        _configureShareRole(policyEngine, shareSupplyPolicy, YieldcoinShare.attachPolicyEngine.selector, Roles.POLICY_ENGINE_MANAGER_ROLE, policyEngineManager);
+        _configureShareRole(
+            policyEngine,
+            shareSupplyPolicy,
+            YieldcoinShare.setCCIPAdmin.selector,
+            Roles.CONFIG_OPERATOR_ROLE,
+            configOperator
+        );
+        _configureShareRole(
+            policyEngine,
+            shareSupplyPolicy,
+            YieldcoinShare.attachPolicyEngine.selector,
+            Roles.POLICY_ENGINE_MANAGER_ROLE,
+            policyEngineManager
+        );
         // Metadata setters
-        _configureShareRole(policyEngine, shareSupplyPolicy, ComplianceTokenERC3643.setName.selector, Roles.CONFIG_OPERATOR_ROLE, configOperator);
-        _configureShareRole(policyEngine, shareSupplyPolicy, ComplianceTokenERC3643.setSymbol.selector, Roles.CONFIG_OPERATOR_ROLE, configOperator);
+        _configureShareRole(
+            policyEngine,
+            shareSupplyPolicy,
+            ComplianceTokenERC3643.setName.selector,
+            Roles.CONFIG_OPERATOR_ROLE,
+            configOperator
+        );
+        _configureShareRole(
+            policyEngine,
+            shareSupplyPolicy,
+            ComplianceTokenERC3643.setSymbol.selector,
+            Roles.CONFIG_OPERATOR_ROLE,
+            configOperator
+        );
         // Pause/unpause
-        _configureShareRole(policyEngine, shareSupplyPolicy, ComplianceTokenERC3643.pause.selector, Roles.PAUSER_ROLE, pauser);
-        _configureShareRole(policyEngine, shareSupplyPolicy, ComplianceTokenERC3643.unpause.selector, Roles.UNPAUSER_ROLE, unpauser);
+        _configureShareRole(
+            policyEngine, shareSupplyPolicy, ComplianceTokenERC3643.pause.selector, Roles.PAUSER_ROLE, pauser
+        );
+        _configureShareRole(
+            policyEngine, shareSupplyPolicy, ComplianceTokenERC3643.unpause.selector, Roles.UNPAUSER_ROLE, unpauser
+        );
         // Compliance operations (batch selectors wired separately: runPolicy uses msg.sig of the outer call)
-        _configureShareRole(policyEngine, shareSupplyPolicy, ComplianceTokenERC3643.forcedTransfer.selector, Roles.COMPLIANCE_OPERATOR_ROLE, complianceOperator);
-        _configureShareRole(policyEngine, shareSupplyPolicy, ComplianceTokenERC3643.batchForcedTransfer.selector, Roles.COMPLIANCE_OPERATOR_ROLE, complianceOperator);
-        _configureShareRole(policyEngine, shareSupplyPolicy, ComplianceTokenERC3643.setAddressFrozen.selector, Roles.COMPLIANCE_OPERATOR_ROLE, complianceOperator);
-        _configureShareRole(policyEngine, shareSupplyPolicy, ComplianceTokenERC3643.batchSetAddressFrozen.selector, Roles.COMPLIANCE_OPERATOR_ROLE, complianceOperator);
-        _configureShareRole(policyEngine, shareSupplyPolicy, ComplianceTokenERC3643.freezePartialTokens.selector, Roles.COMPLIANCE_OPERATOR_ROLE, complianceOperator);
-        _configureShareRole(policyEngine, shareSupplyPolicy, ComplianceTokenERC3643.batchFreezePartialTokens.selector, Roles.COMPLIANCE_OPERATOR_ROLE, complianceOperator);
-        _configureShareRole(policyEngine, shareSupplyPolicy, ComplianceTokenERC3643.unfreezePartialTokens.selector, Roles.COMPLIANCE_OPERATOR_ROLE, complianceOperator);
-        _configureShareRole(policyEngine, shareSupplyPolicy, ComplianceTokenERC3643.batchUnfreezePartialTokens.selector, Roles.COMPLIANCE_OPERATOR_ROLE, complianceOperator);
+        _configureShareRole(
+            policyEngine,
+            shareSupplyPolicy,
+            ComplianceTokenERC3643.forcedTransfer.selector,
+            Roles.COMPLIANCE_OPERATOR_ROLE,
+            complianceOperator
+        );
+        _configureShareRole(
+            policyEngine,
+            shareSupplyPolicy,
+            ComplianceTokenERC3643.batchForcedTransfer.selector,
+            Roles.COMPLIANCE_OPERATOR_ROLE,
+            complianceOperator
+        );
+        _configureShareRole(
+            policyEngine,
+            shareSupplyPolicy,
+            ComplianceTokenERC3643.setAddressFrozen.selector,
+            Roles.COMPLIANCE_OPERATOR_ROLE,
+            complianceOperator
+        );
+        _configureShareRole(
+            policyEngine,
+            shareSupplyPolicy,
+            ComplianceTokenERC3643.batchSetAddressFrozen.selector,
+            Roles.COMPLIANCE_OPERATOR_ROLE,
+            complianceOperator
+        );
+        _configureShareRole(
+            policyEngine,
+            shareSupplyPolicy,
+            ComplianceTokenERC3643.freezePartialTokens.selector,
+            Roles.COMPLIANCE_OPERATOR_ROLE,
+            complianceOperator
+        );
+        _configureShareRole(
+            policyEngine,
+            shareSupplyPolicy,
+            ComplianceTokenERC3643.batchFreezePartialTokens.selector,
+            Roles.COMPLIANCE_OPERATOR_ROLE,
+            complianceOperator
+        );
+        _configureShareRole(
+            policyEngine,
+            shareSupplyPolicy,
+            ComplianceTokenERC3643.unfreezePartialTokens.selector,
+            Roles.COMPLIANCE_OPERATOR_ROLE,
+            complianceOperator
+        );
+        _configureShareRole(
+            policyEngine,
+            shareSupplyPolicy,
+            ComplianceTokenERC3643.batchUnfreezePartialTokens.selector,
+            Roles.COMPLIANCE_OPERATOR_ROLE,
+            complianceOperator
+        );
 
         bytes32[] memory noParameters = new bytes32[](0);
         bytes4[] memory protectedSelectors = new bytes4[](16);
-        protectedSelectors[0]  = ComplianceTokenERC3643.mint.selector;
-        protectedSelectors[1]  = ComplianceTokenERC3643.burn.selector;
-        protectedSelectors[2]  = YieldcoinShare.setCCIPAdmin.selector;
-        protectedSelectors[3]  = YieldcoinShare.attachPolicyEngine.selector;
-        protectedSelectors[4]  = ComplianceTokenERC3643.setName.selector;
-        protectedSelectors[5]  = ComplianceTokenERC3643.setSymbol.selector;
-        protectedSelectors[6]  = ComplianceTokenERC3643.pause.selector;
-        protectedSelectors[7]  = ComplianceTokenERC3643.unpause.selector;
-        protectedSelectors[8]  = ComplianceTokenERC3643.forcedTransfer.selector;
-        protectedSelectors[9]  = ComplianceTokenERC3643.batchForcedTransfer.selector;
+        protectedSelectors[0] = ComplianceTokenERC3643.mint.selector;
+        protectedSelectors[1] = ComplianceTokenERC3643.burn.selector;
+        protectedSelectors[2] = YieldcoinShare.setCCIPAdmin.selector;
+        protectedSelectors[3] = YieldcoinShare.attachPolicyEngine.selector;
+        protectedSelectors[4] = ComplianceTokenERC3643.setName.selector;
+        protectedSelectors[5] = ComplianceTokenERC3643.setSymbol.selector;
+        protectedSelectors[6] = ComplianceTokenERC3643.pause.selector;
+        protectedSelectors[7] = ComplianceTokenERC3643.unpause.selector;
+        protectedSelectors[8] = ComplianceTokenERC3643.forcedTransfer.selector;
+        protectedSelectors[9] = ComplianceTokenERC3643.batchForcedTransfer.selector;
         protectedSelectors[10] = ComplianceTokenERC3643.setAddressFrozen.selector;
         protectedSelectors[11] = ComplianceTokenERC3643.batchSetAddressFrozen.selector;
         protectedSelectors[12] = ComplianceTokenERC3643.freezePartialTokens.selector;
@@ -403,7 +491,9 @@ contract DeployParent is Script {
         protectedSelectors[14] = ComplianceTokenERC3643.unfreezePartialTokens.selector;
         protectedSelectors[15] = ComplianceTokenERC3643.batchUnfreezePartialTokens.selector;
         for (uint256 i; i < protectedSelectors.length; ++i) {
-            _addSharePolicyPair(policyEngine, yieldcoin, terminalAllow, protectedSelectors[i], address(shareSupplyPolicy), noParameters);
+            _addSharePolicyPair(
+                policyEngine, yieldcoin, terminalAllow, protectedSelectors[i], address(shareSupplyPolicy), noParameters
+            );
         }
     }
 
