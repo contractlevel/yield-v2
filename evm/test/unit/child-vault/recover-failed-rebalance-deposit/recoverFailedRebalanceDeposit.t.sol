@@ -15,14 +15,7 @@ contract ChildVault_RecoverFailedRebalanceDepositUnitTest is BaseUnitTest {
     function setUp() public {
         _setChildCrosschainVault(PARENT_CHAIN_SELECTOR, address(s_parentVault));
         _storeRebalanceDepositRecovery();
-        _changePrank(i_recoveryOperator);
-    }
-
-    function test_ChildVault_recoverFailedRebalanceDeposit_RevertWhen_CallerDoesNotHaveRECOVERY_OPERATOR_ROLE() public {
         _changePrank(i_nonOwner);
-
-        vm.expectRevert();
-        s_childVault.recoverFailedRebalanceDeposit(REBALANCE_NONCE);
     }
 
     function test_ChildVault_recoverFailedRebalanceDeposit_RevertWhen_NoPendingRecovery() public {

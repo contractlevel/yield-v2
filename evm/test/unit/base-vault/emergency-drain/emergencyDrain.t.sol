@@ -16,8 +16,8 @@ abstract contract BaseVault_EmergencyDrainUnitTest is BaseUnitTest {
 
     function _setUpVault() internal {
         _changePrank(i_owner);
-        s_vault.grantRole(Roles.EMERGENCY_DRAINER_ROLE, i_recoveryOperator);
-        _changePrank(i_recoveryOperator);
+        s_vault.grantRole(Roles.EMERGENCY_DRAINER_ROLE, i_emergencyDrainer);
+        _changePrank(i_emergencyDrainer);
     }
 
     function test_BaseVault_emergencyDrain_RevertWhen_CallerDoesNotHaveEMERGENCY_DRAINER_ROLE()
@@ -36,7 +36,7 @@ abstract contract BaseVault_EmergencyDrainUnitTest is BaseUnitTest {
         _changePrank(i_pauser);
         s_vault.pause();
 
-        _changePrank(i_recoveryOperator);
+        _changePrank(i_emergencyDrainer);
         vm.expectRevert(IBaseVault.BaseVault__EmergencyDrainDelayNotMet.selector);
         s_vault.emergencyDrain(true);
     }
@@ -49,16 +49,16 @@ abstract contract BaseVault_EmergencyDrainUnitTest is BaseUnitTest {
 
         deal(address(s_mockUsdc), address(s_vault), USDC_AMOUNT);
 
-        _changePrank(i_recoveryOperator);
+        _changePrank(i_emergencyDrainer);
         vm.recordLogs();
         s_vault.emergencyDrain(true);
 
-        assertEq(s_mockUsdc.balanceOf(i_recoveryOperator), USDC_AMOUNT);
+        assertEq(s_mockUsdc.balanceOf(i_emergencyDrainer), USDC_AMOUNT);
         assertEq(s_mockUsdc.balanceOf(address(s_vault)), 0);
         assertEq(s_mockProtocolAdapter.getWithdrawCalls(), 0);
 
         Vm.Log memory log = _assertEmittedBy(keccak256("EmergencyDrainExecuted(address,uint256)"), address(s_vault));
-        assertEq(address(uint160(uint256(log.topics[1]))), i_recoveryOperator);
+        assertEq(address(uint160(uint256(log.topics[1]))), i_emergencyDrainer);
         assertEq(uint256(log.topics[2]), USDC_AMOUNT);
     }
 
@@ -72,12 +72,12 @@ abstract contract BaseVault_EmergencyDrainUnitTest is BaseUnitTest {
         s_mockProtocolAdapter.setTVL(TVL);
         deal(address(s_mockUsdc), address(s_vault), USDC_AMOUNT);
 
-        _changePrank(i_recoveryOperator);
+        _changePrank(i_emergencyDrainer);
         s_vault.emergencyDrain(true);
 
         assertEq(s_mockProtocolAdapter.getLastWithdrawAmount(), type(uint256).max);
         assertEq(s_mockProtocolAdapter.getWithdrawCalls(), 1);
-        assertEq(s_mockUsdc.balanceOf(i_recoveryOperator), USDC_AMOUNT);
+        assertEq(s_mockUsdc.balanceOf(i_emergencyDrainer), USDC_AMOUNT);
         assertEq(s_mockUsdc.balanceOf(address(s_vault)), 0);
     }
 
@@ -91,7 +91,7 @@ abstract contract BaseVault_EmergencyDrainUnitTest is BaseUnitTest {
         s_mockProtocolAdapter.setTVL(TVL);
         s_mockProtocolAdapter.setWithdrawReverts(true);
 
-        _changePrank(i_recoveryOperator);
+        _changePrank(i_emergencyDrainer);
         vm.expectRevert(abi.encodeWithSelector(IBaseVault.BaseVault__WithdrawFailed.selector, type(uint256).max));
         s_vault.emergencyDrain(true);
     }
@@ -107,14 +107,14 @@ abstract contract BaseVault_EmergencyDrainUnitTest is BaseUnitTest {
         s_mockProtocolAdapter.setWithdrawReverts(true);
         deal(address(s_mockUsdc), address(s_vault), USDC_AMOUNT);
 
-        _changePrank(i_recoveryOperator);
+        _changePrank(i_emergencyDrainer);
         vm.expectCall(
             address(s_mockProtocolAdapter),
             abi.encodeWithSelector(s_mockProtocolAdapter.withdraw.selector, type(uint256).max)
         );
         s_vault.emergencyDrain(false);
 
-        assertEq(s_mockUsdc.balanceOf(i_recoveryOperator), USDC_AMOUNT);
+        assertEq(s_mockUsdc.balanceOf(i_emergencyDrainer), USDC_AMOUNT);
         assertEq(s_mockUsdc.balanceOf(address(s_vault)), 0);
     }
 

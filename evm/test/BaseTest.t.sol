@@ -19,7 +19,7 @@ contract BaseTest is Constants, Test {
     address internal immutable i_depositOperator = makeAddr("depositOperator");
     address internal immutable i_withdrawOperator = makeAddr("withdrawOperator");
     address internal immutable i_rebalanceOperator = makeAddr("rebalanceOperator");
-    address internal immutable i_recoveryOperator = makeAddr("recoveryOperator");
+    address internal immutable i_emergencyDrainer = makeAddr("emergencyDrainer");
     address internal immutable i_linkOperator = makeAddr("linkOperator");
     address internal immutable i_complianceOperator = makeAddr("complianceOperator");
     address internal immutable i_epochOperator = makeAddr("epochOperator");
@@ -59,7 +59,7 @@ contract BaseTest is Constants, Test {
         vm.label(i_depositOperator, "DepositOperator");
         vm.label(i_withdrawOperator, "WithdrawOperator");
         vm.label(i_rebalanceOperator, "RebalanceOperator");
-        vm.label(i_recoveryOperator, "RecoveryOperator");
+        vm.label(i_emergencyDrainer, "EmergencyDrainer");
         vm.label(i_linkOperator, "LinkOperator");
         vm.label(i_complianceOperator, "ComplianceOperator");
         vm.label(i_epochOperator, "EpochOperator");

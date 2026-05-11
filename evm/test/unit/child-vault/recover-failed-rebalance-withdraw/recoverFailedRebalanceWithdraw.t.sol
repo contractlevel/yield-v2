@@ -23,16 +23,7 @@ contract ChildVault_RecoverFailedRebalanceWithdrawUnitTest is BaseUnitTest {
         deal(address(s_mockUsdc), address(s_childVault), REBALANCE_AMOUNT);
         _storeRebalanceWithdrawRecovery();
         s_mockProtocolAdapter.setWithdrawReturnAmount(REBALANCE_AMOUNT);
-        _changePrank(i_recoveryOperator);
-    }
-
-    function test_ChildVault_recoverFailedRebalanceWithdraw_RevertWhen_CallerDoesNotHaveRECOVERY_OPERATOR_ROLE()
-        public
-    {
         _changePrank(i_nonOwner);
-
-        vm.expectRevert();
-        s_childVault.recoverFailedRebalanceWithdraw(REBALANCE_NONCE);
     }
 
     function test_ChildVault_recoverFailedRebalanceWithdraw_RevertWhen_NoPendingRecovery() public {

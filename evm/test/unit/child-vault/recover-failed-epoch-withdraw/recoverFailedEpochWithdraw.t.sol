@@ -15,14 +15,7 @@ contract ChildVault_RecoverFailedEpochWithdrawUnitTest is BaseUnitTest {
         _setChildCrosschainVault(PARENT_CHAIN_SELECTOR, address(s_parentVault));
         deal(address(s_mockUsdc), address(s_childVault), WITHDRAW_AMOUNT);
         _storeEpochWithdrawRecovery();
-        _changePrank(i_recoveryOperator);
-    }
-
-    function test_ChildVault_recoverFailedEpochWithdraw_RevertWhen_CallerDoesNotHaveRECOVERY_OPERATOR_ROLE() public {
         _changePrank(i_nonOwner);
-
-        vm.expectRevert();
-        s_childVault.recoverFailedEpochWithdraw(EPOCH_NONCE);
     }
 
     function test_ChildVault_recoverFailedEpochWithdraw_RevertWhen_NoPendingRecovery() public {

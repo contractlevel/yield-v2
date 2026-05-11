@@ -78,7 +78,6 @@ contract DeployChild is Script {
         childVault.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
         childVault.grantRole(Roles.EPOCH_OPERATOR_ROLE, address(workflowRouter));
         childVault.grantRole(Roles.REBALANCE_OPERATOR_ROLE, address(workflowRouter));
-        childVault.grantRole(Roles.RECOVERY_OPERATOR_ROLE, address(workflowRouter));
         childVault.grantRole(Roles.EMERGENCY_DRAINER_ROLE, networkConfig.roles.emergencyDrainer);
         childVault.grantRole(Roles.LINK_OPERATOR_ROLE, networkConfig.roles.linkOperator);
 

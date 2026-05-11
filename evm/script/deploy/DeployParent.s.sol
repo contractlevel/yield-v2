@@ -46,7 +46,6 @@
 // ///      ParentVault.CONFIG_OPERATOR_ROLE: networkConfig.roles.configOperator
 // ///      ParentVault.EPOCH_OPERATOR_ROLE: address(workflowRouter)
 // ///      ParentVault.REBALANCE_OPERATOR_ROLE: address(workflowRouter)
-// ///      ParentVault.RECOVERY_OPERATOR_ROLE: address(workflowRouter)
 // ///      ParentVault.EMERGENCY_DRAINER_ROLE: networkConfig.roles.emergencyDrainer
 // ///      ParentVault.LINK_OPERATOR_ROLE: networkConfig.roles.linkOperator
 // ///      ParentVault.COMPLIANCE_OPERATOR_ROLE: networkConfig.roles.complianceOperator
@@ -181,7 +180,6 @@
 //         deploy.parentVault.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
 //         deploy.parentVault.grantRole(Roles.EPOCH_OPERATOR_ROLE, address(deploy.workflowRouter));
 //         deploy.parentVault.grantRole(Roles.REBALANCE_OPERATOR_ROLE, address(deploy.workflowRouter));
-//         deploy.parentVault.grantRole(Roles.RECOVERY_OPERATOR_ROLE, address(deploy.workflowRouter));
 //         deploy.parentVault.grantRole(Roles.EMERGENCY_DRAINER_ROLE, networkConfig.roles.emergencyDrainer);
 //         deploy.parentVault.grantRole(Roles.LINK_OPERATOR_ROLE, networkConfig.roles.linkOperator);
 

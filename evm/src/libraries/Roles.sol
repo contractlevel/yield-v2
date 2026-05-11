@@ -16,8 +16,6 @@ library Roles {
     bytes32 internal constant CONFIG_OPERATOR_ROLE = keccak256("CONFIG_OPERATOR_ROLE");
     /// @notice Rebalance operator role for rebalancing the Yieldcoin v2 protocol
     bytes32 internal constant REBALANCE_OPERATOR_ROLE = keccak256("REBALANCE_OPERATOR_ROLE");
-    /// @notice Recovery operator role for executing recovery functions in the Yieldcoin v2 protocol
-    bytes32 internal constant RECOVERY_OPERATOR_ROLE = keccak256("RECOVERY_OPERATOR_ROLE");
     /// @notice Link operator role for withdrawing LINK from the Yieldcoin v2 vaults
     bytes32 internal constant LINK_OPERATOR_ROLE = keccak256("LINK_OPERATOR_ROLE");
     /// @notice Compliance operator role for managing Chainlink ACE policies

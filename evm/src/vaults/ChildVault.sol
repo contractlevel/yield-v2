@@ -243,10 +243,9 @@ contract ChildVault is BaseVault, IChildVault {
 
     /// @notice Recovers a failed epoch deposit into the active Child strategy
     /// @param epochNonce The epoch nonce of the failed deposit
-    /// @dev Precondition: caller must have the RECOVERY_OPERATOR_ROLE
     /// @dev Precondition: epoch deposit recovery state must exist
     /// @dev Precondition: active strategy adapter must be set
-    function recoverFailedEpochDeposit(uint256 epochNonce) external onlyRole(Roles.RECOVERY_OPERATOR_ROLE) {
+    function recoverFailedEpochDeposit(uint256 epochNonce) external {
         Types.AmountRecovery memory recovery = _requireEpochDepositRecovery(epochNonce);
 
         _executeDeposit(recovery.amount, true);
@@ -257,10 +256,9 @@ contract ChildVault is BaseVault, IChildVault {
 
     /// @notice Recovers a failed epoch withdraw from the active Child strategy
     /// @param epochNonce The epoch nonce of the failed withdraw
-    /// @dev Precondition: caller must have the RECOVERY_OPERATOR_ROLE
     /// @dev Precondition: epoch withdraw recovery state must exist
     /// @dev Precondition: active strategy adapter must be set
-    function recoverFailedEpochWithdraw(uint256 epochNonce) external onlyRole(Roles.RECOVERY_OPERATOR_ROLE) {
+    function recoverFailedEpochWithdraw(uint256 epochNonce) external {
         Types.AmountRecovery memory recovery = _requireEpochWithdrawRecovery(epochNonce);
 
         uint256 amountOut = _executeWithdraw(recovery.amount, true);
@@ -273,10 +271,9 @@ contract ChildVault is BaseVault, IChildVault {
 
     /// @notice Recovers a failed rebalance withdraw from the active Child strategy
     /// @param rebalanceNonce The nonce of the failed rebalance withdraw
-    /// @dev Precondition: caller must have the RECOVERY_OPERATOR_ROLE
     /// @dev Precondition: rebalance withdraw recovery state must exist
     /// @dev Precondition: active strategy adapter must be set
-    function recoverFailedRebalanceWithdraw(uint256 rebalanceNonce) external onlyRole(Roles.RECOVERY_OPERATOR_ROLE) {
+    function recoverFailedRebalanceWithdraw(uint256 rebalanceNonce) external {
         Types.RebalanceWithdrawRecovery memory recovery = _requireRebalanceWithdrawRecovery(rebalanceNonce);
 
         uint256 amountRebalanced = _executeWithdraw(type(uint256).max, true);
@@ -289,13 +286,11 @@ contract ChildVault is BaseVault, IChildVault {
 
     /// @notice Recovers a failed rebalance deposit into the active Child strategy
     /// @param rebalanceNonce The nonce of the failed rebalance deposit
-    /// @dev Precondition: caller must have the RECOVERY_OPERATOR_ROLE
     /// @dev Precondition: rebalance deposit recovery state must exist
     /// @dev Precondition: active strategy adapter must be set
     function recoverFailedRebalanceDeposit(uint256 rebalanceNonce)
         external
         override(BaseVault, IChildVault)
-        onlyRole(Roles.RECOVERY_OPERATOR_ROLE)
     {
         _recoverFailedRebalanceDeposit(rebalanceNonce);
     }

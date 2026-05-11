@@ -62,8 +62,6 @@ abstract contract BaseUnitTest is BaseTest {
         params.thisChainSelector = CHILD_CHAIN_SELECTOR;
         s_childVault = new ChildVault(params, PARENT_CHAIN_SELECTOR);
 
-        s_parentVault.grantRole(Roles.RECOVERY_OPERATOR_ROLE, i_recoveryOperator);
-        s_childVault.grantRole(Roles.RECOVERY_OPERATOR_ROLE, i_recoveryOperator);
         s_parentVault.grantRole(Roles.EPOCH_OPERATOR_ROLE, i_epochOperator);
         s_childVault.grantRole(Roles.EPOCH_OPERATOR_ROLE, i_epochOperator);
         s_parentVault.grantRole(Roles.REBALANCE_OPERATOR_ROLE, i_rebalanceOperator);

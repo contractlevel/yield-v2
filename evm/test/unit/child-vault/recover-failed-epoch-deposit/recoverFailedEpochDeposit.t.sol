@@ -16,13 +16,7 @@ contract ChildVault_RecoverFailedEpochDepositUnitTest is BaseUnitTest {
         _setChildActiveAdapter(address(s_mockProtocolAdapter));
         _setChildCrosschainVault(PARENT_CHAIN_SELECTOR, address(s_parentVault));
         _storeEpochDepositRecovery();
-        _changePrank(i_recoveryOperator);
-    }
-
-    function test_ChildVault_recoverFailedEpochDeposit_RevertWhen_CallerDoesNotHaveRECOVERY_OPERATOR_ROLE() public {
         _changePrank(i_nonOwner);
-        vm.expectRevert();
-        s_childVault.recoverFailedEpochDeposit(EPOCH_NONCE);
     }
 
     function test_ChildVault_recoverFailedEpochDeposit_RevertWhen_NoPendingRecovery() public {

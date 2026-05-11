@@ -20,16 +20,7 @@ contract ParentVault_RecoverFailedRebalanceDepositUnitTest is BaseUnitTest {
         _setParentCrosschainVault(CHILD_CHAIN_SELECTOR, address(s_childVault));
         _setParentPendingRebalance(AAVE_V3_PROTOCOL_ID, PARENT_CHAIN_SELECTOR);
         _storeRebalanceDepositRecovery();
-        _changePrank(i_recoveryOperator);
-    }
-
-    function test_ParentVault_recoverFailedRebalanceDeposit_RevertWhen_CallerDoesNotHaveRECOVERY_OPERATOR_ROLE()
-        public
-    {
         _changePrank(i_nonOwner);
-
-        vm.expectRevert();
-        s_parentVault.recoverFailedRebalanceDeposit(REBALANCE_NONCE);
     }
 
     function test_ParentVault_recoverFailedRebalanceDeposit_RevertWhen_NoPendingRecovery() public {

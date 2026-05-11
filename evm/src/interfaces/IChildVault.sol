@@ -52,25 +52,21 @@ interface IChildVault is IBaseVault {
     //////////////////////////////////////////////////////////////*/
     /// @notice Recovers a failed epoch deposit into the active Child strategy
     /// @param epochNonce The epoch nonce of the failed deposit
-    /// @dev Precondition: caller must have the RECOVERY_OPERATOR_ROLE
     /// @dev Precondition: epoch deposit recovery state must exist
     function recoverFailedEpochDeposit(uint256 epochNonce) external;
 
     /// @notice Recovers a failed epoch withdraw from the active Child strategy
     /// @param epochNonce The epoch nonce of the failed withdraw
-    /// @dev Precondition: caller must have the RECOVERY_OPERATOR_ROLE
     /// @dev Precondition: epoch withdraw recovery state must exist
     function recoverFailedEpochWithdraw(uint256 epochNonce) external;
 
     /// @notice Recovers a failed rebalance withdraw from the active Child strategy
     /// @param rebalanceNonce The nonce of the failed rebalance withdraw
-    /// @dev Precondition: caller must have the RECOVERY_OPERATOR_ROLE
     /// @dev Precondition: rebalance withdraw recovery state must exist
     function recoverFailedRebalanceWithdraw(uint256 rebalanceNonce) external;
 
     /// @notice Recovers a failed rebalance deposit into the active Child strategy
     /// @param rebalanceNonce The nonce of the failed rebalance deposit
-    /// @dev Precondition: caller must have the RECOVERY_OPERATOR_ROLE
     /// @dev Precondition: rebalance deposit recovery state must exist
     function recoverFailedRebalanceDeposit(uint256 rebalanceNonce) external;
 
