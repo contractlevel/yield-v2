@@ -31,6 +31,8 @@ contract HelperConfig is Script {
         address unpauser;
         address configOperator;
         address complianceOperator;
+        address policyAdmin;
+        address policyConfigAdmin;
         address policyEngineManager;
         address emergencyDrainer;
         address linkOperator;
@@ -101,6 +103,8 @@ contract HelperConfig is Script {
             unpauser: makeAddr("unpauser"),
             configOperator: makeAddr("configOperator"),
             complianceOperator: makeAddr("complianceOperator"),
+            policyAdmin: makeAddr("policyAdmin"),
+            policyConfigAdmin: makeAddr("policyConfigAdmin"),
             policyEngineManager: makeAddr("policyEngineManager"),
             emergencyDrainer: makeAddr("emergencyDrainer"),
             linkOperator: makeAddr("linkOperator")

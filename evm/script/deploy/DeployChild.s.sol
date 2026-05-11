@@ -93,7 +93,6 @@ contract DeployChild is Script {
 
         childVault.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
         adapterRegistry.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
-        workflowRouter.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
 
         /// @dev The deployer remains default admin until the configured default admin accepts this transfer.
         ///      networkConfig.roles.defaultAdmin should call acceptDefaultAdminTransfer() ASAP.

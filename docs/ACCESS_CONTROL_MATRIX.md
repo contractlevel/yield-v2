@@ -33,7 +33,8 @@ It is the source of truth for how authority should be named, assigned, implement
 | Token unpause               | `YieldcoinShare` through ACE RBAC       | `UNPAUSER_ROLE`                                                                  | Unpause token                                                                               | Separate from pause if asymmetric safety is desired                                           |
 | Share supply                | `YieldcoinShare` through ACE RBAC       | `ParentVault` with `MINTER_ROLE` / `BURNER_ROLE`                                 | Mint and burn shares                                                                        | Share supply authority belongs to the vault flow                                              |
 | Vault user access           | `ParentVault` through ACE policies      | KYC/compliance policy stack                                                      | Gate deposit, withdraw, claim, cancel functions                                             | ACE is the user eligibility layer                                                             |
-| Vault operations            | Vaults                                  | `WorkflowRouter` with local vault roles                                          | Epoch and rebalance execution                                                               | Keep operational vault roles local; only user-facing functions should move through ACE        |
+| Epoch execution             | Vaults                                  | `WorkflowRouter` holding `EPOCH_OPERATOR_ROLE`                                   | Epoch execution (`closeEpoch`, `executeEpochWithdraw`)                                      | Keep operational vault roles local; only user-facing functions should move through ACE        |
+| Rebalance execution         | Vaults                                  | `WorkflowRouter` holding `REBALANCE_OPERATOR_ROLE`                               | Rebalance execution (`initiateRebalance`, `completeRebalance`, `executeRebalance`)          | Keep operational vault roles local; only user-facing functions should move through ACE        |
 | Vault recovery              | Vaults                                  | Public stored-state retry                                                        | Execute recovery from previously stored recovery state                                      | Caller must not choose amount, strategy, destination, or recipient                            |
 | Protocol config             | Vaults, routers, registry               | `CONFIG_OPERATOR_ROLE`                                                           | Set vault/router config, adapters, workflow metadata/selectors                              | Explicit and narrow                                                                           |
 | CCIP token admin            | `YieldcoinShare`                        | `CONFIG_OPERATOR_ROLE` actor through ACE RBAC                                    | Set Chainlink CCIP token admin identity                                                     | `getCCIPAdmin()` returns stored CCIP admin state, never token `owner()`                       |
@@ -49,7 +50,8 @@ It is the source of truth for how authority should be named, assigned, implement
 | `setInitialActiveProtocolAdapter`  | `DEFAULT_ADMIN_ROLE` because this is a one-time deploy-time action |
 | Config setters                     | `CONFIG_OPERATOR_ROLE`                                             |
 | Pause/unpause                      | `PAUSER_ROLE` / `UNPAUSER_ROLE`                                    |
-| Epoch/rebalance                    | `WorkflowRouter`                                                   |
+| Epoch (`closeEpoch`)               | `EPOCH_OPERATOR_ROLE` granted to `WorkflowRouter`                  |
+| Rebalance (`initiateRebalance`, `completeRebalance`) | `REBALANCE_OPERATOR_ROLE` granted to `WorkflowRouter` |
 | Recovery                           | Public stored-state retry                                          |
 | Emergency drain                    | `EMERGENCY_DRAINER_ROLE`                                           |
 | LINK withdrawal                    | `LINK_OPERATOR_ROLE`                                               |
@@ -63,7 +65,8 @@ It is the source of truth for how authority should be named, assigned, implement
 | Grant/revoke roles    | `DEFAULT_ADMIN_ROLE`            |
 | Config setters        | `CONFIG_OPERATOR_ROLE`          |
 | Pause/unpause         | `PAUSER_ROLE` / `UNPAUSER_ROLE` |
-| Epoch/rebalance       | `WorkflowRouter`                |
+| Epoch (`executeEpochWithdraw`)     | `EPOCH_OPERATOR_ROLE` granted to `WorkflowRouter`  |
+| Rebalance (`executeRebalance`)     | `REBALANCE_OPERATOR_ROLE` granted to `WorkflowRouter` |
 | Recovery              | Public stored-state retry       |
 | Emergency drain       | `EMERGENCY_DRAINER_ROLE`        |
 | LINK withdrawal       | `LINK_OPERATOR_ROLE`            |
@@ -150,6 +153,37 @@ RBAC changes are made through `PolicyEngine.setPolicyConfiguration`:
 | Remove operation allowance | `removeOperationAllowanceFromRole(bytes4 operation, bytes32 role)` |
 | Grant role membership      | `grantRole(bytes32 role, address account)`                         |
 | Revoke role membership     | `revokeRole(bytes32 role, address account)`                        |
+
+### OnlyAuthorizedSenderPolicy
+
+| Policy authority | Holder | Direct power |
+| ---------------- | ------ | ------------ |
+| Policy `owner()` | `PolicyEngine` | Add/remove authorized sender addresses |
+
+Authorized sender changes are made through `PolicyEngine.setPolicyConfiguration`:
+
+| Sender change | Selector |
+| ------------- | -------- |
+| Authorize sender | `authorizeSender(address account)` |
+| Unauthorize sender | `unauthorizeSender(address account)` |
+
+Human governance administers authorized senders through `PolicyEngine.POLICY_CONFIG_ADMIN_ROLE`. `PolicyEngine` is the on-chain executor that owns `OnlyAuthorizedSenderPolicy`, so provider allowlists are not controlled directly by a provider or compliance operator.
+
+### IdentityRegistry and CredentialRegistry
+
+| Function or authority                                                                                    | Control                                                                                         |
+| -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Registry `owner()`                                                                                       | `PolicyEngine`                                                                                  |
+| `attachPolicyEngine`                                                                                     | Registry `owner()`; effectively disabled in normal operation by making `PolicyEngine` the owner |
+| `IdentityRegistry.registerIdentity` / `registerIdentities` / `removeIdentity`                            | Authorized identity provider senders in `OnlyAuthorizedSenderPolicy`, plus terminal allow       |
+| `CredentialRegistry.registerCredential` / `registerCredentials` / `removeCredential` / `renewCredential` | Authorized credential provider senders in `OnlyAuthorizedSenderPolicy`, plus terminal allow     |
+| Add/remove authorized provider senders                                                                   | `PolicyEngine.POLICY_CONFIG_ADMIN_ROLE` via `PolicyEngine.setPolicyConfiguration`               |
+| Registry selector policy wiring                                                                          | `PolicyEngine.ADMIN_ROLE`                                                                       |
+| Credential validation policy configuration                                                               | `PolicyEngine.POLICY_CONFIG_ADMIN_ROLE`                                                         |
+
+`IdentityRegistry` and `CredentialRegistry` are Chainlink ACE `PolicyProtectedUpgradeable` contracts. Their mutable registry functions are protected by ACE policies, while inherited ownership controls policy engine attachment. Registry `owner()` must therefore be the `PolicyEngine`, not a credential issuer or compliance operator.
+
+Identity and credential providers can write registry entries only when their sender address is authorized in the registry's `OnlyAuthorizedSenderPolicy`. `PolicyEngine.ADMIN_ROLE` wires that policy to the registry selectors. `PolicyEngine.POLICY_CONFIG_ADMIN_ROLE` changes the authorized provider senders by calling `PolicyEngine.setPolicyConfiguration`, which makes `PolicyEngine` call `authorizeSender` or `unauthorizeSender` on the policy.
 
 ## Runtime Policy Mapping
 

@@ -1,6 +1,6 @@
 attachPolicyEngine
-  ├── when the caller does not have the COMPLIANCE_OPERATOR_ROLE
+  ├── when the caller does not have the POLICY_ENGINE_MANAGER_ROLE
   │   └── it should revert
-  └── when the caller has the COMPLIANCE_OPERATOR_ROLE
+  └── when the caller has the POLICY_ENGINE_MANAGER_ROLE
       ├── it should update the policy engine
       └── it should emit a PolicyEngineAttached event

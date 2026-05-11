@@ -57,9 +57,8 @@ abstract contract BaseUnitTest is BaseTest {
         _changePrank(i_configOperator);
         s_adapterRegistry.setAdapter(AAVE_V3_PROTOCOL_ID, address(s_mockProtocolAdapter));
         _changePrank(i_owner);
-        s_parentVault = new ParentVault(
-            params, i_treasury, address(s_yieldcoin), i_complianceOperator, address(s_mockPolicyEngine)
-        );
+        s_parentVault =
+            new ParentVault(params, i_treasury, address(s_yieldcoin), i_policyEngineManager, address(s_mockPolicyEngine));
         s_parentVault.setInitialActiveProtocolAdapter(AAVE_V3_PROTOCOL_ID);
 
         params.thisChainSelector = CHILD_CHAIN_SELECTOR;

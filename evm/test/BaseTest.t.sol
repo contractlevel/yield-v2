@@ -22,6 +22,7 @@ contract BaseTest is Constants, Test {
     address internal immutable i_emergencyDrainer = makeAddr("emergencyDrainer");
     address internal immutable i_linkOperator = makeAddr("linkOperator");
     address internal immutable i_complianceOperator = makeAddr("complianceOperator");
+    address internal immutable i_policyEngineManager = makeAddr("policyEngineManager");
     address internal immutable i_epochOperator = makeAddr("epochOperator");
     address internal immutable i_treasury = makeAddr("treasury");
 
@@ -62,6 +63,7 @@ contract BaseTest is Constants, Test {
         vm.label(i_emergencyDrainer, "EmergencyDrainer");
         vm.label(i_linkOperator, "LinkOperator");
         vm.label(i_complianceOperator, "ComplianceOperator");
+        vm.label(i_policyEngineManager, "PolicyEngineManager");
         vm.label(i_epochOperator, "EpochOperator");
         vm.label(i_treasury, "Treasury");
     }

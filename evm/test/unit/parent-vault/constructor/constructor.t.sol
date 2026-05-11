@@ -13,7 +13,7 @@ contract ParentVault_ConstructorUnitTest is BaseUnitTest {
             _baseVaultParams(PARENT_CHAIN_SELECTOR),
             i_treasury,
             address(s_yieldcoin),
-            i_complianceOperator,
+            i_policyEngineManager,
             address(s_mockPolicyEngine)
         );
         assertEq(parentVault.getThisChainSelector(), PARENT_CHAIN_SELECTOR);
@@ -28,7 +28,7 @@ contract ParentVault_ConstructorUnitTest is BaseUnitTest {
         assertEq(parentVault.hasRole(Roles.PAUSER_ROLE, i_pauser), true);
         assertEq(parentVault.hasRole(Roles.UNPAUSER_ROLE, i_unpauser), true);
         assertEq(parentVault.hasRole(Roles.CONFIG_OPERATOR_ROLE, address(i_configOperator)), true);
-        assertEq(parentVault.hasRole(Roles.COMPLIANCE_OPERATOR_ROLE, address(i_complianceOperator)), true);
+        assertEq(parentVault.hasRole(Roles.POLICY_ENGINE_MANAGER_ROLE, address(i_policyEngineManager)), true);
         assertEq(parentVault.getRebalance().nonce, 1);
         assertEq(parentVault.getEpochNonce(), 1);
         assertEq(uint256(parentVault.getEpoch(1).status), uint256(Types.EpochStatus.OPEN));

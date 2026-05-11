@@ -86,17 +86,19 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @param params BaseVault Constructor parameters
     /// @param treasury The address of the operator multisig for protocol fees
     /// @param share The address of the Yieldcoin (YIELD) share token
-    /// @param complianceOperator The address of the compliance operator for policy management - trusted actor in the system
+    /// @param policyEngineManager The address authorized to replace this vault's attached policy engine
     /// @param policyEngine The address of the Yieldcoin v2 PolicyEngine
+    /// @dev PolicyProtected ownership is initialized to the vault default admin only to satisfy inherited Ownable state.
+    ///      Runtime policy engine replacement is controlled by POLICY_ENGINE_MANAGER_ROLE.
     /// @dev The initial active protocol adapter is set after deployment with setInitialActiveProtocolAdapter.
     ///      Deployment order: deploy vault, deploy adapter with vault address, register adapter, then call setter.
     constructor(
         BaseVault.ConstructorParams memory params,
         address treasury,
         address share,
-        address complianceOperator,
+        address policyEngineManager,
         address policyEngine
-    ) BaseVault(params) PolicyProtected(complianceOperator, policyEngine) {
+    ) BaseVault(params) PolicyProtected(params.defaultAdmin, policyEngine) {
         i_share = share;
         s_epochNonce = 1;
         s_epochs[1].status = Types.EpochStatus.OPEN;
@@ -104,7 +106,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         s_rebalance.nonce = 1;
         s_rebalance.lastRebalanceCompletedTimestamp = block.timestamp;
         s_treasury = treasury;
-        _grantRole(Roles.COMPLIANCE_OPERATOR_ROLE, complianceOperator);
+        _grantRole(Roles.POLICY_ENGINE_MANAGER_ROLE, policyEngineManager);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -691,9 +693,10 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         return AccessControlDefaultAdminRules.owner();
     }
 
-    /// @notice Attaches a policy engine. Restricted to COMPLIANCE_OPERATOR_ROLE instead of
-    ///         Ownable's onlyOwner, so policy management is governed independently of the default admin.
-    function attachPolicyEngine(address policyEngine) external override onlyRole(Roles.COMPLIANCE_OPERATOR_ROLE) {
+    /// @notice Attaches a policy engine.
+    /// @dev Precondition: Caller must have the POLICY_ENGINE_MANAGER_ROLE
+    /// @param policyEngine The policy engine to attach
+    function attachPolicyEngine(address policyEngine) external override onlyRole(Roles.POLICY_ENGINE_MANAGER_ROLE) {
         _attachPolicyEngine(policyEngine);
     }
 

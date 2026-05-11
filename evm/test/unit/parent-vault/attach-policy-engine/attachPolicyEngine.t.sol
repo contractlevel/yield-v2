@@ -14,16 +14,16 @@ contract ParentVault_AttachPolicyEngineUnitTest is BaseUnitTest {
 
     function setUp() public {
         s_newMockPolicyEngine = new MockPolicyEngine();
-        _changePrank(i_complianceOperator);
+        _changePrank(i_policyEngineManager);
     }
 
-    function test_ParentVault_attachPolicyEngine_RevertWhen_CallerDoesNotHaveCOMPLIANCE_OPERATOR_ROLE()
+    function test_ParentVault_attachPolicyEngine_RevertWhen_CallerDoesNotHavePOLICY_ENGINE_MANAGER_ROLE()
         external
         whenCallerIsNotAdmin
     {
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector, i_nonOwner, Roles.COMPLIANCE_OPERATOR_ROLE
+                IAccessControl.AccessControlUnauthorizedAccount.selector, i_nonOwner, Roles.POLICY_ENGINE_MANAGER_ROLE
             )
         );
         s_parentVault.attachPolicyEngine(address(s_newMockPolicyEngine));

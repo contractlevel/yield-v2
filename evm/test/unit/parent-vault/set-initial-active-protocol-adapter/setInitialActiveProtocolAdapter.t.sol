@@ -16,7 +16,7 @@ contract ParentVault_SetInitialActiveProtocolAdapterUnitTest is BaseUnitTest {
             _baseVaultParams(PARENT_CHAIN_SELECTOR),
             i_treasury,
             address(s_yieldcoin),
-            i_complianceOperator,
+            i_policyEngineManager,
             address(s_mockPolicyEngine)
         );
     }
