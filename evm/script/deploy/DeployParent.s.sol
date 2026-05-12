@@ -71,7 +71,8 @@ import {TerminalAllowPolicy} from "../../src/modules/policies/TerminalAllowPolic
 ///      PolicyEngine.DEFAULT_ADMIN_ROLE: networkConfig.roles.defaultAdmin
 ///      PolicyEngine.ADMIN_ROLE: networkConfig.roles.policyAdmin
 ///      PolicyEngine.POLICY_CONFIG_ADMIN_ROLE: networkConfig.roles.policyConfigAdmin
-/// @notice After running this script, networkConfig.roles.defaultAdmin must call acceptDefaultAdminTransfer() and changeDefaultAdminDelay() on ParentVault, WorkflowRouter, and PolicyEngine ASAP.
+/// @notice After running this script, networkConfig.roles.defaultAdmin must call acceptDefaultAdminTransfer() on ParentVault and AdapterRegistry ASAP.
+/// @notice WorkflowRouter is deployed directly with networkConfig.roles.defaultAdmin and an initial 3-day default admin delay.
 contract DeployParent is Script {
     bytes4 private constant RBAC_GRANT_ROLE_SELECTOR = bytes4(keccak256("grantRole(bytes32,address)"));
     bytes4 private constant AUTHORIZE_SENDER_SELECTOR = OnlyAuthorizedSenderPolicy.authorizeSender.selector;
