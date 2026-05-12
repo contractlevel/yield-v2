@@ -55,7 +55,7 @@ import {TerminalAllowPolicy} from "../../src/modules/policies/TerminalAllowPolic
 ///      ParentVault.POLICY_ENGINE_MANAGER_ROLE: networkConfig.roles.policyEngineManager
 ///      ParentVault.PAUSER_ROLE: networkConfig.roles.pauser
 ///      ParentVault.UNPAUSER_ROLE: networkConfig.roles.unpauser
-///      WorkflowRouter.DEFAULT_ADMIN_ROLE: deployer/msg.sender, pending transfer to networkConfig.roles.defaultAdmin
+///      WorkflowRouter.DEFAULT_ADMIN_ROLE: networkConfig.roles.defaultAdmin
 ///      WorkflowRouter.CONFIG_OPERATOR_ROLE: networkConfig.roles.configOperator
 ///      WorkflowRouter.PAUSER_ROLE: networkConfig.roles.pauser
 ///      WorkflowRouter.UNPAUSER_ROLE: networkConfig.roles.unpauser
@@ -177,7 +177,7 @@ contract DeployParent is Script {
         uint48 initialDelay = 259200; // 3 days
         WorkflowRouter.ConstructorParams memory workflowRouterParams = WorkflowRouter.ConstructorParams({
             initialDelay: initialDelay,
-            defaultAdmin: deployer,
+            defaultAdmin: networkConfig.roles.defaultAdmin,
             pauser: networkConfig.roles.pauser,
             unpauser: networkConfig.roles.unpauser,
             configOperator: networkConfig.roles.configOperator,
@@ -245,12 +245,6 @@ contract DeployParent is Script {
         ///      networkConfig.roles.defaultAdmin should call acceptDefaultAdminTransfer() ASAP.
         if (deployer != networkConfig.roles.defaultAdmin) {
             deploy.parentVault.beginDefaultAdminTransfer(networkConfig.roles.defaultAdmin);
-        }
-
-        /// @dev The deployer remains default admin until the configured default admin accepts this transfer.
-        ///      networkConfig.roles.defaultAdmin should call acceptDefaultAdminTransfer() ASAP.
-        if (deployer != networkConfig.roles.defaultAdmin) {
-            deploy.workflowRouter.beginDefaultAdminTransfer(networkConfig.roles.defaultAdmin);
         }
 
         /// @dev The deployer remains default admin until the configured default admin accepts this transfer.

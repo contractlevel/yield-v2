@@ -78,7 +78,7 @@ contract DeployChild is Script {
         /// @dev Deploy the WorkflowRouter
         WorkflowRouter.ConstructorParams memory workflowRouterParams = WorkflowRouter.ConstructorParams({
             initialDelay: 0,
-            defaultAdmin: deployer,
+            defaultAdmin: networkConfig.roles.defaultAdmin,
             pauser: networkConfig.roles.pauser,
             unpauser: networkConfig.roles.unpauser,
             configOperator: networkConfig.roles.configOperator,
@@ -101,12 +101,6 @@ contract DeployChild is Script {
         ///      networkConfig.roles.defaultAdmin should call acceptDefaultAdminTransfer() ASAP.
         if (deployer != networkConfig.roles.defaultAdmin) {
             deploy.childVault.beginDefaultAdminTransfer(networkConfig.roles.defaultAdmin);
-        }
-
-        /// @dev The deployer remains default admin until the configured default admin accepts this transfer.
-        ///      networkConfig.roles.defaultAdmin should call acceptDefaultAdminTransfer() ASAP.
-        if (deployer != networkConfig.roles.defaultAdmin) {
-            deploy.workflowRouter.beginDefaultAdminTransfer(networkConfig.roles.defaultAdmin);
         }
 
         /// @dev The deployer remains default admin until the configured default admin accepts this transfer.
