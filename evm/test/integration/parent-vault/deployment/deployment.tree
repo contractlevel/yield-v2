@@ -10,4 +10,7 @@ ParentVault_deployment
 ├── workflow router
 │   └── it should configure constructor-granted router roles
 └── ACE components
-    └── it should attach and configure the deployed policy engine
+    ├── it should attach and configure the deployed policy engine
+    ├── it should register ParentVault KYC
+    ├── it should remove temporary deployer registry write permission
+    └── it should hand off ACE roles

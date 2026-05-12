@@ -37,6 +37,7 @@ abstract contract BaseIntegrationTest is BaseTest {
     struct Parent {
         address link;
         address usdc;
+        bytes32 vaultCcid;
         AdapterRegistry adapterRegistry;
         YieldcoinShare shareImpl;
         YieldcoinShare share;
@@ -78,6 +79,7 @@ abstract contract BaseIntegrationTest is BaseTest {
         parent = Parent({
             link: parentDeployment.link,
             usdc: parentDeployment.usdc,
+            vaultCcid: parentDeployment.vaultCcid,
             adapterRegistry: parentDeployment.adapterRegistry,
             shareImpl: parentDeployment.yieldcoinImpl,
             share: parentDeployment.yieldcoinProxy,

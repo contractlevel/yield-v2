@@ -77,10 +77,15 @@ contract DeployParent is Script {
     bytes4 private constant AUTHORIZE_SENDER_SELECTOR = OnlyAuthorizedSenderPolicy.authorizeSender.selector;
     bytes4 private constant UNAUTHORIZE_SENDER_SELECTOR = OnlyAuthorizedSenderPolicy.unauthorizeSender.selector;
     bytes32 private constant KYC_CREDENTIAL = keccak256("common.kyc");
+    /// @notice CCID used to register the ParentVault as a system identity in ACE registries.
+    /// @dev Coordinate this value with the KYC provider before production deployment.
+    ///      It is intentionally script-owned because only the parent deployment consumes it.
+    bytes32 public constant PARENT_VAULT_CCID = keccak256("yield-v2.parent-vault");
 
     struct Deployment {
         address link;
         address usdc;
+        bytes32 vaultCcid;
         AdapterRegistry adapterRegistry;
         YieldcoinShare yieldcoinImpl;
         YieldcoinShare yieldcoinProxy;
@@ -109,6 +114,7 @@ contract DeployParent is Script {
         HelperConfig.NetworkConfig memory networkConfig = helperConfig.getActiveNetworkConfig();
         deploy.link = networkConfig.tokens.link;
         deploy.usdc = networkConfig.tokens.usdc;
+        deploy.vaultCcid = PARENT_VAULT_CCID;
 
         /// @dev Deploy the PolicyEngine, IdentityRegistry, and CredentialRegistry
         (deploy.policyEngine, deploy.identityRegistry, deploy.credentialRegistry) = _deployACEComponents(deployer);
@@ -197,7 +203,12 @@ contract DeployParent is Script {
             networkConfig.kycProvider,
             deployer
         );
-        _registerSystemKyc(deploy.identityRegistry, deploy.credentialRegistry, address(deploy.parentVault));
+        _registerSystemKyc(
+            deploy.identityRegistry,
+            deploy.credentialRegistry,
+            PARENT_VAULT_CCID,
+            address(deploy.parentVault)
+        );
         _removeTemporaryRegistryProvider(deploy.policyEngine, deploy.providerPolicy, deployer, networkConfig.kycProvider);
 
         deploy.shareKycPolicy = _configureShareKycPolicies(
@@ -680,9 +691,11 @@ contract DeployParent is Script {
     function _registerSystemKyc(
         IdentityRegistry identityRegistry,
         CredentialRegistry credentialRegistry,
+        bytes32 ccid,
         address account
     ) internal {
-        bytes32 ccid = keccak256(abi.encodePacked(account));
+        /// @dev `ccid` is supplied by HelperConfig so production deployments can coordinate
+        ///      the ParentVault system identity with the KYC provider instead of deriving it onchain.
         identityRegistry.registerIdentity(ccid, account, "");
         credentialRegistry.registerCredential(ccid, KYC_CREDENTIAL, 0, "", "");
     }

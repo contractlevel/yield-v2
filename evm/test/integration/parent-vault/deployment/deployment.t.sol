@@ -56,4 +56,31 @@ contract ParentVault_DeploymentIntegrationTest is BaseIntegrationTest {
             )
         );
     }
+
+    function test_ParentVault_deployment_RegistersParentVaultKyc() external view {
+        bytes32 ccid = parent.vaultCcid;
+
+        assertEq(parent.identityRegistry.getIdentity(address(parent.vault)), ccid);
+        assertTrue(parent.vaultKycPolicy.validate(address(parent.vault), ""));
+        assertTrue(parent.shareKycPolicy.validate(address(parent.vault), ""));
+    }
+
+    function test_ParentVault_deployment_RemovesTemporaryRegistryProvider() external view {
+        assertTrue(parent.providerPolicy.senderAuthorized(networkConfig.kycProvider));
+        assertFalse(parent.providerPolicy.senderAuthorized(address(this)));
+    }
+
+    function test_ParentVault_deployment_HandsOffACERoles() external view {
+        assertTrue(parent.policyEngine.hasRole(parent.policyEngine.DEFAULT_ADMIN_ROLE(), networkConfig.roles.defaultAdmin));
+        assertTrue(parent.policyEngine.hasRole(parent.policyEngine.ADMIN_ROLE(), networkConfig.roles.policyAdmin));
+        assertTrue(
+            parent.policyEngine.hasRole(
+                parent.policyEngine.POLICY_CONFIG_ADMIN_ROLE(), networkConfig.roles.policyConfigAdmin
+            )
+        );
+
+        assertFalse(parent.policyEngine.hasRole(parent.policyEngine.DEFAULT_ADMIN_ROLE(), address(this)));
+        assertFalse(parent.policyEngine.hasRole(parent.policyEngine.ADMIN_ROLE(), address(this)));
+        assertFalse(parent.policyEngine.hasRole(parent.policyEngine.POLICY_CONFIG_ADMIN_ROLE(), address(this)));
+    }
 }
