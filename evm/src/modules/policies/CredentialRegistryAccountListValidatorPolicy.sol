@@ -60,9 +60,4 @@ contract CredentialRegistryAccountListValidatorPolicy is Policy, CredentialRegis
 
         return IPolicyEngine.PolicyResult.Continue;
     }
-
-    /// @inheritdoc Policy
-    function supportsInterface(bytes4 interfaceId) public view override(Policy) returns (bool) {
-        return super.supportsInterface(interfaceId);
-    }
 }
