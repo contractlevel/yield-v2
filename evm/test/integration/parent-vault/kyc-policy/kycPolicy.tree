@@ -1,0 +1,31 @@
+ParentVault_kycPolicy
+├── deposit
+│   ├── when the caller is not KYC approved
+│   │   └── it should revert through ACE
+│   └── when the caller is KYC approved
+│       └── it should reach vault logic
+├── withdraw
+│   ├── when the caller is not KYC approved
+│   │   └── it should revert through ACE
+│   └── when the caller is KYC approved
+│       └── it should reach vault logic
+├── claimShares
+│   ├── when the caller is not KYC approved
+│   │   └── it should revert through ACE
+│   └── when the caller is KYC approved
+│       └── it should reach vault logic
+├── claimUsdc
+│   ├── when the caller is not KYC approved
+│   │   └── it should revert through ACE
+│   └── when the caller is KYC approved
+│       └── it should reach vault logic
+├── cancelDeposit
+│   ├── when the caller is not KYC approved
+│   │   └── it should revert through ACE
+│   └── when the caller is KYC approved
+│       └── it should reach vault logic
+└── cancelWithdraw
+    ├── when the caller is not KYC approved
+    │   └── it should revert through ACE
+    └── when the caller is KYC approved
+        └── it should reach vault logic

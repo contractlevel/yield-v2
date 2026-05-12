@@ -15,7 +15,9 @@ import {Roles} from "../../src/libraries/Roles.sol";
 /// @author @contractlevel
 /// @notice Script to deploy the ChildVault and its modules
 contract DeployChild is Script {
-    struct ChildDeployment {
+    struct Deployment {
+        address link;
+        address usdc;
         AdapterRegistry adapterRegistry;
         ChildVault childVault;
         AaveV3Adapter aaveV3Adapter;
@@ -26,19 +28,21 @@ contract DeployChild is Script {
     /*//////////////////////////////////////////////////////////////
                                   RUN
     //////////////////////////////////////////////////////////////*/
-    function run() external {
+    function run() external returns (Deployment memory deploy) {
         HelperConfig helperConfig = new HelperConfig();
 
-        vm.startBroadcast();
-        HelperConfig.NetworkConfig memory networkConfig = helperConfig.getActiveNetworkConfig();
         address deployer = msg.sender;
+        vm.startBroadcast(deployer);
+        HelperConfig.NetworkConfig memory networkConfig = helperConfig.getActiveNetworkConfig();
+        deploy.link = networkConfig.tokens.link;
+        deploy.usdc = networkConfig.tokens.usdc;
 
         /// @dev Deploy the AdapterRegistry
-        AdapterRegistry adapterRegistry = new AdapterRegistry(
+        deploy.adapterRegistry = new AdapterRegistry(
             0, /// @dev Initial delay for the default admin role
             deployer
         );
-        adapterRegistry.grantRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
+        deploy.adapterRegistry.grantRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
 
         /// @dev Deploy the ChildVault
         BaseVault.ConstructorParams memory baseVaultParams = BaseVault.ConstructorParams({
@@ -49,66 +53,66 @@ contract DeployChild is Script {
             pauser: networkConfig.roles.pauser,
             unpauser: networkConfig.roles.unpauser,
             configOperator: deployer,
-            adapterRegistry: address(adapterRegistry),
+            adapterRegistry: address(deploy.adapterRegistry),
             thisChainSelector: networkConfig.ccip.thisChainSelector
         });
-        ChildVault childVault = new ChildVault(baseVaultParams, networkConfig.ccip.parentChainSelector);
+        deploy.childVault = new ChildVault(baseVaultParams, networkConfig.ccip.parentChainSelector);
 
         /// @dev Deploy the Aave v3 Adapter
         bytes32 aaveV3ProtocolId = keccak256("aave-v3");
-        AaveV3Adapter aaveV3Adapter = new AaveV3Adapter(
-            address(childVault), networkConfig.tokens.usdc, networkConfig.protocols.aaveV3PoolAddressesProvider
+        deploy.aaveV3Adapter = new AaveV3Adapter(
+            address(deploy.childVault), networkConfig.tokens.usdc, networkConfig.protocols.aaveV3PoolAddressesProvider
         );
-        adapterRegistry.setAdapter(aaveV3ProtocolId, address(aaveV3Adapter));
+        deploy.adapterRegistry.setAdapter(aaveV3ProtocolId, address(deploy.aaveV3Adapter));
 
         /// @dev Deploy the Aave v4 Adapter
         bytes32 aaveV4ProtocolId = keccak256("aave-v4");
-        AaveV4Adapter aaveV4Adapter = new AaveV4Adapter(
-            address(childVault),
+        deploy.aaveV4Adapter = new AaveV4Adapter(
+            address(deploy.childVault),
             networkConfig.tokens.usdc,
             networkConfig.protocols.aaveV4Spoke,
             networkConfig.protocols.aaveV4ReserveId
         );
-        adapterRegistry.setAdapter(aaveV4ProtocolId, address(aaveV4Adapter));
+        deploy.adapterRegistry.setAdapter(aaveV4ProtocolId, address(deploy.aaveV4Adapter));
 
         /// @dev Deploy the WorkflowRouter
-        WorkflowRouter workflowRouter = new WorkflowRouter(
-            0, /// @dev Initial delay for the default admin role
-            deployer,
-            address(childVault)
-        );
+        WorkflowRouter.ConstructorParams memory workflowRouterParams = WorkflowRouter.ConstructorParams({
+            initialDelay: 0,
+            defaultAdmin: deployer,
+            pauser: networkConfig.roles.pauser,
+            unpauser: networkConfig.roles.unpauser,
+            configOperator: networkConfig.roles.configOperator,
+            keystoneForwarder: networkConfig.cre.keystoneForwarder,
+            vault: address(deploy.childVault)
+        });
+        deploy.workflowRouter = new WorkflowRouter(workflowRouterParams);
 
-        childVault.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
-        adapterRegistry.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
-        childVault.grantRole(Roles.EPOCH_OPERATOR_ROLE, address(workflowRouter));
-        childVault.grantRole(Roles.REBALANCE_OPERATOR_ROLE, address(workflowRouter));
-        childVault.grantRole(Roles.EMERGENCY_DRAINER_ROLE, networkConfig.roles.emergencyDrainer);
-        childVault.grantRole(Roles.LINK_OPERATOR_ROLE, networkConfig.roles.linkOperator);
+        deploy.childVault.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
+        deploy.adapterRegistry.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
+        deploy.childVault.grantRole(Roles.EPOCH_OPERATOR_ROLE, address(deploy.workflowRouter));
+        deploy.childVault.grantRole(Roles.REBALANCE_OPERATOR_ROLE, address(deploy.workflowRouter));
+        deploy.childVault.grantRole(Roles.EMERGENCY_DRAINER_ROLE, networkConfig.roles.emergencyDrainer);
+        deploy.childVault.grantRole(Roles.LINK_OPERATOR_ROLE, networkConfig.roles.linkOperator);
 
-        workflowRouter.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
-        workflowRouter.grantRole(Roles.PAUSER_ROLE, networkConfig.roles.pauser);
-        workflowRouter.grantRole(Roles.UNPAUSER_ROLE, networkConfig.roles.unpauser);
-        workflowRouter.grantRole(Roles.KEYSTONE_FORWARDER_ROLE, networkConfig.cre.keystoneForwarder);
-
-        childVault.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
-        adapterRegistry.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
+        deploy.childVault.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
+        deploy.adapterRegistry.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
 
         /// @dev The deployer remains default admin until the configured default admin accepts this transfer.
         ///      networkConfig.roles.defaultAdmin should call acceptDefaultAdminTransfer() ASAP.
         if (deployer != networkConfig.roles.defaultAdmin) {
-            childVault.beginDefaultAdminTransfer(networkConfig.roles.defaultAdmin);
+            deploy.childVault.beginDefaultAdminTransfer(networkConfig.roles.defaultAdmin);
         }
 
         /// @dev The deployer remains default admin until the configured default admin accepts this transfer.
         ///      networkConfig.roles.defaultAdmin should call acceptDefaultAdminTransfer() ASAP.
         if (deployer != networkConfig.roles.defaultAdmin) {
-            workflowRouter.beginDefaultAdminTransfer(networkConfig.roles.defaultAdmin);
+            deploy.workflowRouter.beginDefaultAdminTransfer(networkConfig.roles.defaultAdmin);
         }
 
         /// @dev The deployer remains default admin until the configured default admin accepts this transfer.
         ///      networkConfig.roles.defaultAdmin should call acceptDefaultAdminTransfer() ASAP.
         if (deployer != networkConfig.roles.defaultAdmin) {
-            adapterRegistry.beginDefaultAdminTransfer(networkConfig.roles.defaultAdmin);
+            deploy.adapterRegistry.beginDefaultAdminTransfer(networkConfig.roles.defaultAdmin);
         }
 
         vm.stopBroadcast();

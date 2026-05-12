@@ -1,0 +1,13 @@
+ParentVault_deployment
+├── roles
+│   └── it should grant expected vault roles
+├── core addresses
+│   └── it should configure vault addresses from deployment config
+├── adapters
+│   └── it should register Aave V3 and Aave V4 adapters
+├── initial active adapter
+│   └── it should set Aave V3 as the initial active adapter
+├── workflow router
+│   └── it should configure constructor-granted router roles
+└── ACE components
+    └── it should attach and configure the deployed policy engine

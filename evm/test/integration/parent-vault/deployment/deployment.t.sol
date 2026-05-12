@@ -1,0 +1,59 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.28;
+
+import {BaseIntegrationTest} from "../../BaseIntegrationTest.t.sol";
+
+import {Roles} from "../../../../src/libraries/Roles.sol";
+
+contract ParentVault_DeploymentIntegrationTest is BaseIntegrationTest {
+    function test_ParentVault_deployment_GrantsExpectedVaultRoles() external view {
+        assertEq(parent.vault.defaultAdmin(), address(this));
+        assertTrue(parent.vault.hasRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator));
+        assertTrue(parent.vault.hasRole(Roles.EPOCH_OPERATOR_ROLE, address(parent.workflowRouter)));
+        assertTrue(parent.vault.hasRole(Roles.REBALANCE_OPERATOR_ROLE, address(parent.workflowRouter)));
+        assertTrue(parent.vault.hasRole(Roles.EMERGENCY_DRAINER_ROLE, networkConfig.roles.emergencyDrainer));
+        assertTrue(parent.vault.hasRole(Roles.LINK_OPERATOR_ROLE, networkConfig.roles.linkOperator));
+        assertTrue(parent.vault.hasRole(Roles.PAUSER_ROLE, networkConfig.roles.pauser));
+        assertTrue(parent.vault.hasRole(Roles.UNPAUSER_ROLE, networkConfig.roles.unpauser));
+        assertTrue(parent.vault.hasRole(Roles.POLICY_ENGINE_MANAGER_ROLE, networkConfig.roles.policyEngineManager));
+    }
+
+    function test_ParentVault_deployment_ConfiguresCoreAddresses() external view {
+        assertEq(parent.vault.getAdapterRegistry(), address(parent.adapterRegistry));
+        assertEq(parent.vault.getShare(), address(parent.share));
+        assertEq(parent.vault.getTreasury(), networkConfig.treasury);
+        assertEq(parent.vault.getUsdc(), parent.usdc);
+        assertEq(parent.vault.getLink(), parent.link);
+        assertEq(parent.vault.getThisChainSelector(), networkConfig.ccip.parentChainSelector);
+    }
+
+    function test_ParentVault_deployment_RegistersAdapters() external view {
+        _assertAdapterRegistered(parent.adapterRegistry, AAVE_V3_PROTOCOL_ID, address(parent.aaveV3Adapter));
+        _assertAdapterRegistered(parent.adapterRegistry, AAVE_V4_PROTOCOL_ID, address(parent.aaveV4Adapter));
+    }
+
+    function test_ParentVault_deployment_SetsInitialActiveAdapter() external view {
+        assertTrue(parent.vault.getInitialActiveProtocolAdapterSet());
+        assertEq(parent.vault.getActiveProtocolAdapter(), address(parent.aaveV3Adapter));
+    }
+
+    function test_ParentVault_deployment_ConfiguresWorkflowRouter() external view {
+        assertEq(parent.workflowRouter.getVault(), address(parent.vault));
+        assertTrue(parent.workflowRouter.hasRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator));
+        assertTrue(parent.workflowRouter.hasRole(Roles.PAUSER_ROLE, networkConfig.roles.pauser));
+        assertTrue(parent.workflowRouter.hasRole(Roles.UNPAUSER_ROLE, networkConfig.roles.unpauser));
+        assertTrue(parent.workflowRouter.hasRole(Roles.KEYSTONE_FORWARDER_ROLE, networkConfig.cre.keystoneForwarder));
+    }
+
+    function test_ParentVault_deployment_ConfiguresACEComponents() external view {
+        assertEq(parent.vault.getPolicyEngine(), address(parent.policyEngine));
+        assertEq(parent.share.getPolicyEngine(), address(parent.policyEngine));
+        assertTrue(parent.policyEngine.hasRole(parent.policyEngine.DEFAULT_ADMIN_ROLE(), networkConfig.roles.defaultAdmin));
+        assertTrue(parent.policyEngine.hasRole(parent.policyEngine.ADMIN_ROLE(), networkConfig.roles.policyAdmin));
+        assertTrue(
+            parent.policyEngine.hasRole(
+                parent.policyEngine.POLICY_CONFIG_ADMIN_ROLE(), networkConfig.roles.policyConfigAdmin
+            )
+        );
+    }
+}

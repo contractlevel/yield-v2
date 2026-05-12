@@ -1,0 +1,22 @@
+YieldcoinShare_kycPolicy
+├── transfer
+│   ├── when the recipient is not KYC approved
+│   │   └── it should revert through ACE
+│   └── when the accounts are KYC approved
+│       └── it should transfer shares
+├── transferFrom
+│   ├── when the recipient is not KYC approved
+│   │   └── it should revert through ACE
+│   └── when the accounts are KYC approved
+│       └── it should transfer shares
+├── approve
+│   ├── when the spender is not KYC approved
+│   │   └── it should revert through ACE
+│   └── when the accounts are KYC approved
+│       └── it should set allowance
+├── increaseAllowance
+│   └── when the spender is not KYC approved
+│       └── it should revert through ACE
+└── decreaseAllowance
+    └── when the spender is not KYC approved
+        └── it should revert through ACE

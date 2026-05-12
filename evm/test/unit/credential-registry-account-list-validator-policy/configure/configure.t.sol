@@ -11,11 +11,6 @@ import {Policy} from "@chainlink/policy-management/core/Policy.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract CredentialRegistryAccountListValidatorPolicy_ConfigureUnitTest is BaseUnitTest {
-    bytes32 internal constant KYC_CREDENTIAL = keccak256("common.kyc");
-    bytes32 internal constant KYC_REQUIREMENT = keccak256("KYC");
-    bytes32 internal constant AML_CREDENTIAL = keccak256("common.aml");
-    bytes32 internal constant AML_REQUIREMENT = keccak256("AML");
-
     address internal i_policyEngine = makeAddr("policyEngine");
     address internal i_policyOwner = makeAddr("policyOwner");
     address internal i_identityRegistry = makeAddr("identityRegistry");

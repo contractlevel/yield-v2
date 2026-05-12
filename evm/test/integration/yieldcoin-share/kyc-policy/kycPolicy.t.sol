@@ -1,0 +1,87 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.28;
+
+import {BaseIntegrationTest} from "../../BaseIntegrationTest.t.sol";
+
+import {ComplianceTokenERC3643} from "@chainlink/tokens/erc-3643/src/ComplianceTokenERC3643.sol";
+
+contract YieldcoinShare_KycPolicyIntegrationTest is BaseIntegrationTest {
+    uint256 private constant SHARE_AMOUNT = 100e18;
+
+    function setUp() public override {
+        super.setUp();
+        _registerKyc(i_depositor);
+        _mintShares(i_depositor, SHARE_AMOUNT);
+    }
+
+    function test_YieldcoinShare_transfer_RevertWhen_RecipientIsNotKycApproved() external {
+        _assertShareKycPolicy(ComplianceTokenERC3643.transfer.selector);
+
+        _changePrank(i_depositor);
+        _expectPolicyRevert();
+        parent.share.transfer(i_withdrawer, 1e18);
+    }
+
+    function test_YieldcoinShare_transfer_SucceedsWhen_AccountsAreKycApproved() external {
+        _registerKyc(i_withdrawer);
+
+        _changePrank(i_depositor);
+        parent.share.transfer(i_withdrawer, 1e18);
+
+        assertEq(parent.share.balanceOf(i_withdrawer), 1e18);
+    }
+
+    function test_YieldcoinShare_transferFrom_RevertWhen_RecipientIsNotKycApproved() external {
+        _assertShareKycPolicy(ComplianceTokenERC3643.transferFrom.selector);
+        _registerKyc(i_withdrawer);
+        _approveShares(i_depositor, i_withdrawer, 1e18);
+
+        _changePrank(i_withdrawer);
+        _expectPolicyRevert();
+        parent.share.transferFrom(i_depositor, i_fallbackRecipient, 1e18);
+    }
+
+    function test_YieldcoinShare_transferFrom_SucceedsWhen_AccountsAreKycApproved() external {
+        _registerKyc(i_withdrawer);
+        _registerKyc(i_fallbackRecipient);
+        _approveShares(i_depositor, i_withdrawer, 1e18);
+
+        _changePrank(i_withdrawer);
+        parent.share.transferFrom(i_depositor, i_fallbackRecipient, 1e18);
+
+        assertEq(parent.share.balanceOf(i_fallbackRecipient), 1e18);
+    }
+
+    function test_YieldcoinShare_approve_RevertWhen_SpenderIsNotKycApproved() external {
+        _assertShareKycPolicy(ComplianceTokenERC3643.approve.selector);
+
+        _changePrank(i_depositor);
+        _expectPolicyRevert();
+        parent.share.approve(i_withdrawer, 1e18);
+    }
+
+    function test_YieldcoinShare_approve_SucceedsWhen_AccountsAreKycApproved() external {
+        _registerKyc(i_withdrawer);
+
+        _changePrank(i_depositor);
+        parent.share.approve(i_withdrawer, 1e18);
+
+        assertEq(parent.share.allowance(i_depositor, i_withdrawer), 1e18);
+    }
+
+    function test_YieldcoinShare_increaseAllowance_RevertWhen_SpenderIsNotKycApproved() external {
+        _assertShareKycPolicy(ComplianceTokenERC3643.increaseAllowance.selector);
+
+        _changePrank(i_depositor);
+        _expectPolicyRevert();
+        parent.share.increaseAllowance(i_withdrawer, 1e18);
+    }
+
+    function test_YieldcoinShare_decreaseAllowance_RevertWhen_SpenderIsNotKycApproved() external {
+        _assertShareKycPolicy(ComplianceTokenERC3643.decreaseAllowance.selector);
+
+        _changePrank(i_depositor);
+        _expectPolicyRevert();
+        parent.share.decreaseAllowance(i_withdrawer, 0);
+    }
+}

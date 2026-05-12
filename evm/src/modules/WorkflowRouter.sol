@@ -41,14 +41,34 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
+    /// @notice Parameters to initialize the contract in the constructor.
     /// @param initialDelay The initial delay for the default admin role
-    /// @param initialOwner The address of the initial owner
+    /// @param defaultAdmin The address of the default admin
+    /// @param pauser The address that can pause the router
+    /// @param unpauser The address that can unpause the router
+    /// @param configOperator The address that can configure workflow metadata and selectors
+    /// @param keystoneForwarder The Chainlink Keystone Forwarder address
     /// @param vault The address of the Yieldcoin v2 Vault
+    struct ConstructorParams {
+        uint48 initialDelay;
+        address defaultAdmin;
+        address pauser;
+        address unpauser;
+        address configOperator;
+        address keystoneForwarder;
+        address vault;
+    }
+
+    /// @param params Constructor parameters
     //slither-disable-next-line missing-zero-check
-    constructor(uint48 initialDelay, address initialOwner, address vault)
-        AccessControlDefaultAdminRules(initialDelay, initialOwner)
+    constructor(ConstructorParams memory params)
+        AccessControlDefaultAdminRules(params.initialDelay, params.defaultAdmin)
     {
-        i_vault = vault;
+        i_vault = params.vault;
+        _grantRole(Roles.PAUSER_ROLE, params.pauser);
+        _grantRole(Roles.UNPAUSER_ROLE, params.unpauser);
+        _grantRole(Roles.CONFIG_OPERATOR_ROLE, params.configOperator);
+        _grantRole(Roles.KEYSTONE_FORWARDER_ROLE, params.keystoneForwarder);
     }
 
     /*//////////////////////////////////////////////////////////////

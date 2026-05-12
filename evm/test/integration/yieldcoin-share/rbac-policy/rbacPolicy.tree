@@ -1,0 +1,30 @@
+YieldcoinShare_rbacPolicy
+├── mint
+│   ├── when the caller is not ParentVault
+│   │   └── it should revert through ACE
+│   └── when the caller is ParentVault
+│       └── it should mint shares
+├── burn
+│   ├── when the caller is not ParentVault
+│   │   └── it should revert through ACE
+│   └── when the caller is ParentVault
+│       └── it should burn shares
+├── setCCIPAdmin
+│   ├── when the caller is not config operator
+│   │   └── it should revert through ACE
+│   └── when the caller is config operator
+│       └── it should set CCIP admin
+├── metadata setters
+│   └── when the caller is not config operator
+│       └── they should revert through ACE
+├── pause and unpause
+│   └── when the caller does not hold the configured role
+│       └── they should revert through ACE
+├── attachPolicyEngine
+│   └── when the caller is not policy engine manager
+│       └── it should revert through ACE
+└── compliance operations
+    ├── when the caller is not compliance operator
+    │   └── they should revert through ACE
+    └── when the caller is compliance operator
+        └── forcedTransfer should transfer shares

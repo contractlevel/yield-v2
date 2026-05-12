@@ -1,2 +1,7 @@
 constructor
-  └── it should set the vault
+  ├── it should set the vault
+  ├── it should grant DEFAULT_ADMIN_ROLE to defaultAdmin
+  ├── it should grant PAUSER_ROLE to pauser
+  ├── it should grant UNPAUSER_ROLE to unpauser
+  ├── it should grant CONFIG_OPERATOR_ROLE to configOperator
+  └── it should grant KEYSTONE_FORWARDER_ROLE to keystoneForwarder

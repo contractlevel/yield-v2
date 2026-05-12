@@ -74,8 +74,13 @@ import {TerminalAllowPolicy} from "../../src/modules/policies/TerminalAllowPolic
 /// @notice After running this script, networkConfig.roles.defaultAdmin must call acceptDefaultAdminTransfer() and changeDefaultAdminDelay() on ParentVault, WorkflowRouter, and PolicyEngine ASAP.
 contract DeployParent is Script {
     bytes4 private constant RBAC_GRANT_ROLE_SELECTOR = bytes4(keccak256("grantRole(bytes32,address)"));
+    bytes4 private constant AUTHORIZE_SENDER_SELECTOR = OnlyAuthorizedSenderPolicy.authorizeSender.selector;
+    bytes4 private constant UNAUTHORIZE_SENDER_SELECTOR = OnlyAuthorizedSenderPolicy.unauthorizeSender.selector;
+    bytes32 private constant KYC_CREDENTIAL = keccak256("common.kyc");
 
-    struct ParentDeploy {
+    struct Deployment {
+        address link;
+        address usdc;
         AdapterRegistry adapterRegistry;
         YieldcoinShare yieldcoinImpl;
         YieldcoinShare yieldcoinProxy;
@@ -86,7 +91,7 @@ contract DeployParent is Script {
         PolicyEngine policyEngine;
         IdentityRegistry identityRegistry;
         CredentialRegistry credentialRegistry;
-        CredentialRegistryIdentityValidatorPolicy kycPolicy;
+        CredentialRegistryIdentityValidatorPolicy vaultKycPolicy;
         CredentialRegistryAccountListValidatorPolicy shareKycPolicy;
         RoleBasedAccessControlPolicy shareSupplyPolicy;
         OnlyAuthorizedSenderPolicy providerPolicy;
@@ -96,12 +101,14 @@ contract DeployParent is Script {
     /*//////////////////////////////////////////////////////////////
                                   RUN
     //////////////////////////////////////////////////////////////*/
-    function run() external returns (ParentDeploy memory deploy) {
+    function run() external returns (Deployment memory deploy) {
         HelperConfig helperConfig = new HelperConfig();
 
-        vm.startBroadcast();
-        HelperConfig.NetworkConfig memory networkConfig = helperConfig.getActiveNetworkConfig();
         address deployer = msg.sender;
+        vm.startBroadcast(deployer);
+        HelperConfig.NetworkConfig memory networkConfig = helperConfig.getActiveNetworkConfig();
+        deploy.link = networkConfig.tokens.link;
+        deploy.usdc = networkConfig.tokens.usdc;
 
         /// @dev Deploy the PolicyEngine, IdentityRegistry, and CredentialRegistry
         (deploy.policyEngine, deploy.identityRegistry, deploy.credentialRegistry) = _deployACEComponents(deployer);
@@ -115,6 +122,7 @@ contract DeployParent is Script {
 
         /// @dev Deploy the YieldcoinShare
         YieldcoinShare yieldcoinImpl = new YieldcoinShare();
+        deploy.yieldcoinImpl = yieldcoinImpl;
         ERC1967Proxy yieldcoinProxy = new ERC1967Proxy(
             address(yieldcoinImpl),
             abi.encodeWithSelector(
@@ -160,28 +168,37 @@ contract DeployParent is Script {
         deploy.parentVault.setInitialActiveProtocolAdapter(aaveV3ProtocolId);
 
         /// @dev Deploy the WorkflowRouter
-        deploy.workflowRouter = new WorkflowRouter(
-            0, /// @dev Initial delay for the default admin role
-            deployer,
-            address(deploy.parentVault)
-        );
+        uint48 initialDelay = 259200; // 3 days
+        WorkflowRouter.ConstructorParams memory workflowRouterParams = WorkflowRouter.ConstructorParams({
+            initialDelay: initialDelay,
+            defaultAdmin: deployer,
+            pauser: networkConfig.roles.pauser,
+            unpauser: networkConfig.roles.unpauser,
+            configOperator: networkConfig.roles.configOperator,
+            keystoneForwarder: networkConfig.cre.keystoneForwarder,
+            vault: address(deploy.parentVault)
+        });
+        deploy.workflowRouter = new WorkflowRouter(workflowRouterParams);
 
         deploy.terminalAllow = _deployTerminalAllowPolicy(deploy.policyEngine);
 
-        _configureVaultKycPolicies(
+        deploy.vaultKycPolicy = _configureVaultKycPolicies(
             deploy.policyEngine,
             deploy.identityRegistry,
             deploy.credentialRegistry,
             deploy.parentVault,
             deploy.terminalAllow
         );
-        _configureRegistryProviderPolicies(
+        deploy.providerPolicy = _configureRegistryProviderPolicies(
             deploy.policyEngine,
             deploy.identityRegistry,
             deploy.credentialRegistry,
             deploy.terminalAllow,
-            networkConfig.kycProvider
+            networkConfig.kycProvider,
+            deployer
         );
+        _registerSystemKyc(deploy.identityRegistry, deploy.credentialRegistry, address(deploy.parentVault));
+        _removeTemporaryRegistryProvider(deploy.policyEngine, deploy.providerPolicy, deployer, networkConfig.kycProvider);
 
         deploy.shareKycPolicy = _configureShareKycPolicies(
             deploy.policyEngine,
@@ -191,7 +208,7 @@ contract DeployParent is Script {
             deploy.terminalAllow
         );
 
-        _configureSharePolicies(
+        deploy.shareSupplyPolicy = _configureSharePolicies(
             deploy.policyEngine,
             deploy.yieldcoinProxy,
             deploy.parentVault,
@@ -209,12 +226,6 @@ contract DeployParent is Script {
         deploy.parentVault.grantRole(Roles.REBALANCE_OPERATOR_ROLE, address(deploy.workflowRouter));
         deploy.parentVault.grantRole(Roles.EMERGENCY_DRAINER_ROLE, networkConfig.roles.emergencyDrainer);
         deploy.parentVault.grantRole(Roles.LINK_OPERATOR_ROLE, networkConfig.roles.linkOperator);
-
-        // @review these could be passed as constructor params, then we don't have to transfer default admin role from msg.sender
-        deploy.workflowRouter.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
-        deploy.workflowRouter.grantRole(Roles.PAUSER_ROLE, networkConfig.roles.pauser);
-        deploy.workflowRouter.grantRole(Roles.UNPAUSER_ROLE, networkConfig.roles.unpauser);
-        deploy.workflowRouter.grantRole(Roles.KEYSTONE_FORWARDER_ROLE, networkConfig.cre.keystoneForwarder);
 
         deploy.parentVault.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
         deploy.adapterRegistry.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
@@ -326,7 +337,7 @@ contract DeployParent is Script {
         CredentialRegistry credentialRegistry,
         ParentVault parentVault,
         TerminalAllowPolicy terminalAllow
-    ) internal {
+    ) internal returns (CredentialRegistryIdentityValidatorPolicy kycPolicy) {
         (
             ICredentialRequirements.CredentialSourceInput[] memory sources,
             ICredentialRequirements.CredentialRequirementInput[] memory requirements
@@ -343,8 +354,7 @@ contract DeployParent is Script {
                 abi.encode(sources, requirements)
             )
         );
-        CredentialRegistryIdentityValidatorPolicy kycPolicy =
-            CredentialRegistryIdentityValidatorPolicy(address(kycPolicyProxy));
+        kycPolicy = CredentialRegistryIdentityValidatorPolicy(address(kycPolicyProxy));
 
         /// @dev Extract msg.sender from the policy engine payload
         SenderExtractor senderExtractor = new SenderExtractor();
@@ -427,7 +437,7 @@ contract DeployParent is Script {
         address complianceOperator,
         address pauser,
         address unpauser
-    ) internal {
+    ) internal returns (RoleBasedAccessControlPolicy shareSupplyPolicy) {
         RoleBasedAccessControlPolicy shareSupplyPolicyImpl = new RoleBasedAccessControlPolicy();
         ERC1967Proxy shareSupplyPolicyProxy = new ERC1967Proxy(
             address(shareSupplyPolicyImpl),
@@ -435,7 +445,7 @@ contract DeployParent is Script {
                 Policy.initialize.selector, address(policyEngine), address(policyEngine), new bytes(0)
             )
         );
-        RoleBasedAccessControlPolicy shareSupplyPolicy = RoleBasedAccessControlPolicy(address(shareSupplyPolicyProxy));
+        shareSupplyPolicy = RoleBasedAccessControlPolicy(address(shareSupplyPolicyProxy));
 
         // Supply
         _configureShareRole(
@@ -610,8 +620,9 @@ contract DeployParent is Script {
         IdentityRegistry identityRegistry,
         CredentialRegistry credentialRegistry,
         TerminalAllowPolicy terminalAllow,
-        address provider
-    ) internal {
+        address provider,
+        address temporaryProvider
+    ) internal returns (OnlyAuthorizedSenderPolicy providerPolicy) {
         OnlyAuthorizedSenderPolicy providerPolicyImpl = new OnlyAuthorizedSenderPolicy();
         ERC1967Proxy providerPolicyProxy = new ERC1967Proxy(
             address(providerPolicyImpl),
@@ -619,14 +630,22 @@ contract DeployParent is Script {
                 Policy.initialize.selector, address(policyEngine), address(policyEngine), new bytes(0)
             )
         );
-        OnlyAuthorizedSenderPolicy providerPolicy = OnlyAuthorizedSenderPolicy(address(providerPolicyProxy));
+        providerPolicy = OnlyAuthorizedSenderPolicy(address(providerPolicyProxy));
 
         policyEngine.setPolicyConfiguration(
             address(providerPolicy),
             policyEngine.getPolicyConfigVersion(address(providerPolicy)),
-            OnlyAuthorizedSenderPolicy.authorizeSender.selector,
+            AUTHORIZE_SENDER_SELECTOR,
             abi.encode(provider)
         );
+        if (temporaryProvider != provider) {
+            policyEngine.setPolicyConfiguration(
+                address(providerPolicy),
+                policyEngine.getPolicyConfigVersion(address(providerPolicy)),
+                AUTHORIZE_SENDER_SELECTOR,
+                abi.encode(temporaryProvider)
+            );
+        }
 
         bytes4[] memory identitySelectors = new bytes4[](3);
         identitySelectors[0] = IdentityRegistry.registerIdentity.selector;
@@ -656,6 +675,32 @@ contract DeployParent is Script {
                 address(credentialRegistry), credentialSelectors[i], address(terminalAllow), noParameters
             );
         }
+    }
+
+    function _registerSystemKyc(
+        IdentityRegistry identityRegistry,
+        CredentialRegistry credentialRegistry,
+        address account
+    ) internal {
+        bytes32 ccid = keccak256(abi.encodePacked(account));
+        identityRegistry.registerIdentity(ccid, account, "");
+        credentialRegistry.registerCredential(ccid, KYC_CREDENTIAL, 0, "", "");
+    }
+
+    function _removeTemporaryRegistryProvider(
+        PolicyEngine policyEngine,
+        OnlyAuthorizedSenderPolicy providerPolicy,
+        address temporaryProvider,
+        address provider
+    ) internal {
+        if (temporaryProvider == provider) return;
+
+        policyEngine.setPolicyConfiguration(
+            address(providerPolicy),
+            policyEngine.getPolicyConfigVersion(address(providerPolicy)),
+            UNAUTHORIZE_SENDER_SELECTOR,
+            abi.encode(temporaryProvider)
+        );
     }
 
     function _handoffACERoles(

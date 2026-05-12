@@ -15,9 +15,6 @@ import {MockCredentialRegistry} from "../../../mocks/MockCredentialRegistry.sol"
 import {MockIdentityRegistry} from "../../../mocks/MockIdentityRegistry.sol";
 
 contract CredentialRegistryAccountListValidatorPolicy_RunUnitTest is BaseUnitTest {
-    bytes32 internal constant KYC_CREDENTIAL = keccak256("common.kyc");
-    bytes32 internal constant KYC_REQUIREMENT = keccak256("KYC");
-
     address internal i_policyEngine = makeAddr("policyEngine");
     address internal i_policyOwner = makeAddr("policyOwner");
     address internal i_accountOne = makeAddr("accountOne");
