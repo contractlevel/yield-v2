@@ -1,0 +1,11 @@
+CredentialRegistryAccountListValidatorPolicy_run
+├── when every account has KYC
+│   └── it should return Continue
+├── when any account does not have KYC
+│   └── it should revert
+├── when parameters are empty
+│   └── it should revert
+├── when parameters have multiple items
+│   └── it should revert
+└── when account list is empty
+    └── it should revert

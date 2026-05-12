@@ -26,6 +26,10 @@ import {
 import {ICredentialRequirements} from "@chainlink/cross-chain-identity/interfaces/ICredentialRequirements.sol";
 
 import {SenderExtractor} from "../../src/modules/extractors/SenderExtractor.sol";
+import {YieldcoinShareKycExtractor} from "../../src/modules/extractors/YieldcoinShareKycExtractor.sol";
+import {
+    CredentialRegistryAccountListValidatorPolicy
+} from "../../src/modules/policies/CredentialRegistryAccountListValidatorPolicy.sol";
 import {TerminalAllowPolicy} from "../../src/modules/policies/TerminalAllowPolicy.sol";
 
 /// @title DeployParentVault Script
@@ -83,6 +87,7 @@ contract DeployParent is Script {
         IdentityRegistry identityRegistry;
         CredentialRegistry credentialRegistry;
         CredentialRegistryIdentityValidatorPolicy kycPolicy;
+        CredentialRegistryAccountListValidatorPolicy shareKycPolicy;
         RoleBasedAccessControlPolicy shareSupplyPolicy;
         OnlyAuthorizedSenderPolicy providerPolicy;
         TerminalAllowPolicy terminalAllow;
@@ -98,8 +103,10 @@ contract DeployParent is Script {
         HelperConfig.NetworkConfig memory networkConfig = helperConfig.getActiveNetworkConfig();
         address deployer = msg.sender;
 
+        /// @dev Deploy the PolicyEngine, IdentityRegistry, and CredentialRegistry
         (deploy.policyEngine, deploy.identityRegistry, deploy.credentialRegistry) = _deployACEComponents(deployer);
 
+        /// @dev Deploy the AdapterRegistry
         deploy.adapterRegistry = new AdapterRegistry(
             0, /// @dev Initial delay for the default admin role
             deployer
@@ -176,6 +183,14 @@ contract DeployParent is Script {
             networkConfig.kycProvider
         );
 
+        deploy.shareKycPolicy = _configureShareKycPolicies(
+            deploy.policyEngine,
+            deploy.identityRegistry,
+            deploy.credentialRegistry,
+            deploy.yieldcoinProxy,
+            deploy.terminalAllow
+        );
+
         _configureSharePolicies(
             deploy.policyEngine,
             deploy.yieldcoinProxy,
@@ -195,6 +210,7 @@ contract DeployParent is Script {
         deploy.parentVault.grantRole(Roles.EMERGENCY_DRAINER_ROLE, networkConfig.roles.emergencyDrainer);
         deploy.parentVault.grantRole(Roles.LINK_OPERATOR_ROLE, networkConfig.roles.linkOperator);
 
+        // @review these could be passed as constructor params, then we don't have to transfer default admin role from msg.sender
         deploy.workflowRouter.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
         deploy.workflowRouter.grantRole(Roles.PAUSER_ROLE, networkConfig.roles.pauser);
         deploy.workflowRouter.grantRole(Roles.UNPAUSER_ROLE, networkConfig.roles.unpauser);
@@ -276,6 +292,34 @@ contract DeployParent is Script {
         terminalAllow = TerminalAllowPolicy(address(terminalAllowProxy));
     }
 
+    function _buildKycCredentialRequirements(IdentityRegistry identityRegistry, CredentialRegistry credentialRegistry)
+        internal
+        pure
+        returns (
+            ICredentialRequirements.CredentialSourceInput[] memory sources,
+            ICredentialRequirements.CredentialRequirementInput[] memory requirements
+        )
+    {
+        /// @dev Values used in CredentialRegistryIdentityValidatorPolicyTest.t.sol
+        bytes32 kycCredential = keccak256("common.kyc");
+        bytes32 kycRequirement = keccak256("KYC");
+
+        sources = new ICredentialRequirements.CredentialSourceInput[](1);
+        sources[0] = ICredentialRequirements.CredentialSourceInput({
+            credentialTypeId: kycCredential,
+            identityRegistry: address(identityRegistry),
+            credentialRegistry: address(credentialRegistry),
+            dataValidator: address(0)
+        });
+
+        bytes32[] memory requiredCredentials = new bytes32[](1);
+        requiredCredentials[0] = kycCredential;
+        requirements = new ICredentialRequirements.CredentialRequirementInput[](1);
+        requirements[0] = ICredentialRequirements.CredentialRequirementInput({
+            requirementId: kycRequirement, credentialTypeIds: requiredCredentials, minValidations: 1, invert: false
+        });
+    }
+
     function _configureVaultKycPolicies(
         PolicyEngine policyEngine,
         IdentityRegistry identityRegistry,
@@ -283,27 +327,11 @@ contract DeployParent is Script {
         ParentVault parentVault,
         TerminalAllowPolicy terminalAllow
     ) internal {
-        /// @dev Values used in CredentialRegistryIdentityValidatorPolicyTest.t.sol
-        bytes32 kycCredential = keccak256("common.kyc");
-        bytes32 kycRequirement = keccak256("KYC");
+        (
+            ICredentialRequirements.CredentialSourceInput[] memory sources,
+            ICredentialRequirements.CredentialRequirementInput[] memory requirements
+        ) = _buildKycCredentialRequirements(identityRegistry, credentialRegistry);
 
-        /// @dev Credential sources
-        ICredentialRequirements.CredentialSourceInput[] memory sources =
-            new ICredentialRequirements.CredentialSourceInput[](1);
-        sources[0] = ICredentialRequirements.CredentialSourceInput({
-            credentialTypeId: kycCredential,
-            identityRegistry: address(identityRegistry),
-            credentialRegistry: address(credentialRegistry),
-            dataValidator: address(0)
-        });
-        /// @dev Credential requirements
-        bytes32[] memory requiredCredentials = new bytes32[](1);
-        requiredCredentials[0] = kycCredential;
-        ICredentialRequirements.CredentialRequirementInput[] memory requirements =
-            new ICredentialRequirements.CredentialRequirementInput[](1);
-        requirements[0] = ICredentialRequirements.CredentialRequirementInput({
-            requirementId: kycRequirement, credentialTypeIds: requiredCredentials, minValidations: 1, invert: false
-        });
         /// @dev KYC Policy
         CredentialRegistryIdentityValidatorPolicy kycPolicyImpl = new CredentialRegistryIdentityValidatorPolicy();
         ERC1967Proxy kycPolicyProxy = new ERC1967Proxy(
@@ -339,6 +367,53 @@ contract DeployParent is Script {
         for (uint256 i; i < selectors.length; ++i) {
             policyEngine.addPolicy(address(parentVault), selectors[i], address(kycPolicy), senderParameter);
             policyEngine.addPolicy(address(parentVault), selectors[i], address(terminalAllow), noParameters);
+        }
+    }
+
+    function _configureShareKycPolicies(
+        PolicyEngine policyEngine,
+        IdentityRegistry identityRegistry,
+        CredentialRegistry credentialRegistry,
+        YieldcoinShare yieldcoin,
+        TerminalAllowPolicy terminalAllow
+    ) internal returns (CredentialRegistryAccountListValidatorPolicy shareKycPolicy) {
+        (
+            ICredentialRequirements.CredentialSourceInput[] memory sources,
+            ICredentialRequirements.CredentialRequirementInput[] memory requirements
+        ) = _buildKycCredentialRequirements(identityRegistry, credentialRegistry);
+
+        CredentialRegistryAccountListValidatorPolicy shareKycPolicyImpl =
+            new CredentialRegistryAccountListValidatorPolicy();
+        ERC1967Proxy shareKycPolicyProxy = new ERC1967Proxy(
+            address(shareKycPolicyImpl),
+            abi.encodeWithSelector(
+                Policy.initialize.selector,
+                address(policyEngine),
+                address(policyEngine),
+                abi.encode(sources, requirements)
+            )
+        );
+        shareKycPolicy = CredentialRegistryAccountListValidatorPolicy(address(shareKycPolicyProxy));
+
+        YieldcoinShareKycExtractor extractor = new YieldcoinShareKycExtractor();
+
+        bytes4[] memory selectors = new bytes4[](6);
+        selectors[0] = ComplianceTokenERC3643.transfer.selector;
+        selectors[1] = ComplianceTokenERC3643.transferFrom.selector;
+        selectors[2] = ComplianceTokenERC3643.batchTransfer.selector;
+        selectors[3] = ComplianceTokenERC3643.approve.selector;
+        selectors[4] = ComplianceTokenERC3643.increaseAllowance.selector;
+        selectors[5] = ComplianceTokenERC3643.decreaseAllowance.selector;
+
+        policyEngine.setExtractors(selectors, address(extractor));
+
+        bytes32[] memory kycAccounts = new bytes32[](1);
+        kycAccounts[0] = extractor.PARAM_KYC_ACCOUNTS();
+
+        bytes32[] memory noParameters = new bytes32[](0);
+        for (uint256 i; i < selectors.length; ++i) {
+            policyEngine.addPolicy(address(yieldcoin), selectors[i], address(shareKycPolicy), kycAccounts);
+            policyEngine.addPolicy(address(yieldcoin), selectors[i], address(terminalAllow), noParameters);
         }
     }
 
