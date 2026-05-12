@@ -210,12 +210,11 @@ contract DeployParent is Script {
             deployer
         );
         _registerSystemKyc(
-            deploy.identityRegistry,
-            deploy.credentialRegistry,
-            PARENT_VAULT_CCID,
-            address(deploy.parentVault)
+            deploy.identityRegistry, deploy.credentialRegistry, PARENT_VAULT_CCID, address(deploy.parentVault)
         );
-        _removeTemporaryRegistryProvider(deploy.policyEngine, deploy.providerPolicy, deployer, networkConfig.kycProvider);
+        _removeTemporaryRegistryProvider(
+            deploy.policyEngine, deploy.providerPolicy, deployer, networkConfig.kycProvider
+        );
 
         deploy.shareKycPolicy = _configureShareKycPolicies(
             deploy.policyEngine,

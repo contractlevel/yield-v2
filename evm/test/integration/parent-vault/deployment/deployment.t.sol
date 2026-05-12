@@ -87,12 +87,13 @@ contract ParentVault_DeploymentIntegrationTest is BaseIntegrationTest {
     function test_ParentVault_deployment_ConfiguresACEComponents() external view {
         assertEq(parent.vault.getPolicyEngine(), address(parent.policyEngine));
         assertEq(parent.share.getPolicyEngine(), address(parent.policyEngine));
-        assertTrue(parent.policyEngine.hasRole(parent.policyEngine.DEFAULT_ADMIN_ROLE(), networkConfig.roles.defaultAdmin));
+        assertTrue(
+            parent.policyEngine.hasRole(parent.policyEngine.DEFAULT_ADMIN_ROLE(), networkConfig.roles.defaultAdmin)
+        );
         assertTrue(parent.policyEngine.hasRole(parent.policyEngine.ADMIN_ROLE(), networkConfig.roles.policyAdmin));
         assertTrue(
-            parent.policyEngine.hasRole(
-                parent.policyEngine.POLICY_CONFIG_ADMIN_ROLE(), networkConfig.roles.policyConfigAdmin
-            )
+            parent.policyEngine
+                .hasRole(parent.policyEngine.POLICY_CONFIG_ADMIN_ROLE(), networkConfig.roles.policyConfigAdmin)
         );
     }
 
@@ -110,12 +111,13 @@ contract ParentVault_DeploymentIntegrationTest is BaseIntegrationTest {
     }
 
     function test_ParentVault_deployment_HandsOffACERoles() external view {
-        assertTrue(parent.policyEngine.hasRole(parent.policyEngine.DEFAULT_ADMIN_ROLE(), networkConfig.roles.defaultAdmin));
+        assertTrue(
+            parent.policyEngine.hasRole(parent.policyEngine.DEFAULT_ADMIN_ROLE(), networkConfig.roles.defaultAdmin)
+        );
         assertTrue(parent.policyEngine.hasRole(parent.policyEngine.ADMIN_ROLE(), networkConfig.roles.policyAdmin));
         assertTrue(
-            parent.policyEngine.hasRole(
-                parent.policyEngine.POLICY_CONFIG_ADMIN_ROLE(), networkConfig.roles.policyConfigAdmin
-            )
+            parent.policyEngine
+                .hasRole(parent.policyEngine.POLICY_CONFIG_ADMIN_ROLE(), networkConfig.roles.policyConfigAdmin)
         );
 
         assertFalse(parent.policyEngine.hasRole(parent.policyEngine.DEFAULT_ADMIN_ROLE(), address(this)));

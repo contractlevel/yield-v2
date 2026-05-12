@@ -166,16 +166,22 @@ contract YieldcoinShare_RbacPolicyIntegrationTest is BaseIntegrationTest {
 
         _changePrank(i_nonOwner);
         _expectPolicyRevert();
-        parent.share.batchForcedTransfer(
-            _twoAddresses(i_depositor, i_depositor), _twoAddresses(i_withdrawer, i_withdrawer), _twoAmounts(1e18, 2e18)
-        );
+        parent.share
+            .batchForcedTransfer(
+                _twoAddresses(i_depositor, i_depositor),
+                _twoAddresses(i_withdrawer, i_withdrawer),
+                _twoAmounts(1e18, 2e18)
+            );
     }
 
     function test_YieldcoinShare_batchForcedTransfer_SucceedsWhen_CallerIsComplianceOperator() external {
         _changePrank(networkConfig.roles.complianceOperator);
-        parent.share.batchForcedTransfer(
-            _twoAddresses(i_depositor, i_depositor), _twoAddresses(i_withdrawer, i_withdrawer), _twoAmounts(1e18, 2e18)
-        );
+        parent.share
+            .batchForcedTransfer(
+                _twoAddresses(i_depositor, i_depositor),
+                _twoAddresses(i_withdrawer, i_withdrawer),
+                _twoAmounts(1e18, 2e18)
+            );
 
         assertEq(parent.share.balanceOf(i_withdrawer), 3e18);
     }
