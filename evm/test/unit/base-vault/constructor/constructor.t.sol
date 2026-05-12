@@ -29,7 +29,7 @@ contract ParentVault_ConstructorUnitTest is BaseVault_ConstructorUnitTest {
         s_vault = s_parentVault;
     }
 
-    function _expectedChainSelector() internal view override returns (uint64) {
+    function _expectedChainSelector() internal pure override returns (uint64) {
         return PARENT_CHAIN_SELECTOR;
     }
 }
@@ -39,7 +39,7 @@ contract ChildVault_ConstructorUnitTest is BaseVault_ConstructorUnitTest {
         s_vault = s_childVault;
     }
 
-    function _expectedChainSelector() internal view override returns (uint64) {
+    function _expectedChainSelector() internal pure override returns (uint64) {
         return CHILD_CHAIN_SELECTOR;
     }
 }

@@ -39,4 +39,10 @@ interface IProtocolAdapter {
     /// @notice Gets the address of the protocol pool
     /// @return pool The address of the protocol pool
     function getProtocolPool() external view returns (address pool);
+    /// @notice Gets the Yieldcoin v2 Vault authorized to call this adapter
+    /// @return vault The vault address
+    function getVault() external view returns (address vault);
+    /// @notice Gets the USDC token used by this adapter
+    /// @return usdc The USDC token address
+    function getUsdc() external view returns (address usdc);
 }

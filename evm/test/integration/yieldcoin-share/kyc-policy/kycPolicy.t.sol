@@ -31,6 +31,42 @@ contract YieldcoinShare_KycPolicyIntegrationTest is BaseIntegrationTest {
         assertEq(parent.share.balanceOf(i_withdrawer), 1e18);
     }
 
+    function test_YieldcoinShare_batchTransfer_RevertWhen_RecipientIsNotKycApproved() external {
+        _assertShareKycPolicy(ComplianceTokenERC3643.batchTransfer.selector);
+        _registerKyc(i_withdrawer);
+
+        address[] memory recipients = new address[](2);
+        recipients[0] = i_withdrawer;
+        recipients[1] = i_fallbackRecipient;
+
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = 1e18;
+        amounts[1] = 1e18;
+
+        _changePrank(i_depositor);
+        _expectPolicyRevert();
+        parent.share.batchTransfer(recipients, amounts);
+    }
+
+    function test_YieldcoinShare_batchTransfer_SucceedsWhen_AccountsAreKycApproved() external {
+        _registerKyc(i_withdrawer);
+        _registerKyc(i_fallbackRecipient);
+
+        address[] memory recipients = new address[](2);
+        recipients[0] = i_withdrawer;
+        recipients[1] = i_fallbackRecipient;
+
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = 1e18;
+        amounts[1] = 2e18;
+
+        _changePrank(i_depositor);
+        parent.share.batchTransfer(recipients, amounts);
+
+        assertEq(parent.share.balanceOf(i_withdrawer), 1e18);
+        assertEq(parent.share.balanceOf(i_fallbackRecipient), 2e18);
+    }
+
     function test_YieldcoinShare_transferFrom_RevertWhen_RecipientIsNotKycApproved() external {
         _assertShareKycPolicy(ComplianceTokenERC3643.transferFrom.selector);
         _registerKyc(i_withdrawer);

@@ -35,6 +35,14 @@ contract MockProtocolAdapter is IProtocolAdapter {
         return address(0);
     }
 
+    function getVault() external pure override returns (address) {
+        return address(0);
+    }
+
+    function getUsdc() external pure override returns (address) {
+        return address(0);
+    }
+
     function setDepositReverts(bool depositReverts) external {
         s_depositReverts = depositReverts;
     }

@@ -14,6 +14,7 @@ import {AaveV3Adapter} from "../../src/modules/adapters/AaveV3Adapter.sol";
 import {AaveV4Adapter} from "../../src/modules/adapters/AaveV4Adapter.sol";
 import {WorkflowRouter} from "../../src/modules/WorkflowRouter.sol";
 import {YieldcoinShare} from "../../src/token/YieldcoinShare.sol";
+import {IProtocolAdapter} from "../../src/interfaces/IProtocolAdapter.sol";
 import {Roles} from "../../src/libraries/Roles.sol";
 
 import {CredentialRegistry} from "@chainlink/cross-chain-identity/CredentialRegistry.sol";
@@ -38,6 +39,9 @@ abstract contract BaseIntegrationTest is BaseTest {
         address link;
         address usdc;
         bytes32 vaultCcid;
+        address aaveV3PoolAddressesProvider;
+        address aaveV4Spoke;
+        uint256 aaveV4ReserveId;
         AdapterRegistry adapterRegistry;
         YieldcoinShare shareImpl;
         YieldcoinShare share;
@@ -58,6 +62,9 @@ abstract contract BaseIntegrationTest is BaseTest {
     struct Child {
         address link;
         address usdc;
+        address aaveV3PoolAddressesProvider;
+        address aaveV4Spoke;
+        uint256 aaveV4ReserveId;
         AdapterRegistry adapterRegistry;
         ChildVault vault;
         AaveV3Adapter aaveV3Adapter;
@@ -80,6 +87,9 @@ abstract contract BaseIntegrationTest is BaseTest {
             link: parentDeployment.link,
             usdc: parentDeployment.usdc,
             vaultCcid: parentDeployment.vaultCcid,
+            aaveV3PoolAddressesProvider: parentDeployment.aaveV3PoolAddressesProvider,
+            aaveV4Spoke: parentDeployment.aaveV4Spoke,
+            aaveV4ReserveId: parentDeployment.aaveV4ReserveId,
             adapterRegistry: parentDeployment.adapterRegistry,
             shareImpl: parentDeployment.yieldcoinImpl,
             share: parentDeployment.yieldcoinProxy,
@@ -101,6 +111,9 @@ abstract contract BaseIntegrationTest is BaseTest {
         child = Child({
             link: childDeployment.link,
             usdc: childDeployment.usdc,
+            aaveV3PoolAddressesProvider: childDeployment.aaveV3PoolAddressesProvider,
+            aaveV4Spoke: childDeployment.aaveV4Spoke,
+            aaveV4ReserveId: childDeployment.aaveV4ReserveId,
             adapterRegistry: childDeployment.adapterRegistry,
             vault: childDeployment.childVault,
             aaveV3Adapter: childDeployment.aaveV3Adapter,
@@ -145,6 +158,11 @@ abstract contract BaseIntegrationTest is BaseTest {
 
     function _assertAdapterRegistered(AdapterRegistry registry, bytes32 protocolId, address adapter) internal view {
         assertEq(registry.getAdapter(protocolId), adapter);
+    }
+
+    function _assertProtocolAdapterConfigured(IProtocolAdapter adapter, address vault, address usdc) internal view {
+        assertEq(adapter.getVault(), vault);
+        assertEq(adapter.getUsdc(), usdc);
     }
 
     function _assertPolicyPair(address target, bytes4 selector, address firstPolicy) internal view {

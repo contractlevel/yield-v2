@@ -9,6 +9,7 @@ abstract contract Constants {
     uint64 internal constant CHILD_CHAIN_SELECTOR = 2;
 
     uint256 internal constant PENDING_DEPOSIT_TIMEOUT = 20 minutes;
+    uint48 internal constant INITIAL_DEFAULT_ADMIN_DELAY = 259200; // 3 days
 
     bytes32 internal constant AAVE_V3_PROTOCOL_ID = keccak256("aave-v3");
     bytes32 internal constant AAVE_V4_PROTOCOL_ID = keccak256("aave-v4");

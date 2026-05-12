@@ -37,4 +37,17 @@ abstract contract ProtocolAdapter is IProtocolAdapter, ReentrancyGuard {
         }
         _;
     }
+
+    /*//////////////////////////////////////////////////////////////
+                                 GETTER
+    //////////////////////////////////////////////////////////////*/
+    /// @inheritdoc IProtocolAdapter
+    function getVault() external view returns (address vault) {
+        vault = i_vault;
+    }
+
+    /// @inheritdoc IProtocolAdapter
+    function getUsdc() external view returns (address usdc) {
+        usdc = i_usdc;
+    }
 }

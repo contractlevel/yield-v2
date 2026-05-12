@@ -18,6 +18,9 @@ contract DeployChild is Script {
     struct Deployment {
         address link;
         address usdc;
+        address aaveV3PoolAddressesProvider;
+        address aaveV4Spoke;
+        uint256 aaveV4ReserveId;
         AdapterRegistry adapterRegistry;
         ChildVault childVault;
         AaveV3Adapter aaveV3Adapter;
@@ -36,6 +39,9 @@ contract DeployChild is Script {
         HelperConfig.NetworkConfig memory networkConfig = helperConfig.getActiveNetworkConfig();
         deploy.link = networkConfig.tokens.link;
         deploy.usdc = networkConfig.tokens.usdc;
+        deploy.aaveV3PoolAddressesProvider = networkConfig.protocols.aaveV3PoolAddressesProvider;
+        deploy.aaveV4Spoke = networkConfig.protocols.aaveV4Spoke;
+        deploy.aaveV4ReserveId = networkConfig.protocols.aaveV4ReserveId;
 
         /// @dev Deploy the AdapterRegistry
         deploy.adapterRegistry = new AdapterRegistry(
@@ -76,8 +82,9 @@ contract DeployChild is Script {
         deploy.adapterRegistry.setAdapter(aaveV4ProtocolId, address(deploy.aaveV4Adapter));
 
         /// @dev Deploy the WorkflowRouter
+        uint48 initialDelay = 259200; // 3 days
         WorkflowRouter.ConstructorParams memory workflowRouterParams = WorkflowRouter.ConstructorParams({
-            initialDelay: 0,
+            initialDelay: initialDelay,
             defaultAdmin: networkConfig.roles.defaultAdmin,
             pauser: networkConfig.roles.pauser,
             unpauser: networkConfig.roles.unpauser,

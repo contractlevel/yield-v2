@@ -86,6 +86,9 @@ contract DeployParent is Script {
         address link;
         address usdc;
         bytes32 vaultCcid;
+        address aaveV3PoolAddressesProvider;
+        address aaveV4Spoke;
+        uint256 aaveV4ReserveId;
         AdapterRegistry adapterRegistry;
         YieldcoinShare yieldcoinImpl;
         YieldcoinShare yieldcoinProxy;
@@ -115,6 +118,9 @@ contract DeployParent is Script {
         deploy.link = networkConfig.tokens.link;
         deploy.usdc = networkConfig.tokens.usdc;
         deploy.vaultCcid = PARENT_VAULT_CCID;
+        deploy.aaveV3PoolAddressesProvider = networkConfig.protocols.aaveV3PoolAddressesProvider;
+        deploy.aaveV4Spoke = networkConfig.protocols.aaveV4Spoke;
+        deploy.aaveV4ReserveId = networkConfig.protocols.aaveV4ReserveId;
 
         /// @dev Deploy the PolicyEngine, IdentityRegistry, and CredentialRegistry
         (deploy.policyEngine, deploy.identityRegistry, deploy.credentialRegistry) = _deployACEComponents(deployer);

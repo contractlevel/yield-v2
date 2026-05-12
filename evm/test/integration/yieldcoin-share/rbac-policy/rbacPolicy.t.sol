@@ -33,6 +33,14 @@ contract YieldcoinShare_RbacPolicyIntegrationTest is BaseIntegrationTest {
         assertEq(parent.share.balanceOf(i_withdrawer), 1e18);
     }
 
+    function test_YieldcoinShare_batchMint_RevertWhen_CallerIsParentVault() external {
+        _assertSharePolicyNotConfigured(ComplianceTokenERC3643.batchMint.selector);
+
+        _changePrank(address(parent.vault));
+        _expectPolicyRevert();
+        parent.share.batchMint(_twoAddresses(i_withdrawer, i_fallbackRecipient), _twoAmounts(1e18, 2e18));
+    }
+
     function test_YieldcoinShare_burn_RevertWhen_CallerIsNotParentVault() external {
         _assertShareRbacPolicy(ComplianceTokenERC3643.burn.selector, Roles.BURNER_ROLE, address(parent.vault));
 
@@ -46,6 +54,14 @@ contract YieldcoinShare_RbacPolicyIntegrationTest is BaseIntegrationTest {
         parent.share.burn(i_depositor, 1e18);
 
         assertEq(parent.share.balanceOf(i_depositor), SHARE_AMOUNT - 1e18);
+    }
+
+    function test_YieldcoinShare_batchBurn_RevertWhen_CallerIsParentVault() external {
+        _assertSharePolicyNotConfigured(ComplianceTokenERC3643.batchBurn.selector);
+
+        _changePrank(address(parent.vault));
+        _expectPolicyRevert();
+        parent.share.batchBurn(_twoAddresses(i_depositor, i_depositor), _twoAmounts(1e18, 2e18));
     }
 
     function test_YieldcoinShare_setCCIPAdmin_RevertWhen_CallerIsNotConfigOperator() external {
@@ -141,6 +157,29 @@ contract YieldcoinShare_RbacPolicyIntegrationTest is BaseIntegrationTest {
         assertEq(parent.share.balanceOf(i_withdrawer), 1e18);
     }
 
+    function test_YieldcoinShare_batchForcedTransfer_RevertWhen_CallerIsNotComplianceOperator() external {
+        _assertShareRbacPolicy(
+            ComplianceTokenERC3643.batchForcedTransfer.selector,
+            Roles.COMPLIANCE_OPERATOR_ROLE,
+            networkConfig.roles.complianceOperator
+        );
+
+        _changePrank(i_nonOwner);
+        _expectPolicyRevert();
+        parent.share.batchForcedTransfer(
+            _twoAddresses(i_depositor, i_depositor), _twoAddresses(i_withdrawer, i_withdrawer), _twoAmounts(1e18, 2e18)
+        );
+    }
+
+    function test_YieldcoinShare_batchForcedTransfer_SucceedsWhen_CallerIsComplianceOperator() external {
+        _changePrank(networkConfig.roles.complianceOperator);
+        parent.share.batchForcedTransfer(
+            _twoAddresses(i_depositor, i_depositor), _twoAddresses(i_withdrawer, i_withdrawer), _twoAmounts(1e18, 2e18)
+        );
+
+        assertEq(parent.share.balanceOf(i_withdrawer), 3e18);
+    }
+
     function test_YieldcoinShare_setAddressFrozen_RevertWhen_CallerIsNotComplianceOperator() external {
         _assertShareRbacPolicy(
             ComplianceTokenERC3643.setAddressFrozen.selector,
@@ -151,6 +190,26 @@ contract YieldcoinShare_RbacPolicyIntegrationTest is BaseIntegrationTest {
         _changePrank(i_nonOwner);
         _expectPolicyRevert();
         parent.share.setAddressFrozen(i_depositor, true);
+    }
+
+    function test_YieldcoinShare_batchSetAddressFrozen_RevertWhen_CallerIsNotComplianceOperator() external {
+        _assertShareRbacPolicy(
+            ComplianceTokenERC3643.batchSetAddressFrozen.selector,
+            Roles.COMPLIANCE_OPERATOR_ROLE,
+            networkConfig.roles.complianceOperator
+        );
+
+        _changePrank(i_nonOwner);
+        _expectPolicyRevert();
+        parent.share.batchSetAddressFrozen(_twoAddresses(i_depositor, i_withdrawer), _twoBools(true, true));
+    }
+
+    function test_YieldcoinShare_batchSetAddressFrozen_SucceedsWhen_CallerIsComplianceOperator() external {
+        _changePrank(networkConfig.roles.complianceOperator);
+        parent.share.batchSetAddressFrozen(_twoAddresses(i_depositor, i_withdrawer), _twoBools(true, true));
+
+        assertTrue(parent.share.isFrozen(i_depositor));
+        assertTrue(parent.share.isFrozen(i_withdrawer));
     }
 
     function test_YieldcoinShare_freezePartialTokens_RevertWhen_CallerIsNotComplianceOperator() external {
@@ -165,6 +224,18 @@ contract YieldcoinShare_RbacPolicyIntegrationTest is BaseIntegrationTest {
         parent.share.freezePartialTokens(i_depositor, 1e18);
     }
 
+    function test_YieldcoinShare_batchFreezePartialTokens_RevertWhen_CallerIsNotComplianceOperator() external {
+        _assertShareRbacPolicy(
+            ComplianceTokenERC3643.batchFreezePartialTokens.selector,
+            Roles.COMPLIANCE_OPERATOR_ROLE,
+            networkConfig.roles.complianceOperator
+        );
+
+        _changePrank(i_nonOwner);
+        _expectPolicyRevert();
+        parent.share.batchFreezePartialTokens(_twoAddresses(i_depositor, i_withdrawer), _twoAmounts(1e18, 1e18));
+    }
+
     function test_YieldcoinShare_unfreezePartialTokens_RevertWhen_CallerIsNotComplianceOperator() external {
         _assertShareRbacPolicy(
             ComplianceTokenERC3643.unfreezePartialTokens.selector,
@@ -175,5 +246,40 @@ contract YieldcoinShare_RbacPolicyIntegrationTest is BaseIntegrationTest {
         _changePrank(i_nonOwner);
         _expectPolicyRevert();
         parent.share.unfreezePartialTokens(i_depositor, 1e18);
+    }
+
+    function test_YieldcoinShare_batchUnfreezePartialTokens_RevertWhen_CallerIsNotComplianceOperator() external {
+        _assertShareRbacPolicy(
+            ComplianceTokenERC3643.batchUnfreezePartialTokens.selector,
+            Roles.COMPLIANCE_OPERATOR_ROLE,
+            networkConfig.roles.complianceOperator
+        );
+
+        _changePrank(i_nonOwner);
+        _expectPolicyRevert();
+        parent.share.batchUnfreezePartialTokens(_twoAddresses(i_depositor, i_withdrawer), _twoAmounts(1e18, 1e18));
+    }
+
+    function _twoAddresses(address first, address second) private pure returns (address[] memory accounts) {
+        accounts = new address[](2);
+        accounts[0] = first;
+        accounts[1] = second;
+    }
+
+    function _twoAmounts(uint256 first, uint256 second) private pure returns (uint256[] memory amounts) {
+        amounts = new uint256[](2);
+        amounts[0] = first;
+        amounts[1] = second;
+    }
+
+    function _twoBools(bool first, bool second) private pure returns (bool[] memory values) {
+        values = new bool[](2);
+        values[0] = first;
+        values[1] = second;
+    }
+
+    function _assertSharePolicyNotConfigured(bytes4 selector) private view {
+        address[] memory policies = parent.policyEngine.getPolicies(address(parent.share), selector);
+        assertEq(policies.length, 0);
     }
 }
