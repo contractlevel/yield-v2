@@ -31,6 +31,7 @@ contract ChildVault_DeploymentIntegrationTest is BaseIntegrationTest {
 
     function test_ChildVault_deployment_ConfiguresWorkflowRouter() external view {
         assertEq(child.workflowRouter.getVault(), address(child.vault));
+        assertTrue(child.workflowRouter.hasRole(Roles.DEFAULT_ADMIN_ROLE, networkConfig.roles.defaultAdmin));
         assertTrue(child.workflowRouter.hasRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator));
         assertTrue(child.workflowRouter.hasRole(Roles.PAUSER_ROLE, networkConfig.roles.pauser));
         assertTrue(child.workflowRouter.hasRole(Roles.UNPAUSER_ROLE, networkConfig.roles.unpauser));
