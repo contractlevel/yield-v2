@@ -79,7 +79,9 @@ contract YieldcoinShareKycExtractor_ExtractUnitTest is BaseUnitTest {
             _payload(ComplianceTokenERC3643.decreaseAllowance.selector, abi.encode(i_spender, uint256(1)))
         );
 
-        _assertKycAccounts(parameters, _accounts(i_sender, i_spender));
+        address[] memory expectedAccounts = new address[](1);
+        expectedAccounts[0] = i_sender;
+        _assertKycAccounts(parameters, expectedAccounts);
     }
 
     function test_YieldcoinShareKycExtractor_extract_RevertWhen_SelectorIsUnsupported() external {

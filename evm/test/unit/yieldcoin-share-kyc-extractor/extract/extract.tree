@@ -10,6 +10,6 @@ YieldcoinShareKycExtractor_extract
 ├── when selector is increaseAllowance
 │   └── it should return owner and spender as KYC accounts
 ├── when selector is decreaseAllowance
-│   └── it should return owner and spender as KYC accounts
+│   └── it should return only the owner as KYC accounts
 └── when selector is unsupported
     └── it should revert

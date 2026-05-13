@@ -33,9 +33,7 @@ YieldcoinShare_kycPolicy
 │   └── when the accounts are KYC approved
 │       └── it should increase allowance
 └── decreaseAllowance
-    ├── when the spender is not KYC approved
-    │   └── it should revert through ACE
     ├── when the caller is not KYC approved
     │   └── it should revert through ACE
-    └── when the accounts are KYC approved
+    └── when the caller is KYC approved
         └── it should decrease allowance

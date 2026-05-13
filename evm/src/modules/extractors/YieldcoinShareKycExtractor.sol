@@ -47,12 +47,16 @@ contract YieldcoinShareKycExtractor is IExtractor {
         } else if (
             payload.selector == ComplianceTokenERC3643.approve.selector
                 || payload.selector == ComplianceTokenERC3643.increaseAllowance.selector
-                || payload.selector == ComplianceTokenERC3643.decreaseAllowance.selector
         ) {
             (address spender,) = abi.decode(payload.data, (address, uint256));
             accounts = new address[](2);
             accounts[0] = payload.sender;
             accounts[1] = spender;
+        } else if (payload.selector == ComplianceTokenERC3643.decreaseAllowance.selector) {
+            // Only the caller must be KYC-approved. Excluding the spender allows owners to
+            // revoke allowances for addresses that have since lost KYC status.
+            accounts = new address[](1);
+            accounts[0] = payload.sender;
         } else {
             revert IPolicyEngine.UnsupportedSelector(payload.selector);
         }

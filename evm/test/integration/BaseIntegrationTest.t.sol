@@ -18,6 +18,7 @@ import {WorkflowRouter} from "../../src/modules/WorkflowRouter.sol";
 import {YieldcoinShare} from "../../src/token/YieldcoinShare.sol";
 import {IProtocolAdapter} from "../../src/interfaces/IProtocolAdapter.sol";
 import {Roles} from "../../src/libraries/Roles.sol";
+import {Types} from "../../src/libraries/Types.sol";
 
 import {MockAaveV3Pool} from "../mocks/MockAaveV3Pool.sol";
 import {MockAaveV3PoolAddressesProvider} from "../mocks/MockAaveV3PoolAddressesProvider.sol";
@@ -354,6 +355,39 @@ abstract contract BaseIntegrationTest is BaseTest {
         _configureWorkflow(router, workflowId, workflowName, workflowOwner, selectors);
     }
 
+    function _configureInitiateRebalanceWorkflow(
+        WorkflowRouter router,
+        bytes32 workflowId,
+        bytes10 workflowName,
+        address workflowOwner
+    ) internal {
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = ParentVault.initiateRebalance.selector;
+        _configureWorkflow(router, workflowId, workflowName, workflowOwner, selectors);
+    }
+
+    function _configureCompleteRebalanceWorkflow(
+        WorkflowRouter router,
+        bytes32 workflowId,
+        bytes10 workflowName,
+        address workflowOwner
+    ) internal {
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = ParentVault.completeRebalance.selector;
+        _configureWorkflow(router, workflowId, workflowName, workflowOwner, selectors);
+    }
+
+    function _configureExecuteRebalanceWorkflow(
+        WorkflowRouter router,
+        bytes32 workflowId,
+        bytes10 workflowName,
+        address workflowOwner
+    ) internal {
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = ChildVault.executeRebalance.selector;
+        _configureWorkflow(router, workflowId, workflowName, workflowOwner, selectors);
+    }
+
     function _closeEpochThroughWorkflow(
         WorkflowRouter router,
         bytes32 workflowId,
@@ -386,6 +420,82 @@ abstract contract BaseIntegrationTest is BaseTest {
             workflowOwner,
             abi.encodeWithSelector(ChildVault.executeEpochWithdraw.selector, epochNonce, amount)
         );
+    }
+
+    function _initiateRebalanceThroughWorkflow(
+        WorkflowRouter router,
+        bytes32 workflowId,
+        bytes10 workflowName,
+        address workflowOwner,
+        Types.Strategy memory newStrategy
+    ) internal {
+        _callWorkflowRouter(
+            router,
+            workflowId,
+            workflowName,
+            workflowOwner,
+            abi.encodeWithSelector(ParentVault.initiateRebalance.selector, newStrategy)
+        );
+    }
+
+    function _completeRebalanceThroughWorkflow(
+        WorkflowRouter router,
+        bytes32 workflowId,
+        bytes10 workflowName,
+        address workflowOwner,
+        uint256 rebalanceNonce
+    ) internal {
+        _callWorkflowRouter(
+            router,
+            workflowId,
+            workflowName,
+            workflowOwner,
+            abi.encodeWithSelector(ParentVault.completeRebalance.selector, rebalanceNonce)
+        );
+    }
+
+    function _executeRebalanceThroughWorkflow(
+        WorkflowRouter router,
+        bytes32 workflowId,
+        bytes10 workflowName,
+        address workflowOwner,
+        uint256 rebalanceNonce,
+        Types.Strategy memory newStrategy
+    ) internal {
+        _callWorkflowRouter(
+            router,
+            workflowId,
+            workflowName,
+            workflowOwner,
+            abi.encodeWithSelector(ChildVault.executeRebalance.selector, rebalanceNonce, newStrategy)
+        );
+    }
+
+    function _parentStrategy(bytes32 protocolId) internal pure returns (Types.Strategy memory strategy) {
+        strategy = Types.Strategy({protocolId: protocolId, chainSelector: PARENT_CHAIN_SELECTOR});
+    }
+
+    function _childStrategy(bytes32 protocolId) internal pure returns (Types.Strategy memory strategy) {
+        strategy = Types.Strategy({protocolId: protocolId, chainSelector: CHILD_CHAIN_SELECTOR});
+    }
+
+    function _seedParentLocalTvl(uint256 depositAmount) internal returns (uint256 netDepositAmount) {
+        (netDepositAmount,) = parent.vault.getNetAmountAndOperationFee(depositAmount);
+
+        _registerKyc(i_depositor);
+        _fundAndApproveUsdc(i_depositor, depositAmount);
+
+        _changePrank(i_depositor);
+        parent.vault.deposit(depositAmount);
+
+        _configureCloseEpochWorkflow(parent.workflowRouter, keccak256("seed-parent-local-tvl"), bytes10("closeEpoch"), i_owner);
+        _warpPastMinEpoch();
+        _closeEpochThroughWorkflow(
+            parent.workflowRouter, keccak256("seed-parent-local-tvl"), bytes10("closeEpoch"), i_owner, 1, 0
+        );
+
+        _changePrank(i_depositor);
+        parent.vault.claimShares(1);
     }
 
     function _setChildActiveAdapter(bytes32 protocolId) internal {

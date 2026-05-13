@@ -1,0 +1,9 @@
+Rebalance_parentToParent
+├── given the active strategy is Parent Aave V3
+├── and TVL was created through a real parent epoch deposit
+├── when CRE initiates rebalance through Parent WorkflowRouter
+├── then ParentVault should withdraw all TVL from Parent Aave V3
+├── and ParentVault should deposit the TVL into Parent Aave V4
+├── and ParentVault should finalize the rebalance synchronously
+├── and ParentVault should increment the rebalance nonce
+└── and the active strategy should be Parent Aave V4

@@ -166,24 +166,21 @@ contract YieldcoinShare_KycPolicyIntegrationTest is BaseIntegrationTest {
         assertEq(parent.share.allowance(i_depositor, i_withdrawer), 1e18);
     }
 
-    function test_YieldcoinShare_decreaseAllowance_RevertWhen_SpenderIsNotKycApproved() external {
+    function test_YieldcoinShare_decreaseAllowance_SucceedsWhen_SpenderIsNotKycApproved() external {
         _assertShareKycPolicy(ComplianceTokenERC3643.decreaseAllowance.selector);
 
         _changePrank(i_depositor);
-        _expectPolicyRevert();
         parent.share.decreaseAllowance(i_withdrawer, 0);
     }
 
     function test_YieldcoinShare_decreaseAllowance_RevertWhen_CallerIsNotKycApproved() external {
-        _registerKyc(i_withdrawer);
-
         _changePrank(i_nonKycUser);
         _expectPolicyRevert();
         parent.share.decreaseAllowance(i_withdrawer, 0);
     }
 
-    function test_YieldcoinShare_decreaseAllowance_SucceedsWhen_AccountsAreKycApproved() external {
-        _registerKyc(i_withdrawer);
+    function test_YieldcoinShare_decreaseAllowance_SucceedsWhen_CallerIsKycApproved() external {
+        _registerKyc(i_withdrawer); // approve requires spender KYC; only setting up the prior allowance
 
         _changePrank(i_depositor);
         parent.share.approve(i_withdrawer, 2e18);
