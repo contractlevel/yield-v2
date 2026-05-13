@@ -22,7 +22,7 @@ contract ChildDeposit_EpochIntegrationTest is BaseIntegrationTest {
         _setDefaultCcipGasLimits();
     }
 
-    function test_Epoch_childDeposit_ParentClaimableBeforeRemoteSettlement() external {
+    function test_Epoch_childDeposit_ParentClaimableAfterLocalCcipSendToChild() external {
         assertEq(parent.vault.getThisChainSelector(), PARENT_CHAIN_SELECTOR);
         assertEq(child.vault.getThisChainSelector(), CHILD_CHAIN_SELECTOR);
         assertEq(child.vault.getParentChainSelector(), PARENT_CHAIN_SELECTOR);

@@ -4,7 +4,8 @@ Epoch_2a_childDeposit
 ├── and Parent and Child have crosschain vault allowlists configured
 ├── and the epoch has net deposits
 ├── when CRE closes the epoch through Parent WorkflowRouter
-├── then ParentVault should mark the epoch claimable before remote settlement
+├── then ParentVault should mark the epoch claimable after local CCIP send to Child
 ├── and ParentVault should open the next epoch
 ├── and ParentVault should bridge net USDC to the child strategy chain
+├── and ChildVault should deposit net USDC into the child strategy
 └── and the depositor should claim Yieldcoin shares on Parent

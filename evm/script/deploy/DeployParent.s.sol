@@ -41,7 +41,8 @@ import {TerminalAllowPolicy} from "../../src/modules/policies/TerminalAllowPolic
 /// @dev All user-facing functions for ParentVault and YieldcoinShare require the user to have completed KYC with a registered provider.
 ///      This includes:
 ///      ParentVault: deposit, withdraw, claimShares, claimUsdc, cancelDeposit, and cancelWithdraw functions.
-///      YieldcoinShare: transfer, transferFrom, approve, and approveAll functions. Transfer recipients must have completed KYC with a registered provider.
+///      YieldcoinShare: transfer, transferFrom, batchTransfer, approve, increaseAllowance, and decreaseAllowance functions.
+///      Both the caller and the relevant counterparty addresses (recipient, spender) must be KYC-approved.
 /// @dev YieldcoinShare mint and burn functions are protected by a RoleBasedAccessControlPolicy.
 ///      The RoleBasedAccessControlPolicy is configured to grant the MINTER_ROLE and BURNER_ROLE to the ParentVault contract.
 ///      RoleBasedAccessControlPolicy (as opposed to OZ's AccessControlDefaultAdminRules) is used for YieldcoinShare mint and burn because these functions could not be overridden as a ComplianceTokenERC3643.
@@ -337,6 +338,9 @@ contract DeployParent is Script {
             credentialTypeId: kycCredential,
             identityRegistry: address(identityRegistry),
             credentialRegistry: address(credentialRegistry),
+            /// @dev address(0) means credential existence is sufficient — no data-field validation.
+            ///      To enforce jurisdiction, accreditation type, or other content-level checks,
+            ///      replace this with a custom CredentialDataValidator implementation.
             dataValidator: address(0)
         });
 
