@@ -7,6 +7,8 @@ import {Types} from "../../../../src/libraries/Types.sol";
 import {MockAaveV3Pool} from "../../../mocks/MockAaveV3Pool.sol";
 import {MockAaveV4Spoke} from "../../../mocks/MockAaveV4Spoke.sol";
 
+import {Vm} from "forge-std/Test.sol";
+
 contract ParentToParent_RebalanceIntegrationTest is BaseIntegrationTest {
     bytes32 private constant WORKFLOW_ID = keccak256("parent-to-parent-rebalance");
     bytes10 private constant WORKFLOW_NAME = bytes10("rebalance");
@@ -33,9 +35,25 @@ contract ParentToParent_RebalanceIntegrationTest is BaseIntegrationTest {
             targetReserveId, address(parent.aaveV4Adapter)
         );
 
+        vm.recordLogs();
         _initiateRebalanceThroughWorkflow(
             parent.workflowRouter, WORKFLOW_ID, WORKFLOW_NAME, i_owner, _parentStrategy(AAVE_V4_PROTOCOL_ID)
         );
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+
+        Vm.Log memory withdrawLog =
+            _assertEmittedBy(logs, keccak256("RebalanceWithdrawSuccess(uint256,uint256)"), address(parent.vault));
+        assertEq(uint256(withdrawLog.topics[1]), 1);
+        assertEq(uint256(withdrawLog.topics[2]), tvl);
+
+        Vm.Log memory depositLog =
+            _assertEmittedBy(logs, keccak256("RebalanceDepositSuccess(uint256,uint256)"), address(parent.vault));
+        assertEq(uint256(depositLog.topics[1]), 1);
+        assertEq(uint256(depositLog.topics[2]), tvl);
+
+        Vm.Log memory completedLog =
+            _assertEmittedBy(logs, keccak256("RebalanceCompleted(uint256)"), address(parent.vault));
+        assertEq(uint256(completedLog.topics[1]), 1);
 
         Types.Rebalance memory rebalance = parent.vault.getRebalance();
         assertEq(uint256(rebalance.state), uint256(Types.RebalanceState.NONE));

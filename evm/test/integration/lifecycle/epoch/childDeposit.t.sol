@@ -23,6 +23,8 @@ contract ChildDeposit_EpochIntegrationTest is BaseIntegrationTest {
     }
 
     function test_Epoch_childDeposit_ParentClaimableAfterLocalCcipSendToChild() external {
+        address childPool = child.aaveV3Adapter.getProtocolPool();
+
         assertEq(parent.vault.getThisChainSelector(), PARENT_CHAIN_SELECTOR);
         assertEq(child.vault.getThisChainSelector(), CHILD_CHAIN_SELECTOR);
         assertEq(child.vault.getParentChainSelector(), PARENT_CHAIN_SELECTOR);
@@ -30,7 +32,7 @@ contract ChildDeposit_EpochIntegrationTest is BaseIntegrationTest {
         assertEq(child.vault.getCrosschainVault(PARENT_CHAIN_SELECTOR), address(parent.vault));
 
         (uint256 netDepositAmount,) = parent.vault.getNetAmountAndOperationFee(DEPOSIT_AMOUNT);
-        uint256 childPoolBalanceBefore = IERC20(parent.usdc).balanceOf(address(local.childAaveV3Pool));
+        uint256 childPoolBalanceBefore = IERC20(parent.usdc).balanceOf(childPool);
 
         _registerKyc(i_depositor);
         _fundAndApproveUsdc(i_depositor, DEPOSIT_AMOUNT);
@@ -44,7 +46,7 @@ contract ChildDeposit_EpochIntegrationTest is BaseIntegrationTest {
         assertEq(uint256(parent.vault.getEpoch(1).status), uint256(Types.EpochStatus.CLAIMABLE));
         assertEq(parent.vault.getEpochNonce(), 2);
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.OPEN));
-        assertEq(IERC20(parent.usdc).balanceOf(address(local.childAaveV3Pool)), childPoolBalanceBefore + netDepositAmount);
+        assertEq(IERC20(parent.usdc).balanceOf(childPool), childPoolBalanceBefore + netDepositAmount);
 
         _changePrank(i_depositor);
         parent.vault.claimShares(1);

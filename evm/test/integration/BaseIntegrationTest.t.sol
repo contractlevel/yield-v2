@@ -90,16 +90,9 @@ abstract contract BaseIntegrationTest is BaseTest {
 
     struct LocalTopology {
         CCIPLocalSimulator ccipLocalSimulator;
-        IRouterClient ccipRouter;
         MockCCIPRouter mockCcipRouter;
         LinkToken link;
         MockUSDC usdc;
-        MockAaveV3Pool parentAaveV3Pool;
-        MockAaveV3Pool childAaveV3Pool;
-        MockAaveV3PoolAddressesProvider parentAaveV3PoolAddressesProvider;
-        MockAaveV3PoolAddressesProvider childAaveV3PoolAddressesProvider;
-        MockAaveV4Spoke parentAaveV4Spoke;
-        MockAaveV4Spoke childAaveV4Spoke;
     }
 
     Parent internal parent;
@@ -169,21 +162,24 @@ abstract contract BaseIntegrationTest is BaseTest {
     function _deployLocalParentChildTopology() internal {
         local.ccipLocalSimulator = new CCIPLocalSimulator();
         (, IRouterClient sourceRouter,,, LinkToken linkToken,,) = local.ccipLocalSimulator.configuration();
-        local.ccipRouter = sourceRouter;
         local.mockCcipRouter = MockCCIPRouter(address(sourceRouter));
         local.link = linkToken;
         local.usdc = new MockUSDC();
 
-        local.parentAaveV3Pool = new MockAaveV3Pool();
-        local.childAaveV3Pool = new MockAaveV3Pool();
-        local.parentAaveV3PoolAddressesProvider =
-            new MockAaveV3PoolAddressesProvider(address(local.parentAaveV3Pool));
-        local.childAaveV3PoolAddressesProvider = new MockAaveV3PoolAddressesProvider(address(local.childAaveV3Pool));
-        local.parentAaveV4Spoke = new MockAaveV4Spoke(address(local.usdc));
-        local.childAaveV4Spoke = new MockAaveV4Spoke(address(local.usdc));
+        MockAaveV3Pool parentAaveV3Pool = new MockAaveV3Pool();
+        MockAaveV3Pool childAaveV3Pool = new MockAaveV3Pool();
+        MockAaveV3PoolAddressesProvider parentAaveV3PoolAddressesProvider =
+            new MockAaveV3PoolAddressesProvider(address(parentAaveV3Pool));
+        MockAaveV3PoolAddressesProvider childAaveV3PoolAddressesProvider =
+            new MockAaveV3PoolAddressesProvider(address(childAaveV3Pool));
+        MockAaveV4Spoke parentAaveV4Spoke = new MockAaveV4Spoke(address(local.usdc));
+        MockAaveV4Spoke childAaveV4Spoke = new MockAaveV4Spoke(address(local.usdc));
 
-        HelperConfig.NetworkConfig memory parentConfig = _localParentConfig();
-        HelperConfig.NetworkConfig memory childConfig = _localChildConfig(parentConfig);
+        HelperConfig.NetworkConfig memory parentConfig = _localConfig(
+            address(parentAaveV3PoolAddressesProvider), address(parentAaveV4Spoke), PARENT_CHAIN_SELECTOR
+        );
+        HelperConfig.NetworkConfig memory childConfig =
+            _localConfig(address(childAaveV3PoolAddressesProvider), address(childAaveV4Spoke), CHILD_CHAIN_SELECTOR);
         networkConfig = parentConfig;
 
         DeployParent parentDeployer = new DeployParent();
@@ -233,33 +229,35 @@ abstract contract BaseIntegrationTest is BaseTest {
         _setCrosschainVault(child.vault, PARENT_CHAIN_SELECTOR, address(parent.vault));
         local.mockCcipRouter.setPeerToChainSelector(address(parent.vault), PARENT_CHAIN_SELECTOR);
         local.mockCcipRouter.setPeerToChainSelector(address(child.vault), CHILD_CHAIN_SELECTOR);
+        _assertLocalParentChildTopologySplit();
         _labelParentIntegrationContracts();
         _labelChildIntegrationContracts();
     }
 
-    function _localParentConfig() internal view returns (HelperConfig.NetworkConfig memory config) {
-        config = networkConfig;
-        config.tokens.link = address(local.link);
-        config.tokens.usdc = address(local.usdc);
-        config.protocols.aaveV3PoolAddressesProvider = address(local.parentAaveV3PoolAddressesProvider);
-        config.protocols.aaveV4Spoke = address(local.parentAaveV4Spoke);
-        config.protocols.aaveV4ReserveId = 1;
-        config.ccip.router = address(local.ccipRouter);
-        config.ccip.thisChainSelector = PARENT_CHAIN_SELECTOR;
-        config.ccip.parentChainSelector = PARENT_CHAIN_SELECTOR;
-    }
-
-    function _localChildConfig(HelperConfig.NetworkConfig memory parentConfig)
+    function _localConfig(address aaveV3PoolAddressesProvider, address aaveV4Spoke, uint64 thisChainSelector)
         internal
         view
         returns (HelperConfig.NetworkConfig memory config)
     {
-        config = parentConfig;
-        config.protocols.aaveV3PoolAddressesProvider = address(local.childAaveV3PoolAddressesProvider);
-        config.protocols.aaveV4Spoke = address(local.childAaveV4Spoke);
+        config = networkConfig;
+        config.tokens.link = address(local.link);
+        config.tokens.usdc = address(local.usdc);
+        config.protocols.aaveV3PoolAddressesProvider = aaveV3PoolAddressesProvider;
+        config.protocols.aaveV4Spoke = aaveV4Spoke;
         config.protocols.aaveV4ReserveId = 1;
-        config.ccip.thisChainSelector = CHILD_CHAIN_SELECTOR;
+        config.ccip.router = address(local.mockCcipRouter);
+        config.ccip.thisChainSelector = thisChainSelector;
         config.ccip.parentChainSelector = PARENT_CHAIN_SELECTOR;
+    }
+
+    function _assertLocalParentChildTopologySplit() internal view {
+        assertEq(parent.aaveV3Adapter.getPoolAddressesProvider(), parent.aaveV3PoolAddressesProvider);
+        assertEq(child.aaveV3Adapter.getPoolAddressesProvider(), child.aaveV3PoolAddressesProvider);
+        assertNotEq(parent.aaveV3Adapter.getProtocolPool(), child.aaveV3Adapter.getProtocolPool());
+
+        assertEq(parent.aaveV4Adapter.getProtocolPool(), parent.aaveV4Spoke);
+        assertEq(child.aaveV4Adapter.getProtocolPool(), child.aaveV4Spoke);
+        assertNotEq(parent.aaveV4Adapter.getProtocolPool(), child.aaveV4Adapter.getProtocolPool());
     }
 
     function _expectPolicyRevert() internal {

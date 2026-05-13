@@ -80,6 +80,14 @@ contract BaseTest is Constants, Test {
     function _assertEmittedBy(bytes32 eventSig, address emitter) internal view returns (Vm.Log memory) {
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
+        return _assertEmittedBy(logs, eventSig, emitter);
+    }
+
+    function _assertEmittedBy(Vm.Log[] memory logs, bytes32 eventSig, address emitter)
+        internal
+        pure
+        returns (Vm.Log memory)
+    {
         for (uint256 i; i < logs.length; ++i) {
             if (logs[i].topics[0] == eventSig && logs[i].emitter == emitter) return logs[i];
         }
