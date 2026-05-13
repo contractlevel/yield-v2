@@ -12,9 +12,11 @@ contract BaseTest is Constants, Test {
     address internal immutable i_pauser = makeAddr("pauser");
     address internal immutable i_unpauser = makeAddr("unpauser");
     address internal immutable i_nonOwner = makeAddr("nonOwner");
+    address internal immutable i_nonKycUser = makeAddr("nonKycUser");
     address internal immutable i_depositor = makeAddr("depositor");
     address internal immutable i_withdrawer = makeAddr("withdrawer");
-    address internal immutable i_fallbackRecipient = makeAddr("fallbackRecipient");
+    address internal immutable i_recipient1 = makeAddr("recipient1");
+    address internal immutable i_recipient2 = makeAddr("recipient2");
     address internal immutable i_configOperator = makeAddr("configOperator");
     address internal immutable i_depositOperator = makeAddr("depositOperator");
     address internal immutable i_withdrawOperator = makeAddr("withdrawOperator");
@@ -53,9 +55,11 @@ contract BaseTest is Constants, Test {
         vm.label(i_pauser, "Pauser");
         vm.label(i_unpauser, "Unpauser");
         vm.label(i_nonOwner, "NonOwner");
+        vm.label(i_nonKycUser, "NonKycUser");
         vm.label(i_depositor, "Depositor");
         vm.label(i_withdrawer, "Withdrawer");
-        vm.label(i_fallbackRecipient, "FallbackRecipient");
+        vm.label(i_recipient1, "Recipient1");
+        vm.label(i_recipient2, "Recipient2");
         vm.label(i_configOperator, "ConfigOperator");
         vm.label(i_depositOperator, "DepositOperator");
         vm.label(i_withdrawOperator, "WithdrawOperator");

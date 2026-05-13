@@ -11,8 +11,6 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 abstract contract BaseVault_SetDefaultCcipGasLimitUnitTest is BaseUnitTest {
     BaseVault internal s_vault;
 
-    uint256 internal constant DEFAULT_CCIP_GAS_LIMIT = 500_000;
-
     function test_BaseVault_setDefaultCcipGasLimit_RevertWhen_CallerDoesNotHaveCONFIG_OPERATOR_ROLE() external {
         _changePrank(i_nonOwner);
         vm.expectRevert(

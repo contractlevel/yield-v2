@@ -8,8 +8,8 @@ import {IBaseVault} from "../../../../src/interfaces/IBaseVault.sol";
 import {IParentVault} from "../../../../src/interfaces/IParentVault.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
 
-import {CCIPReceiver} from "@chainlink/contracts-ccip/applications/CCIPReceiver.sol";
-import {Client} from "@chainlink/contracts-ccip/interfaces/IRouterClient.sol";
+import {CCIPReceiver} from "@chainlink/contracts-ccip/contracts/applications/CCIPReceiver.sol";
+import {Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
 
 contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
     using stdStorage for StdStorage;

@@ -8,8 +8,8 @@ import {IShare} from "../interfaces/IShare.sol";
 import {Types} from "../libraries/Types.sol";
 import {Roles} from "../libraries/Roles.sol";
 
-import {Client} from "@chainlink/contracts-ccip/interfaces/IRouterClient.sol";
-import {CCIPReceiver, IAny2EVMMessageReceiver} from "@chainlink/contracts-ccip/applications/CCIPReceiver.sol";
+import {Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
+import {CCIPReceiver, IAny2EVMMessageReceiver} from "@chainlink/contracts-ccip/contracts/applications/CCIPReceiver.sol";
 import {PolicyProtected, IPolicyProtected, Ownable} from "@chainlink/policy-management/core/PolicyProtected.sol";
 
 import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";

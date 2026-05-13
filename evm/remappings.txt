@@ -1,5 +1,6 @@
 @chainlink/contracts/=lib/chainlink-evm/contracts/
-@chainlink/contracts-ccip/=lib/chainlink-ccip/chains/evm/contracts/
+@chainlink/contracts-ccip/=lib/chainlink-ccip/chains/evm/
+@chainlink/local/=lib/chainlink-local/
 
 @chainlink/policy-management/=lib/chainlink-ace/packages/policy-management/src/
 @chainlink/cross-chain-identity/=lib/chainlink-ace/packages/cross-chain-identity/src/

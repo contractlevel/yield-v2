@@ -1,11 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {BaseIntegrationTest} from "../../BaseIntegrationTest.t.sol";
+import {BaseIntegrationTest} from "../BaseIntegrationTest.t.sol";
 
-import {Roles} from "../../../../src/libraries/Roles.sol";
+import {Roles} from "../../../src/libraries/Roles.sol";
 
 contract ParentVault_DeploymentIntegrationTest is BaseIntegrationTest {
+    function setUp() public override {
+        super.setUp();
+        _deployParent();
+    }
+
     function test_ParentVault_deployment_GrantsExpectedVaultRoles() external view {
         assertEq(parent.vault.defaultAdmin(), address(this));
         assertTrue(parent.vault.hasRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator));

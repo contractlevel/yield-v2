@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/shared/interfaces/LinkTokenInterface.sol";
 // import {IERC677Receiver} from "@chainlink/contracts/src/v0.8/shared/interfaces/IERC677Receiver.sol";
-import {CCIPReceiver, IAny2EVMMessageReceiver} from "@chainlink/contracts-ccip/applications/CCIPReceiver.sol";
-import {IRouterClient, Client} from "@chainlink/contracts-ccip/interfaces/IRouterClient.sol";
+import {CCIPReceiver, IAny2EVMMessageReceiver} from "@chainlink/contracts-ccip/contracts/applications/CCIPReceiver.sol";
+import {IRouterClient, Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
 
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {

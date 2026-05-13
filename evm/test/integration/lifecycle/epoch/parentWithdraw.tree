@@ -1,0 +1,9 @@
+Epoch_1b_parentWithdraw
+├── given the active strategy is local to Parent
+├── and a depositor has claimed Yieldcoin shares from a prior epoch
+├── and the epoch has net withdrawals
+├── when CRE closes the epoch through WorkflowRouter
+├── then ParentVault should withdraw USDC from the local adapter
+├── and ParentVault should mark the epoch claimable
+├── and ParentVault should open the next epoch
+└── and the withdrawer should claim USDC while shares are burned

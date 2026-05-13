@@ -25,3 +25,6 @@
 [submodule "evm/lib/aave-v4"]
 	path = evm/lib/aave-v4
 	url = https://github.com/aave/aave-v4
+[submodule "evm/lib/chainlink-local"]
+	path = evm/lib/chainlink-local
+	url = https://github.com/contractlevel/chainlink-local

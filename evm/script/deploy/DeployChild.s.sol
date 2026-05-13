@@ -37,6 +37,14 @@ contract DeployChild is Script {
         address deployer = msg.sender;
         vm.startBroadcast(deployer);
         HelperConfig.NetworkConfig memory networkConfig = helperConfig.getActiveNetworkConfig();
+        deploy = deployWithConfig(networkConfig, deployer);
+        vm.stopBroadcast();
+    }
+
+    function deployWithConfig(HelperConfig.NetworkConfig memory networkConfig, address deployer)
+        public
+        returns (Deployment memory deploy)
+    {
         deploy.link = networkConfig.tokens.link;
         deploy.usdc = networkConfig.tokens.usdc;
         deploy.aaveV3PoolAddressesProvider = networkConfig.protocols.aaveV3PoolAddressesProvider;
@@ -115,7 +123,5 @@ contract DeployChild is Script {
         if (deployer != networkConfig.roles.defaultAdmin) {
             deploy.adapterRegistry.beginDefaultAdminTransfer(networkConfig.roles.defaultAdmin);
         }
-
-        vm.stopBroadcast();
     }
 }

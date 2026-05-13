@@ -19,7 +19,7 @@ import {MockCCIPRouter} from "../mocks/MockCCIPRouter.sol";
 import {Roles} from "../../src/libraries/Roles.sol";
 import {Types} from "../../src/libraries/Types.sol";
 
-import {Client} from "@chainlink/contracts-ccip/interfaces/IRouterClient.sol";
+import {Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 abstract contract BaseUnitTest is BaseTest {

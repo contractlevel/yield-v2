@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {BaseIntegrationTest} from "../../BaseIntegrationTest.t.sol";
+import {BaseIntegrationTest} from "../BaseIntegrationTest.t.sol";
 
-import {YieldcoinShare} from "../../../../src/token/YieldcoinShare.sol";
-import {Roles} from "../../../../src/libraries/Roles.sol";
+import {YieldcoinShare} from "../../../src/token/YieldcoinShare.sol";
+import {Roles} from "../../../src/libraries/Roles.sol";
 
 import {ComplianceTokenERC3643} from "@chainlink/tokens/erc-3643/src/ComplianceTokenERC3643.sol";
 
@@ -13,6 +13,7 @@ contract YieldcoinShare_RbacPolicyIntegrationTest is BaseIntegrationTest {
 
     function setUp() public override {
         super.setUp();
+        _deployParent();
         _registerKyc(i_depositor);
         _registerKyc(i_withdrawer);
         _mintShares(i_depositor, SHARE_AMOUNT);
@@ -38,7 +39,7 @@ contract YieldcoinShare_RbacPolicyIntegrationTest is BaseIntegrationTest {
 
         _changePrank(address(parent.vault));
         _expectPolicyRevert();
-        parent.share.batchMint(_twoAddresses(i_withdrawer, i_fallbackRecipient), _twoAmounts(1e18, 2e18));
+        parent.share.batchMint(_twoAddresses(i_recipient1, i_recipient2), _twoAmounts(1e18, 2e18));
     }
 
     function test_YieldcoinShare_burn_RevertWhen_CallerIsNotParentVault() external {

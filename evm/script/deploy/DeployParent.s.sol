@@ -116,6 +116,14 @@ contract DeployParent is Script {
         address deployer = msg.sender;
         vm.startBroadcast(deployer);
         HelperConfig.NetworkConfig memory networkConfig = helperConfig.getActiveNetworkConfig();
+        deploy = deployWithConfig(networkConfig, deployer);
+        vm.stopBroadcast();
+    }
+
+    function deployWithConfig(HelperConfig.NetworkConfig memory networkConfig, address deployer)
+        public
+        returns (Deployment memory deploy)
+    {
         deploy.link = networkConfig.tokens.link;
         deploy.usdc = networkConfig.tokens.usdc;
         deploy.vaultCcid = PARENT_VAULT_CCID;
@@ -267,8 +275,6 @@ contract DeployParent is Script {
             networkConfig.roles.policyAdmin,
             networkConfig.roles.policyConfigAdmin
         );
-
-        vm.stopBroadcast();
     }
 
     /*//////////////////////////////////////////////////////////////

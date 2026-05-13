@@ -1,0 +1,8 @@
+Epoch_1a_parentDeposit
+├── given the active strategy is local to Parent
+├── and the epoch has net deposits
+├── when CRE closes the epoch through WorkflowRouter
+├── then ParentVault should mark the epoch claimable
+├── and ParentVault should open the next epoch
+├── and ParentVault should deposit net USDC into the local adapter
+└── and the depositor should claim Yieldcoin shares

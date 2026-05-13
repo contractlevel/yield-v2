@@ -1,0 +1,11 @@
+Epoch_2b_childWithdraw
+├── given the active strategy is remote on Child
+├── and a depositor has claimed Yieldcoin shares from a prior epoch
+├── and the epoch has net withdrawals
+├── when CRE closes the epoch through Parent WorkflowRouter
+├── then ParentVault should mark the epoch executing
+├── and ParentVault should open the next epoch
+├── when CRE executes the withdraw through Child WorkflowRouter
+├── then ChildVault should bridge withdrawn USDC back to Parent
+├── and ParentVault should become claimable after local CCIP delivery
+└── and the withdrawer should claim USDC while shares are burned

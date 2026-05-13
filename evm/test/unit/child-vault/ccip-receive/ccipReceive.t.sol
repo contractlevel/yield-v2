@@ -7,8 +7,8 @@ import {IBaseVault} from "../../../../src/interfaces/IBaseVault.sol";
 import {IChildVault} from "../../../../src/interfaces/IChildVault.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
 
-import {CCIPReceiver} from "@chainlink/contracts-ccip/applications/CCIPReceiver.sol";
-import {Client} from "@chainlink/contracts-ccip/interfaces/IRouterClient.sol";
+import {CCIPReceiver} from "@chainlink/contracts-ccip/contracts/applications/CCIPReceiver.sol";
+import {Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
 
 contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
     uint256 internal constant EPOCH_NONCE = 1;

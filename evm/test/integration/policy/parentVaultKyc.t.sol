@@ -1,14 +1,19 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {BaseIntegrationTest} from "../../BaseIntegrationTest.t.sol";
+import {BaseIntegrationTest} from "../BaseIntegrationTest.t.sol";
 
-import {IParentVault} from "../../../../src/interfaces/IParentVault.sol";
-import {ParentVault} from "../../../../src/vaults/ParentVault.sol";
+import {IParentVault} from "../../../src/interfaces/IParentVault.sol";
+import {ParentVault} from "../../../src/vaults/ParentVault.sol";
 
 contract ParentVault_KycPolicyIntegrationTest is BaseIntegrationTest {
     uint256 private constant DEPOSIT_AMOUNT = 100e6;
     uint256 private constant SHARE_AMOUNT = 100e18;
+
+    function setUp() public override {
+        super.setUp();
+        _deployParent();
+    }
 
     function test_ParentVault_deposit_RevertWhen_CallerIsNotKycApproved() external {
         _assertParentVaultKycPolicy(ParentVault.deposit.selector);

@@ -5,6 +5,7 @@
 cre/.env
 evm/.env
 
+.claude/
 CLAUDE.md
 .notes.md
 lcov.info
@@ -13,3 +14,5 @@ evm/cache/
 evm/broadcast/
 evm/CLAUDE.md
 evm/report.md
+
+cre/research/

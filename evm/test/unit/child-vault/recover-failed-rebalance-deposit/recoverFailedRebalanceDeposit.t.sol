@@ -6,7 +6,7 @@ import {BaseUnitTest, Vm} from "../../BaseUnitTest.t.sol";
 import {IBaseVault} from "../../../../src/interfaces/IBaseVault.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
 
-import {Client} from "@chainlink/contracts-ccip/interfaces/IRouterClient.sol";
+import {Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
 
 contract ChildVault_RecoverFailedRebalanceDepositUnitTest is BaseUnitTest {
     uint256 internal constant REBALANCE_NONCE = 1;

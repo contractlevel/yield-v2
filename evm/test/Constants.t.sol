@@ -22,4 +22,6 @@ abstract contract Constants {
     bytes32 internal constant KYC_REQUIREMENT = keccak256("KYC");
     bytes32 internal constant AML_CREDENTIAL = keccak256("common.aml");
     bytes32 internal constant AML_REQUIREMENT = keccak256("AML");
+
+    uint256 internal constant DEFAULT_CCIP_GAS_LIMIT = 500_000;
 }
