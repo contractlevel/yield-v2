@@ -31,9 +31,8 @@ contract ParentToParent_RebalanceIntegrationTest is BaseIntegrationTest {
         deal(parent.usdc, oldPool, tvl);
         MockAaveV3Pool(oldPool).setWithdrawReturn(tvl);
 
-        uint256 targetTvlBefore = MockAaveV4Spoke(targetSpoke).getUserSuppliedAssets(
-            targetReserveId, address(parent.aaveV4Adapter)
-        );
+        uint256 targetTvlBefore =
+            MockAaveV4Spoke(targetSpoke).getUserSuppliedAssets(targetReserveId, address(parent.aaveV4Adapter));
 
         vm.recordLogs();
         _initiateRebalanceThroughWorkflow(

@@ -1,0 +1,13 @@
+Rebalance_childToSameChild
+├── given the active strategy is Child Aave V3
+├── and TVL was created through a real parent epoch deposit to Child
+├── when CRE initiates rebalance through Parent WorkflowRouter
+├── then ParentVault should keep the rebalance pending
+├── when CRE executes rebalance through Child WorkflowRouter
+├── then ChildVault should withdraw all TVL from Child Aave V3
+├── and ChildVault should deposit the TVL into Child Aave V4 locally
+├── and ChildVault should not send rebalance funds through CCIP
+├── when CRE completes rebalance through Parent WorkflowRouter
+├── then ParentVault should finalize the rebalance
+├── and ParentVault should increment the rebalance nonce
+└── and the active strategy should be Child Aave V4

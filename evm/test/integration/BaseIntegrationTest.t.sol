@@ -24,11 +24,7 @@ import {MockAaveV3Pool} from "../mocks/MockAaveV3Pool.sol";
 import {MockAaveV3PoolAddressesProvider} from "../mocks/MockAaveV3PoolAddressesProvider.sol";
 import {MockAaveV4Spoke} from "../mocks/MockAaveV4Spoke.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
-import {
-    CCIPLocalSimulator,
-    IRouterClient,
-    LinkToken
-} from "@chainlink/local/src/ccip/CCIPLocalSimulator.sol";
+import {CCIPLocalSimulator, IRouterClient, LinkToken} from "@chainlink/local/src/ccip/CCIPLocalSimulator.sol";
 import {MockCCIPRouter} from "@chainlink/local/test/mocks/MockRouter.sol";
 
 import {CredentialRegistry} from "@chainlink/cross-chain-identity/CredentialRegistry.sol";
@@ -175,9 +171,8 @@ abstract contract BaseIntegrationTest is BaseTest {
         MockAaveV4Spoke parentAaveV4Spoke = new MockAaveV4Spoke(address(local.usdc));
         MockAaveV4Spoke childAaveV4Spoke = new MockAaveV4Spoke(address(local.usdc));
 
-        HelperConfig.NetworkConfig memory parentConfig = _localConfig(
-            address(parentAaveV3PoolAddressesProvider), address(parentAaveV4Spoke), PARENT_CHAIN_SELECTOR
-        );
+        HelperConfig.NetworkConfig memory parentConfig =
+            _localConfig(address(parentAaveV3PoolAddressesProvider), address(parentAaveV4Spoke), PARENT_CHAIN_SELECTOR);
         HelperConfig.NetworkConfig memory childConfig =
             _localConfig(address(childAaveV3PoolAddressesProvider), address(childAaveV4Spoke), CHILD_CHAIN_SELECTOR);
         networkConfig = parentConfig;
@@ -486,10 +481,33 @@ abstract contract BaseIntegrationTest is BaseTest {
         _changePrank(i_depositor);
         parent.vault.deposit(depositAmount);
 
-        _configureCloseEpochWorkflow(parent.workflowRouter, keccak256("seed-parent-local-tvl"), bytes10("closeEpoch"), i_owner);
+        _configureCloseEpochWorkflow(
+            parent.workflowRouter, keccak256("seed-parent-local-tvl"), bytes10("closeEpoch"), i_owner
+        );
         _warpPastMinEpoch();
         _closeEpochThroughWorkflow(
             parent.workflowRouter, keccak256("seed-parent-local-tvl"), bytes10("closeEpoch"), i_owner, 1, 0
+        );
+
+        _changePrank(i_depositor);
+        parent.vault.claimShares(1);
+    }
+
+    function _seedChildLocalTvl(uint256 depositAmount) internal returns (uint256 netDepositAmount) {
+        (netDepositAmount,) = parent.vault.getNetAmountAndOperationFee(depositAmount);
+
+        _registerKyc(i_depositor);
+        _fundAndApproveUsdc(i_depositor, depositAmount);
+
+        _changePrank(i_depositor);
+        parent.vault.deposit(depositAmount);
+
+        _configureCloseEpochWorkflow(
+            parent.workflowRouter, keccak256("seed-child-local-tvl"), bytes10("closeEpoch"), i_owner
+        );
+        _warpPastMinEpoch();
+        _closeEpochThroughWorkflow(
+            parent.workflowRouter, keccak256("seed-child-local-tvl"), bytes10("closeEpoch"), i_owner, 1, 0
         );
 
         _changePrank(i_depositor);

@@ -41,12 +41,17 @@ contract ParentToChild_RebalanceIntegrationTest is BaseIntegrationTest {
 
         vm.recordLogs();
         _initiateRebalanceThroughWorkflow(
-            parent.workflowRouter, INITIATE_WORKFLOW_ID, INITIATE_WORKFLOW_NAME, i_owner, _childStrategy(AAVE_V3_PROTOCOL_ID)
+            parent.workflowRouter,
+            INITIATE_WORKFLOW_ID,
+            INITIATE_WORKFLOW_NAME,
+            i_owner,
+            _childStrategy(AAVE_V3_PROTOCOL_ID)
         );
         Vm.Log[] memory initiateLogs = vm.getRecordedLogs();
 
-        Vm.Log memory withdrawLog =
-            _assertEmittedBy(initiateLogs, keccak256("RebalanceWithdrawSuccess(uint256,uint256)"), address(parent.vault));
+        Vm.Log memory withdrawLog = _assertEmittedBy(
+            initiateLogs, keccak256("RebalanceWithdrawSuccess(uint256,uint256)"), address(parent.vault)
+        );
         assertEq(uint256(withdrawLog.topics[1]), 1);
         assertEq(uint256(withdrawLog.topics[2]), tvl);
 
