@@ -10,7 +10,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract ChildDeposit_EpochIntegrationTest is BaseIntegrationTest {
     bytes32 private constant WORKFLOW_ID = keccak256("child-deposit-epoch");
     bytes10 private constant WORKFLOW_NAME = bytes10("closeEpoch");
-    uint256 private constant DEPOSIT_AMOUNT = MIN_DEPOSIT_AMOUNT;
     uint256 private constant TVL = 0;
 
     function setUp() public override {

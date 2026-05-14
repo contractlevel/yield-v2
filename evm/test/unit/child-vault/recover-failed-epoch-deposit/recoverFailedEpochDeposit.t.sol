@@ -10,7 +10,6 @@ import {Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClie
 
 contract ChildVault_RecoverFailedEpochDepositUnitTest is BaseUnitTest {
     uint256 internal constant EPOCH_NONCE = 1;
-    uint256 internal constant DEPOSIT_AMOUNT = 500 * 1e6;
 
     function setUp() public {
         _setChildActiveAdapter(address(s_mockProtocolAdapter));

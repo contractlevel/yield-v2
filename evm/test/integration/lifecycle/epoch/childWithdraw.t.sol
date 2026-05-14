@@ -13,7 +13,6 @@ contract ChildWithdraw_EpochIntegrationTest is BaseIntegrationTest {
     bytes32 private constant CHILD_WORKFLOW_ID = keccak256("child-withdraw-child-epoch");
     bytes10 private constant CLOSE_EPOCH_WORKFLOW_NAME = bytes10("closeEpoch");
     bytes10 private constant EXECUTE_WITHDRAW_WORKFLOW_NAME = bytes10("epochDraw");
-    uint256 private constant DEPOSIT_AMOUNT = MIN_DEPOSIT_AMOUNT;
 
     uint256 private s_shareAmount;
     address private s_childAaveV3Pool;

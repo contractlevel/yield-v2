@@ -17,7 +17,6 @@ contract ChildToSameChild_RebalanceIntegrationTest is BaseIntegrationTest {
     bytes10 private constant INITIATE_WORKFLOW_NAME = bytes10("rebalance");
     bytes10 private constant EXECUTE_WORKFLOW_NAME = bytes10("execRb");
     bytes10 private constant COMPLETE_WORKFLOW_NAME = bytes10("completeRb");
-    uint256 private constant DEPOSIT_AMOUNT = MIN_DEPOSIT_AMOUNT;
 
     function setUp() public override {
         super.setUp();

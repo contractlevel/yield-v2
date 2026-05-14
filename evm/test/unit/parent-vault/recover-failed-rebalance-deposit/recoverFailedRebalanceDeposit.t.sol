@@ -14,7 +14,7 @@ contract ParentVault_RecoverFailedRebalanceDepositUnitTest is BaseUnitTest {
     using stdStorage for StdStorage;
 
     uint256 internal constant REBALANCE_NONCE = 1;
-    uint256 internal constant DEPOSIT_AMOUNT = 500 * 1e6;
+
 
     function setUp() public {
         _setParentCrosschainVault(CHILD_CHAIN_SELECTOR, address(s_childVault));

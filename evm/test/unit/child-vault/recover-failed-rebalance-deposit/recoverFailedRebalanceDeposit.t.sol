@@ -10,7 +10,6 @@ import {Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClie
 
 contract ChildVault_RecoverFailedRebalanceDepositUnitTest is BaseUnitTest {
     uint256 internal constant REBALANCE_NONCE = 1;
-    uint256 internal constant DEPOSIT_AMOUNT = 500 * 1e6;
 
     function setUp() public {
         _setChildCrosschainVault(PARENT_CHAIN_SELECTOR, address(s_parentVault));

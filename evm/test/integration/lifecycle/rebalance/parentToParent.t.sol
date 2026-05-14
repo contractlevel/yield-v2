@@ -12,7 +12,6 @@ import {Vm} from "forge-std/Test.sol";
 contract ParentToParent_RebalanceIntegrationTest is BaseIntegrationTest {
     bytes32 private constant WORKFLOW_ID = keccak256("parent-to-parent-rebalance");
     bytes10 private constant WORKFLOW_NAME = bytes10("rebalance");
-    uint256 private constant DEPOSIT_AMOUNT = MIN_DEPOSIT_AMOUNT;
 
     function setUp() public override {
         super.setUp();

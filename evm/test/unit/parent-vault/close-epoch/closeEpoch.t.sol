@@ -8,7 +8,6 @@ import {IBaseVault} from "../../../../src/interfaces/IBaseVault.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
 
 contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
-    uint256 internal constant DEPOSIT_AMOUNT = MIN_DEPOSIT_AMOUNT;
     uint256 internal constant WITHDRAW_SHARES = MIN_DEPOSIT_AMOUNT;
     uint256 internal constant TVL = 1_000 * 1e6;
     uint256 internal s_netDepositAmount;

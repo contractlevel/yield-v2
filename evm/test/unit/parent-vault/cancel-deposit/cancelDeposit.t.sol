@@ -7,7 +7,6 @@ import {IParentVault} from "../../../../src/interfaces/IParentVault.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
 
 contract ParentVault_CancelDepositUnitTest is BaseUnitTest {
-    uint256 internal constant DEPOSIT_AMOUNT = MIN_DEPOSIT_AMOUNT;
     uint256 internal s_netDepositAmount;
 
     function setUp() public {

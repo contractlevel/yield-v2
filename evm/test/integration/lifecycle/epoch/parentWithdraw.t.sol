@@ -11,7 +11,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract ParentWithdraw_EpochIntegrationTest is BaseIntegrationTest {
     bytes32 private constant WORKFLOW_ID = keccak256("parent-withdraw-epoch");
     bytes10 private constant WORKFLOW_NAME = bytes10("closeEpoch");
-    uint256 private constant DEPOSIT_AMOUNT = MIN_DEPOSIT_AMOUNT;
 
     uint256 private s_shareAmount;
     address private s_aaveV3Pool;

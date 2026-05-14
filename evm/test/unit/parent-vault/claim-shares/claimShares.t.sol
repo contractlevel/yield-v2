@@ -7,7 +7,6 @@ import {IParentVault} from "../../../../src/interfaces/IParentVault.sol";
 
 contract ParentVault_ClaimSharesUnitTest is BaseUnitTest {
     // At bootstrap (pricePerShare = SHARE_PRECISION), shares minted = USDC deposited
-    uint256 internal constant DEPOSIT_AMOUNT = MIN_DEPOSIT_AMOUNT;
     uint256 internal s_expectedShares;
 
     function setUp() public {

@@ -6,7 +6,7 @@ import {BaseAaveV3AdapterUnitTest, Vm} from "../BaseAaveV3AdapterUnitTest.t.sol"
 import {IProtocolAdapter} from "../../../../src/interfaces/IProtocolAdapter.sol";
 
 contract AaveV3Adapter_DepositUnitTest is BaseAaveV3AdapterUnitTest {
-    uint256 internal constant DEPOSIT_AMOUNT = 1000 * 1e6;
+
 
     function setUp() public {
         deal(address(s_mockUsdc), address(s_aaveV3Adapter), DEPOSIT_AMOUNT);
