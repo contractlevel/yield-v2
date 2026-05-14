@@ -6,8 +6,6 @@ import {BaseAaveV4AdapterUnitTest, Vm} from "../BaseAaveV4AdapterUnitTest.t.sol"
 import {IProtocolAdapter} from "../../../../src/interfaces/IProtocolAdapter.sol";
 
 contract AaveV4Adapter_DepositUnitTest is BaseAaveV4AdapterUnitTest {
-
-
     function setUp() public {
         deal(address(s_mockUsdc), address(s_aaveV4Adapter), DEPOSIT_AMOUNT);
         _changePrank(address(s_parentVault));

@@ -7,8 +7,6 @@ import {IParentVault} from "../../../../src/interfaces/IParentVault.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
 
 contract ParentVault_DepositUnitTest is BaseUnitTest {
-
-
     function setUp() public {
         deal(address(s_mockUsdc), i_depositor, DEPOSIT_AMOUNT * 2);
         _changePrank(i_depositor);

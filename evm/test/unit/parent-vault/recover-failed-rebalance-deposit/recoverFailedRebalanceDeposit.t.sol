@@ -15,7 +15,6 @@ contract ParentVault_RecoverFailedRebalanceDepositUnitTest is BaseUnitTest {
 
     uint256 internal constant REBALANCE_NONCE = 1;
 
-
     function setUp() public {
         _setParentCrosschainVault(CHILD_CHAIN_SELECTOR, address(s_childVault));
         _setParentPendingRebalance(AAVE_V3_PROTOCOL_ID, PARENT_CHAIN_SELECTOR);

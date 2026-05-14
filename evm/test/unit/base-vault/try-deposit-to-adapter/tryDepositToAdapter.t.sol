@@ -8,7 +8,6 @@ import {BaseVault, IBaseVault} from "../../../../src/vaults/BaseVault.sol";
 abstract contract BaseVault_TryDepositToAdapterUnitTest is BaseUnitTest {
     BaseVault internal s_vault;
 
-
     function test_BaseVault_tryDepositToAdapter_RevertWhen_CallerIsNotSelf() external {
         vm.expectRevert(IBaseVault.BaseVault__OnlySelf.selector);
         s_vault.tryDepositToAdapter(address(s_mockProtocolAdapter), DEPOSIT_AMOUNT);
