@@ -1,0 +1,3 @@
+ChildWithdraw_RebalanceRecoveryIntegrationTest
+└── when a rebalance withdraw fails on the child strategy
+    └── it should store recovery state, recover the withdraw, bridge to parent, and complete the rebalance

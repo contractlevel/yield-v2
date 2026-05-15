@@ -1,0 +1,3 @@
+ChildDeposit_RebalanceRecoveryIntegrationTest
+└── when a parent-to-child rebalance deposit fails on the child strategy
+    └── it should store recovery state, recover the deposit, and allow parent completion

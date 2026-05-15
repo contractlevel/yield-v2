@@ -1,0 +1,3 @@
+ChildDeposit_RecoveryIntegrationTest
+└── when a remote epoch deposit fails on the child strategy
+    └── it should store recovery state, recover into the strategy, and leave parent shares claimable
