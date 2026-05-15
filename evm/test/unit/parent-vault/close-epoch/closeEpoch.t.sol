@@ -116,7 +116,7 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         _closeEpoch(TVL);
 
         assertEq(s_mockProtocolAdapter.getWithdrawCalls(), 1);
-        assertEq(s_mockProtocolAdapter.getLastWithdrawAmount(), TVL); // @review netWithdraw won't necessarily be the TVL amount
+        assertEq(s_mockProtocolAdapter.getLastWithdrawAmount(), TVL);
     }
 
     function test_ParentVault_closeEpoch_RemoteNetDeposit_BridgesNetFlowToStrategyChain() public {

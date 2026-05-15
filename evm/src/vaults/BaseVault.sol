@@ -35,9 +35,9 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @dev Initial default admin role transfer delay. Deploy scripts use the deployer as a temporary admin
     ///      and immediately begin handoff to the configured default admin.
     uint48 internal constant INITIAL_DEFAULT_ADMIN_ROLE_TRANSFER_DELAY = 0;
-
     /// @dev Delay for emergency draining
     uint256 internal constant EMERGENCY_DRAIN_DELAY = 1 days;
+
     /*//////////////////////////////////////////////////////////////
                                IMMUTABLE
     //////////////////////////////////////////////////////////////*/
@@ -209,6 +209,11 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /*//////////////////////////////////////////////////////////////
                          STRATEGY INTERACTIONS
     //////////////////////////////////////////////////////////////*/
+    /// @notice Executes a deposit to the active strategy
+    /// @param amount The amount to deposit
+    /// @param revertOnFailure Indicates whether the call should revert if the deposit to strategy fails or not
+    /// @return success Whether the deposit succeeded or not
+    /// @notice This function uses a trycatch to handle cases where the deposit to strategy fails
     function _executeDeposit(uint256 amount, bool revertOnFailure) internal returns (bool success) {
         address activeAdapter = s_activeProtocolAdapter;
         if (activeAdapter == address(0)) revert BaseVault__NoActiveAdapter();
@@ -220,6 +225,10 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         }
     }
 
+    /// @notice Called by _executeDeposit for explicit recovery
+    /// @param adapter The active strategy adapter
+    /// @param amount The amount to deposit into the adapter
+    /// @dev Precondition: caller must be this vault
     function tryDepositToAdapter(address adapter, uint256 amount) external {
         if (msg.sender != address(this)) revert BaseVault__OnlySelf();
 
@@ -227,6 +236,11 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         IProtocolAdapter(adapter).deposit(amount);
     }
 
+    /// @notice Executes a withdraw from the active strategy
+    /// @param amount The amount to withdraw
+    /// @param revertOnFailure Indicates whether the call should revert if the withdraw from strategy fails or not
+    /// @return amountOut The amount withdrawn. This will be 0 if revertOnFailure is false and the withdraw failed
+    /// @notice This function uses a trycatch to handle cases where the withdraw from strategy fails
     function _executeWithdraw(uint256 amount, bool revertOnFailure) internal returns (uint256 amountOut) {
         address activeAdapter = s_activeProtocolAdapter;
         if (activeAdapter == address(0)) revert BaseVault__NoActiveAdapter();
@@ -239,6 +253,11 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     }
 
     // @review do we want to pass a bool for revertOnFailure?
+    /// @notice Executes a rebalance by attempting to withdraw from the old strategy with _executeWithdraw. If that was successful, then attempts to rebalance with _rebalanceToNewStrategy
+    /// @param rebalanceNonce The nonce of the rebalance
+    /// @param newStrategy The new strategy to rebalance to
+    /// @return amountRebalanced The amount rebalanced
+    /// @notice This function uses a trycatch to handle cases where the withdraw from the old strategy failed
     function _executeRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy)
         internal
         returns (uint256 amountRebalanced)
@@ -293,6 +312,14 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /*//////////////////////////////////////////////////////////////
                                 RECOVERY
     //////////////////////////////////////////////////////////////*/
+    /// @notice Recovery function for storing a failed rebalance deposit
+    /// @notice This is called when a rebalance attempts to deposit into a new strategy and fails
+    /// @param rebalanceNonce The nonce of the rebalance
+    /// @param amount The amount that should have been rebalanced into the new strategy
+    /// @dev Maps the amount and the block.timestamp to the rebalance nonce
+    /// @dev Emits RebalanceDepositRecoveryStored event
+    /// @dev Precondition: Stored recovery should not already exist for the rebalance nonce
+    /// @dev Precondition: amount should not be zero
     function _storeRebalanceDepositRecovery(uint256 rebalanceNonce, uint256 amount) internal {
         if (amount == 0) revert BaseVault__ZeroRecoveryAmount();
         if (s_rebalanceDepositRecovery[rebalanceNonce].amount != 0) revert BaseVault__RecoveryAlreadyPending();
@@ -301,6 +328,12 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         emit RebalanceDepositRecoveryStored(rebalanceNonce, amount);
     }
 
+    /// @notice Recovery function for clearing a failed rebalance deposit that was previously stored
+    /// @notice This is called when a previously failed rebalance deposit succeeds
+    /// @param rebalanceNonce The nonce of the rebalance
+    /// @dev Precondition: Failed rebalance deposit should exist
+    /// @dev Deletes the recovery state for the rebalance nonce
+    /// @dev Emites RebalanceDepositRecoveryCleared event
     function _clearRebalanceDepositRecovery(uint256 rebalanceNonce) internal {
         if (s_rebalanceDepositRecovery[rebalanceNonce].amount == 0) revert BaseVault__NoPendingRecovery();
 
@@ -308,6 +341,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         emit RebalanceDepositRecoveryCleared(rebalanceNonce);
     }
 
+    // @review if this is even needed
     function _requireRebalanceDepositRecovery(uint256 rebalanceNonce)
         internal
         view
@@ -317,6 +351,9 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         if (recovery.amount == 0) revert BaseVault__NoPendingRecovery();
     }
 
+    /// @notice Inherited and implemented by ParentVault and ChildVault
+    /// @param rebalanceNonce The nonce of the rebalance
+    // @review continue natspec
     function recoverFailedRebalanceDeposit(uint256 rebalanceNonce) external virtual;
 
     function _recoverFailedRebalanceDeposit(uint256 rebalanceNonce) internal returns (uint256 amount) {

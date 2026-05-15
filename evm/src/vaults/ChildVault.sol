@@ -107,10 +107,12 @@ contract ChildVault is BaseVault, IChildVault {
 
     /// @notice This is called by the WorkflowRouter
     /// @notice Withdraws the entire tvl from the active strategy protocol adapter and sends it to the new strategy
-    // @review whether this should be in the BaseVault. An external version of this function (ie this) shouldn't because if a rebalance needs to be executed on the parent, this is what happens:
+    /// @notice This function shouldn't be in BaseVault because if a rebalance needs to be executed on the parent, this is what happens:
     /// - CRE workflow writes to parent
     /// - if parent == strategy: _executeWithdraw and _rebalanceToNewStrategy
-    /// - if parent != strategy: CRE workflow writes to strategy (ie THIS call)
+    /// @param rebalanceNonce The nonce of the rebalance
+    /// @param newStrategy The new strategy to rebalance to
+    /// @dev Precondition: caller must have the REBALANCE_OPERATOR_ROLE
     function executeRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy)
         external
         onlyRole(Roles.REBALANCE_OPERATOR_ROLE)
