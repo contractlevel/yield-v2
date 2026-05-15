@@ -91,7 +91,7 @@ contract ChildToRemoteChild_RebalanceIntegrationTest is BaseIntegrationTest {
         assertEq(uint256(withdrawLog.topics[2]), tvl);
 
         Vm.Log memory childBridgeLog =
-            _assertEmittedBy(executeLogs, keccak256("USDCBridged(bytes32,uint256,uint8)"), address(child.vault));
+            _assertEmittedBy(executeLogs, keccak256("CCIPBridged(bytes32,uint256,uint8)"), address(child.vault));
         assertEq(uint256(childBridgeLog.topics[2]), tvl);
         assertEq(uint256(childBridgeLog.topics[3]), uint256(Types.CcipTx.REBALANCE));
 

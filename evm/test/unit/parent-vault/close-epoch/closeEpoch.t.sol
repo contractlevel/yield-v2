@@ -247,14 +247,14 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         assertEq(uint256(log.topics[1]), 1);
     }
 
-    function test_ParentVault_closeEpoch_RemoteNetDeposit_EmitsUSDCBridged() public {
+    function test_ParentVault_closeEpoch_RemoteNetDeposit_EmitsCCIPBridged() public {
         _prepareRemoteStrategy();
         _submitDeposit();
 
         vm.recordLogs();
         _closeEpoch(TVL);
 
-        Vm.Log memory log = _assertEmittedBy(keccak256("USDCBridged(bytes32,uint256,uint8)"), address(s_parentVault));
+        Vm.Log memory log = _assertEmittedBy(keccak256("CCIPBridged(bytes32,uint256,uint8)"), address(s_parentVault));
         assertEq(uint256(log.topics[2]), s_netDepositAmount);
         assertEq(uint256(log.topics[3]), uint256(Types.CcipTx.DEPOSIT));
     }

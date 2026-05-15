@@ -80,11 +80,11 @@ interface IBaseVault is IPauseable {
     /// @param rebalanceNonce The nonce of the rebalance
     event RebalanceWithdrawFailure(uint256 indexed rebalanceNonce);
 
-    /// @notice Emitted when USDC is bridged to a destination chain
+    /// @notice Emitted when a CCIP transfer is sent to a destination chain
     /// @param ccipMessageId The ID of the CCIP message
     /// @param amount The amount of USDC bridged
     /// @param ccipTxType The type of CCIP transaction
-    event USDCBridged(bytes32 indexed ccipMessageId, uint256 indexed amount, Types.CcipTx indexed ccipTxType);
+    event CCIPBridged(bytes32 indexed ccipMessageId, uint256 indexed amount, Types.CcipTx indexed ccipTxType);
 
     /// @notice Emitted when the crosschain vaults are set by a CONFIG_OPERATOR
     /// @param chainSelector The CCIP selectors of the chain
@@ -117,34 +117,91 @@ interface IBaseVault is IPauseable {
     /*//////////////////////////////////////////////////////////////
                                RECOVERY
     //////////////////////////////////////////////////////////////*/
-    // @review add natspec for all functions
+    /// @dev Precondition: Caller must have the EMERGENCY_DRAINER_ROLE
+    /// @dev Precondition: Vault must have been paused for at least EMERGENCY_DRAIN_DELAY
+    /// @dev Withdraws all USDC from the vault to the emergency drainer
+    /// @param revertOnFailure Whether to revert if the withdraw from strategy fails
+    /// @notice If the vault has the TVL, it will be withdrawn from the strategy and transferred to the emergency drainer
     function emergencyDrain(bool revertOnFailure) external;
 
     /*//////////////////////////////////////////////////////////////
                            CONFIG SETTERS
     //////////////////////////////////////////////////////////////*/
+    /// @notice Sets the crosschain vaults
+    /// @param chainSelectors The CCIP selectors of the chains
+    /// @param vaults The addresses of the crosschain vaults
+    /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
+    /// @dev Precondition: chainSelectors and vaults must have the same length
+    /// @dev Sets the crosschain vaults
+    /// @dev Emits the CrosschainVaultSet event
     function setCrosschainVaults(uint64[] calldata chainSelectors, address[] calldata vaults) external;
+    /// @notice Sets the CCIP gas limit for a given chain selector
+    /// @param chainSelector The CCIP selector of the chain
+    /// @param gasLimit The CCIP gas limit
+    /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
+    /// @dev Sets the CCIP gas limit
+    /// @dev Emits the CcipGasLimitSet event
     function setCcipGasLimit(uint64 chainSelector, uint256 gasLimit) external;
+    /// @notice Sets the default CCIP gas limit
+    /// @notice If a chain doesn't have a specific CCIP gas limit set, the default CCIP gas limit will be used.
+    /// @param gasLimit The CCIP gas limit
+    /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
+    /// @dev Sets the default CCIP gas limit
+    /// @dev Emits the DefaultCcipGasLimitSet event
     function setDefaultCcipGasLimit(uint256 gasLimit) external;
 
     /*//////////////////////////////////////////////////////////////
                             LINK OPERATOR
     //////////////////////////////////////////////////////////////*/
+    /// @notice Withdraws LINK from the vault
+    /// @param amount The amount of LINK to withdraw
+    /// @dev Precondition: Caller must have the LINK_OPERATOR_ROLE
+    /// @dev Precondition: Amount must be greater than 0
+    /// @dev Withdraws LINK from the vault to the caller
     function withdrawLink(uint256 amount) external;
 
     /*//////////////////////////////////////////////////////////////
                                GETTERS
     //////////////////////////////////////////////////////////////*/
+    /// @notice Gets the LINK token
+    /// @return link The address of the LINK token
     function getLink() external view returns (address link);
+    /// @notice Gets the USDC token
+    /// @return usdc The address of the USDC token
     function getUsdc() external view returns (address usdc);
+    /// @notice Gets the CCIP selector for this chain
+    /// @return thisChainSelector The CCIP selector for this chain
     function getThisChainSelector() external view returns (uint64 thisChainSelector);
+    /// @notice Gets the adapter registry
+    /// @return adapterRegistry The address of the adapter registry
     function getAdapterRegistry() external view returns (address adapterRegistry);
+    /// @notice Gets the crosschain vault address for a given chain selector
+    /// @param chainSelector The CCIP selector of the chain
+    /// @return vault The address of the crosschain vault
     function getCrosschainVault(uint64 chainSelector) external view returns (address vault);
+    /// @notice Gets the CCIP gas limit for a given chain selector
+    /// @param chainSelector The CCIP selector of the chain
+    /// @return gasLimit The CCIP gas limit for the chain selector
     function getCcipGasLimit(uint64 chainSelector) external view returns (uint256 gasLimit);
+    /// @notice Gets the default CCIP gas limit
+    /// @return defaultCcipGasLimit The default CCIP gas limit
     function getDefaultCcipGasLimit() external view returns (uint256 defaultCcipGasLimit);
+    /// @notice Gets the timestamp when the vault was paused
+    /// @return pausedAt The timestamp when the vault was paused
+    /// @dev Returns 0 if the vault is not paused
     function getPausedAt() external view returns (uint256 pausedAt);
+    /// @notice Returns the active strategy protocol adapter
+    /// @return activeProtocolAdapter The address of the active strategy protocol adapter
     function getActiveProtocolAdapter() external view returns (address activeProtocolAdapter);
+    /// @notice Gets the TVL of the vault
+    /// @return tvl The TVL of the vault
+    /// @dev Strategy chain will return tvl, non-strategy chain will return 0
     function getTVL() external view returns (uint256 tvl);
+    /// @notice Gets the Types.AmountRecovery for a rebalanceNonce
+    /// @param rebalanceNonce The nonce of the rebalance
+    /// @return recovery Types.AmountRecovery struct includes:
+    ///         uint256 amount - the amount that needs to be rebalanced/deposited into the new strategy
+    ///         uint256 createdAt - block.timestamp the recovery state was stored
     function getRebalanceDepositRecovery(uint256 rebalanceNonce)
         external
         view

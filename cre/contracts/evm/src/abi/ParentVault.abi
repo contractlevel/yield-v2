@@ -1937,7 +1937,7 @@
   },
   {
     "type": "event",
-    "name": "USDCBridged",
+    "name": "CCIPBridged",
     "inputs": [
       {
         "name": "ccipMessageId",

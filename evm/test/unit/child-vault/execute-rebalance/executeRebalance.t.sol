@@ -86,11 +86,11 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
         assertEq(s_mockUsdc.balanceOf(address(s_mockCcipRouter)), routerBefore + REBALANCE_AMOUNT);
     }
 
-    function test_ChildVault_executeRebalance_RemoteChild_EmitsUSDCBridged() public {
+    function test_ChildVault_executeRebalance_RemoteChild_EmitsCCIPBridged() public {
         vm.recordLogs();
         _executeRemoteChildRebalance();
 
-        Vm.Log memory log = _assertEmittedBy(keccak256("USDCBridged(bytes32,uint256,uint8)"), address(s_childVault));
+        Vm.Log memory log = _assertEmittedBy(keccak256("CCIPBridged(bytes32,uint256,uint8)"), address(s_childVault));
         assertEq(uint256(log.topics[2]), REBALANCE_AMOUNT);
         assertEq(uint256(log.topics[3]), uint256(Types.CcipTx.REBALANCE));
     }

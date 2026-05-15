@@ -55,11 +55,11 @@ contract ChildVault_ExecuteEpochWithdrawUnitTest is BaseUnitTest {
         assertEq(uint256(log.topics[2]), WITHDRAW_AMOUNT);
     }
 
-    function test_ChildVault_executeEpochWithdraw_Success_EmitsUSDCBridged() public {
+    function test_ChildVault_executeEpochWithdraw_Success_EmitsCCIPBridged() public {
         vm.recordLogs();
         s_childVault.executeEpochWithdraw(EPOCH_NONCE, WITHDRAW_AMOUNT);
 
-        Vm.Log memory log = _assertEmittedBy(keccak256("USDCBridged(bytes32,uint256,uint8)"), address(s_childVault));
+        Vm.Log memory log = _assertEmittedBy(keccak256("CCIPBridged(bytes32,uint256,uint8)"), address(s_childVault));
         assertEq(uint256(log.topics[2]), WITHDRAW_AMOUNT);
         assertEq(uint256(log.topics[3]), uint256(Types.CcipTx.WITHDRAW));
     }

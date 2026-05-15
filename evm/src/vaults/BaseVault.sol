@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-// import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/shared/interfaces/LinkTokenInterface.sol";
-// import {IERC677Receiver} from "@chainlink/contracts/src/v0.8/shared/interfaces/IERC677Receiver.sol";
 import {CCIPReceiver, IAny2EVMMessageReceiver} from "@chainlink/contracts-ccip/contracts/applications/CCIPReceiver.sol";
 import {IRouterClient, Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
 
@@ -121,6 +119,9 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     }
 
     /// @param params Constructor parameters
+    /// @notice Grants PAUSER_ROLE to params.pauser
+    /// @notice Grants UNPAUSER_ROLE to params.unpauser
+    /// @notice Grants CONFIG_OPERATOR_ROLE to params.configOperator
     constructor(ConstructorParams memory params)
         CCIPReceiver(params.ccipRouter)
         AccessControlDefaultAdminRules(INITIAL_DEFAULT_ADMIN_ROLE_TRANSFER_DELAY, params.defaultAdmin)
@@ -182,7 +183,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
          * address indexed sender,
          * bytes32 indexed messageId,
          */
-        emit USDCBridged(ccipMessageId, bridgeAmount, ccipTxType); // @review event name
+        emit CCIPBridged(ccipMessageId, bridgeAmount, ccipTxType);
     }
 
     /// @notice Handles the CCIP rebalance message
@@ -502,11 +503,16 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
 
     /// @notice Gets the TVL of the vault
     /// @return tvl The TVL of the vault
-    /// @dev Precondition: Active protocol adapter must not be the zero address - that means this chain is the active strategy chain
+    /// @dev Strategy chain will return tvl, non-strategy chain will return 0
     function getTVL() external view returns (uint256 tvl) {
         tvl = _getTVL();
     }
 
+    /// @notice Gets the Types.AmountRecovery for a rebalanceNonce
+    /// @param rebalanceNonce The nonce of the rebalance
+    /// @return recovery Types.AmountRecovery struct includes:
+    ///         uint256 amount - the amount that needs to be rebalanced/deposited into the new strategy
+    ///         uint256 createdAt - block.timestamp the recovery state was stored
     function getRebalanceDepositRecovery(uint256 rebalanceNonce)
         external
         view
@@ -518,7 +524,16 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /*//////////////////////////////////////////////////////////////
                                 OVERRIDE
     //////////////////////////////////////////////////////////////*/
-    // @review inheritdoc IERC165
+    /// @inheritdoc IERC165
+    /**
+     * @dev Returns true if this contract implements the interface defined by
+     * `interfaceId`. See the corresponding
+     * https://eips.ethereum.org/EIPS/eip-165#how-interfaces-are-identified[ERC section]
+     * to learn more about how these ids are created.
+     *
+     * This function call must use less than 30 000 gas.
+     */
+    /// @dev Overrides CCIPReceiver and AccessControlDefaultAdminRules
     function supportsInterface(bytes4 interfaceId)
         public
         pure
