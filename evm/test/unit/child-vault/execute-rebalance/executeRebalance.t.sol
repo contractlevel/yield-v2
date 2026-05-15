@@ -8,7 +8,6 @@ import {MockProtocolAdapter} from "../../../mocks/MockProtocolAdapter.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
 
 contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
-    uint64 internal constant REMOTE_CHILD_CHAIN_SELECTOR = 3;
     uint256 internal constant REBALANCE_NONCE = 1;
     uint256 internal constant REBALANCE_AMOUNT = 500 * 1e6;
 

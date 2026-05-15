@@ -93,6 +93,7 @@ abstract contract BaseIntegrationTest is BaseTest {
 
     Parent internal parent;
     Child internal child;
+    Child internal remoteChild;
     LocalTopology internal local;
 
     HelperConfig internal helperConfig;
@@ -229,6 +230,113 @@ abstract contract BaseIntegrationTest is BaseTest {
         _labelChildIntegrationContracts();
     }
 
+    function _deployLocalParentTwoChildTopology() internal {
+        local.ccipLocalSimulator = new CCIPLocalSimulator();
+        (, IRouterClient sourceRouter,,, LinkToken linkToken,,) = local.ccipLocalSimulator.configuration();
+        local.mockCcipRouter = MockCCIPRouter(address(sourceRouter));
+        local.link = linkToken;
+        local.usdc = new MockUSDC();
+
+        MockAaveV3Pool parentAaveV3Pool = new MockAaveV3Pool();
+        MockAaveV3Pool childAaveV3Pool = new MockAaveV3Pool();
+        MockAaveV3Pool remoteChildAaveV3Pool = new MockAaveV3Pool();
+        MockAaveV3PoolAddressesProvider parentAaveV3PoolAddressesProvider =
+            new MockAaveV3PoolAddressesProvider(address(parentAaveV3Pool));
+        MockAaveV3PoolAddressesProvider childAaveV3PoolAddressesProvider =
+            new MockAaveV3PoolAddressesProvider(address(childAaveV3Pool));
+        MockAaveV3PoolAddressesProvider remoteChildAaveV3PoolAddressesProvider =
+            new MockAaveV3PoolAddressesProvider(address(remoteChildAaveV3Pool));
+        MockAaveV4Spoke parentAaveV4Spoke = new MockAaveV4Spoke(address(local.usdc));
+        MockAaveV4Spoke childAaveV4Spoke = new MockAaveV4Spoke(address(local.usdc));
+        MockAaveV4Spoke remoteChildAaveV4Spoke = new MockAaveV4Spoke(address(local.usdc));
+
+        HelperConfig.NetworkConfig memory parentConfig =
+            _localConfig(address(parentAaveV3PoolAddressesProvider), address(parentAaveV4Spoke), PARENT_CHAIN_SELECTOR);
+        HelperConfig.NetworkConfig memory childConfig =
+            _localConfig(address(childAaveV3PoolAddressesProvider), address(childAaveV4Spoke), CHILD_CHAIN_SELECTOR);
+        HelperConfig.NetworkConfig memory remoteChildConfig = _localConfig(
+            address(remoteChildAaveV3PoolAddressesProvider),
+            address(remoteChildAaveV4Spoke),
+            REMOTE_CHILD_CHAIN_SELECTOR
+        );
+        networkConfig = parentConfig;
+
+        DeployParent parentDeployer = new DeployParent();
+        DeployParent.Deployment memory parentDeployment =
+            parentDeployer.deployWithConfig(parentConfig, address(parentDeployer));
+        parent = Parent({
+            link: parentDeployment.link,
+            usdc: parentDeployment.usdc,
+            vaultCcid: parentDeployment.vaultCcid,
+            aaveV3PoolAddressesProvider: parentDeployment.aaveV3PoolAddressesProvider,
+            aaveV4Spoke: parentDeployment.aaveV4Spoke,
+            aaveV4ReserveId: parentDeployment.aaveV4ReserveId,
+            adapterRegistry: parentDeployment.adapterRegistry,
+            shareImpl: parentDeployment.yieldcoinImpl,
+            share: parentDeployment.yieldcoinProxy,
+            vault: parentDeployment.parentVault,
+            aaveV3Adapter: parentDeployment.aaveV3Adapter,
+            aaveV4Adapter: parentDeployment.aaveV4Adapter,
+            workflowRouter: parentDeployment.workflowRouter,
+            policyEngine: parentDeployment.policyEngine,
+            identityRegistry: parentDeployment.identityRegistry,
+            credentialRegistry: parentDeployment.credentialRegistry,
+            vaultKycPolicy: parentDeployment.vaultKycPolicy,
+            shareKycPolicy: parentDeployment.shareKycPolicy,
+            shareSupplyPolicy: parentDeployment.shareSupplyPolicy,
+            providerPolicy: parentDeployment.providerPolicy,
+            terminalAllow: parentDeployment.terminalAllow
+        });
+
+        DeployChild childDeployer = new DeployChild();
+        DeployChild.Deployment memory childDeployment =
+            childDeployer.deployWithConfig(childConfig, address(childDeployer));
+        child = Child({
+            link: childDeployment.link,
+            usdc: childDeployment.usdc,
+            aaveV3PoolAddressesProvider: childDeployment.aaveV3PoolAddressesProvider,
+            aaveV4Spoke: childDeployment.aaveV4Spoke,
+            aaveV4ReserveId: childDeployment.aaveV4ReserveId,
+            adapterRegistry: childDeployment.adapterRegistry,
+            vault: childDeployment.childVault,
+            aaveV3Adapter: childDeployment.aaveV3Adapter,
+            aaveV4Adapter: childDeployment.aaveV4Adapter,
+            workflowRouter: childDeployment.workflowRouter
+        });
+
+        DeployChild remoteChildDeployer = new DeployChild();
+        DeployChild.Deployment memory remoteChildDeployment =
+            remoteChildDeployer.deployWithConfig(remoteChildConfig, address(remoteChildDeployer));
+        remoteChild = Child({
+            link: remoteChildDeployment.link,
+            usdc: remoteChildDeployment.usdc,
+            aaveV3PoolAddressesProvider: remoteChildDeployment.aaveV3PoolAddressesProvider,
+            aaveV4Spoke: remoteChildDeployment.aaveV4Spoke,
+            aaveV4ReserveId: remoteChildDeployment.aaveV4ReserveId,
+            adapterRegistry: remoteChildDeployment.adapterRegistry,
+            vault: remoteChildDeployment.childVault,
+            aaveV3Adapter: remoteChildDeployment.aaveV3Adapter,
+            aaveV4Adapter: remoteChildDeployment.aaveV4Adapter,
+            workflowRouter: remoteChildDeployment.workflowRouter
+        });
+
+        _setCrosschainVault(parent.vault, CHILD_CHAIN_SELECTOR, address(child.vault));
+        _setCrosschainVault(parent.vault, REMOTE_CHILD_CHAIN_SELECTOR, address(remoteChild.vault));
+        _setCrosschainVault(child.vault, PARENT_CHAIN_SELECTOR, address(parent.vault));
+        _setCrosschainVault(child.vault, REMOTE_CHILD_CHAIN_SELECTOR, address(remoteChild.vault));
+        _setCrosschainVault(remoteChild.vault, PARENT_CHAIN_SELECTOR, address(parent.vault));
+        _setCrosschainVault(remoteChild.vault, CHILD_CHAIN_SELECTOR, address(child.vault));
+
+        local.mockCcipRouter.setPeerToChainSelector(address(parent.vault), PARENT_CHAIN_SELECTOR);
+        local.mockCcipRouter.setPeerToChainSelector(address(child.vault), CHILD_CHAIN_SELECTOR);
+        local.mockCcipRouter.setPeerToChainSelector(address(remoteChild.vault), REMOTE_CHILD_CHAIN_SELECTOR);
+
+        _assertLocalParentTwoChildTopologySplit();
+        _labelParentIntegrationContracts();
+        _labelChildIntegrationContracts();
+        _labelRemoteChildIntegrationContracts();
+    }
+
     function _localConfig(address aaveV3PoolAddressesProvider, address aaveV4Spoke, uint64 thisChainSelector)
         internal
         view
@@ -253,6 +361,17 @@ abstract contract BaseIntegrationTest is BaseTest {
         assertEq(parent.aaveV4Adapter.getProtocolPool(), parent.aaveV4Spoke);
         assertEq(child.aaveV4Adapter.getProtocolPool(), child.aaveV4Spoke);
         assertNotEq(parent.aaveV4Adapter.getProtocolPool(), child.aaveV4Adapter.getProtocolPool());
+    }
+
+    function _assertLocalParentTwoChildTopologySplit() internal view {
+        _assertLocalParentChildTopologySplit();
+        assertEq(remoteChild.aaveV3Adapter.getPoolAddressesProvider(), remoteChild.aaveV3PoolAddressesProvider);
+        assertNotEq(parent.aaveV3Adapter.getProtocolPool(), remoteChild.aaveV3Adapter.getProtocolPool());
+        assertNotEq(child.aaveV3Adapter.getProtocolPool(), remoteChild.aaveV3Adapter.getProtocolPool());
+
+        assertEq(remoteChild.aaveV4Adapter.getProtocolPool(), remoteChild.aaveV4Spoke);
+        assertNotEq(parent.aaveV4Adapter.getProtocolPool(), remoteChild.aaveV4Adapter.getProtocolPool());
+        assertNotEq(child.aaveV4Adapter.getProtocolPool(), remoteChild.aaveV4Adapter.getProtocolPool());
     }
 
     function _expectPolicyRevert() internal {
@@ -472,6 +591,10 @@ abstract contract BaseIntegrationTest is BaseTest {
         strategy = Types.Strategy({protocolId: protocolId, chainSelector: CHILD_CHAIN_SELECTOR});
     }
 
+    function _remoteChildStrategy(bytes32 protocolId) internal pure returns (Types.Strategy memory strategy) {
+        strategy = Types.Strategy({protocolId: protocolId, chainSelector: REMOTE_CHILD_CHAIN_SELECTOR});
+    }
+
     function _seedParentLocalTvl(uint256 depositAmount) internal returns (uint256 netDepositAmount) {
         (netDepositAmount,) = parent.vault.getNetAmountAndOperationFee(depositAmount);
 
@@ -519,6 +642,11 @@ abstract contract BaseIntegrationTest is BaseTest {
         stdstore.target(address(child.vault)).sig("getActiveProtocolAdapter()").checked_write(adapter);
     }
 
+    function _setRemoteChildActiveAdapter(bytes32 protocolId) internal {
+        address adapter = remoteChild.adapterRegistry.getAdapter(protocolId);
+        stdstore.target(address(remoteChild.vault)).sig("getActiveProtocolAdapter()").checked_write(adapter);
+    }
+
     function _assertAdapterRegistered(AdapterRegistry registry, bytes32 protocolId, address adapter) internal view {
         assertEq(registry.getAdapter(protocolId), adapter);
     }
@@ -553,6 +681,7 @@ abstract contract BaseIntegrationTest is BaseTest {
         _changePrank(networkConfig.roles.configOperator);
         parent.vault.setDefaultCcipGasLimit(DEFAULT_CCIP_GAS_LIMIT);
         child.vault.setDefaultCcipGasLimit(DEFAULT_CCIP_GAS_LIMIT);
+        if (address(remoteChild.vault) != address(0)) remoteChild.vault.setDefaultCcipGasLimit(DEFAULT_CCIP_GAS_LIMIT);
     }
 
     function _labelParentIntegrationContracts() internal {
@@ -569,6 +698,10 @@ abstract contract BaseIntegrationTest is BaseTest {
 
     function _labelChildIntegrationContracts() internal {
         vm.label(address(child.vault), "Integration ChildVault");
+    }
+
+    function _labelRemoteChildIntegrationContracts() internal {
+        vm.label(address(remoteChild.vault), "Integration RemoteChildVault");
     }
 
     function test_baseIntegrationTest() public virtual {}

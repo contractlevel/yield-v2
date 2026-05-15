@@ -7,6 +7,7 @@ abstract contract Constants {
     uint64 internal constant CHAIN_SELECTOR = 5009297550715157269;
     uint64 internal constant PARENT_CHAIN_SELECTOR = 1;
     uint64 internal constant CHILD_CHAIN_SELECTOR = 2;
+    uint64 internal constant REMOTE_CHILD_CHAIN_SELECTOR = 3;
 
     uint256 internal constant PENDING_DEPOSIT_TIMEOUT = 20 minutes;
     uint48 internal constant INITIAL_DEFAULT_ADMIN_DELAY = 259200; // 3 days

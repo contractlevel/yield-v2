@@ -1,0 +1,6 @@
+Rebalance_childToRemoteChild
+├── given the active strategy is remote on Child
+├── and the pending strategy is remote on a different Child
+├── when Parent initiates the rebalance
+├── and Child executes the rebalance to the remote Child
+└── it should bridge TVL to the remote Child strategy and complete on Parent
