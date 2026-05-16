@@ -105,6 +105,19 @@ contract YieldcoinShare_KycPolicyIntegrationTest is BaseIntegrationTest {
         parent.share.transferFrom(i_depositor, i_recipient1, 1e18);
     }
 
+    function test_YieldcoinShare_transferFrom_RevertWhen_FromIsNotKycApproved() external {
+        _assertShareKycPolicy(ComplianceTokenERC3643.transferFrom.selector);
+        address from = makeAddr("from");
+        _mintShares(from, SHARE_AMOUNT);
+        _registerKyc(i_withdrawer);
+        _registerKyc(i_recipient1);
+        _approveShares(from, i_withdrawer, 1e18);
+
+        _changePrank(i_withdrawer);
+        _expectPolicyRevert();
+        parent.share.transferFrom(from, i_recipient1, 1e18);
+    }
+
     function test_YieldcoinShare_transferFrom_SucceedsWhen_AccountsAreKycApproved() external {
         _registerKyc(i_withdrawer);
         _registerKyc(i_recipient1);
