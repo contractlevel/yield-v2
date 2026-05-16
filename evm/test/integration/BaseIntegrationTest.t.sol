@@ -386,6 +386,13 @@ abstract contract BaseIntegrationTest is BaseTest {
         parent.credentialRegistry.registerCredential(ccid, KYC_CREDENTIAL, 0, "", "");
     }
 
+    function _revokeKyc(address account) internal {
+        bytes32 ccid = keccak256(abi.encodePacked(account));
+
+        _changePrank(networkConfig.kycProvider);
+        parent.credentialRegistry.removeCredential(ccid, KYC_CREDENTIAL, "");
+    }
+
     function _fundAndApproveUsdc(address account, uint256 amount) internal {
         deal(parent.vault.getUsdc(), account, amount);
         _changePrank(account);

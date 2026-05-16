@@ -1,0 +1,32 @@
+Epoch_multiUserDeposit
+├── given the active strategy is local to Parent
+├── and two depositors submit different USDC amounts in the same epoch
+├── when CRE closes the epoch through WorkflowRouter
+├── then ParentVault should mark the epoch claimable
+├── and ParentVault should open the next epoch
+├── and ParentVault should deposit the combined net USDC into the local adapter
+├── and the first depositor should claim Yieldcoin shares proportional to their deposit
+└── and the second depositor should claim Yieldcoin shares proportional to their deposit
+
+Epoch_multiUserWithdraw
+├── given the active strategy is local to Parent
+├── and two depositors have claimed Yieldcoin shares from a prior epoch
+├── and both submit share burn requests in the same epoch
+├── when CRE closes the epoch through WorkflowRouter
+├── then ParentVault should withdraw the combined net USDC from the local adapter
+├── and ParentVault should mark the epoch claimable
+├── and ParentVault should open the next epoch
+├── and the first withdrawer should claim USDC proportional to their share burn
+└── and the second withdrawer should claim USDC proportional to their share burn
+
+Epoch_multiUserMixed
+├── given the active strategy is local to Parent
+├── and a withdrawer has claimed Yieldcoin shares from a prior epoch
+├── and a depositor submits USDC in the current epoch
+├── and the withdrawer submits a share burn request in the same epoch
+├── when CRE closes the epoch through WorkflowRouter
+├── then ParentVault should settle the net flow with the local adapter
+├── and ParentVault should mark the epoch claimable
+├── and ParentVault should open the next epoch
+├── and the depositor should claim Yieldcoin shares
+└── and the withdrawer should claim USDC while their shares are burned

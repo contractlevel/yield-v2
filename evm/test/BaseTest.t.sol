@@ -18,8 +18,6 @@ contract BaseTest is Constants, Test {
     address internal immutable i_recipient1 = makeAddr("recipient1");
     address internal immutable i_recipient2 = makeAddr("recipient2");
     address internal immutable i_configOperator = makeAddr("configOperator");
-    address internal immutable i_depositOperator = makeAddr("depositOperator");
-    address internal immutable i_withdrawOperator = makeAddr("withdrawOperator");
     address internal immutable i_rebalanceOperator = makeAddr("rebalanceOperator");
     address internal immutable i_emergencyDrainer = makeAddr("emergencyDrainer");
     address internal immutable i_linkOperator = makeAddr("linkOperator");
@@ -61,8 +59,6 @@ contract BaseTest is Constants, Test {
         vm.label(i_recipient1, "Recipient1");
         vm.label(i_recipient2, "Recipient2");
         vm.label(i_configOperator, "ConfigOperator");
-        vm.label(i_depositOperator, "DepositOperator");
-        vm.label(i_withdrawOperator, "WithdrawOperator");
         vm.label(i_rebalanceOperator, "RebalanceOperator");
         vm.label(i_emergencyDrainer, "EmergencyDrainer");
         vm.label(i_linkOperator, "LinkOperator");

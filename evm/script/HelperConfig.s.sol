@@ -86,7 +86,7 @@ contract HelperConfig is Script {
     /*//////////////////////////////////////////////////////////////
                                 MAINNETS
     //////////////////////////////////////////////////////////////*/
-    function getArbitrumConfig() public view returns (NetworkConfig memory networkConfig) {
+    function getArbitrumConfig() public pure returns (NetworkConfig memory networkConfig) {
         networkConfig = NetworkConfig({
             initialOwner: BURNER_EOA,
             treasury: BURNER_EOA,
@@ -120,7 +120,7 @@ contract HelperConfig is Script {
         });
     }
 
-    function getBaseConfig() public view returns (NetworkConfig memory networkConfig) {
+    function getBaseConfig() public pure returns (NetworkConfig memory networkConfig) {
         networkConfig = NetworkConfig({
             initialOwner: BURNER_EOA,
             treasury: BURNER_EOA,
