@@ -20,7 +20,7 @@ contract YieldcoinShare is ComplianceTokenERC3643, YieldcoinShareStore {
     /*//////////////////////////////////////////////////////////////
                                INITIALIZE
     //////////////////////////////////////////////////////////////*/
-    function initialize(address policyEngine, address initialCcipAdmin) public initializer {
+    function initialize(address policyEngine, address initialCcipAdmin) external initializer {
         __ComplianceTokenERC3643_init("Yieldcoin", "YIELD", 18, policyEngine);
         _setCCIPAdmin(initialCcipAdmin);
     }

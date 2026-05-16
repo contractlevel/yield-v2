@@ -24,6 +24,7 @@ contract YieldcoinShareKycExtractor is IExtractor {
         override
         returns (IPolicyEngine.Parameter[] memory parameters)
     {
+        //slither-disable-next-line uninitialized-local
         address[] memory accounts;
 
         if (payload.selector == ComplianceTokenERC3643.transfer.selector) {

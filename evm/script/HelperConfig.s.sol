@@ -154,6 +154,40 @@ contract HelperConfig is Script {
         });
     }
 
+    function getEthereumConfig() public pure returns (NetworkConfig memory networkConfig) {
+        networkConfig = NetworkConfig({
+            initialOwner: BURNER_EOA,
+            treasury: BURNER_EOA,
+            kycProvider: BURNER_EOA,
+            roles: RolesConfig({
+                defaultAdmin: BURNER_EOA,
+                pauser: BURNER_EOA,
+                unpauser: BURNER_EOA,
+                configOperator: BURNER_EOA,
+                complianceOperator: BURNER_EOA,
+                policyAdmin: BURNER_EOA,
+                policyConfigAdmin: BURNER_EOA,
+                policyEngineManager: BURNER_EOA,
+                emergencyDrainer: BURNER_EOA,
+                linkOperator: BURNER_EOA
+            }),
+            tokens: TokensConfig({
+                link: 0x514910771AF9Ca656af840dff83E8264EcF986CA, usdc: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
+            }),
+            protocols: ProtocolsConfig({
+                aaveV3PoolAddressesProvider: 0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e,
+                aaveV4Spoke: 0x94e756A88941f6Df2D5200234a974EE5a89Dc485,
+                aaveV4ReserveId: 0
+            }),
+            ccip: CCIPConfig({
+                router: 0x80226fc0Ee2b096224EeAc085Bb9a8cba1146f7D,
+                thisChainSelector: 5009297550715157269,
+                parentChainSelector: ARBITRUM_CHAIN_SELECTOR
+            }),
+            cre: CREConfig({keystoneForwarder: 0xF8344CFd5c43616a4366C34E3EEE75af79a74482})
+        });
+    }
+
     /*//////////////////////////////////////////////////////////////
                                  LOCAL
     //////////////////////////////////////////////////////////////*/

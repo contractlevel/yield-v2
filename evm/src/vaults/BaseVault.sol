@@ -279,6 +279,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     function _rebalanceToNewStrategy(uint256 rebalanceNonce, uint256 tvlToRebalance, Types.Strategy memory newStrategy)
         internal
     {
+        //slither-disable-next-line incorrect-equality
         if (newStrategy.chainSelector == i_thisChainSelector) {
             _setActiveAdapter(newStrategy.protocolId);
 
@@ -321,6 +322,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @dev Precondition: Stored recovery should not already exist for the rebalance nonce
     /// @dev Precondition: amount should not be zero
     function _storeRebalanceDepositRecovery(uint256 rebalanceNonce, uint256 amount) internal {
+        //slither-disable-next-line incorrect-equality
         if (amount == 0) revert BaseVault__ZeroRecoveryAmount();
         if (s_rebalanceDepositRecovery[rebalanceNonce].amount != 0) revert BaseVault__RecoveryAlreadyPending();
 
@@ -335,6 +337,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @dev Deletes the recovery state for the rebalance nonce
     /// @dev Emites RebalanceDepositRecoveryCleared event
     function _clearRebalanceDepositRecovery(uint256 rebalanceNonce) internal {
+        //slither-disable-next-line incorrect-equality
         if (s_rebalanceDepositRecovery[rebalanceNonce].amount == 0) revert BaseVault__NoPendingRecovery();
 
         delete s_rebalanceDepositRecovery[rebalanceNonce];
@@ -348,6 +351,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         returns (Types.AmountRecovery memory recovery)
     {
         recovery = s_rebalanceDepositRecovery[rebalanceNonce];
+        //slither-disable-next-line incorrect-equality
         if (recovery.amount == 0) revert BaseVault__NoPendingRecovery();
     }
 

@@ -92,6 +92,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     ///      Runtime policy engine replacement is controlled by POLICY_ENGINE_MANAGER_ROLE.
     /// @dev The initial active protocol adapter is set after deployment with setInitialActiveProtocolAdapter.
     ///      Deployment order: deploy vault, deploy adapter with vault address, register adapter, then call setter.
+    //slither-disable-next-line missing-zero-check
     constructor(
         BaseVault.ConstructorParams memory params,
         address treasury,
@@ -119,7 +120,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @dev Precondition: Caller must have the DEFAULT_ADMIN_ROLE
     /// @dev Precondition: the initial active protocol adapter must not already be set
     /// @dev Precondition: the protocol ID must have a registered adapter
-    function setInitialActiveProtocolAdapter(bytes32 protocolId) external onlyRole(Roles.DEFAULT_ADMIN_ROLE) {
+    function setInitialActiveProtocolAdapter(bytes32 protocolId) external nonReentrant onlyRole(Roles.DEFAULT_ADMIN_ROLE) {
         if (s_initialActiveProtocolAdapterSet) revert ParentVault__InitialActiveProtocolAdapterAlreadySet();
 
         address adapter = IAdapterRegistry(i_adapterRegistry).getAdapter(protocolId);
@@ -363,7 +364,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @dev Precondition: the epoch period must have exceeded the MIN_EPOCH_PERIOD
     /// @dev Precondition: there must have been a deposit or withdraw intent submitted during the epoch
     /// @dev Precondition: local strategy interactions must be successful
-    function closeEpoch(uint256 epochNonce, uint256 tvl) external onlyRole(Roles.EPOCH_OPERATOR_ROLE) {
+    function closeEpoch(uint256 epochNonce, uint256 tvl) external nonReentrant onlyRole(Roles.EPOCH_OPERATOR_ROLE) {
         if (s_rebalance.state != Types.RebalanceState.NONE) revert ParentVault__RebalanceInProgress();
 
         Types.Epoch storage epoch = s_epochs[epochNonce];
@@ -488,7 +489,11 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @notice This is called by the WorkflowRouter
     /// @dev Precondition: the caller must have the REBALANCE_OPERATOR_ROLE
     // @review continue natspec for paths here and epoch.status
-    function initiateRebalance(Types.Strategy memory newStrategy) external onlyRole(Roles.REBALANCE_OPERATOR_ROLE) {
+    function initiateRebalance(Types.Strategy memory newStrategy)
+        external
+        nonReentrant
+        onlyRole(Roles.REBALANCE_OPERATOR_ROLE)
+    {
         // revert if rebalance is already in progress
         if (s_rebalance.state != Types.RebalanceState.NONE) revert ParentVault__RebalanceInProgress();
 
@@ -513,11 +518,13 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         s_rebalance.lastRebalanceInitiatedTimestamp = block.timestamp;
         emit RebalanceInitiated(s_rebalance.nonce, newStrategy.chainSelector, newStrategy.protocolId);
 
-        // compare if old strategy chain selector is this one
+        /// @dev check if old/previously-active strategy chain selector is this one
+        //slither-disable-next-line incorrect-equality
         if (s_rebalance.activeStrategy.chainSelector == i_thisChainSelector) {
             // withdraw from local strategy
             uint256 amountOut = _executeWithdraw(type(uint256).max, true);
             // @review will this condition ever be hit?
+            //slither-disable-next-line incorrect-equality
             if (amountOut == 0) revert ParentVault__WithdrawFailed(s_rebalance.nonce, type(uint256).max);
             emit RebalanceWithdrawSuccess(s_rebalance.nonce, amountOut);
             if (newStrategy.chainSelector == i_thisChainSelector) {
@@ -539,7 +546,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         } // else, CRE is trigged by the event to write to old strategy chain and rebalance/bridge from there
     }
 
-    function completeRebalance(uint256 rebalanceNonce) external onlyRole(Roles.REBALANCE_OPERATOR_ROLE) {
+    function completeRebalance(uint256 rebalanceNonce) external nonReentrant onlyRole(Roles.REBALANCE_OPERATOR_ROLE) {
         _finalizeRebalance(rebalanceNonce);
     }
 
@@ -547,6 +554,8 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @param rebalanceNonce The nonce of the failed rebalance deposit
     /// @dev Precondition: rebalance deposit recovery state must exist
     /// @dev Precondition: active strategy adapter must be set
+    /// @dev Precondition: rebalance state must be REBALANCING
+    /// @dev Precondition: rebalance nonce must be the current nonce // @review, do we really need to pass it then?
     function recoverFailedRebalanceDeposit(uint256 rebalanceNonce) external override(BaseVault, IParentVault) {
         _recoverFailedRebalanceDeposit(rebalanceNonce);
         _finalizeRebalance(rebalanceNonce);

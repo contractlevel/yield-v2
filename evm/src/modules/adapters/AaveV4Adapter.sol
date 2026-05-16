@@ -67,6 +67,7 @@ contract AaveV4Adapter is ProtocolAdapter {
     function withdraw(uint256 amount) external nonReentrant onlyVault returns (uint256 actualWithdrawnAmount) {
         /// @dev Scenario 1: Epoch Withdraw - when the amount is a specific amount
         if (amount != type(uint256).max) {
+            //slither-disable-next-line unused-return
             (, actualWithdrawnAmount) = IAaveV4Spoke(i_spoke).withdraw(i_reserveId, amount, address(this));
             /// @dev Precondition: the actual withdrawn amount must not be less than the requested amount
             if (actualWithdrawnAmount < amount) revert AaveV4Adapter__IncorrectWithdrawAmount();
@@ -75,6 +76,7 @@ contract AaveV4Adapter is ProtocolAdapter {
         else {
             uint256 tvl = _getTVL();
 
+            //slither-disable-next-line unused-return
             (, actualWithdrawnAmount) = IAaveV4Spoke(i_spoke).withdraw(i_reserveId, amount, address(this));
 
             /// @dev Precondition: the actual withdrawn amount must not be less than the TVL
