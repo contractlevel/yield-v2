@@ -9,6 +9,7 @@ import {MockCCIPRouter} from "../test/mocks/MockCCIPRouter.sol";
 import {MockAaveV3Pool} from "../test/mocks/MockAaveV3Pool.sol";
 import {MockAaveV3PoolAddressesProvider} from "../test/mocks/MockAaveV3PoolAddressesProvider.sol";
 import {MockAaveV4Spoke} from "../test/mocks/MockAaveV4Spoke.sol";
+import {MockComet} from "../test/mocks/MockComet.sol";
 
 contract HelperConfig is Script {
     /*//////////////////////////////////////////////////////////////
@@ -52,6 +53,7 @@ contract HelperConfig is Script {
     struct ProtocolsConfig {
         address aaveV3PoolAddressesProvider;
         address aaveV4Spoke;
+        address compoundV3Comet;
     }
 
     struct CCIPConfig {
@@ -107,7 +109,8 @@ contract HelperConfig is Script {
             }),
             protocols: ProtocolsConfig({
                 aaveV3PoolAddressesProvider: 0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e,
-                aaveV4Spoke: address(0) // @review update when aave v4 is deployed
+                aaveV4Spoke: address(0), // @review update when aave v4 is deployed
+                compoundV3Comet: 0x9c4ec768c28520B50860ea7a15bd7213a9fF58bf
             }),
             ccip: CCIPConfig({
                 router: 0x141fa059441E0ca23ce184B6A78bafD2A517DdE8,
@@ -140,7 +143,8 @@ contract HelperConfig is Script {
             }),
             protocols: ProtocolsConfig({
                 aaveV3PoolAddressesProvider: 0xe20fCBdBfFC4Dd138cE8b2E6FBb6CB49777ad64D,
-                aaveV4Spoke: address(0) // @review update when aave v4 is deployed
+                aaveV4Spoke: address(0), // @review update when aave v4 is deployed
+                compoundV3Comet: 0xb125E6687d4313864e53df431d5425969c15Eb2F
             }),
             ccip: CCIPConfig({
                 router: 0x881e3A65B4d4a04dD529061dd0071cf975F58bCD,
@@ -173,7 +177,8 @@ contract HelperConfig is Script {
             }),
             protocols: ProtocolsConfig({
                 aaveV3PoolAddressesProvider: 0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e,
-                aaveV4Spoke: 0x94E756a88941F6df2d5200234a974eE5A89dC485
+                aaveV4Spoke: 0x94E756a88941F6df2d5200234a974eE5A89dC485,
+                compoundV3Comet: 0xc3d688B66703497DAA19211EEdff47f25384cdc3
             }),
             ccip: CCIPConfig({
                 router: 0x80226fc0Ee2b096224EeAc085Bb9a8cba1146f7D,
@@ -229,7 +234,8 @@ contract HelperConfig is Script {
 
         return ProtocolsConfig({
             aaveV3PoolAddressesProvider: address(new MockAaveV3PoolAddressesProvider(aaveV3Pool)),
-            aaveV4Spoke: address(new MockAaveV4Spoke(usdc))
+            aaveV4Spoke: address(new MockAaveV4Spoke(usdc)),
+            compoundV3Comet: address(new MockComet())
         });
     }
 

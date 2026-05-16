@@ -61,25 +61,25 @@ contract AaveV3Adapter is ProtocolAdapter {
     /// @dev Transfers the actual withdrawn amount to the Yieldcoin v2 Vault
     /// @dev Precondition: caller must be the Yieldcoin v2 Vault
     /// @notice We handle 2 withdraw scenarios:
-    /// 1. Rebalance Withdraw - when the amount is type(uint256).max
-    /// 2. User Withdraw - when the amount is a specific amount
+    /// 1. Epoch Withdraw - when the amount is a specific amount
+    /// 2. Rebalance Withdraw - when the amount is type(uint256).max
     function withdraw(uint256 amount) external nonReentrant onlyVault returns (uint256 actualWithdrawnAmount) {
         address pool = _getAavePool();
 
+        /// @dev Scenario 1: Epoch Withdraw - when the amount is a specific amount
+        if (amount != type(uint256).max) {
+            actualWithdrawnAmount = IPool(pool).withdraw(i_usdc, amount, address(this));
+            /// @dev Precondition: the actual withdrawn amount must not be less than the requested amount
+            if (actualWithdrawnAmount < amount) revert AaveV3Adapter__IncorrectWithdrawAmount();
+        }
         /// @dev Scenario 1: Rebalance Withdraw - when the amount is type(uint256).max
-        if (amount == type(uint256).max) {
+        else {
             uint256 tvl = _getTVL(pool);
 
             actualWithdrawnAmount = IPool(pool).withdraw(i_usdc, amount, address(this));
 
             /// @dev Precondition: the actual withdrawn amount must not be less than the TVL
             if (actualWithdrawnAmount < tvl) revert AaveV3Adapter__IncorrectWithdrawAmount();
-        }
-        /// @dev Scenario 2: User Withdraw - when the amount is a specific amount
-        else {
-            actualWithdrawnAmount = IPool(pool).withdraw(i_usdc, amount, address(this));
-            /// @dev Precondition: the actual withdrawn amount must not be less than the requested amount
-            if (actualWithdrawnAmount < amount) revert AaveV3Adapter__IncorrectWithdrawAmount();
         }
         emit Withdraw(actualWithdrawnAmount);
         IERC20(i_usdc).safeTransfer(i_vault, actualWithdrawnAmount);

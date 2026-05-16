@@ -4,6 +4,7 @@ ChildVault_deployment
 ├── core addresses
 │   └── it should configure vault addresses from deployment config
 ├── adapters
-│   └── it should register Aave V3 and Aave V4 adapters
+│   ├── it should register Aave V3, Aave V4, and Compound V3 adapters
+│   └── it should configure deployed adapters
 └── workflow router
     └── it should configure constructor-granted router roles

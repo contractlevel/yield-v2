@@ -120,8 +120,14 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @dev Precondition: Caller must have the DEFAULT_ADMIN_ROLE
     /// @dev Precondition: the initial active protocol adapter must not already be set
     /// @dev Precondition: the protocol ID must have a registered adapter
-    function setInitialActiveProtocolAdapter(bytes32 protocolId) external nonReentrant onlyRole(Roles.DEFAULT_ADMIN_ROLE) {
-        if (s_initialActiveProtocolAdapterSet) revert ParentVault__InitialActiveProtocolAdapterAlreadySet();
+    function setInitialActiveProtocolAdapter(bytes32 protocolId)
+        external
+        nonReentrant
+        onlyRole(Roles.DEFAULT_ADMIN_ROLE)
+    {
+        if (s_initialActiveProtocolAdapterSet) {
+            revert ParentVault__InitialActiveProtocolAdapterAlreadySet();
+        }
 
         address adapter = IAdapterRegistry(i_adapterRegistry).getAdapter(protocolId);
         if (adapter == address(0)) revert BaseVault__NoAdapterRegistered(protocolId);

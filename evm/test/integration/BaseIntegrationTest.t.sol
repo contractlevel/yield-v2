@@ -14,6 +14,7 @@ import {ChildVault} from "../../src/vaults/ChildVault.sol";
 import {AdapterRegistry} from "../../src/modules/AdapterRegistry.sol";
 import {AaveV3Adapter} from "../../src/modules/adapters/AaveV3Adapter.sol";
 import {AaveV4Adapter} from "../../src/modules/adapters/AaveV4Adapter.sol";
+import {CompoundV3Adapter} from "../../src/modules/adapters/CompoundV3Adapter.sol";
 import {WorkflowRouter} from "../../src/modules/WorkflowRouter.sol";
 import {YieldcoinShare} from "../../src/token/YieldcoinShare.sol";
 import {IProtocolAdapter} from "../../src/interfaces/IProtocolAdapter.sol";
@@ -23,6 +24,7 @@ import {Types} from "../../src/libraries/Types.sol";
 import {MockAaveV3Pool} from "../mocks/MockAaveV3Pool.sol";
 import {MockAaveV3PoolAddressesProvider} from "../mocks/MockAaveV3PoolAddressesProvider.sol";
 import {MockAaveV4Spoke} from "../mocks/MockAaveV4Spoke.sol";
+import {MockComet} from "../mocks/MockComet.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
 import {CCIPLocalSimulator, IRouterClient, LinkToken} from "@chainlink/local/src/ccip/CCIPLocalSimulator.sol";
 import {MockCCIPRouter} from "@chainlink/local/test/mocks/MockRouter.sol";
@@ -53,12 +55,14 @@ abstract contract BaseIntegrationTest is BaseTest {
         bytes32 vaultCcid;
         address aaveV3PoolAddressesProvider;
         address aaveV4Spoke;
+        address compoundV3Comet;
         AdapterRegistry adapterRegistry;
         YieldcoinShare shareImpl;
         YieldcoinShare share;
         ParentVault vault;
         AaveV3Adapter aaveV3Adapter;
         AaveV4Adapter aaveV4Adapter;
+        CompoundV3Adapter compoundV3Adapter;
         WorkflowRouter workflowRouter;
         PolicyEngine policyEngine;
         IdentityRegistry identityRegistry;
@@ -75,10 +79,12 @@ abstract contract BaseIntegrationTest is BaseTest {
         address usdc;
         address aaveV3PoolAddressesProvider;
         address aaveV4Spoke;
+        address compoundV3Comet;
         AdapterRegistry adapterRegistry;
         ChildVault vault;
         AaveV3Adapter aaveV3Adapter;
         AaveV4Adapter aaveV4Adapter;
+        CompoundV3Adapter compoundV3Adapter;
         WorkflowRouter workflowRouter;
     }
 
@@ -110,12 +116,14 @@ abstract contract BaseIntegrationTest is BaseTest {
             vaultCcid: parentDeployment.vaultCcid,
             aaveV3PoolAddressesProvider: parentDeployment.aaveV3PoolAddressesProvider,
             aaveV4Spoke: parentDeployment.aaveV4Spoke,
+            compoundV3Comet: parentDeployment.compoundV3Comet,
             adapterRegistry: parentDeployment.adapterRegistry,
             shareImpl: parentDeployment.yieldcoinImpl,
             share: parentDeployment.yieldcoinProxy,
             vault: parentDeployment.parentVault,
             aaveV3Adapter: parentDeployment.aaveV3Adapter,
             aaveV4Adapter: parentDeployment.aaveV4Adapter,
+            compoundV3Adapter: parentDeployment.compoundV3Adapter,
             workflowRouter: parentDeployment.workflowRouter,
             policyEngine: parentDeployment.policyEngine,
             identityRegistry: parentDeployment.identityRegistry,
@@ -137,10 +145,12 @@ abstract contract BaseIntegrationTest is BaseTest {
             usdc: childDeployment.usdc,
             aaveV3PoolAddressesProvider: childDeployment.aaveV3PoolAddressesProvider,
             aaveV4Spoke: childDeployment.aaveV4Spoke,
+            compoundV3Comet: childDeployment.compoundV3Comet,
             adapterRegistry: childDeployment.adapterRegistry,
             vault: childDeployment.childVault,
             aaveV3Adapter: childDeployment.aaveV3Adapter,
             aaveV4Adapter: childDeployment.aaveV4Adapter,
+            compoundV3Adapter: childDeployment.compoundV3Adapter,
             workflowRouter: childDeployment.workflowRouter
         });
 
@@ -167,11 +177,21 @@ abstract contract BaseIntegrationTest is BaseTest {
             new MockAaveV3PoolAddressesProvider(address(childAaveV3Pool));
         MockAaveV4Spoke parentAaveV4Spoke = new MockAaveV4Spoke(address(local.usdc));
         MockAaveV4Spoke childAaveV4Spoke = new MockAaveV4Spoke(address(local.usdc));
+        MockComet parentComet = new MockComet();
+        MockComet childComet = new MockComet();
 
-        HelperConfig.NetworkConfig memory parentConfig =
-            _localConfig(address(parentAaveV3PoolAddressesProvider), address(parentAaveV4Spoke), PARENT_CHAIN_SELECTOR);
-        HelperConfig.NetworkConfig memory childConfig =
-            _localConfig(address(childAaveV3PoolAddressesProvider), address(childAaveV4Spoke), CHILD_CHAIN_SELECTOR);
+        HelperConfig.NetworkConfig memory parentConfig = _localConfig(
+            address(parentAaveV3PoolAddressesProvider),
+            address(parentAaveV4Spoke),
+            address(parentComet),
+            PARENT_CHAIN_SELECTOR
+        );
+        HelperConfig.NetworkConfig memory childConfig = _localConfig(
+            address(childAaveV3PoolAddressesProvider),
+            address(childAaveV4Spoke),
+            address(childComet),
+            CHILD_CHAIN_SELECTOR
+        );
         networkConfig = parentConfig;
 
         DeployParent parentDeployer = new DeployParent();
@@ -183,12 +203,14 @@ abstract contract BaseIntegrationTest is BaseTest {
             vaultCcid: parentDeployment.vaultCcid,
             aaveV3PoolAddressesProvider: parentDeployment.aaveV3PoolAddressesProvider,
             aaveV4Spoke: parentDeployment.aaveV4Spoke,
+            compoundV3Comet: parentDeployment.compoundV3Comet,
             adapterRegistry: parentDeployment.adapterRegistry,
             shareImpl: parentDeployment.yieldcoinImpl,
             share: parentDeployment.yieldcoinProxy,
             vault: parentDeployment.parentVault,
             aaveV3Adapter: parentDeployment.aaveV3Adapter,
             aaveV4Adapter: parentDeployment.aaveV4Adapter,
+            compoundV3Adapter: parentDeployment.compoundV3Adapter,
             workflowRouter: parentDeployment.workflowRouter,
             policyEngine: parentDeployment.policyEngine,
             identityRegistry: parentDeployment.identityRegistry,
@@ -208,10 +230,12 @@ abstract contract BaseIntegrationTest is BaseTest {
             usdc: childDeployment.usdc,
             aaveV3PoolAddressesProvider: childDeployment.aaveV3PoolAddressesProvider,
             aaveV4Spoke: childDeployment.aaveV4Spoke,
+            compoundV3Comet: childDeployment.compoundV3Comet,
             adapterRegistry: childDeployment.adapterRegistry,
             vault: childDeployment.childVault,
             aaveV3Adapter: childDeployment.aaveV3Adapter,
             aaveV4Adapter: childDeployment.aaveV4Adapter,
+            compoundV3Adapter: childDeployment.compoundV3Adapter,
             workflowRouter: childDeployment.workflowRouter
         });
 
@@ -243,14 +267,26 @@ abstract contract BaseIntegrationTest is BaseTest {
         MockAaveV4Spoke parentAaveV4Spoke = new MockAaveV4Spoke(address(local.usdc));
         MockAaveV4Spoke childAaveV4Spoke = new MockAaveV4Spoke(address(local.usdc));
         MockAaveV4Spoke remoteChildAaveV4Spoke = new MockAaveV4Spoke(address(local.usdc));
+        MockComet parentComet = new MockComet();
+        MockComet childComet = new MockComet();
+        MockComet remoteChildComet = new MockComet();
 
-        HelperConfig.NetworkConfig memory parentConfig =
-            _localConfig(address(parentAaveV3PoolAddressesProvider), address(parentAaveV4Spoke), PARENT_CHAIN_SELECTOR);
-        HelperConfig.NetworkConfig memory childConfig =
-            _localConfig(address(childAaveV3PoolAddressesProvider), address(childAaveV4Spoke), CHILD_CHAIN_SELECTOR);
+        HelperConfig.NetworkConfig memory parentConfig = _localConfig(
+            address(parentAaveV3PoolAddressesProvider),
+            address(parentAaveV4Spoke),
+            address(parentComet),
+            PARENT_CHAIN_SELECTOR
+        );
+        HelperConfig.NetworkConfig memory childConfig = _localConfig(
+            address(childAaveV3PoolAddressesProvider),
+            address(childAaveV4Spoke),
+            address(childComet),
+            CHILD_CHAIN_SELECTOR
+        );
         HelperConfig.NetworkConfig memory remoteChildConfig = _localConfig(
             address(remoteChildAaveV3PoolAddressesProvider),
             address(remoteChildAaveV4Spoke),
+            address(remoteChildComet),
             REMOTE_CHILD_CHAIN_SELECTOR
         );
         networkConfig = parentConfig;
@@ -264,12 +300,14 @@ abstract contract BaseIntegrationTest is BaseTest {
             vaultCcid: parentDeployment.vaultCcid,
             aaveV3PoolAddressesProvider: parentDeployment.aaveV3PoolAddressesProvider,
             aaveV4Spoke: parentDeployment.aaveV4Spoke,
+            compoundV3Comet: parentDeployment.compoundV3Comet,
             adapterRegistry: parentDeployment.adapterRegistry,
             shareImpl: parentDeployment.yieldcoinImpl,
             share: parentDeployment.yieldcoinProxy,
             vault: parentDeployment.parentVault,
             aaveV3Adapter: parentDeployment.aaveV3Adapter,
             aaveV4Adapter: parentDeployment.aaveV4Adapter,
+            compoundV3Adapter: parentDeployment.compoundV3Adapter,
             workflowRouter: parentDeployment.workflowRouter,
             policyEngine: parentDeployment.policyEngine,
             identityRegistry: parentDeployment.identityRegistry,
@@ -289,10 +327,12 @@ abstract contract BaseIntegrationTest is BaseTest {
             usdc: childDeployment.usdc,
             aaveV3PoolAddressesProvider: childDeployment.aaveV3PoolAddressesProvider,
             aaveV4Spoke: childDeployment.aaveV4Spoke,
+            compoundV3Comet: childDeployment.compoundV3Comet,
             adapterRegistry: childDeployment.adapterRegistry,
             vault: childDeployment.childVault,
             aaveV3Adapter: childDeployment.aaveV3Adapter,
             aaveV4Adapter: childDeployment.aaveV4Adapter,
+            compoundV3Adapter: childDeployment.compoundV3Adapter,
             workflowRouter: childDeployment.workflowRouter
         });
 
@@ -304,10 +344,12 @@ abstract contract BaseIntegrationTest is BaseTest {
             usdc: remoteChildDeployment.usdc,
             aaveV3PoolAddressesProvider: remoteChildDeployment.aaveV3PoolAddressesProvider,
             aaveV4Spoke: remoteChildDeployment.aaveV4Spoke,
+            compoundV3Comet: remoteChildDeployment.compoundV3Comet,
             adapterRegistry: remoteChildDeployment.adapterRegistry,
             vault: remoteChildDeployment.childVault,
             aaveV3Adapter: remoteChildDeployment.aaveV3Adapter,
             aaveV4Adapter: remoteChildDeployment.aaveV4Adapter,
+            compoundV3Adapter: remoteChildDeployment.compoundV3Adapter,
             workflowRouter: remoteChildDeployment.workflowRouter
         });
 
@@ -328,16 +370,18 @@ abstract contract BaseIntegrationTest is BaseTest {
         _labelRemoteChildIntegrationContracts();
     }
 
-    function _localConfig(address aaveV3PoolAddressesProvider, address aaveV4Spoke, uint64 thisChainSelector)
-        internal
-        view
-        returns (HelperConfig.NetworkConfig memory config)
-    {
+    function _localConfig(
+        address aaveV3PoolAddressesProvider,
+        address aaveV4Spoke,
+        address compoundV3Comet,
+        uint64 thisChainSelector
+    ) internal view returns (HelperConfig.NetworkConfig memory config) {
         config = networkConfig;
         config.tokens.link = address(local.link);
         config.tokens.usdc = address(local.usdc);
         config.protocols.aaveV3PoolAddressesProvider = aaveV3PoolAddressesProvider;
         config.protocols.aaveV4Spoke = aaveV4Spoke;
+        config.protocols.compoundV3Comet = compoundV3Comet;
         config.ccip.router = address(local.mockCcipRouter);
         config.ccip.thisChainSelector = thisChainSelector;
         config.ccip.parentChainSelector = PARENT_CHAIN_SELECTOR;
@@ -351,6 +395,10 @@ abstract contract BaseIntegrationTest is BaseTest {
         assertEq(parent.aaveV4Adapter.getProtocolPool(), parent.aaveV4Spoke);
         assertEq(child.aaveV4Adapter.getProtocolPool(), child.aaveV4Spoke);
         assertNotEq(parent.aaveV4Adapter.getProtocolPool(), child.aaveV4Adapter.getProtocolPool());
+
+        assertEq(parent.compoundV3Adapter.getProtocolPool(), parent.compoundV3Comet);
+        assertEq(child.compoundV3Adapter.getProtocolPool(), child.compoundV3Comet);
+        assertNotEq(parent.compoundV3Adapter.getProtocolPool(), child.compoundV3Adapter.getProtocolPool());
     }
 
     function _assertLocalParentTwoChildTopologySplit() internal view {
@@ -362,6 +410,10 @@ abstract contract BaseIntegrationTest is BaseTest {
         assertEq(remoteChild.aaveV4Adapter.getProtocolPool(), remoteChild.aaveV4Spoke);
         assertNotEq(parent.aaveV4Adapter.getProtocolPool(), remoteChild.aaveV4Adapter.getProtocolPool());
         assertNotEq(child.aaveV4Adapter.getProtocolPool(), remoteChild.aaveV4Adapter.getProtocolPool());
+
+        assertEq(remoteChild.compoundV3Adapter.getProtocolPool(), remoteChild.compoundV3Comet);
+        assertNotEq(parent.compoundV3Adapter.getProtocolPool(), remoteChild.compoundV3Adapter.getProtocolPool());
+        assertNotEq(child.compoundV3Adapter.getProtocolPool(), remoteChild.compoundV3Adapter.getProtocolPool());
     }
 
     function _expectPolicyRevert() internal {

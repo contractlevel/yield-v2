@@ -52,6 +52,7 @@ contract ParentVault_DeploymentIntegrationTest is BaseIntegrationTest {
     function test_ParentVault_deployment_RegistersAdapters() external view {
         _assertAdapterRegistered(parent.adapterRegistry, AAVE_V3_PROTOCOL_ID, address(parent.aaveV3Adapter));
         _assertAdapterRegistered(parent.adapterRegistry, AAVE_V4_PROTOCOL_ID, address(parent.aaveV4Adapter));
+        _assertAdapterRegistered(parent.adapterRegistry, COMPOUND_V3_PROTOCOL_ID, address(parent.compoundV3Adapter));
     }
 
     function test_ParentVault_deployment_ConfiguresAdapters() external view {
@@ -61,6 +62,9 @@ contract ParentVault_DeploymentIntegrationTest is BaseIntegrationTest {
         _assertProtocolAdapterConfigured(parent.aaveV4Adapter, address(parent.vault), parent.usdc);
         assertEq(parent.aaveV4Adapter.getProtocolPool(), parent.aaveV4Spoke);
         assertEq(parent.aaveV4Adapter.getReserveId(), 0);
+
+        _assertProtocolAdapterConfigured(parent.compoundV3Adapter, address(parent.vault), parent.usdc);
+        assertEq(parent.compoundV3Adapter.getProtocolPool(), parent.compoundV3Comet);
     }
 
     function test_ParentVault_deployment_ConfiguresAdapterRegistryRoles() external view {

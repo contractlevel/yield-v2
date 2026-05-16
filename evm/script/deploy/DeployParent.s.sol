@@ -8,6 +8,7 @@ import {ParentVault, BaseVault} from "../../src/vaults/ParentVault.sol";
 import {AdapterRegistry} from "../../src/modules/AdapterRegistry.sol";
 import {AaveV3Adapter} from "../../src/modules/adapters/AaveV3Adapter.sol";
 import {AaveV4Adapter} from "../../src/modules/adapters/AaveV4Adapter.sol";
+import {CompoundV3Adapter} from "../../src/modules/adapters/CompoundV3Adapter.sol";
 import {WorkflowRouter} from "../../src/modules/WorkflowRouter.sol";
 import {YieldcoinShare} from "../../src/token/YieldcoinShare.sol";
 import {Roles} from "../../src/libraries/Roles.sol";
@@ -90,12 +91,14 @@ contract DeployParent is Script {
         bytes32 vaultCcid;
         address aaveV3PoolAddressesProvider;
         address aaveV4Spoke;
+        address compoundV3Comet;
         AdapterRegistry adapterRegistry;
         YieldcoinShare yieldcoinImpl;
         YieldcoinShare yieldcoinProxy;
         ParentVault parentVault;
         AaveV3Adapter aaveV3Adapter;
         AaveV4Adapter aaveV4Adapter;
+        CompoundV3Adapter compoundV3Adapter;
         WorkflowRouter workflowRouter;
         PolicyEngine policyEngine;
         IdentityRegistry identityRegistry;
@@ -129,6 +132,7 @@ contract DeployParent is Script {
         deploy.vaultCcid = PARENT_VAULT_CCID;
         deploy.aaveV3PoolAddressesProvider = networkConfig.protocols.aaveV3PoolAddressesProvider;
         deploy.aaveV4Spoke = networkConfig.protocols.aaveV4Spoke;
+        deploy.compoundV3Comet = networkConfig.protocols.compoundV3Comet;
 
         /// @dev Deploy the PolicyEngine, IdentityRegistry, and CredentialRegistry
         (deploy.policyEngine, deploy.identityRegistry, deploy.credentialRegistry) = _deployACEComponents(deployer);
@@ -182,6 +186,12 @@ contract DeployParent is Script {
             address(deploy.parentVault), networkConfig.tokens.usdc, networkConfig.protocols.aaveV4Spoke
         );
         deploy.adapterRegistry.setAdapter(aaveV4ProtocolId, address(deploy.aaveV4Adapter));
+        /// @dev Deploy the Compound v3 Adapter
+        bytes32 compoundV3ProtocolId = keccak256("compound-v3");
+        deploy.compoundV3Adapter = new CompoundV3Adapter(
+            address(deploy.parentVault), networkConfig.tokens.usdc, networkConfig.protocols.compoundV3Comet
+        );
+        deploy.adapterRegistry.setAdapter(compoundV3ProtocolId, address(deploy.compoundV3Adapter));
         deploy.parentVault.setInitialActiveProtocolAdapter(aaveV3ProtocolId);
 
         /// @dev Deploy the WorkflowRouter
