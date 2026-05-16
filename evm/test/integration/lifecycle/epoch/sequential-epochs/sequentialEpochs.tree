@@ -1,0 +1,10 @@
+Epoch_sequential
+├── given the active strategy is local to Parent
+├── and depositor A deposits in epoch 1 and claims shares at 1:1 price
+├── and the protocol accrues 100% yield between epochs
+├── and depositor B deposits in epoch 2 at the updated share price
+├── when both epochs close
+├── then both epochs should be CLAIMABLE and epoch 3 OPEN
+├── and depositor A should hold the same share balance
+├── and depositor B should hold the same share count as A (at double price)
+└── and deposit mappings from prior epochs should be cleared
