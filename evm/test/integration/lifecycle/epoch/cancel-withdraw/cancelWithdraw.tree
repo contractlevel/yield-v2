@@ -1,0 +1,7 @@
+Epoch_cancelWithdraw
+├── given the active strategy is local to Parent
+├── and a depositor has claimed Yieldcoin shares from a prior epoch
+├── and the depositor submits a share burn request in the current epoch
+├── when the depositor cancels their withdraw
+├── then ParentVault should return the shares to the depositor
+└── and ParentVault should clear the share burn mapping

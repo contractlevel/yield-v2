@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {BaseIntegrationTest} from "../BaseIntegrationTest.t.sol";
+import {BaseIntegrationTest} from "../../BaseIntegrationTest.t.sol";
 
-import {Roles} from "../../../src/libraries/Roles.sol";
+import {Roles} from "../../../../src/libraries/Roles.sol";
 
 contract ChildVault_DeploymentIntegrationTest is BaseIntegrationTest {
     function setUp() public override {

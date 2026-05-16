@@ -1,0 +1,6 @@
+Epoch_cancelDeposit
+├── given the active strategy is local to Parent
+├── and a depositor submits USDC in the current epoch
+├── when the depositor cancels their deposit
+├── then ParentVault should return the net USDC to the depositor
+└── and ParentVault should clear the deposit mapping

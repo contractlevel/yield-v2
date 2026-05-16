@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {BaseIntegrationTest} from "../BaseIntegrationTest.t.sol";
+import {BaseIntegrationTest} from "../../BaseIntegrationTest.t.sol";
 
 import {ComplianceTokenERC3643} from "@chainlink/tokens/erc-3643/src/ComplianceTokenERC3643.sol";
 

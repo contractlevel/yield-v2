@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {BaseIntegrationTest} from "../../BaseIntegrationTest.t.sol";
+import {BaseIntegrationTest} from "../../../BaseIntegrationTest.t.sol";
 
-import {Types} from "../../../../src/libraries/Types.sol";
-import {MockAaveV3Pool} from "../../../mocks/MockAaveV3Pool.sol";
-import {MockAaveV4Spoke} from "../../../mocks/MockAaveV4Spoke.sol";
+import {Types} from "../../../../../src/libraries/Types.sol";
+import {MockAaveV3Pool} from "../../../../mocks/MockAaveV3Pool.sol";
+import {MockAaveV4Spoke} from "../../../../mocks/MockAaveV4Spoke.sol";
 
 import {Vm} from "forge-std/Test.sol";
 

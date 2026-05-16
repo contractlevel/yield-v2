@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {BaseIntegrationTest} from "../../BaseIntegrationTest.t.sol";
+import {BaseIntegrationTest} from "../../../BaseIntegrationTest.t.sol";
 
-import {Types} from "../../../../src/libraries/Types.sol";
-import {MockAaveV3Pool} from "../../../mocks/MockAaveV3Pool.sol";
+import {Types} from "../../../../../src/libraries/Types.sol";
+import {MockAaveV3Pool} from "../../../../mocks/MockAaveV3Pool.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
