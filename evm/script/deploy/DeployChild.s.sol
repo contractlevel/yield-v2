@@ -20,7 +20,6 @@ contract DeployChild is Script {
         address usdc;
         address aaveV3PoolAddressesProvider;
         address aaveV4Spoke;
-        uint256 aaveV4ReserveId;
         AdapterRegistry adapterRegistry;
         ChildVault childVault;
         AaveV3Adapter aaveV3Adapter;
@@ -49,7 +48,6 @@ contract DeployChild is Script {
         deploy.usdc = networkConfig.tokens.usdc;
         deploy.aaveV3PoolAddressesProvider = networkConfig.protocols.aaveV3PoolAddressesProvider;
         deploy.aaveV4Spoke = networkConfig.protocols.aaveV4Spoke;
-        deploy.aaveV4ReserveId = networkConfig.protocols.aaveV4ReserveId;
 
         /// @dev Deploy the AdapterRegistry
         deploy.adapterRegistry = new AdapterRegistry(
@@ -82,10 +80,7 @@ contract DeployChild is Script {
         /// @dev Deploy the Aave v4 Adapter
         bytes32 aaveV4ProtocolId = keccak256("aave-v4");
         deploy.aaveV4Adapter = new AaveV4Adapter(
-            address(deploy.childVault),
-            networkConfig.tokens.usdc,
-            networkConfig.protocols.aaveV4Spoke,
-            networkConfig.protocols.aaveV4ReserveId
+            address(deploy.childVault), networkConfig.tokens.usdc, networkConfig.protocols.aaveV4Spoke
         );
         deploy.adapterRegistry.setAdapter(aaveV4ProtocolId, address(deploy.aaveV4Adapter));
 

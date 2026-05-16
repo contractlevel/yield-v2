@@ -52,7 +52,6 @@ contract HelperConfig is Script {
     struct ProtocolsConfig {
         address aaveV3PoolAddressesProvider;
         address aaveV4Spoke;
-        uint256 aaveV4ReserveId;
     }
 
     struct CCIPConfig {
@@ -108,8 +107,7 @@ contract HelperConfig is Script {
             }),
             protocols: ProtocolsConfig({
                 aaveV3PoolAddressesProvider: 0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e,
-                aaveV4Spoke: address(0), // @review update when aave v4 is deployed
-                aaveV4ReserveId: 0
+                aaveV4Spoke: address(0) // @review update when aave v4 is deployed
             }),
             ccip: CCIPConfig({
                 router: 0x141fa059441E0ca23ce184B6A78bafD2A517DdE8,
@@ -142,8 +140,7 @@ contract HelperConfig is Script {
             }),
             protocols: ProtocolsConfig({
                 aaveV3PoolAddressesProvider: 0xe20fCBdBfFC4Dd138cE8b2E6FBb6CB49777ad64D,
-                aaveV4Spoke: address(0), // @review update when aave v4 is deployed
-                aaveV4ReserveId: 0
+                aaveV4Spoke: address(0) // @review update when aave v4 is deployed
             }),
             ccip: CCIPConfig({
                 router: 0x881e3A65B4d4a04dD529061dd0071cf975F58bCD,
@@ -176,8 +173,7 @@ contract HelperConfig is Script {
             }),
             protocols: ProtocolsConfig({
                 aaveV3PoolAddressesProvider: 0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e,
-                aaveV4Spoke: 0x94e756A88941f6Df2D5200234a974EE5a89Dc485,
-                aaveV4ReserveId: 0
+                aaveV4Spoke: 0x94E756a88941F6df2d5200234a974eE5A89dC485
             }),
             ccip: CCIPConfig({
                 router: 0x80226fc0Ee2b096224EeAc085Bb9a8cba1146f7D,
@@ -233,8 +229,7 @@ contract HelperConfig is Script {
 
         return ProtocolsConfig({
             aaveV3PoolAddressesProvider: address(new MockAaveV3PoolAddressesProvider(aaveV3Pool)),
-            aaveV4Spoke: address(new MockAaveV4Spoke(usdc)),
-            aaveV4ReserveId: 1
+            aaveV4Spoke: address(new MockAaveV4Spoke(usdc))
         });
     }
 

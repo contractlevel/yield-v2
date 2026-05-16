@@ -50,7 +50,7 @@ contract ChildVault_DeploymentIntegrationTest is BaseIntegrationTest {
 
         _assertProtocolAdapterConfigured(child.aaveV4Adapter, address(child.vault), child.usdc);
         assertEq(child.aaveV4Adapter.getProtocolPool(), child.aaveV4Spoke);
-        assertEq(child.aaveV4Adapter.getReserveId(), child.aaveV4ReserveId);
+        assertEq(child.aaveV4Adapter.getReserveId(), 0);
     }
 
     function test_ChildVault_deployment_ConfiguresAdapterRegistryRoles() external view {

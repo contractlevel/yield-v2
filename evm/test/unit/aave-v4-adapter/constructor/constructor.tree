@@ -1,2 +1,6 @@
 constructor
-  └── it should set the spoke and reserve id
+  ├── it should set the spoke and discovered reserve id
+  ├── when the reserve is not found
+  │   └── it should revert
+  └── when a duplicate reserve is found
+      └── it should revert

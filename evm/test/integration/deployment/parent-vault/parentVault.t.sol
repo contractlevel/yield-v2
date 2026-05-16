@@ -60,7 +60,7 @@ contract ParentVault_DeploymentIntegrationTest is BaseIntegrationTest {
 
         _assertProtocolAdapterConfigured(parent.aaveV4Adapter, address(parent.vault), parent.usdc);
         assertEq(parent.aaveV4Adapter.getProtocolPool(), parent.aaveV4Spoke);
-        assertEq(parent.aaveV4Adapter.getReserveId(), parent.aaveV4ReserveId);
+        assertEq(parent.aaveV4Adapter.getReserveId(), 0);
     }
 
     function test_ParentVault_deployment_ConfiguresAdapterRegistryRoles() external view {

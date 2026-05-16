@@ -90,7 +90,6 @@ contract DeployParent is Script {
         bytes32 vaultCcid;
         address aaveV3PoolAddressesProvider;
         address aaveV4Spoke;
-        uint256 aaveV4ReserveId;
         AdapterRegistry adapterRegistry;
         YieldcoinShare yieldcoinImpl;
         YieldcoinShare yieldcoinProxy;
@@ -130,7 +129,6 @@ contract DeployParent is Script {
         deploy.vaultCcid = PARENT_VAULT_CCID;
         deploy.aaveV3PoolAddressesProvider = networkConfig.protocols.aaveV3PoolAddressesProvider;
         deploy.aaveV4Spoke = networkConfig.protocols.aaveV4Spoke;
-        deploy.aaveV4ReserveId = networkConfig.protocols.aaveV4ReserveId;
 
         /// @dev Deploy the PolicyEngine, IdentityRegistry, and CredentialRegistry
         (deploy.policyEngine, deploy.identityRegistry, deploy.credentialRegistry) = _deployACEComponents(deployer);
@@ -181,10 +179,7 @@ contract DeployParent is Script {
         /// @dev Deploy the Aave v4 Adapter
         bytes32 aaveV4ProtocolId = keccak256("aave-v4");
         deploy.aaveV4Adapter = new AaveV4Adapter(
-            address(deploy.parentVault),
-            networkConfig.tokens.usdc,
-            networkConfig.protocols.aaveV4Spoke,
-            networkConfig.protocols.aaveV4ReserveId
+            address(deploy.parentVault), networkConfig.tokens.usdc, networkConfig.protocols.aaveV4Spoke
         );
         deploy.adapterRegistry.setAdapter(aaveV4ProtocolId, address(deploy.aaveV4Adapter));
         deploy.parentVault.setInitialActiveProtocolAdapter(aaveV3ProtocolId);

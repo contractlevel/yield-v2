@@ -4,10 +4,21 @@ pragma solidity 0.8.28;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract MockAaveV4Spoke {
+    struct Reserve {
+        address underlying;
+        address hub;
+        uint16 assetId;
+        uint8 decimals;
+        uint24 collateralRisk;
+        uint8 flags;
+        uint32 dynamicConfigKey;
+    }
+
     error MockAaveV4Spoke__SupplyReverts();
     error MockAaveV4Spoke__WithdrawReverts();
 
     address internal immutable i_underlying;
+    Reserve[] internal s_reserves;
     uint256 internal s_withdrawReturn;
     bool internal s_supplyReverts;
     bool internal s_withdrawReverts;
@@ -16,6 +27,15 @@ contract MockAaveV4Spoke {
 
     constructor(address underlying) {
         i_underlying = underlying;
+        _addReserve(underlying);
+    }
+
+    function addReserve(address underlying) external returns (uint256 reserveId) {
+        reserveId = _addReserve(underlying);
+    }
+
+    function clearReserves() external {
+        delete s_reserves;
     }
 
     function setWithdrawReturn(uint256 amount) external {
@@ -54,5 +74,28 @@ contract MockAaveV4Spoke {
 
     function getUserSuppliedAssets(uint256 reserveId, address user) external view returns (uint256) {
         return s_suppliedAssets[reserveId][user];
+    }
+
+    function getReserveCount() external view returns (uint256) {
+        return s_reserves.length;
+    }
+
+    function getReserve(uint256 reserveId) external view returns (Reserve memory) {
+        return s_reserves[reserveId];
+    }
+
+    function _addReserve(address underlying) internal returns (uint256 reserveId) {
+        reserveId = s_reserves.length;
+        s_reserves.push(
+            Reserve({
+                underlying: underlying,
+                hub: address(0),
+                assetId: uint16(reserveId),
+                decimals: 6,
+                collateralRisk: 0,
+                flags: 0,
+                dynamicConfigKey: 0
+            })
+        );
     }
 }

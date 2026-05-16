@@ -20,6 +20,10 @@ contract AaveV4Adapter is ProtocolAdapter {
     //////////////////////////////////////////////////////////////*/
     /// @dev Thrown when the actual withdrawn amount is less than the amount requested
     error AaveV4Adapter__IncorrectWithdrawAmount();
+    /// @dev Thrown when the configured USDC token is not listed as a reserve on the Spoke
+    error AaveV4Adapter__ReserveNotFound();
+    /// @dev Thrown when the configured USDC token is listed more than once on the Spoke
+    error AaveV4Adapter__DuplicateReserveFound();
 
     /*//////////////////////////////////////////////////////////////
                                IMMUTABLE
@@ -35,11 +39,10 @@ contract AaveV4Adapter is ProtocolAdapter {
     /// @param vault The address of the Yieldcoin v2 Vault
     /// @param usdc The address of the USDC token
     /// @param spoke The address of the Aave v4 Spoke
-    /// @param reserveId The Aave v4 reserve id for USDC on the Spoke
     //slither-disable-next-line missing-zero-check
-    constructor(address vault, address usdc, address spoke, uint256 reserveId) ProtocolAdapter(vault, usdc) {
+    constructor(address vault, address usdc, address spoke) ProtocolAdapter(vault, usdc) {
         i_spoke = spoke;
-        i_reserveId = reserveId;
+        i_reserveId = _getReserveId(spoke, usdc);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -93,6 +96,26 @@ contract AaveV4Adapter is ProtocolAdapter {
     /// @return tvl The TVL of the Aave v4 position
     function _getTVL() internal view returns (uint256 tvl) {
         tvl = IAaveV4Spoke(i_spoke).getUserSuppliedAssets(i_reserveId, address(this));
+    }
+
+    /// @notice Gets the reserve id for an underlying token on an Aave v4 Spoke
+    /// @param spoke The address of the Aave v4 Spoke
+    /// @param underlying The address of the underlying token
+    /// @return reserveId The Aave v4 reserve id
+    function _getReserveId(address spoke, address underlying) internal view returns (uint256 reserveId) {
+        IAaveV4Spoke aaveV4Spoke = IAaveV4Spoke(spoke);
+        uint256 reserveCount = aaveV4Spoke.getReserveCount();
+        bool found;
+
+        for (uint256 i = 0; i < reserveCount; ++i) {
+            if (aaveV4Spoke.getReserve(i).underlying != underlying) continue;
+            if (found) revert AaveV4Adapter__DuplicateReserveFound();
+
+            found = true;
+            reserveId = i;
+        }
+
+        if (!found) revert AaveV4Adapter__ReserveNotFound();
     }
 
     /*//////////////////////////////////////////////////////////////

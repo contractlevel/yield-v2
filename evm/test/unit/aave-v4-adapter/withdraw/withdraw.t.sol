@@ -23,7 +23,7 @@ contract AaveV4Adapter_WithdrawUnitTest is BaseAaveV4AdapterUnitTest {
     }
 
     function test_AaveV4Adapter_withdraw_RevertWhen_RebalanceWithdrawAmountIsLessThanTVL() external {
-        s_mockAaveV4Spoke.setUserSuppliedAssets(RESERVE_ID, address(s_aaveV4Adapter), TVL);
+        s_mockAaveV4Spoke.setUserSuppliedAssets(s_aaveV4Adapter.getReserveId(), address(s_aaveV4Adapter), TVL);
         deal(address(s_mockUsdc), address(s_mockAaveV4Spoke), INSUFFICIENT_AMOUNT);
         s_mockAaveV4Spoke.setWithdrawReturn(INSUFFICIENT_AMOUNT);
 
@@ -32,7 +32,7 @@ contract AaveV4Adapter_WithdrawUnitTest is BaseAaveV4AdapterUnitTest {
     }
 
     function test_AaveV4Adapter_withdraw_Success_RebalanceWithdraw() external {
-        s_mockAaveV4Spoke.setUserSuppliedAssets(RESERVE_ID, address(s_aaveV4Adapter), TVL);
+        s_mockAaveV4Spoke.setUserSuppliedAssets(s_aaveV4Adapter.getReserveId(), address(s_aaveV4Adapter), TVL);
         deal(address(s_mockUsdc), address(s_mockAaveV4Spoke), TVL);
         s_mockAaveV4Spoke.setWithdrawReturn(TVL);
 

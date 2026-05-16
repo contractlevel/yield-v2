@@ -53,7 +53,6 @@ abstract contract BaseIntegrationTest is BaseTest {
         bytes32 vaultCcid;
         address aaveV3PoolAddressesProvider;
         address aaveV4Spoke;
-        uint256 aaveV4ReserveId;
         AdapterRegistry adapterRegistry;
         YieldcoinShare shareImpl;
         YieldcoinShare share;
@@ -76,7 +75,6 @@ abstract contract BaseIntegrationTest is BaseTest {
         address usdc;
         address aaveV3PoolAddressesProvider;
         address aaveV4Spoke;
-        uint256 aaveV4ReserveId;
         AdapterRegistry adapterRegistry;
         ChildVault vault;
         AaveV3Adapter aaveV3Adapter;
@@ -112,7 +110,6 @@ abstract contract BaseIntegrationTest is BaseTest {
             vaultCcid: parentDeployment.vaultCcid,
             aaveV3PoolAddressesProvider: parentDeployment.aaveV3PoolAddressesProvider,
             aaveV4Spoke: parentDeployment.aaveV4Spoke,
-            aaveV4ReserveId: parentDeployment.aaveV4ReserveId,
             adapterRegistry: parentDeployment.adapterRegistry,
             shareImpl: parentDeployment.yieldcoinImpl,
             share: parentDeployment.yieldcoinProxy,
@@ -140,7 +137,6 @@ abstract contract BaseIntegrationTest is BaseTest {
             usdc: childDeployment.usdc,
             aaveV3PoolAddressesProvider: childDeployment.aaveV3PoolAddressesProvider,
             aaveV4Spoke: childDeployment.aaveV4Spoke,
-            aaveV4ReserveId: childDeployment.aaveV4ReserveId,
             adapterRegistry: childDeployment.adapterRegistry,
             vault: childDeployment.childVault,
             aaveV3Adapter: childDeployment.aaveV3Adapter,
@@ -187,7 +183,6 @@ abstract contract BaseIntegrationTest is BaseTest {
             vaultCcid: parentDeployment.vaultCcid,
             aaveV3PoolAddressesProvider: parentDeployment.aaveV3PoolAddressesProvider,
             aaveV4Spoke: parentDeployment.aaveV4Spoke,
-            aaveV4ReserveId: parentDeployment.aaveV4ReserveId,
             adapterRegistry: parentDeployment.adapterRegistry,
             shareImpl: parentDeployment.yieldcoinImpl,
             share: parentDeployment.yieldcoinProxy,
@@ -213,7 +208,6 @@ abstract contract BaseIntegrationTest is BaseTest {
             usdc: childDeployment.usdc,
             aaveV3PoolAddressesProvider: childDeployment.aaveV3PoolAddressesProvider,
             aaveV4Spoke: childDeployment.aaveV4Spoke,
-            aaveV4ReserveId: childDeployment.aaveV4ReserveId,
             adapterRegistry: childDeployment.adapterRegistry,
             vault: childDeployment.childVault,
             aaveV3Adapter: childDeployment.aaveV3Adapter,
@@ -270,7 +264,6 @@ abstract contract BaseIntegrationTest is BaseTest {
             vaultCcid: parentDeployment.vaultCcid,
             aaveV3PoolAddressesProvider: parentDeployment.aaveV3PoolAddressesProvider,
             aaveV4Spoke: parentDeployment.aaveV4Spoke,
-            aaveV4ReserveId: parentDeployment.aaveV4ReserveId,
             adapterRegistry: parentDeployment.adapterRegistry,
             shareImpl: parentDeployment.yieldcoinImpl,
             share: parentDeployment.yieldcoinProxy,
@@ -296,7 +289,6 @@ abstract contract BaseIntegrationTest is BaseTest {
             usdc: childDeployment.usdc,
             aaveV3PoolAddressesProvider: childDeployment.aaveV3PoolAddressesProvider,
             aaveV4Spoke: childDeployment.aaveV4Spoke,
-            aaveV4ReserveId: childDeployment.aaveV4ReserveId,
             adapterRegistry: childDeployment.adapterRegistry,
             vault: childDeployment.childVault,
             aaveV3Adapter: childDeployment.aaveV3Adapter,
@@ -312,7 +304,6 @@ abstract contract BaseIntegrationTest is BaseTest {
             usdc: remoteChildDeployment.usdc,
             aaveV3PoolAddressesProvider: remoteChildDeployment.aaveV3PoolAddressesProvider,
             aaveV4Spoke: remoteChildDeployment.aaveV4Spoke,
-            aaveV4ReserveId: remoteChildDeployment.aaveV4ReserveId,
             adapterRegistry: remoteChildDeployment.adapterRegistry,
             vault: remoteChildDeployment.childVault,
             aaveV3Adapter: remoteChildDeployment.aaveV3Adapter,
@@ -347,7 +338,6 @@ abstract contract BaseIntegrationTest is BaseTest {
         config.tokens.usdc = address(local.usdc);
         config.protocols.aaveV3PoolAddressesProvider = aaveV3PoolAddressesProvider;
         config.protocols.aaveV4Spoke = aaveV4Spoke;
-        config.protocols.aaveV4ReserveId = 1;
         config.ccip.router = address(local.mockCcipRouter);
         config.ccip.thisChainSelector = thisChainSelector;
         config.ccip.parentChainSelector = PARENT_CHAIN_SELECTOR;
