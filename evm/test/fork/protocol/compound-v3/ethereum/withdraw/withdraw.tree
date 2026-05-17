@@ -1,0 +1,11 @@
+Ethereum Compound V3 Fork Withdraw
+
+GIVEN the Ethereum child Compound v3 adapter
+  WHEN a caller other than the vault withdraws
+    THEN it reverts
+  WHEN the vault withdraws more than TVL
+    THEN it reverts
+  WHEN the vault withdraws a specific amount
+    THEN USDC returns from live Compound v3 and TVL decreases
+  WHEN the vault withdraws the max amount
+    THEN all supplied USDC returns from live Compound v3

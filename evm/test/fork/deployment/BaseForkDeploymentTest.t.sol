@@ -5,6 +5,8 @@ import {BaseForkTest} from "../BaseForkTest.t.sol";
 import {HelperConfig} from "../../../script/HelperConfig.s.sol";
 import {Roles} from "../../../src/libraries/Roles.sol";
 
+// @review aave v4 constructor assertions
+
 abstract contract BaseForkDeploymentTest is BaseForkTest {
     function _assertParentForkDeployment() internal view {
         assertEq(parent.vault.defaultAdmin(), parentForkDeployer);
@@ -56,10 +58,11 @@ abstract contract BaseForkDeploymentTest is BaseForkTest {
         assertEq(parent.vault.getCrosschainVault(optimismConfig.ccip.thisChainSelector), address(optimismChild.vault));
     }
 
-    function _assertChildForkDeployment(Child memory forkChild, HelperConfig.NetworkConfig memory config, address forkDeployer)
-        internal
-        view
-    {
+    function _assertChildForkDeployment(
+        Child memory forkChild,
+        HelperConfig.NetworkConfig memory config,
+        address forkDeployer
+    ) internal view {
         assertEq(forkChild.vault.defaultAdmin(), forkDeployer);
         assertTrue(forkChild.vault.hasRole(Roles.CONFIG_OPERATOR_ROLE, config.roles.configOperator));
         assertFalse(forkChild.vault.hasRole(Roles.CONFIG_OPERATOR_ROLE, forkDeployer));

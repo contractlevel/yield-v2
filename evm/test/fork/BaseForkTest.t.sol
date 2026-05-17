@@ -10,6 +10,9 @@ import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {CCIPLocalSimulatorFork, Register} from "@chainlink/local/src/ccip/CCIPLocalSimulatorFork.sol";
 
 abstract contract BaseForkTest is BaseDeploymentTest {
+    /// @dev used in protocol adapter fork tests
+    uint256 internal constant WITHDRAW_AMOUNT = DEPOSIT_AMOUNT;
+
     struct ForkChain {
         uint256 forkId;
         uint256 chainId;
@@ -132,7 +135,9 @@ abstract contract BaseForkTest is BaseDeploymentTest {
         vm.makePersistent(address(forkChild.workflowRouter));
         if (address(forkChild.aaveV3Adapter) != address(0)) vm.makePersistent(address(forkChild.aaveV3Adapter));
         if (address(forkChild.aaveV4Adapter) != address(0)) vm.makePersistent(address(forkChild.aaveV4Adapter));
-        if (address(forkChild.compoundV3Adapter) != address(0)) vm.makePersistent(address(forkChild.compoundV3Adapter));
+        if (address(forkChild.compoundV3Adapter) != address(0)) {
+            vm.makePersistent(address(forkChild.compoundV3Adapter));
+        }
     }
 
     function _configureForkCrosschainVaults() internal {

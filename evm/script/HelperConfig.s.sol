@@ -222,7 +222,7 @@ contract HelperConfig is Script {
                 thisChainSelector: 6433500567565415381,
                 parentChainSelector: ARBITRUM_CHAIN_SELECTOR
             }),
-            cre: CREConfig({keystoneForwarder: BURNER_EOA})
+            cre: CREConfig({keystoneForwarder: 0x76c9cf548b4179F8901cda1f8623568b58215E62})
         });
     }
 
@@ -249,14 +249,14 @@ contract HelperConfig is Script {
             protocols: ProtocolsConfig({
                 aaveV3PoolAddressesProvider: 0xa97684ead0e402dC232d5A977953DF7ECBaB3CDb,
                 aaveV4Spoke: address(0),
-                compoundV3Comet: address(0)
+                compoundV3Comet: 0x2e44e174f7D53F0212823acC11C01A11d58c5bCB
             }),
             ccip: CCIPConfig({
                 router: 0x3206695CaE29952f4b0c22a169725a865bc8Ce0f,
                 thisChainSelector: 3734403246176062136,
                 parentChainSelector: ARBITRUM_CHAIN_SELECTOR
             }),
-            cre: CREConfig({keystoneForwarder: BURNER_EOA})
+            cre: CREConfig({keystoneForwarder: 0xF8344CFd5c43616a4366C34E3EEE75af79a74482})
         });
     }
 

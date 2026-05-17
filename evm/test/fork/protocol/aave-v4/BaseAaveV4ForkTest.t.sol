@@ -2,36 +2,36 @@
 pragma solidity 0.8.28;
 
 import {BaseForkTest} from "../../BaseForkTest.t.sol";
-import {AaveV3Adapter} from "../../../../src/modules/adapters/AaveV3Adapter.sol";
+import {AaveV4Adapter} from "../../../../src/modules/adapters/AaveV4Adapter.sol";
 import {IProtocolAdapter} from "../../../../src/interfaces/IProtocolAdapter.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-abstract contract BaseAaveV3ForkTest is BaseForkTest {
-    function _assertAaveV3DepositRevertsWhenCallerIsNotVault(AaveV3Adapter adapter) internal {
+abstract contract BaseAaveV4ForkTest is BaseForkTest {
+    function _assertAaveV4DepositRevertsWhenCallerIsNotVault(AaveV4Adapter adapter) internal {
         _changePrank(i_nonOwner);
 
         vm.expectRevert(IProtocolAdapter.ProtocolAdapter__OnlyVault.selector);
         adapter.deposit(DEPOSIT_AMOUNT);
     }
 
-    function _assertAaveV3DepositSucceeds(AaveV3Adapter adapter, address vault, address usdc) internal {
+    function _assertAaveV4DepositSucceeds(AaveV4Adapter adapter, address vault, address usdc) internal {
         uint256 tvlBefore = adapter.getTVL();
 
-        _depositToAaveV3(adapter, vault, usdc, DEPOSIT_AMOUNT);
+        _depositToAaveV4(adapter, vault, usdc, DEPOSIT_AMOUNT);
 
         assertEq(IERC20(usdc).balanceOf(address(adapter)), 0);
         assertApproxEqAbs(adapter.getTVL(), tvlBefore + DEPOSIT_AMOUNT, PROTOCOL_FORK_TOLERANCE);
     }
 
-    function _assertAaveV3WithdrawRevertsWhenCallerIsNotVault(AaveV3Adapter adapter) internal {
+    function _assertAaveV4WithdrawRevertsWhenCallerIsNotVault(AaveV4Adapter adapter) internal {
         _changePrank(i_nonOwner);
 
         vm.expectRevert(IProtocolAdapter.ProtocolAdapter__OnlyVault.selector);
         adapter.withdraw(WITHDRAW_AMOUNT);
     }
 
-    function _assertAaveV3WithdrawSucceeds(AaveV3Adapter adapter, address vault, address usdc) internal {
-        _depositToAaveV3(adapter, vault, usdc, DEPOSIT_AMOUNT + WITHDRAW_AMOUNT);
+    function _assertAaveV4WithdrawSucceeds(AaveV4Adapter adapter, address vault, address usdc) internal {
+        _depositToAaveV4(adapter, vault, usdc, DEPOSIT_AMOUNT + WITHDRAW_AMOUNT);
 
         uint256 tvlBefore = adapter.getTVL();
         uint256 vaultBalanceBefore = IERC20(usdc).balanceOf(vault);
@@ -45,8 +45,8 @@ abstract contract BaseAaveV3ForkTest is BaseForkTest {
         assertLt(adapter.getTVL(), tvlBefore);
     }
 
-    function _assertAaveV3RebalanceWithdrawSucceeds(AaveV3Adapter adapter, address vault, address usdc) internal {
-        _depositToAaveV3(adapter, vault, usdc, DEPOSIT_AMOUNT);
+    function _assertAaveV4RebalanceWithdrawSucceeds(AaveV4Adapter adapter, address vault, address usdc) internal {
+        _depositToAaveV4(adapter, vault, usdc, DEPOSIT_AMOUNT);
 
         uint256 vaultBalanceBefore = IERC20(usdc).balanceOf(vault);
 
@@ -59,7 +59,7 @@ abstract contract BaseAaveV3ForkTest is BaseForkTest {
         assertLe(adapter.getTVL(), PROTOCOL_FORK_TOLERANCE);
     }
 
-    function _depositToAaveV3(AaveV3Adapter adapter, address vault, address usdc, uint256 amount) internal {
+    function _depositToAaveV4(AaveV4Adapter adapter, address vault, address usdc, uint256 amount) internal {
         deal(usdc, address(adapter), amount);
         _changePrank(vault);
 
@@ -69,5 +69,5 @@ abstract contract BaseAaveV3ForkTest is BaseForkTest {
         assertEq(uint256(_assertEmittedBy(keccak256("Deposit(uint256)"), address(adapter)).topics[1]), amount);
     }
 
-    function test_baseAaveV3ForkTest() public virtual {}
+    function test_baseAaveV4ForkTest() public virtual {}
 }

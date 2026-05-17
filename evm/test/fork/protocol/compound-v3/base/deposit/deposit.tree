@@ -1,0 +1,7 @@
+Base Compound V3 Fork Deposit
+
+GIVEN the Base child Compound v3 adapter
+  WHEN a caller other than the vault deposits
+    THEN it reverts
+  WHEN the vault deposits USDC
+    THEN the adapter supplies to live Compound v3 and TVL increases

@@ -1,0 +1,9 @@
+Optimism Aave V3 Fork Withdraw
+
+GIVEN the Optimism child Aave v3 adapter
+  WHEN a caller other than the vault withdraws
+    THEN it reverts
+  WHEN the vault withdraws a specific amount
+    THEN USDC returns from live Aave v3 and TVL decreases
+  WHEN the vault withdraws the max amount
+    THEN all supplied USDC returns from live Aave v3
