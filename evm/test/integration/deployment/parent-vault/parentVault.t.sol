@@ -50,21 +50,35 @@ contract ParentVault_DeploymentIntegrationTest is BaseIntegrationTest {
     }
 
     function test_ParentVault_deployment_RegistersAdapters() external view {
-        _assertAdapterRegistered(parent.adapterRegistry, AAVE_V3_PROTOCOL_ID, address(parent.aaveV3Adapter));
-        _assertAdapterRegistered(parent.adapterRegistry, AAVE_V4_PROTOCOL_ID, address(parent.aaveV4Adapter));
-        _assertAdapterRegistered(parent.adapterRegistry, COMPOUND_V3_PROTOCOL_ID, address(parent.compoundV3Adapter));
+        _assertOptionalAaveV3Adapter(
+            parent.adapterRegistry,
+            parent.aaveV3Adapter,
+            parent.aaveV3PoolAddressesProvider,
+            address(parent.vault),
+            parent.usdc
+        );
+        _assertOptionalAaveV4Adapter(
+            parent.adapterRegistry, parent.aaveV4Adapter, parent.aaveV4Spoke, address(parent.vault), parent.usdc
+        );
+        _assertOptionalCompoundV3Adapter(
+            parent.adapterRegistry, parent.compoundV3Adapter, parent.compoundV3Comet, address(parent.vault), parent.usdc
+        );
     }
 
     function test_ParentVault_deployment_ConfiguresAdapters() external view {
-        _assertProtocolAdapterConfigured(parent.aaveV3Adapter, address(parent.vault), parent.usdc);
-        assertEq(parent.aaveV3Adapter.getPoolAddressesProvider(), parent.aaveV3PoolAddressesProvider);
-
-        _assertProtocolAdapterConfigured(parent.aaveV4Adapter, address(parent.vault), parent.usdc);
-        assertEq(parent.aaveV4Adapter.getProtocolPool(), parent.aaveV4Spoke);
-        assertEq(parent.aaveV4Adapter.getReserveId(), 0);
-
-        _assertProtocolAdapterConfigured(parent.compoundV3Adapter, address(parent.vault), parent.usdc);
-        assertEq(parent.compoundV3Adapter.getProtocolPool(), parent.compoundV3Comet);
+        _assertOptionalAaveV3Adapter(
+            parent.adapterRegistry,
+            parent.aaveV3Adapter,
+            parent.aaveV3PoolAddressesProvider,
+            address(parent.vault),
+            parent.usdc
+        );
+        _assertOptionalAaveV4Adapter(
+            parent.adapterRegistry, parent.aaveV4Adapter, parent.aaveV4Spoke, address(parent.vault), parent.usdc
+        );
+        _assertOptionalCompoundV3Adapter(
+            parent.adapterRegistry, parent.compoundV3Adapter, parent.compoundV3Comet, address(parent.vault), parent.usdc
+        );
     }
 
     function test_ParentVault_deployment_ConfiguresAdapterRegistryRoles() external view {
@@ -79,7 +93,13 @@ contract ParentVault_DeploymentIntegrationTest is BaseIntegrationTest {
 
     function test_ParentVault_deployment_SetsInitialActiveAdapter() external view {
         assertTrue(parent.vault.getInitialActiveProtocolAdapterSet());
-        assertEq(parent.vault.getActiveProtocolAdapter(), address(parent.aaveV3Adapter));
+        if (parent.aaveV3PoolAddressesProvider != address(0)) {
+            assertEq(parent.vault.getActiveProtocolAdapter(), address(parent.aaveV3Adapter));
+        } else if (parent.aaveV4Spoke != address(0)) {
+            assertEq(parent.vault.getActiveProtocolAdapter(), address(parent.aaveV4Adapter));
+        } else {
+            assertEq(parent.vault.getActiveProtocolAdapter(), address(parent.compoundV3Adapter));
+        }
     }
 
     function test_ParentVault_deployment_ConfiguresWorkflowRouter() external view {

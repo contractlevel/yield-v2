@@ -1,0 +1,5 @@
+Base Aave V3 Fork
+
+GIVEN the Base child deployment
+  WHEN Aave v3 is configured
+    THEN the adapter is registered and points at a live Aave v3 pool

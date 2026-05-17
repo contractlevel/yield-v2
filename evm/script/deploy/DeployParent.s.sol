@@ -174,25 +174,41 @@ contract DeployParent is Script {
             networkConfig.roles.policyEngineManager,
             address(deploy.policyEngine)
         );
-        /// @dev Deploy the Aave v3 Adapter
+        bytes32 initialActiveProtocolId;
+
+        /// @dev Deploy optional protocol adapters only when the configured protocol address exists on this chain.
         bytes32 aaveV3ProtocolId = keccak256("aave-v3");
-        deploy.aaveV3Adapter = new AaveV3Adapter(
-            address(deploy.parentVault), networkConfig.tokens.usdc, networkConfig.protocols.aaveV3PoolAddressesProvider
-        );
-        deploy.adapterRegistry.setAdapter(aaveV3ProtocolId, address(deploy.aaveV3Adapter));
-        /// @dev Deploy the Aave v4 Adapter
+        if (networkConfig.protocols.aaveV3PoolAddressesProvider != address(0)) {
+            deploy.aaveV3Adapter = new AaveV3Adapter(
+                address(deploy.parentVault),
+                networkConfig.tokens.usdc,
+                networkConfig.protocols.aaveV3PoolAddressesProvider
+            );
+            deploy.adapterRegistry.setAdapter(aaveV3ProtocolId, address(deploy.aaveV3Adapter));
+            initialActiveProtocolId = aaveV3ProtocolId;
+        }
+
         bytes32 aaveV4ProtocolId = keccak256("aave-v4");
-        deploy.aaveV4Adapter = new AaveV4Adapter(
-            address(deploy.parentVault), networkConfig.tokens.usdc, networkConfig.protocols.aaveV4Spoke
-        );
-        deploy.adapterRegistry.setAdapter(aaveV4ProtocolId, address(deploy.aaveV4Adapter));
-        /// @dev Deploy the Compound v3 Adapter
+        if (networkConfig.protocols.aaveV4Spoke != address(0)) {
+            deploy.aaveV4Adapter = new AaveV4Adapter(
+                address(deploy.parentVault), networkConfig.tokens.usdc, networkConfig.protocols.aaveV4Spoke
+            );
+            deploy.adapterRegistry.setAdapter(aaveV4ProtocolId, address(deploy.aaveV4Adapter));
+            if (initialActiveProtocolId == bytes32(0)) initialActiveProtocolId = aaveV4ProtocolId;
+        }
+
         bytes32 compoundV3ProtocolId = keccak256("compound-v3");
-        deploy.compoundV3Adapter = new CompoundV3Adapter(
-            address(deploy.parentVault), networkConfig.tokens.usdc, networkConfig.protocols.compoundV3Comet
-        );
-        deploy.adapterRegistry.setAdapter(compoundV3ProtocolId, address(deploy.compoundV3Adapter));
-        deploy.parentVault.setInitialActiveProtocolAdapter(aaveV3ProtocolId);
+        if (networkConfig.protocols.compoundV3Comet != address(0)) {
+            deploy.compoundV3Adapter = new CompoundV3Adapter(
+                address(deploy.parentVault), networkConfig.tokens.usdc, networkConfig.protocols.compoundV3Comet
+            );
+            deploy.adapterRegistry.setAdapter(compoundV3ProtocolId, address(deploy.compoundV3Adapter));
+            if (initialActiveProtocolId == bytes32(0)) initialActiveProtocolId = compoundV3ProtocolId;
+        }
+
+        if (initialActiveProtocolId != bytes32(0)) {
+            deploy.parentVault.setInitialActiveProtocolAdapter(initialActiveProtocolId);
+        }
 
         /// @dev Deploy the WorkflowRouter
         uint48 initialDelay = 259200; // 3 days

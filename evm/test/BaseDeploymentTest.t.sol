@@ -1,0 +1,251 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.28;
+
+import {BaseTest} from "./BaseTest.t.sol";
+
+import {DeployParent} from "../script/deploy/DeployParent.s.sol";
+import {DeployChild} from "../script/deploy/DeployChild.s.sol";
+import {HelperConfig} from "../script/HelperConfig.s.sol";
+
+import {BaseVault} from "../src/vaults/BaseVault.sol";
+import {ParentVault} from "../src/vaults/ParentVault.sol";
+import {ChildVault} from "../src/vaults/ChildVault.sol";
+import {AdapterRegistry} from "../src/modules/AdapterRegistry.sol";
+import {AaveV3Adapter} from "../src/modules/adapters/AaveV3Adapter.sol";
+import {AaveV4Adapter} from "../src/modules/adapters/AaveV4Adapter.sol";
+import {CompoundV3Adapter} from "../src/modules/adapters/CompoundV3Adapter.sol";
+import {WorkflowRouter} from "../src/modules/WorkflowRouter.sol";
+import {YieldcoinShare} from "../src/token/YieldcoinShare.sol";
+import {IProtocolAdapter} from "../src/interfaces/IProtocolAdapter.sol";
+import {Roles} from "../src/libraries/Roles.sol";
+
+import {CredentialRegistry} from "@chainlink/cross-chain-identity/CredentialRegistry.sol";
+import {IdentityRegistry} from "@chainlink/cross-chain-identity/IdentityRegistry.sol";
+import {
+    CredentialRegistryIdentityValidatorPolicy
+} from "@chainlink/cross-chain-identity/CredentialRegistryIdentityValidatorPolicy.sol";
+import {PolicyEngine} from "@chainlink/policy-management/core/PolicyEngine.sol";
+import {OnlyAuthorizedSenderPolicy} from "@chainlink/policy-management/policies/OnlyAuthorizedSenderPolicy.sol";
+import {RoleBasedAccessControlPolicy} from "@chainlink/policy-management/policies/RoleBasedAccessControlPolicy.sol";
+
+import {
+    CredentialRegistryAccountListValidatorPolicy
+} from "../src/modules/policies/CredentialRegistryAccountListValidatorPolicy.sol";
+import {TerminalAllowPolicy} from "../src/modules/policies/TerminalAllowPolicy.sol";
+
+abstract contract BaseDeploymentTest is BaseTest {
+    struct Parent {
+        address link;
+        address usdc;
+        bytes32 vaultCcid;
+        address aaveV3PoolAddressesProvider;
+        address aaveV4Spoke;
+        address compoundV3Comet;
+        AdapterRegistry adapterRegistry;
+        YieldcoinShare shareImpl;
+        YieldcoinShare share;
+        ParentVault vault;
+        AaveV3Adapter aaveV3Adapter;
+        AaveV4Adapter aaveV4Adapter;
+        CompoundV3Adapter compoundV3Adapter;
+        WorkflowRouter workflowRouter;
+        PolicyEngine policyEngine;
+        IdentityRegistry identityRegistry;
+        CredentialRegistry credentialRegistry;
+        CredentialRegistryIdentityValidatorPolicy vaultKycPolicy;
+        CredentialRegistryAccountListValidatorPolicy shareKycPolicy;
+        RoleBasedAccessControlPolicy shareSupplyPolicy;
+        OnlyAuthorizedSenderPolicy providerPolicy;
+        TerminalAllowPolicy terminalAllow;
+    }
+
+    struct Child {
+        address link;
+        address usdc;
+        address aaveV3PoolAddressesProvider;
+        address aaveV4Spoke;
+        address compoundV3Comet;
+        AdapterRegistry adapterRegistry;
+        ChildVault vault;
+        AaveV3Adapter aaveV3Adapter;
+        AaveV4Adapter aaveV4Adapter;
+        CompoundV3Adapter compoundV3Adapter;
+        WorkflowRouter workflowRouter;
+    }
+
+    Parent internal parent;
+    Child internal child;
+    Child internal remoteChild;
+
+    HelperConfig internal helperConfig;
+    HelperConfig.NetworkConfig internal networkConfig;
+
+    function setUp() public virtual {
+        helperConfig = new HelperConfig();
+        networkConfig = helperConfig.getActiveNetworkConfig();
+    }
+
+    function _deployParent() internal {
+        DeployParent.Deployment memory parentDeployment = new DeployParent().run();
+        parent = _parentFromDeployment(parentDeployment);
+        _labelParentIntegrationContracts();
+    }
+
+    function _deployChild() internal {
+        DeployChild.Deployment memory childDeployment = new DeployChild().run();
+        child = _childFromDeployment(childDeployment);
+        _labelChildIntegrationContracts();
+    }
+
+    function _deployParentAndChild() internal {
+        _deployParent();
+        _deployChild();
+    }
+
+    function _parentFromDeployment(DeployParent.Deployment memory parentDeployment)
+        internal
+        pure
+        returns (Parent memory parent_)
+    {
+        parent_ = Parent({
+            link: parentDeployment.link,
+            usdc: parentDeployment.usdc,
+            vaultCcid: parentDeployment.vaultCcid,
+            aaveV3PoolAddressesProvider: parentDeployment.aaveV3PoolAddressesProvider,
+            aaveV4Spoke: parentDeployment.aaveV4Spoke,
+            compoundV3Comet: parentDeployment.compoundV3Comet,
+            adapterRegistry: parentDeployment.adapterRegistry,
+            shareImpl: parentDeployment.yieldcoinImpl,
+            share: parentDeployment.yieldcoinProxy,
+            vault: parentDeployment.parentVault,
+            aaveV3Adapter: parentDeployment.aaveV3Adapter,
+            aaveV4Adapter: parentDeployment.aaveV4Adapter,
+            compoundV3Adapter: parentDeployment.compoundV3Adapter,
+            workflowRouter: parentDeployment.workflowRouter,
+            policyEngine: parentDeployment.policyEngine,
+            identityRegistry: parentDeployment.identityRegistry,
+            credentialRegistry: parentDeployment.credentialRegistry,
+            vaultKycPolicy: parentDeployment.vaultKycPolicy,
+            shareKycPolicy: parentDeployment.shareKycPolicy,
+            shareSupplyPolicy: parentDeployment.shareSupplyPolicy,
+            providerPolicy: parentDeployment.providerPolicy,
+            terminalAllow: parentDeployment.terminalAllow
+        });
+    }
+
+    function _childFromDeployment(DeployChild.Deployment memory childDeployment)
+        internal
+        pure
+        returns (Child memory child_)
+    {
+        child_ = Child({
+            link: childDeployment.link,
+            usdc: childDeployment.usdc,
+            aaveV3PoolAddressesProvider: childDeployment.aaveV3PoolAddressesProvider,
+            aaveV4Spoke: childDeployment.aaveV4Spoke,
+            compoundV3Comet: childDeployment.compoundV3Comet,
+            adapterRegistry: childDeployment.adapterRegistry,
+            vault: childDeployment.childVault,
+            aaveV3Adapter: childDeployment.aaveV3Adapter,
+            aaveV4Adapter: childDeployment.aaveV4Adapter,
+            compoundV3Adapter: childDeployment.compoundV3Adapter,
+            workflowRouter: childDeployment.workflowRouter
+        });
+    }
+
+    function _setCrosschainVault(BaseVault vault, uint64 chainSelector, address crosschainVault) internal {
+        uint64[] memory chainSelectors = new uint64[](1);
+        address[] memory vaults = new address[](1);
+        chainSelectors[0] = chainSelector;
+        vaults[0] = crosschainVault;
+
+        _changePrank(networkConfig.roles.configOperator);
+        vault.setCrosschainVaults(chainSelectors, vaults);
+    }
+
+    function _assertAdapterRegistered(AdapterRegistry registry, bytes32 protocolId, address adapter) internal view {
+        assertEq(registry.getAdapter(protocolId), adapter);
+    }
+
+    function _assertProtocolAdapterConfigured(IProtocolAdapter adapter, address vault, address usdc) internal view {
+        assertEq(adapter.getVault(), vault);
+        assertEq(adapter.getUsdc(), usdc);
+    }
+
+    function _assertOptionalAaveV3Adapter(
+        AdapterRegistry registry,
+        AaveV3Adapter adapter,
+        address configuredProvider,
+        address vault,
+        address usdc
+    ) internal view {
+        if (configuredProvider == address(0)) {
+            assertEq(address(adapter), address(0));
+            assertEq(registry.getAdapter(AAVE_V3_PROTOCOL_ID), address(0));
+            return;
+        }
+
+        _assertAdapterRegistered(registry, AAVE_V3_PROTOCOL_ID, address(adapter));
+        _assertProtocolAdapterConfigured(adapter, vault, usdc);
+        assertEq(adapter.getPoolAddressesProvider(), configuredProvider);
+    }
+
+    function _assertOptionalAaveV4Adapter(
+        AdapterRegistry registry,
+        AaveV4Adapter adapter,
+        address configuredSpoke,
+        address vault,
+        address usdc
+    ) internal view {
+        if (configuredSpoke == address(0)) {
+            assertEq(address(adapter), address(0));
+            assertEq(registry.getAdapter(AAVE_V4_PROTOCOL_ID), address(0));
+            return;
+        }
+
+        _assertAdapterRegistered(registry, AAVE_V4_PROTOCOL_ID, address(adapter));
+        _assertProtocolAdapterConfigured(adapter, vault, usdc);
+        assertEq(adapter.getProtocolPool(), configuredSpoke);
+        // assertGt(adapter.getReserveId(), 0); // @review. mocks use 0, but forks dont (or at least eth fork doesnt)
+    }
+
+    function _assertOptionalCompoundV3Adapter(
+        AdapterRegistry registry,
+        CompoundV3Adapter adapter,
+        address configuredComet,
+        address vault,
+        address usdc
+    ) internal view {
+        if (configuredComet == address(0)) {
+            assertEq(address(adapter), address(0));
+            assertEq(registry.getAdapter(COMPOUND_V3_PROTOCOL_ID), address(0));
+            return;
+        }
+
+        _assertAdapterRegistered(registry, COMPOUND_V3_PROTOCOL_ID, address(adapter));
+        _assertProtocolAdapterConfigured(adapter, vault, usdc);
+        assertEq(adapter.getProtocolPool(), configuredComet);
+    }
+
+    function _labelParentIntegrationContracts() internal virtual {
+        vm.label(address(parent.vault), "Integration ParentVault");
+        vm.label(address(parent.share), "Integration YieldcoinShare");
+        vm.label(address(parent.policyEngine), "Integration PolicyEngine");
+        vm.label(address(parent.identityRegistry), "Integration IdentityRegistry");
+        vm.label(address(parent.credentialRegistry), "Integration CredentialRegistry");
+        vm.label(address(parent.vaultKycPolicy), "Integration ParentVault KYC Policy");
+        vm.label(address(parent.shareKycPolicy), "Integration Share KYC Policy");
+        vm.label(address(parent.shareSupplyPolicy), "Integration Share RBAC Policy");
+        vm.label(address(parent.terminalAllow), "Integration TerminalAllowPolicy");
+    }
+
+    function _labelChildIntegrationContracts() internal virtual {
+        vm.label(address(child.vault), "Integration ChildVault");
+    }
+
+    function _labelRemoteChildIntegrationContracts() internal virtual {
+        vm.label(address(remoteChild.vault), "Integration RemoteChildVault");
+    }
+
+    function test_baseDeploymentTest() public virtual {}
+}

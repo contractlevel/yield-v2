@@ -27,4 +27,16 @@ abstract contract Constants {
     bytes32 internal constant AML_REQUIREMENT = keccak256("AML");
 
     uint256 internal constant DEFAULT_CCIP_GAS_LIMIT = 500_000;
+
+    uint256 internal constant ARBITRUM_CHAIN_ID = 42161;
+    uint256 internal constant BASE_CHAIN_ID = 8453;
+    uint256 internal constant ETHEREUM_CHAIN_ID = 1;
+    uint256 internal constant AVALANCHE_CHAIN_ID = 43114;
+    uint256 internal constant OPTIMISM_CHAIN_ID = 10;
+
+    uint256 internal constant ARBITRUM_FORK_BLOCK = 463545353;
+    uint256 internal constant BASE_FORK_BLOCK = 46087200;
+    uint256 internal constant ETHEREUM_FORK_BLOCK = 25110160;
+    uint256 internal constant AVALANCHE_FORK_BLOCK = 85608699;
+    uint256 internal constant OPTIMISM_FORK_BLOCK = 151682527;
 }

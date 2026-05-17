@@ -40,21 +40,35 @@ contract ChildVault_DeploymentIntegrationTest is BaseIntegrationTest {
     }
 
     function test_ChildVault_deployment_RegistersAdapters() external view {
-        _assertAdapterRegistered(child.adapterRegistry, AAVE_V3_PROTOCOL_ID, address(child.aaveV3Adapter));
-        _assertAdapterRegistered(child.adapterRegistry, AAVE_V4_PROTOCOL_ID, address(child.aaveV4Adapter));
-        _assertAdapterRegistered(child.adapterRegistry, COMPOUND_V3_PROTOCOL_ID, address(child.compoundV3Adapter));
+        _assertOptionalAaveV3Adapter(
+            child.adapterRegistry,
+            child.aaveV3Adapter,
+            child.aaveV3PoolAddressesProvider,
+            address(child.vault),
+            child.usdc
+        );
+        _assertOptionalAaveV4Adapter(
+            child.adapterRegistry, child.aaveV4Adapter, child.aaveV4Spoke, address(child.vault), child.usdc
+        );
+        _assertOptionalCompoundV3Adapter(
+            child.adapterRegistry, child.compoundV3Adapter, child.compoundV3Comet, address(child.vault), child.usdc
+        );
     }
 
     function test_ChildVault_deployment_ConfiguresAdapters() external view {
-        _assertProtocolAdapterConfigured(child.aaveV3Adapter, address(child.vault), child.usdc);
-        assertEq(child.aaveV3Adapter.getPoolAddressesProvider(), child.aaveV3PoolAddressesProvider);
-
-        _assertProtocolAdapterConfigured(child.aaveV4Adapter, address(child.vault), child.usdc);
-        assertEq(child.aaveV4Adapter.getProtocolPool(), child.aaveV4Spoke);
-        assertEq(child.aaveV4Adapter.getReserveId(), 0);
-
-        _assertProtocolAdapterConfigured(child.compoundV3Adapter, address(child.vault), child.usdc);
-        assertEq(child.compoundV3Adapter.getProtocolPool(), child.compoundV3Comet);
+        _assertOptionalAaveV3Adapter(
+            child.adapterRegistry,
+            child.aaveV3Adapter,
+            child.aaveV3PoolAddressesProvider,
+            address(child.vault),
+            child.usdc
+        );
+        _assertOptionalAaveV4Adapter(
+            child.adapterRegistry, child.aaveV4Adapter, child.aaveV4Spoke, address(child.vault), child.usdc
+        );
+        _assertOptionalCompoundV3Adapter(
+            child.adapterRegistry, child.compoundV3Adapter, child.compoundV3Comet, address(child.vault), child.usdc
+        );
     }
 
     function test_ChildVault_deployment_ConfiguresAdapterRegistryRoles() external view {

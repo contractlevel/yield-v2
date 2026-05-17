@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {BaseTest} from "../BaseTest.t.sol";
+import {BaseDeploymentTest} from "../BaseDeploymentTest.t.sol";
 import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
 
 import {DeployParent} from "../../script/deploy/DeployParent.s.sol";
@@ -46,47 +46,8 @@ import {TerminalAllowPolicy} from "../../src/modules/policies/TerminalAllowPolic
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-abstract contract BaseIntegrationTest is BaseTest {
+abstract contract BaseIntegrationTest is BaseDeploymentTest {
     using stdStorage for StdStorage;
-
-    struct Parent {
-        address link;
-        address usdc;
-        bytes32 vaultCcid;
-        address aaveV3PoolAddressesProvider;
-        address aaveV4Spoke;
-        address compoundV3Comet;
-        AdapterRegistry adapterRegistry;
-        YieldcoinShare shareImpl;
-        YieldcoinShare share;
-        ParentVault vault;
-        AaveV3Adapter aaveV3Adapter;
-        AaveV4Adapter aaveV4Adapter;
-        CompoundV3Adapter compoundV3Adapter;
-        WorkflowRouter workflowRouter;
-        PolicyEngine policyEngine;
-        IdentityRegistry identityRegistry;
-        CredentialRegistry credentialRegistry;
-        CredentialRegistryIdentityValidatorPolicy vaultKycPolicy;
-        CredentialRegistryAccountListValidatorPolicy shareKycPolicy;
-        RoleBasedAccessControlPolicy shareSupplyPolicy;
-        OnlyAuthorizedSenderPolicy providerPolicy;
-        TerminalAllowPolicy terminalAllow;
-    }
-
-    struct Child {
-        address link;
-        address usdc;
-        address aaveV3PoolAddressesProvider;
-        address aaveV4Spoke;
-        address compoundV3Comet;
-        AdapterRegistry adapterRegistry;
-        ChildVault vault;
-        AaveV3Adapter aaveV3Adapter;
-        AaveV4Adapter aaveV4Adapter;
-        CompoundV3Adapter compoundV3Adapter;
-        WorkflowRouter workflowRouter;
-    }
 
     struct LocalTopology {
         CCIPLocalSimulator ccipLocalSimulator;
@@ -95,72 +56,7 @@ abstract contract BaseIntegrationTest is BaseTest {
         MockUSDC usdc;
     }
 
-    Parent internal parent;
-    Child internal child;
-    Child internal remoteChild;
     LocalTopology internal local;
-
-    HelperConfig internal helperConfig;
-    HelperConfig.NetworkConfig internal networkConfig;
-
-    function setUp() public virtual {
-        helperConfig = new HelperConfig();
-        networkConfig = helperConfig.getActiveNetworkConfig();
-    }
-
-    function _deployParent() internal {
-        DeployParent.Deployment memory parentDeployment = new DeployParent().run();
-        parent = Parent({
-            link: parentDeployment.link,
-            usdc: parentDeployment.usdc,
-            vaultCcid: parentDeployment.vaultCcid,
-            aaveV3PoolAddressesProvider: parentDeployment.aaveV3PoolAddressesProvider,
-            aaveV4Spoke: parentDeployment.aaveV4Spoke,
-            compoundV3Comet: parentDeployment.compoundV3Comet,
-            adapterRegistry: parentDeployment.adapterRegistry,
-            shareImpl: parentDeployment.yieldcoinImpl,
-            share: parentDeployment.yieldcoinProxy,
-            vault: parentDeployment.parentVault,
-            aaveV3Adapter: parentDeployment.aaveV3Adapter,
-            aaveV4Adapter: parentDeployment.aaveV4Adapter,
-            compoundV3Adapter: parentDeployment.compoundV3Adapter,
-            workflowRouter: parentDeployment.workflowRouter,
-            policyEngine: parentDeployment.policyEngine,
-            identityRegistry: parentDeployment.identityRegistry,
-            credentialRegistry: parentDeployment.credentialRegistry,
-            vaultKycPolicy: parentDeployment.vaultKycPolicy,
-            shareKycPolicy: parentDeployment.shareKycPolicy,
-            shareSupplyPolicy: parentDeployment.shareSupplyPolicy,
-            providerPolicy: parentDeployment.providerPolicy,
-            terminalAllow: parentDeployment.terminalAllow
-        });
-
-        _labelParentIntegrationContracts();
-    }
-
-    function _deployChild() internal {
-        DeployChild.Deployment memory childDeployment = new DeployChild().run();
-        child = Child({
-            link: childDeployment.link,
-            usdc: childDeployment.usdc,
-            aaveV3PoolAddressesProvider: childDeployment.aaveV3PoolAddressesProvider,
-            aaveV4Spoke: childDeployment.aaveV4Spoke,
-            compoundV3Comet: childDeployment.compoundV3Comet,
-            adapterRegistry: childDeployment.adapterRegistry,
-            vault: childDeployment.childVault,
-            aaveV3Adapter: childDeployment.aaveV3Adapter,
-            aaveV4Adapter: childDeployment.aaveV4Adapter,
-            compoundV3Adapter: childDeployment.compoundV3Adapter,
-            workflowRouter: childDeployment.workflowRouter
-        });
-
-        _labelChildIntegrationContracts();
-    }
-
-    function _deployParentAndChild() internal {
-        _deployParent();
-        _deployChild();
-    }
 
     function _deployLocalParentChildTopology() internal {
         local.ccipLocalSimulator = new CCIPLocalSimulator();
@@ -197,47 +93,12 @@ abstract contract BaseIntegrationTest is BaseTest {
         DeployParent parentDeployer = new DeployParent();
         DeployParent.Deployment memory parentDeployment =
             parentDeployer.deployWithConfig(parentConfig, address(parentDeployer));
-        parent = Parent({
-            link: parentDeployment.link,
-            usdc: parentDeployment.usdc,
-            vaultCcid: parentDeployment.vaultCcid,
-            aaveV3PoolAddressesProvider: parentDeployment.aaveV3PoolAddressesProvider,
-            aaveV4Spoke: parentDeployment.aaveV4Spoke,
-            compoundV3Comet: parentDeployment.compoundV3Comet,
-            adapterRegistry: parentDeployment.adapterRegistry,
-            shareImpl: parentDeployment.yieldcoinImpl,
-            share: parentDeployment.yieldcoinProxy,
-            vault: parentDeployment.parentVault,
-            aaveV3Adapter: parentDeployment.aaveV3Adapter,
-            aaveV4Adapter: parentDeployment.aaveV4Adapter,
-            compoundV3Adapter: parentDeployment.compoundV3Adapter,
-            workflowRouter: parentDeployment.workflowRouter,
-            policyEngine: parentDeployment.policyEngine,
-            identityRegistry: parentDeployment.identityRegistry,
-            credentialRegistry: parentDeployment.credentialRegistry,
-            vaultKycPolicy: parentDeployment.vaultKycPolicy,
-            shareKycPolicy: parentDeployment.shareKycPolicy,
-            shareSupplyPolicy: parentDeployment.shareSupplyPolicy,
-            providerPolicy: parentDeployment.providerPolicy,
-            terminalAllow: parentDeployment.terminalAllow
-        });
+        parent = _parentFromDeployment(parentDeployment);
 
         DeployChild childDeployer = new DeployChild();
         DeployChild.Deployment memory childDeployment =
             childDeployer.deployWithConfig(childConfig, address(childDeployer));
-        child = Child({
-            link: childDeployment.link,
-            usdc: childDeployment.usdc,
-            aaveV3PoolAddressesProvider: childDeployment.aaveV3PoolAddressesProvider,
-            aaveV4Spoke: childDeployment.aaveV4Spoke,
-            compoundV3Comet: childDeployment.compoundV3Comet,
-            adapterRegistry: childDeployment.adapterRegistry,
-            vault: childDeployment.childVault,
-            aaveV3Adapter: childDeployment.aaveV3Adapter,
-            aaveV4Adapter: childDeployment.aaveV4Adapter,
-            compoundV3Adapter: childDeployment.compoundV3Adapter,
-            workflowRouter: childDeployment.workflowRouter
-        });
+        child = _childFromDeployment(childDeployment);
 
         _setCrosschainVault(parent.vault, CHILD_CHAIN_SELECTOR, address(child.vault));
         _setCrosschainVault(child.vault, PARENT_CHAIN_SELECTOR, address(parent.vault));
@@ -294,64 +155,17 @@ abstract contract BaseIntegrationTest is BaseTest {
         DeployParent parentDeployer = new DeployParent();
         DeployParent.Deployment memory parentDeployment =
             parentDeployer.deployWithConfig(parentConfig, address(parentDeployer));
-        parent = Parent({
-            link: parentDeployment.link,
-            usdc: parentDeployment.usdc,
-            vaultCcid: parentDeployment.vaultCcid,
-            aaveV3PoolAddressesProvider: parentDeployment.aaveV3PoolAddressesProvider,
-            aaveV4Spoke: parentDeployment.aaveV4Spoke,
-            compoundV3Comet: parentDeployment.compoundV3Comet,
-            adapterRegistry: parentDeployment.adapterRegistry,
-            shareImpl: parentDeployment.yieldcoinImpl,
-            share: parentDeployment.yieldcoinProxy,
-            vault: parentDeployment.parentVault,
-            aaveV3Adapter: parentDeployment.aaveV3Adapter,
-            aaveV4Adapter: parentDeployment.aaveV4Adapter,
-            compoundV3Adapter: parentDeployment.compoundV3Adapter,
-            workflowRouter: parentDeployment.workflowRouter,
-            policyEngine: parentDeployment.policyEngine,
-            identityRegistry: parentDeployment.identityRegistry,
-            credentialRegistry: parentDeployment.credentialRegistry,
-            vaultKycPolicy: parentDeployment.vaultKycPolicy,
-            shareKycPolicy: parentDeployment.shareKycPolicy,
-            shareSupplyPolicy: parentDeployment.shareSupplyPolicy,
-            providerPolicy: parentDeployment.providerPolicy,
-            terminalAllow: parentDeployment.terminalAllow
-        });
+        parent = _parentFromDeployment(parentDeployment);
 
         DeployChild childDeployer = new DeployChild();
         DeployChild.Deployment memory childDeployment =
             childDeployer.deployWithConfig(childConfig, address(childDeployer));
-        child = Child({
-            link: childDeployment.link,
-            usdc: childDeployment.usdc,
-            aaveV3PoolAddressesProvider: childDeployment.aaveV3PoolAddressesProvider,
-            aaveV4Spoke: childDeployment.aaveV4Spoke,
-            compoundV3Comet: childDeployment.compoundV3Comet,
-            adapterRegistry: childDeployment.adapterRegistry,
-            vault: childDeployment.childVault,
-            aaveV3Adapter: childDeployment.aaveV3Adapter,
-            aaveV4Adapter: childDeployment.aaveV4Adapter,
-            compoundV3Adapter: childDeployment.compoundV3Adapter,
-            workflowRouter: childDeployment.workflowRouter
-        });
+        child = _childFromDeployment(childDeployment);
 
         DeployChild remoteChildDeployer = new DeployChild();
         DeployChild.Deployment memory remoteChildDeployment =
             remoteChildDeployer.deployWithConfig(remoteChildConfig, address(remoteChildDeployer));
-        remoteChild = Child({
-            link: remoteChildDeployment.link,
-            usdc: remoteChildDeployment.usdc,
-            aaveV3PoolAddressesProvider: remoteChildDeployment.aaveV3PoolAddressesProvider,
-            aaveV4Spoke: remoteChildDeployment.aaveV4Spoke,
-            compoundV3Comet: remoteChildDeployment.compoundV3Comet,
-            adapterRegistry: remoteChildDeployment.adapterRegistry,
-            vault: remoteChildDeployment.childVault,
-            aaveV3Adapter: remoteChildDeployment.aaveV3Adapter,
-            aaveV4Adapter: remoteChildDeployment.aaveV4Adapter,
-            compoundV3Adapter: remoteChildDeployment.compoundV3Adapter,
-            workflowRouter: remoteChildDeployment.workflowRouter
-        });
+        remoteChild = _childFromDeployment(remoteChildDeployment);
 
         _setCrosschainVault(parent.vault, CHILD_CHAIN_SELECTOR, address(child.vault));
         _setCrosschainVault(parent.vault, REMOTE_CHILD_CHAIN_SELECTOR, address(remoteChild.vault));
@@ -449,16 +263,6 @@ abstract contract BaseIntegrationTest is BaseTest {
     function _approveShares(address owner, address spender, uint256 amount) internal {
         _changePrank(owner);
         parent.share.approve(spender, amount);
-    }
-
-    function _setCrosschainVault(BaseVault vault, uint64 chainSelector, address crosschainVault) internal {
-        uint64[] memory chainSelectors = new uint64[](1);
-        address[] memory vaults = new address[](1);
-        chainSelectors[0] = chainSelector;
-        vaults[0] = crosschainVault;
-
-        _changePrank(networkConfig.roles.configOperator);
-        vault.setCrosschainVaults(chainSelectors, vaults);
     }
 
     function _setParentRemoteStrategyToChild(bytes32 protocolId) internal {
@@ -696,15 +500,6 @@ abstract contract BaseIntegrationTest is BaseTest {
         stdstore.target(address(remoteChild.vault)).sig("getActiveProtocolAdapter()").checked_write(adapter);
     }
 
-    function _assertAdapterRegistered(AdapterRegistry registry, bytes32 protocolId, address adapter) internal view {
-        assertEq(registry.getAdapter(protocolId), adapter);
-    }
-
-    function _assertProtocolAdapterConfigured(IProtocolAdapter adapter, address vault, address usdc) internal view {
-        assertEq(adapter.getVault(), vault);
-        assertEq(adapter.getUsdc(), usdc);
-    }
-
     function _assertPolicyPair(address target, bytes4 selector, address firstPolicy) internal view {
         address[] memory policies = parent.policyEngine.getPolicies(target, selector);
         assertEq(policies.length, 2);
@@ -731,26 +526,6 @@ abstract contract BaseIntegrationTest is BaseTest {
         parent.vault.setDefaultCcipGasLimit(DEFAULT_CCIP_GAS_LIMIT);
         child.vault.setDefaultCcipGasLimit(DEFAULT_CCIP_GAS_LIMIT);
         if (address(remoteChild.vault) != address(0)) remoteChild.vault.setDefaultCcipGasLimit(DEFAULT_CCIP_GAS_LIMIT);
-    }
-
-    function _labelParentIntegrationContracts() internal {
-        vm.label(address(parent.vault), "Integration ParentVault");
-        vm.label(address(parent.share), "Integration YieldcoinShare");
-        vm.label(address(parent.policyEngine), "Integration PolicyEngine");
-        vm.label(address(parent.identityRegistry), "Integration IdentityRegistry");
-        vm.label(address(parent.credentialRegistry), "Integration CredentialRegistry");
-        vm.label(address(parent.vaultKycPolicy), "Integration ParentVault KYC Policy");
-        vm.label(address(parent.shareKycPolicy), "Integration Share KYC Policy");
-        vm.label(address(parent.shareSupplyPolicy), "Integration Share RBAC Policy");
-        vm.label(address(parent.terminalAllow), "Integration TerminalAllowPolicy");
-    }
-
-    function _labelChildIntegrationContracts() internal {
-        vm.label(address(child.vault), "Integration ChildVault");
-    }
-
-    function _labelRemoteChildIntegrationContracts() internal {
-        vm.label(address(remoteChild.vault), "Integration RemoteChildVault");
     }
 
     function test_baseIntegrationTest() public virtual {}

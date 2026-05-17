@@ -74,6 +74,9 @@ contract HelperConfig is Script {
     constructor() {
         if (block.chainid == 42161) activeNetworkConfig = getArbitrumConfig();
         else if (block.chainid == 8453) activeNetworkConfig = getBaseConfig();
+        else if (block.chainid == 1) activeNetworkConfig = getEthereumConfig();
+        else if (block.chainid == 43114) activeNetworkConfig = getAvalancheConfig();
+        else if (block.chainid == 10) activeNetworkConfig = getOptimismConfig();
         else activeNetworkConfig = getOrCreateAnvilEthConfig();
     }
 
@@ -108,7 +111,7 @@ contract HelperConfig is Script {
                 link: 0xf97f4df75117a78c1A5a0DBb814Af92458539FB4, usdc: 0xaf88d065e77c8cC2239327C5EDb3A432268e5831
             }),
             protocols: ProtocolsConfig({
-                aaveV3PoolAddressesProvider: 0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e,
+                aaveV3PoolAddressesProvider: 0xa97684ead0e402dC232d5A977953DF7ECBaB3CDb,
                 aaveV4Spoke: address(0), // @review update when aave v4 is deployed
                 compoundV3Comet: 0x9c4ec768c28520B50860ea7a15bd7213a9fF58bf
             }),
@@ -177,7 +180,7 @@ contract HelperConfig is Script {
             }),
             protocols: ProtocolsConfig({
                 aaveV3PoolAddressesProvider: 0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e,
-                aaveV4Spoke: 0x94E756a88941F6df2d5200234a974eE5A89dC485,
+                aaveV4Spoke: 0x94e7A5dCbE816e498b89aB752661904E2F56c485,
                 compoundV3Comet: 0xc3d688B66703497DAA19211EEdff47f25384cdc3
             }),
             ccip: CCIPConfig({
@@ -185,7 +188,75 @@ contract HelperConfig is Script {
                 thisChainSelector: 5009297550715157269,
                 parentChainSelector: ARBITRUM_CHAIN_SELECTOR
             }),
-            cre: CREConfig({keystoneForwarder: 0xF8344CFd5c43616a4366C34E3EEE75af79a74482})
+            cre: CREConfig({keystoneForwarder: 0x0b93082D9b3C7C97fAcd250082899BAcf3af3885})
+        });
+    }
+
+    function getAvalancheConfig() public pure returns (NetworkConfig memory networkConfig) {
+        networkConfig = NetworkConfig({
+            initialOwner: BURNER_EOA,
+            treasury: BURNER_EOA,
+            kycProvider: BURNER_EOA,
+            roles: RolesConfig({
+                defaultAdmin: BURNER_EOA,
+                pauser: BURNER_EOA,
+                unpauser: BURNER_EOA,
+                configOperator: BURNER_EOA,
+                complianceOperator: BURNER_EOA,
+                policyAdmin: BURNER_EOA,
+                policyConfigAdmin: BURNER_EOA,
+                policyEngineManager: BURNER_EOA,
+                emergencyDrainer: BURNER_EOA,
+                linkOperator: BURNER_EOA
+            }),
+            tokens: TokensConfig({
+                link: 0x5947BB275c521040051D82396192181b413227A3, usdc: 0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E
+            }),
+            protocols: ProtocolsConfig({
+                aaveV3PoolAddressesProvider: 0xa97684ead0e402dC232d5A977953DF7ECBaB3CDb,
+                aaveV4Spoke: address(0),
+                compoundV3Comet: address(0)
+            }),
+            ccip: CCIPConfig({
+                router: 0x27F39D0af3303703750D4001fCc1844c6491563c,
+                thisChainSelector: 6433500567565415381,
+                parentChainSelector: ARBITRUM_CHAIN_SELECTOR
+            }),
+            cre: CREConfig({keystoneForwarder: BURNER_EOA})
+        });
+    }
+
+    function getOptimismConfig() public pure returns (NetworkConfig memory networkConfig) {
+        networkConfig = NetworkConfig({
+            initialOwner: BURNER_EOA,
+            treasury: BURNER_EOA,
+            kycProvider: BURNER_EOA,
+            roles: RolesConfig({
+                defaultAdmin: BURNER_EOA,
+                pauser: BURNER_EOA,
+                unpauser: BURNER_EOA,
+                configOperator: BURNER_EOA,
+                complianceOperator: BURNER_EOA,
+                policyAdmin: BURNER_EOA,
+                policyConfigAdmin: BURNER_EOA,
+                policyEngineManager: BURNER_EOA,
+                emergencyDrainer: BURNER_EOA,
+                linkOperator: BURNER_EOA
+            }),
+            tokens: TokensConfig({
+                link: 0x350a791Bfc2C21F9Ed5d10980Dad2e2638ffa7f6, usdc: 0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85
+            }),
+            protocols: ProtocolsConfig({
+                aaveV3PoolAddressesProvider: 0xa97684ead0e402dC232d5A977953DF7ECBaB3CDb,
+                aaveV4Spoke: address(0),
+                compoundV3Comet: address(0)
+            }),
+            ccip: CCIPConfig({
+                router: 0x3206695CaE29952f4b0c22a169725a865bc8Ce0f,
+                thisChainSelector: 3734403246176062136,
+                parentChainSelector: ARBITRUM_CHAIN_SELECTOR
+            }),
+            cre: CREConfig({keystoneForwarder: BURNER_EOA})
         });
     }
 
