@@ -13,14 +13,14 @@ contract Optimism_CompoundV3WithdrawForkTest is BaseCompoundV3ForkTest {
         _assertCompoundV3WithdrawRevertsWhenCallerIsNotVault(optimismChild.compoundV3Adapter);
     }
 
-    function test_Optimism_compoundV3_withdraw_RevertWhen_UserWithdrawAmountExceedsTVL() external {
-        _assertCompoundV3WithdrawRevertsWhenAmountExceedsTVL(
+    function test_Optimism_compoundV3_withdraw_RevertWhen_EpochWithdrawAmountExceedsTVL() external {
+        _assertCompoundV3EpochWithdrawRevertsWhenAmountExceedsTVL(
             optimismChild.compoundV3Adapter, address(optimismChild.vault)
         );
     }
 
-    function test_Optimism_compoundV3_withdraw_Success_UserWithdraw() external {
-        _assertCompoundV3WithdrawSucceeds(
+    function test_Optimism_compoundV3_withdraw_Success_EpochWithdraw() external {
+        _assertCompoundV3EpochWithdrawSucceeds(
             optimismChild.compoundV3Adapter, address(optimismChild.vault), optimismChild.usdc
         );
     }

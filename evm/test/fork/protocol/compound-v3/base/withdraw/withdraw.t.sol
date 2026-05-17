@@ -13,12 +13,12 @@ contract Base_CompoundV3WithdrawForkTest is BaseCompoundV3ForkTest {
         _assertCompoundV3WithdrawRevertsWhenCallerIsNotVault(baseChild.compoundV3Adapter);
     }
 
-    function test_Base_compoundV3_withdraw_RevertWhen_UserWithdrawAmountExceedsTVL() external {
-        _assertCompoundV3WithdrawRevertsWhenAmountExceedsTVL(baseChild.compoundV3Adapter, address(baseChild.vault));
+    function test_Base_compoundV3_withdraw_RevertWhen_EpochWithdrawAmountExceedsTVL() external {
+        _assertCompoundV3EpochWithdrawRevertsWhenAmountExceedsTVL(baseChild.compoundV3Adapter, address(baseChild.vault));
     }
 
-    function test_Base_compoundV3_withdraw_Success_UserWithdraw() external {
-        _assertCompoundV3WithdrawSucceeds(baseChild.compoundV3Adapter, address(baseChild.vault), baseChild.usdc);
+    function test_Base_compoundV3_withdraw_Success_EpochWithdraw() external {
+        _assertCompoundV3EpochWithdrawSucceeds(baseChild.compoundV3Adapter, address(baseChild.vault), baseChild.usdc);
     }
 
     function test_Base_compoundV3_withdraw_Success_RebalanceWithdraw() external {

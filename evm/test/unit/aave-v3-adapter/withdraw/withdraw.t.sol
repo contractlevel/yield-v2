@@ -44,7 +44,7 @@ contract AaveV3Adapter_WithdrawUnitTest is BaseAaveV3AdapterUnitTest {
         assertEq(s_mockUsdc.balanceOf(address(s_parentVault)), TVL);
     }
 
-    function test_AaveV3Adapter_withdraw_RevertWhen_UserWithdrawAmountIsLessThanRequested() external {
+    function test_AaveV3Adapter_withdraw_RevertWhen_EpochWithdrawAmountIsLessThanRequested() external {
         deal(address(s_mockUsdc), address(s_mockAaveV3Pool), INSUFFICIENT_AMOUNT);
         s_mockAaveV3Pool.setWithdrawReturn(INSUFFICIENT_AMOUNT);
 
@@ -52,7 +52,7 @@ contract AaveV3Adapter_WithdrawUnitTest is BaseAaveV3AdapterUnitTest {
         s_aaveV3Adapter.withdraw(TVL);
     }
 
-    function test_AaveV3Adapter_withdraw_Success_UserWithdraw() external {
+    function test_AaveV3Adapter_withdraw_Success_EpochWithdraw() external {
         deal(address(s_mockUsdc), address(s_mockAaveV3Pool), WITHDRAW_AMOUNT);
         s_mockAaveV3Pool.setWithdrawReturn(WITHDRAW_AMOUNT);
 

@@ -13,14 +13,14 @@ contract Ethereum_CompoundV3WithdrawForkTest is BaseCompoundV3ForkTest {
         _assertCompoundV3WithdrawRevertsWhenCallerIsNotVault(ethereumChild.compoundV3Adapter);
     }
 
-    function test_Ethereum_compoundV3_withdraw_RevertWhen_UserWithdrawAmountExceedsTVL() external {
-        _assertCompoundV3WithdrawRevertsWhenAmountExceedsTVL(
+    function test_Ethereum_compoundV3_withdraw_RevertWhen_EpochWithdrawAmountExceedsTVL() external {
+        _assertCompoundV3EpochWithdrawRevertsWhenAmountExceedsTVL(
             ethereumChild.compoundV3Adapter, address(ethereumChild.vault)
         );
     }
 
-    function test_Ethereum_compoundV3_withdraw_Success_UserWithdraw() external {
-        _assertCompoundV3WithdrawSucceeds(
+    function test_Ethereum_compoundV3_withdraw_Success_EpochWithdraw() external {
+        _assertCompoundV3EpochWithdrawSucceeds(
             ethereumChild.compoundV3Adapter, address(ethereumChild.vault), ethereumChild.usdc
         );
     }

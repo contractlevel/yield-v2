@@ -45,7 +45,7 @@ contract AaveV4Adapter_WithdrawUnitTest is BaseAaveV4AdapterUnitTest {
         assertEq(s_mockUsdc.balanceOf(address(s_parentVault)), TVL);
     }
 
-    function test_AaveV4Adapter_withdraw_RevertWhen_UserWithdrawAmountIsLessThanRequested() external {
+    function test_AaveV4Adapter_withdraw_RevertWhen_EpochWithdrawAmountIsLessThanRequested() external {
         deal(address(s_mockUsdc), address(s_mockAaveV4Spoke), INSUFFICIENT_AMOUNT);
         s_mockAaveV4Spoke.setWithdrawReturn(INSUFFICIENT_AMOUNT);
 
@@ -53,7 +53,7 @@ contract AaveV4Adapter_WithdrawUnitTest is BaseAaveV4AdapterUnitTest {
         s_aaveV4Adapter.withdraw(WITHDRAW_AMOUNT);
     }
 
-    function test_AaveV4Adapter_withdraw_Success_UserWithdraw() external {
+    function test_AaveV4Adapter_withdraw_Success_EpochWithdraw() external {
         deal(address(s_mockUsdc), address(s_mockAaveV4Spoke), WITHDRAW_AMOUNT);
         s_mockAaveV4Spoke.setWithdrawReturn(WITHDRAW_AMOUNT);
 
@@ -66,7 +66,7 @@ contract AaveV4Adapter_WithdrawUnitTest is BaseAaveV4AdapterUnitTest {
         assertEq(s_mockUsdc.balanceOf(address(s_parentVault)), WITHDRAW_AMOUNT);
     }
 
-    function test_AaveV4Adapter_withdraw_Success_UserWithdraw_WhenAmountIsGreaterThanRequested() external {
+    function test_AaveV4Adapter_withdraw_Success_EpochWithdraw_WhenAmountIsGreaterThanRequested() external {
         deal(address(s_mockUsdc), address(s_mockAaveV4Spoke), EXCESS_AMOUNT);
         s_mockAaveV4Spoke.setWithdrawReturn(EXCESS_AMOUNT);
 

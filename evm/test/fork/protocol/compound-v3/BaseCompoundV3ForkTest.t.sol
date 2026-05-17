@@ -30,14 +30,16 @@ abstract contract BaseCompoundV3ForkTest is BaseForkTest {
         adapter.withdraw(WITHDRAW_AMOUNT);
     }
 
-    function _assertCompoundV3WithdrawRevertsWhenAmountExceedsTVL(CompoundV3Adapter adapter, address vault) internal {
+    function _assertCompoundV3EpochWithdrawRevertsWhenAmountExceedsTVL(CompoundV3Adapter adapter, address vault)
+        internal
+    {
         _changePrank(vault);
 
         vm.expectRevert(CompoundV3Adapter.CompoundV3Adapter__WithdrawAmountExceedsTotalValue.selector);
         adapter.withdraw(WITHDRAW_AMOUNT);
     }
 
-    function _assertCompoundV3WithdrawSucceeds(CompoundV3Adapter adapter, address vault, address usdc) internal {
+    function _assertCompoundV3EpochWithdrawSucceeds(CompoundV3Adapter adapter, address vault, address usdc) internal {
         _depositToCompoundV3(adapter, vault, usdc, DEPOSIT_AMOUNT + WITHDRAW_AMOUNT);
 
         uint256 tvlBefore = adapter.getTVL();

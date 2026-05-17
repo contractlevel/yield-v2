@@ -13,8 +13,8 @@ contract Ethereum_AaveV3WithdrawForkTest is BaseAaveV3ForkTest {
         _assertAaveV3WithdrawRevertsWhenCallerIsNotVault(ethereumChild.aaveV3Adapter);
     }
 
-    function test_Ethereum_aaveV3_withdraw_Success_UserWithdraw() external {
-        _assertAaveV3WithdrawSucceeds(ethereumChild.aaveV3Adapter, address(ethereumChild.vault), ethereumChild.usdc);
+    function test_Ethereum_aaveV3_withdraw_Success_EpochWithdraw() external {
+        _assertAaveV3EpochWithdrawSucceeds(ethereumChild.aaveV3Adapter, address(ethereumChild.vault), ethereumChild.usdc);
     }
 
     function test_Ethereum_aaveV3_withdraw_Success_RebalanceWithdraw() external {

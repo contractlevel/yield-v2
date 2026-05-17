@@ -13,8 +13,10 @@ contract Avalanche_AaveV3WithdrawForkTest is BaseAaveV3ForkTest {
         _assertAaveV3WithdrawRevertsWhenCallerIsNotVault(avalancheChild.aaveV3Adapter);
     }
 
-    function test_Avalanche_aaveV3_withdraw_Success_UserWithdraw() external {
-        _assertAaveV3WithdrawSucceeds(avalancheChild.aaveV3Adapter, address(avalancheChild.vault), avalancheChild.usdc);
+    function test_Avalanche_aaveV3_withdraw_Success_EpochWithdraw() external {
+        _assertAaveV3EpochWithdrawSucceeds(
+            avalancheChild.aaveV3Adapter, address(avalancheChild.vault), avalancheChild.usdc
+        );
     }
 
     function test_Avalanche_aaveV3_withdraw_Success_RebalanceWithdraw() external {

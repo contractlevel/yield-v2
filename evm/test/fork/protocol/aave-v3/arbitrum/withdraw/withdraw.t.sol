@@ -13,8 +13,8 @@ contract Arbitrum_AaveV3WithdrawForkTest is BaseAaveV3ForkTest {
         _assertAaveV3WithdrawRevertsWhenCallerIsNotVault(parent.aaveV3Adapter);
     }
 
-    function test_Arbitrum_aaveV3_withdraw_Success_UserWithdraw() external {
-        _assertAaveV3WithdrawSucceeds(parent.aaveV3Adapter, address(parent.vault), parent.usdc);
+    function test_Arbitrum_aaveV3_withdraw_Success_EpochWithdraw() external {
+        _assertAaveV3EpochWithdrawSucceeds(parent.aaveV3Adapter, address(parent.vault), parent.usdc);
     }
 
     function test_Arbitrum_aaveV3_withdraw_Success_RebalanceWithdraw() external {

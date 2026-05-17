@@ -22,7 +22,7 @@ contract CompoundV3Adapter_WithdrawUnitTest is BaseCompoundV3AdapterUnitTest {
         s_compoundV3Adapter.withdraw(WITHDRAW_AMOUNT);
     }
 
-    function test_CompoundV3Adapter_withdraw_RevertWhen_UserWithdrawAmountExceedsTVL() external {
+    function test_CompoundV3Adapter_withdraw_RevertWhen_EpochWithdrawAmountExceedsTVL() external {
         s_mockComet.setBalance(address(s_compoundV3Adapter), WITHDRAW_AMOUNT);
 
         vm.expectRevert(CompoundV3Adapter.CompoundV3Adapter__WithdrawAmountExceedsTotalValue.selector);
@@ -52,7 +52,7 @@ contract CompoundV3Adapter_WithdrawUnitTest is BaseCompoundV3AdapterUnitTest {
         assertEq(s_mockUsdc.balanceOf(address(s_parentVault)), TVL);
     }
 
-    function test_CompoundV3Adapter_withdraw_RevertWhen_UserWithdrawAmountIsLessThanRequested() external {
+    function test_CompoundV3Adapter_withdraw_RevertWhen_EpochWithdrawAmountIsLessThanRequested() external {
         s_mockComet.setBalance(address(s_compoundV3Adapter), WITHDRAW_AMOUNT);
         deal(address(s_mockUsdc), address(s_mockComet), INSUFFICIENT_AMOUNT);
         s_mockComet.setWithdrawReturn(INSUFFICIENT_AMOUNT);
@@ -61,7 +61,7 @@ contract CompoundV3Adapter_WithdrawUnitTest is BaseCompoundV3AdapterUnitTest {
         s_compoundV3Adapter.withdraw(WITHDRAW_AMOUNT);
     }
 
-    function test_CompoundV3Adapter_withdraw_Success_UserWithdraw() external {
+    function test_CompoundV3Adapter_withdraw_Success_EpochWithdraw() external {
         s_mockComet.setBalance(address(s_compoundV3Adapter), WITHDRAW_AMOUNT);
         deal(address(s_mockUsdc), address(s_mockComet), WITHDRAW_AMOUNT);
         s_mockComet.setWithdrawReturn(WITHDRAW_AMOUNT);
@@ -75,7 +75,7 @@ contract CompoundV3Adapter_WithdrawUnitTest is BaseCompoundV3AdapterUnitTest {
         assertEq(s_mockUsdc.balanceOf(address(s_parentVault)), WITHDRAW_AMOUNT);
     }
 
-    function test_CompoundV3Adapter_withdraw_Success_UserWithdraw_WhenAmountIsGreaterThanRequested() external {
+    function test_CompoundV3Adapter_withdraw_Success_EpochWithdraw_WhenAmountIsGreaterThanRequested() external {
         s_mockComet.setBalance(address(s_compoundV3Adapter), TVL);
         deal(address(s_mockUsdc), address(s_mockComet), EXCESS_AMOUNT);
         s_mockComet.setWithdrawReturn(EXCESS_AMOUNT);

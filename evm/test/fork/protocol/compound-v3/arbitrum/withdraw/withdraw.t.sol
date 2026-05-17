@@ -13,13 +13,12 @@ contract Arbitrum_CompoundV3WithdrawForkTest is BaseCompoundV3ForkTest {
         _assertCompoundV3WithdrawRevertsWhenCallerIsNotVault(parent.compoundV3Adapter);
     }
 
-    // @review UserWithdraw should be renamed EpochWithdraw across the codebase where appropriate
-    function test_Arbitrum_compoundV3_withdraw_RevertWhen_UserWithdrawAmountExceedsTVL() external {
-        _assertCompoundV3WithdrawRevertsWhenAmountExceedsTVL(parent.compoundV3Adapter, address(parent.vault));
+    function test_Arbitrum_compoundV3_withdraw_RevertWhen_EpochWithdrawAmountExceedsTVL() external {
+        _assertCompoundV3EpochWithdrawRevertsWhenAmountExceedsTVL(parent.compoundV3Adapter, address(parent.vault));
     }
 
-    function test_Arbitrum_compoundV3_withdraw_Success_UserWithdraw() external {
-        _assertCompoundV3WithdrawSucceeds(parent.compoundV3Adapter, address(parent.vault), parent.usdc);
+    function test_Arbitrum_compoundV3_withdraw_Success_EpochWithdraw() external {
+        _assertCompoundV3EpochWithdrawSucceeds(parent.compoundV3Adapter, address(parent.vault), parent.usdc);
     }
 
     function test_Arbitrum_compoundV3_withdraw_Success_RebalanceWithdraw() external {

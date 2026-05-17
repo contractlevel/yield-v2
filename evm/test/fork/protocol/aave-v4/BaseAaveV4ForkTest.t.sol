@@ -30,7 +30,7 @@ abstract contract BaseAaveV4ForkTest is BaseForkTest {
         adapter.withdraw(WITHDRAW_AMOUNT);
     }
 
-    function _assertAaveV4WithdrawSucceeds(AaveV4Adapter adapter, address vault, address usdc) internal {
+    function _assertAaveV4EpochWithdrawSucceeds(AaveV4Adapter adapter, address vault, address usdc) internal {
         _depositToAaveV4(adapter, vault, usdc, DEPOSIT_AMOUNT + WITHDRAW_AMOUNT);
 
         uint256 tvlBefore = adapter.getTVL();

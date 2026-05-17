@@ -3,9 +3,9 @@ Arbitrum Compound V3 Fork Withdraw
 GIVEN the Arbitrum parent Compound v3 adapter
   WHEN a caller other than the vault withdraws
     THEN it reverts
-  WHEN the vault withdraws more than TVL
+  WHEN the epoch withdraw amount exceeds TVL
     THEN it reverts
-  WHEN the vault withdraws a specific amount
+  WHEN the vault performs an epoch withdraw
     THEN USDC returns from live Compound v3 and TVL decreases
   WHEN the vault withdraws the max amount
     THEN all supplied USDC returns from live Compound v3
