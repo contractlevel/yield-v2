@@ -1,0 +1,5 @@
+recover child rebalance withdraw on Base fork
+└── when the Base strategy withdraw fails
+    ├── it should emit RebalanceWithdrawRecoveryStored
+    ├── it should recover from Base Aave V3 and route USDC to Arbitrum
+    └── it should clear the Base active adapter and finalize the parent rebalance

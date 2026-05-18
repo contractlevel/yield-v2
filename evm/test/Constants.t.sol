@@ -40,5 +40,5 @@ abstract contract Constants {
     uint256 internal constant AVALANCHE_FORK_BLOCK = 85608699;
     uint256 internal constant OPTIMISM_FORK_BLOCK = 151682527;
 
-    uint256 internal constant PROTOCOL_FORK_TOLERANCE = 10;
+    uint256 internal constant PROTOCOL_FORK_TOLERANCE = 50;
 }

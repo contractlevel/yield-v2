@@ -1,0 +1,5 @@
+recover child epoch deposit on Base fork
+└── when the bridged deposit fails on Base
+    ├── it should emit EpochDepositRecoveryStored
+    ├── it should recover into Base Aave V3 and clear recovery
+    └── it should let the depositor claim shares

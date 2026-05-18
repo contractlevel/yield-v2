@@ -1,0 +1,5 @@
+recover parent rebalance deposit on Arbitrum fork
+└── when the Base-to-Arbitrum rebalance deposit fails
+    ├── it should emit RebalanceDepositRecoveryStored
+    ├── it should recover into parent Aave V3 and clear recovery
+    └── it should complete the parent rebalance

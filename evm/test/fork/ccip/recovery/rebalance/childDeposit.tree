@@ -1,0 +1,5 @@
+recover child rebalance deposit on Base fork
+└── when the parent-to-Base rebalance deposit fails
+    ├── it should emit RebalanceDepositRecoveryStored
+    ├── it should recover into Base Aave V3 and clear recovery
+    └── it should let the parent complete the rebalance to Base
