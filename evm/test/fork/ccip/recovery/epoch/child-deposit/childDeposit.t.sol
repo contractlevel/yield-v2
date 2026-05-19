@@ -18,7 +18,6 @@ contract ChildDeposit_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
 
     function test_CcipFork_recoveryChildEpochDeposit_DepositsAfterFailedBaseDeposit() external {
         _selectArbitrumFork();
-        (uint256 netDepositAmount,) = parent.vault.getNetAmountAndOperationFee(DEPOSIT_AMOUNT);
 
         _registerKyc(i_depositor);
         _fundAndApproveParentUsdc(i_depositor, DEPOSIT_AMOUNT);
@@ -35,7 +34,7 @@ contract ChildDeposit_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
         _routeUsdcMessageFromActiveForkTo(baseFork);
 
         _selectBaseFork();
-        _assertAmountRecovery(baseChild.vault.getEpochDepositRecovery(1), netDepositAmount);
+        _assertAmountRecovery(baseChild.vault.getEpochDepositRecovery(1), DEPOSIT_AMOUNT);
 
         _restoreBaseAaveV3Adapter();
         vm.recordLogs();
@@ -44,13 +43,13 @@ contract ChildDeposit_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
 
         _assertEmittedBy(recoveryLogs, keccak256("EpochDepositRecoveryCleared(uint256)"), address(baseChild.vault));
         _assertAmountRecoveryCleared(baseChild.vault.getEpochDepositRecovery(1));
-        assertApproxEqAbs(baseChild.aaveV3Adapter.getTVL(), netDepositAmount, PROTOCOL_FORK_TOLERANCE);
+        assertApproxEqAbs(baseChild.aaveV3Adapter.getTVL(), DEPOSIT_AMOUNT, PROTOCOL_FORK_TOLERANCE);
 
         _selectArbitrumFork();
         _changePrank(i_depositor);
         parent.vault.claimShares(1);
 
-        assertEq(parent.share.balanceOf(i_depositor), netDepositAmount);
+        assertEq(parent.share.balanceOf(i_depositor), DEPOSIT_AMOUNT);
         assertEq(parent.vault.getDepositAmount(i_depositor, 1), 0);
     }
 }

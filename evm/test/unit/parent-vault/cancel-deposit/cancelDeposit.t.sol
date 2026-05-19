@@ -7,15 +7,11 @@ import {IParentVault} from "../../../../src/interfaces/IParentVault.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
 
 contract ParentVault_CancelDepositUnitTest is BaseUnitTest {
-    uint256 internal s_netDepositAmount;
-
     function setUp() public {
         deal(address(s_mockUsdc), i_depositor, DEPOSIT_AMOUNT);
         _changePrank(i_depositor);
         s_mockUsdc.approve(address(s_parentVault), type(uint256).max);
         s_parentVault.deposit(DEPOSIT_AMOUNT);
-
-        (s_netDepositAmount,) = s_parentVault.getNetAmountAndOperationFee(DEPOSIT_AMOUNT);
     }
 
     function test_ParentVault_cancelDeposit_RevertWhen_Paused() public givenContractIsPaused(address(s_parentVault)) {
@@ -39,8 +35,8 @@ contract ParentVault_CancelDepositUnitTest is BaseUnitTest {
         uint256 vaultBefore = s_mockUsdc.balanceOf(address(s_parentVault));
         uint256 depositorBefore = s_mockUsdc.balanceOf(i_depositor);
         s_parentVault.cancelDeposit();
-        assertEq(s_mockUsdc.balanceOf(address(s_parentVault)), vaultBefore - s_netDepositAmount);
-        assertEq(s_mockUsdc.balanceOf(i_depositor), depositorBefore + s_netDepositAmount);
+        assertEq(s_mockUsdc.balanceOf(address(s_parentVault)), vaultBefore - DEPOSIT_AMOUNT);
+        assertEq(s_mockUsdc.balanceOf(i_depositor), depositorBefore + DEPOSIT_AMOUNT);
     }
 
     function test_ParentVault_cancelDeposit_Success_DeletesDepositMapping() public {
@@ -60,6 +56,6 @@ contract ParentVault_CancelDepositUnitTest is BaseUnitTest {
             _assertEmittedBy(keccak256("DepositCancelled(uint256,address,uint256)"), address(s_parentVault));
         assertEq(uint256(log.topics[1]), 1);
         assertEq(address(uint160(uint256(log.topics[2]))), i_depositor);
-        assertEq(uint256(log.topics[3]), s_netDepositAmount);
+        assertEq(uint256(log.topics[3]), DEPOSIT_AMOUNT);
     }
 }

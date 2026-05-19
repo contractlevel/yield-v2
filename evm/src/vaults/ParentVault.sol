@@ -36,8 +36,8 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     uint256 internal constant MIN_EPOCH_PERIOD = 1 hours; // @review this value
     /// @dev Basis points denominator (100% = 10_000 bps)
     uint256 internal constant BPS_DENOMINATOR = 10_000;
-    /// @dev Operation fee for deposits and withdraws in basis points (0.1%)
-    uint256 internal constant OPERATION_FEE_BPS = 10;
+    /// @dev Performance fee rate (7.77%)
+    uint256 internal constant PERFORMANCE_FEE_BPS = 777;
     /// @dev Annual management fee rate (1%)
     uint256 internal constant MANAGEMENT_FEE_BPS = 100;
 
@@ -65,6 +65,8 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @notice One subtlety: between closeEpoch and the last claimUsdc call for an epoch, s_totalShares is decremented but the actual Yieldcoin share tokens haven't been burned yet.
     /// The i_share.totalSupply() will be higher than s_totalShares during this window. Therefore we never use i_share.totalSupply() as an authoritative share count — always use s_totalShares.
     uint256 internal s_totalShares;
+    /// @dev Highest price per share ever recorded for performance fee purposes
+    uint256 internal s_performanceFeeHighWaterMark;
     /// @dev Current epoch nonce
     uint256 internal s_epochNonce;
     /// @dev Epochs
@@ -101,6 +103,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         address policyEngine
     ) BaseVault(params) PolicyProtected(params.defaultAdmin, policyEngine) {
         i_share = share;
+        s_performanceFeeHighWaterMark = SHARE_PRECISION;
         s_epochNonce = 1;
         s_epochs[1].status = Types.EpochStatus.OPEN;
         s_epochs[1].openedAtTimestamp = block.timestamp;
@@ -166,15 +169,11 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         /// @dev This condition should never be hit under normal operations as the epoch nonce is incremented on openNextEpoch
         if (s_epochs[epochNonce].status != Types.EpochStatus.OPEN) revert ParentVault__EpochNotOpen(epochNonce);
 
-        (uint256 netAmount, uint256 fee) = _calculateNetAmountAndOperationFee(amount);
-
-        s_deposits[msg.sender][epochNonce] += netAmount;
-        s_epochs[epochNonce].totalDepositAmount += netAmount;
+        s_deposits[msg.sender][epochNonce] += amount;
+        s_epochs[epochNonce].totalDepositAmount += amount;
 
         IERC20(i_usdc).safeTransferFrom(msg.sender, address(this), amount);
-        IERC20(i_usdc).safeTransfer(s_treasury, fee);
-        emit DepositFeeCollected(epochNonce, msg.sender, fee);
-        emit DepositSubmitted(epochNonce, msg.sender, netAmount);
+        emit DepositSubmitted(epochNonce, msg.sender, amount);
     }
 
     /// @notice Submit USDC withdraw intent
@@ -261,12 +260,8 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
 
         usdcWithdrawAmount = shareBurnAmount * epoch.totalWithdrawClaimAmount / epoch.totalShareBurnAmount;
 
-        (uint256 netAmount, uint256 fee) = _calculateNetAmountAndOperationFee(usdcWithdrawAmount);
-
-        emit WithdrawClaimed(epochNonce, msg.sender, netAmount);
-        IERC20(i_usdc).safeTransfer(msg.sender, netAmount);
-        IERC20(i_usdc).safeTransfer(s_treasury, fee);
-        emit WithdrawFeeCollected(epochNonce, msg.sender, fee);
+        emit WithdrawClaimed(epochNonce, msg.sender, usdcWithdrawAmount);
+        IERC20(i_usdc).safeTransfer(msg.sender, usdcWithdrawAmount);
     }
 
     /// @notice Cancels a deposit
@@ -388,24 +383,27 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         // 1. Calculate price per share
         uint256 pricePerShare = _calculatePricePerShare(tvl);
 
-        // 2. Calculate total withdraw USDC owed
+        // 2. Collect performance fee on net yield
+        _collectPerformanceFee(epochNonce, pricePerShare);
+
+        // 3. Calculate total withdraw USDC owed
         uint256 totalWithdrawUsdc = epoch.totalShareBurnAmount * pricePerShare / SHARE_PRECISION;
 
-        // 3. Calculate net flow (signed)
+        // 4. Calculate net flow (signed)
         // positive: deposits exceed withdrawals, surplus goes to strategy
         // negative: withdrawals exceed deposits, strategy must send USDC back
         int256 netFlow = int256(epoch.totalDepositAmount) - int256(totalWithdrawUsdc);
 
-        // 4. Mint new shares and burn withdrawn shares
+        // 5. Mint new shares and burn withdrawn shares
         uint256 newShares = epoch.totalDepositAmount * SHARE_PRECISION / pricePerShare;
         s_totalShares = s_totalShares + newShares - epoch.totalShareBurnAmount; // @review gas optimization
 
-        // 5. Store epoch settlement data
+        // 6. Store epoch settlement data
         epoch.totalWithdrawClaimAmount = totalWithdrawUsdc;
         epoch.pricePerShare = pricePerShare;
         epoch.closedAtTimestamp = block.timestamp;
 
-        // 6. Transition epoch status and handle net flow
+        // 7. Transition epoch status and handle net flow
         /// @dev deposits exceeded withdraws
         if (netFlow >= 0) {
             epoch.status = Types.EpochStatus.CLAIMABLE;
@@ -605,37 +603,43 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         }
     }
 
+    /// @notice Collects performance fee when the settlement price exceeds the high water mark
+    /// @param epochNonce The epoch nonce collecting the fee
+    /// @param pricePerShare The epoch settlement price per share
+    function _collectPerformanceFee(uint256 epochNonce, uint256 pricePerShare) internal {
+        uint256 highWaterMark = s_performanceFeeHighWaterMark;
+        if (pricePerShare <= highWaterMark) return;
+
+        uint256 totalShares = s_totalShares;
+        uint256 yieldPerShare = pricePerShare - highWaterMark;
+        uint256 totalYield = _ceilDiv(yieldPerShare * totalShares, SHARE_PRECISION);
+        uint256 feeUsdc = _ceilDiv(totalYield * PERFORMANCE_FEE_BPS, BPS_DENOMINATOR);
+        uint256 feeShares = _ceilDiv(feeUsdc * SHARE_PRECISION, pricePerShare);
+
+        if (feeShares != 0) {
+            s_totalShares = totalShares + feeShares;
+            IShare(i_share).mint(s_treasury, feeShares);
+            emit PerformanceFeeCollected(epochNonce, feeShares, highWaterMark);
+        }
+
+        s_performanceFeeHighWaterMark = pricePerShare;
+    }
+
     /*//////////////////////////////////////////////////////////////
-                            INTERNAL GETTER
+                         INTERNAL VIEW AND PURE FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-    /// @notice Calculates the net amount after deducting the rounded-up operation fee
-    /// @param grossAmount The gross USDC amount before fees
-    /// @return netAmount The USDC amount after fees
-    /// @return feeAmount The USDC fee amount collected by the protocol
-    function _calculateNetAmountAndOperationFee(uint256 grossAmount)
-        internal
-        pure
-        returns (uint256 netAmount, uint256 feeAmount)
-    {
-        feeAmount = (grossAmount * OPERATION_FEE_BPS + BPS_DENOMINATOR - 1) / BPS_DENOMINATOR;
-        netAmount = grossAmount - feeAmount;
+    /// @notice Divides and rounds up
+    /// @param numerator The numerator
+    /// @param denominator The denominator
+    /// @return result The rounded-up quotient
+    // @review replacing this with OZ mulDiv or solady
+    function _ceilDiv(uint256 numerator, uint256 denominator) internal pure returns (uint256 result) {
+        result = numerator == 0 ? 0 : (numerator - 1) / denominator + 1;
     }
 
     /*//////////////////////////////////////////////////////////////
                                  GETTER
     //////////////////////////////////////////////////////////////*/
-    /// @notice Returns the net amount and operation fee for a given amount
-    /// @param grossAmount The gross USDC amount before fees
-    /// @return netAmount The USDC amount after fees
-    /// @return feeAmount The USDC fee amount collected by the protocol
-    function getNetAmountAndOperationFee(uint256 grossAmount)
-        external
-        pure
-        returns (uint256 netAmount, uint256 feeAmount)
-    {
-        (netAmount, feeAmount) = _calculateNetAmountAndOperationFee(grossAmount);
-    }
-
     /// @notice Returns the rebalance state
     /// @return rebalance The current rebalance state
     function getRebalance() external view returns (Types.Rebalance memory rebalance) {
@@ -685,6 +689,11 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @inheritdoc IParentVault
     function getInitialActiveProtocolAdapterSet() external view returns (bool initialActiveProtocolAdapterSet) {
         initialActiveProtocolAdapterSet = s_initialActiveProtocolAdapterSet;
+    }
+
+    /// @inheritdoc IParentVault
+    function getPerformanceFeeHighWaterMark() external view returns (uint256 highWaterMark) {
+        highWaterMark = s_performanceFeeHighWaterMark;
     }
 
     /// @notice Gets the operator multisig for protocol fees

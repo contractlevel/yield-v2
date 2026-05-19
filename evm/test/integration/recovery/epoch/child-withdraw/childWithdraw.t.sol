@@ -59,12 +59,11 @@ contract ChildWithdraw_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.CLAIMABLE));
 
         uint256 depositorUsdcBeforeClaim = IERC20(parent.usdc).balanceOf(i_depositor);
-        (uint256 expectedClaimAmount,) = parent.vault.getNetAmountAndOperationFee(shareAmount);
 
         _changePrank(i_depositor);
         parent.vault.claimUsdc(2);
 
-        assertEq(IERC20(parent.usdc).balanceOf(i_depositor), depositorUsdcBeforeClaim + expectedClaimAmount);
+        assertEq(IERC20(parent.usdc).balanceOf(i_depositor), depositorUsdcBeforeClaim + shareAmount);
         assertEq(parent.share.balanceOf(i_depositor), 0);
         assertEq(parent.vault.getWithdrawShareBurnAmount(i_depositor, 2), 0);
     }

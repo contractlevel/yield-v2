@@ -29,7 +29,6 @@ contract CancelWithdraw_EpochIntegrationTest is BaseIntegrationTest {
     }
 
     function _depositAndClaimShares() private returns (uint256 shareAmount) {
-        (shareAmount,) = parent.vault.getNetAmountAndOperationFee(DEPOSIT_AMOUNT);
         _fundAndApproveUsdc(i_depositor, DEPOSIT_AMOUNT);
 
         _changePrank(i_depositor);
@@ -40,5 +39,7 @@ contract CancelWithdraw_EpochIntegrationTest is BaseIntegrationTest {
 
         _changePrank(i_depositor);
         parent.vault.claimShares(1);
+
+        return DEPOSIT_AMOUNT;
     }
 }

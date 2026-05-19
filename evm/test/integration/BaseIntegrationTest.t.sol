@@ -448,9 +448,7 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
         strategy = Types.Strategy({protocolId: protocolId, chainSelector: REMOTE_CHILD_CHAIN_SELECTOR});
     }
 
-    function _seedParentLocalTvl(uint256 depositAmount) internal returns (uint256 netDepositAmount) {
-        (netDepositAmount,) = parent.vault.getNetAmountAndOperationFee(depositAmount);
-
+    function _seedParentLocalTvl(uint256 depositAmount) internal {
         _registerKyc(i_depositor);
         _fundAndApproveUsdc(i_depositor, depositAmount);
 
@@ -469,9 +467,7 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
         parent.vault.claimShares(1);
     }
 
-    function _seedChildLocalTvl(uint256 depositAmount) internal returns (uint256 netDepositAmount) {
-        (netDepositAmount,) = parent.vault.getNetAmountAndOperationFee(depositAmount);
-
+    function _seedChildLocalTvl(uint256 depositAmount) internal {
         _registerKyc(i_depositor);
         _fundAndApproveUsdc(i_depositor, depositAmount);
 

@@ -20,7 +20,8 @@ contract ParentToParent_RebalanceIntegrationTest is BaseIntegrationTest {
     }
 
     function test_Rebalance_parentToParent_FinalizesSynchronouslyIntoParentTargetStrategy() external {
-        uint256 tvl = _seedParentLocalTvl(DEPOSIT_AMOUNT);
+        uint256 tvl = DEPOSIT_AMOUNT;
+        _seedParentLocalTvl(tvl);
         address oldPool = parent.aaveV3Adapter.getProtocolPool();
         address targetSpoke = parent.aaveV4Adapter.getProtocolPool();
         uint256 targetReserveId = parent.aaveV4Adapter.getReserveId();

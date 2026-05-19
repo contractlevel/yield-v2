@@ -35,7 +35,6 @@ contract ChildWithdraw_EpochIntegrationTest is BaseIntegrationTest {
     }
 
     function test_Epoch_childWithdraw_ParentClaimableAfterRemoteWithdrawSettles() external {
-        uint256 treasuryBeforeClaim = IERC20(parent.usdc).balanceOf(networkConfig.treasury);
         _approveShares(i_depositor, address(parent.vault), s_shareAmount);
 
         _changePrank(i_depositor);
@@ -59,21 +58,18 @@ contract ChildWithdraw_EpochIntegrationTest is BaseIntegrationTest {
 
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.CLAIMABLE));
 
-        (uint256 expectedClaimAmount, uint256 expectedFee) = parent.vault.getNetAmountAndOperationFee(s_shareAmount);
         uint256 depositorUsdcBeforeClaim = IERC20(parent.usdc).balanceOf(i_depositor);
 
         _changePrank(i_depositor);
         parent.vault.claimUsdc(2);
 
-        assertEq(IERC20(parent.usdc).balanceOf(i_depositor), depositorUsdcBeforeClaim + expectedClaimAmount);
-        assertEq(IERC20(parent.usdc).balanceOf(networkConfig.treasury), treasuryBeforeClaim + expectedFee);
+        assertEq(IERC20(parent.usdc).balanceOf(i_depositor), depositorUsdcBeforeClaim + s_shareAmount);
         assertEq(parent.share.balanceOf(i_depositor), 0);
         assertEq(parent.vault.getWithdrawShareBurnAmount(i_depositor, 2), 0);
         assertEq(parent.vault.getTotalShares(), 0);
     }
 
     function _depositAndClaimShares() private returns (uint256 shareAmount) {
-        (shareAmount,) = parent.vault.getNetAmountAndOperationFee(DEPOSIT_AMOUNT);
         _fundAndApproveUsdc(i_depositor, DEPOSIT_AMOUNT);
 
         _changePrank(i_depositor);
@@ -84,5 +80,7 @@ contract ChildWithdraw_EpochIntegrationTest is BaseIntegrationTest {
 
         _changePrank(i_depositor);
         parent.vault.claimShares(1);
+
+        return DEPOSIT_AMOUNT;
     }
 }

@@ -35,7 +35,8 @@ contract ChildToSameChild_RebalanceIntegrationTest is BaseIntegrationTest {
     }
 
     function test_Rebalance_childToSameChild_CompletesAfterLocalChildStrategyMove() external {
-        uint256 tvl = _seedChildLocalTvl(DEPOSIT_AMOUNT);
+        uint256 tvl = DEPOSIT_AMOUNT;
+        _seedChildLocalTvl(tvl);
         address oldPool = child.aaveV3Adapter.getProtocolPool();
         address targetSpoke = child.aaveV4Adapter.getProtocolPool();
         uint256 targetReserveId = child.aaveV4Adapter.getReserveId();

@@ -18,7 +18,6 @@ contract ParentDeposit_EpochIntegrationTest is BaseIntegrationTest {
     }
 
     function test_Epoch_parentDeposit_ClosesThroughWorkflowRouterAndDepositorClaimsShares() external {
-        (uint256 netDepositAmount,) = parent.vault.getNetAmountAndOperationFee(DEPOSIT_AMOUNT);
         address aaveV3Pool = parent.aaveV3Adapter.getProtocolPool();
         uint256 poolBalanceBefore = IERC20(parent.usdc).balanceOf(aaveV3Pool);
 
@@ -35,13 +34,13 @@ contract ParentDeposit_EpochIntegrationTest is BaseIntegrationTest {
         assertEq(uint256(parent.vault.getEpoch(1).status), uint256(Types.EpochStatus.CLAIMABLE));
         assertEq(parent.vault.getEpochNonce(), 2);
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.OPEN));
-        assertEq(parent.vault.getTotalShares(), netDepositAmount);
-        assertEq(IERC20(parent.usdc).balanceOf(aaveV3Pool), poolBalanceBefore + netDepositAmount);
+        assertEq(parent.vault.getTotalShares(), DEPOSIT_AMOUNT);
+        assertEq(IERC20(parent.usdc).balanceOf(aaveV3Pool), poolBalanceBefore + DEPOSIT_AMOUNT);
 
         _changePrank(i_depositor);
         parent.vault.claimShares(1);
 
-        assertEq(parent.share.balanceOf(i_depositor), netDepositAmount);
+        assertEq(parent.share.balanceOf(i_depositor), DEPOSIT_AMOUNT);
         assertEq(parent.vault.getDepositAmount(i_depositor, 1), 0);
     }
 }

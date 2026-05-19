@@ -106,16 +106,13 @@ interface IParentVault is IBaseVault {
     /// @notice Emitted when management fees are collected
     /// @param feeShares The number of shares minted to the treasury
     event ManagementFeeCollected(uint256 indexed feeShares);
-    /// @notice Emitted when a deposit fee is collected
-    /// @param epochNonce The epoch nonce of the deposit
-    /// @param depositor The address of the depositor
-    /// @param fee The amount of USDC that was collected
-    event DepositFeeCollected(uint256 indexed epochNonce, address indexed depositor, uint256 indexed fee);
-    /// @notice Emitted when a withdraw fee is collected
-    /// @param epochNonce The epoch nonce of the withdraw
-    /// @param withdrawer The address of the withdrawer
-    /// @param fee The amount of USDC that was collected
-    event WithdrawFeeCollected(uint256 indexed epochNonce, address indexed withdrawer, uint256 indexed fee);
+    /// @notice Emitted when performance fees are collected
+    /// @param epochNonce The epoch nonce that collected the fee
+    /// @param feeShares The number of shares minted to the treasury
+    /// @param highWaterMark The prior performance fee high water mark
+    event PerformanceFeeCollected(
+        uint256 indexed epochNonce, uint256 indexed feeShares, uint256 indexed highWaterMark
+    );
     /// @notice Emitted when a deposit is cancelled
     /// @param epochNonce The epoch nonce of the deposit
     /// @param depositor The address of the depositor
@@ -165,4 +162,8 @@ interface IParentVault is IBaseVault {
     /// @notice Returns whether the initial active protocol adapter has been set
     /// @return initialActiveProtocolAdapterSet Whether the initial active protocol adapter has been set
     function getInitialActiveProtocolAdapterSet() external view returns (bool initialActiveProtocolAdapterSet);
+
+    /// @notice Returns the performance fee high water mark
+    /// @return highWaterMark The highest price per share recorded for performance fee purposes
+    function getPerformanceFeeHighWaterMark() external view returns (uint256 highWaterMark);
 }

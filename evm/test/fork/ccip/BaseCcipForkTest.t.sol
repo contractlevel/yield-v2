@@ -330,7 +330,6 @@ abstract contract BaseCcipForkTest is BaseForkTest {
 
     function _depositAndClaimParentShares(bytes32 workflowId) internal returns (uint256 shareAmount) {
         _selectArbitrumFork();
-        (shareAmount,) = parent.vault.getNetAmountAndOperationFee(DEPOSIT_AMOUNT);
 
         _registerKyc(i_depositor);
         _fundAndApproveParentUsdc(i_depositor, DEPOSIT_AMOUNT);
@@ -346,6 +345,8 @@ abstract contract BaseCcipForkTest is BaseForkTest {
 
         _changePrank(i_depositor);
         parent.vault.claimShares(1);
+
+        return DEPOSIT_AMOUNT;
     }
 
     function test_baseCcipForkTest() public virtual {}

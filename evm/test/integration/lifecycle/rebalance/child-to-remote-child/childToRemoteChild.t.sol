@@ -35,7 +35,8 @@ contract ChildToRemoteChild_RebalanceIntegrationTest is BaseIntegrationTest {
     }
 
     function test_Rebalance_childToRemoteChild_CompletesAfterLocalCcipSendToRemoteChild() external {
-        uint256 tvl = _seedChildLocalTvl(DEPOSIT_AMOUNT);
+        uint256 tvl = DEPOSIT_AMOUNT;
+        _seedChildLocalTvl(tvl);
         address oldPool = child.aaveV3Adapter.getProtocolPool();
         address targetSpoke = remoteChild.aaveV4Adapter.getProtocolPool();
         uint256 targetReserveId = remoteChild.aaveV4Adapter.getReserveId();

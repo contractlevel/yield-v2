@@ -12,9 +12,7 @@ contract CancelDeposit_EpochIntegrationTest is BaseIntegrationTest {
         _registerKyc(i_depositor);
     }
 
-    function test_Epoch_cancelDeposit_ReturnsNetUsdcAndClearsDeposit() external {
-        (uint256 netAmount,) = parent.vault.getNetAmountAndOperationFee(DEPOSIT_AMOUNT);
-
+    function test_Epoch_cancelDeposit_ReturnsUsdcAndClearsDeposit() external {
         _fundAndApproveUsdc(i_depositor, DEPOSIT_AMOUNT);
         _changePrank(i_depositor);
         parent.vault.deposit(DEPOSIT_AMOUNT);
@@ -23,7 +21,7 @@ contract CancelDeposit_EpochIntegrationTest is BaseIntegrationTest {
 
         parent.vault.cancelDeposit();
 
-        assertEq(IERC20(parent.usdc).balanceOf(i_depositor), usdcBefore + netAmount);
+        assertEq(IERC20(parent.usdc).balanceOf(i_depositor), usdcBefore + DEPOSIT_AMOUNT);
         assertEq(parent.vault.getDepositAmount(i_depositor, 1), 0);
     }
 }

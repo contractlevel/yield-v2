@@ -22,7 +22,7 @@ contract ParentVault_ClaimSharesUnitTest is BaseUnitTest {
         s_parentVault.closeEpoch(1, 0);
         // Epoch 1 → CLAIMABLE (netFlow = DEPOSIT_AMOUNT > 0), epoch 2 opened
 
-        (s_expectedShares,) = s_parentVault.getNetAmountAndOperationFee(DEPOSIT_AMOUNT);
+        s_expectedShares = DEPOSIT_AMOUNT;
 
         _changePrank(i_depositor);
     }

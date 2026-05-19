@@ -17,7 +17,6 @@ contract ChildDeposit_CcipForkTest is BaseCcipForkTest {
 
     function test_CcipFork_epochChildDeposit_RoutesUsdcToChildStrategy() external {
         _selectArbitrumFork();
-        (uint256 netDepositAmount,) = parent.vault.getNetAmountAndOperationFee(DEPOSIT_AMOUNT);
 
         _registerKyc(i_depositor);
         _fundAndApproveParentUsdc(i_depositor, DEPOSIT_AMOUNT);
@@ -38,7 +37,7 @@ contract ChildDeposit_CcipForkTest is BaseCcipForkTest {
         assertEq(parent.vault.getEpochNonce(), 2);
 
         _selectBaseFork();
-        assertApproxEqAbs(baseChild.aaveV3Adapter.getTVL(), netDepositAmount, PROTOCOL_FORK_TOLERANCE);
+        assertApproxEqAbs(baseChild.aaveV3Adapter.getTVL(), DEPOSIT_AMOUNT, PROTOCOL_FORK_TOLERANCE);
         assertEq(baseChild.vault.getActiveProtocolAdapter(), address(baseChild.aaveV3Adapter));
     }
 }

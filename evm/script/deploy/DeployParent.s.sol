@@ -33,6 +33,8 @@ import {
 } from "../../src/modules/policies/CredentialRegistryAccountListValidatorPolicy.sol";
 import {TerminalAllowPolicy} from "../../src/modules/policies/TerminalAllowPolicy.sol";
 
+// @review s_treasury should be kyc allowed to interact with Vault and Token
+
 /// @title DeployParentVault Script
 /// @author @contractlevel
 /// @notice Script to deploy the ParentVault and its modules

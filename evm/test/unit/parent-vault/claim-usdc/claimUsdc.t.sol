@@ -58,12 +58,9 @@ contract ParentVault_ClaimUsdcUnitTest is BaseUnitTest {
     }
 
     function test_ParentVault_claimUsdc_Success_TransfersUsdc() public {
-        (uint256 netAmount, uint256 fee) = s_parentVault.getNetAmountAndOperationFee(EXPECTED_USDC);
         uint256 withdrawerBefore = s_mockUsdc.balanceOf(i_withdrawer);
-        uint256 treasuryBefore = s_mockUsdc.balanceOf(i_treasury);
         s_parentVault.claimUsdc(1);
-        assertEq(s_mockUsdc.balanceOf(i_withdrawer), withdrawerBefore + netAmount);
-        assertEq(s_mockUsdc.balanceOf(i_treasury), treasuryBefore + fee);
+        assertEq(s_mockUsdc.balanceOf(i_withdrawer), withdrawerBefore + EXPECTED_USDC);
     }
 
     function test_ParentVault_claimUsdc_Success_BurnsShares() public {
@@ -93,24 +90,12 @@ contract ParentVault_ClaimUsdcUnitTest is BaseUnitTest {
     }
 
     function test_ParentVault_claimUsdc_Success_EmitsWithdrawClaimed() public {
-        (uint256 netAmount,) = s_parentVault.getNetAmountAndOperationFee(EXPECTED_USDC);
         vm.recordLogs();
         s_parentVault.claimUsdc(1);
         Vm.Log memory log =
             _assertEmittedBy(keccak256("WithdrawClaimed(uint256,address,uint256)"), address(s_parentVault));
         assertEq(uint256(log.topics[1]), 1);
         assertEq(address(uint160(uint256(log.topics[2]))), i_withdrawer);
-        assertEq(uint256(log.topics[3]), netAmount);
-    }
-
-    function test_ParentVault_claimUsdc_Success_EmitsWithdrawFeeCollected() public {
-        (, uint256 fee) = s_parentVault.getNetAmountAndOperationFee(EXPECTED_USDC);
-        vm.recordLogs();
-        s_parentVault.claimUsdc(1);
-        Vm.Log memory log =
-            _assertEmittedBy(keccak256("WithdrawFeeCollected(uint256,address,uint256)"), address(s_parentVault));
-        assertEq(uint256(log.topics[1]), 1);
-        assertEq(address(uint160(uint256(log.topics[2]))), i_withdrawer);
-        assertEq(uint256(log.topics[3]), fee);
+        assertEq(uint256(log.topics[3]), EXPECTED_USDC);
     }
 }

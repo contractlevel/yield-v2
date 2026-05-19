@@ -9,7 +9,7 @@ import {Types} from "../../../../src/libraries/Types.sol";
 contract ParentVault_CompleteRebalanceUnitTest is BaseUnitTest {
     uint256 internal constant TOTAL_SHARES = 1_000_000 * 1e6;
     uint256 internal constant MANAGEMENT_FEE_BPS = 1_000;
-    uint256 internal constant BPS_DENOMINATOR = 100_000;
+    uint256 internal constant BPS_DENOMINATOR = 100_000; // @review 10_000 in contracts
 
     function setUp() public {
         _setParentRebalanceState(Types.RebalanceState.REBALANCING);

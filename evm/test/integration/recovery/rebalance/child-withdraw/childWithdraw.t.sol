@@ -13,7 +13,8 @@ contract ChildWithdraw_RebalanceRecoveryIntegrationTest is BaseRecoveryIntegrati
     function test_Recovery_childRebalanceWithdraw_FinalizesParentAfterFailedChildWithdraw() external {
         _setParentRemoteStrategyToChild(AAVE_V3_PROTOCOL_ID);
         _setChildActiveAdapter(AAVE_V3_PROTOCOL_ID);
-        uint256 tvl = _seedChildLocalTvl(DEPOSIT_AMOUNT);
+        uint256 tvl = DEPOSIT_AMOUNT;
+        _seedChildLocalTvl(tvl);
         address childPool = child.aaveV3Adapter.getProtocolPool();
         address parentSpoke = parent.aaveV4Adapter.getProtocolPool();
         uint256 parentReserveId = parent.aaveV4Adapter.getReserveId();

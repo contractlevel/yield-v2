@@ -11,7 +11,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract ChildDeposit_RebalanceRecoveryIntegrationTest is BaseRecoveryIntegrationTest {
     function test_Recovery_childRebalanceDeposit_CompletesAfterFailedParentToChildDeposit() external {
-        uint256 tvl = _seedParentLocalTvl(DEPOSIT_AMOUNT);
+        uint256 tvl = DEPOSIT_AMOUNT;
+        _seedParentLocalTvl(tvl);
         address parentPool = parent.aaveV3Adapter.getProtocolPool();
         address childPool = child.aaveV3Adapter.getProtocolPool();
         uint256 childPoolBalanceBefore = IERC20(parent.usdc).balanceOf(childPool);

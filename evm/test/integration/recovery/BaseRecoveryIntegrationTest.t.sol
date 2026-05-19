@@ -38,7 +38,6 @@ abstract contract BaseRecoveryIntegrationTest is BaseIntegrationTest {
     }
 
     function _depositAndClaimParentLocalShares() internal returns (uint256 shareAmount) {
-        (shareAmount,) = parent.vault.getNetAmountAndOperationFee(DEPOSIT_AMOUNT);
         _registerKyc(i_depositor);
         _fundAndApproveUsdc(i_depositor, DEPOSIT_AMOUNT);
 
@@ -52,6 +51,8 @@ abstract contract BaseRecoveryIntegrationTest is BaseIntegrationTest {
 
         _changePrank(i_depositor);
         parent.vault.claimShares(1);
+
+        return DEPOSIT_AMOUNT;
     }
 
     function _prepareAaveV3RebalanceWithdraw(address pool, address adapter, uint256 amount) internal {

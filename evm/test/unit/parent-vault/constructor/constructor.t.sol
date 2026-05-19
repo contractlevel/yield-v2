@@ -30,6 +30,7 @@ contract ParentVault_ConstructorUnitTest is BaseUnitTest {
         assertEq(parentVault.hasRole(Roles.CONFIG_OPERATOR_ROLE, address(i_configOperator)), true);
         assertEq(parentVault.hasRole(Roles.POLICY_ENGINE_MANAGER_ROLE, address(i_policyEngineManager)), true);
         assertEq(parentVault.getRebalance().nonce, 1);
+        assertEq(parentVault.getPerformanceFeeHighWaterMark(), SHARE_PRECISION);
         assertEq(parentVault.getEpochNonce(), 1);
         assertEq(uint256(parentVault.getEpoch(1).status), uint256(Types.EpochStatus.OPEN));
         assertEq(parentVault.getEpoch(1).openedAtTimestamp, block.timestamp);

@@ -141,6 +141,10 @@ abstract contract BaseUnitTest is BaseTest {
         stdstore.target(address(s_parentVault)).sig("getTotalShares()").checked_write(totalShares);
     }
 
+    function _setParentPerformanceFeeHighWaterMark(uint256 highWaterMark) internal {
+        stdstore.target(address(s_parentVault)).sig("getPerformanceFeeHighWaterMark()").checked_write(highWaterMark);
+    }
+
     function _setParentEpochNonce(uint256 epochNonce) internal {
         stdstore.target(address(s_parentVault)).sig("getEpochNonce()").checked_write(epochNonce);
     }

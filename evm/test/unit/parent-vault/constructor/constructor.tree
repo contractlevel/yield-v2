@@ -12,6 +12,7 @@ ParentVault_constructor
   ├── it should grant CONFIG_OPERATOR_ROLE to configOperator
   ├── it should grant POLICY_ENGINE_MANAGER_ROLE to policyEngineManager
   ├── it should set the rebalance nonce to 1
+  ├── it should set the performance fee high water mark to SHARE_PRECISION
   ├── it should set the epoch nonce to 1
   ├── it should set the first epoch to OPEN
   ├── it should set the first epoch open timestamp to block.timestamp
