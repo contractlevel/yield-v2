@@ -1,0 +1,12 @@
+Rebalance_parentToChild_CcipFork
+├── given the active strategy is Arbitrum Aave V3
+├── and TVL exists in the parent strategy
+├── when CRE initiates rebalance through Parent WorkflowRouter
+├── then ParentVault should withdraw all TVL from Arbitrum Aave V3
+├── and ParentVault should send the TVL to Base through local CCIP
+├── and ChildVault should deposit the TVL into Base Aave V3
+├── and ParentVault should keep the rebalance pending
+├── when CRE completes rebalance through Parent WorkflowRouter
+├── then ParentVault should finalize the rebalance
+├── and ParentVault should increment the rebalance nonce
+└── and the active strategy should be Base Aave V3

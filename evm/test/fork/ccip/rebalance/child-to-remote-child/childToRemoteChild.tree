@@ -1,0 +1,13 @@
+Rebalance_childToRemoteChild_CcipFork
+├── given the active strategy is Base Aave V3
+├── and TVL exists in the Base child strategy
+├── when CRE initiates rebalance through Parent WorkflowRouter
+├── and CRE executes rebalance through Base Child WorkflowRouter
+├── then ChildVault should withdraw all TVL from Base Aave V3
+├── and ChildVault should send the TVL to Ethereum through local CCIP
+├── and Ethereum ChildVault should deposit the TVL into Ethereum Aave V3
+├── and Base ChildVault should clear its active adapter
+├── when CRE completes rebalance through Parent WorkflowRouter
+├── then ParentVault should finalize the rebalance
+├── and ParentVault should increment the rebalance nonce
+└── and the active strategy should be Ethereum Aave V3

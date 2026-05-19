@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {BaseCcipForkTest} from "../BaseCcipForkTest.t.sol";
-import {Types} from "../../../../src/libraries/Types.sol";
+import {BaseCcipForkTest} from "../../BaseCcipForkTest.t.sol";
+import {Types} from "../../../../../src/libraries/Types.sol";
 
 contract ParentToChild_CcipForkTest is BaseCcipForkTest {
     bytes32 private constant INITIATE_WORKFLOW_ID = keccak256("ccip-fork-parent-child-initiate");

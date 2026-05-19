@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {BaseCcipForkTest} from "../BaseCcipForkTest.t.sol";
-import {Types} from "../../../../src/libraries/Types.sol";
+import {BaseCcipForkTest} from "../../BaseCcipForkTest.t.sol";
+import {Types} from "../../../../../src/libraries/Types.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract ChildWithdraw_CcipForkTest is BaseCcipForkTest {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {BaseCcipRecoveryForkTest} from "../BaseCcipRecoveryForkTest.t.sol";
+import {BaseCcipRecoveryForkTest} from "../../BaseCcipRecoveryForkTest.t.sol";
 
 import {Vm} from "forge-std/Test.sol";
 

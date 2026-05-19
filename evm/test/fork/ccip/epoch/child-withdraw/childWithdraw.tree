@@ -1,0 +1,11 @@
+Epoch_childWithdraw_CcipFork
+├── given the active strategy is remote on Base
+├── and the depositor has claimed shares from a prior fork epoch deposit
+├── and the depositor submits a full share withdraw intent
+├── when CRE closes the epoch through Parent WorkflowRouter
+├── then ParentVault should mark the epoch executing
+├── when CRE withdraws from Base Aave V3 through Child WorkflowRouter
+├── and local CCIP routes USDC back to Arbitrum
+├── then ParentVault should mark the epoch claimable
+├── and the depositor should claim USDC on Parent
+└── and the depositor share balance should be zero

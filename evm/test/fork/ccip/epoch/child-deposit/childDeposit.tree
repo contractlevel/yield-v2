@@ -1,0 +1,11 @@
+Epoch_childDeposit_CcipFork
+├── given the active strategy is remote on Base
+├── and Parent and Child have fork crosschain vault allowlists configured
+├── and the depositor is KYC-approved on Parent
+├── and the epoch has net deposits
+├── when CRE closes the epoch through Parent WorkflowRouter
+├── and local CCIP routes USDC to Base
+├── then ParentVault should mark the epoch claimable
+├── and ParentVault should open the next epoch
+├── and ChildVault should deposit net USDC into Base Aave V3
+└── and ChildVault should set Base Aave V3 as the active adapter
