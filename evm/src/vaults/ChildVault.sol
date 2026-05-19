@@ -51,23 +51,26 @@ contract ChildVault is BaseVault, IChildVault {
     /// @notice Receives CCIP messages
     /// @param message Any2EVMMessage.
     /// @dev Precondition: the message must be sent by an allowed sender (a crosschain vault mapped to an allowed source chain selector)
+    /// @dev Precondition: the received token must be i_usdc
     function _ccipReceive(Client.Any2EVMMessage memory message)
         internal
         override
         nonReentrant
         onlyAllowedSender(abi.decode(message.sender, (address)), message.sourceChainSelector)
     {
+        uint256 receivedUsdcAmount = _validateReceivedTokenAndGetAmount(message);
+
         /// @dev data decodes to a uint256 epochNonce for deposits/withdraws and a (uint256 rebalanceNonce, bytes32 protocolId) for rebalances
         (Types.CcipTx ccipTxType, bytes memory data) = abi.decode(message.data, (Types.CcipTx, bytes));
 
         if (ccipTxType == Types.CcipTx.DEPOSIT) {
             uint256 epochNonce = abi.decode(data, (uint256));
-            _handleCCIPDeposit(epochNonce, message.destTokenAmounts[0].amount);
+            _handleCCIPDeposit(epochNonce, receivedUsdcAmount);
         }
         /// @dev see BaseVault::_handleCCIPRebalance
         if (ccipTxType == Types.CcipTx.REBALANCE) {
             (uint256 rebalanceNonce, bytes32 protocolId) = abi.decode(data, (uint256, bytes32));
-            _handleCCIPRebalance(rebalanceNonce, protocolId, message.destTokenAmounts[0].amount);
+            _handleCCIPRebalance(rebalanceNonce, protocolId, receivedUsdcAmount);
         }
     }
 

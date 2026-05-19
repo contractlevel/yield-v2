@@ -28,25 +28,22 @@ abstract contract BaseCcipRecoveryForkTest is BaseCcipForkTest {
 
     function _setParentActiveAdapterToAaveV3() internal {
         _selectArbitrumFork();
-        stdstore.target(address(parent.vault)).sig("getActiveProtocolAdapter()").checked_write(
-            address(parent.aaveV3Adapter)
-        );
+        stdstore.target(address(parent.vault)).sig("getActiveProtocolAdapter()")
+            .checked_write(address(parent.aaveV3Adapter));
         assertEq(parent.vault.getActiveProtocolAdapter(), address(parent.aaveV3Adapter));
     }
 
     function _setParentActiveAdapterToFailingAdapter() internal {
         _selectArbitrumFork();
-        stdstore.target(address(parent.vault)).sig("getActiveProtocolAdapter()").checked_write(
-            address(parentFailingAdapter)
-        );
+        stdstore.target(address(parent.vault)).sig("getActiveProtocolAdapter()")
+            .checked_write(address(parentFailingAdapter));
         assertEq(parent.vault.getActiveProtocolAdapter(), address(parentFailingAdapter));
     }
 
     function _setBaseChildActiveAdapterToFailingAdapter() internal {
         _selectBaseFork();
-        stdstore.target(address(baseChild.vault)).sig("getActiveProtocolAdapter()").checked_write(
-            address(baseFailingAdapter)
-        );
+        stdstore.target(address(baseChild.vault)).sig("getActiveProtocolAdapter()")
+            .checked_write(address(baseFailingAdapter));
         assertEq(baseChild.vault.getActiveProtocolAdapter(), address(baseFailingAdapter));
     }
 

@@ -14,7 +14,9 @@ contract Optimism_AaveV3WithdrawForkTest is BaseAaveV3ForkTest {
     }
 
     function test_Optimism_aaveV3_withdraw_Success_EpochWithdraw() external {
-        _assertAaveV3EpochWithdrawSucceeds(optimismChild.aaveV3Adapter, address(optimismChild.vault), optimismChild.usdc);
+        _assertAaveV3EpochWithdrawSucceeds(
+            optimismChild.aaveV3Adapter, address(optimismChild.vault), optimismChild.usdc
+        );
     }
 
     function test_Optimism_aaveV3_withdraw_Success_RebalanceWithdraw() external {

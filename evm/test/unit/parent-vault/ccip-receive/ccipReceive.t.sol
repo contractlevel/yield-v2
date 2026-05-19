@@ -45,6 +45,17 @@ contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
         s_parentVault.ccipReceive(message);
     }
 
+    function test_ParentVault_ccipReceive_RevertWhen_ReceivedTokenIsNotUsdc() public {
+        address wrongToken = address(s_mockLink);
+        Client.Any2EVMMessage memory message = _withdrawMessage(EPOCH_NONCE, EXPECTED_WITHDRAW_USDC);
+        message.destTokenAmounts[0].token = wrongToken;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IBaseVault.BaseVault__InvalidReceivedToken.selector, wrongToken, address(s_mockUsdc))
+        );
+        s_parentVault.ccipReceive(message);
+    }
+
     /*//////////////////////////////////////////////////////////////
                              WITHDRAW PATH
     //////////////////////////////////////////////////////////////*/

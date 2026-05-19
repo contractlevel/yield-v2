@@ -206,6 +206,20 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         }
     }
 
+    /// @notice Validates that a CCIP message delivered the vault's configured USDC token and returns the delivered amount
+    /// @param message The CCIP message received from the router
+    /// @return amount The amount of USDC delivered by CCIP
+    /// @dev Precondition: the received token must be i_usdc
+    function _validateReceivedTokenAndGetAmount(Client.Any2EVMMessage memory message)
+        internal
+        view
+        returns (uint256 amount)
+    {
+        Client.EVMTokenAmount memory tokenAmount = message.destTokenAmounts[0];
+        if (tokenAmount.token != i_usdc) revert BaseVault__InvalidReceivedToken(tokenAmount.token, i_usdc);
+        amount = tokenAmount.amount;
+    }
+
     /*//////////////////////////////////////////////////////////////
                          STRATEGY INTERACTIONS
     //////////////////////////////////////////////////////////////*/

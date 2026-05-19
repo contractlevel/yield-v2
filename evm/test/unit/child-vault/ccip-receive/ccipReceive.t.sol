@@ -37,6 +37,17 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
         s_childVault.ccipReceive(message);
     }
 
+    function test_ChildVault_ccipReceive_RevertWhen_ReceivedTokenIsNotUsdc() public {
+        address wrongToken = address(s_mockLink);
+        Client.Any2EVMMessage memory message = _depositMessage(EPOCH_NONCE);
+        message.destTokenAmounts[0].token = wrongToken;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IBaseVault.BaseVault__InvalidReceivedToken.selector, wrongToken, address(s_mockUsdc))
+        );
+        s_childVault.ccipReceive(message);
+    }
+
     /*//////////////////////////////////////////////////////////////
                               DEPOSIT PATH
     //////////////////////////////////////////////////////////////*/

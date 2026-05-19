@@ -37,6 +37,10 @@ interface IBaseVault is IPauseable {
     /// @param sender The address of the sender
     /// @param srcChainSelector The CCIP selector of the chain
     error BaseVault__InvalidSender(address sender, uint64 srcChainSelector);
+    /// @dev Thrown when a CCIP message does not deliver the vault's configured USDC token
+    /// @param receivedToken The token address delivered by CCIP
+    /// @param expectedToken The vault's configured USDC token
+    error BaseVault__InvalidReceivedToken(address receivedToken, address expectedToken);
     /// @dev Thrown when there is no pending recovery for the requested operation
     error BaseVault__NoPendingRecovery();
     /// @dev Thrown when a conflicting recovery record already exists

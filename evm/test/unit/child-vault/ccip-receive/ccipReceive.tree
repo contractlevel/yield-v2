@@ -3,6 +3,8 @@ ChildVault_ccipReceive
 │   └── it should revert with InvalidRouter
 ├── when sender is not the allowed sender for the source chain
 │   └── it should revert with BaseVault__InvalidSender
+├── when received token is not USDC
+│   └── it should revert with BaseVault__InvalidReceivedToken
 ├── when message is a deposit
 │   ├── when there is no active adapter
 │   │   └── it should revert with BaseVault__NoActiveAdapter

@@ -279,7 +279,8 @@ abstract contract BaseCcipForkTest is BaseForkTest {
     }
 
     function _parentAaveV3Strategy() internal view returns (Types.Strategy memory strategy) {
-        strategy = Types.Strategy({protocolId: AAVE_V3_PROTOCOL_ID, chainSelector: arbitrumConfig.ccip.thisChainSelector});
+        strategy =
+            Types.Strategy({protocolId: AAVE_V3_PROTOCOL_ID, chainSelector: arbitrumConfig.ccip.thisChainSelector});
     }
 
     function _baseAaveV3Strategy() internal view returns (Types.Strategy memory strategy) {
@@ -287,31 +288,29 @@ abstract contract BaseCcipForkTest is BaseForkTest {
     }
 
     function _ethereumAaveV3Strategy() internal view returns (Types.Strategy memory strategy) {
-        strategy = Types.Strategy({protocolId: AAVE_V3_PROTOCOL_ID, chainSelector: ethereumConfig.ccip.thisChainSelector});
+        strategy =
+            Types.Strategy({protocolId: AAVE_V3_PROTOCOL_ID, chainSelector: ethereumConfig.ccip.thisChainSelector});
     }
 
     function _setParentRemoteStrategyToBase() internal {
         _selectArbitrumFork();
         stdstore.target(address(parent.vault)).sig("getActiveProtocolAdapter()").checked_write(address(0));
         stdstore.target(address(parent.vault)).sig("getRebalance()").depth(2).checked_write(AAVE_V3_PROTOCOL_ID);
-        stdstore.target(address(parent.vault)).sig("getRebalance()").depth(3).checked_write(
-            baseConfig.ccip.thisChainSelector
-        );
+        stdstore.target(address(parent.vault)).sig("getRebalance()").depth(3)
+            .checked_write(baseConfig.ccip.thisChainSelector);
     }
 
     function _setBaseChildActiveAdapterToAaveV3() internal {
         _selectBaseFork();
-        stdstore.target(address(baseChild.vault)).sig("getActiveProtocolAdapter()").checked_write(
-            address(baseChild.aaveV3Adapter)
-        );
+        stdstore.target(address(baseChild.vault)).sig("getActiveProtocolAdapter()")
+            .checked_write(address(baseChild.aaveV3Adapter));
         assertEq(baseChild.vault.getActiveProtocolAdapter(), address(baseChild.aaveV3Adapter));
     }
 
     function _setEthereumChildActiveAdapterToAaveV3() internal {
         _selectEthereumFork();
-        stdstore.target(address(ethereumChild.vault)).sig("getActiveProtocolAdapter()").checked_write(
-            address(ethereumChild.aaveV3Adapter)
-        );
+        stdstore.target(address(ethereumChild.vault)).sig("getActiveProtocolAdapter()")
+            .checked_write(address(ethereumChild.aaveV3Adapter));
         assertEq(ethereumChild.vault.getActiveProtocolAdapter(), address(ethereumChild.aaveV3Adapter));
     }
 

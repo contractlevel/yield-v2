@@ -318,12 +318,15 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @notice Receives CCIP messages
     /// @param message Any2EVMMessage.
     /// @dev Precondition: the message must be sent by an allowed sender (a crosschain vault mapped to an allowed source chain selector)
+    /// @dev Precondition: the received token must be i_usdc
     function _ccipReceive(Client.Any2EVMMessage memory message)
         internal
         override
         nonReentrant
         onlyAllowedSender(abi.decode(message.sender, (address)), message.sourceChainSelector)
     {
+        uint256 receivedUsdcAmount = _validateReceivedTokenAndGetAmount(message);
+
         /// @dev data decodes to a uint256 epochNonce for withdraws and a (uint256 rebalanceNonce, bytes32 protocolId) for rebalances
         (Types.CcipTx ccipTxType, bytes memory data) = abi.decode(message.data, (Types.CcipTx, bytes));
         if (ccipTxType == Types.CcipTx.WITHDRAW) {
@@ -333,7 +336,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
             /// @dev calculate the expected withdraw amount bridged back to the parent for the epoch
             uint256 expectedWithdrawUsdc = epoch.totalWithdrawClaimAmount - epoch.totalDepositAmount;
             /// @dev cache actual amount bridged back
-            uint256 receivedWithdrawUsdc = message.destTokenAmounts[0].amount;
+            uint256 receivedWithdrawUsdc = receivedUsdcAmount;
             /// @dev update the total withdraw claim amount
             epoch.totalWithdrawClaimAmount = epoch.totalDepositAmount + receivedWithdrawUsdc;
             if (receivedWithdrawUsdc < expectedWithdrawUsdc) {
@@ -345,7 +348,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         /// @dev see BaseVault::_handleCCIPRebalance
         if (ccipTxType == Types.CcipTx.REBALANCE) {
             (uint256 rebalanceNonce, bytes32 protocolId) = abi.decode(data, (uint256, bytes32));
-            bool success = _handleCCIPRebalance(rebalanceNonce, protocolId, message.destTokenAmounts[0].amount);
+            bool success = _handleCCIPRebalance(rebalanceNonce, protocolId, receivedUsdcAmount);
             if (success) _finalizeRebalance(rebalanceNonce);
         }
     }
