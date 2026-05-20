@@ -192,15 +192,31 @@ abstract contract BaseUnitTest is BaseTest {
         bytes memory data,
         uint256 amount
     ) internal view returns (Client.Any2EVMMessage memory message) {
-        Client.EVMTokenAmount[] memory destTokenAmounts = new Client.EVMTokenAmount[](1);
-        destTokenAmounts[0] = Client.EVMTokenAmount({token: address(s_mockUsdc), amount: amount});
-
         message = Client.Any2EVMMessage({
             messageId: bytes32(0),
             sourceChainSelector: sourceChainSelector,
             sender: abi.encode(sender),
             data: abi.encode(ccipTxType, data),
-            destTokenAmounts: destTokenAmounts
+            destTokenAmounts: _singleUsdcTokenAmount(amount)
         });
+    }
+
+    function _singleUsdcTokenAmount(uint256 amount)
+        internal
+        view
+        returns (Client.EVMTokenAmount[] memory destTokenAmounts)
+    {
+        destTokenAmounts = new Client.EVMTokenAmount[](1);
+        destTokenAmounts[0] = Client.EVMTokenAmount({token: address(s_mockUsdc), amount: amount});
+    }
+
+    function _twoUsdcTokenAmounts(uint256 firstAmount, uint256 secondAmount)
+        internal
+        view
+        returns (Client.EVMTokenAmount[] memory destTokenAmounts)
+    {
+        destTokenAmounts = new Client.EVMTokenAmount[](2);
+        destTokenAmounts[0] = Client.EVMTokenAmount({token: address(s_mockUsdc), amount: firstAmount});
+        destTokenAmounts[1] = Client.EVMTokenAmount({token: address(s_mockUsdc), amount: secondAmount});
     }
 }

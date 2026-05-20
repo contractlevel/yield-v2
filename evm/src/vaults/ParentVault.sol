@@ -339,10 +339,13 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
             _finalizeEpoch(epochNonce);
         }
         /// @dev see BaseVault::_handleCCIPRebalance
-        if (ccipTxType == Types.CcipTx.REBALANCE) {
+        else if (ccipTxType == Types.CcipTx.REBALANCE) {
             (uint256 rebalanceNonce, bytes32 protocolId) = abi.decode(data, (uint256, bytes32));
             bool success = _handleCCIPRebalance(rebalanceNonce, protocolId, receivedUsdcAmount);
             if (success) _finalizeRebalance(rebalanceNonce);
+        }
+        else {
+            revert BaseVault__InvalidTxType(ccipTxType);
         }
     }
 

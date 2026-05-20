@@ -5,6 +5,14 @@ ParentVault_ccipReceive
 │   └── it should revert with BaseVault__InvalidSender
 ├── when received token is not USDC
 │   └── it should revert with BaseVault__InvalidReceivedToken
+├── when token amounts length is zero
+│   └── it should revert with BaseVault__InvalidTokenAmountsLength
+├── when token amounts length is greater than one
+│   └── it should revert with BaseVault__InvalidTokenAmountsLength
+├── when received amount is zero
+│   └── it should revert with BaseVault__NoZeroAmount
+├── when tx type is invalid
+│   └── it should revert with BaseVault__InvalidTxType
 ├── when message is a withdraw
 │   ├── when the epoch is not executing
 │   │   └── it should revert with ParentVault__EpochNotExecuting

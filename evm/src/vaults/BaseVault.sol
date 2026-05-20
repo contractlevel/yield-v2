@@ -215,9 +215,13 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         view
         returns (uint256 amount)
     {
+        uint256 tokenAmountsLength = message.destTokenAmounts.length;
+        if (tokenAmountsLength != 1) revert BaseVault__InvalidTokenAmountsLength(tokenAmountsLength, 1);
+
         Client.EVMTokenAmount memory tokenAmount = message.destTokenAmounts[0];
         if (tokenAmount.token != i_usdc) revert BaseVault__InvalidReceivedToken(tokenAmount.token, i_usdc);
         amount = tokenAmount.amount;
+        if (amount == 0) revert BaseVault__NoZeroAmount();
     }
 
     /*//////////////////////////////////////////////////////////////

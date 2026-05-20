@@ -56,6 +56,38 @@ contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
         s_parentVault.ccipReceive(message);
     }
 
+    function test_ParentVault_ccipReceive_RevertWhen_TokenAmountsLengthIsZero() public {
+        Client.Any2EVMMessage memory message = _withdrawMessage(EPOCH_NONCE, EXPECTED_WITHDRAW_USDC);
+        message.destTokenAmounts = new Client.EVMTokenAmount[](0);
+
+        vm.expectRevert(abi.encodeWithSelector(IBaseVault.BaseVault__InvalidTokenAmountsLength.selector, 0, 1));
+        s_parentVault.ccipReceive(message);
+    }
+
+    function test_ParentVault_ccipReceive_RevertWhen_TokenAmountsLengthIsGreaterThanOne() public {
+        Client.Any2EVMMessage memory message = _withdrawMessage(EPOCH_NONCE, EXPECTED_WITHDRAW_USDC);
+        message.destTokenAmounts = _twoUsdcTokenAmounts(EXPECTED_WITHDRAW_USDC, 1);
+
+        vm.expectRevert(abi.encodeWithSelector(IBaseVault.BaseVault__InvalidTokenAmountsLength.selector, 2, 1));
+        s_parentVault.ccipReceive(message);
+    }
+
+    function test_ParentVault_ccipReceive_RevertWhen_ReceivedAmountIsZero() public {
+        vm.expectRevert(IBaseVault.BaseVault__NoZeroAmount.selector);
+        s_parentVault.ccipReceive(_withdrawMessage(EPOCH_NONCE, 0));
+    }
+
+    function test_ParentVault_ccipReceive_RevertWhen_TxTypeIsInvalid() public {
+        Client.Any2EVMMessage memory message = _message(
+            CHILD_CHAIN_SELECTOR, address(s_childVault), Types.CcipTx.DEPOSIT, abi.encode(EPOCH_NONCE), BRIDGED_AMOUNT
+        );
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IBaseVault.BaseVault__InvalidTxType.selector, Types.CcipTx.DEPOSIT)
+        );
+        s_parentVault.ccipReceive(message);
+    }
+
     /*//////////////////////////////////////////////////////////////
                              WITHDRAW PATH
     //////////////////////////////////////////////////////////////*/

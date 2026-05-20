@@ -48,6 +48,38 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
         s_childVault.ccipReceive(message);
     }
 
+    function test_ChildVault_ccipReceive_RevertWhen_TokenAmountsLengthIsZero() public {
+        Client.Any2EVMMessage memory message = _depositMessage(EPOCH_NONCE);
+        message.destTokenAmounts = new Client.EVMTokenAmount[](0);
+
+        vm.expectRevert(abi.encodeWithSelector(IBaseVault.BaseVault__InvalidTokenAmountsLength.selector, 0, 1));
+        s_childVault.ccipReceive(message);
+    }
+
+    function test_ChildVault_ccipReceive_RevertWhen_TokenAmountsLengthIsGreaterThanOne() public {
+        Client.Any2EVMMessage memory message = _depositMessage(EPOCH_NONCE);
+        message.destTokenAmounts = _twoUsdcTokenAmounts(BRIDGED_AMOUNT, 1);
+
+        vm.expectRevert(abi.encodeWithSelector(IBaseVault.BaseVault__InvalidTokenAmountsLength.selector, 2, 1));
+        s_childVault.ccipReceive(message);
+    }
+
+    function test_ChildVault_ccipReceive_RevertWhen_ReceivedAmountIsZero() public {
+        vm.expectRevert(IBaseVault.BaseVault__NoZeroAmount.selector);
+        s_childVault.ccipReceive(_depositMessage(EPOCH_NONCE, 0));
+    }
+
+    function test_ChildVault_ccipReceive_RevertWhen_TxTypeIsInvalid() public {
+        Client.Any2EVMMessage memory message = _message(
+            PARENT_CHAIN_SELECTOR, address(s_parentVault), Types.CcipTx.WITHDRAW, abi.encode(EPOCH_NONCE), BRIDGED_AMOUNT
+        );
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IBaseVault.BaseVault__InvalidTxType.selector, Types.CcipTx.WITHDRAW)
+        );
+        s_childVault.ccipReceive(message);
+    }
+
     /*//////////////////////////////////////////////////////////////
                               DEPOSIT PATH
     //////////////////////////////////////////////////////////////*/
@@ -214,8 +246,12 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
                              HELPER UTILITY
     //////////////////////////////////////////////////////////////*/
     function _depositMessage(uint256 epochNonce) internal view returns (Client.Any2EVMMessage memory) {
+        return _depositMessage(epochNonce, BRIDGED_AMOUNT);
+    }
+
+    function _depositMessage(uint256 epochNonce, uint256 amount) internal view returns (Client.Any2EVMMessage memory) {
         return _message(
-            PARENT_CHAIN_SELECTOR, address(s_parentVault), Types.CcipTx.DEPOSIT, abi.encode(epochNonce), BRIDGED_AMOUNT
+            PARENT_CHAIN_SELECTOR, address(s_parentVault), Types.CcipTx.DEPOSIT, abi.encode(epochNonce), amount
         );
     }
 

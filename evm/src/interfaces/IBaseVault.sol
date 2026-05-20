@@ -18,6 +18,13 @@ interface IBaseVault is IPauseable {
 
     /// @dev Thrown when the input array lengths do not match
     error BaseVault__InvalidInputLengths();
+    /// @dev Thrown when a CCIP message delivers an unexpected number of token amounts
+    /// @param receivedLength The number of token amounts delivered by CCIP
+    /// @param expectedLength The expected number of token amounts
+    error BaseVault__InvalidTokenAmountsLength(uint256 receivedLength, uint256 expectedLength);
+
+    /// @dev Thrown when CCIP receive in Parent and Child Vault receives an invalid tx type
+    error BaseVault__InvalidTxType(Types.CcipTx ccipTxType);
 
     /// @dev Thrown when the active protocol adapter is the zero address
     error BaseVault__NoActiveAdapter();
