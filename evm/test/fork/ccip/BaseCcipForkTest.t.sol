@@ -129,10 +129,6 @@ abstract contract BaseCcipForkTest is BaseForkTest {
     }
 
     function _routeUsdcMessageTo(uint256 forkId) internal {
-        uint256 sourceForkId = vm.activeFork();
-        vm.selectFork(sourceForkId);
-        vm.selectFork(forkId); // @review dont think we need this line?
-        vm.selectFork(sourceForkId);
         ccipLocalSimulatorFork.switchChainAndRouteMessageWithUSDC(forkId, attesters, attesterPks);
     }
 

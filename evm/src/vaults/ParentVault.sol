@@ -330,12 +330,10 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
 
             /// @dev calculate the expected withdraw amount bridged back to the parent for the epoch
             uint256 expectedWithdrawUsdc = epoch.totalWithdrawClaimAmount - epoch.totalDepositAmount;
-            /// @dev cache actual amount bridged back
-            uint256 receivedWithdrawUsdc = receivedUsdcAmount;
             /// @dev update the total withdraw claim amount
-            epoch.totalWithdrawClaimAmount = epoch.totalDepositAmount + receivedWithdrawUsdc;
-            if (receivedWithdrawUsdc < expectedWithdrawUsdc) {
-                emit EpochWithdrawAmountShort(epochNonce, expectedWithdrawUsdc, receivedWithdrawUsdc);
+            epoch.totalWithdrawClaimAmount = epoch.totalDepositAmount + receivedUsdcAmount;
+            if (receivedUsdcAmount < expectedWithdrawUsdc) {
+                emit EpochWithdrawAmountShort(epochNonce, expectedWithdrawUsdc, receivedUsdcAmount);
             }
 
             _finalizeEpoch(epochNonce);
@@ -380,14 +378,14 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
             revert ParentVault__EmptyEpoch(epochNonce);
         }
 
-        // 1. Calculate price per share
-        uint256 pricePerShare = _calculatePricePerShare(tvl);
+        // 1. Calculate gross price per share before performance fee dilution
+        uint256 grossPricePerShare = _calculatePricePerShare(tvl);
 
-        // 2. Collect performance fee on net yield
-        _collectPerformanceFee(epochNonce, pricePerShare);
+        // 2. Collect performance fee on net yield and settle users at the post-fee price
+        uint256 settlementPricePerShare = _collectPerformanceFee(epochNonce, tvl, grossPricePerShare);
 
         // 3. Calculate total withdraw USDC owed
-        uint256 totalWithdrawUsdc = epoch.totalShareBurnAmount * pricePerShare / SHARE_PRECISION;
+        uint256 totalWithdrawUsdc = epoch.totalShareBurnAmount * settlementPricePerShare / SHARE_PRECISION;
 
         // 4. Calculate net flow (signed)
         // positive: deposits exceed withdrawals, surplus goes to strategy
@@ -395,12 +393,12 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         int256 netFlow = int256(epoch.totalDepositAmount) - int256(totalWithdrawUsdc);
 
         // 5. Mint new shares and burn withdrawn shares
-        uint256 newShares = epoch.totalDepositAmount * SHARE_PRECISION / pricePerShare;
+        uint256 newShares = epoch.totalDepositAmount * SHARE_PRECISION / settlementPricePerShare;
         s_totalShares = s_totalShares + newShares - epoch.totalShareBurnAmount; // @review gas optimization
 
         // 6. Store epoch settlement data
         epoch.totalWithdrawClaimAmount = totalWithdrawUsdc;
-        epoch.pricePerShare = pricePerShare;
+        epoch.pricePerShare = settlementPricePerShare;
         epoch.closedAtTimestamp = block.timestamp;
 
         // 7. Transition epoch status and handle net flow
@@ -603,18 +601,28 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         }
     }
 
-    /// @notice Collects performance fee when the settlement price exceeds the high water mark
+    /// @notice Collects performance fee when the gross price exceeds the high water mark
     /// @param epochNonce The epoch nonce collecting the fee
-    /// @param pricePerShare The epoch settlement price per share
-    function _collectPerformanceFee(uint256 epochNonce, uint256 pricePerShare) internal {
+    /// @param tvl The strategy TVL before current epoch deposits and withdrawals settle
+    /// @param grossPricePerShare The epoch price per share before performance fee dilution
+    /// @return settlementPricePerShare The epoch price per share after performance fee dilution
+    function _collectPerformanceFee(uint256 epochNonce, uint256 tvl, uint256 grossPricePerShare)
+        internal
+        returns (uint256 settlementPricePerShare)
+    {
         uint256 highWaterMark = s_performanceFeeHighWaterMark;
-        if (pricePerShare <= highWaterMark) return;
+        if (grossPricePerShare <= highWaterMark) return grossPricePerShare;
 
         uint256 totalShares = s_totalShares;
-        uint256 yieldPerShare = pricePerShare - highWaterMark;
+        uint256 yieldPerShare = grossPricePerShare - highWaterMark;
+        /// @dev totalYield is the USDC value created above the prior after-fee high water mark.
         uint256 totalYield = _ceilDiv(yieldPerShare * totalShares, SHARE_PRECISION);
+        /// @dev feeUsdc is 7.77% of net yield, rounded up in favor of the protocol.
         uint256 feeUsdc = _ceilDiv(totalYield * PERFORMANCE_FEE_BPS, BPS_DENOMINATOR);
-        uint256 feeShares = _ceilDiv(feeUsdc * SHARE_PRECISION, pricePerShare);
+        /// @dev Mint enough shares so treasury's post-mint ownership is worth feeUsdc:
+        ///      feeShares / (totalShares + feeShares) * tvl = feeUsdc
+        ///      feeShares = feeUsdc * totalShares / (tvl - feeUsdc)
+        uint256 feeShares = _ceilDiv(feeUsdc * totalShares, tvl - feeUsdc);
 
         if (feeShares != 0) {
             s_totalShares = totalShares + feeShares;
@@ -622,7 +630,9 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
             emit PerformanceFeeCollected(epochNonce, feeShares, highWaterMark);
         }
 
-        s_performanceFeeHighWaterMark = pricePerShare;
+        // @review definite gas optimization here with s_totalShares reads
+        settlementPricePerShare = _calculatePricePerShare(tvl);
+        s_performanceFeeHighWaterMark = settlementPricePerShare;
     }
 
     /*//////////////////////////////////////////////////////////////
