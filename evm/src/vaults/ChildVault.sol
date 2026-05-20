@@ -71,8 +71,7 @@ contract ChildVault is BaseVault, IChildVault {
         else if (ccipTxType == Types.CcipTx.REBALANCE) {
             (uint256 rebalanceNonce, bytes32 protocolId) = abi.decode(data, (uint256, bytes32));
             _handleCCIPRebalance(rebalanceNonce, protocolId, receivedUsdcAmount);
-        }
-        else {
+        } else {
             revert BaseVault__InvalidTxType(ccipTxType);
         }
     }

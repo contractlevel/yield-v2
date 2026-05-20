@@ -222,6 +222,28 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         assertEq(s_parentVault.getPerformanceFeeHighWaterMark(), settlementPricePerShare);
     }
 
+    function test_ParentVault_closeEpoch_PerformanceFee_WhenFeeWouldConsumeTvl_SkipsFeeAndLeavesHighWaterMarkUnchanged()
+        public
+    {
+        uint256 totalShares = 1;
+        uint256 tvl = 1;
+        uint256 highWaterMark = 0;
+        uint256 expectedPricePerShare = SHARE_PRECISION;
+        uint256 expectedDepositShares = DEPOSIT_AMOUNT;
+
+        _setParentTotalShares(totalShares);
+        _setParentPerformanceFeeHighWaterMark(highWaterMark);
+        _submitDeposit();
+
+        _closeEpoch(tvl);
+
+        assertEq(s_yieldcoin.balanceOf(i_treasury), 0);
+        assertEq(s_parentVault.getTotalShares(), totalShares + expectedDepositShares);
+        assertEq(s_parentVault.getEpoch(1).pricePerShare, expectedPricePerShare);
+        assertEq(uint8(s_parentVault.getEpoch(1).status), uint8(Types.EpochStatus.CLAIMABLE));
+        assertEq(s_parentVault.getPerformanceFeeHighWaterMark(), highWaterMark);
+    }
+
     function test_ParentVault_closeEpoch_PerformanceFee_EmitsPerformanceFeeCollected() public {
         uint256 grossPricePerShare = 105 * SHARE_PRECISION / 100;
         uint256 tvl = SEEDED_SHARES * grossPricePerShare / SHARE_PRECISION;

@@ -343,8 +343,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
             (uint256 rebalanceNonce, bytes32 protocolId) = abi.decode(data, (uint256, bytes32));
             bool success = _handleCCIPRebalance(rebalanceNonce, protocolId, receivedUsdcAmount);
             if (success) _finalizeRebalance(rebalanceNonce);
-        }
-        else {
+        } else {
             revert BaseVault__InvalidTxType(ccipTxType);
         }
     }
@@ -622,6 +621,13 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         uint256 totalYield = _ceilDiv(yieldPerShare * totalShares, SHARE_PRECISION);
         /// @dev feeUsdc is 7.77% of net yield, rounded up in favor of the protocol.
         uint256 feeUsdc = _ceilDiv(totalYield * PERFORMANCE_FEE_BPS, BPS_DENOMINATOR);
+
+        /// @dev Defensive guard: if rounding or bad TVL input would make the fee consume
+        ///      all TVL, skip fee collection for this epoch and leave the HWM unchanged.
+        if (feeUsdc >= tvl) {
+            return grossPricePerShare;
+        }
+
         /// @dev Mint enough shares so treasury's post-mint ownership is worth feeUsdc:
         ///      feeShares / (totalShares + feeShares) * tvl = feeUsdc
         ///      feeShares = feeUsdc * totalShares / (tvl - feeUsdc)

@@ -71,12 +71,14 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
 
     function test_ChildVault_ccipReceive_RevertWhen_TxTypeIsInvalid() public {
         Client.Any2EVMMessage memory message = _message(
-            PARENT_CHAIN_SELECTOR, address(s_parentVault), Types.CcipTx.WITHDRAW, abi.encode(EPOCH_NONCE), BRIDGED_AMOUNT
+            PARENT_CHAIN_SELECTOR,
+            address(s_parentVault),
+            Types.CcipTx.WITHDRAW,
+            abi.encode(EPOCH_NONCE),
+            BRIDGED_AMOUNT
         );
 
-        vm.expectRevert(
-            abi.encodeWithSelector(IBaseVault.BaseVault__InvalidTxType.selector, Types.CcipTx.WITHDRAW)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IBaseVault.BaseVault__InvalidTxType.selector, Types.CcipTx.WITHDRAW));
         s_childVault.ccipReceive(message);
     }
 
@@ -250,9 +252,10 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
     }
 
     function _depositMessage(uint256 epochNonce, uint256 amount) internal view returns (Client.Any2EVMMessage memory) {
-        return _message(
-            PARENT_CHAIN_SELECTOR, address(s_parentVault), Types.CcipTx.DEPOSIT, abi.encode(epochNonce), amount
-        );
+        return
+            _message(
+                PARENT_CHAIN_SELECTOR, address(s_parentVault), Types.CcipTx.DEPOSIT, abi.encode(epochNonce), amount
+            );
     }
 
     function _rebalanceMessage(uint256 rebalanceNonce, bytes32 protocolId)

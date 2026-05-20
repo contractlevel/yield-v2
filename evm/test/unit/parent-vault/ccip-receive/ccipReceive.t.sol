@@ -82,9 +82,7 @@ contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
             CHILD_CHAIN_SELECTOR, address(s_childVault), Types.CcipTx.DEPOSIT, abi.encode(EPOCH_NONCE), BRIDGED_AMOUNT
         );
 
-        vm.expectRevert(
-            abi.encodeWithSelector(IBaseVault.BaseVault__InvalidTxType.selector, Types.CcipTx.DEPOSIT)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IBaseVault.BaseVault__InvalidTxType.selector, Types.CcipTx.DEPOSIT));
         s_parentVault.ccipReceive(message);
     }
 
