@@ -207,7 +207,8 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
     {
         uint256 grossPricePerShare = 105 * SHARE_PRECISION / 100;
         uint256 tvl = SEEDED_SHARES * grossPricePerShare / SHARE_PRECISION;
-        uint256 expectedFeeShares = _expectedPerformanceFeeShares(SEEDED_SHARES, tvl, grossPricePerShare, SHARE_PRECISION);
+        uint256 expectedFeeShares =
+            _expectedPerformanceFeeShares(SEEDED_SHARES, tvl, grossPricePerShare, SHARE_PRECISION);
         uint256 settlementPricePerShare = _pricePerShare(tvl, SEEDED_SHARES + expectedFeeShares);
         uint256 expectedDepositShares = DEPOSIT_AMOUNT * SHARE_PRECISION / settlementPricePerShare;
 
@@ -224,7 +225,8 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
     function test_ParentVault_closeEpoch_PerformanceFee_EmitsPerformanceFeeCollected() public {
         uint256 grossPricePerShare = 105 * SHARE_PRECISION / 100;
         uint256 tvl = SEEDED_SHARES * grossPricePerShare / SHARE_PRECISION;
-        uint256 expectedFeeShares = _expectedPerformanceFeeShares(SEEDED_SHARES, tvl, grossPricePerShare, SHARE_PRECISION);
+        uint256 expectedFeeShares =
+            _expectedPerformanceFeeShares(SEEDED_SHARES, tvl, grossPricePerShare, SHARE_PRECISION);
 
         _setParentTotalShares(SEEDED_SHARES);
         _submitDeposit();
@@ -277,7 +279,8 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
     function test_ParentVault_closeEpoch_PerformanceFee_WithdrawsSettleAtPostFeePrice() public {
         uint256 grossPricePerShare = 105 * SHARE_PRECISION / 100;
         uint256 tvl = SEEDED_SHARES * grossPricePerShare / SHARE_PRECISION;
-        uint256 expectedFeeShares = _expectedPerformanceFeeShares(SEEDED_SHARES, tvl, grossPricePerShare, SHARE_PRECISION);
+        uint256 expectedFeeShares =
+            _expectedPerformanceFeeShares(SEEDED_SHARES, tvl, grossPricePerShare, SHARE_PRECISION);
         uint256 settlementPricePerShare = _pricePerShare(tvl, SEEDED_SHARES + expectedFeeShares);
         uint256 expectedWithdrawUsdc = WITHDRAW_SHARES * settlementPricePerShare / SHARE_PRECISION;
 
@@ -397,11 +400,7 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         uint256 tvl,
         uint256 grossPricePerShare,
         uint256 highWaterMark
-    )
-        internal
-        pure
-        returns (uint256 feeShares)
-    {
+    ) internal pure returns (uint256 feeShares) {
         uint256 totalYield = _ceilDiv((grossPricePerShare - highWaterMark) * totalShares, SHARE_PRECISION);
         uint256 feeUsdc = _ceilDiv(totalYield * PERFORMANCE_FEE_BPS, BPS_DENOMINATOR);
         feeShares = _ceilDiv(feeUsdc * totalShares, tvl - feeUsdc);
