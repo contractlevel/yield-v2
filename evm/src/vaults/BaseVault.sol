@@ -416,24 +416,9 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @notice Gets the Yieldcoin TVL if this chain is the active strategy chain
     ///         Returns 0 if this chain is not the active strategy chain
     /// @return tvl The Yieldcoin TVL
-    function _getTVL() internal view returns (uint256 tvl) {
-        address activeProtocolAdapter = s_activeProtocolAdapter;
-        // @review order of these, which one is used more often?
-        if (activeProtocolAdapter == address(0)) tvl = 0;
-        else tvl = IProtocolAdapter(activeProtocolAdapter).getTVL();
-    }
-
-    // function _getTVL() internal view returns (uint256 tvl) {
-    //     address activeAdapter = s_activeProtocolAdapter;
-    //     if (activeAdapter == address(0)) return 0;
-
-    //     // Relies on IProtocolAdapter.getTVL() invariant: returns 0 when no position exists.
-    //     // This lets us detect pending rebalance-deposit recovery (USDC held by vault, not yet deployed).
-    //     tvl = IProtocolAdapter(activeAdapter).getTVL();
-    //     if (tvl == 0) {
-    //         tvl = s_rebalanceDepositRecovery.amount;
-    //     }
-    // }
+    /// @notice This needs to be overridden and implemented differently in Parent and Child Vaults to account for epoch netdeposit fails on Child
+    /// @notice Returns 0 if the TVL is in transit over CCIP. This should not be read onchain when Parent state is REBALANCING
+    function _getTVL() internal view virtual returns (uint256 tvl);
 
     /*//////////////////////////////////////////////////////////////
                              CONFIG SETTERS
@@ -573,6 +558,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @notice Gets the TVL of the vault
     /// @return tvl The TVL of the vault
     /// @dev Strategy chain will return tvl, non-strategy chain will return 0
+    /// @notice Returns 0 if the TVL is in transit over CCIP. This should not be read onchain when Parent state is REBALANCING
     function getTVL() external view returns (uint256 tvl) {
         tvl = _getTVL();
     }

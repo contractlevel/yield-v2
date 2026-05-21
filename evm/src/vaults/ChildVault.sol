@@ -6,6 +6,8 @@ import {BaseVault} from "./BaseVault.sol";
 import {IChildVault} from "../interfaces/IChildVault.sol";
 import {Types} from "../libraries/Types.sol";
 import {Roles} from "../libraries/Roles.sol";
+import {IProtocolAdapter} from "../interfaces/IProtocolAdapter.sol";
+
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -331,5 +333,20 @@ contract ChildVault is BaseVault, IChildVault {
     /// @return recovery The stored rebalance withdraw recovery state
     function getRebalanceWithdrawRecovery() external view returns (Types.RebalanceWithdrawRecovery memory recovery) {
         recovery = s_rebalanceWithdrawRecovery;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                                OVERRIDE
+    //////////////////////////////////////////////////////////////*/
+    /// @notice Gets the Yieldcoin TVL if this chain is the active strategy chain
+    ///         Returns 0 if this chain is not the active strategy chain
+    /// @return tvl The Yieldcoin TVL
+    /// @notice The Child Vault implementation includes s_epochDepositRecovery.amount
+    /// @notice Returns 0 if the TVL is in transit over CCIP. This should not be read onchain when Parent state is REBALANCING
+    function _getTVL() internal view override returns (uint256 tvl) {
+        address activeAdapter = s_activeProtocolAdapter;
+        if (activeAdapter == address(0)) return 0;
+        tvl = IProtocolAdapter(activeAdapter).getTVL() + s_epochDepositRecovery.amount;
+        if (tvl == 0) tvl = s_rebalanceDepositRecovery.amount;
     }
 }

@@ -7,6 +7,7 @@ import {IAdapterRegistry} from "../interfaces/IAdapterRegistry.sol";
 import {IShare} from "../interfaces/IShare.sol";
 import {Types} from "../libraries/Types.sol";
 import {Roles} from "../libraries/Roles.sol";
+import {IProtocolAdapter} from "../interfaces/IProtocolAdapter.sol";
 
 import {Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
 import {CCIPReceiver, IAny2EVMMessageReceiver} from "@chainlink/contracts-ccip/contracts/applications/CCIPReceiver.sol";
@@ -380,6 +381,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     ///      covered by netting/settlement, and depositors can claim shares minted at
     ///      epoch close. The remaining issue is yield drag from idle USDC on the Child,
     ///      so singleton child recovery plus workflow retry discipline is sufficient.
+    /// @dev previousEpochNonce == 0 means no prior epoch exists (constructor sets s_epochNonce = 1).
     function closeEpoch(uint256 tvl) external nonReentrant onlyRole(Roles.EPOCH_OPERATOR_ROLE) {
         if (s_rebalance.state != Types.RebalanceState.NONE) revert ParentVault__RebalanceInProgress();
 
@@ -765,5 +767,17 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
             || interfaceId == type(IAccessControlDefaultAdminRules).interfaceId
             || interfaceId == type(IAny2EVMMessageReceiver).interfaceId
             || interfaceId == type(IPolicyProtected).interfaceId;
+    }
+
+    /// @notice Gets the Yieldcoin TVL if this chain is the active strategy chain
+    ///         Returns 0 if this chain is not the active strategy chain
+    /// @return tvl The Yieldcoin TVL
+    /// @notice The Child Vault implementation includes s_epochDepositRecovery.amount
+    /// @notice Returns 0 if the TVL is in transit over CCIP. This should not be read onchain when Parent state is REBALANCING
+    function _getTVL() internal view override returns (uint256 tvl) {
+        address activeAdapter = s_activeProtocolAdapter;
+        if (activeAdapter == address(0)) return 0;
+        tvl = IProtocolAdapter(activeAdapter).getTVL();
+        if (tvl == 0) tvl = s_rebalanceDepositRecovery.amount;
     }
 }
