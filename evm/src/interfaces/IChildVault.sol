@@ -82,6 +82,9 @@ interface IChildVault is IBaseVault {
     function getEpochWithdrawRecovery(uint256 epochNonce) external view returns (Types.AmountRecovery memory recovery);
 
     /// @notice Gets failed rebalance withdraw recovery state
-    /// @return recovery The stored rebalance withdraw recovery state
+    /// @return recovery Types.RebalanceWithdrawRecovery struct includes:
+    ///         uint256 rebalanceNonce - the nonce of the rebalance
+    ///         uint256 amount - the amount that needs to be rebalanced/withdraw from the old strategy
+    ///         uint256 createdAt - block.timestamp the recovery state was stored
     function getRebalanceWithdrawRecovery() external view returns (Types.RebalanceWithdrawRecovery memory recovery);
 }

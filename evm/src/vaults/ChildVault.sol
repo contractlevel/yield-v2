@@ -239,11 +239,11 @@ contract ChildVault is BaseVault, IChildVault {
     /// @notice Clears recovery state for a failed rebalance withdraw
     /// @dev Precondition: rebalance withdraw recovery state must exist
     function _clearRebalanceWithdrawRecovery() internal {
-        uint256 rebalanceNonce = s_rebalanceWithdrawRecovery.rebalanceNonce;
         //slither-disable-next-line incorrect-equality
         if (s_rebalanceWithdrawRecovery.strategy.chainSelector == 0) {
             revert BaseVault__NoPendingRecovery();
         }
+        uint256 rebalanceNonce = s_rebalanceWithdrawRecovery.rebalanceNonce;
 
         delete s_rebalanceWithdrawRecovery;
         emit RebalanceWithdrawRecoveryCleared(rebalanceNonce);

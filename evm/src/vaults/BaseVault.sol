@@ -356,9 +356,9 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @dev Deletes the recovery state
     /// @dev Emites RebalanceDepositRecoveryCleared event
     function _clearRebalanceDepositRecovery() internal {
-        uint256 rebalanceNonce = s_rebalanceDepositRecovery.rebalanceNonce;
         //slither-disable-next-line incorrect-equality
         if (s_rebalanceDepositRecovery.amount == 0) revert BaseVault__NoPendingRecovery();
+        uint256 rebalanceNonce = s_rebalanceDepositRecovery.rebalanceNonce;
 
         delete s_rebalanceDepositRecovery;
         emit RebalanceDepositRecoveryCleared(rebalanceNonce);
