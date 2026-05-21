@@ -378,7 +378,7 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
 
         Vm.Log memory log = _assertEmittedBy(keccak256("CCIPBridged(bytes32,uint256,uint8)"), address(s_parentVault));
         assertEq(uint256(log.topics[2]), DEPOSIT_AMOUNT);
-        assertEq(uint256(log.topics[3]), uint256(Types.CcipTx.DEPOSIT));
+        assertEq(uint256(log.topics[3]), uint256(Types.CcipTx.EPOCH_NET_DEPOSIT));
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -85,7 +85,7 @@ contract ChildVault_RecoverFailedEpochDepositUnitTest is BaseUnitTest {
 
     function _depositMessage(uint256 epochNonce) internal view returns (Client.Any2EVMMessage memory) {
         return _message(
-            PARENT_CHAIN_SELECTOR, address(s_parentVault), Types.CcipTx.DEPOSIT, abi.encode(epochNonce), DEPOSIT_AMOUNT
+            PARENT_CHAIN_SELECTOR, address(s_parentVault), Types.CcipTx.EPOCH_NET_DEPOSIT, abi.encode(epochNonce), DEPOSIT_AMOUNT
         );
     }
 }

@@ -142,7 +142,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @param bridgeAmount The amount of USDC to bridge
     /// @param destinationChainSelector The CCIP selector of the destination chain
     /// @param ccipTxType The type of CCIP transaction
-    /// @param txData abi.encode(epochNonce) for deposit/withdraw, or abi.encode(rebalanceNonce, newStrategy.protocolId) for rebalance
+    /// @param txData abi.encode(epochNonce) for epoch net deposit/withdraw, or abi.encode(rebalanceNonce, newStrategy.protocolId) for rebalance
     /// @dev Precondition: Destination chain selector must be a valid crosschain vault
     function _ccipSend(
         uint256 bridgeAmount,

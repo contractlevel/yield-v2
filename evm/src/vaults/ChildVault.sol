@@ -60,10 +60,10 @@ contract ChildVault is BaseVault, IChildVault {
     {
         uint256 receivedUsdcAmount = _validateReceivedTokenAndGetAmount(message);
 
-        /// @dev data decodes to a uint256 epochNonce for deposits/withdraws and a (uint256 rebalanceNonce, bytes32 protocolId) for rebalances
+        /// @dev data decodes to a uint256 epochNonce for epoch net deposits/withdraws and a (uint256 rebalanceNonce, bytes32 protocolId) for rebalances
         (Types.CcipTx ccipTxType, bytes memory data) = abi.decode(message.data, (Types.CcipTx, bytes));
 
-        if (ccipTxType == Types.CcipTx.DEPOSIT) {
+        if (ccipTxType == Types.CcipTx.EPOCH_NET_DEPOSIT) {
             uint256 epochNonce = abi.decode(data, (uint256));
             _handleCCIPDeposit(epochNonce, receivedUsdcAmount);
         }
@@ -107,7 +107,7 @@ contract ChildVault is BaseVault, IChildVault {
         uint256 amountOut = _executeWithdraw(amount, false);
         if (amountOut > 0) {
             emit WithdrawFromStrategySuccess(epochNonce, amountOut);
-            _ccipSend(amountOut, i_parentChainSelector, Types.CcipTx.WITHDRAW, abi.encode(epochNonce));
+            _ccipSend(amountOut, i_parentChainSelector, Types.CcipTx.EPOCH_NET_WITHDRAW, abi.encode(epochNonce));
         } else {
             _storeEpochWithdrawRecovery(epochNonce, amount);
             emit WithdrawFromStrategyFailure(epochNonce, amount);
@@ -288,7 +288,7 @@ contract ChildVault is BaseVault, IChildVault {
 
         _clearEpochWithdrawRecovery(epochNonce);
         emit WithdrawFromStrategySuccess(epochNonce, amountOut);
-        _ccipSend(amountOut, i_parentChainSelector, Types.CcipTx.WITHDRAW, abi.encode(epochNonce));
+        _ccipSend(amountOut, i_parentChainSelector, Types.CcipTx.EPOCH_NET_WITHDRAW, abi.encode(epochNonce));
     }
 
     /// @notice Recovers a failed rebalance withdraw from the active Child strategy

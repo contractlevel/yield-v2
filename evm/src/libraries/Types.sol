@@ -23,13 +23,13 @@ library Types {
     /*//////////////////////////////////////////////////////////////
                                   CCIP
     //////////////////////////////////////////////////////////////*/
-    /// @notice CCIP Transaction Types - used to discriminate between deposit, withdraw, and rebalance when receiving CCIP messages
-    /// @param DEPOSIT Epoch netflow has more deposits that withdraws, and bridges USDC to the active strategy chain
-    /// @param WITHDRAW Epoch netflow has more withdraws than deposits, USDC is bridged from the strategy to the Parent
+    /// @notice CCIP transaction type discriminators for epoch net-flow settlement and rebalances
+    /// @param EPOCH_NET_DEPOSIT Epoch netflow has more deposits than withdraws and bridges USDC to the active strategy chain
+    /// @param EPOCH_NET_WITHDRAW Epoch netflow has more withdraws than deposits and bridges USDC from the strategy to the Parent
     /// @param REBALANCE The system rebalances by bridging the TVL from the old strategy to the new strategy chain
     enum CcipTx {
-        DEPOSIT, // 0 // @review rename these to EPOCH_DEPOSIT and EPOCH_WITHDRAW or something similar EpochInFlow EpochOutFlow
-        WITHDRAW, // 1
+        EPOCH_NET_DEPOSIT, // 0
+        EPOCH_NET_WITHDRAW, // 1
         REBALANCE // 2
     }
 

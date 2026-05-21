@@ -322,9 +322,9 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     {
         uint256 receivedUsdcAmount = _validateReceivedTokenAndGetAmount(message);
 
-        /// @dev data decodes to a uint256 epochNonce for withdraws and a (uint256 rebalanceNonce, bytes32 protocolId) for rebalances
+        /// @dev data decodes to a uint256 epochNonce for epoch net withdraws and a (uint256 rebalanceNonce, bytes32 protocolId) for rebalances
         (Types.CcipTx ccipTxType, bytes memory data) = abi.decode(message.data, (Types.CcipTx, bytes));
-        if (ccipTxType == Types.CcipTx.WITHDRAW) {
+        if (ccipTxType == Types.CcipTx.EPOCH_NET_WITHDRAW) {
             uint256 epochNonce = abi.decode(data, (uint256));
             Types.Epoch storage epoch = s_epochs[epochNonce];
 
@@ -423,7 +423,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
                     _ccipSend(
                         uint256(netFlow),
                         s_rebalance.activeStrategy.chainSelector,
-                        Types.CcipTx.DEPOSIT,
+                        Types.CcipTx.EPOCH_NET_DEPOSIT,
                         abi.encode(epochNonce)
                     );
                 }

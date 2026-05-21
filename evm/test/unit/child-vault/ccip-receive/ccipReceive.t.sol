@@ -73,12 +73,12 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
         Client.Any2EVMMessage memory message = _message(
             PARENT_CHAIN_SELECTOR,
             address(s_parentVault),
-            Types.CcipTx.WITHDRAW,
+            Types.CcipTx.EPOCH_NET_WITHDRAW,
             abi.encode(EPOCH_NONCE),
             BRIDGED_AMOUNT
         );
 
-        vm.expectRevert(abi.encodeWithSelector(IBaseVault.BaseVault__InvalidTxType.selector, Types.CcipTx.WITHDRAW));
+        vm.expectRevert(abi.encodeWithSelector(IBaseVault.BaseVault__InvalidTxType.selector, Types.CcipTx.EPOCH_NET_WITHDRAW));
         s_childVault.ccipReceive(message);
     }
 
@@ -255,7 +255,7 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
     function _depositMessage(uint256 epochNonce, uint256 amount) internal view returns (Client.Any2EVMMessage memory) {
         return
             _message(
-                PARENT_CHAIN_SELECTOR, address(s_parentVault), Types.CcipTx.DEPOSIT, abi.encode(epochNonce), amount
+                PARENT_CHAIN_SELECTOR, address(s_parentVault), Types.CcipTx.EPOCH_NET_DEPOSIT, abi.encode(epochNonce), amount
             );
     }
 
