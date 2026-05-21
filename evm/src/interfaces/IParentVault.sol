@@ -150,9 +150,8 @@ interface IParentVault is IBaseVault {
                                RECOVERY
     //////////////////////////////////////////////////////////////*/
     /// @notice Recovers a failed rebalance deposit into the active Parent strategy
-    /// @param rebalanceNonce The nonce of the failed rebalance deposit
     /// @dev Precondition: rebalance deposit recovery state must exist
-    function recoverFailedRebalanceDeposit(uint256 rebalanceNonce) external;
+    function recoverFailedRebalanceDeposit() external;
 
     /*//////////////////////////////////////////////////////////////
                                GETTERS

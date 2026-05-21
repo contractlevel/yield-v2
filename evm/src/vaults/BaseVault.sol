@@ -70,7 +70,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @notice This is used for emergency recovery modes.
     uint256 internal s_pausedAt;
     /// @dev Recovery state for failed rebalance deposit operations. This can exist on Parent or Child.
-    mapping(uint256 rebalanceNonce => Types.AmountRecovery recovery) internal s_rebalanceDepositRecovery;
+    Types.RebalanceDepositRecovery internal s_rebalanceDepositRecovery;
 
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
@@ -335,57 +335,55 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @notice This is called when a rebalance attempts to deposit into a new strategy and fails
     /// @param rebalanceNonce The nonce of the rebalance
     /// @param amount The amount that should have been rebalanced into the new strategy
-    /// @dev Maps the amount and the block.timestamp to the rebalance nonce
+    /// @dev Stores the rebalance nonce, amount, and block timestamp in one pending slot
     /// @dev Emits RebalanceDepositRecoveryStored event
-    /// @dev Precondition: Stored recovery should not already exist for the rebalance nonce
+    /// @dev Precondition: Stored recovery should not already exist
     /// @dev Precondition: amount should not be zero
     function _storeRebalanceDepositRecovery(uint256 rebalanceNonce, uint256 amount) internal {
         //slither-disable-next-line incorrect-equality
         if (amount == 0) revert BaseVault__ZeroRecoveryAmount();
-        if (s_rebalanceDepositRecovery[rebalanceNonce].amount != 0) revert BaseVault__RecoveryAlreadyPending();
+        if (s_rebalanceDepositRecovery.amount != 0) revert BaseVault__RecoveryAlreadyPending();
 
-        s_rebalanceDepositRecovery[rebalanceNonce] = Types.AmountRecovery({amount: amount, createdAt: block.timestamp});
+        s_rebalanceDepositRecovery = Types.RebalanceDepositRecovery({
+            rebalanceNonce: rebalanceNonce, amount: amount, createdAt: block.timestamp
+        });
         emit RebalanceDepositRecoveryStored(rebalanceNonce, amount);
     }
 
     /// @notice Recovery function for clearing a failed rebalance deposit that was previously stored
     /// @notice This is called when a previously failed rebalance deposit succeeds
-    /// @param rebalanceNonce The nonce of the rebalance
     /// @dev Precondition: Failed rebalance deposit should exist
-    /// @dev Deletes the recovery state for the rebalance nonce
+    /// @dev Deletes the recovery state
     /// @dev Emites RebalanceDepositRecoveryCleared event
-    function _clearRebalanceDepositRecovery(uint256 rebalanceNonce) internal {
+    function _clearRebalanceDepositRecovery() internal {
+        uint256 rebalanceNonce = s_rebalanceDepositRecovery.rebalanceNonce;
         //slither-disable-next-line incorrect-equality
-        if (s_rebalanceDepositRecovery[rebalanceNonce].amount == 0) revert BaseVault__NoPendingRecovery();
+        if (s_rebalanceDepositRecovery.amount == 0) revert BaseVault__NoPendingRecovery();
 
-        delete s_rebalanceDepositRecovery[rebalanceNonce];
+        delete s_rebalanceDepositRecovery;
         emit RebalanceDepositRecoveryCleared(rebalanceNonce);
     }
 
     // @review if this is even needed
-    function _requireRebalanceDepositRecovery(uint256 rebalanceNonce)
-        internal
-        view
-        returns (Types.AmountRecovery memory recovery)
-    {
-        recovery = s_rebalanceDepositRecovery[rebalanceNonce];
+    function _requireRebalanceDepositRecovery() internal view returns (Types.RebalanceDepositRecovery memory recovery) {
+        recovery = s_rebalanceDepositRecovery;
         //slither-disable-next-line incorrect-equality
         if (recovery.amount == 0) revert BaseVault__NoPendingRecovery();
     }
 
     /// @notice Inherited and implemented by ParentVault and ChildVault
-    /// @param rebalanceNonce The nonce of the rebalance
     // @review continue natspec
-    function recoverFailedRebalanceDeposit(uint256 rebalanceNonce) external virtual;
+    function recoverFailedRebalanceDeposit() external virtual;
 
-    function _recoverFailedRebalanceDeposit(uint256 rebalanceNonce) internal returns (uint256 amount) {
-        Types.AmountRecovery memory recovery = _requireRebalanceDepositRecovery(rebalanceNonce);
+    function _recoverFailedRebalanceDeposit() internal returns (uint256 rebalanceNonce, uint256 amount) {
+        Types.RebalanceDepositRecovery memory recovery = _requireRebalanceDepositRecovery();
+        rebalanceNonce = recovery.rebalanceNonce;
 
         _executeDeposit(recovery.amount, true);
-        _clearRebalanceDepositRecovery(rebalanceNonce);
+        _clearRebalanceDepositRecovery();
 
         emit RebalanceDepositSuccess(rebalanceNonce, recovery.amount);
-        return recovery.amount;
+        amount = recovery.amount;
     }
 
     /// @dev Precondition: Caller must have the EMERGENCY_DRAINER_ROLE
@@ -567,17 +565,13 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         tvl = _getTVL();
     }
 
-    /// @notice Gets the Types.AmountRecovery for a rebalanceNonce
-    /// @param rebalanceNonce The nonce of the rebalance
-    /// @return recovery Types.AmountRecovery struct includes:
+    /// @notice Gets the pending rebalance deposit recovery
+    /// @return recovery Types.RebalanceDepositRecovery struct includes:
+    ///         uint256 rebalanceNonce - the nonce of the rebalance
     ///         uint256 amount - the amount that needs to be rebalanced/deposited into the new strategy
     ///         uint256 createdAt - block.timestamp the recovery state was stored
-    function getRebalanceDepositRecovery(uint256 rebalanceNonce)
-        external
-        view
-        returns (Types.AmountRecovery memory recovery)
-    {
-        recovery = s_rebalanceDepositRecovery[rebalanceNonce];
+    function getRebalanceDepositRecovery() external view returns (Types.RebalanceDepositRecovery memory recovery) {
+        recovery = s_rebalanceDepositRecovery;
     }
 
     /*//////////////////////////////////////////////////////////////

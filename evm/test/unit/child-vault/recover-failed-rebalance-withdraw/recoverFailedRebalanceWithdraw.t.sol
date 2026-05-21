@@ -26,33 +26,35 @@ contract ChildVault_RecoverFailedRebalanceWithdrawUnitTest is BaseUnitTest {
     }
 
     function test_ChildVault_recoverFailedRebalanceWithdraw_RevertWhen_NoPendingRecovery() public {
+        s_childVault.recoverFailedRebalanceWithdraw();
+
         vm.expectRevert(IBaseVault.BaseVault__NoPendingRecovery.selector);
-        s_childVault.recoverFailedRebalanceWithdraw(2);
+        s_childVault.recoverFailedRebalanceWithdraw();
     }
 
     function test_ChildVault_recoverFailedRebalanceWithdraw_RevertWhen_NoActiveAdapter() public {
         _clearChildActiveAdapter();
 
         vm.expectRevert(IBaseVault.BaseVault__NoActiveAdapter.selector);
-        s_childVault.recoverFailedRebalanceWithdraw(REBALANCE_NONCE);
+        s_childVault.recoverFailedRebalanceWithdraw();
     }
 
     function test_ChildVault_recoverFailedRebalanceWithdraw_RevertWhen_AdapterWithdrawReverts() public {
         s_mockProtocolAdapter.setWithdrawReverts(true);
 
         vm.expectRevert(abi.encodeWithSelector(IBaseVault.BaseVault__WithdrawFailed.selector, type(uint256).max));
-        s_childVault.recoverFailedRebalanceWithdraw(REBALANCE_NONCE);
+        s_childVault.recoverFailedRebalanceWithdraw();
     }
 
     function test_ChildVault_recoverFailedRebalanceWithdraw_RevertWhen_AdapterReturnsZero() public {
         s_mockProtocolAdapter.setWithdrawReturnAmount(0);
 
         vm.expectRevert(IBaseVault.BaseVault__ZeroRecoveryAmount.selector);
-        s_childVault.recoverFailedRebalanceWithdraw(REBALANCE_NONCE);
+        s_childVault.recoverFailedRebalanceWithdraw();
     }
 
     function test_ChildVault_recoverFailedRebalanceWithdraw_Success_WithdrawsFromActiveAdapter() public {
-        s_childVault.recoverFailedRebalanceWithdraw(REBALANCE_NONCE);
+        s_childVault.recoverFailedRebalanceWithdraw();
 
         assertEq(s_mockProtocolAdapter.getWithdrawCalls(), 1);
         assertEq(s_mockProtocolAdapter.getLastWithdrawAmount(), type(uint256).max);
@@ -61,15 +63,16 @@ contract ChildVault_RecoverFailedRebalanceWithdrawUnitTest is BaseUnitTest {
     function test_ChildVault_recoverFailedRebalanceWithdraw_Success_BridgesToTargetChild() public {
         uint256 routerBefore = s_mockUsdc.balanceOf(address(s_mockCcipRouter));
 
-        s_childVault.recoverFailedRebalanceWithdraw(REBALANCE_NONCE);
+        s_childVault.recoverFailedRebalanceWithdraw();
 
         assertEq(s_mockUsdc.balanceOf(address(s_mockCcipRouter)), routerBefore + REBALANCE_AMOUNT);
     }
 
     function test_ChildVault_recoverFailedRebalanceWithdraw_Success_ClearsRecoveryState() public {
-        s_childVault.recoverFailedRebalanceWithdraw(REBALANCE_NONCE);
+        s_childVault.recoverFailedRebalanceWithdraw();
 
-        Types.RebalanceWithdrawRecovery memory recovery = s_childVault.getRebalanceWithdrawRecovery(REBALANCE_NONCE);
+        Types.RebalanceWithdrawRecovery memory recovery = s_childVault.getRebalanceWithdrawRecovery();
+        assertEq(recovery.rebalanceNonce, 0);
         assertEq(recovery.strategy.protocolId, bytes32(0));
         assertEq(recovery.strategy.chainSelector, 0);
         assertEq(recovery.createdAt, 0);
@@ -77,7 +80,7 @@ contract ChildVault_RecoverFailedRebalanceWithdrawUnitTest is BaseUnitTest {
 
     function test_ChildVault_recoverFailedRebalanceWithdraw_Success_EmitsRebalanceWithdrawSuccess() public {
         vm.recordLogs();
-        s_childVault.recoverFailedRebalanceWithdraw(REBALANCE_NONCE);
+        s_childVault.recoverFailedRebalanceWithdraw();
 
         Vm.Log memory log =
             _assertEmittedBy(keccak256("RebalanceWithdrawSuccess(uint256,uint256)"), address(s_childVault));
@@ -87,7 +90,7 @@ contract ChildVault_RecoverFailedRebalanceWithdrawUnitTest is BaseUnitTest {
 
     function test_ChildVault_recoverFailedRebalanceWithdraw_Success_EmitsRebalanceWithdrawRecoveryCleared() public {
         vm.recordLogs();
-        s_childVault.recoverFailedRebalanceWithdraw(REBALANCE_NONCE);
+        s_childVault.recoverFailedRebalanceWithdraw();
 
         Vm.Log memory log =
             _assertEmittedBy(keccak256("RebalanceWithdrawRecoveryCleared(uint256)"), address(s_childVault));

@@ -28,7 +28,7 @@ library Types {
     /// @param WITHDRAW Epoch netflow has more withdraws than deposits, USDC is bridged from the strategy to the Parent
     /// @param REBALANCE The system rebalances by bridging the TVL from the old strategy to the new strategy chain
     enum CcipTx {
-        DEPOSIT, // 0
+        DEPOSIT, // 0 // @review rename these to EPOCH_DEPOSIT and EPOCH_WITHDRAW or something similar EpochInFlow EpochOutFlow
         WITHDRAW, // 1
         REBALANCE // 2
     }
@@ -52,10 +52,22 @@ library Types {
         uint256 createdAt;
     }
 
+    /// @notice Recovery state for failed rebalance deposit operations
+    /// @param rebalanceNonce The nonce of the rebalance
+    /// @param amount The amount needed to retry the failed deposit
+    /// @param createdAt The timestamp when the recovery state was stored
+    struct RebalanceDepositRecovery {
+        uint256 rebalanceNonce;
+        uint256 amount;
+        uint256 createdAt;
+    }
+
     /// @notice Recovery state for failed rebalance withdraw operations
+    /// @param rebalanceNonce The nonce of the rebalance
     /// @param strategy The target strategy to continue the rebalance into after withdraw succeeds
     /// @param createdAt The timestamp when the recovery state was stored
     struct RebalanceWithdrawRecovery {
+        uint256 rebalanceNonce;
         Strategy strategy;
         uint256 createdAt;
     }

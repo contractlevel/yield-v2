@@ -47,7 +47,7 @@ contract ParentDeposit_RebalanceRecoveryIntegrationTest is BaseRecoveryIntegrati
         );
         assertEq(uint256(storedLog.topics[1]), 1);
         assertEq(uint256(storedLog.topics[2]), tvl);
-        _assertAmountRecovery(parent.vault.getRebalanceDepositRecovery(1), tvl);
+        _assertRebalanceDepositRecovery(parent.vault.getRebalanceDepositRecovery(), 1, tvl);
         assertEq(uint256(parent.vault.getRebalance().state), uint256(Types.RebalanceState.REBALANCING));
         assertEq(
             MockAaveV4Spoke(parentSpoke).getUserSuppliedAssets(parentReserveId, address(parent.aaveV4Adapter)),
@@ -56,13 +56,13 @@ contract ParentDeposit_RebalanceRecoveryIntegrationTest is BaseRecoveryIntegrati
 
         MockAaveV4Spoke(parentSpoke).setSupplyReverts(false);
         vm.recordLogs();
-        parent.vault.recoverFailedRebalanceDeposit(1);
+        parent.vault.recoverFailedRebalanceDeposit();
         Vm.Log[] memory recoveryLogs = vm.getRecordedLogs();
 
         _assertEmittedBy(recoveryLogs, keccak256("RebalanceDepositRecoveryCleared(uint256)"), address(parent.vault));
         _assertEmittedBy(recoveryLogs, keccak256("RebalanceDepositSuccess(uint256,uint256)"), address(parent.vault));
         _assertEmittedBy(recoveryLogs, keccak256("RebalanceCompleted(uint256)"), address(parent.vault));
-        _assertAmountRecoveryCleared(parent.vault.getRebalanceDepositRecovery(1));
+        _assertRebalanceDepositRecoveryCleared(parent.vault.getRebalanceDepositRecovery());
         assertEq(
             MockAaveV4Spoke(parentSpoke).getUserSuppliedAssets(parentReserveId, address(parent.aaveV4Adapter)),
             parentSuppliedBefore + tvl

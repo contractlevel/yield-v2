@@ -558,13 +558,12 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     }
 
     /// @notice Recovers a failed rebalance deposit into the active Parent strategy and finalizes the rebalance
-    /// @param rebalanceNonce The nonce of the failed rebalance deposit
     /// @dev Precondition: rebalance deposit recovery state must exist
     /// @dev Precondition: active strategy adapter must be set
     /// @dev Precondition: rebalance state must be REBALANCING
-    /// @dev Precondition: rebalance nonce must be the current nonce // @review, do we really need to pass it then?
-    function recoverFailedRebalanceDeposit(uint256 rebalanceNonce) external override(BaseVault, IParentVault) {
-        _recoverFailedRebalanceDeposit(rebalanceNonce);
+    /// @dev Precondition: pending recovery nonce must be the current nonce
+    function recoverFailedRebalanceDeposit() external override(BaseVault, IParentVault) {
+        (uint256 rebalanceNonce,) = _recoverFailedRebalanceDeposit();
         _finalizeRebalance(rebalanceNonce);
     }
 
@@ -639,7 +638,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
             emit PerformanceFeeCollected(epochNonce, feeShares, highWaterMark);
         }
 
-        // @review definite gas optimization here with s_totalShares reads
+        // @review definite gas optimization in here with s_totalShares reads
         settlementPricePerShare = _calculatePricePerShare(tvl);
         s_performanceFeeHighWaterMark = settlementPricePerShare;
     }

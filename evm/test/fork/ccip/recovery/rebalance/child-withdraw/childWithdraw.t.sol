@@ -40,19 +40,22 @@ contract ChildWithdraw_RebalanceRecoveryCcipForkTest is BaseCcipRecoveryForkTest
         assertEq(bytes32(storedLog.topics[2]), AAVE_V3_PROTOCOL_ID);
         assertEq(uint64(uint256(storedLog.topics[3])), arbitrumConfig.ccip.thisChainSelector);
         _assertRebalanceWithdrawRecovery(
-            baseChild.vault.getRebalanceWithdrawRecovery(1), AAVE_V3_PROTOCOL_ID, arbitrumConfig.ccip.thisChainSelector
+            baseChild.vault.getRebalanceWithdrawRecovery(),
+            1,
+            AAVE_V3_PROTOCOL_ID,
+            arbitrumConfig.ccip.thisChainSelector
         );
 
         _restoreBaseAaveV3Adapter();
         _prepareBaseToParentRouting();
         vm.warp(block.timestamp + 5 minutes);
-        baseChild.vault.recoverFailedRebalanceWithdraw(1);
+        baseChild.vault.recoverFailedRebalanceWithdraw();
 
         _selectBaseFork();
         _routeUsdcMessageTo(arbitrumFork);
 
         _selectBaseFork();
-        _assertRebalanceWithdrawRecoveryCleared(baseChild.vault.getRebalanceWithdrawRecovery(1));
+        _assertRebalanceWithdrawRecoveryCleared(baseChild.vault.getRebalanceWithdrawRecovery());
         assertEq(baseChild.vault.getActiveProtocolAdapter(), address(0));
 
         _selectArbitrumFork();

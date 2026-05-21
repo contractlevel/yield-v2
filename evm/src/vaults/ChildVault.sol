@@ -34,7 +34,7 @@ contract ChildVault is BaseVault, IChildVault {
     /// @dev Recovery state for failed epoch withdraw operations
     mapping(uint256 epochNonce => Types.AmountRecovery recovery) internal s_epochWithdrawRecovery;
     /// @dev Recovery state for failed rebalance withdraw operations
-    mapping(uint256 rebalanceNonce => Types.RebalanceWithdrawRecovery recovery) internal s_rebalanceWithdrawRecovery;
+    Types.RebalanceWithdrawRecovery internal s_rebalanceWithdrawRecovery;
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
@@ -222,42 +222,42 @@ contract ChildVault is BaseVault, IChildVault {
     /// @param rebalanceNonce The rebalance nonce of the failed withdraw
     /// @param strategy The target strategy to continue the rebalance into after withdraw succeeds
     /// @dev Precondition: strategy chain selector must not be zero
-    /// @dev Precondition: rebalance withdraw recovery state must not already exist for the rebalance
+    /// @dev Precondition: rebalance withdraw recovery state must not already exist
     function _storeRebalanceWithdrawRecovery(uint256 rebalanceNonce, Types.Strategy memory strategy) internal {
         //slither-disable-next-line incorrect-equality
         if (strategy.chainSelector == 0) revert ChildVault__InvalidRecoveryStrategy();
-        if (s_rebalanceWithdrawRecovery[rebalanceNonce].strategy.chainSelector != 0) {
+        if (s_rebalanceWithdrawRecovery.strategy.chainSelector != 0) {
             revert BaseVault__RecoveryAlreadyPending();
         }
 
-        s_rebalanceWithdrawRecovery[rebalanceNonce] =
-            Types.RebalanceWithdrawRecovery({strategy: strategy, createdAt: block.timestamp});
+        s_rebalanceWithdrawRecovery = Types.RebalanceWithdrawRecovery({
+            rebalanceNonce: rebalanceNonce, strategy: strategy, createdAt: block.timestamp
+        });
         emit RebalanceWithdrawRecoveryStored(rebalanceNonce, strategy.protocolId, strategy.chainSelector);
     }
 
     /// @notice Clears recovery state for a failed rebalance withdraw
-    /// @param rebalanceNonce The rebalance nonce of the recovered withdraw
     /// @dev Precondition: rebalance withdraw recovery state must exist
-    function _clearRebalanceWithdrawRecovery(uint256 rebalanceNonce) internal {
+    function _clearRebalanceWithdrawRecovery() internal {
+        uint256 rebalanceNonce = s_rebalanceWithdrawRecovery.rebalanceNonce;
         //slither-disable-next-line incorrect-equality
-        if (s_rebalanceWithdrawRecovery[rebalanceNonce].strategy.chainSelector == 0) {
+        if (s_rebalanceWithdrawRecovery.strategy.chainSelector == 0) {
             revert BaseVault__NoPendingRecovery();
         }
 
-        delete s_rebalanceWithdrawRecovery[rebalanceNonce];
+        delete s_rebalanceWithdrawRecovery;
         emit RebalanceWithdrawRecoveryCleared(rebalanceNonce);
     }
 
     /// @notice Requires and returns failed rebalance withdraw recovery state
-    /// @param rebalanceNonce The rebalance nonce to query
     /// @return recovery The stored rebalance withdraw recovery state
     /// @dev Precondition: rebalance withdraw recovery state must exist
-    function _requireRebalanceWithdrawRecovery(uint256 rebalanceNonce)
+    function _requireRebalanceWithdrawRecovery()
         internal
         view
         returns (Types.RebalanceWithdrawRecovery memory recovery)
     {
-        recovery = s_rebalanceWithdrawRecovery[rebalanceNonce];
+        recovery = s_rebalanceWithdrawRecovery;
         //slither-disable-next-line incorrect-equality
         if (recovery.strategy.chainSelector == 0) revert BaseVault__NoPendingRecovery();
     }
@@ -292,27 +292,26 @@ contract ChildVault is BaseVault, IChildVault {
     }
 
     /// @notice Recovers a failed rebalance withdraw from the active Child strategy
-    /// @param rebalanceNonce The nonce of the failed rebalance withdraw
     /// @dev Precondition: rebalance withdraw recovery state must exist
     /// @dev Precondition: active strategy adapter must be set
-    function recoverFailedRebalanceWithdraw(uint256 rebalanceNonce) external nonReentrant {
-        Types.RebalanceWithdrawRecovery memory recovery = _requireRebalanceWithdrawRecovery(rebalanceNonce);
+    function recoverFailedRebalanceWithdraw() external nonReentrant {
+        Types.RebalanceWithdrawRecovery memory recovery = _requireRebalanceWithdrawRecovery();
+        uint256 rebalanceNonce = recovery.rebalanceNonce;
 
         uint256 amountRebalanced = _executeWithdraw(type(uint256).max, true);
         //slither-disable-next-line incorrect-equality
         if (amountRebalanced == 0) revert BaseVault__ZeroRecoveryAmount();
 
-        _clearRebalanceWithdrawRecovery(rebalanceNonce);
+        _clearRebalanceWithdrawRecovery();
         emit RebalanceWithdrawSuccess(rebalanceNonce, amountRebalanced);
         _rebalanceToNewStrategy(rebalanceNonce, amountRebalanced, recovery.strategy);
     }
 
     /// @notice Recovers a failed rebalance deposit into the active Child strategy
-    /// @param rebalanceNonce The nonce of the failed rebalance deposit
     /// @dev Precondition: rebalance deposit recovery state must exist
     /// @dev Precondition: active strategy adapter must be set
-    function recoverFailedRebalanceDeposit(uint256 rebalanceNonce) external override(BaseVault, IChildVault) {
-        _recoverFailedRebalanceDeposit(rebalanceNonce);
+    function recoverFailedRebalanceDeposit() external override(BaseVault, IChildVault) {
+        _recoverFailedRebalanceDeposit();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -339,13 +338,8 @@ contract ChildVault is BaseVault, IChildVault {
     }
 
     /// @notice Gets failed rebalance withdraw recovery state
-    /// @param rebalanceNonce The rebalance nonce to query
     /// @return recovery The stored rebalance withdraw recovery state
-    function getRebalanceWithdrawRecovery(uint256 rebalanceNonce)
-        external
-        view
-        returns (Types.RebalanceWithdrawRecovery memory recovery)
-    {
-        recovery = s_rebalanceWithdrawRecovery[rebalanceNonce];
+    function getRebalanceWithdrawRecovery() external view returns (Types.RebalanceWithdrawRecovery memory recovery) {
+        recovery = s_rebalanceWithdrawRecovery;
     }
 }

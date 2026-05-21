@@ -117,7 +117,8 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
 
         s_childVault.executeRebalance(REBALANCE_NONCE, _remoteChildStrategy());
 
-        Types.RebalanceWithdrawRecovery memory recovery = s_childVault.getRebalanceWithdrawRecovery(REBALANCE_NONCE);
+        Types.RebalanceWithdrawRecovery memory recovery = s_childVault.getRebalanceWithdrawRecovery();
+        assertEq(recovery.rebalanceNonce, REBALANCE_NONCE);
         assertEq(recovery.strategy.protocolId, AAVE_V4_PROTOCOL_ID);
         assertEq(recovery.strategy.chainSelector, REMOTE_CHILD_CHAIN_SELECTOR);
         assertEq(recovery.createdAt, block.timestamp);
@@ -142,7 +143,8 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
 
         s_childVault.executeRebalance(REBALANCE_NONCE, _remoteChildStrategy());
 
-        Types.RebalanceWithdrawRecovery memory recovery = s_childVault.getRebalanceWithdrawRecovery(REBALANCE_NONCE);
+        Types.RebalanceWithdrawRecovery memory recovery = s_childVault.getRebalanceWithdrawRecovery();
+        assertEq(recovery.rebalanceNonce, REBALANCE_NONCE);
         assertEq(recovery.strategy.protocolId, AAVE_V4_PROTOCOL_ID);
         assertEq(recovery.strategy.chainSelector, REMOTE_CHILD_CHAIN_SELECTOR);
         assertEq(recovery.createdAt, block.timestamp);
@@ -155,6 +157,15 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
 
         vm.expectRevert(IBaseVault.BaseVault__RecoveryAlreadyPending.selector);
         s_childVault.executeRebalance(REBALANCE_NONCE, _remoteChildStrategy());
+    }
+
+    function test_ChildVault_executeRebalance_WhenRebalanceWithdrawRecoveryStateAlreadyExists_Reverts() public {
+        s_mockProtocolAdapter.setWithdrawReverts(true);
+
+        s_childVault.executeRebalance(REBALANCE_NONCE, _remoteChildStrategy());
+
+        vm.expectRevert(IBaseVault.BaseVault__RecoveryAlreadyPending.selector);
+        s_childVault.executeRebalance(REBALANCE_NONCE + 1, _remoteChildStrategy());
     }
 
     function test_ChildVault_executeRebalance_WhenSameChildDepositAdapterReverts_EmitsDepositFailure() public {
@@ -173,7 +184,8 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
 
         s_childVault.executeRebalance(REBALANCE_NONCE, _sameChildStrategy());
 
-        Types.AmountRecovery memory recovery = s_childVault.getRebalanceDepositRecovery(REBALANCE_NONCE);
+        Types.RebalanceDepositRecovery memory recovery = s_childVault.getRebalanceDepositRecovery();
+        assertEq(recovery.rebalanceNonce, REBALANCE_NONCE);
         assertEq(recovery.amount, REBALANCE_AMOUNT);
         assertEq(recovery.createdAt, block.timestamp);
     }
@@ -199,6 +211,15 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
 
         vm.expectRevert(IBaseVault.BaseVault__RecoveryAlreadyPending.selector);
         s_childVault.executeRebalance(REBALANCE_NONCE, _sameChildStrategy());
+    }
+
+    function test_ChildVault_executeRebalance_WhenRebalanceDepositRecoveryStateAlreadyExists_Reverts() public {
+        s_newMockProtocolAdapter.setDepositReverts(true);
+
+        s_childVault.executeRebalance(REBALANCE_NONCE, _sameChildStrategy());
+
+        vm.expectRevert(IBaseVault.BaseVault__RecoveryAlreadyPending.selector);
+        s_childVault.executeRebalance(REBALANCE_NONCE + 1, _sameChildStrategy());
     }
 
     /*//////////////////////////////////////////////////////////////

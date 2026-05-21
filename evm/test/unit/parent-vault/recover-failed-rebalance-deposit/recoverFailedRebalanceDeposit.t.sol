@@ -23,48 +23,51 @@ contract ParentVault_RecoverFailedRebalanceDepositUnitTest is BaseUnitTest {
     }
 
     function test_ParentVault_recoverFailedRebalanceDeposit_RevertWhen_NoPendingRecovery() public {
+        s_parentVault.recoverFailedRebalanceDeposit();
+
         vm.expectRevert(IBaseVault.BaseVault__NoPendingRecovery.selector);
-        s_parentVault.recoverFailedRebalanceDeposit(2);
+        s_parentVault.recoverFailedRebalanceDeposit();
     }
 
     function test_ParentVault_recoverFailedRebalanceDeposit_RevertWhen_NoActiveAdapter() public {
         _clearParentActiveAdapter();
 
         vm.expectRevert(IBaseVault.BaseVault__NoActiveAdapter.selector);
-        s_parentVault.recoverFailedRebalanceDeposit(REBALANCE_NONCE);
+        s_parentVault.recoverFailedRebalanceDeposit();
     }
 
     function test_ParentVault_recoverFailedRebalanceDeposit_RevertWhen_AdapterDepositReverts() public {
         s_mockProtocolAdapter.setDepositReverts(true);
 
         vm.expectRevert(abi.encodeWithSelector(IBaseVault.BaseVault__DepositFailed.selector, DEPOSIT_AMOUNT));
-        s_parentVault.recoverFailedRebalanceDeposit(REBALANCE_NONCE);
+        s_parentVault.recoverFailedRebalanceDeposit();
     }
 
     function test_ParentVault_recoverFailedRebalanceDeposit_RevertWhen_NoRebalanceInProgress() public {
         _setParentRebalanceState(Types.RebalanceState.NONE);
 
         vm.expectRevert(IParentVault.ParentVault__NoRebalanceInProgress.selector);
-        s_parentVault.recoverFailedRebalanceDeposit(REBALANCE_NONCE);
+        s_parentVault.recoverFailedRebalanceDeposit();
     }
 
     function test_ParentVault_recoverFailedRebalanceDeposit_Success_DepositsIntoActiveAdapter() public {
-        s_parentVault.recoverFailedRebalanceDeposit(REBALANCE_NONCE);
+        s_parentVault.recoverFailedRebalanceDeposit();
 
         assertEq(s_mockProtocolAdapter.getDepositCalls(), 1);
         assertEq(s_mockProtocolAdapter.getLastDepositAmount(), DEPOSIT_AMOUNT);
     }
 
     function test_ParentVault_recoverFailedRebalanceDeposit_Success_ClearsRecoveryState() public {
-        s_parentVault.recoverFailedRebalanceDeposit(REBALANCE_NONCE);
+        s_parentVault.recoverFailedRebalanceDeposit();
 
-        Types.AmountRecovery memory recovery = s_parentVault.getRebalanceDepositRecovery(REBALANCE_NONCE);
+        Types.RebalanceDepositRecovery memory recovery = s_parentVault.getRebalanceDepositRecovery();
+        assertEq(recovery.rebalanceNonce, 0);
         assertEq(recovery.amount, 0);
         assertEq(recovery.createdAt, 0);
     }
 
     function test_ParentVault_recoverFailedRebalanceDeposit_Success_FinalizesRebalance() public {
-        s_parentVault.recoverFailedRebalanceDeposit(REBALANCE_NONCE);
+        s_parentVault.recoverFailedRebalanceDeposit();
 
         Types.Rebalance memory rebalance = s_parentVault.getRebalance();
         assertEq(uint256(rebalance.state), uint256(Types.RebalanceState.NONE));
@@ -75,7 +78,7 @@ contract ParentVault_RecoverFailedRebalanceDepositUnitTest is BaseUnitTest {
 
     function test_ParentVault_recoverFailedRebalanceDeposit_Success_EmitsRebalanceDepositSuccess() public {
         vm.recordLogs();
-        s_parentVault.recoverFailedRebalanceDeposit(REBALANCE_NONCE);
+        s_parentVault.recoverFailedRebalanceDeposit();
 
         Vm.Log memory log =
             _assertEmittedBy(keccak256("RebalanceDepositSuccess(uint256,uint256)"), address(s_parentVault));
@@ -85,7 +88,7 @@ contract ParentVault_RecoverFailedRebalanceDepositUnitTest is BaseUnitTest {
 
     function test_ParentVault_recoverFailedRebalanceDeposit_Success_EmitsRebalanceDepositRecoveryCleared() public {
         vm.recordLogs();
-        s_parentVault.recoverFailedRebalanceDeposit(REBALANCE_NONCE);
+        s_parentVault.recoverFailedRebalanceDeposit();
 
         Vm.Log memory log =
             _assertEmittedBy(keccak256("RebalanceDepositRecoveryCleared(uint256)"), address(s_parentVault));
@@ -94,7 +97,7 @@ contract ParentVault_RecoverFailedRebalanceDepositUnitTest is BaseUnitTest {
 
     function test_ParentVault_recoverFailedRebalanceDeposit_Success_EmitsRebalanceCompleted() public {
         vm.recordLogs();
-        s_parentVault.recoverFailedRebalanceDeposit(REBALANCE_NONCE);
+        s_parentVault.recoverFailedRebalanceDeposit();
 
         Vm.Log memory log = _assertEmittedBy(keccak256("RebalanceCompleted(uint256)"), address(s_parentVault));
         assertEq(uint256(log.topics[1]), REBALANCE_NONCE);

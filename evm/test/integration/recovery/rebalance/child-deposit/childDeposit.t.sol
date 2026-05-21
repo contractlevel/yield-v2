@@ -35,18 +35,18 @@ contract ChildDeposit_RebalanceRecoveryIntegrationTest is BaseRecoveryIntegratio
         );
         assertEq(uint256(storedLog.topics[1]), 1);
         assertEq(uint256(storedLog.topics[2]), tvl);
-        _assertAmountRecovery(child.vault.getRebalanceDepositRecovery(1), tvl);
+        _assertRebalanceDepositRecovery(child.vault.getRebalanceDepositRecovery(), 1, tvl);
         assertEq(IERC20(parent.usdc).balanceOf(childPool), childPoolBalanceBefore);
         assertEq(uint256(parent.vault.getRebalance().state), uint256(Types.RebalanceState.REBALANCING));
 
         MockAaveV3Pool(childPool).setSupplyReverts(false);
         vm.recordLogs();
-        child.vault.recoverFailedRebalanceDeposit(1);
+        child.vault.recoverFailedRebalanceDeposit();
         Vm.Log[] memory recoveryLogs = vm.getRecordedLogs();
 
         _assertEmittedBy(recoveryLogs, keccak256("RebalanceDepositRecoveryCleared(uint256)"), address(child.vault));
         _assertEmittedBy(recoveryLogs, keccak256("RebalanceDepositSuccess(uint256,uint256)"), address(child.vault));
-        _assertAmountRecoveryCleared(child.vault.getRebalanceDepositRecovery(1));
+        _assertRebalanceDepositRecoveryCleared(child.vault.getRebalanceDepositRecovery());
         assertEq(IERC20(parent.usdc).balanceOf(childPool), childPoolBalanceBefore + tvl);
 
         _completeRebalanceThroughWorkflow(

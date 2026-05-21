@@ -7,19 +7,25 @@ ChildVault_executeRebalance
   │   │   ├── it should store rebalance withdraw recovery
   │   │   ├── it should emit RebalanceWithdrawRecoveryStored
   │   │   └── when rebalance withdraw recovery already exists
-  │   │       └── it should revert with BaseVault__RecoveryAlreadyPending
+  │   │       ├── it should revert with BaseVault__RecoveryAlreadyPending
+  │   │       └── when recovery state already exists
+  │   │           └── it should revert with BaseVault__RecoveryAlreadyPending
   │   └── when adapter returns zero
   │       ├── it should emit failure without bridging
   │       ├── it should store rebalance withdraw recovery
   │       ├── it should emit RebalanceWithdrawRecoveryStored
   │       └── when rebalance withdraw recovery already exists
-  │           └── it should revert with BaseVault__RecoveryAlreadyPending
+  │           ├── it should revert with BaseVault__RecoveryAlreadyPending
+  │           └── when recovery state already exists
+  │               └── it should revert with BaseVault__RecoveryAlreadyPending
   ├── when rebalance is to the same child
   │   ├── when the target protocol adapter is not registered
   │   │   └── it should revert with BaseVault__NoAdapterRegistered
   │   ├── when target deposit adapter reverts
   │   │   ├── it should emit RebalanceDepositFailure
   │   │   ├── it should store rebalance deposit recovery
+  │   │   └── when recovery state already exists
+  │   │       └── it should revert with BaseVault__RecoveryAlreadyPending
   └── when rebalance is to a remote child
       ├── it should withdraw from the active adapter
       └── it should bridge to the target child

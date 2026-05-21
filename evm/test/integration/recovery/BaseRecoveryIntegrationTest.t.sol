@@ -72,17 +72,36 @@ abstract contract BaseRecoveryIntegrationTest is BaseIntegrationTest {
         assertEq(recovery.createdAt, 0);
     }
 
+    function _assertRebalanceDepositRecovery(
+        Types.RebalanceDepositRecovery memory recovery,
+        uint256 rebalanceNonce,
+        uint256 amount
+    ) internal view {
+        assertEq(recovery.rebalanceNonce, rebalanceNonce);
+        assertEq(recovery.amount, amount);
+        assertEq(recovery.createdAt, block.timestamp);
+    }
+
+    function _assertRebalanceDepositRecoveryCleared(Types.RebalanceDepositRecovery memory recovery) internal pure {
+        assertEq(recovery.rebalanceNonce, 0);
+        assertEq(recovery.amount, 0);
+        assertEq(recovery.createdAt, 0);
+    }
+
     function _assertRebalanceWithdrawRecovery(
         Types.RebalanceWithdrawRecovery memory recovery,
+        uint256 rebalanceNonce,
         bytes32 protocolId,
         uint64 chainSelector
     ) internal view {
+        assertEq(recovery.rebalanceNonce, rebalanceNonce);
         assertEq(recovery.strategy.protocolId, protocolId);
         assertEq(recovery.strategy.chainSelector, chainSelector);
         assertEq(recovery.createdAt, block.timestamp);
     }
 
     function _assertRebalanceWithdrawRecoveryCleared(Types.RebalanceWithdrawRecovery memory recovery) internal pure {
+        assertEq(recovery.rebalanceNonce, 0);
         assertEq(recovery.strategy.protocolId, bytes32(0));
         assertEq(recovery.strategy.chainSelector, 0);
         assertEq(recovery.createdAt, 0);

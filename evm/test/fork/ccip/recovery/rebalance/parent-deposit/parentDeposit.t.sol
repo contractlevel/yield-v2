@@ -40,17 +40,17 @@ contract ParentDeposit_RebalanceRecoveryCcipForkTest is BaseCcipRecoveryForkTest
         _routeUsdcMessageFromActiveForkTo(arbitrumFork);
 
         _selectArbitrumFork();
-        _assertAmountRecovery(parent.vault.getRebalanceDepositRecovery(1), rebalanceAmount);
+        _assertRebalanceDepositRecovery(parent.vault.getRebalanceDepositRecovery(), 1, rebalanceAmount);
         assertEq(uint256(parent.vault.getRebalance().state), uint256(Types.RebalanceState.REBALANCING));
 
         _restoreParentAaveV3Adapter();
         vm.recordLogs();
-        parent.vault.recoverFailedRebalanceDeposit(1);
+        parent.vault.recoverFailedRebalanceDeposit();
         Vm.Log[] memory recoveryLogs = vm.getRecordedLogs();
 
         _assertEmittedBy(recoveryLogs, keccak256("RebalanceDepositRecoveryCleared(uint256)"), address(parent.vault));
         _assertEmittedBy(recoveryLogs, keccak256("RebalanceCompleted(uint256)"), address(parent.vault));
-        _assertAmountRecoveryCleared(parent.vault.getRebalanceDepositRecovery(1));
+        _assertRebalanceDepositRecoveryCleared(parent.vault.getRebalanceDepositRecovery());
         assertApproxEqAbs(parent.aaveV3Adapter.getTVL(), rebalanceAmount, PROTOCOL_FORK_TOLERANCE);
         _assertCompletedRebalance(AAVE_V3_PROTOCOL_ID, arbitrumConfig.ccip.thisChainSelector);
     }

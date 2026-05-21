@@ -216,7 +216,8 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
 
         s_childVault.ccipReceive(_rebalanceMessage(REBALANCE_NONCE, AAVE_V3_PROTOCOL_ID));
 
-        Types.AmountRecovery memory recovery = s_childVault.getRebalanceDepositRecovery(REBALANCE_NONCE);
+        Types.RebalanceDepositRecovery memory recovery = s_childVault.getRebalanceDepositRecovery();
+        assertEq(recovery.rebalanceNonce, REBALANCE_NONCE);
         assertEq(recovery.amount, BRIDGED_AMOUNT);
         assertEq(recovery.createdAt, block.timestamp);
     }

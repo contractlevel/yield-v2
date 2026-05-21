@@ -30,17 +30,17 @@ contract ChildDeposit_RebalanceRecoveryCcipForkTest is BaseCcipRecoveryForkTest 
         _routeUsdcMessageFromActiveForkTo(baseFork);
 
         _selectBaseFork();
-        _assertAmountRecovery(baseChild.vault.getRebalanceDepositRecovery(1), rebalanceAmount);
+        _assertRebalanceDepositRecovery(baseChild.vault.getRebalanceDepositRecovery(), 1, rebalanceAmount);
         _selectArbitrumFork();
         assertEq(uint256(parent.vault.getRebalance().state), uint256(Types.RebalanceState.REBALANCING));
 
         _restoreBaseAaveV3Adapter();
         vm.recordLogs();
-        baseChild.vault.recoverFailedRebalanceDeposit(1);
+        baseChild.vault.recoverFailedRebalanceDeposit();
         Vm.Log[] memory recoveryLogs = vm.getRecordedLogs();
 
         _assertEmittedBy(recoveryLogs, keccak256("RebalanceDepositRecoveryCleared(uint256)"), address(baseChild.vault));
-        _assertAmountRecoveryCleared(baseChild.vault.getRebalanceDepositRecovery(1));
+        _assertRebalanceDepositRecoveryCleared(baseChild.vault.getRebalanceDepositRecovery());
         assertApproxEqAbs(baseChild.aaveV3Adapter.getTVL(), rebalanceAmount, PROTOCOL_FORK_TOLERANCE);
 
         _selectArbitrumFork();

@@ -208,13 +208,10 @@ interface IBaseVault is IPauseable {
     /// @return tvl The TVL of the vault
     /// @dev Strategy chain will return tvl, non-strategy chain will return 0
     function getTVL() external view returns (uint256 tvl);
-    /// @notice Gets the Types.AmountRecovery for a rebalanceNonce
-    /// @param rebalanceNonce The nonce of the rebalance
-    /// @return recovery Types.AmountRecovery struct includes:
+    /// @notice Gets the pending rebalance deposit recovery
+    /// @return recovery Types.RebalanceDepositRecovery struct includes:
+    ///         uint256 rebalanceNonce - the nonce of the rebalance
     ///         uint256 amount - the amount that needs to be rebalanced/deposited into the new strategy
     ///         uint256 createdAt - block.timestamp the recovery state was stored
-    function getRebalanceDepositRecovery(uint256 rebalanceNonce)
-        external
-        view
-        returns (Types.AmountRecovery memory recovery);
+    function getRebalanceDepositRecovery() external view returns (Types.RebalanceDepositRecovery memory recovery);
 }

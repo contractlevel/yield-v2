@@ -61,14 +61,12 @@ interface IChildVault is IBaseVault {
     function recoverFailedEpochWithdraw(uint256 epochNonce) external;
 
     /// @notice Recovers a failed rebalance withdraw from the active Child strategy
-    /// @param rebalanceNonce The nonce of the failed rebalance withdraw
     /// @dev Precondition: rebalance withdraw recovery state must exist
-    function recoverFailedRebalanceWithdraw(uint256 rebalanceNonce) external;
+    function recoverFailedRebalanceWithdraw() external;
 
     /// @notice Recovers a failed rebalance deposit into the active Child strategy
-    /// @param rebalanceNonce The nonce of the failed rebalance deposit
     /// @dev Precondition: rebalance deposit recovery state must exist
-    function recoverFailedRebalanceDeposit(uint256 rebalanceNonce) external;
+    function recoverFailedRebalanceDeposit() external;
 
     /*//////////////////////////////////////////////////////////////
                                 GETTERS
@@ -84,10 +82,6 @@ interface IChildVault is IBaseVault {
     function getEpochWithdrawRecovery(uint256 epochNonce) external view returns (Types.AmountRecovery memory recovery);
 
     /// @notice Gets failed rebalance withdraw recovery state
-    /// @param rebalanceNonce The rebalance nonce to query
     /// @return recovery The stored rebalance withdraw recovery state
-    function getRebalanceWithdrawRecovery(uint256 rebalanceNonce)
-        external
-        view
-        returns (Types.RebalanceWithdrawRecovery memory recovery);
+    function getRebalanceWithdrawRecovery() external view returns (Types.RebalanceWithdrawRecovery memory recovery);
 }
