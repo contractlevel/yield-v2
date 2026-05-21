@@ -35,7 +35,7 @@ contract MultiUser_EpochIntegrationTest is BaseIntegrationTest {
         parent.vault.deposit(DEPOSIT_AMOUNT_B);
 
         _warpPastMinEpoch();
-        _closeEpochThroughWorkflow(parent.workflowRouter, WORKFLOW_ID, WORKFLOW_NAME, i_owner, 1, 0);
+        _closeEpochThroughWorkflow(parent.workflowRouter, WORKFLOW_ID, WORKFLOW_NAME, i_owner, 0);
 
         assertEq(uint256(parent.vault.getEpoch(1).status), uint256(Types.EpochStatus.CLAIMABLE));
         assertEq(parent.vault.getEpochNonce(), 2);
@@ -72,7 +72,7 @@ contract MultiUser_EpochIntegrationTest is BaseIntegrationTest {
         MockAaveV3Pool(aaveV3Pool).setWithdrawReturn(tvl);
 
         _warpPastMinEpoch();
-        _closeEpochThroughWorkflow(parent.workflowRouter, WORKFLOW_ID, WORKFLOW_NAME, i_owner, 2, tvl);
+        _closeEpochThroughWorkflow(parent.workflowRouter, WORKFLOW_ID, WORKFLOW_NAME, i_owner, tvl);
 
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.CLAIMABLE));
         assertEq(parent.vault.getEpochNonce(), 3);
@@ -110,7 +110,7 @@ contract MultiUser_EpochIntegrationTest is BaseIntegrationTest {
         uint256 withdrawerUsdcBefore = IERC20(parent.usdc).balanceOf(i_withdrawer);
 
         _warpPastMinEpoch();
-        _closeEpochThroughWorkflow(parent.workflowRouter, WORKFLOW_ID, WORKFLOW_NAME, i_owner, 2, withdrawerShares);
+        _closeEpochThroughWorkflow(parent.workflowRouter, WORKFLOW_ID, WORKFLOW_NAME, i_owner, withdrawerShares);
 
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.CLAIMABLE));
         assertEq(parent.vault.getEpochNonce(), 3);
@@ -139,7 +139,7 @@ contract MultiUser_EpochIntegrationTest is BaseIntegrationTest {
         parent.vault.deposit(DEPOSIT_AMOUNT_B);
 
         _warpPastMinEpoch();
-        _closeEpochThroughWorkflow(parent.workflowRouter, WORKFLOW_ID, WORKFLOW_NAME, i_owner, 1, 0);
+        _closeEpochThroughWorkflow(parent.workflowRouter, WORKFLOW_ID, WORKFLOW_NAME, i_owner, 0);
 
         _changePrank(i_depositor);
         parent.vault.claimShares(1);
@@ -156,7 +156,7 @@ contract MultiUser_EpochIntegrationTest is BaseIntegrationTest {
         parent.vault.deposit(DEPOSIT_AMOUNT);
 
         _warpPastMinEpoch();
-        _closeEpochThroughWorkflow(parent.workflowRouter, WORKFLOW_ID, WORKFLOW_NAME, i_owner, 1, 0);
+        _closeEpochThroughWorkflow(parent.workflowRouter, WORKFLOW_ID, WORKFLOW_NAME, i_owner, 0);
 
         _changePrank(i_withdrawer);
         parent.vault.claimShares(1);

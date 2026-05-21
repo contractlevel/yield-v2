@@ -9,6 +9,8 @@ ParentVault_closeEpoch
 │   └── it should revert with ParentVault__EpochTooShort
 ├── when epoch has no deposits and no withdrawals
 │   └── it should revert with ParentVault__EmptyEpoch
+├── when previous epoch is not claimable
+│   └── it should revert with ParentVault__EpochNotClaimable
 ├── it should store pricePerShare on the epoch
 ├── it should store totalWithdrawClaimAmount on the epoch
 ├── it should store closedAtTimestamp on the epoch

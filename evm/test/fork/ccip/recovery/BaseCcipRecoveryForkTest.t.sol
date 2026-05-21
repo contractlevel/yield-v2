@@ -92,12 +92,17 @@ abstract contract BaseCcipRecoveryForkTest is BaseCcipForkTest {
         _routeUsdcMessageTo(destinationForkId);
     }
 
-    function _assertAmountRecovery(Types.AmountRecovery memory recovery, uint256 amount) internal view {
+    function _assertEpochRecovery(Types.EpochRecovery memory recovery, uint256 epochNonce, uint256 amount)
+        internal
+        view
+    {
+        assertEq(recovery.epochNonce, epochNonce);
         assertEq(recovery.amount, amount);
         assertEq(recovery.createdAt, block.timestamp);
     }
 
-    function _assertAmountRecoveryCleared(Types.AmountRecovery memory recovery) internal pure {
+    function _assertEpochRecoveryCleared(Types.EpochRecovery memory recovery) internal pure {
+        assertEq(recovery.epochNonce, 0);
         assertEq(recovery.amount, 0);
         assertEq(recovery.createdAt, 0);
     }

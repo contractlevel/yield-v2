@@ -52,6 +52,16 @@ library Types {
         uint256 createdAt;
     }
 
+    /// @notice Recovery state for failed epoch operations
+    /// @param epochNonce The nonce of the epoch
+    /// @param amount The amount needed to retry the failed operation
+    /// @param createdAt The timestamp when the recovery state was stored
+    struct EpochRecovery {
+        uint256 epochNonce;
+        uint256 amount;
+        uint256 createdAt;
+    }
+
     /// @notice Recovery state for failed rebalance deposit operations
     /// @param rebalanceNonce The nonce of the rebalance
     /// @param amount The amount needed to retry the failed deposit

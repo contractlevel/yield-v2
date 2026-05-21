@@ -358,7 +358,6 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
         bytes32 workflowId,
         bytes10 workflowName,
         address workflowOwner,
-        uint256 epochNonce,
         uint256 tvl
     ) internal {
         _callWorkflowRouter(
@@ -366,7 +365,7 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
             workflowId,
             workflowName,
             workflowOwner,
-            abi.encodeWithSelector(ParentVault.closeEpoch.selector, epochNonce, tvl)
+            abi.encodeWithSelector(ParentVault.closeEpoch.selector, tvl)
         );
     }
 
@@ -460,7 +459,7 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
         );
         _warpPastMinEpoch();
         _closeEpochThroughWorkflow(
-            parent.workflowRouter, keccak256("seed-parent-local-tvl"), bytes10("closeEpoch"), i_owner, 1, 0
+            parent.workflowRouter, keccak256("seed-parent-local-tvl"), bytes10("closeEpoch"), i_owner, 0
         );
 
         _changePrank(i_depositor);
@@ -479,7 +478,7 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
         );
         _warpPastMinEpoch();
         _closeEpochThroughWorkflow(
-            parent.workflowRouter, keccak256("seed-child-local-tvl"), bytes10("closeEpoch"), i_owner, 1, 0
+            parent.workflowRouter, keccak256("seed-child-local-tvl"), bytes10("closeEpoch"), i_owner, 0
         );
 
         _changePrank(i_depositor);

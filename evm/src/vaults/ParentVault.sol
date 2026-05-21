@@ -360,16 +360,34 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     ///         When `netFlow < 0` and the active strategy is local to this chain: the netFlow is withdrawn from the strategy and the epoch is CLAIMABLE
     ///         When `netFlow < 0` and the active strategy is remote to this chain: EpochExecuting() event triggers CRE to write to strategy chain and the epoch is EXECUTING
     /// @notice Opens the next epoch
-    /// @param epochNonce The nonce of the epoch to close
     /// @param tvl The Total Value Locked in the active strategy of the Yieldcoin v2 system
     /// @dev Precondition: the caller must have the EPOCH_OPERATOR_ROLE
     /// @dev Precondition: there must not be an active rebalance
+    /// @dev Precondition: the previous epoch must be claimable, if a previous epoch exists
     /// @dev Precondition: the epoch must be open
     /// @dev Precondition: the epoch period must have exceeded the MIN_EPOCH_PERIOD
     /// @dev Precondition: there must have been a deposit or withdraw intent submitted during the epoch
     /// @dev Precondition: local strategy interactions must be successful
-    function closeEpoch(uint256 epochNonce, uint256 tvl) external nonReentrant onlyRole(Roles.EPOCH_OPERATOR_ROLE) {
+    /// @dev The previous-epoch guard prevents closing a later epoch while a prior
+    ///      remote-withdraw epoch is still EXECUTING. This protects withdraw claimants:
+    ///      if a child strategy withdraw fails, the owed USDC is not back on the Parent,
+    ///      so affected users cannot claim until recoverFailedEpochWithdraw succeeds.
+    ///
+    ///      The guard intentionally does not make the Parent aware of pending child-side
+    ///      remote-deposit recovery. Remote net-deposit epochs are marked CLAIMABLE on
+    ///      the Parent before the Child deposit into the strategy completes. If that
+    ///      child deposit fails, user claims are still live: withdrawer USDC is already
+    ///      covered by netting/settlement, and depositors can claim shares minted at
+    ///      epoch close. The remaining issue is yield drag from idle USDC on the Child,
+    ///      so singleton child recovery plus workflow retry discipline is sufficient.
+    function closeEpoch(uint256 tvl) external nonReentrant onlyRole(Roles.EPOCH_OPERATOR_ROLE) {
         if (s_rebalance.state != Types.RebalanceState.NONE) revert ParentVault__RebalanceInProgress();
+
+        uint256 epochNonce = s_epochNonce;
+        uint256 previousEpochNonce = epochNonce - 1;
+        if (previousEpochNonce != 0 && s_epochs[previousEpochNonce].status != Types.EpochStatus.CLAIMABLE) {
+            revert ParentVault__EpochNotClaimable(previousEpochNonce);
+        }
 
         Types.Epoch storage epoch = s_epochs[epochNonce];
         if (epoch.status != Types.EpochStatus.OPEN) revert ParentVault__EpochNotOpen(epochNonce);

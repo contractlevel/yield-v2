@@ -10,7 +10,7 @@ ChildVault_recoveryInternals
 ├── storeEpochDepositRecovery
 │   ├── when amount is zero
 │   │   └── it should revert with BaseVault__ZeroRecoveryAmount
-│   └── when epoch withdraw recovery exists
+│   └── when any epoch recovery state exists
 │       └── it should revert with BaseVault__RecoveryAlreadyPending
 ├── clearEpochDepositRecovery
 │   └── when there is no pending recovery
@@ -18,7 +18,7 @@ ChildVault_recoveryInternals
 ├── storeEpochWithdrawRecovery
 │   ├── when amount is zero
 │   │   └── it should revert with BaseVault__ZeroRecoveryAmount
-│   └── when epoch deposit recovery exists
+│   └── when any epoch recovery state exists
 │       └── it should revert with BaseVault__RecoveryAlreadyPending
 ├── clearEpochWithdrawRecovery
 │   └── when there is no pending recovery

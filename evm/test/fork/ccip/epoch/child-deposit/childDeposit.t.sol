@@ -25,7 +25,7 @@ contract ChildDeposit_CcipForkTest is BaseCcipForkTest {
         parent.vault.deposit(DEPOSIT_AMOUNT);
 
         _warpPastMinEpoch();
-        _closeEpochThroughWorkflow(CLOSE_WORKFLOW_ID, 1, 0);
+        _closeEpochThroughWorkflow(CLOSE_WORKFLOW_ID, 0);
 
         _selectArbitrumFork();
         _setBaseChildActiveAdapterToAaveV3();

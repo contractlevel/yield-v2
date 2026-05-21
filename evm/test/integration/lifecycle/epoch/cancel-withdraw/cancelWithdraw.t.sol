@@ -35,7 +35,7 @@ contract CancelWithdraw_EpochIntegrationTest is BaseIntegrationTest {
         parent.vault.deposit(DEPOSIT_AMOUNT);
 
         _warpPastMinEpoch();
-        _closeEpochThroughWorkflow(parent.workflowRouter, WORKFLOW_ID, WORKFLOW_NAME, i_owner, 1, 0);
+        _closeEpochThroughWorkflow(parent.workflowRouter, WORKFLOW_ID, WORKFLOW_NAME, i_owner, 0);
 
         _changePrank(i_depositor);
         parent.vault.claimShares(1);

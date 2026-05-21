@@ -26,7 +26,7 @@ contract ChildDeposit_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         _warpPastMinEpoch();
         vm.recordLogs();
         _closeEpochThroughWorkflow(
-            parent.workflowRouter, CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner, 1, 0
+            parent.workflowRouter, CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner, 0
         );
         Vm.Log[] memory failureLogs = vm.getRecordedLogs();
 
@@ -35,12 +35,12 @@ contract ChildDeposit_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         );
         assertEq(uint256(storedLog.topics[1]), 1);
         assertEq(uint256(storedLog.topics[2]), DEPOSIT_AMOUNT);
-        _assertAmountRecovery(child.vault.getEpochDepositRecovery(1), DEPOSIT_AMOUNT);
+        _assertEpochRecovery(child.vault.getEpochDepositRecovery(), 1, DEPOSIT_AMOUNT);
         assertEq(IERC20(parent.usdc).balanceOf(childPool), childPoolBalanceBefore);
 
         MockAaveV3Pool(childPool).setSupplyReverts(false);
         vm.recordLogs();
-        child.vault.recoverFailedEpochDeposit(1);
+        child.vault.recoverFailedEpochDeposit();
         Vm.Log[] memory recoveryLogs = vm.getRecordedLogs();
 
         _assertEmittedBy(recoveryLogs, keccak256("EpochDepositRecoveryCleared(uint256)"), address(child.vault));
@@ -49,7 +49,7 @@ contract ChildDeposit_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         );
         assertEq(uint256(successLog.topics[1]), 1);
         assertEq(uint256(successLog.topics[2]), DEPOSIT_AMOUNT);
-        _assertAmountRecoveryCleared(child.vault.getEpochDepositRecovery(1));
+        _assertEpochRecoveryCleared(child.vault.getEpochDepositRecovery());
         assertEq(IERC20(parent.usdc).balanceOf(childPool), childPoolBalanceBefore + DEPOSIT_AMOUNT);
 
         _changePrank(i_depositor);

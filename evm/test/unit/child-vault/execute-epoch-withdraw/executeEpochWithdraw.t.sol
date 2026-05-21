@@ -80,7 +80,8 @@ contract ChildVault_ExecuteEpochWithdrawUnitTest is BaseUnitTest {
 
         s_childVault.executeEpochWithdraw(EPOCH_NONCE, WITHDRAW_AMOUNT);
 
-        Types.AmountRecovery memory recovery = s_childVault.getEpochWithdrawRecovery(EPOCH_NONCE);
+        Types.EpochRecovery memory recovery = s_childVault.getEpochWithdrawRecovery();
+        assertEq(recovery.epochNonce, EPOCH_NONCE);
         assertEq(recovery.amount, WITHDRAW_AMOUNT);
         assertEq(recovery.createdAt, block.timestamp);
     }
@@ -103,7 +104,8 @@ contract ChildVault_ExecuteEpochWithdrawUnitTest is BaseUnitTest {
 
         s_childVault.executeEpochWithdraw(EPOCH_NONCE, WITHDRAW_AMOUNT);
 
-        Types.AmountRecovery memory recovery = s_childVault.getEpochWithdrawRecovery(EPOCH_NONCE);
+        Types.EpochRecovery memory recovery = s_childVault.getEpochWithdrawRecovery();
+        assertEq(recovery.epochNonce, EPOCH_NONCE);
         assertEq(recovery.amount, WITHDRAW_AMOUNT);
         assertEq(recovery.createdAt, block.timestamp);
     }

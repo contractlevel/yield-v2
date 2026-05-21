@@ -423,6 +423,18 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         else tvl = IProtocolAdapter(activeProtocolAdapter).getTVL();
     }
 
+    // function _getTVL() internal view returns (uint256 tvl) {
+    //     address activeAdapter = s_activeProtocolAdapter;
+    //     if (activeAdapter == address(0)) return 0;
+
+    //     // Relies on IProtocolAdapter.getTVL() invariant: returns 0 when no position exists.
+    //     // This lets us detect pending rebalance-deposit recovery (USDC held by vault, not yet deployed).
+    //     tvl = IProtocolAdapter(activeAdapter).getTVL();
+    //     if (tvl == 0) {
+    //         tvl = s_rebalanceDepositRecovery.amount;
+    //     }
+    // }
+
     /*//////////////////////////////////////////////////////////////
                              CONFIG SETTERS
     //////////////////////////////////////////////////////////////*/

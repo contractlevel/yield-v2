@@ -39,7 +39,7 @@ contract ChildDeposit_EpochIntegrationTest is BaseIntegrationTest {
         parent.vault.deposit(DEPOSIT_AMOUNT);
 
         _warpPastMinEpoch();
-        _closeEpochThroughWorkflow(parent.workflowRouter, WORKFLOW_ID, WORKFLOW_NAME, i_owner, 1, TVL);
+        _closeEpochThroughWorkflow(parent.workflowRouter, WORKFLOW_ID, WORKFLOW_NAME, i_owner, TVL);
 
         assertEq(uint256(parent.vault.getEpoch(1).status), uint256(Types.EpochStatus.CLAIMABLE));
         assertEq(parent.vault.getEpochNonce(), 2);

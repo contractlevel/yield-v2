@@ -33,7 +33,7 @@ contract ParentVault_ClaimUsdcUnitTest is BaseUnitTest {
         // Advance time past minimum epoch period and close epoch 1
         vm.warp(block.timestamp + MIN_EPOCH_PERIOD + 1);
         _changePrank(i_epochOperator);
-        s_parentVault.closeEpoch(1, 0);
+        s_parentVault.closeEpoch(0);
         // pricePerShare = SHARE_PRECISION (bootstrap, totalShares was 0)
         // netFlow = LARGE_DEPOSIT_AMOUNT - SHARE_BURN_AMOUNT > 0 → CLAIMABLE, epoch 2 opened
 

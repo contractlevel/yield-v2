@@ -7,6 +7,7 @@ ChildVault_recoverFailedEpochDeposit
 │   └── it should revert with BaseVault__DepositFailed
 └── when recovery succeeds
     ├── it should deposit into the active adapter
+    ├── it should store the epoch nonce
     ├── it should clear recovery state
     ├── it should emit DepositToStrategySuccess
     └── it should emit EpochDepositRecoveryCleared

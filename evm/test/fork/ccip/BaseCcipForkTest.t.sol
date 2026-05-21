@@ -211,14 +211,14 @@ abstract contract BaseCcipForkTest is BaseForkTest {
         router.onReport(_buildMetadata(workflowId, workflowName, workflowOwner), report);
     }
 
-    function _closeEpochThroughWorkflow(bytes32 workflowId, uint256 epochNonce, uint256 tvl) internal {
+    function _closeEpochThroughWorkflow(bytes32 workflowId, uint256 tvl) internal {
         _selectArbitrumFork();
         _callWorkflowRouter(
             parent.workflowRouter,
             workflowId,
             CLOSE_EPOCH_WORKFLOW_NAME,
             i_owner,
-            abi.encodeWithSelector(ParentVault.closeEpoch.selector, epochNonce, tvl)
+            abi.encodeWithSelector(ParentVault.closeEpoch.selector, tvl)
         );
     }
 
@@ -334,7 +334,7 @@ abstract contract BaseCcipForkTest is BaseForkTest {
         parent.vault.deposit(DEPOSIT_AMOUNT);
 
         _warpPastMinEpoch();
-        _closeEpochThroughWorkflow(workflowId, 1, 0);
+        _closeEpochThroughWorkflow(workflowId, 0);
         _setBaseChildActiveAdapterToAaveV3();
         _selectArbitrumFork();
         _routeUsdcMessageTo(baseFork);

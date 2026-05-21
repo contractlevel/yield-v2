@@ -23,7 +23,7 @@ contract ChildWithdraw_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
 
         _warpPastMinEpoch();
         _closeEpochThroughWorkflow(
-            parent.workflowRouter, CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner, 2, shareAmount
+            parent.workflowRouter, CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner, shareAmount
         );
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.EXECUTING));
 
@@ -43,19 +43,19 @@ contract ChildWithdraw_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         );
         assertEq(uint256(storedLog.topics[1]), 2);
         assertEq(uint256(storedLog.topics[2]), shareAmount);
-        _assertAmountRecovery(child.vault.getEpochWithdrawRecovery(2), shareAmount);
+        _assertEpochRecovery(child.vault.getEpochWithdrawRecovery(), 2, shareAmount);
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.EXECUTING));
 
         deal(parent.usdc, childPool, shareAmount);
         MockAaveV3Pool(childPool).setWithdrawReturn(shareAmount);
 
         vm.recordLogs();
-        child.vault.recoverFailedEpochWithdraw(2);
+        child.vault.recoverFailedEpochWithdraw();
         Vm.Log[] memory recoveryLogs = vm.getRecordedLogs();
 
         _assertEmittedBy(recoveryLogs, keccak256("EpochWithdrawRecoveryCleared(uint256)"), address(child.vault));
         _assertEmittedBy(recoveryLogs, keccak256("WithdrawFromStrategySuccess(uint256,uint256)"), address(child.vault));
-        _assertAmountRecoveryCleared(child.vault.getEpochWithdrawRecovery(2));
+        _assertEpochRecoveryCleared(child.vault.getEpochWithdrawRecovery());
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.CLAIMABLE));
 
         uint256 depositorUsdcBeforeClaim = IERC20(parent.usdc).balanceOf(i_depositor);

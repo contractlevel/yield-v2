@@ -32,7 +32,7 @@ contract ChildWithdraw_CcipForkTest is BaseCcipForkTest {
         parent.vault.withdraw(shareAmount);
 
         _warpPastMinEpoch();
-        _closeEpochThroughWorkflow(CLOSE_WORKFLOW_ID, 2, shareAmount);
+        _closeEpochThroughWorkflow(CLOSE_WORKFLOW_ID, shareAmount);
 
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.EXECUTING));
 

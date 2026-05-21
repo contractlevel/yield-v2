@@ -35,7 +35,7 @@ contract ParentWithdraw_EpochIntegrationTest is BaseIntegrationTest {
         parent.vault.withdraw(s_shareAmount);
 
         _warpPastMinEpoch();
-        _closeEpochThroughWorkflow(parent.workflowRouter, WORKFLOW_ID, WORKFLOW_NAME, i_owner, 2, s_shareAmount);
+        _closeEpochThroughWorkflow(parent.workflowRouter, WORKFLOW_ID, WORKFLOW_NAME, i_owner, s_shareAmount);
 
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.CLAIMABLE));
         assertEq(parent.vault.getEpochNonce(), 3);
@@ -59,7 +59,7 @@ contract ParentWithdraw_EpochIntegrationTest is BaseIntegrationTest {
         parent.vault.deposit(DEPOSIT_AMOUNT);
 
         _warpPastMinEpoch();
-        _closeEpochThroughWorkflow(parent.workflowRouter, WORKFLOW_ID, WORKFLOW_NAME, i_owner, 1, 0);
+        _closeEpochThroughWorkflow(parent.workflowRouter, WORKFLOW_ID, WORKFLOW_NAME, i_owner, 0);
 
         _changePrank(i_depositor);
         parent.vault.claimShares(1);

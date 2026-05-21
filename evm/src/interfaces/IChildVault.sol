@@ -51,14 +51,12 @@ interface IChildVault is IBaseVault {
                                RECOVERY
     //////////////////////////////////////////////////////////////*/
     /// @notice Recovers a failed epoch deposit into the active Child strategy
-    /// @param epochNonce The epoch nonce of the failed deposit
     /// @dev Precondition: epoch deposit recovery state must exist
-    function recoverFailedEpochDeposit(uint256 epochNonce) external;
+    function recoverFailedEpochDeposit() external;
 
     /// @notice Recovers a failed epoch withdraw from the active Child strategy
-    /// @param epochNonce The epoch nonce of the failed withdraw
     /// @dev Precondition: epoch withdraw recovery state must exist
-    function recoverFailedEpochWithdraw(uint256 epochNonce) external;
+    function recoverFailedEpochWithdraw() external;
 
     /// @notice Recovers a failed rebalance withdraw from the active Child strategy
     /// @dev Precondition: rebalance withdraw recovery state must exist
@@ -72,14 +70,12 @@ interface IChildVault is IBaseVault {
                                 GETTERS
     //////////////////////////////////////////////////////////////*/
     /// @notice Gets failed epoch deposit recovery state
-    /// @param epochNonce The epoch nonce to query
     /// @return recovery The stored epoch deposit recovery state
-    function getEpochDepositRecovery(uint256 epochNonce) external view returns (Types.AmountRecovery memory recovery);
+    function getEpochDepositRecovery() external view returns (Types.EpochRecovery memory recovery);
 
     /// @notice Gets failed epoch withdraw recovery state
-    /// @param epochNonce The epoch nonce to query
     /// @return recovery The stored epoch withdraw recovery state
-    function getEpochWithdrawRecovery(uint256 epochNonce) external view returns (Types.AmountRecovery memory recovery);
+    function getEpochWithdrawRecovery() external view returns (Types.EpochRecovery memory recovery);
 
     /// @notice Gets failed rebalance withdraw recovery state
     /// @return recovery Types.RebalanceWithdrawRecovery struct includes:

@@ -26,16 +26,16 @@ contract ChildVaultRecoveryInternalsHarness is ChildVault {
         _storeEpochDepositRecovery(epochNonce, amount);
     }
 
-    function exposed_clearEpochDepositRecovery(uint256 epochNonce) external {
-        _clearEpochDepositRecovery(epochNonce);
+    function exposed_clearEpochDepositRecovery() external {
+        _clearEpochDepositRecovery();
     }
 
     function exposed_storeEpochWithdrawRecovery(uint256 epochNonce, uint256 amount) external {
         _storeEpochWithdrawRecovery(epochNonce, amount);
     }
 
-    function exposed_clearEpochWithdrawRecovery(uint256 epochNonce) external {
-        _clearEpochWithdrawRecovery(epochNonce);
+    function exposed_clearEpochWithdrawRecovery() external {
+        _clearEpochWithdrawRecovery();
     }
 
     function exposed_storeRebalanceWithdrawRecovery(uint256 rebalanceNonce, Types.Strategy memory strategy) external {
@@ -91,9 +91,18 @@ contract ChildVault_RecoveryInternalsUnitTest is BaseUnitTest {
         s_harness.exposed_storeEpochDepositRecovery(EPOCH_NONCE, RECOVERY_AMOUNT);
     }
 
+    function test_ChildVault_recoveryInternals_StoreEpochDepositRecovery_RevertWhen_RecoveryStateAlreadyExists()
+        public
+    {
+        s_harness.exposed_storeEpochDepositRecovery(EPOCH_NONCE, RECOVERY_AMOUNT);
+
+        vm.expectRevert(IBaseVault.BaseVault__RecoveryAlreadyPending.selector);
+        s_harness.exposed_storeEpochDepositRecovery(EPOCH_NONCE + 1, RECOVERY_AMOUNT);
+    }
+
     function test_ChildVault_recoveryInternals_ClearEpochDepositRecovery_RevertWhen_NoPendingRecovery() public {
         vm.expectRevert(IBaseVault.BaseVault__NoPendingRecovery.selector);
-        s_harness.exposed_clearEpochDepositRecovery(EPOCH_NONCE);
+        s_harness.exposed_clearEpochDepositRecovery();
     }
 
     function test_ChildVault_recoveryInternals_StoreEpochWithdrawRecovery_RevertWhen_AmountIsZero() public {
@@ -110,9 +119,18 @@ contract ChildVault_RecoveryInternalsUnitTest is BaseUnitTest {
         s_harness.exposed_storeEpochWithdrawRecovery(EPOCH_NONCE, RECOVERY_AMOUNT);
     }
 
+    function test_ChildVault_recoveryInternals_StoreEpochWithdrawRecovery_RevertWhen_RecoveryStateAlreadyExists()
+        public
+    {
+        s_harness.exposed_storeEpochWithdrawRecovery(EPOCH_NONCE, RECOVERY_AMOUNT);
+
+        vm.expectRevert(IBaseVault.BaseVault__RecoveryAlreadyPending.selector);
+        s_harness.exposed_storeEpochWithdrawRecovery(EPOCH_NONCE + 1, RECOVERY_AMOUNT);
+    }
+
     function test_ChildVault_recoveryInternals_ClearEpochWithdrawRecovery_RevertWhen_NoPendingRecovery() public {
         vm.expectRevert(IBaseVault.BaseVault__NoPendingRecovery.selector);
-        s_harness.exposed_clearEpochWithdrawRecovery(EPOCH_NONCE);
+        s_harness.exposed_clearEpochWithdrawRecovery();
     }
 
     function test_ChildVault_recoveryInternals_StoreRebalanceWithdrawRecovery_RevertWhen_StrategyChainSelectorIsZero()

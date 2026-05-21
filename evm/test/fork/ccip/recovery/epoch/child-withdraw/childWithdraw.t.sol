@@ -34,7 +34,7 @@ contract ChildWithdraw_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
         parent.vault.withdraw(shareAmount);
 
         _warpPastMinEpoch();
-        _closeEpochThroughWorkflow(CLOSE_WORKFLOW_ID, 2, shareAmount);
+        _closeEpochThroughWorkflow(CLOSE_WORKFLOW_ID, shareAmount);
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.EXECUTING));
 
         _selectBaseFork();
@@ -48,18 +48,18 @@ contract ChildWithdraw_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
         );
         assertEq(uint256(storedLog.topics[1]), 2);
         assertEq(uint256(storedLog.topics[2]), shareAmount);
-        _assertAmountRecovery(baseChild.vault.getEpochWithdrawRecovery(2), shareAmount);
+        _assertEpochRecovery(baseChild.vault.getEpochWithdrawRecovery(), 2, shareAmount);
 
         _restoreBaseAaveV3Adapter();
         _prepareBaseToParentRouting();
         vm.warp(block.timestamp + 5 minutes);
-        baseChild.vault.recoverFailedEpochWithdraw(2);
+        baseChild.vault.recoverFailedEpochWithdraw();
 
         _selectBaseFork();
         _routeUsdcMessageTo(arbitrumFork);
 
         _selectBaseFork();
-        _assertAmountRecoveryCleared(baseChild.vault.getEpochWithdrawRecovery(2));
+        _assertEpochRecoveryCleared(baseChild.vault.getEpochWithdrawRecovery());
 
         _selectArbitrumFork();
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.CLAIMABLE));

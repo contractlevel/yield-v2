@@ -27,7 +27,7 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         _changePrank(i_nonOwner);
         _warpPastMinEpoch();
         vm.expectRevert();
-        s_parentVault.closeEpoch(1, 0);
+        s_parentVault.closeEpoch(0);
     }
 
     function test_ParentVault_closeEpoch_RevertWhen_RebalanceInProgress() public {
@@ -35,7 +35,7 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
 
         _warpPastMinEpoch();
         vm.expectRevert(IParentVault.ParentVault__RebalanceInProgress.selector);
-        s_parentVault.closeEpoch(1, 0);
+        s_parentVault.closeEpoch(0);
     }
 
     function test_ParentVault_closeEpoch_RevertWhen_EpochNotOpen() public {
@@ -43,18 +43,18 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
 
         _warpPastMinEpoch();
         vm.expectRevert(abi.encodeWithSelector(IParentVault.ParentVault__EpochNotOpen.selector, 1));
-        s_parentVault.closeEpoch(1, 0);
+        s_parentVault.closeEpoch(0);
     }
 
     function test_ParentVault_closeEpoch_RevertWhen_EpochTooShort() public {
         vm.expectRevert(abi.encodeWithSelector(IParentVault.ParentVault__EpochTooShort.selector, 1));
-        s_parentVault.closeEpoch(1, 0);
+        s_parentVault.closeEpoch(0);
     }
 
     function test_ParentVault_closeEpoch_RevertWhen_EmptyEpoch() public {
         _warpPastMinEpoch();
         vm.expectRevert(abi.encodeWithSelector(IParentVault.ParentVault__EmptyEpoch.selector, 1));
-        s_parentVault.closeEpoch(1, 0);
+        s_parentVault.closeEpoch(0);
     }
 
     function test_ParentVault_closeEpoch_RevertWhen_LocalNetDepositAdapterReverts() public {
@@ -64,7 +64,7 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         _changePrank(i_epochOperator);
         _warpPastMinEpoch();
         vm.expectRevert(abi.encodeWithSelector(IBaseVault.BaseVault__DepositFailed.selector, DEPOSIT_AMOUNT));
-        s_parentVault.closeEpoch(1, TVL);
+        s_parentVault.closeEpoch(TVL);
     }
 
     function test_ParentVault_closeEpoch_RevertWhen_LocalNetWithdrawAdapterReverts() public {
@@ -74,7 +74,7 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         _changePrank(i_epochOperator);
         _warpPastMinEpoch();
         vm.expectRevert(abi.encodeWithSelector(IBaseVault.BaseVault__WithdrawFailed.selector, TVL));
-        s_parentVault.closeEpoch(1, TVL);
+        s_parentVault.closeEpoch(TVL);
     }
 
     function test_ParentVault_closeEpoch_Success_MakesEpochClaimable() public {
@@ -147,6 +147,32 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         Vm.Log memory log = _assertEmittedBy(keccak256("EpochExecuting(uint256,uint256)"), address(s_parentVault));
         assertEq(uint256(log.topics[1]), 1);
         assertEq(uint256(log.topics[2]), TVL);
+    }
+
+    function test_ParentVault_closeEpoch_RevertWhen_PreviousEpochNotClaimable() public {
+        _prepareRemoteStrategy();
+        _prepareNetWithdraw();
+        _closeEpoch(TVL);
+
+        _submitDeposit();
+
+        _warpPastMinEpoch();
+        _changePrank(i_epochOperator);
+        vm.expectRevert(abi.encodeWithSelector(IParentVault.ParentVault__EpochNotClaimable.selector, 1));
+        s_parentVault.closeEpoch(TVL);
+    }
+
+    function test_ParentVault_closeEpoch_WhenPreviousEpochClaimable_ClosesCurrentEpoch() public {
+        _submitDeposit();
+        _closeEpoch(TVL);
+
+        deal(address(s_mockUsdc), i_depositor, DEPOSIT_AMOUNT);
+        _submitDeposit();
+
+        _closeEpoch(TVL);
+
+        assertEq(uint8(s_parentVault.getEpoch(2).status), uint8(Types.EpochStatus.CLAIMABLE));
+        assertEq(s_parentVault.getEpochNonce(), 3);
     }
 
     function test_ParentVault_closeEpoch_Success_StoresPricePerShareOnEpoch() public {
@@ -387,7 +413,7 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
     function _closeEpoch(uint256 tvl) internal {
         _warpPastMinEpoch();
         _changePrank(i_epochOperator);
-        s_parentVault.closeEpoch(1, tvl);
+        s_parentVault.closeEpoch(tvl);
     }
 
     function _warpPastMinEpoch() internal {

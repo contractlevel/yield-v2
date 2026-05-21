@@ -30,9 +30,9 @@ contract ChildVault is BaseVault, IChildVault {
                                  STATE
     //////////////////////////////////////////////////////////////*/
     /// @dev Recovery state for failed epoch deposit operations
-    mapping(uint256 epochNonce => Types.AmountRecovery recovery) internal s_epochDepositRecovery;
+    Types.EpochRecovery internal s_epochDepositRecovery;
     /// @dev Recovery state for failed epoch withdraw operations
-    mapping(uint256 epochNonce => Types.AmountRecovery recovery) internal s_epochWithdrawRecovery;
+    Types.EpochRecovery internal s_epochWithdrawRecovery;
     /// @dev Recovery state for failed rebalance withdraw operations
     Types.RebalanceWithdrawRecovery internal s_rebalanceWithdrawRecovery;
 
@@ -145,34 +145,30 @@ contract ChildVault is BaseVault, IChildVault {
     /// @dev Precondition: epoch withdraw recovery state must not already exist for the epoch
     function _storeEpochDepositRecovery(uint256 epochNonce, uint256 amount) internal {
         if (amount == 0) revert BaseVault__ZeroRecoveryAmount();
-        if (s_epochDepositRecovery[epochNonce].amount != 0) revert BaseVault__RecoveryAlreadyPending();
-        if (s_epochWithdrawRecovery[epochNonce].amount != 0) revert BaseVault__RecoveryAlreadyPending();
+        if (s_epochDepositRecovery.amount != 0) revert BaseVault__RecoveryAlreadyPending();
+        if (s_epochWithdrawRecovery.amount != 0) revert BaseVault__RecoveryAlreadyPending();
 
-        s_epochDepositRecovery[epochNonce] = Types.AmountRecovery({amount: amount, createdAt: block.timestamp});
+        s_epochDepositRecovery =
+            Types.EpochRecovery({epochNonce: epochNonce, amount: amount, createdAt: block.timestamp});
         emit EpochDepositRecoveryStored(epochNonce, amount);
     }
 
     /// @notice Clears recovery state for a failed epoch deposit
-    /// @param epochNonce The epoch nonce of the recovered deposit
     /// @dev Precondition: epoch deposit recovery state must exist
-    function _clearEpochDepositRecovery(uint256 epochNonce) internal {
+    function _clearEpochDepositRecovery() internal {
         //slither-disable-next-line incorrect-equality
-        if (s_epochDepositRecovery[epochNonce].amount == 0) revert BaseVault__NoPendingRecovery();
+        if (s_epochDepositRecovery.amount == 0) revert BaseVault__NoPendingRecovery();
+        uint256 epochNonce = s_epochDepositRecovery.epochNonce;
 
-        delete s_epochDepositRecovery[epochNonce];
+        delete s_epochDepositRecovery;
         emit EpochDepositRecoveryCleared(epochNonce);
     }
 
     /// @notice Requires and returns failed epoch deposit recovery state
-    /// @param epochNonce The epoch nonce to query
     /// @return recovery The stored epoch deposit recovery state
     /// @dev Precondition: epoch deposit recovery state must exist
-    function _requireEpochDepositRecovery(uint256 epochNonce)
-        internal
-        view
-        returns (Types.AmountRecovery memory recovery)
-    {
-        recovery = s_epochDepositRecovery[epochNonce];
+    function _requireEpochDepositRecovery() internal view returns (Types.EpochRecovery memory recovery) {
+        recovery = s_epochDepositRecovery;
         //slither-disable-next-line incorrect-equality
         if (recovery.amount == 0) revert BaseVault__NoPendingRecovery();
     }
@@ -186,34 +182,30 @@ contract ChildVault is BaseVault, IChildVault {
     function _storeEpochWithdrawRecovery(uint256 epochNonce, uint256 amount) internal {
         //slither-disable-next-line incorrect-equality
         if (amount == 0) revert BaseVault__ZeroRecoveryAmount();
-        if (s_epochWithdrawRecovery[epochNonce].amount != 0) revert BaseVault__RecoveryAlreadyPending();
-        if (s_epochDepositRecovery[epochNonce].amount != 0) revert BaseVault__RecoveryAlreadyPending();
+        if (s_epochWithdrawRecovery.amount != 0) revert BaseVault__RecoveryAlreadyPending();
+        if (s_epochDepositRecovery.amount != 0) revert BaseVault__RecoveryAlreadyPending();
 
-        s_epochWithdrawRecovery[epochNonce] = Types.AmountRecovery({amount: amount, createdAt: block.timestamp});
+        s_epochWithdrawRecovery =
+            Types.EpochRecovery({epochNonce: epochNonce, amount: amount, createdAt: block.timestamp});
         emit EpochWithdrawRecoveryStored(epochNonce, amount);
     }
 
     /// @notice Clears recovery state for a failed epoch withdraw
-    /// @param epochNonce The epoch nonce of the recovered withdraw
     /// @dev Precondition: epoch withdraw recovery state must exist
-    function _clearEpochWithdrawRecovery(uint256 epochNonce) internal {
+    function _clearEpochWithdrawRecovery() internal {
         //slither-disable-next-line incorrect-equality
-        if (s_epochWithdrawRecovery[epochNonce].amount == 0) revert BaseVault__NoPendingRecovery();
+        if (s_epochWithdrawRecovery.amount == 0) revert BaseVault__NoPendingRecovery();
+        uint256 epochNonce = s_epochWithdrawRecovery.epochNonce;
 
-        delete s_epochWithdrawRecovery[epochNonce];
+        delete s_epochWithdrawRecovery;
         emit EpochWithdrawRecoveryCleared(epochNonce);
     }
 
     /// @notice Requires and returns failed epoch withdraw recovery state
-    /// @param epochNonce The epoch nonce to query
     /// @return recovery The stored epoch withdraw recovery state
     /// @dev Precondition: epoch withdraw recovery state must exist
-    function _requireEpochWithdrawRecovery(uint256 epochNonce)
-        internal
-        view
-        returns (Types.AmountRecovery memory recovery)
-    {
-        recovery = s_epochWithdrawRecovery[epochNonce];
+    function _requireEpochWithdrawRecovery() internal view returns (Types.EpochRecovery memory recovery) {
+        recovery = s_epochWithdrawRecovery;
         //slither-disable-next-line incorrect-equality
         if (recovery.amount == 0) revert BaseVault__NoPendingRecovery();
     }
@@ -263,30 +255,30 @@ contract ChildVault is BaseVault, IChildVault {
     }
 
     /// @notice Recovers a failed epoch deposit into the active Child strategy
-    /// @param epochNonce The epoch nonce of the failed deposit
     /// @dev Precondition: epoch deposit recovery state must exist
     /// @dev Precondition: active strategy adapter must be set
-    function recoverFailedEpochDeposit(uint256 epochNonce) external {
-        Types.AmountRecovery memory recovery = _requireEpochDepositRecovery(epochNonce);
+    function recoverFailedEpochDeposit() external {
+        Types.EpochRecovery memory recovery = _requireEpochDepositRecovery();
+        uint256 epochNonce = recovery.epochNonce;
 
         _executeDeposit(recovery.amount, true);
-        _clearEpochDepositRecovery(epochNonce);
+        _clearEpochDepositRecovery();
 
         emit DepositToStrategySuccess(epochNonce, recovery.amount);
     }
 
     /// @notice Recovers a failed epoch withdraw from the active Child strategy
-    /// @param epochNonce The epoch nonce of the failed withdraw
     /// @dev Precondition: epoch withdraw recovery state must exist
     /// @dev Precondition: active strategy adapter must be set
-    function recoverFailedEpochWithdraw(uint256 epochNonce) external {
-        Types.AmountRecovery memory recovery = _requireEpochWithdrawRecovery(epochNonce);
+    function recoverFailedEpochWithdraw() external {
+        Types.EpochRecovery memory recovery = _requireEpochWithdrawRecovery();
+        uint256 epochNonce = recovery.epochNonce;
 
         uint256 amountOut = _executeWithdraw(recovery.amount, true);
         //slither-disable-next-line incorrect-equality
         if (amountOut == 0) revert BaseVault__ZeroRecoveryAmount();
 
-        _clearEpochWithdrawRecovery(epochNonce);
+        _clearEpochWithdrawRecovery();
         emit WithdrawFromStrategySuccess(epochNonce, amountOut);
         _ccipSend(amountOut, i_parentChainSelector, Types.CcipTx.EPOCH_NET_WITHDRAW, abi.encode(epochNonce));
     }
@@ -324,17 +316,15 @@ contract ChildVault is BaseVault, IChildVault {
     }
 
     /// @notice Gets failed epoch deposit recovery state
-    /// @param epochNonce The epoch nonce to query
     /// @return recovery The stored epoch deposit recovery state
-    function getEpochDepositRecovery(uint256 epochNonce) external view returns (Types.AmountRecovery memory recovery) {
-        recovery = s_epochDepositRecovery[epochNonce];
+    function getEpochDepositRecovery() external view returns (Types.EpochRecovery memory recovery) {
+        recovery = s_epochDepositRecovery;
     }
 
     /// @notice Gets failed epoch withdraw recovery state
-    /// @param epochNonce The epoch nonce to query
     /// @return recovery The stored epoch withdraw recovery state
-    function getEpochWithdrawRecovery(uint256 epochNonce) external view returns (Types.AmountRecovery memory recovery) {
-        recovery = s_epochWithdrawRecovery[epochNonce];
+    function getEpochWithdrawRecovery() external view returns (Types.EpochRecovery memory recovery) {
+        recovery = s_epochWithdrawRecovery;
     }
 
     /// @notice Gets failed rebalance withdraw recovery state

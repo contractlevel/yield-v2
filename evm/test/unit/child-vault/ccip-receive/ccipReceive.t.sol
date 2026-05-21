@@ -78,7 +78,9 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
             BRIDGED_AMOUNT
         );
 
-        vm.expectRevert(abi.encodeWithSelector(IBaseVault.BaseVault__InvalidTxType.selector, Types.CcipTx.EPOCH_NET_WITHDRAW));
+        vm.expectRevert(
+            abi.encodeWithSelector(IBaseVault.BaseVault__InvalidTxType.selector, Types.CcipTx.EPOCH_NET_WITHDRAW)
+        );
         s_childVault.ccipReceive(message);
     }
 
@@ -132,7 +134,8 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
 
         s_childVault.ccipReceive(_depositMessage(EPOCH_NONCE));
 
-        Types.AmountRecovery memory recovery = s_childVault.getEpochDepositRecovery(EPOCH_NONCE);
+        Types.EpochRecovery memory recovery = s_childVault.getEpochDepositRecovery();
+        assertEq(recovery.epochNonce, EPOCH_NONCE);
         assertEq(recovery.amount, BRIDGED_AMOUNT);
         assertEq(recovery.createdAt, block.timestamp);
     }
@@ -253,10 +256,13 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
     }
 
     function _depositMessage(uint256 epochNonce, uint256 amount) internal view returns (Client.Any2EVMMessage memory) {
-        return
-            _message(
-                PARENT_CHAIN_SELECTOR, address(s_parentVault), Types.CcipTx.EPOCH_NET_DEPOSIT, abi.encode(epochNonce), amount
-            );
+        return _message(
+            PARENT_CHAIN_SELECTOR,
+            address(s_parentVault),
+            Types.CcipTx.EPOCH_NET_DEPOSIT,
+            abi.encode(epochNonce),
+            amount
+        );
     }
 
     function _rebalanceMessage(uint256 rebalanceNonce, bytes32 protocolId)
