@@ -97,6 +97,10 @@ contract ChildVault is BaseVault, IChildVault {
 
     /// @notice Sends a ChildVault CCIP message and stores recovery state on failure
     /// @notice Overrides BaseVault::_ccipSend to use a try/catch. (Parent failures use atomic revert)
+    /// @param bridgeAmount The amount of USDC to bridge
+    /// @param destinationChainSelector The CCIP selector of the destination chain
+    /// @param ccipTxType The type of CCIP transaction
+    /// @param txData abi.encode(epochNonce) for epoch net deposit/withdraw, or abi.encode(rebalanceNonce, newStrategy.protocolId) for rebalance
     function _ccipSend(
         uint256 bridgeAmount,
         uint64 destinationChainSelector,
@@ -120,6 +124,10 @@ contract ChildVault is BaseVault, IChildVault {
 
     /// @notice Executes a CCIP send through an external self-call boundary for ChildVault try/catch recovery
     /// @dev Precondition: caller must be this vault
+    /// @param bridgeAmount The amount of USDC to bridge
+    /// @param destinationChainSelector The CCIP selector of the destination chain
+    /// @param ccipTxType The type of CCIP transaction
+    /// @param txData abi.encode(epochNonce) for epoch net deposit/withdraw, or abi.encode(rebalanceNonce, newStrategy.protocolId) for rebalance
     function tryCcipSend(
         uint256 bridgeAmount,
         uint64 destinationChainSelector,

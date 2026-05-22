@@ -154,6 +154,10 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     }
 
     /// @notice Builds and sends a CCIP message
+    /// @param bridgeAmount The amount of USDC to bridge
+    /// @param destinationChainSelector The CCIP selector of the destination chain
+    /// @param ccipTxType The type of CCIP transaction
+    /// @param txData abi.encode(epochNonce) for epoch net deposit/withdraw, or abi.encode(rebalanceNonce, newStrategy.protocolId) for rebalance
     function _executeCcipSend(
         uint256 bridgeAmount,
         uint64 destinationChainSelector,
