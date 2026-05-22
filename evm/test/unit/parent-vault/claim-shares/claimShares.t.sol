@@ -91,8 +91,8 @@ contract ParentVault_ClaimSharesUnitTest is BaseUnitTest {
         uint256 pricePerShare = 2 * SHARE_PRECISION;
         uint256 expectedTotalMinted = totalDeposit * SHARE_PRECISION / pricePerShare;
         uint256 expectedFirstMint = firstDeposit * expectedTotalMinted / totalDeposit;
-        uint256 expectedSecondMint = secondDeposit * (expectedTotalMinted - expectedFirstMint)
-            / (totalDeposit - firstDeposit);
+        uint256 expectedSecondMint =
+            secondDeposit * (expectedTotalMinted - expectedFirstMint) / (totalDeposit - firstDeposit);
         uint256 expectedThirdMint = expectedTotalMinted - expectedFirstMint - expectedSecondMint;
 
         _setParentTotalShares(totalShares);

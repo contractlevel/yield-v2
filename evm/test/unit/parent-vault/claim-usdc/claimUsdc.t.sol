@@ -122,8 +122,8 @@ contract ParentVault_ClaimUsdcUnitTest is BaseUnitTest {
         uint256 tvl = 2_000 * 1e6;
         uint256 adjustedWithdrawClaimAmount = 601 * 1e6;
         uint256 expectedFirstUsdc = firstBurn * adjustedWithdrawClaimAmount / totalBurn;
-        uint256 expectedSecondUsdc = secondBurn * (adjustedWithdrawClaimAmount - expectedFirstUsdc)
-            / (totalBurn - firstBurn);
+        uint256 expectedSecondUsdc =
+            secondBurn * (adjustedWithdrawClaimAmount - expectedFirstUsdc) / (totalBurn - firstBurn);
         uint256 expectedThirdUsdc = adjustedWithdrawClaimAmount - expectedFirstUsdc - expectedSecondUsdc;
 
         _setParentTotalShares(totalShares);

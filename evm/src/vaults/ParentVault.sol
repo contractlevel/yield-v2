@@ -63,7 +63,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     Types.Rebalance internal s_rebalance;
 
     /// @dev Total number of Yieldcoin shares minted and available to claim
-    /// @notice One subtlety: between closeEpoch and the last claimUsdc call for an epoch, s_totalShares is decremented but the actual Yieldcoin share tokens haven't been burned yet.
+    /// @notice One subtlety: between closeEpoch and the last claimUsdc call for an epoch, s_totalShares could be decremented but the actual Yieldcoin share tokens haven't been burned yet.
     /// The i_share.totalSupply() will be higher than s_totalShares during this window. Therefore we never use i_share.totalSupply() as an authoritative share count — always use s_totalShares.
     uint256 internal s_totalShares;
     /// @dev Highest price per share ever recorded for performance fee purposes
@@ -399,10 +399,10 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     ///      epoch close. The remaining issue is yield drag from idle USDC on the Child,
     ///      so singleton child recovery plus workflow retry discipline is sufficient.
     /// @dev previousEpochNonce == 0 means no prior epoch exists (constructor sets s_epochNonce = 1).
-    /// @notice The tvl parameter is provided by the CRE workflow via WorkflowRouter and is trusted 
-    ///         to accurately reflect the active strategy chain's TVL. The CRE workflow is audited to 
-    ///         the same standard as this contract. No onchain validation of this value is performed; 
-    ///         an incorrect value will corrupt epoch share accounting irrecoverably once any user 
+    /// @notice The tvl parameter is provided by the CRE workflow via WorkflowRouter and is trusted
+    ///         to accurately reflect the active strategy chain's TVL. The CRE workflow is audited to
+    ///         the same standard as this contract. No onchain validation of this value is performed;
+    ///         an incorrect value will corrupt epoch share accounting irrecoverably once any user
     ///         claims against the affected epoch.
     function closeEpoch(uint256 tvl) external nonReentrant onlyRole(Roles.EPOCH_OPERATOR_ROLE) {
         if (s_rebalance.state != Types.RebalanceState.NONE) revert ParentVault__RebalanceInProgress();
