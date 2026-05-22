@@ -96,6 +96,7 @@ contract ChildVault is BaseVault, IChildVault {
     }
 
     /// @notice Sends a ChildVault CCIP message and stores recovery state on failure
+    /// @notice Overrides BaseVault::_ccipSend to use a try/catch. (Parent failures use atomic revert)
     function _ccipSend(
         uint256 bridgeAmount,
         uint64 destinationChainSelector,
@@ -115,6 +116,18 @@ contract ChildVault is BaseVault, IChildVault {
             });
             emit CcipSendRecoveryStored(ccipTxType, destinationChainSelector, bridgeAmount);
         }
+    }
+
+    /// @notice Executes a CCIP send through an external self-call boundary for ChildVault try/catch recovery
+    /// @dev Precondition: caller must be this vault
+    function tryCcipSend(
+        uint256 bridgeAmount,
+        uint64 destinationChainSelector,
+        Types.CcipTx ccipTxType,
+        bytes calldata txData
+    ) external {
+        if (msg.sender != address(this)) revert ChildVault__OnlySelf();
+        _executeCcipSend(bridgeAmount, destinationChainSelector, ccipTxType, txData);
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -153,18 +153,6 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         _executeCcipSend(bridgeAmount, destinationChainSelector, ccipTxType, txData);
     }
 
-    /// @notice Executes a CCIP send through an external self-call boundary for ChildVault try/catch recovery
-    /// @dev Precondition: caller must be this vault
-    function tryCcipSend(
-        uint256 bridgeAmount,
-        uint64 destinationChainSelector,
-        Types.CcipTx ccipTxType,
-        bytes calldata txData
-    ) external {
-        if (msg.sender != address(this)) revert BaseVault__OnlySelf();
-        _executeCcipSend(bridgeAmount, destinationChainSelector, ccipTxType, txData);
-    }
-
     /// @notice Builds and sends a CCIP message
     function _executeCcipSend(
         uint256 bridgeAmount,

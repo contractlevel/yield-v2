@@ -13,6 +13,8 @@ interface IChildVault is IBaseVault {
     //////////////////////////////////////////////////////////////*/
     /// @dev Thrown when a recovery strategy is invalid
     error ChildVault__InvalidRecoveryStrategy();
+    /// @dev Thrown when an external self-call helper is called by any address other than this contract
+    error ChildVault__OnlySelf();
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
