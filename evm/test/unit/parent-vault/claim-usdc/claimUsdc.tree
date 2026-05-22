@@ -8,7 +8,11 @@ ParentVault_claimUsdc
 └── when the claim is valid
     ├── it should transfer the correct USDC amount to the withdrawer
     ├── it should burn the withdrawn shares
+    ├── it should zero remaining counters for a single claimant
     ├── it should delete the withdrawer's withdraw mapping entry
     ├── it should return the correct USDC withdraw amount
     ├── it should use totalWithdrawClaimAmount
-    └── it should emit WithdrawClaimed
+    ├── it should emit WithdrawClaimed
+    ├── it should distribute rounding remainder to the pool-exhausting claimant
+    └── when the epoch is deposit-only
+        └── it should leave withdraw-side remaining counters at zero

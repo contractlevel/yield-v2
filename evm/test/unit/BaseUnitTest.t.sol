@@ -150,7 +150,7 @@ abstract contract BaseUnitTest is BaseTest {
     }
 
     function _setParentEpochStatus(uint256 epochNonce, Types.EpochStatus status) internal {
-        stdstore.target(address(s_parentVault)).sig("getEpoch(uint256)").with_key(epochNonce).depth(6)
+        stdstore.target(address(s_parentVault)).sig("getEpoch(uint256)").with_key(epochNonce).depth(10)
             .checked_write(uint256(status));
     }
 

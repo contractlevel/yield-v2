@@ -19,14 +19,14 @@ ParentVault_ccipReceive
 │   ├── when the received USDC amount is less than the epoch withdraw obligation
 │   │   ├── it should make the epoch claimable
 │   │   ├── it should emit EpochWithdrawAmountShort
-│   │   └── it should update the withdraw claim amount
+│   │   └── it should update the withdraw claim amount and remaining withdraw claim amount
 │   ├── when the received USDC amount matches the epoch withdraw obligation
 │   │   ├── it should make the epoch claimable
-│   │   ├── it should update the withdraw claim amount
+│   │   ├── it should update the withdraw claim amount and remaining withdraw claim amount
 │   │   └── it should emit EpochClaimable
 │   └── when the received USDC amount is greater than the epoch withdraw obligation
 │       ├── it should make the epoch claimable
-│       ├── it should update the withdraw claim amount
+│       ├── it should update the withdraw claim amount and remaining withdraw claim amount
 │       └── it should emit EpochClaimable
 └── when message is a rebalance
     ├── when the target protocol adapter is not registered

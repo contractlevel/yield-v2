@@ -221,14 +221,22 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         runPolicy
         returns (uint256 shareMintAmount)
     {
-        Types.Epoch memory epoch = s_epochs[epochNonce];
+        Types.Epoch storage epoch = s_epochs[epochNonce];
         if (epoch.status != Types.EpochStatus.CLAIMABLE) revert ParentVault__EpochNotClaimable(epochNonce);
 
         uint256 usdcDepositAmount = s_deposits[msg.sender][epochNonce];
         if (usdcDepositAmount == 0) revert ParentVault__NoDeposit(msg.sender, epochNonce);
-        delete s_deposits[msg.sender][epochNonce];
 
-        shareMintAmount = usdcDepositAmount * SHARE_PRECISION / epoch.pricePerShare;
+        if (usdcDepositAmount == epoch.remainingDepositClaimAmount) {
+            shareMintAmount = epoch.remainingShareMintAmount;
+        } else {
+            shareMintAmount = usdcDepositAmount * epoch.remainingShareMintAmount / epoch.remainingDepositClaimAmount;
+        }
+
+        epoch.remainingDepositClaimAmount -= usdcDepositAmount;
+        epoch.remainingShareMintAmount -= shareMintAmount;
+
+        delete s_deposits[msg.sender][epochNonce];
         IShare(i_share).mint(msg.sender, shareMintAmount);
 
         emit DepositClaimed(epochNonce, msg.sender, shareMintAmount);
@@ -250,16 +258,24 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         runPolicy
         returns (uint256 usdcWithdrawAmount)
     {
-        Types.Epoch memory epoch = s_epochs[epochNonce];
+        Types.Epoch storage epoch = s_epochs[epochNonce];
         if (epoch.status != Types.EpochStatus.CLAIMABLE) revert ParentVault__EpochNotClaimable(epochNonce);
 
         uint256 shareBurnAmount = s_withdraws[msg.sender][epochNonce];
         if (shareBurnAmount == 0) revert ParentVault__NoWithdraw(msg.sender, epochNonce);
+
+        if (shareBurnAmount == epoch.remainingShareBurnAmount) {
+            usdcWithdrawAmount = epoch.remainingWithdrawClaimAmount;
+        } else {
+            usdcWithdrawAmount = shareBurnAmount * epoch.remainingWithdrawClaimAmount / epoch.remainingShareBurnAmount;
+        }
+
+        epoch.remainingShareBurnAmount -= shareBurnAmount;
+        epoch.remainingWithdrawClaimAmount -= usdcWithdrawAmount;
+
         delete s_withdraws[msg.sender][epochNonce];
 
         IShare(i_share).burn(address(this), shareBurnAmount);
-
-        usdcWithdrawAmount = shareBurnAmount * epoch.totalWithdrawClaimAmount / epoch.totalShareBurnAmount;
 
         emit WithdrawClaimed(epochNonce, msg.sender, usdcWithdrawAmount);
         IERC20(i_usdc).safeTransfer(msg.sender, usdcWithdrawAmount);
@@ -333,6 +349,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
             uint256 expectedWithdrawUsdc = epoch.totalWithdrawClaimAmount - epoch.totalDepositAmount;
             /// @dev update the total withdraw claim amount
             epoch.totalWithdrawClaimAmount = epoch.totalDepositAmount + receivedUsdcAmount;
+            epoch.remainingWithdrawClaimAmount = epoch.totalWithdrawClaimAmount;
             if (receivedUsdcAmount < expectedWithdrawUsdc) {
                 emit EpochWithdrawAmountShort(epochNonce, expectedWithdrawUsdc, receivedUsdcAmount);
             }
@@ -382,6 +399,11 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     ///      epoch close. The remaining issue is yield drag from idle USDC on the Child,
     ///      so singleton child recovery plus workflow retry discipline is sufficient.
     /// @dev previousEpochNonce == 0 means no prior epoch exists (constructor sets s_epochNonce = 1).
+    /// @notice The tvl parameter is provided by the CRE workflow via WorkflowRouter and is trusted 
+    ///         to accurately reflect the active strategy chain's TVL. The CRE workflow is audited to 
+    ///         the same standard as this contract. No onchain validation of this value is performed; 
+    ///         an incorrect value will corrupt epoch share accounting irrecoverably once any user 
+    ///         claims against the affected epoch.
     function closeEpoch(uint256 tvl) external nonReentrant onlyRole(Roles.EPOCH_OPERATOR_ROLE) {
         if (s_rebalance.state != Types.RebalanceState.NONE) revert ParentVault__RebalanceInProgress();
 
@@ -421,6 +443,10 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         // 6. Store epoch settlement data
         epoch.totalWithdrawClaimAmount = totalWithdrawUsdc;
         epoch.pricePerShare = settlementPricePerShare;
+        epoch.remainingDepositClaimAmount = epoch.totalDepositAmount;
+        epoch.remainingShareMintAmount = newShares;
+        epoch.remainingShareBurnAmount = epoch.totalShareBurnAmount;
+        epoch.remainingWithdrawClaimAmount = totalWithdrawUsdc;
         epoch.closedAtTimestamp = block.timestamp;
 
         // 7. Transition epoch status and handle net flow
@@ -461,6 +487,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
                 /// @dev true for revertOnFail because this is local
                 uint256 amountOut = _executeWithdraw(netWithdrawAmount, true);
                 epoch.totalWithdrawClaimAmount = epoch.totalDepositAmount + amountOut;
+                epoch.remainingWithdrawClaimAmount = epoch.totalWithdrawClaimAmount;
                 emit WithdrawFromStrategySuccess(epochNonce, amountOut);
                 epoch.status = Types.EpochStatus.CLAIMABLE;
                 emit EpochClaimable(epochNonce);

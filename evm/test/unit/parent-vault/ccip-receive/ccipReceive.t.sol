@@ -142,6 +142,10 @@ contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
         assertEq(
             s_parentVault.getEpoch(EPOCH_NONCE).totalWithdrawClaimAmount, TOTAL_DEPOSIT_AMOUNT + receivedWithdrawUsdc
         );
+        assertEq(
+            s_parentVault.getEpoch(EPOCH_NONCE).remainingWithdrawClaimAmount,
+            TOTAL_DEPOSIT_AMOUNT + receivedWithdrawUsdc
+        );
     }
 
     function test_ParentVault_ccipReceive_Withdraw_Success_MakesEpochClaimable() public {
@@ -160,6 +164,7 @@ contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
         s_parentVault.ccipReceive(_withdrawMessage(EPOCH_NONCE, EXPECTED_WITHDRAW_USDC));
 
         assertEq(s_parentVault.getEpoch(EPOCH_NONCE).totalWithdrawClaimAmount, TOTAL_WITHDRAW_USDC);
+        assertEq(s_parentVault.getEpoch(EPOCH_NONCE).remainingWithdrawClaimAmount, TOTAL_WITHDRAW_USDC);
     }
 
     function test_ParentVault_ccipReceive_Withdraw_WhenReceivedAmountIsGreaterThanExpected_MakesEpochClaimable()
@@ -184,6 +189,10 @@ contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
 
         assertEq(
             s_parentVault.getEpoch(EPOCH_NONCE).totalWithdrawClaimAmount, TOTAL_DEPOSIT_AMOUNT + receivedWithdrawUsdc
+        );
+        assertEq(
+            s_parentVault.getEpoch(EPOCH_NONCE).remainingWithdrawClaimAmount,
+            TOTAL_DEPOSIT_AMOUNT + receivedWithdrawUsdc
         );
     }
 

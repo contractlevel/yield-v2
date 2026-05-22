@@ -5,6 +5,9 @@ import {BaseUnitTest, Vm} from "../../BaseUnitTest.t.sol";
 import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
 
 import {IParentVault} from "../../../../src/interfaces/IParentVault.sol";
+import {Roles} from "../../../../src/libraries/Roles.sol";
+import {BaseVault} from "../../../../src/vaults/BaseVault.sol";
+import {ParentVault} from "../../../../src/vaults/ParentVault.sol";
 
 contract ParentVault_ClaimUsdcUnitTest is BaseUnitTest {
     using stdStorage for StdStorage;
@@ -69,6 +72,13 @@ contract ParentVault_ClaimUsdcUnitTest is BaseUnitTest {
         assertEq(s_yieldcoin.totalSupply(), supplyBefore - SHARE_BURN_AMOUNT);
     }
 
+    function test_ParentVault_claimUsdc_Success_SingleClaimantZeroesRemainingCounters() public {
+        s_parentVault.claimUsdc(1);
+
+        assertEq(s_parentVault.getEpoch(1).remainingShareBurnAmount, 0);
+        assertEq(s_parentVault.getEpoch(1).remainingWithdrawClaimAmount, 0);
+    }
+
     function test_ParentVault_claimUsdc_Success_DeletesWithdrawMapping() public {
         s_parentVault.claimUsdc(1);
         assertEq(s_parentVault.getWithdrawShareBurnAmount(i_withdrawer, 1), 0);
@@ -82,6 +92,8 @@ contract ParentVault_ClaimUsdcUnitTest is BaseUnitTest {
     function test_ParentVault_claimUsdc_Success_UsesTotalWithdrawClaimAmount() public {
         uint256 adjustedWithdrawClaimAmount = EXPECTED_USDC - 1;
         stdstore.target(address(s_parentVault)).sig("getEpoch(uint256)").with_key(1).depth(2)
+            .checked_write(adjustedWithdrawClaimAmount);
+        stdstore.target(address(s_parentVault)).sig("getEpoch(uint256)").with_key(1).depth(7)
             .checked_write(adjustedWithdrawClaimAmount);
 
         uint256 usdcWithdrawAmount = s_parentVault.claimUsdc(1);
@@ -97,5 +109,85 @@ contract ParentVault_ClaimUsdcUnitTest is BaseUnitTest {
         assertEq(uint256(log.topics[1]), 1);
         assertEq(address(uint160(uint256(log.topics[2]))), i_withdrawer);
         assertEq(uint256(log.topics[3]), EXPECTED_USDC);
+    }
+
+    function test_ParentVault_claimUsdc_Success_DistributesRoundingRemainderToPoolExhaustingClaimant() public {
+        _deployFreshParentVault();
+
+        uint256 firstBurn = 100 * 1e6;
+        uint256 secondBurn = 100 * 1e6;
+        uint256 thirdBurn = 101 * 1e6;
+        uint256 totalBurn = firstBurn + secondBurn + thirdBurn;
+        uint256 totalShares = 1_000 * 1e6;
+        uint256 tvl = 2_000 * 1e6;
+        uint256 adjustedWithdrawClaimAmount = 601 * 1e6;
+        uint256 expectedFirstUsdc = firstBurn * adjustedWithdrawClaimAmount / totalBurn;
+        uint256 expectedSecondUsdc = secondBurn * (adjustedWithdrawClaimAmount - expectedFirstUsdc)
+            / (totalBurn - firstBurn);
+        uint256 expectedThirdUsdc = adjustedWithdrawClaimAmount - expectedFirstUsdc - expectedSecondUsdc;
+
+        _setParentTotalShares(totalShares);
+        _setParentPerformanceFeeHighWaterMark(2 * SHARE_PRECISION);
+        _submitWithdraw(i_withdrawer, firstBurn);
+        _submitWithdraw(i_recipient1, secondBurn);
+        _submitWithdraw(i_recipient2, thirdBurn);
+        s_mockProtocolAdapter.setWithdrawReturnAmount(adjustedWithdrawClaimAmount);
+        _closeEpoch(tvl);
+        deal(address(s_mockUsdc), address(s_parentVault), adjustedWithdrawClaimAmount);
+
+        _changePrank(i_withdrawer);
+        uint256 firstUsdc = s_parentVault.claimUsdc(1);
+        _changePrank(i_recipient1);
+        uint256 secondUsdc = s_parentVault.claimUsdc(1);
+        _changePrank(i_recipient2);
+        uint256 thirdUsdc = s_parentVault.claimUsdc(1);
+
+        assertEq(firstUsdc, expectedFirstUsdc);
+        assertEq(secondUsdc, expectedSecondUsdc);
+        assertEq(thirdUsdc, expectedThirdUsdc);
+        assertEq(firstUsdc + secondUsdc + thirdUsdc, adjustedWithdrawClaimAmount);
+        assertEq(s_parentVault.getEpoch(1).remainingShareBurnAmount, 0);
+        assertEq(s_parentVault.getEpoch(1).remainingWithdrawClaimAmount, 0);
+    }
+
+    function test_ParentVault_claimUsdc_WhenDepositOnlyEpoch_WithdrawSideRemainingCountersAreZero() public {
+        _deployFreshParentVault();
+
+        _submitDeposit(i_depositor, DEPOSIT_AMOUNT);
+        _closeEpoch(0);
+
+        assertEq(s_parentVault.getEpoch(1).remainingShareBurnAmount, 0);
+        assertEq(s_parentVault.getEpoch(1).remainingWithdrawClaimAmount, 0);
+    }
+
+    function _deployFreshParentVault() internal {
+        _changePrank(i_owner);
+        BaseVault.ConstructorParams memory params = _baseVaultParams(PARENT_CHAIN_SELECTOR);
+        s_parentVault = new ParentVault(
+            params, i_treasury, address(s_yieldcoin), i_policyEngineManager, address(s_mockPolicyEngine)
+        );
+        s_parentVault.setInitialActiveProtocolAdapter(AAVE_V3_PROTOCOL_ID);
+        s_parentVault.grantRole(Roles.EPOCH_OPERATOR_ROLE, i_epochOperator);
+    }
+
+    function _submitDeposit(address depositor, uint256 amount) internal {
+        deal(address(s_mockUsdc), depositor, amount);
+        _changePrank(depositor);
+        s_mockUsdc.approve(address(s_parentVault), amount);
+        s_parentVault.deposit(amount);
+    }
+
+    function _submitWithdraw(address withdrawer, uint256 amount) internal {
+        _changePrank(address(s_parentVault));
+        s_yieldcoin.mint(withdrawer, amount);
+        _changePrank(withdrawer);
+        s_yieldcoin.approve(address(s_parentVault), amount);
+        s_parentVault.withdraw(amount);
+    }
+
+    function _closeEpoch(uint256 tvl) internal {
+        vm.warp(block.timestamp + MIN_EPOCH_PERIOD + 1);
+        _changePrank(i_epochOperator);
+        s_parentVault.closeEpoch(tvl);
     }
 }

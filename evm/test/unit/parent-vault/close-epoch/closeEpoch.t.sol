@@ -190,6 +190,17 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         assertEq(s_parentVault.getEpoch(1).totalWithdrawClaimAmount, TVL);
     }
 
+    function test_ParentVault_closeEpoch_Success_InitializesRemainingClaimAmounts() public {
+        _submitDeposit();
+        _submitParentWithdraw(WITHDRAW_SHARES);
+        _closeEpoch(TVL);
+
+        assertEq(s_parentVault.getEpoch(1).remainingDepositClaimAmount, DEPOSIT_AMOUNT);
+        assertEq(s_parentVault.getEpoch(1).remainingShareMintAmount, DEPOSIT_AMOUNT);
+        assertEq(s_parentVault.getEpoch(1).remainingShareBurnAmount, WITHDRAW_SHARES);
+        assertEq(s_parentVault.getEpoch(1).remainingWithdrawClaimAmount, WITHDRAW_SHARES);
+    }
+
     function test_ParentVault_closeEpoch_LocalNetWithdraw_WhenAdapterReturnsDifferentAmount_UpdatesWithdrawClaimAmount()
         public
     {
@@ -200,6 +211,7 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         _closeEpoch(TVL);
 
         assertEq(s_parentVault.getEpoch(1).totalWithdrawClaimAmount, amountOut);
+        assertEq(s_parentVault.getEpoch(1).remainingWithdrawClaimAmount, amountOut);
     }
 
     function test_ParentVault_closeEpoch_Success_StoresClosedAtTimestampOnEpoch() public {

@@ -123,14 +123,26 @@ library Types {
     /// @param totalShareBurnAmount The total amount of shares submitted to be burned during the epoch
     /// @param totalWithdrawClaimAmount The total amount of USDC available for withdraw claims during the epoch
     /// @param pricePerShare The price per share of the epoch
+    /// @param remainingDepositClaimAmount The unclaimed USDC deposit amount used for shrinking-pool share claims
+    /// @param remainingShareMintAmount The unclaimed shares to mint for deposit claims
+    /// @param remainingShareBurnAmount The unclaimed shares submitted for withdraw claims
+    /// @param remainingWithdrawClaimAmount The unclaimed USDC available for withdraw claims
     /// @param openedAtTimestamp The timestamp when the epoch was opened
     /// @param closedAtTimestamp The timestamp when the epoch was closed
     /// @param status The status of the epoch
+    /// @dev Remaining counter pairs are mutable claim-settlement state. Existing totals remain historical settlement state.
+    ///      The claimant who exhausts a side's input pool receives that side's rounding remainder, bounded per side per epoch
+    ///      by at most N - 1 smallest output units where N is the number of claimants on that side.
+    ///      Deposit-side counters should reach zero together. Withdraw-side counters should reach zero together.
     struct Epoch {
         uint256 totalDepositAmount;
         uint256 totalShareBurnAmount;
         uint256 totalWithdrawClaimAmount;
         uint256 pricePerShare;
+        uint256 remainingDepositClaimAmount;
+        uint256 remainingShareMintAmount;
+        uint256 remainingShareBurnAmount;
+        uint256 remainingWithdrawClaimAmount;
         uint256 openedAtTimestamp;
         uint256 closedAtTimestamp;
         EpochStatus status;

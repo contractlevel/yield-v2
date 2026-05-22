@@ -7,6 +7,12 @@ ParentVault_claimShares
 │   └── it should revert with ParentVault__NoDeposit
 └── when the claim is valid
     ├── it should mint the correct number of shares to the depositor
+    ├── it should zero remaining counters for a single claimant
     ├── it should delete the depositor's deposit mapping entry
     ├── it should return the correct share mint amount
-    └── it should emit DepositClaimed
+    ├── it should emit DepositClaimed
+    ├── it should distribute rounding remainder to the pool-exhausting claimant
+    ├── when the epoch is withdraw-only
+    │   └── it should leave deposit-side remaining counters at zero
+    └── when claims span sequential epochs
+        └── it should keep remaining counters isolated by epoch nonce
