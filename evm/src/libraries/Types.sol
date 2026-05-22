@@ -74,6 +74,20 @@ library Types {
         uint256 createdAt;
     }
 
+    /// @notice Recovery state for failed ChildVault CCIP send operations
+    /// @param ccipTxType The CCIP transaction type to replay
+    /// @param amount The amount of USDC to bridge
+    /// @param destinationChainSelector The CCIP selector of the destination chain
+    /// @param txData The encoded payload to send with the CCIP message
+    /// @param createdAt The timestamp when the recovery state was stored
+    struct CcipSendRecovery {
+        CcipTx ccipTxType;
+        uint256 amount;
+        uint64 destinationChainSelector;
+        bytes txData;
+        uint256 createdAt;
+    }
+
     /*//////////////////////////////////////////////////////////////
                                REBALANCE
     //////////////////////////////////////////////////////////////*/

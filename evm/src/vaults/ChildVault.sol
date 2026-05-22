@@ -37,6 +37,8 @@ contract ChildVault is BaseVault, IChildVault {
     Types.EpochRecovery internal s_epochWithdrawRecovery;
     /// @dev Recovery state for failed rebalance withdraw operations
     Types.RebalanceWithdrawRecovery internal s_rebalanceWithdrawRecovery;
+    /// @dev Recovery state for failed CCIP send operations
+    Types.CcipSendRecovery internal s_ccipSendRecovery;
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
@@ -90,6 +92,28 @@ contract ChildVault is BaseVault, IChildVault {
         } else {
             _storeEpochDepositRecovery(epochNonce, amount);
             emit DepositToStrategyFailure(epochNonce, amount);
+        }
+    }
+
+    /// @notice Dispatches a ChildVault CCIP send and stores recovery state on failure
+    function _dispatchCcipSend(
+        uint256 bridgeAmount,
+        uint64 destinationChainSelector,
+        Types.CcipTx ccipTxType,
+        bytes memory txData
+    ) internal override {
+        if (s_ccipSendRecovery.amount != 0) revert BaseVault__RecoveryAlreadyPending();
+
+        try this.tryCcipSend(bridgeAmount, destinationChainSelector, ccipTxType, txData) {}
+        catch {
+            s_ccipSendRecovery = Types.CcipSendRecovery({
+                ccipTxType: ccipTxType,
+                amount: bridgeAmount,
+                destinationChainSelector: destinationChainSelector,
+                txData: txData,
+                createdAt: block.timestamp
+            });
+            emit CcipSendRecoveryStored(ccipTxType, destinationChainSelector, bridgeAmount);
         }
     }
 
@@ -308,6 +332,19 @@ contract ChildVault is BaseVault, IChildVault {
         _recoverFailedRebalanceDeposit();
     }
 
+    /// @notice Retries a failed ChildVault CCIP send
+    /// @dev Precondition: CCIP send recovery state must exist
+    function recoverFailedCcipSend() external nonReentrant {
+        Types.CcipSendRecovery memory recovery = s_ccipSendRecovery;
+        if (recovery.amount == 0) revert BaseVault__NoPendingRecovery();
+
+        // Clear before retry; if _executeCcipSend reverts, EVM atomicity restores this recovery state.
+        delete s_ccipSendRecovery;
+        emit CcipSendRecoveryCleared(recovery.ccipTxType, recovery.destinationChainSelector, recovery.amount);
+
+        _executeCcipSend(recovery.amount, recovery.destinationChainSelector, recovery.ccipTxType, recovery.txData);
+    }
+
     /*//////////////////////////////////////////////////////////////
                                  GETTER
     //////////////////////////////////////////////////////////////*/
@@ -333,6 +370,12 @@ contract ChildVault is BaseVault, IChildVault {
     /// @return recovery The stored rebalance withdraw recovery state
     function getRebalanceWithdrawRecovery() external view returns (Types.RebalanceWithdrawRecovery memory recovery) {
         recovery = s_rebalanceWithdrawRecovery;
+    }
+
+    /// @notice Gets failed CCIP send recovery state
+    /// @return recovery The stored CCIP send recovery state
+    function getCcipSendRecovery() external view returns (Types.CcipSendRecovery memory recovery) {
+        recovery = s_ccipSendRecovery;
     }
 
     /*//////////////////////////////////////////////////////////////

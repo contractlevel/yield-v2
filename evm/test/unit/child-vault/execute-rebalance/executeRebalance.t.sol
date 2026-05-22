@@ -95,6 +95,21 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
         assertEq(uint256(log.topics[3]), uint256(Types.CcipTx.REBALANCE));
     }
 
+    function test_ChildVault_executeRebalance_RemoteChild_WhenCcipSendReverts_StoresCcipSendRecovery() public {
+        s_mockCcipRouter.setCcipSendReverts(true);
+
+        _executeRemoteChildRebalance();
+
+        Types.CcipSendRecovery memory recovery = s_childVault.getCcipSendRecovery();
+        (uint256 rebalanceNonce, bytes32 protocolId) = abi.decode(recovery.txData, (uint256, bytes32));
+        assertEq(uint256(recovery.ccipTxType), uint256(Types.CcipTx.REBALANCE));
+        assertEq(recovery.amount, REBALANCE_AMOUNT);
+        assertEq(recovery.destinationChainSelector, REMOTE_CHILD_CHAIN_SELECTOR);
+        assertEq(rebalanceNonce, REBALANCE_NONCE);
+        assertEq(protocolId, AAVE_V4_PROTOCOL_ID);
+        assertEq(recovery.createdAt, block.timestamp);
+    }
+
     function test_ChildVault_executeRebalance_RemoteChild_ClearsActiveProtocolAdapter() public {
         _executeRemoteChildRebalance();
 

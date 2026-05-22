@@ -6,6 +6,7 @@ import {BaseUnitTest, Vm} from "../../BaseUnitTest.t.sol";
 import {IParentVault} from "../../../../src/interfaces/IParentVault.sol";
 import {IBaseVault} from "../../../../src/interfaces/IBaseVault.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
+import {MockCCIPRouter} from "../../../mocks/MockCCIPRouter.sol";
 
 contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
     uint256 internal constant WITHDRAW_SHARES = MIN_DEPOSIT_AMOUNT;
@@ -126,6 +127,17 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         _closeEpoch(TVL);
 
         assertEq(s_mockUsdc.balanceOf(address(s_mockCcipRouter)), routerBefore + DEPOSIT_AMOUNT);
+    }
+
+    function test_ParentVault_closeEpoch_RemoteNetDeposit_RevertWhen_CcipSendReverts() public {
+        _prepareRemoteStrategy();
+        _submitDeposit();
+        s_mockCcipRouter.setCcipSendReverts(true);
+
+        _warpPastMinEpoch();
+        _changePrank(i_epochOperator);
+        vm.expectRevert(MockCCIPRouter.MockCCIPRouter__CcipSendReverts.selector);
+        s_parentVault.closeEpoch(TVL);
     }
 
     function test_ParentVault_closeEpoch_RemoteNetWithdraw_MarksEpochExecuting() public {

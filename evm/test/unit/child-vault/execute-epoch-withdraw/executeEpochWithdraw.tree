@@ -5,7 +5,9 @@ ChildVault_executeEpochWithdraw
 │   └── it should revert with BaseVault__NoActiveAdapter
 ├── when withdraw succeeds
 │   ├── it should withdraw from the active adapter
-│   └── it should bridge withdrawn USDC to Parent
+│   ├── it should bridge withdrawn USDC to Parent
+│   └── when ccipSend reverts
+│       └── it should store CCIP send recovery
 ├── when withdraw adapter reverts
 │   ├── it should emit failure without bridging
 │   ├── it should store epoch withdraw recovery

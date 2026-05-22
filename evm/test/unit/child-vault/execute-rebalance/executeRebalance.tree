@@ -28,4 +28,6 @@ ChildVault_executeRebalance
   │   │       └── it should revert with BaseVault__RecoveryAlreadyPending
   └── when rebalance is to a remote child
       ├── it should withdraw from the active adapter
-      └── it should bridge to the target child
+      ├── it should bridge to the target child
+      └── when ccipSend reverts
+          └── it should store CCIP send recovery

@@ -31,6 +31,8 @@ ParentVault_closeEpoch
 │   └── it should emit WithdrawFromStrategySuccess
 ├── when remote strategy has net deposit
 │   ├── it should bridge net flow to the strategy chain
+│   ├── when ccipSend reverts
+│   │   └── it should revert
 │   └── it should emit EpochClaimable
 ├── when remote strategy has net withdrawal
 │   ├── it should mark the epoch executing

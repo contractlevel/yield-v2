@@ -14,6 +14,8 @@ ParentVault_initiateRebalance
 ├── when parent rebalances local to child
 │   ├── it should withdraw from the old adapter
 │   ├── it should bridge to the child
+│   ├── when ccipSend reverts
+│   │   └── it should revert
 │   └── it should leave the rebalance pending
 └── when local adapter fails
     ├── it should revert when withdraw reverts

@@ -1,0 +1,5 @@
+CcipSend_RecoveryIntegrationTest
+├── when a ChildVault epoch withdraw CCIP send fails
+│   └── it should store recovery, retry the send, and make the parent epoch claimable
+└── when a ChildVault rebalance CCIP send fails
+    └── it should store recovery, retry the send, and complete the parent rebalance

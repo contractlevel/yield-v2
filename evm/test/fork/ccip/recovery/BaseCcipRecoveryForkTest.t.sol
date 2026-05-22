@@ -142,6 +142,28 @@ abstract contract BaseCcipRecoveryForkTest is BaseCcipForkTest {
         assertEq(recovery.createdAt, 0);
     }
 
+    function _assertCcipSendRecovery(
+        Types.CcipSendRecovery memory recovery,
+        Types.CcipTx ccipTxType,
+        uint64 destinationChainSelector,
+        uint256 amount,
+        bytes memory txData
+    ) internal view {
+        assertEq(uint256(recovery.ccipTxType), uint256(ccipTxType));
+        assertEq(recovery.destinationChainSelector, destinationChainSelector);
+        assertEq(recovery.amount, amount);
+        assertEq(recovery.txData, txData);
+        assertEq(recovery.createdAt, block.timestamp);
+    }
+
+    function _assertCcipSendRecoveryCleared(Types.CcipSendRecovery memory recovery) internal pure {
+        assertEq(uint256(recovery.ccipTxType), 0);
+        assertEq(recovery.destinationChainSelector, 0);
+        assertEq(recovery.amount, 0);
+        assertEq(recovery.txData.length, 0);
+        assertEq(recovery.createdAt, 0);
+    }
+
     function _assertCompletedRebalance(bytes32 protocolId, uint64 chainSelector) internal {
         vm.selectFork(arbitrumFork);
         Types.Rebalance memory rebalance = parent.vault.getRebalance();

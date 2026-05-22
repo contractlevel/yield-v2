@@ -5,6 +5,7 @@ import {BaseUnitTest, Vm} from "../../BaseUnitTest.t.sol";
 
 import {IBaseVault} from "../../../../src/interfaces/IBaseVault.sol";
 import {IParentVault} from "../../../../src/interfaces/IParentVault.sol";
+import {MockCCIPRouter} from "../../../mocks/MockCCIPRouter.sol";
 import {MockProtocolAdapter} from "../../../mocks/MockProtocolAdapter.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
 
@@ -154,6 +155,14 @@ contract ParentVault_InitiateRebalanceUnitTest is BaseUnitTest {
         _initiateLocalToChild();
 
         assertEq(s_mockUsdc.balanceOf(address(s_mockCcipRouter)), routerBefore + REBALANCE_AMOUNT);
+    }
+
+    function test_ParentVault_initiateRebalance_LocalToChild_RevertWhen_CcipSendReverts() public {
+        _setParentCrosschainVault(CHILD_CHAIN_SELECTOR, address(s_childVault));
+        s_mockCcipRouter.setCcipSendReverts(true);
+
+        vm.expectRevert(MockCCIPRouter.MockCCIPRouter__CcipSendReverts.selector);
+        _initiateLocalToChild();
     }
 
     function test_ParentVault_initiateRebalance_LocalToChild_ClearsActiveProtocolAdapter() public {

@@ -5,10 +5,23 @@ import {IRouterClient, Client} from "@chainlink/contracts-ccip/contracts/interfa
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract MockCCIPRouter is IRouterClient {
+    error MockCCIPRouter__GetFeeReverts();
+    error MockCCIPRouter__CcipSendReverts();
+
     address internal immutable i_usdc;
+    bool internal s_getFeeReverts;
+    bool internal s_ccipSendReverts;
 
     constructor(address usdc) {
         i_usdc = usdc;
+    }
+
+    function setGetFeeReverts(bool getFeeReverts) external {
+        s_getFeeReverts = getFeeReverts;
+    }
+
+    function setCcipSendReverts(bool ccipSendReverts) external {
+        s_ccipSendReverts = ccipSendReverts;
     }
 
     function getFee(
@@ -17,9 +30,10 @@ contract MockCCIPRouter is IRouterClient {
         Client.EVM2AnyMessage memory /* message */
     )
         external
-        pure
+        view
         returns (uint256)
     {
+        if (s_getFeeReverts) revert MockCCIPRouter__GetFeeReverts();
         return 0;
     }
 
@@ -32,6 +46,7 @@ contract MockCCIPRouter is IRouterClient {
         payable
         returns (bytes32)
     {
+        if (s_ccipSendReverts) revert MockCCIPRouter__CcipSendReverts();
         IERC20(i_usdc).transferFrom(msg.sender, address(this), message.tokenAmounts[0].amount);
         return bytes32(0);
     }

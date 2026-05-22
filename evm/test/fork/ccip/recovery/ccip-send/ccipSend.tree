@@ -1,0 +1,9 @@
+recover ChildVault CCIP send on Base fork
+├── when the Base child epoch withdraw CCIP send fails
+│   ├── it should emit CcipSendRecoveryStored
+│   ├── it should retry the send and route USDC to Arbitrum
+│   └── it should make the parent epoch claimable for USDC
+└── when the Base child rebalance CCIP send fails
+    ├── it should emit CcipSendRecoveryStored
+    ├── it should retry the send and route USDC to Arbitrum
+    └── it should clear the Base active adapter and finalize the parent rebalance

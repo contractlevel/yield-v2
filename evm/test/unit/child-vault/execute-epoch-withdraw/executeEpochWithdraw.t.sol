@@ -64,6 +64,19 @@ contract ChildVault_ExecuteEpochWithdrawUnitTest is BaseUnitTest {
         assertEq(uint256(log.topics[3]), uint256(Types.CcipTx.EPOCH_NET_WITHDRAW));
     }
 
+    function test_ChildVault_executeEpochWithdraw_WhenCcipSendReverts_StoresCcipSendRecovery() public {
+        s_mockCcipRouter.setCcipSendReverts(true);
+
+        s_childVault.executeEpochWithdraw(EPOCH_NONCE, WITHDRAW_AMOUNT);
+
+        Types.CcipSendRecovery memory recovery = s_childVault.getCcipSendRecovery();
+        assertEq(uint256(recovery.ccipTxType), uint256(Types.CcipTx.EPOCH_NET_WITHDRAW));
+        assertEq(recovery.amount, WITHDRAW_AMOUNT);
+        assertEq(recovery.destinationChainSelector, PARENT_CHAIN_SELECTOR);
+        assertEq(abi.decode(recovery.txData, (uint256)), EPOCH_NONCE);
+        assertEq(recovery.createdAt, block.timestamp);
+    }
+
     function test_ChildVault_executeEpochWithdraw_WhenAdapterReverts_EmitsFailureWithoutBridging() public {
         s_mockProtocolAdapter.setWithdrawReverts(true);
         uint256 routerBefore = s_mockUsdc.balanceOf(address(s_mockCcipRouter));

@@ -150,6 +150,39 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         Types.CcipTx ccipTxType,
         bytes memory txData
     ) internal {
+        _dispatchCcipSend(bridgeAmount, destinationChainSelector, ccipTxType, txData);
+    }
+
+    /// @notice Dispatches a CCIP send
+    /// @dev Parent/default behavior reverts on any send failure. ChildVault overrides this for recovery storage.
+    function _dispatchCcipSend(
+        uint256 bridgeAmount,
+        uint64 destinationChainSelector,
+        Types.CcipTx ccipTxType,
+        bytes memory txData
+    ) internal virtual {
+        _executeCcipSend(bridgeAmount, destinationChainSelector, ccipTxType, txData);
+    }
+
+    /// @notice Executes a CCIP send through an external self-call boundary for ChildVault try/catch recovery
+    /// @dev Precondition: caller must be this vault
+    function tryCcipSend(
+        uint256 bridgeAmount,
+        uint64 destinationChainSelector,
+        Types.CcipTx ccipTxType,
+        bytes calldata txData
+    ) external {
+        if (msg.sender != address(this)) revert BaseVault__OnlySelf();
+        _executeCcipSend(bridgeAmount, destinationChainSelector, ccipTxType, txData);
+    }
+
+    /// @notice Builds and sends a CCIP message
+    function _executeCcipSend(
+        uint256 bridgeAmount,
+        uint64 destinationChainSelector,
+        Types.CcipTx ccipTxType,
+        bytes memory txData
+    ) internal {
         /// @dev Get the vault address for receiving the message
         address vault = s_crosschainVaults[destinationChainSelector];
         /// @dev Get the CCIP gas limit for the strategy chain
