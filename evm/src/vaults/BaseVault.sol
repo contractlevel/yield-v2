@@ -149,17 +149,6 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         uint64 destinationChainSelector,
         Types.CcipTx ccipTxType,
         bytes memory txData
-    ) internal {
-        _dispatchCcipSend(bridgeAmount, destinationChainSelector, ccipTxType, txData);
-    }
-
-    /// @notice Dispatches a CCIP send
-    /// @dev Parent/default behavior reverts on any send failure. ChildVault overrides this for recovery storage.
-    function _dispatchCcipSend(
-        uint256 bridgeAmount,
-        uint64 destinationChainSelector,
-        Types.CcipTx ccipTxType,
-        bytes memory txData
     ) internal virtual {
         _executeCcipSend(bridgeAmount, destinationChainSelector, ccipTxType, txData);
     }

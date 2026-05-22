@@ -95,8 +95,8 @@ contract ChildVault is BaseVault, IChildVault {
         }
     }
 
-    /// @notice Dispatches a ChildVault CCIP send and stores recovery state on failure
-    function _dispatchCcipSend(
+    /// @notice Sends a ChildVault CCIP message and stores recovery state on failure
+    function _ccipSend(
         uint256 bridgeAmount,
         uint64 destinationChainSelector,
         Types.CcipTx ccipTxType,
