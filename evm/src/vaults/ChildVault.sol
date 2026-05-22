@@ -101,6 +101,7 @@ contract ChildVault is BaseVault, IChildVault {
     /// @param destinationChainSelector The CCIP selector of the destination chain
     /// @param ccipTxType The type of CCIP transaction
     /// @param txData abi.encode(epochNonce) for epoch net deposit/withdraw, or abi.encode(rebalanceNonce, newStrategy.protocolId) for rebalance
+    /// @dev Precondition: There must not be a ccip send recovery already in state
     function _ccipSend(
         uint256 bridgeAmount,
         uint64 destinationChainSelector,
