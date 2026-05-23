@@ -53,22 +53,19 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /*//////////////////////////////////////////////////////////////
                                  STATE
     //////////////////////////////////////////////////////////////*/
-    // @review order of state variables
     /// @dev Default CCIP gas limit
     uint256 internal s_defaultCcipGasLimit;
     /// @dev Mapping of chain selectors to CCIP gas limits
-    mapping(uint64 chainSelector => uint256 gasLimit) s_ccipGasLimits;
+    mapping(uint64 chainSelector => uint256 gasLimit) internal s_ccipGasLimits;
     /// @dev Mapping of chain selectors to crosschain vault addresses - also trusted CCIP senders allow list
     /// @notice The Parent chain should include itself as a trusted CCIP sender and set its own vault address
     mapping(uint64 chainSelector => address vault) internal s_crosschainVaults;
-
     /// @dev Active strategy protocol adapter for this chain. If this is address(0), this chain is NOT the active strategy chain
     //slither-disable-next-line uninitialized-state
     address internal s_activeProtocolAdapter;
-
     /// @dev Timestamp when the vault was paused. Deleted when the vault is unpaused.
     /// @notice This is used for emergency recovery modes.
-    uint256 internal s_pausedAt;
+    uint96 internal s_pausedAt;
     /// @dev Recovery state for failed rebalance deposit operations. This can exist on Parent or Child.
     Types.RebalanceDepositRecovery internal s_rebalanceDepositRecovery;
 
@@ -454,7 +451,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @dev Sets the timestamp when the vault was paused
     function pause() external onlyRole(Roles.PAUSER_ROLE) {
         _pause();
-        s_pausedAt = block.timestamp;
+        s_pausedAt = uint96(block.timestamp);
     }
 
     /// @notice Unpauses the vault

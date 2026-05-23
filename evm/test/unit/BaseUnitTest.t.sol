@@ -27,7 +27,7 @@ abstract contract BaseUnitTest is BaseTest {
 
     MockLink internal s_mockLink;
     MockPolicyEngine internal s_mockPolicyEngine;
-    MockProtocolAdapter internal s_mockProtocolAdapter; // @review replace this with AaveV3Adapter
+    MockProtocolAdapter internal s_mockProtocolAdapter;
     MockUSDC internal s_mockUsdc;
     MockCCIPRouter internal s_mockCcipRouter;
 

@@ -76,8 +76,6 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     mapping(address depositor => mapping(uint256 epochId => uint256 usdcAmount)) s_deposits;
     /// @dev Mapping of withdrawers to their withdraw intents for each epoch
     mapping(address withdrawer => mapping(uint256 epochId => uint256 shareBurnAmount)) s_withdraws;
-
-    // @review order of state variables
     /// @dev Treasury address for collecting fees. This should be the protocol operator's multisig.
     address internal s_treasury;
     /// @dev Whether the initial active protocol adapter has been set
@@ -542,7 +540,11 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @param newStrategy The new strategy to rebalance to
     /// @notice This is called by the WorkflowRouter
     /// @dev Precondition: the caller must have the REBALANCE_OPERATOR_ROLE
-    // @review continue natspec for paths here and epoch.status
+    /// @dev Precondition: A rebalance must not already be in progress
+    /// @dev Precondiiton: newStrategy must not be the same as the current active strategy
+    /// @dev Precondition: An epoch must not be EXECUTING
+    /// @dev Precondition: If current/active/previous strategy is on this chain, withdrawing tvl from the old strategy must succeed
+    /// @dev Precondition: If current/active/previous strategy and newStrategy is on this chain, depositing tvl into the new strategy must succeed
     function initiateRebalance(Types.Strategy memory newStrategy)
         external
         nonReentrant
@@ -577,7 +579,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         if (s_rebalance.activeStrategy.chainSelector == i_thisChainSelector) {
             // withdraw from local strategy
             uint256 amountOut = _executeWithdraw(type(uint256).max, true);
-            // @review will this condition ever be hit?
+            /// @dev This condition should never be hit as the _executeWithdraw call reverts on failure
             //slither-disable-next-line incorrect-equality
             if (amountOut == 0) revert ParentVault__WithdrawFailed(s_rebalance.nonce, type(uint256).max);
             emit RebalanceWithdrawSuccess(s_rebalance.nonce, amountOut);
@@ -600,6 +602,9 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         } // else, CRE is trigged by the event to write to old strategy chain and rebalance/bridge from there
     }
 
+    /// @notice Completes a rebalance
+    /// @dev Precondition: caller must have REBALANCE_OPERATOR_ROLE
+    /// @notice The WorkflowRouter calls this
     function completeRebalance(uint256 rebalanceNonce) external nonReentrant onlyRole(Roles.REBALANCE_OPERATOR_ROLE) {
         _finalizeRebalance(rebalanceNonce);
     }
@@ -614,6 +619,11 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         _finalizeRebalance(rebalanceNonce);
     }
 
+    /// @notice Finalizes a rebalance
+    /// @param rebalanceNonce the nonce of the rebalance to finalize
+    /// @dev Precondition: a rebalance must be in progress
+    /// @dev Precondition: rebalanceNonce must be the current rebalanceNonce @review we can probably delete this param
+    /// @notice Collects a management fee based on time elapsed since the last rebalance completed
     function _finalizeRebalance(uint256 rebalanceNonce) internal {
         if (s_rebalance.state != Types.RebalanceState.REBALANCING) revert ParentVault__NoRebalanceInProgress();
         if (s_rebalance.nonce != rebalanceNonce) revert ParentVault__InvalidRebalanceNonce(rebalanceNonce);
@@ -628,6 +638,20 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         emit RebalanceCompleted(rebalanceNonce);
         ++s_rebalance.nonce;
         _collectManagementFee(lastRebalanceCompletedTimestamp);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                                RECOVERY
+    //////////////////////////////////////////////////////////////*/
+    /// @notice Recovers a failed rebalance deposit into the active Parent strategy and finalizes the rebalance
+    /// @dev Precondition: rebalance deposit recovery state must exist
+    /// @dev Precondition: active strategy adapter must be set
+    /// @dev Precondition: rebalance state must be REBALANCING
+    /// @dev Precondition: pending recovery nonce must be the current nonce
+    /// @notice This Parent implemention overrides the BaseVault because we can finalize the rebalance in same atomic tx
+    function recoverFailedRebalanceDeposit() external override(BaseVault, IParentVault) {
+        (uint256 rebalanceNonce,) = _recoverFailedRebalanceDeposit();
+        _finalizeRebalance(rebalanceNonce);
     }
 
     /*//////////////////////////////////////////////////////////////
