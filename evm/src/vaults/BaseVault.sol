@@ -284,7 +284,6 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         }
     }
 
-    // @review do we want to pass a bool for revertOnFailure?
     /// @notice Executes a rebalance by attempting to withdraw from the old strategy with _executeWithdraw. If that was successful, then attempts to rebalance with _rebalanceToNewStrategy
     /// @param rebalanceNonce The nonce of the rebalance
     /// @param newStrategy The new strategy to rebalance to
@@ -584,6 +583,14 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     ///         uint256 createdAt - block.timestamp the recovery state was stored
     function getRebalanceDepositRecovery() external view returns (Types.RebalanceDepositRecovery memory recovery) {
         recovery = s_rebalanceDepositRecovery;
+    }
+
+    /// @notice Check for if a recovery exists
+    /// @notice Overridden on Child, which contains multiple recovery modes
+    /// @return recoveryExists true if recovery exists, false if not
+    /// @dev This is used for Workflow-level checks
+    function getRecoveryExists() external view virtual returns (bool recoveryExists) {
+        recoveryExists = s_rebalanceDepositRecovery.amount != 0;
     }
 
     /*//////////////////////////////////////////////////////////////

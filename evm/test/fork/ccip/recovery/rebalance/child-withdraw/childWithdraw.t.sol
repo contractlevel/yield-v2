@@ -45,6 +45,7 @@ contract ChildWithdraw_RebalanceRecoveryCcipForkTest is BaseCcipRecoveryForkTest
             AAVE_V3_PROTOCOL_ID,
             arbitrumConfig.ccip.thisChainSelector
         );
+        assertTrue(baseChild.vault.getRecoveryExists());
 
         _restoreBaseAaveV3Adapter();
         _prepareBaseToParentRouting();
@@ -56,6 +57,7 @@ contract ChildWithdraw_RebalanceRecoveryCcipForkTest is BaseCcipRecoveryForkTest
 
         _selectBaseFork();
         _assertRebalanceWithdrawRecoveryCleared(baseChild.vault.getRebalanceWithdrawRecovery());
+        assertFalse(baseChild.vault.getRecoveryExists());
         assertEq(baseChild.vault.getActiveProtocolAdapter(), address(0));
 
         _selectArbitrumFork();

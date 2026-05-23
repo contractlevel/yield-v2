@@ -24,6 +24,7 @@ contract ChildVault_CcipSendRecoveryUnitTest is BaseUnitTest {
     function test_ChildVault_recoverFailedCcipSend_RevertWhen_NoPendingRecovery() public {
         vm.expectRevert(IBaseVault.BaseVault__NoPendingRecovery.selector);
         s_childVault.recoverFailedCcipSend();
+        assertFalse(s_childVault.getRecoveryExists());
     }
 
     function test_ChildVault_executeEpochWithdraw_WhenGetFeeReverts_StoresCcipSendRecovery() public {
@@ -35,6 +36,7 @@ contract ChildVault_CcipSendRecoveryUnitTest is BaseUnitTest {
         assertEq(recovery.destinationChainSelector, PARENT_CHAIN_SELECTOR);
         assertEq(abi.decode(recovery.txData, (uint256)), EPOCH_NONCE);
         assertEq(recovery.createdAt, block.timestamp);
+        assertTrue(s_childVault.getRecoveryExists());
     }
 
     function test_ChildVault_executeEpochWithdraw_WhenCcipSendReverts_StoresCcipSendRecovery() public {
@@ -48,6 +50,7 @@ contract ChildVault_CcipSendRecoveryUnitTest is BaseUnitTest {
         assertEq(recovery.amount, WITHDRAW_AMOUNT);
         assertEq(recovery.destinationChainSelector, PARENT_CHAIN_SELECTOR);
         assertEq(abi.decode(recovery.txData, (uint256)), EPOCH_NONCE);
+        assertTrue(s_childVault.getRecoveryExists());
     }
 
     function test_ChildVault_executeRebalance_WhenGetFeeReverts_StoresCcipSendRecovery() public {
@@ -60,6 +63,7 @@ contract ChildVault_CcipSendRecoveryUnitTest is BaseUnitTest {
         assertEq(recovery.destinationChainSelector, REMOTE_CHILD_CHAIN_SELECTOR);
         assertEq(rebalanceNonce, REBALANCE_NONCE);
         assertEq(protocolId, AAVE_V4_PROTOCOL_ID);
+        assertTrue(s_childVault.getRecoveryExists());
     }
 
     function test_ChildVault_executeEpochWithdraw_WhenGetFeeReverts_EmitsCcipSendRecoveryStored() public {
@@ -90,6 +94,7 @@ contract ChildVault_CcipSendRecoveryUnitTest is BaseUnitTest {
         assertEq(recovery.destinationChainSelector, 0);
         assertEq(recovery.txData.length, 0);
         assertEq(recovery.createdAt, 0);
+        assertFalse(s_childVault.getRecoveryExists());
     }
 
     function test_ChildVault_recoverFailedCcipSend_Success_EmitsCcipSendRecoveryCleared() public {
@@ -117,6 +122,7 @@ contract ChildVault_CcipSendRecoveryUnitTest is BaseUnitTest {
         assertEq(recovery.amount, WITHDRAW_AMOUNT);
         assertEq(recovery.destinationChainSelector, PARENT_CHAIN_SELECTOR);
         assertEq(abi.decode(recovery.txData, (uint256)), EPOCH_NONCE);
+        assertTrue(s_childVault.getRecoveryExists());
     }
 
     function test_ChildVault_executeRebalance_WhenCcipSendRecoveryPending_RevertsWithoutOverwrite() public {
@@ -132,6 +138,7 @@ contract ChildVault_CcipSendRecoveryUnitTest is BaseUnitTest {
         assertEq(uint256(recovery.ccipTxType), uint256(Types.CcipTx.EPOCH_NET_WITHDRAW));
         assertEq(recovery.amount, WITHDRAW_AMOUNT);
         assertEq(recovery.destinationChainSelector, PARENT_CHAIN_SELECTOR);
+        assertTrue(s_childVault.getRecoveryExists());
     }
 
     function test_ChildVault_recoverFailedCcipSend_WhenCleared_AllowsLaterDifferentSendType() public {
@@ -146,6 +153,7 @@ contract ChildVault_CcipSendRecoveryUnitTest is BaseUnitTest {
 
         assertEq(s_mockUsdc.balanceOf(address(s_mockCcipRouter)), routerBefore + REBALANCE_AMOUNT);
         assertEq(s_childVault.getCcipSendRecovery().amount, 0);
+        assertFalse(s_childVault.getRecoveryExists());
     }
 
     function _storeEpochWithdrawCcipSendRecoveryFromGetFee() internal {

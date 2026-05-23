@@ -138,6 +138,7 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
         assertEq(recovery.epochNonce, EPOCH_NONCE);
         assertEq(recovery.amount, BRIDGED_AMOUNT);
         assertEq(recovery.createdAt, block.timestamp);
+        assertTrue(s_childVault.getRecoveryExists());
     }
 
     function test_ChildVault_ccipReceive_Deposit_WhenActiveAdapterDepositReverts_EmitsEpochDepositRecoveryStored()
@@ -163,6 +164,7 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
 
         vm.expectRevert(IBaseVault.BaseVault__RecoveryAlreadyPending.selector);
         s_childVault.ccipReceive(_depositMessage(EPOCH_NONCE));
+        assertTrue(s_childVault.getRecoveryExists());
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -223,6 +225,7 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
         assertEq(recovery.rebalanceNonce, REBALANCE_NONCE);
         assertEq(recovery.amount, BRIDGED_AMOUNT);
         assertEq(recovery.createdAt, block.timestamp);
+        assertTrue(s_childVault.getRecoveryExists());
     }
 
     function test_ChildVault_ccipReceive_Rebalance_WhenTargetAdapterDepositReverts_EmitsRebalanceDepositRecoveryStored()
@@ -246,6 +249,7 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
 
         vm.expectRevert(IBaseVault.BaseVault__RecoveryAlreadyPending.selector);
         s_childVault.ccipReceive(_rebalanceMessage(REBALANCE_NONCE, AAVE_V3_PROTOCOL_ID));
+        assertTrue(s_childVault.getRecoveryExists());
     }
 
     /*//////////////////////////////////////////////////////////////

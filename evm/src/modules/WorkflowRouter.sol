@@ -35,7 +35,7 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
     /// @dev Mapping of workflow IDs to metadata
     mapping(bytes32 workflowId => WorkflowMetadata) internal s_workflowMetadata;
     /// @dev Mapping of workflow IDs to allowed function selectors
-    /// @dev Function selector clash should be double checked! // @review selector clash
+    /// @dev Function selector clash should be double checked!
     mapping(bytes32 workflowId => mapping(bytes4 selector => bool isAllowlisted)) internal s_workflowSelectors;
 
     /*//////////////////////////////////////////////////////////////

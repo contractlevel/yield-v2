@@ -64,6 +64,7 @@ contract CcipSend_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
             shareAmount,
             abi.encode(uint256(2))
         );
+        assertTrue(baseChild.vault.getRecoveryExists());
 
         _setCrosschainVault(baseChild.vault, arbitrumConfig.ccip.thisChainSelector, address(parent.vault));
         vm.warp(block.timestamp + 5 minutes);
@@ -72,6 +73,7 @@ contract CcipSend_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
         _selectBaseFork();
         _routeUsdcMessageTo(arbitrumFork);
         _assertCcipSendRecoveryCleared(baseChild.vault.getCcipSendRecovery());
+        assertFalse(baseChild.vault.getRecoveryExists());
 
         _selectArbitrumFork();
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.CLAIMABLE));
@@ -110,6 +112,7 @@ contract CcipSend_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
             recovery.amount,
             abi.encode(uint256(1), AAVE_V3_PROTOCOL_ID)
         );
+        assertTrue(baseChild.vault.getRecoveryExists());
 
         _setCrosschainVault(baseChild.vault, arbitrumConfig.ccip.thisChainSelector, address(parent.vault));
         vm.warp(block.timestamp + 5 minutes);
@@ -118,6 +121,7 @@ contract CcipSend_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
         _selectBaseFork();
         _routeUsdcMessageTo(arbitrumFork);
         _assertCcipSendRecoveryCleared(baseChild.vault.getCcipSendRecovery());
+        assertFalse(baseChild.vault.getRecoveryExists());
         assertEq(baseChild.vault.getActiveProtocolAdapter(), address(0));
 
         _selectArbitrumFork();

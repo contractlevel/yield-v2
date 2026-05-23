@@ -194,7 +194,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     {
         if (shareBurnAmount == 0) revert ParentVault__NoZeroAmount();
         epochNonce = s_epochNonce;
-        // @review will there ever be a case where the current epoch nonce is not open?
+        /// @dev This condition should never be hit under normal operations as the epoch nonce is incremented on openNextEpoch
         if (s_epochs[epochNonce].status != Types.EpochStatus.OPEN) revert ParentVault__EpochNotOpen(epochNonce);
 
         s_withdraws[msg.sender][epochNonce] += shareBurnAmount;

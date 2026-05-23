@@ -52,6 +52,7 @@ contract ChildWithdraw_RebalanceRecoveryIntegrationTest is BaseRecoveryIntegrati
         _assertRebalanceWithdrawRecovery(
             child.vault.getRebalanceWithdrawRecovery(), 1, AAVE_V4_PROTOCOL_ID, PARENT_CHAIN_SELECTOR
         );
+        assertTrue(child.vault.getRecoveryExists());
         assertEq(uint256(parent.vault.getRebalance().state), uint256(Types.RebalanceState.REBALANCING));
 
         MockAaveV3Pool(childPool).setWithdrawReverts(false);
@@ -65,6 +66,7 @@ contract ChildWithdraw_RebalanceRecoveryIntegrationTest is BaseRecoveryIntegrati
         _assertEmittedBy(recoveryLogs, keccak256("RebalanceWithdrawRecoveryCleared(uint256)"), address(child.vault));
         _assertEmittedBy(recoveryLogs, keccak256("RebalanceWithdrawSuccess(uint256,uint256)"), address(child.vault));
         _assertRebalanceWithdrawRecoveryCleared(child.vault.getRebalanceWithdrawRecovery());
+        assertFalse(child.vault.getRecoveryExists());
         assertEq(child.vault.getActiveProtocolAdapter(), address(0));
         assertEq(
             MockAaveV4Spoke(parentSpoke).getUserSuppliedAssets(parentReserveId, address(parent.aaveV4Adapter)),

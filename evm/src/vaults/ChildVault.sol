@@ -400,6 +400,16 @@ contract ChildVault is BaseVault, IChildVault {
         recovery = s_ccipSendRecovery;
     }
 
+    /// @notice Check for if a recovery exists
+    /// @notice Overridden on Child, which contains multiple recovery modes
+    /// @return recoveryExists true if recovery exists, false if not
+    /// @dev This is used for Workflow-level checks
+    function getRecoveryExists() external view override returns (bool recoveryExists) {
+        recoveryExists = s_rebalanceDepositRecovery.amount != 0 || s_epochDepositRecovery.amount != 0
+            || s_epochWithdrawRecovery.amount != 0 || s_rebalanceWithdrawRecovery.rebalanceNonce != 0
+            || s_ccipSendRecovery.amount != 0;
+    }
+
     /*//////////////////////////////////////////////////////////////
                                 OVERRIDE
     //////////////////////////////////////////////////////////////*/

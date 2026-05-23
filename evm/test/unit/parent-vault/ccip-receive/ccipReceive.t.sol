@@ -295,6 +295,7 @@ contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
         assertEq(recovery.rebalanceNonce, REBALANCE_NONCE);
         assertEq(recovery.amount, BRIDGED_AMOUNT);
         assertEq(recovery.createdAt, block.timestamp);
+        assertTrue(s_parentVault.getRecoveryExists());
     }
 
     function test_ParentVault_ccipReceive_Rebalance_WhenTargetAdapterDepositReverts_EmitsRebalanceDepositRecoveryStored()
@@ -333,6 +334,7 @@ contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
 
         vm.expectRevert(IBaseVault.BaseVault__RecoveryAlreadyPending.selector);
         s_parentVault.ccipReceive(_rebalanceMessage(REBALANCE_NONCE, AAVE_V3_PROTOCOL_ID, BRIDGED_AMOUNT));
+        assertTrue(s_parentVault.getRecoveryExists());
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -23,6 +23,7 @@ contract ChildVault_RecoverFailedEpochDepositUnitTest is BaseUnitTest {
 
         vm.expectRevert(IBaseVault.BaseVault__NoPendingRecovery.selector);
         s_childVault.recoverFailedEpochDeposit();
+        assertFalse(s_childVault.getRecoveryExists());
     }
 
     function test_ChildVault_recoverFailedEpochDeposit_RevertWhen_NoActiveAdapter() public {
@@ -30,6 +31,7 @@ contract ChildVault_RecoverFailedEpochDepositUnitTest is BaseUnitTest {
 
         vm.expectRevert(IBaseVault.BaseVault__NoActiveAdapter.selector);
         s_childVault.recoverFailedEpochDeposit();
+        assertTrue(s_childVault.getRecoveryExists());
     }
 
     function test_ChildVault_recoverFailedEpochDeposit_RevertWhen_AdapterDepositReverts() public {
@@ -37,6 +39,7 @@ contract ChildVault_RecoverFailedEpochDepositUnitTest is BaseUnitTest {
 
         vm.expectRevert(abi.encodeWithSelector(IBaseVault.BaseVault__DepositFailed.selector, DEPOSIT_AMOUNT));
         s_childVault.recoverFailedEpochDeposit();
+        assertTrue(s_childVault.getRecoveryExists());
     }
 
     function test_ChildVault_recoverFailedEpochDeposit_Success_DepositsIntoActiveAdapter() public {
@@ -53,6 +56,7 @@ contract ChildVault_RecoverFailedEpochDepositUnitTest is BaseUnitTest {
         assertEq(recovery.epochNonce, 0);
         assertEq(recovery.amount, 0);
         assertEq(recovery.createdAt, 0);
+        assertFalse(s_childVault.getRecoveryExists());
     }
 
     function test_ChildVault_recoverFailedEpochDeposit_Success_EmitsDepositToStrategySuccess() public {
@@ -79,6 +83,7 @@ contract ChildVault_RecoverFailedEpochDepositUnitTest is BaseUnitTest {
         assertEq(recovery.epochNonce, EPOCH_NONCE);
         assertEq(recovery.amount, DEPOSIT_AMOUNT);
         assertEq(recovery.createdAt, block.timestamp);
+        assertTrue(s_childVault.getRecoveryExists());
     }
 
     /*//////////////////////////////////////////////////////////////

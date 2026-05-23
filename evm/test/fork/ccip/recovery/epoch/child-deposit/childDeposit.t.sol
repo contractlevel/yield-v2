@@ -35,6 +35,7 @@ contract ChildDeposit_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
 
         _selectBaseFork();
         _assertEpochRecovery(baseChild.vault.getEpochDepositRecovery(), 1, DEPOSIT_AMOUNT);
+        assertTrue(baseChild.vault.getRecoveryExists());
 
         _restoreBaseAaveV3Adapter();
         vm.recordLogs();
@@ -43,6 +44,7 @@ contract ChildDeposit_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
 
         _assertEmittedBy(recoveryLogs, keccak256("EpochDepositRecoveryCleared(uint256)"), address(baseChild.vault));
         _assertEpochRecoveryCleared(baseChild.vault.getEpochDepositRecovery());
+        assertFalse(baseChild.vault.getRecoveryExists());
         assertApproxEqAbs(baseChild.aaveV3Adapter.getTVL(), DEPOSIT_AMOUNT, PROTOCOL_FORK_TOLERANCE);
 
         _selectArbitrumFork();

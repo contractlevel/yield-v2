@@ -75,6 +75,7 @@ contract ChildVault_ExecuteEpochWithdrawUnitTest is BaseUnitTest {
         assertEq(recovery.destinationChainSelector, PARENT_CHAIN_SELECTOR);
         assertEq(abi.decode(recovery.txData, (uint256)), EPOCH_NONCE);
         assertEq(recovery.createdAt, block.timestamp);
+        assertTrue(s_childVault.getRecoveryExists());
     }
 
     function test_ChildVault_executeEpochWithdraw_WhenAdapterReverts_EmitsFailureWithoutBridging() public {
@@ -97,6 +98,7 @@ contract ChildVault_ExecuteEpochWithdrawUnitTest is BaseUnitTest {
         assertEq(recovery.epochNonce, EPOCH_NONCE);
         assertEq(recovery.amount, WITHDRAW_AMOUNT);
         assertEq(recovery.createdAt, block.timestamp);
+        assertTrue(s_childVault.getRecoveryExists());
     }
 
     function test_ChildVault_executeEpochWithdraw_WhenAdapterReverts_EmitsEpochWithdrawRecoveryStored() public {
@@ -121,6 +123,7 @@ contract ChildVault_ExecuteEpochWithdrawUnitTest is BaseUnitTest {
         assertEq(recovery.epochNonce, EPOCH_NONCE);
         assertEq(recovery.amount, WITHDRAW_AMOUNT);
         assertEq(recovery.createdAt, block.timestamp);
+        assertTrue(s_childVault.getRecoveryExists());
     }
 
     function test_ChildVault_executeEpochWithdraw_WhenEpochWithdrawRecoveryAlreadyExists_Reverts() public {
@@ -130,5 +133,6 @@ contract ChildVault_ExecuteEpochWithdrawUnitTest is BaseUnitTest {
 
         vm.expectRevert(IBaseVault.BaseVault__RecoveryAlreadyPending.selector);
         s_childVault.executeEpochWithdraw(EPOCH_NONCE, WITHDRAW_AMOUNT);
+        assertTrue(s_childVault.getRecoveryExists());
     }
 }

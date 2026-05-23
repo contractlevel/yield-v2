@@ -49,6 +49,7 @@ contract ChildWithdraw_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
         assertEq(uint256(storedLog.topics[1]), 2);
         assertEq(uint256(storedLog.topics[2]), shareAmount);
         _assertEpochRecovery(baseChild.vault.getEpochWithdrawRecovery(), 2, shareAmount);
+        assertTrue(baseChild.vault.getRecoveryExists());
 
         _restoreBaseAaveV3Adapter();
         _prepareBaseToParentRouting();
@@ -60,6 +61,7 @@ contract ChildWithdraw_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
 
         _selectBaseFork();
         _assertEpochRecoveryCleared(baseChild.vault.getEpochWithdrawRecovery());
+        assertFalse(baseChild.vault.getRecoveryExists());
 
         _selectArbitrumFork();
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.CLAIMABLE));

@@ -30,6 +30,7 @@ contract ChildVault_RecoverFailedRebalanceWithdrawUnitTest is BaseUnitTest {
 
         vm.expectRevert(IBaseVault.BaseVault__NoPendingRecovery.selector);
         s_childVault.recoverFailedRebalanceWithdraw();
+        assertFalse(s_childVault.getRecoveryExists());
     }
 
     function test_ChildVault_recoverFailedRebalanceWithdraw_RevertWhen_NoActiveAdapter() public {
@@ -37,6 +38,7 @@ contract ChildVault_RecoverFailedRebalanceWithdrawUnitTest is BaseUnitTest {
 
         vm.expectRevert(IBaseVault.BaseVault__NoActiveAdapter.selector);
         s_childVault.recoverFailedRebalanceWithdraw();
+        assertTrue(s_childVault.getRecoveryExists());
     }
 
     function test_ChildVault_recoverFailedRebalanceWithdraw_RevertWhen_AdapterWithdrawReverts() public {
@@ -44,6 +46,7 @@ contract ChildVault_RecoverFailedRebalanceWithdrawUnitTest is BaseUnitTest {
 
         vm.expectRevert(abi.encodeWithSelector(IBaseVault.BaseVault__WithdrawFailed.selector, type(uint256).max));
         s_childVault.recoverFailedRebalanceWithdraw();
+        assertTrue(s_childVault.getRecoveryExists());
     }
 
     function test_ChildVault_recoverFailedRebalanceWithdraw_RevertWhen_AdapterReturnsZero() public {
@@ -51,6 +54,7 @@ contract ChildVault_RecoverFailedRebalanceWithdrawUnitTest is BaseUnitTest {
 
         vm.expectRevert(IBaseVault.BaseVault__ZeroRecoveryAmount.selector);
         s_childVault.recoverFailedRebalanceWithdraw();
+        assertTrue(s_childVault.getRecoveryExists());
     }
 
     function test_ChildVault_recoverFailedRebalanceWithdraw_Success_WithdrawsFromActiveAdapter() public {
@@ -76,6 +80,7 @@ contract ChildVault_RecoverFailedRebalanceWithdrawUnitTest is BaseUnitTest {
         assertEq(recovery.strategy.protocolId, bytes32(0));
         assertEq(recovery.strategy.chainSelector, 0);
         assertEq(recovery.createdAt, 0);
+        assertFalse(s_childVault.getRecoveryExists());
     }
 
     function test_ChildVault_recoverFailedRebalanceWithdraw_Success_EmitsRebalanceWithdrawSuccess() public {
