@@ -126,15 +126,25 @@ abstract contract BaseUnitTest is BaseTest {
     }
 
     function _setChildActiveAdapter(address adapter) internal {
-        stdstore.target(address(s_childVault)).sig("getActiveProtocolAdapter()").checked_write(adapter);
+        _setActiveAdapter(s_childVault, adapter);
     }
 
     function _clearChildActiveAdapter() internal {
-        stdstore.target(address(s_childVault)).sig("getActiveProtocolAdapter()").checked_write(address(0));
+        _setActiveAdapter(s_childVault, address(0));
     }
 
     function _clearParentActiveAdapter() internal {
-        stdstore.target(address(s_parentVault)).sig("getActiveProtocolAdapter()").checked_write(address(0));
+        _setActiveAdapter(s_parentVault, address(0));
+    }
+
+    function _setActiveAdapter(BaseVault vault, address adapter) internal {
+        bytes32 slot = bytes32(uint256(8));
+        bytes32 value = vm.load(address(vault), slot);
+
+        uint256 pausedAtBits = uint256(value) & ~uint256(type(uint160).max);
+        uint256 activeAdapterBits = uint160(adapter);
+
+        vm.store(address(vault), slot, bytes32(pausedAtBits | activeAdapterBits));
     }
 
     function _setParentTotalShares(uint256 totalShares) internal {
