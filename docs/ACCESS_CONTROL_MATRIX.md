@@ -44,32 +44,32 @@ It is the source of truth for how authority should be named, assigned, implement
 
 ### ParentVault
 
-| Function or authority              | Control                                                            |
-| ---------------------------------- | ------------------------------------------------------------------ |
-| Grant/revoke roles                 | `DEFAULT_ADMIN_ROLE`                                               |
-| `setInitialActiveProtocolAdapter`  | `DEFAULT_ADMIN_ROLE` because this is a one-time deploy-time action |
-| Config setters                     | `CONFIG_OPERATOR_ROLE`                                             |
-| Pause/unpause                      | `PAUSER_ROLE` / `UNPAUSER_ROLE`                                    |
-| Epoch (`closeEpoch`)               | `EPOCH_OPERATOR_ROLE` granted to `WorkflowRouter`                  |
-| Rebalance (`initiateRebalance`, `completeRebalance`) | `REBALANCE_OPERATOR_ROLE` granted to `WorkflowRouter` |
-| Recovery                           | Public stored-state retry                                          |
-| Emergency drain                    | `EMERGENCY_DRAINER_ROLE`                                           |
-| LINK withdrawal                    | `LINK_OPERATOR_ROLE`                                               |
-| `attachPolicyEngine`               | `POLICY_ENGINE_MANAGER_ROLE`                                       |
-| User deposit/withdraw/claim/cancel | ACE policy stack                                                   |
+| Function or authority                                | Control                                                            |
+| ---------------------------------------------------- | ------------------------------------------------------------------ |
+| Grant/revoke roles                                   | `DEFAULT_ADMIN_ROLE`                                               |
+| `setInitialActiveProtocolAdapter`                    | `DEFAULT_ADMIN_ROLE` because this is a one-time deploy-time action |
+| Config setters                                       | `CONFIG_OPERATOR_ROLE`                                             |
+| Pause/unpause                                        | `PAUSER_ROLE` / `UNPAUSER_ROLE`                                    |
+| Epoch (`closeEpoch`)                                 | `EPOCH_OPERATOR_ROLE` granted to `WorkflowRouter`                  |
+| Rebalance (`initiateRebalance`, `completeRebalance`) | `REBALANCE_OPERATOR_ROLE` granted to `WorkflowRouter`              |
+| Recovery                                             | Public stored-state retry                                          |
+| Emergency drain                                      | `EMERGENCY_DRAINER_ROLE`                                           |
+| LINK withdrawal                                      | `LINK_OPERATOR_ROLE`                                               |
+| `attachPolicyEngine`                                 | `POLICY_ENGINE_MANAGER_ROLE`                                       |
+| User deposit/withdraw/claim/cancel                   | ACE policy stack                                                   |
 
 ### ChildVault
 
-| Function or authority | Control                         |
-| --------------------- | ------------------------------- |
-| Grant/revoke roles    | `DEFAULT_ADMIN_ROLE`            |
-| Config setters        | `CONFIG_OPERATOR_ROLE`          |
-| Pause/unpause         | `PAUSER_ROLE` / `UNPAUSER_ROLE` |
-| Epoch (`executeEpochWithdraw`)     | `EPOCH_OPERATOR_ROLE` granted to `WorkflowRouter`  |
-| Rebalance (`executeRebalance`)     | `REBALANCE_OPERATOR_ROLE` granted to `WorkflowRouter` |
-| Recovery              | Public stored-state retry       |
-| Emergency drain       | `EMERGENCY_DRAINER_ROLE`        |
-| LINK withdrawal       | `LINK_OPERATOR_ROLE`            |
+| Function or authority          | Control                                               |
+| ------------------------------ | ----------------------------------------------------- |
+| Grant/revoke roles             | `DEFAULT_ADMIN_ROLE`                                  |
+| Config setters                 | `CONFIG_OPERATOR_ROLE`                                |
+| Pause/unpause                  | `PAUSER_ROLE` / `UNPAUSER_ROLE`                       |
+| Epoch (`executeEpochWithdraw`) | `EPOCH_OPERATOR_ROLE` granted to `WorkflowRouter`     |
+| Rebalance (`executeRebalance`) | `REBALANCE_OPERATOR_ROLE` granted to `WorkflowRouter` |
+| Recovery                       | Public stored-state retry                             |
+| Emergency drain                | `EMERGENCY_DRAINER_ROLE`                              |
+| LINK withdrawal                | `LINK_OPERATOR_ROLE`                                  |
 
 ### WorkflowRouter
 
@@ -156,15 +156,15 @@ RBAC changes are made through `PolicyEngine.setPolicyConfiguration`:
 
 ### OnlyAuthorizedSenderPolicy
 
-| Policy authority | Holder | Direct power |
-| ---------------- | ------ | ------------ |
+| Policy authority | Holder         | Direct power                           |
+| ---------------- | -------------- | -------------------------------------- |
 | Policy `owner()` | `PolicyEngine` | Add/remove authorized sender addresses |
 
 Authorized sender changes are made through `PolicyEngine.setPolicyConfiguration`:
 
-| Sender change | Selector |
-| ------------- | -------- |
-| Authorize sender | `authorizeSender(address account)` |
+| Sender change      | Selector                             |
+| ------------------ | ------------------------------------ |
+| Authorize sender   | `authorizeSender(address account)`   |
 | Unauthorize sender | `unauthorizeSender(address account)` |
 
 Human governance administers authorized senders through `PolicyEngine.POLICY_CONFIG_ADMIN_ROLE`. `PolicyEngine` is the on-chain executor that owns `OnlyAuthorizedSenderPolicy`, so provider allowlists are not controlled directly by a provider or compliance operator.
