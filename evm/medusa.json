@@ -1,0 +1,50 @@
+{
+  "fuzzing": {
+    "workers": 10,
+    "workerResetLimit": 50,
+    "timeout": 0,
+    "testLimit": 0,
+    "callSequenceLength": 100,
+    "corpusDirectory": "medusa",
+    "coverageEnabled": true,
+    "deploymentOrder": ["CryticTester"],
+    "targetContracts": ["CryticTester"],
+    "targetContractsBalances": ["0xffffffffffffffffffffffff"],
+    "constructorArgs": {},
+    "deployerAddress": "0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496",
+    "senderAddresses": ["0x10000", "0x20000", "0x30000"],
+    "blockNumberDelayMax": 60480,
+    "blockTimestampDelayMax": 604800,
+    "blockGasLimit": 30000000,
+    "transactionGasLimit": 12500000
+  },
+  "testing": {
+    "stopOnFailedTest": false,
+    "stopOnFailedContractMatching": false,
+    "stopOnNoTests": true,
+    "testAllContracts": false,
+    "traceAll": false,
+    "assertionTesting": {
+      "enabled": true,
+      "testViewMethods": true
+    },
+    "optimizationTesting": {
+      "enabled": false,
+      "testPrefixes": ["optimize_"]
+    }
+  },
+  "chain": {
+    "codeSizeCheckDisabled": true,
+    "cheatCodesEnabled": true,
+    "forkConfig": {
+      "enabled": false
+    }
+  },
+  "compilation": {
+    "platform": "crytic-compile",
+    "target": ".",
+    "platformConfig": {
+      "args": ["--foundry-compile-all"]
+    }
+  }
+}

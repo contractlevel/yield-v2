@@ -1,0 +1,12 @@
+testMode: assertion
+prefix: optimize_
+coverage: true
+corpusDir: echidna-corpus
+balanceAddr: 0xffffffffffffffffffffffff
+balanceContract: 0xffffffffffffffffffffffff
+deployer: "0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496"
+contractAddr: "0x7D8CB8F412B3ee9AC79558791333F41d2b1ccDAC"
+shrinkLimit: 5000
+seqLen: 100
+cryticArgs:
+  - "--foundry-compile-all"

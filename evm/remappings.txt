@@ -15,3 +15,4 @@
 
 @aave/v3-origin/=lib/aave-v3-origin/
 @aave/aave-v4/=lib/aave-v4/
+@chimera/=lib/chimera/src/

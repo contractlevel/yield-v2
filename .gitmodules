@@ -28,3 +28,6 @@
 [submodule "evm/lib/chainlink-local"]
 	path = evm/lib/chainlink-local
 	url = https://github.com/contractlevel/chainlink-local
+[submodule "evm/lib/chimera"]
+	path = evm/lib/chimera
+	url = https://github.com/Recon-Fuzz/chimera

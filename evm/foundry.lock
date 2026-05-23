@@ -23,6 +23,15 @@
       "rev": "793106cd598da8b2762958880300787b0b361fa1"
     }
   },
+  "lib/chainlink-local": {
+    "rev": "97c93ae5b86f64a8ab8f75a825771b9a9c37b46c"
+  },
+  "lib/chimera": {
+    "tag": {
+      "name": "0.1.4",
+      "rev": "0d37c2b8998756680e76d859c343e01c4fc1e006"
+    }
+  },
   "lib/forge-std": {
     "tag": {
       "name": "v1.15.0",

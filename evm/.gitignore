@@ -19,3 +19,11 @@ report.md
 lcov.info
 assets/
 coverage/
+
+# Invariant fuzzer output
+medusa/
+echidna-corpus/
+coverage-echidna/
+coverage-medusa/
+crytic-export/
+
