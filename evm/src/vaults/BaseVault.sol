@@ -377,7 +377,9 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         emit RebalanceDepositRecoveryCleared(rebalanceNonce);
     }
 
-    // @review if this is even needed
+    /// @notice Checks for an existing rebalance deposit recovery
+    /// @dev Precondition: A rebalance deposit recovery must exist
+    /// @param recovery Types.RebalanceDepositRecovery
     function _requireRebalanceDepositRecovery() internal view returns (Types.RebalanceDepositRecovery memory recovery) {
         recovery = s_rebalanceDepositRecovery;
         //slither-disable-next-line incorrect-equality
@@ -385,9 +387,19 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     }
 
     /// @notice Inherited and implemented by ParentVault and ChildVault
-    // @review continue natspec
+    /// @dev Precondition: rebalance deposit recovery state must exist
+    /// @dev Precondition: active strategy adapter must be set
+    /// @dev Precondition: the deposit into the strategy must be successful
+    /// @notice The ChildVault overrides this and implements the internal _recoverFailedRebalanceDeposit
+    /// @notice The ParentVault overrides this, implements the internal _recoverFailedRebalanceDeposit, and then finalizes the rebalance
     function recoverFailedRebalanceDeposit() external virtual;
 
+    /// @notice Inherited and implemented by ParentVault and ChildVault
+    /// @dev Precondition: rebalance deposit recovery state must exist
+    /// @dev Precondition: active strategy adapter must be set
+    /// @dev Precondition: the deposit into the strategy must be successful
+    /// @return rebalanceNonce the nonce of the recovered rebalance deposit
+    /// @return amount the amount of the underlying asset rebalanced/deposited into the new strategy
     function _recoverFailedRebalanceDeposit() internal returns (uint256 rebalanceNonce, uint256 amount) {
         Types.RebalanceDepositRecovery memory recovery = _requireRebalanceDepositRecovery();
         rebalanceNonce = recovery.rebalanceNonce;

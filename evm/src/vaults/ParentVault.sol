@@ -76,12 +76,12 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     mapping(address depositor => mapping(uint256 epochId => uint256 usdcAmount)) s_deposits;
     /// @dev Mapping of withdrawers to their withdraw intents for each epoch
     mapping(address withdrawer => mapping(uint256 epochId => uint256 shareBurnAmount)) s_withdraws;
-    /// @dev Whether the initial active protocol adapter has been set
-    bool internal s_initialActiveProtocolAdapterSet;
 
     // @review order of state variables
     /// @dev Treasury address for collecting fees. This should be the protocol operator's multisig.
     address internal s_treasury;
+    /// @dev Whether the initial active protocol adapter has been set
+    bool internal s_initialActiveProtocolAdapterSet;
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR

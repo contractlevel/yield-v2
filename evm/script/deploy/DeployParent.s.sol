@@ -33,8 +33,6 @@ import {
 } from "../../src/modules/policies/CredentialRegistryAccountListValidatorPolicy.sol";
 import {TerminalAllowPolicy} from "../../src/modules/policies/TerminalAllowPolicy.sol";
 
-// @review s_treasury should be kyc allowed to interact with Vault and Token
-
 /// @title DeployParentVault Script
 /// @author @contractlevel
 /// @notice Script to deploy the ParentVault and its modules
@@ -86,11 +84,16 @@ contract DeployParent is Script {
     /// @dev Coordinate this value with the KYC provider before production deployment.
     ///      It is intentionally script-owned because only the parent deployment consumes it.
     bytes32 public constant PARENT_VAULT_CCID = keccak256("yield-v2.parent-vault");
+    /// @notice CCID used to register the treasury as a system identity in ACE registries.
+    /// @dev Coordinate this value with the KYC provider before production deployment.
+    ///      It is intentionally script-owned because only the parent deployment consumes it.
+    bytes32 public constant TREASURY_CCID = keccak256("yield-v2.treasury");
 
     struct Deployment {
         address link;
         address usdc;
         bytes32 vaultCcid;
+        bytes32 treasuryCcid;
         address aaveV3PoolAddressesProvider;
         address aaveV4Spoke;
         address compoundV3Comet;
@@ -132,6 +135,7 @@ contract DeployParent is Script {
         deploy.link = networkConfig.tokens.link;
         deploy.usdc = networkConfig.tokens.usdc;
         deploy.vaultCcid = PARENT_VAULT_CCID;
+        deploy.treasuryCcid = TREASURY_CCID;
         deploy.aaveV3PoolAddressesProvider = networkConfig.protocols.aaveV3PoolAddressesProvider;
         deploy.aaveV4Spoke = networkConfig.protocols.aaveV4Spoke;
         deploy.compoundV3Comet = networkConfig.protocols.compoundV3Comet;
@@ -245,6 +249,7 @@ contract DeployParent is Script {
         _registerSystemKyc(
             deploy.identityRegistry, deploy.credentialRegistry, PARENT_VAULT_CCID, address(deploy.parentVault)
         );
+        _registerSystemKyc(deploy.identityRegistry, deploy.credentialRegistry, TREASURY_CCID, networkConfig.treasury);
         _removeTemporaryRegistryProvider(
             deploy.policyEngine, deploy.providerPolicy, deployer, networkConfig.kycProvider
         );

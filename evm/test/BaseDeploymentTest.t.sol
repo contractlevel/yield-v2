@@ -38,6 +38,7 @@ abstract contract BaseDeploymentTest is BaseTest {
         address link;
         address usdc;
         bytes32 vaultCcid;
+        bytes32 treasuryCcid;
         address aaveV3PoolAddressesProvider;
         address aaveV4Spoke;
         address compoundV3Comet;
@@ -111,6 +112,7 @@ abstract contract BaseDeploymentTest is BaseTest {
             link: parentDeployment.link,
             usdc: parentDeployment.usdc,
             vaultCcid: parentDeployment.vaultCcid,
+            treasuryCcid: parentDeployment.treasuryCcid,
             aaveV3PoolAddressesProvider: parentDeployment.aaveV3PoolAddressesProvider,
             aaveV4Spoke: parentDeployment.aaveV4Spoke,
             compoundV3Comet: parentDeployment.compoundV3Comet,

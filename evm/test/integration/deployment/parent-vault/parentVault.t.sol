@@ -134,6 +134,12 @@ contract ParentVault_DeploymentIntegrationTest is BaseIntegrationTest {
         assertTrue(parent.shareKycPolicy.validate(address(parent.vault), ""));
     }
 
+    function test_ParentVault_deployment_RegistersTreasuryKyc() external view {
+        assertEq(parent.identityRegistry.getIdentity(networkConfig.treasury), parent.treasuryCcid);
+        assertTrue(parent.vaultKycPolicy.validate(networkConfig.treasury, ""));
+        assertTrue(parent.shareKycPolicy.validate(networkConfig.treasury, ""));
+    }
+
     function test_ParentVault_deployment_RemovesTemporaryRegistryProvider() external view {
         assertTrue(parent.providerPolicy.senderAuthorized(networkConfig.kycProvider));
         assertFalse(parent.providerPolicy.senderAuthorized(address(this)));

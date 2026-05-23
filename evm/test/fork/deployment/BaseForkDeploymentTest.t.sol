@@ -23,6 +23,9 @@ abstract contract BaseForkDeploymentTest is BaseForkTest {
         assertEq(parent.vault.getAdapterRegistry(), address(parent.adapterRegistry));
         assertEq(parent.vault.getShare(), address(parent.share));
         assertEq(parent.vault.getTreasury(), arbitrumConfig.treasury);
+        assertEq(parent.identityRegistry.getIdentity(arbitrumConfig.treasury), parent.treasuryCcid);
+        assertTrue(parent.vaultKycPolicy.validate(arbitrumConfig.treasury, ""));
+        assertTrue(parent.shareKycPolicy.validate(arbitrumConfig.treasury, ""));
         assertEq(parent.vault.getUsdc(), parent.usdc);
         assertEq(parent.vault.getLink(), parent.link);
         assertEq(parent.vault.getThisChainSelector(), arbitrumConfig.ccip.parentChainSelector);
