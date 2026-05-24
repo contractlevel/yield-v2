@@ -16,12 +16,15 @@ contract MockAaveV4Spoke {
 
     error MockAaveV4Spoke__SupplyReverts();
     error MockAaveV4Spoke__WithdrawReverts();
+    error MockAaveV4Spoke__UnexpectedWithdrawAmount(uint256 actual, uint256 expected);
 
     address internal immutable i_underlying;
     Reserve[] internal s_reserves;
     uint256 internal s_withdrawReturn;
+    uint256 internal s_expectedWithdrawAmount;
     bool internal s_supplyReverts;
     bool internal s_withdrawReverts;
+    bool internal s_useExpectedWithdrawAmount;
 
     mapping(uint256 reserveId => mapping(address user => uint256 suppliedAssets)) internal s_suppliedAssets;
 
@@ -40,6 +43,12 @@ contract MockAaveV4Spoke {
 
     function setWithdrawReturn(uint256 amount) external {
         s_withdrawReturn = amount;
+        s_useExpectedWithdrawAmount = false;
+    }
+
+    function setExpectedWithdrawAmount(uint256 amount) external {
+        s_expectedWithdrawAmount = amount;
+        s_useExpectedWithdrawAmount = true;
     }
 
     function setSupplyReverts(bool supplyReverts) external {
@@ -61,15 +70,22 @@ contract MockAaveV4Spoke {
         return (amount, amount);
     }
 
-    function withdraw(uint256 reserveId, uint256, address onBehalfOf) external returns (uint256, uint256) {
+    function withdraw(uint256 reserveId, uint256 amount, address onBehalfOf) external returns (uint256, uint256) {
         if (s_withdrawReverts) revert MockAaveV4Spoke__WithdrawReverts();
-        uint256 amount = s_withdrawReturn;
-        uint256 suppliedAssets = s_suppliedAssets[reserveId][onBehalfOf];
-        if (amount >= suppliedAssets) s_suppliedAssets[reserveId][onBehalfOf] = 0;
-        else s_suppliedAssets[reserveId][onBehalfOf] = suppliedAssets - amount;
+        uint256 amountToTransfer = s_withdrawReturn;
+        if (s_useExpectedWithdrawAmount) {
+            if (amount != s_expectedWithdrawAmount) {
+                revert MockAaveV4Spoke__UnexpectedWithdrawAmount(amount, s_expectedWithdrawAmount);
+            }
+            amountToTransfer = amount;
+        }
 
-        IERC20(i_underlying).transfer(msg.sender, amount);
-        return (amount, amount);
+        uint256 suppliedAssets = s_suppliedAssets[reserveId][onBehalfOf];
+        if (amountToTransfer >= suppliedAssets) s_suppliedAssets[reserveId][onBehalfOf] = 0;
+        else s_suppliedAssets[reserveId][onBehalfOf] = suppliedAssets - amountToTransfer;
+
+        IERC20(i_underlying).transfer(msg.sender, amountToTransfer);
+        return (amountToTransfer, amountToTransfer);
     }
 
     function getUserSuppliedAssets(uint256 reserveId, address user) external view returns (uint256) {

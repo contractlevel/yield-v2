@@ -6,11 +6,14 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract MockComet {
     error MockComet__SupplyReverts();
     error MockComet__WithdrawReverts();
+    error MockComet__UnexpectedWithdrawAmount(uint256 actual, uint256 expected);
 
     mapping(address account => uint256 balance) internal s_balances;
     uint256 internal s_withdrawReturn;
+    uint256 internal s_expectedWithdrawAmount;
     bool internal s_supplyReverts;
     bool internal s_withdrawReverts;
+    bool internal s_useExpectedWithdrawAmount;
 
     function setBalance(address account, uint256 amount) external {
         s_balances[account] = amount;
@@ -18,6 +21,12 @@ contract MockComet {
 
     function setWithdrawReturn(uint256 amount) external {
         s_withdrawReturn = amount;
+        s_useExpectedWithdrawAmount = false;
+    }
+
+    function setExpectedWithdrawAmount(uint256 amount) external {
+        s_expectedWithdrawAmount = amount;
+        s_useExpectedWithdrawAmount = true;
     }
 
     function setSupplyReverts(bool supplyReverts) external {
@@ -38,6 +47,13 @@ contract MockComet {
         if (s_withdrawReverts) revert MockComet__WithdrawReverts();
 
         uint256 amountToTransfer = s_withdrawReturn;
+        if (s_useExpectedWithdrawAmount) {
+            if (amount != s_expectedWithdrawAmount) {
+                revert MockComet__UnexpectedWithdrawAmount(amount, s_expectedWithdrawAmount);
+            }
+            amountToTransfer = amount;
+        }
+
         uint256 balance = s_balances[msg.sender];
         if (amount == type(uint256).max || amountToTransfer >= balance) s_balances[msg.sender] = 0;
         else s_balances[msg.sender] = balance - amountToTransfer;

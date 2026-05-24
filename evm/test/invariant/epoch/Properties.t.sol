@@ -18,7 +18,7 @@ abstract contract Properties is BeforeAfter, Asserts {
         uint256 currentEpochNonce = parent.vault.getEpochNonce();
         eq(
             parent.vault.getEpoch(currentEpochNonce).totalDepositAmount,
-            ghost_totalDeposited,
+            ghost_totalDepositedByEpoch[currentEpochNonce],
             "deposit ghost does not match open epoch total"
         );
     }
