@@ -22,4 +22,28 @@ abstract contract Properties is BeforeAfter, Asserts {
             "deposit ghost does not match open epoch total"
         );
     }
+
+    function invariant_EPOCH_009_depositRemainingCountersReachZeroTogether() public {
+        for (uint256 i; i < ghost_claimableEpochs.length; ++i) {
+            uint256 epochNonce = ghost_claimableEpochs[i];
+            Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
+
+            t(
+                (epoch.remainingDepositClaimAmount == 0) == (epoch.remainingShareMintAmount == 0),
+                "EPOCH-009: deposit-side remaining counters did not reach zero together"
+            );
+        }
+    }
+
+    function invariant_EPOCH_012_withdrawRemainingCountersReachZeroTogether() public {
+        for (uint256 i; i < ghost_claimableEpochs.length; ++i) {
+            uint256 epochNonce = ghost_claimableEpochs[i];
+            Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
+
+            t(
+                (epoch.remainingShareBurnAmount == 0) == (epoch.remainingWithdrawClaimAmount == 0),
+                "EPOCH-012: withdraw-side remaining counters did not reach zero together"
+            );
+        }
+    }
 }
