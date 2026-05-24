@@ -23,6 +23,25 @@ abstract contract Properties is BeforeAfter, Asserts {
         );
     }
 
+
+    function invariant_EPOCH_008_depositRemainingCountersStayBounded() public {
+        for (uint256 i; i < ghost_claimableEpochs.length; ++i) {
+            uint256 epochNonce = ghost_claimableEpochs[i];
+            Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
+
+            lte(
+                epoch.remainingDepositClaimAmount,
+                epoch.totalDepositAmount,
+                "EPOCH-008: remaining deposit claims exceed total deposits"
+            );
+            lte(
+                epoch.remainingShareMintAmount,
+                ghost_totalShareMintedByEpoch[epochNonce],
+                "EPOCH-008: remaining share mints exceed total share mints"
+            );
+        }
+    }
+
     function invariant_EPOCH_009_depositRemainingCountersReachZeroTogether() public {
         for (uint256 i; i < ghost_claimableEpochs.length; ++i) {
             uint256 epochNonce = ghost_claimableEpochs[i];
@@ -31,6 +50,24 @@ abstract contract Properties is BeforeAfter, Asserts {
             t(
                 (epoch.remainingDepositClaimAmount == 0) == (epoch.remainingShareMintAmount == 0),
                 "EPOCH-009: deposit-side remaining counters did not reach zero together"
+            );
+        }
+    }
+
+    function invariant_EPOCH_011_withdrawRemainingCountersStayBounded() public {
+        for (uint256 i; i < ghost_claimableEpochs.length; ++i) {
+            uint256 epochNonce = ghost_claimableEpochs[i];
+            Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
+
+            lte(
+                epoch.remainingShareBurnAmount,
+                epoch.totalShareBurnAmount,
+                "EPOCH-011: remaining share burns exceed total share burns"
+            );
+            lte(
+                epoch.remainingWithdrawClaimAmount,
+                epoch.totalWithdrawClaimAmount,
+                "EPOCH-011: remaining withdraw claims exceed total withdraw claims"
             );
         }
     }

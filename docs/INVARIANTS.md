@@ -30,6 +30,8 @@ Use this fixed test type vocabulary:
 | `fv`            | Formal verification only.                                                                                |
 | `manual`        | Auditor or operator review, not automated.                                                               |
 
+Status values such as `implemented: Foundry + Medusa` mean the property is encoded in the current Chimera suite and has passed local Foundry and Medusa fuzz campaigns. This is fuzzing evidence, not a proof. `partial: Foundry + Medusa` means the implemented suite covers the core state transition or accounting effect, but one or more clauses of the catalogue statement remain represented indirectly, deferred to unit tests, or reserved for later formal verification. Properties that require exhaustive reasoning, arithmetic bounds, or larger state-space guarantees may additionally be verified with Certora later.
+
 Use these ID prefixes:
 
 | Prefix      | Category                                                           |
@@ -138,24 +140,24 @@ These are desired configuration properties. Address zero-checks are not currentl
 
 | ID          | Statement                                                                                                    | Type            | Status    |
 | ----------- | ------------------------------------------------------------------------------------------------------------ | --------------- | --------- |
-| `EPOCH-001` | Exactly one current epoch is `OPEN` at transaction boundaries.                                               | `invariant`     | candidate |
+| `EPOCH-001` | Exactly one current epoch is `OPEN` at transaction boundaries.                                               | `invariant`     | implemented: Foundry + Medusa |
 | `EPOCH-002` | Epoch transitions are limited to `OPEN -> CLAIMABLE` or `OPEN -> EXECUTING -> CLAIMABLE`.                    | `invariant`     | candidate |
 | `EPOCH-003` | `closeEpoch` cannot run while rebalance is active or the previous epoch is still `EXECUTING`.                | `unit`          | candidate |
-| `EPOCH-004` | Closing an epoch always opens the next epoch.                                                                | `postcondition` | candidate |
-| `EPOCH-005` | Deposits, withdraw intents, and cancels only affect the current open epoch.                                  | `invariant`     | candidate |
-| `EPOCH-006` | Cancel refunds the exact escrowed asset and cannot succeed after the user entry has been claimed or deleted. | `postcondition` | candidate |
+| `EPOCH-004` | Closing an epoch always opens the next epoch.                                                                | `postcondition` | implemented: Foundry + Medusa |
+| `EPOCH-005` | Deposits, withdraw intents, and cancels only affect the current open epoch.                                  | `invariant`     | implemented: Foundry + Medusa |
+| `EPOCH-006` | Cancel refunds the exact escrowed asset and cannot succeed after the user entry has been claimed or deleted. | `postcondition` | partial: Foundry + Medusa |
 
 ## Epoch Accounting And Solvency
 
 | ID          | Statement                                                                                                                                                                                                                           | Type                      | Status    |
 | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | --------- |
-| `EPOCH-007` | Deposit-side remaining counters are monotonically non-increasing after epoch close: `remainingDepositClaimAmount` and `remainingShareMintAmount` never increase.                                                                    | `invariant`               | candidate |
-| `EPOCH-008` | Deposit-side remaining counters cannot underflow and must stay bounded by their settlement totals.                                                                                                                                  | `invariant`               | candidate |
-| `EPOCH-009` | Deposit-side remaining counters reach zero together: `remainingDepositClaimAmount == 0` if and only if `remainingShareMintAmount == 0`.                                                                                             | `invariant`               | candidate |
-| `EPOCH-010` | Withdraw-side remaining counters are monotonically non-increasing after epoch close: `remainingShareBurnAmount` and `remainingWithdrawClaimAmount` never increase.                                                                  | `invariant`               | candidate |
-| `EPOCH-011` | Withdraw-side remaining counters cannot underflow and must stay bounded by their settlement totals.                                                                                                                                 | `invariant`               | candidate |
-| `EPOCH-012` | Withdraw-side remaining counters reach zero together: `remainingShareBurnAmount == 0` if and only if `remainingWithdrawClaimAmount == 0`.                                                                                           | `invariant`               | candidate |
-| `EPOCH-013` | A user claim or cancel deletes the user's epoch entry and cannot be replayed.                                                                                                                                                       | `postcondition`           | candidate |
+| `EPOCH-007` | Deposit-side remaining counters are monotonically non-increasing after epoch close: `remainingDepositClaimAmount` and `remainingShareMintAmount` never increase.                                                                    | `invariant`               | implemented: Foundry + Medusa |
+| `EPOCH-008` | Deposit-side remaining counters cannot underflow and must stay bounded by their settlement totals.                                                                                                                                  | `invariant`               | implemented: Foundry + Medusa |
+| `EPOCH-009` | Deposit-side remaining counters reach zero together: `remainingDepositClaimAmount == 0` if and only if `remainingShareMintAmount == 0`.                                                                                             | `invariant`               | implemented: Foundry + Medusa |
+| `EPOCH-010` | Withdraw-side remaining counters are monotonically non-increasing after epoch close: `remainingShareBurnAmount` and `remainingWithdrawClaimAmount` never increase.                                                                  | `invariant`               | implemented: Foundry + Medusa |
+| `EPOCH-011` | Withdraw-side remaining counters cannot underflow and must stay bounded by their settlement totals.                                                                                                                                 | `invariant`               | implemented: Foundry + Medusa |
+| `EPOCH-012` | Withdraw-side remaining counters reach zero together: `remainingShareBurnAmount == 0` if and only if `remainingWithdrawClaimAmount == 0`.                                                                                           | `invariant`               | implemented: Foundry + Medusa |
+| `EPOCH-013` | A user claim or cancel deletes the user's epoch entry and cannot be replayed.                                                                                                                                                       | `postcondition`           | partial: Foundry + Medusa |
 | `EPOCH-014` | Local net withdrawals finalize synchronously; remote net withdrawals become claimable only after authenticated CCIP receipt.                                                                                                        | `unit + integration`      | candidate |
 | `EPOCH-015` | Parent withdraw solvency is tracked as `SOLV-001`; epoch handlers should update any model state needed to assert it.                                                                                                                | `invariant + fv`          | candidate |
 | `EPOCH-016` | A user who deposits assets in epoch `N` must be able to submit a withdraw intent in epoch `N + 1` and receive at least the same amount of assets they deposited, subject only to documented emergency or environmental assumptions. | `invariant + integration` | candidate |

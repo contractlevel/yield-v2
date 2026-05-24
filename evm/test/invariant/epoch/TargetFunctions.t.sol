@@ -22,16 +22,16 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         _recordDeposit(actor, amount);
 
-        eq(_after.epochNonce, epochNonce, "deposit changed epoch nonce");
+        eq(_after.epochNonce, epochNonce, "EPOCH-005: deposit changed epoch nonce");
         eq(
             _after.currentEpochTotalDepositAmount,
             _before.currentEpochTotalDepositAmount + amount,
-            "deposit did not increase epoch total"
+            "EPOCH-005: deposit did not increase current epoch total"
         );
         eq(
             _after.actorCurrentEpochDepositAmount,
             _before.actorCurrentEpochDepositAmount + amount,
-            "deposit did not increase actor deposit"
+            "EPOCH-005: deposit did not increase actor current epoch deposit"
         );
     }
 
@@ -55,13 +55,19 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         _recordDepositCancelled(actor, amount);
 
-        eq(_after.epochNonce, epochNonce, "cancelDeposit changed epoch nonce");
+        eq(_after.epochNonce, epochNonce, "EPOCH-005: cancelDeposit changed epoch nonce");
         eq(
             _after.currentEpochTotalDepositAmount,
             _before.currentEpochTotalDepositAmount - amount,
-            "cancelDeposit did not decrease epoch total"
+            "EPOCH-005: cancelDeposit did not decrease current epoch total"
         );
-        eq(_after.actorCurrentEpochDepositAmount, 0, "cancelDeposit did not clear actor deposit");
+        eq(_after.actorCurrentEpochDepositAmount, 0, "EPOCH-013: cancelDeposit did not clear actor deposit");
+        eq(_after.actorUsdcBalance, _before.actorUsdcBalance + amount, "EPOCH-006: cancelDeposit did not refund USDC");
+        eq(
+            ghost_depositedByActorByEpoch[actor][epochNonce],
+            0,
+            "EPOCH-013: cancelDeposit did not clear actor deposit ghost"
+        );
     }
 
     function handler_closeEpoch(uint256 tvlSeed) public {
@@ -93,14 +99,14 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         _recordEpochClosed(epochNonce);
 
-        eq(_after.epochNonce, epochNonce + 1, "closeEpoch did not increment epoch nonce");
+        eq(_after.epochNonce, epochNonce + 1, "EPOCH-004: closeEpoch did not increment epoch nonce");
         t(
             parent.vault.getEpoch(epochNonce).status == Types.EpochStatus.CLAIMABLE,
-            "closeEpoch did not make epoch claimable"
+            "EPOCH-004: closeEpoch did not make epoch claimable"
         );
         t(
             parent.vault.getEpoch(epochNonce + 1).status == Types.EpochStatus.OPEN,
-            "closeEpoch did not open next epoch"
+            "EPOCH-004: closeEpoch did not open next epoch"
         );
         eq(
             parent.vault.getEpoch(epochNonce).remainingDepositClaimAmount,
@@ -131,9 +137,15 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         __after();
 
         _recordSharesClaimed(actor, claimEpochNonce, shareMintAmount);
+        _checkAndUpdateDepositRemainingCounterMax(claimEpochNonce);
 
         eq(_after.epochNonce, _before.epochNonce, "claimShares changed current epoch nonce");
-        eq(_after.actorTargetEpochDepositAmount, 0, "claimShares did not clear actor deposit");
+        eq(_after.actorTargetEpochDepositAmount, 0, "EPOCH-013: claimShares did not clear actor deposit");
+        eq(
+            ghost_depositedByActorByEpoch[actor][claimEpochNonce],
+            0,
+            "EPOCH-013: claimShares did not clear actor deposit ghost"
+        );
         eq(
             _after.targetEpochRemainingDepositClaimAmount,
             _before.targetEpochRemainingDepositClaimAmount - depositAmount,
@@ -166,16 +178,16 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         _recordWithdraw(actor, shareBurnAmount);
 
-        eq(_after.epochNonce, _before.epochNonce, "withdraw changed epoch nonce");
+        eq(_after.epochNonce, _before.epochNonce, "EPOCH-005: withdraw changed epoch nonce");
         eq(
             _after.currentEpochTotalShareBurnAmount,
             _before.currentEpochTotalShareBurnAmount + shareBurnAmount,
-            "withdraw did not increase epoch share burn total"
+            "EPOCH-005: withdraw did not increase current epoch share burn total"
         );
         eq(
             _after.actorCurrentEpochWithdrawShareBurnAmount,
             _before.actorCurrentEpochWithdrawShareBurnAmount + shareBurnAmount,
-            "withdraw did not increase actor share burn amount"
+            "EPOCH-005: withdraw did not increase actor current epoch share burn amount"
         );
         eq(_after.actorShareBalance, _before.actorShareBalance - shareBurnAmount, "withdraw did not transfer shares");
     }
@@ -200,14 +212,27 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         _recordWithdrawCancelled(actor, shareBurnAmount);
 
-        eq(_after.epochNonce, epochNonce, "cancelWithdraw changed epoch nonce");
+        eq(_after.epochNonce, epochNonce, "EPOCH-005: cancelWithdraw changed epoch nonce");
         eq(
             _after.currentEpochTotalShareBurnAmount,
             _before.currentEpochTotalShareBurnAmount - shareBurnAmount,
-            "cancelWithdraw did not decrease epoch share burn total"
+            "EPOCH-005: cancelWithdraw did not decrease current epoch share burn total"
         );
-        eq(_after.actorCurrentEpochWithdrawShareBurnAmount, 0, "cancelWithdraw did not clear actor withdraw");
-        eq(_after.actorShareBalance, _before.actorShareBalance + shareBurnAmount, "cancelWithdraw did not return shares");
+        eq(
+            _after.actorCurrentEpochWithdrawShareBurnAmount,
+            0,
+            "EPOCH-013: cancelWithdraw did not clear actor withdraw"
+        );
+        eq(
+            ghost_shareBurnedByActorByEpoch[actor][epochNonce],
+            0,
+            "EPOCH-013: cancelWithdraw did not clear actor withdraw ghost"
+        );
+        eq(
+            _after.actorShareBalance,
+            _before.actorShareBalance + shareBurnAmount,
+            "EPOCH-006: cancelWithdraw did not refund shares"
+        );
     }
 
     function handler_claimUsdc(uint256 actorSeed, uint256 epochSeed, uint256 shareSeed, uint256 amountSeed) public {
@@ -232,9 +257,15 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         __after();
 
         _recordUsdcClaimed(actor, claimEpochNonce);
+        _checkAndUpdateWithdrawRemainingCounterMax(claimEpochNonce);
 
         eq(_after.epochNonce, _before.epochNonce, "claimUsdc changed current epoch nonce");
-        eq(_after.actorTargetEpochWithdrawShareBurnAmount, 0, "claimUsdc did not clear actor withdraw");
+        eq(_after.actorTargetEpochWithdrawShareBurnAmount, 0, "EPOCH-013: claimUsdc did not clear actor withdraw");
+        eq(
+            ghost_shareBurnedByActorByEpoch[actor][claimEpochNonce],
+            0,
+            "EPOCH-013: claimUsdc did not clear actor withdraw ghost"
+        );
         eq(
             _after.targetEpochRemainingShareBurnAmount,
             _before.targetEpochRemainingShareBurnAmount - shareBurnAmount,
