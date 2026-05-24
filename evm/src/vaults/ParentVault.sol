@@ -561,6 +561,8 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
             revert ParentVault__SameStrategy();
         }
 
+        // @review revert if currentEpochNonce == 1
+
         // revert if an epoch is in flight
         uint256 currentEpochNonce = s_epochNonce;
         // Cannot rebalance if any epoch is still EXECUTING

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {EpochGhosts} from "./EpochGhosts.t.sol";
+import {EpochGhosts} from "./ghosts/EpochGhosts.t.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 abstract contract BeforeAfter is EpochGhosts {

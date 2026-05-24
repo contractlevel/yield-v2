@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {CcipGhosts} from "../shared/CcipGhosts.t.sol";
-import {Types} from "../../../src/libraries/Types.sol";
+import {CcipGhosts} from "./CcipGhosts.t.sol";
+import {Types} from "../../../../src/libraries/Types.sol";
 
 abstract contract EpochGhosts is CcipGhosts {
     uint256 internal ghost_totalDeposited;

@@ -2,8 +2,8 @@
 pragma solidity 0.8.28;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {MockUSDC} from "../../mocks/MockUSDC.sol";
-import {Setup} from "../epoch/Setup.t.sol";
+import {MockUSDC} from "../../../mocks/MockUSDC.sol";
+import {Setup} from "../Setup.t.sol";
 
 abstract contract ActorGhosts is Setup {
     address[] internal s_actors;
