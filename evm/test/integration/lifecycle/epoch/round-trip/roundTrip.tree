@@ -1,0 +1,9 @@
+Epoch_roundTrip
+├── given a depositor deposits in epoch N and claims shares
+├── and a parent-local rebalance finalizes before the next withdraw epoch
+├── when management fee shares dilute totalShares during rebalance
+├── and the depositor withdraws all claimed shares in epoch N + 1
+├── then the epoch closes claimable through the workflow router
+├── and the depositor can claim the fee-adjusted and rounding-adjusted USDC amount
+├── and the claimed amount must not exceed the original deposit
+└── and the depositor's deposit and withdraw mappings are cleared
