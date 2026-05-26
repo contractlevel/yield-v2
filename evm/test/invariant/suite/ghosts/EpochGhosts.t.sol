@@ -20,6 +20,8 @@ abstract contract EpochGhosts is CcipGhosts {
     mapping(uint256 epochNonce => bool isClaimable) internal ghost_epochIsClaimable;
     uint256[] internal ghost_claimableEpochs;
     uint256 internal ghost_claimableWithdrawObligation;
+    mapping(address actor => uint256 amount) internal ghost_totalUsdcClaimedByActor;
+    mapping(address actor => uint256 amount) internal ghost_feeBurdenByActor;
 
     function _clampDepositAmount(uint256 amountSeed) internal pure returns (uint256) {
         return _boundToRange(amountSeed, MIN_DEPOSIT_AMOUNT, MAX_DEPOSIT_AMOUNT);
@@ -102,6 +104,7 @@ abstract contract EpochGhosts is CcipGhosts {
     function _recordUsdcClaimed(address actor, uint256 epochNonce, uint256 usdcWithdrawAmount) internal {
         ghost_shareBurnedByActorByEpoch[actor][epochNonce] = 0;
         ghost_claimableWithdrawObligation -= usdcWithdrawAmount;
+        ghost_totalUsdcClaimedByActor[actor] += usdcWithdrawAmount;
     }
 
     function _checkAndUpdateWithdrawRemainingCounterMax(uint256 epochNonce) internal {
@@ -144,5 +147,90 @@ abstract contract EpochGhosts is CcipGhosts {
         }
 
         return 0;
+    }
+
+    function _recordFeeBurden(uint256 treasuryShareBalanceBefore, uint256 totalSharesBefore) internal {
+        if (totalSharesBefore == 0) return;
+
+        uint256 treasuryShareBalanceAfter = parent.share.balanceOf(parent.vault.getTreasury());
+        if (treasuryShareBalanceAfter <= treasuryShareBalanceBefore) return;
+
+        uint256 feeShares = treasuryShareBalanceAfter - treasuryShareBalanceBefore;
+        uint256 feeValue = _shareValue(feeShares);
+        if (feeValue == 0) return;
+
+        for (uint256 i; i < s_actors.length; ++i) {
+            address actor = s_actors[i];
+            uint256 feeBearingShares = _feeBearingShares(actor);
+            if (feeBearingShares != 0) {
+                ghost_feeBurdenByActor[actor] += feeValue * feeBearingShares / totalSharesBefore;
+            }
+        }
+    }
+
+    function _actorRedemptionEntitlement(address actor) internal view returns (uint256 entitlement) {
+        uint256 currentEpochNonce = parent.vault.getEpochNonce();
+
+        entitlement += ghost_totalUsdcClaimedByActor[actor];
+        entitlement += ghost_depositedByActorByEpoch[actor][currentEpochNonce];
+        entitlement += _shareValue(parent.share.balanceOf(actor));
+        entitlement += _shareValue(ghost_shareBurnedByActorByEpoch[actor][currentEpochNonce]);
+
+        for (uint256 i; i < ghost_claimableEpochs.length; ++i) {
+            uint256 epochNonce = ghost_claimableEpochs[i];
+            entitlement += _claimableDepositShareValue(actor, epochNonce);
+            entitlement += _claimableWithdrawUsdc(actor, epochNonce);
+        }
+    }
+
+    function _feeBearingShares(address actor) internal view returns (uint256 shares) {
+        uint256 currentEpochNonce = parent.vault.getEpochNonce();
+
+        shares += parent.share.balanceOf(actor);
+        shares += ghost_shareBurnedByActorByEpoch[actor][currentEpochNonce];
+
+        for (uint256 i; i < ghost_claimableEpochs.length; ++i) {
+            uint256 epochNonce = ghost_claimableEpochs[i];
+            shares += _claimableDepositShares(actor, epochNonce);
+            shares += ghost_shareBurnedByActorByEpoch[actor][epochNonce];
+        }
+    }
+
+    function _claimableDepositShareValue(address actor, uint256 epochNonce) internal view returns (uint256) {
+        return _shareValue(_claimableDepositShares(actor, epochNonce));
+    }
+
+    function _claimableDepositShares(address actor, uint256 epochNonce) internal view returns (uint256 shares) {
+        uint256 depositAmount = ghost_depositedByActorByEpoch[actor][epochNonce];
+        if (depositAmount == 0) return 0;
+
+        Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
+        if (epoch.remainingDepositClaimAmount == 0) return 0;
+
+        if (depositAmount == epoch.remainingDepositClaimAmount) return epoch.remainingShareMintAmount;
+        return depositAmount * epoch.remainingShareMintAmount / epoch.remainingDepositClaimAmount;
+    }
+
+    function _claimableWithdrawUsdc(address actor, uint256 epochNonce) internal view returns (uint256 usdcAmount) {
+        uint256 shareBurnAmount = ghost_shareBurnedByActorByEpoch[actor][epochNonce];
+        if (shareBurnAmount == 0) return 0;
+
+        Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
+        if (epoch.remainingShareBurnAmount == 0) return 0;
+
+        if (shareBurnAmount == epoch.remainingShareBurnAmount) return epoch.remainingWithdrawClaimAmount;
+        return shareBurnAmount * epoch.remainingWithdrawClaimAmount / epoch.remainingShareBurnAmount;
+    }
+
+    function _shareValue(uint256 shares) internal view returns (uint256) {
+        return shares * _currentPricePerShare() / SHARE_PRECISION;
+    }
+
+    function _currentPricePerShare() internal view returns (uint256) {
+        uint256 totalShares = parent.vault.getTotalShares();
+        uint256 tvl = _activeStrategyTvl();
+
+        if (totalShares != 0 && tvl != 0) return tvl * SHARE_PRECISION / totalShares;
+        return SHARE_PRECISION;
     }
 }

@@ -91,6 +91,9 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             _setActiveStrategyWithdrawReturn(netWithdrawAmount);
         }
 
+        uint256 treasuryShareBalanceBefore = parent.share.balanceOf(parent.vault.getTreasury());
+        uint256 totalSharesBefore = parent.vault.getTotalShares();
+
         __before();
 
         vm.warp(block.timestamp + MIN_EPOCH_PERIOD + 1);
@@ -103,6 +106,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         __after();
 
+        _recordFeeBurden(treasuryShareBalanceBefore, totalSharesBefore);
         _recordEpochClosed(epochNonce);
 
         eq(_after.epochNonce, epochNonce + 1, "EPOCH-004: closeEpoch did not increment epoch nonce");
@@ -129,10 +133,14 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         }
 
         Types.Strategy memory target = _rebalanceTarget(pathSeed, protocolSeed);
+        uint256 treasuryShareBalanceBefore = parent.share.balanceOf(parent.vault.getTreasury());
+        uint256 totalSharesBefore = parent.vault.getTotalShares();
 
         __before();
         _rebalanceTo(target);
         __after();
+
+        _recordFeeBurden(treasuryShareBalanceBefore, totalSharesBefore);
 
         Types.Rebalance memory rebalance = parent.vault.getRebalance();
         t(rebalance.activeStrategy.protocolId == target.protocolId, "REBALANCE: active protocol mismatch");

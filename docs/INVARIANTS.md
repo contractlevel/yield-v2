@@ -61,6 +61,7 @@ Solvency properties are the headline safety properties. Other sections may refer
 | `SOLV-002` | Recovery actions must not bypass solvency: executing any recovery must preserve `SOLV-001` and `CCIP-005b`.                                                                                                                                                                              | `invariant`      | candidate |
 | `SOLV-003` | ParentVault share escrow must be attributable to outstanding withdraw intents or claimable withdraw settlement; the vault may intentionally hold shares before `claimUsdc` burns them.                                                                                                   | `invariant`      | candidate |
 | `SOLV-004` | Child outbound CCIP recovery is fully collateralized by local USDC while pending. See `CCIP-005b`.                                                                                                                                                                                       | `invariant`      | candidate |
+| `SOLV-005` | Per-user redemption integrity: each actor's total economic entitlement across wallet shares, open deposits, claimable deposit shares, open withdraw intents, claimable withdraw USDC, and already claimed USDC must cover contributed principal net of management/performance fees and documented rounding or dust. | `invariant + integration` | implemented: Foundry + Medusa |
 
 ## External Assumptions
 
@@ -161,7 +162,6 @@ These are desired configuration properties. Address zero-checks are not currentl
 | `EPOCH-013` | A user claim or cancel deletes the user's epoch entry and cannot be replayed.                                                                                                                                                       | `postcondition`           | partial: Foundry + Medusa |
 | `EPOCH-014` | Local net withdrawals finalize synchronously; remote net withdrawals become claimable only after authenticated CCIP receipt.                                                                                                        | `unit + integration`      | candidate |
 | `EPOCH-015` | Parent withdraw solvency is tracked as `SOLV-001`; epoch handlers should update any model state needed to assert it.                                                                                                                | `invariant + fv`          | candidate |
-| `EPOCH-016` | A user who deposits assets in epoch `N` must be able to submit a withdraw intent in epoch `N + 1` and receive at least the same amount of assets they deposited, subject only to documented emergency or environmental assumptions. | `invariant + integration` | candidate |
 
 ## Share And Fee Accounting
 

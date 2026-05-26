@@ -30,6 +30,21 @@ abstract contract Properties is BeforeAfter, Asserts {
         );
     }
 
+    function invariant_SOLV_005_userRedemptionEntitlementCoversPrincipalNetOfFees() public {
+        for (uint256 i; i < s_actors.length; ++i) {
+            address actor = s_actors[i];
+            uint256 principal = ghost_totalDepositedByActor[actor];
+            uint256 feeBurden = ghost_feeBurdenByActor[actor];
+            uint256 requiredValue = principal > feeBurden ? principal - feeBurden : 0;
+
+            lte(
+                requiredValue,
+                _actorRedemptionEntitlement(actor) + _redemptionRoundingTolerance(),
+                "SOLV-005: user redemption entitlement below principal net of fees"
+            );
+        }
+    }
+
     /*//////////////////////////////////////////////////////////////
                                  EPOCH
     //////////////////////////////////////////////////////////////*/
@@ -180,5 +195,9 @@ abstract contract Properties is BeforeAfter, Asserts {
     {
         t(expectedAdapter != address(0), "REBAL-006: active strategy has no registered adapter");
         t(activeAdapter == expectedAdapter, message);
+    }
+
+    function _redemptionRoundingTolerance() internal view returns (uint256) {
+        return 1e6 + ghost_claimableEpochs.length + s_actors.length;
     }
 }
