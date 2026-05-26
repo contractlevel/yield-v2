@@ -28,7 +28,8 @@ contract AaveV4Adapter_WithdrawUnitTest is BaseAaveV4AdapterUnitTest {
     function test_AaveV4Adapter_withdraw_RevertWhen_RebalanceWithdrawAmountIsLessThanTVL() external {
         UnderpayingAaveV4Spoke underpayingSpoke =
             new UnderpayingAaveV4Spoke(address(s_mockUsdc), TVL, INSUFFICIENT_AMOUNT);
-        AaveV4Adapter adapter = new AaveV4Adapter(address(s_parentVault), address(s_mockUsdc), address(underpayingSpoke));
+        AaveV4Adapter adapter =
+            new AaveV4Adapter(address(s_parentVault), address(s_mockUsdc), address(underpayingSpoke));
         deal(address(s_mockUsdc), address(underpayingSpoke), INSUFFICIENT_AMOUNT);
 
         vm.expectRevert(AaveV4Adapter.AaveV4Adapter__IncorrectWithdrawAmount.selector);

@@ -58,10 +58,10 @@ contract MockAaveV3Pool {
                 revert MockAaveV3Pool__UnexpectedWithdrawAmount(amount, s_expectedWithdrawAmount);
             }
 
-            uint256 returnAmount = IERC20(s_aTokenAddress).balanceOf(msg.sender);
-            MockAToken(s_aTokenAddress).burn(msg.sender, returnAmount);
-            IERC20(asset).transfer(to, returnAmount);
-            return returnAmount;
+            uint256 tvl = IERC20(s_aTokenAddress).balanceOf(msg.sender);
+            MockAToken(s_aTokenAddress).burn(msg.sender, tvl);
+            IERC20(asset).transfer(to, tvl);
+            return tvl;
         }
 
         if (s_useExpectedWithdrawAmount) {

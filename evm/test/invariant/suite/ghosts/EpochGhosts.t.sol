@@ -19,6 +19,7 @@ abstract contract EpochGhosts is CcipGhosts {
     mapping(uint256 epochNonce => uint256 amount) internal ghost_maxRemainingWithdrawClaimAmountByEpoch;
     mapping(uint256 epochNonce => bool isClaimable) internal ghost_epochIsClaimable;
     uint256[] internal ghost_claimableEpochs;
+    uint256 internal ghost_claimableWithdrawObligation;
 
     function _clampDepositAmount(uint256 amountSeed) internal pure returns (uint256) {
         return _boundToRange(amountSeed, MIN_DEPOSIT_AMOUNT, MAX_DEPOSIT_AMOUNT);
@@ -59,6 +60,7 @@ abstract contract EpochGhosts is CcipGhosts {
         ghost_maxRemainingShareMintAmountByEpoch[epochNonce] = epoch.remainingShareMintAmount;
         ghost_maxRemainingShareBurnAmountByEpoch[epochNonce] = epoch.remainingShareBurnAmount;
         ghost_maxRemainingWithdrawClaimAmountByEpoch[epochNonce] = epoch.remainingWithdrawClaimAmount;
+        ghost_claimableWithdrawObligation += epoch.remainingWithdrawClaimAmount;
         ghost_claimableEpochs.push(epochNonce);
     }
 
@@ -97,8 +99,9 @@ abstract contract EpochGhosts is CcipGhosts {
         ghost_shareBurnedByActorByEpoch[actor][epochNonce] -= amount;
     }
 
-    function _recordUsdcClaimed(address actor, uint256 epochNonce) internal {
+    function _recordUsdcClaimed(address actor, uint256 epochNonce, uint256 usdcWithdrawAmount) internal {
         ghost_shareBurnedByActorByEpoch[actor][epochNonce] = 0;
+        ghost_claimableWithdrawObligation -= usdcWithdrawAmount;
     }
 
     function _checkAndUpdateWithdrawRemainingCounterMax(uint256 epochNonce) internal {

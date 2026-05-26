@@ -4,16 +4,12 @@ pragma solidity 0.8.28;
 import {BeforeAfter} from "./BeforeAfter.t.sol";
 import {Asserts} from "@chimera/Asserts.sol";
 import {Types} from "../../../src/libraries/Types.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 abstract contract Properties is BeforeAfter, Asserts {
-    function invariant_EPOCH_001_currentEpochIsOpen() public {
-        uint256 currentEpochNonce = parent.vault.getEpochNonce();
-        t(
-            parent.vault.getEpoch(currentEpochNonce).status == Types.EpochStatus.OPEN,
-            "EPOCH-001: current epoch is not open"
-        );
-    }
-
+    /*//////////////////////////////////////////////////////////////
+                                  MISC
+    //////////////////////////////////////////////////////////////*/
     function invariant_depositGhostMatchesOpenEpochTotal() public {
         uint256 currentEpochNonce = parent.vault.getEpochNonce();
         eq(
@@ -23,6 +19,27 @@ abstract contract Properties is BeforeAfter, Asserts {
         );
     }
 
+    /*//////////////////////////////////////////////////////////////
+                                SOLVENCY
+    //////////////////////////////////////////////////////////////*/
+    function invariant_SOLV_001_parentCoversClaimableWithdrawObligations() public {
+        lte(
+            ghost_claimableWithdrawObligation,
+            IERC20(parent.vault.getUsdc()).balanceOf(address(parent.vault)),
+            "SOLV-001: parent USDC balance does not cover claimable withdraw obligations"
+        );
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                                 EPOCH
+    //////////////////////////////////////////////////////////////*/
+    function invariant_EPOCH_001_currentEpochIsOpen() public {
+        uint256 currentEpochNonce = parent.vault.getEpochNonce();
+        t(
+            parent.vault.getEpoch(currentEpochNonce).status == Types.EpochStatus.OPEN,
+            "EPOCH-001: current epoch is not open"
+        );
+    }
 
     function invariant_EPOCH_008_depositRemainingCountersStayBounded() public {
         for (uint256 i; i < ghost_claimableEpochs.length; ++i) {
@@ -72,15 +89,96 @@ abstract contract Properties is BeforeAfter, Asserts {
         }
     }
 
-    function invariant_EPOCH_012_withdrawRemainingCountersReachZeroTogether() public {
+    function invariant_EPOCH_012_noWithdrawClaimAmountAfterShareBurnsProcessed() public {
         for (uint256 i; i < ghost_claimableEpochs.length; ++i) {
             uint256 epochNonce = ghost_claimableEpochs[i];
             Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
 
             t(
-                (epoch.remainingShareBurnAmount == 0) == (epoch.remainingWithdrawClaimAmount == 0),
-                "EPOCH-012: withdraw-side remaining counters did not reach zero together"
+                epoch.remainingShareBurnAmount != 0 || epoch.remainingWithdrawClaimAmount == 0,
+                "EPOCH-012: withdraw claim amount remains after all share burns processed"
             );
         }
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                               REBALANCE
+    //////////////////////////////////////////////////////////////*/
+    function invariant_REBAL_001_rebalanceStateIsValid() public {
+        Types.Rebalance memory rebalance = parent.vault.getRebalance();
+
+        t(
+            rebalance.state == Types.RebalanceState.NONE || rebalance.state == Types.RebalanceState.REBALANCING,
+            "REBAL-001: invalid rebalance state"
+        );
+    }
+
+    function invariant_REBAL_004_pendingStrategyMatchesRebalanceState() public {
+        Types.Rebalance memory rebalance = parent.vault.getRebalance();
+
+        if (rebalance.state == Types.RebalanceState.NONE) {
+            t(_strategyIsEmpty(rebalance.pendingStrategy), "REBAL-004: pending strategy set while not rebalancing");
+        } else {
+            t(!_strategyIsEmpty(rebalance.pendingStrategy), "REBAL-004: pending strategy missing while rebalancing");
+        }
+    }
+
+    function invariant_REBAL_006_activeStrategyAdapterMatchesActiveChain() public {
+        Types.Strategy memory activeStrategy = parent.vault.getRebalance().activeStrategy;
+
+        if (activeStrategy.chainSelector == PARENT_CHAIN_SELECTOR) {
+            _assertActiveStrategyAdapter(
+                parent.vault.getActiveProtocolAdapter(),
+                parent.adapterRegistry.getAdapter(activeStrategy.protocolId),
+                "REBAL-006: parent active adapter mismatch"
+            );
+            t(child.vault.getActiveProtocolAdapter() == address(0), "REBAL-006: adapter set for child strategy");
+            t(remoteChild.vault.getActiveProtocolAdapter() == address(0), "REBAL-006: adapter set for child strategy");
+        } else if (activeStrategy.chainSelector == CHILD_CHAIN_SELECTOR) {
+            _assertActiveStrategyAdapter(
+                child.vault.getActiveProtocolAdapter(),
+                child.adapterRegistry.getAdapter(activeStrategy.protocolId),
+                "REBAL-006: child active adapter mismatch"
+            );
+            t(parent.vault.getActiveProtocolAdapter() == address(0), "REBAL-006: parent adapter set for child strategy");
+            t(
+                remoteChild.vault.getActiveProtocolAdapter() == address(0),
+                "REBAL-006: adapter set for wrong child strategy"
+            );
+        } else if (activeStrategy.chainSelector == REMOTE_CHILD_CHAIN_SELECTOR) {
+            _assertActiveStrategyAdapter(
+                remoteChild.vault.getActiveProtocolAdapter(),
+                remoteChild.adapterRegistry.getAdapter(activeStrategy.protocolId),
+                "REBAL-006: remote child active adapter mismatch"
+            );
+            t(parent.vault.getActiveProtocolAdapter() == address(0), "REBAL-006: parent adapter set for child strategy");
+            t(child.vault.getActiveProtocolAdapter() == address(0), "REBAL-006: adapter set for wrong child strategy");
+        } else {
+            t(false, "REBAL-006: active strategy chain is unsupported");
+        }
+    }
+
+    function invariant_REBAL_008_noRebalanceWhilePreviousEpochExecuting() public {
+        uint256 currentEpochNonce = parent.vault.getEpochNonce();
+        if (currentEpochNonce <= 1) return;
+
+        Types.Rebalance memory rebalance = parent.vault.getRebalance();
+        Types.Epoch memory previousEpoch = parent.vault.getEpoch(currentEpochNonce - 1);
+
+        t(
+            rebalance.state != Types.RebalanceState.REBALANCING || previousEpoch.status != Types.EpochStatus.EXECUTING,
+            "REBAL-008: rebalance active while previous epoch is executing"
+        );
+    }
+
+    function _strategyIsEmpty(Types.Strategy memory strategy) internal pure returns (bool) {
+        return strategy.protocolId == bytes32(0) && strategy.chainSelector == 0;
+    }
+
+    function _assertActiveStrategyAdapter(address activeAdapter, address expectedAdapter, string memory message)
+        internal
+    {
+        t(expectedAdapter != address(0), "REBAL-006: active strategy has no registered adapter");
+        t(activeAdapter == expectedAdapter, message);
     }
 }

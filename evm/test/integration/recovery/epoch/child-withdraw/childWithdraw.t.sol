@@ -48,9 +48,8 @@ contract ChildWithdraw_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         assertTrue(child.vault.getRecoveryExists());
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.EXECUTING));
 
-        MockAToken(MockAaveV3Pool(childPool).getReserveData(parent.usdc).aTokenAddress).mint(
-            address(child.aaveV3Adapter), shareAmount
-        );
+        MockAToken(MockAaveV3Pool(childPool).getReserveData(parent.usdc).aTokenAddress)
+            .mint(address(child.aaveV3Adapter), shareAmount);
         deal(parent.usdc, childPool, shareAmount);
         MockAaveV3Pool(childPool).setWithdrawReturn(shareAmount);
 

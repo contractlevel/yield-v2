@@ -276,7 +276,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         IShare(i_share).burn(address(this), shareBurnAmount);
 
         emit WithdrawClaimed(epochNonce, msg.sender, usdcWithdrawAmount);
-        IERC20(i_usdc).safeTransfer(msg.sender, usdcWithdrawAmount);
+        if (usdcWithdrawAmount != 0) IERC20(i_usdc).safeTransfer(msg.sender, usdcWithdrawAmount);
     }
 
     /// @notice Cancels a deposit
@@ -494,6 +494,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
             else {
                 // remote strategy: CRE handles the withdrawal
                 epoch.status = Types.EpochStatus.EXECUTING;
+                // @review is there ever a case where the netWithdrawAmount is less than the lowest denomination of underlying asset/usdc?
                 emit EpochExecuting(epochNonce, netWithdrawAmount);
             }
         }

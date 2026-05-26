@@ -14,5 +14,7 @@ ParentVault_claimUsdc
     ├── it should use totalWithdrawClaimAmount
     ├── it should emit WithdrawClaimed
     ├── it should distribute rounding remainder to the pool-exhausting claimant
+    ├── when the withdraw claim rounds down to zero
+    │   └── it should burn dust shares without transferring zero USDC
     └── when the epoch is deposit-only
         └── it should leave withdraw-side remaining counters at zero

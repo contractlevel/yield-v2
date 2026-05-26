@@ -50,9 +50,8 @@ contract ChildWithdraw_EpochIntegrationTest is BaseIntegrationTest {
         assertEq(parent.vault.getEpochNonce(), 3);
         assertEq(uint256(parent.vault.getEpoch(3).status), uint256(Types.EpochStatus.OPEN));
 
-        MockAToken(MockAaveV3Pool(s_childAaveV3Pool).getReserveData(parent.usdc).aTokenAddress).mint(
-            address(child.aaveV3Adapter), s_shareAmount
-        );
+        MockAToken(MockAaveV3Pool(s_childAaveV3Pool).getReserveData(parent.usdc).aTokenAddress)
+            .mint(address(child.aaveV3Adapter), s_shareAmount);
         deal(parent.usdc, s_childAaveV3Pool, s_shareAmount);
         MockAaveV3Pool(s_childAaveV3Pool).setWithdrawReturn(s_shareAmount);
 

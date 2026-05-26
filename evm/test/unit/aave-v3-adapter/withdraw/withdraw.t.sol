@@ -26,11 +26,9 @@ contract AaveV3Adapter_WithdrawUnitTest is BaseAaveV3AdapterUnitTest {
     }
 
     function test_AaveV3Adapter_withdraw_RevertWhen_RebalanceWithdrawAmountIsLessThanTVL() external {
-        UnderpayingAaveV3Pool underpayingPool =
-            new UnderpayingAaveV3Pool(address(s_mockAToken), INSUFFICIENT_AMOUNT);
+        UnderpayingAaveV3Pool underpayingPool = new UnderpayingAaveV3Pool(address(s_mockAToken), INSUFFICIENT_AMOUNT);
         MockAaveV3PoolAddressesProvider provider = new MockAaveV3PoolAddressesProvider(address(underpayingPool));
-        AaveV3Adapter adapter =
-            new AaveV3Adapter(address(s_parentVault), address(s_mockUsdc), address(provider));
+        AaveV3Adapter adapter = new AaveV3Adapter(address(s_parentVault), address(s_mockUsdc), address(provider));
 
         s_mockAToken.mint(address(adapter), TVL);
         deal(address(s_mockUsdc), address(underpayingPool), INSUFFICIENT_AMOUNT);

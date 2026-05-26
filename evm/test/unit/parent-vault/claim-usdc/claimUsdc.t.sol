@@ -150,6 +150,42 @@ contract ParentVault_ClaimUsdcUnitTest is BaseUnitTest {
         assertEq(s_parentVault.getEpoch(1).remainingWithdrawClaimAmount, 0);
     }
 
+    function test_ParentVault_claimUsdc_Success_RoundsDustClaimDownAndBurnsSharesWithoutTransferringUsdc() public {
+        _deployFreshParentVault();
+
+        uint256 dustShareBurnAmount = 1;
+        uint256 totalShares = 100 * 1e6;
+        uint256 tvl = totalShares - 1;
+
+        _setParentTotalShares(totalShares);
+        _submitWithdraw(i_withdrawer, dustShareBurnAmount);
+        _closeEpoch(tvl);
+
+        uint256 withdrawerUsdcBefore = s_mockUsdc.balanceOf(i_withdrawer);
+        uint256 supplyBefore = s_yieldcoin.totalSupply();
+
+        _changePrank(i_withdrawer);
+        vm.recordLogs();
+        uint256 usdcWithdrawAmount = s_parentVault.claimUsdc(1);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+
+        assertEq(usdcWithdrawAmount, 0);
+        assertEq(s_mockUsdc.balanceOf(i_withdrawer), withdrawerUsdcBefore);
+        assertEq(s_yieldcoin.totalSupply(), supplyBefore - dustShareBurnAmount);
+        assertEq(s_parentVault.getWithdrawShareBurnAmount(i_withdrawer, 1), 0);
+        assertEq(s_parentVault.getEpoch(1).remainingShareBurnAmount, 0);
+        assertEq(s_parentVault.getEpoch(1).remainingWithdrawClaimAmount, 0);
+
+        bytes32 transferSig = keccak256("Transfer(address,address,uint256)");
+        for (uint256 i; i < logs.length; ++i) {
+            bool isZeroUsdcTransfer = logs[i].emitter == address(s_mockUsdc) && logs[i].topics[0] == transferSig
+                && address(uint160(uint256(logs[i].topics[1]))) == address(s_parentVault)
+                && address(uint160(uint256(logs[i].topics[2]))) == i_withdrawer
+                && abi.decode(logs[i].data, (uint256)) == 0;
+            assertFalse(isZeroUsdcTransfer);
+        }
+    }
+
     function test_ParentVault_claimUsdc_WhenDepositOnlyEpoch_WithdrawSideRemainingCountersAreZero() public {
         _deployFreshParentVault();
 
