@@ -21,7 +21,6 @@ contract ChildWithdraw_RebalanceRecoveryIntegrationTest is BaseRecoveryIntegrati
         uint256 parentSuppliedBefore =
             MockAaveV4Spoke(parentSpoke).getUserSuppliedAssets(parentReserveId, address(parent.aaveV4Adapter));
 
-        _prepareAaveV3RebalanceWithdraw(childPool, address(child.aaveV3Adapter), tvl);
         MockAaveV3Pool(childPool).setWithdrawReverts(true);
 
         _initiateRebalanceThroughWorkflow(
@@ -56,8 +55,6 @@ contract ChildWithdraw_RebalanceRecoveryIntegrationTest is BaseRecoveryIntegrati
         assertEq(uint256(parent.vault.getRebalance().state), uint256(Types.RebalanceState.REBALANCING));
 
         MockAaveV3Pool(childPool).setWithdrawReverts(false);
-        deal(parent.usdc, childPool, tvl);
-        MockAaveV3Pool(childPool).setWithdrawReturn(tvl);
 
         vm.recordLogs();
         child.vault.recoverFailedRebalanceWithdraw();

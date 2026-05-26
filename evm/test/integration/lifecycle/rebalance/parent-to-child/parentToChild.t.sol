@@ -4,7 +4,6 @@ pragma solidity 0.8.28;
 import {BaseIntegrationTest} from "../../../BaseIntegrationTest.t.sol";
 
 import {Types} from "../../../../../src/libraries/Types.sol";
-import {MockAaveV3Pool} from "../../../../mocks/MockAaveV3Pool.sol";
 
 import {Vm} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -30,14 +29,8 @@ contract ParentToChild_RebalanceIntegrationTest is BaseIntegrationTest {
     function test_Rebalance_parentToChild_CompletesAfterLocalCcipSendToChild() external {
         uint256 tvl = DEPOSIT_AMOUNT;
         _seedParentLocalTvl(tvl);
-        address oldPool = parent.aaveV3Adapter.getProtocolPool();
         address childPool = child.aaveV3Adapter.getProtocolPool();
         uint256 childPoolBalanceBefore = IERC20(parent.usdc).balanceOf(childPool);
-
-        MockAaveV3Pool(oldPool).setATokenAddress(parent.usdc);
-        deal(parent.usdc, address(parent.aaveV3Adapter), tvl);
-        deal(parent.usdc, oldPool, tvl);
-        MockAaveV3Pool(oldPool).setWithdrawReturn(tvl);
 
         vm.recordLogs();
         _initiateRebalanceThroughWorkflow(

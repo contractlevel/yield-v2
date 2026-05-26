@@ -13,11 +13,9 @@ contract ChildDeposit_RebalanceRecoveryIntegrationTest is BaseRecoveryIntegratio
     function test_Recovery_childRebalanceDeposit_CompletesAfterFailedParentToChildDeposit() external {
         uint256 tvl = DEPOSIT_AMOUNT;
         _seedParentLocalTvl(tvl);
-        address parentPool = parent.aaveV3Adapter.getProtocolPool();
         address childPool = child.aaveV3Adapter.getProtocolPool();
         uint256 childPoolBalanceBefore = IERC20(parent.usdc).balanceOf(childPool);
 
-        _prepareAaveV3RebalanceWithdraw(parentPool, address(parent.aaveV3Adapter), tvl);
         MockAaveV3Pool(childPool).setSupplyReverts(true);
 
         vm.recordLogs();

@@ -4,7 +4,6 @@ pragma solidity 0.8.28;
 import {BaseIntegrationTest} from "../BaseIntegrationTest.t.sol";
 
 import {Types} from "../../../src/libraries/Types.sol";
-import {MockAaveV3Pool} from "../../mocks/MockAaveV3Pool.sol";
 
 abstract contract BaseRecoveryIntegrationTest is BaseIntegrationTest {
     bytes32 internal constant CLOSE_EPOCH_WORKFLOW_ID = keccak256("recovery-close-epoch");
@@ -53,13 +52,6 @@ abstract contract BaseRecoveryIntegrationTest is BaseIntegrationTest {
         parent.vault.claimShares(1);
 
         return DEPOSIT_AMOUNT;
-    }
-
-    function _prepareAaveV3RebalanceWithdraw(address pool, address adapter, uint256 amount) internal {
-        MockAaveV3Pool(pool).setATokenAddress(parent.usdc);
-        deal(parent.usdc, adapter, amount);
-        deal(parent.usdc, pool, amount);
-        MockAaveV3Pool(pool).setWithdrawReturn(amount);
     }
 
     function _assertEpochRecovery(Types.EpochRecovery memory recovery, uint256 epochNonce, uint256 amount)

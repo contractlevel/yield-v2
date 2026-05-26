@@ -14,13 +14,11 @@ contract ParentDeposit_RebalanceRecoveryIntegrationTest is BaseRecoveryIntegrati
         _setChildActiveAdapter(AAVE_V3_PROTOCOL_ID);
         uint256 tvl = DEPOSIT_AMOUNT;
         _seedChildLocalTvl(tvl);
-        address childPool = child.aaveV3Adapter.getProtocolPool();
         address parentSpoke = parent.aaveV4Adapter.getProtocolPool();
         uint256 parentReserveId = parent.aaveV4Adapter.getReserveId();
         uint256 parentSuppliedBefore =
             MockAaveV4Spoke(parentSpoke).getUserSuppliedAssets(parentReserveId, address(parent.aaveV4Adapter));
 
-        _prepareAaveV3RebalanceWithdraw(childPool, address(child.aaveV3Adapter), tvl);
         MockAaveV4Spoke(parentSpoke).setSupplyReverts(true);
 
         _initiateRebalanceThroughWorkflow(

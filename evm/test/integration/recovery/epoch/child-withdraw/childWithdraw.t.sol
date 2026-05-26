@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 import {BaseRecoveryIntegrationTest} from "../../BaseRecoveryIntegrationTest.t.sol";
 
 import {Types} from "../../../../../src/libraries/Types.sol";
+import {MockAToken} from "../../../../mocks/MockAToken.sol";
 import {MockAaveV3Pool} from "../../../../mocks/MockAaveV3Pool.sol";
 
 import {Vm} from "forge-std/Test.sol";
@@ -47,6 +48,9 @@ contract ChildWithdraw_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         assertTrue(child.vault.getRecoveryExists());
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.EXECUTING));
 
+        MockAToken(MockAaveV3Pool(childPool).getReserveData(parent.usdc).aTokenAddress).mint(
+            address(child.aaveV3Adapter), shareAmount
+        );
         deal(parent.usdc, childPool, shareAmount);
         MockAaveV3Pool(childPool).setWithdrawReturn(shareAmount);
 

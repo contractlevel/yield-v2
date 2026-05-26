@@ -14,11 +14,17 @@ contract CcipSend_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
 
     function test_Recovery_ChildVault_ccipSend_EpochWithdraw_RetryMakesParentEpochClaimable() external {
         uint256 shareAmount = _depositAndClaimParentLocalShares();
-        _setParentRemoteStrategyToChild(AAVE_V3_PROTOCOL_ID);
-        _setChildActiveAdapter(AAVE_V3_PROTOCOL_ID);
 
-        address childPool = child.aaveV3Adapter.getProtocolPool();
-        _prepareAaveV3RebalanceWithdraw(childPool, address(child.aaveV3Adapter), shareAmount);
+        _initiateRebalanceThroughWorkflow(
+            parent.workflowRouter,
+            INITIATE_REBALANCE_WORKFLOW_ID,
+            INITIATE_REBALANCE_WORKFLOW_NAME,
+            i_owner,
+            _childStrategy(AAVE_V3_PROTOCOL_ID)
+        );
+        _completeRebalanceThroughWorkflow(
+            parent.workflowRouter, COMPLETE_REBALANCE_WORKFLOW_ID, COMPLETE_REBALANCE_WORKFLOW_NAME, i_owner, 1
+        );
 
         _approveShares(i_depositor, address(parent.vault), shareAmount);
         _changePrank(i_depositor);
@@ -84,13 +90,10 @@ contract CcipSend_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         _setChildActiveAdapter(AAVE_V3_PROTOCOL_ID);
         uint256 tvl = DEPOSIT_AMOUNT;
         _seedChildLocalTvl(tvl);
-        address childPool = child.aaveV3Adapter.getProtocolPool();
         address parentSpoke = parent.aaveV4Adapter.getProtocolPool();
         uint256 parentReserveId = parent.aaveV4Adapter.getReserveId();
         uint256 parentSuppliedBefore =
             MockAaveV4Spoke(parentSpoke).getUserSuppliedAssets(parentReserveId, address(parent.aaveV4Adapter));
-
-        _prepareAaveV3RebalanceWithdraw(childPool, address(child.aaveV3Adapter), tvl);
 
         _initiateRebalanceThroughWorkflow(
             parent.workflowRouter,

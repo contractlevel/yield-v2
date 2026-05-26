@@ -72,6 +72,18 @@ contract MockAaveV4Spoke {
 
     function withdraw(uint256 reserveId, uint256 amount, address onBehalfOf) external returns (uint256, uint256) {
         if (s_withdrawReverts) revert MockAaveV4Spoke__WithdrawReverts();
+        uint256 suppliedAssets = s_suppliedAssets[reserveId][onBehalfOf];
+
+        if (amount == type(uint256).max) {
+            if (s_useExpectedWithdrawAmount && amount != s_expectedWithdrawAmount) {
+                revert MockAaveV4Spoke__UnexpectedWithdrawAmount(amount, s_expectedWithdrawAmount);
+            }
+
+            s_suppliedAssets[reserveId][onBehalfOf] = 0;
+            IERC20(i_underlying).transfer(msg.sender, suppliedAssets);
+            return (suppliedAssets, suppliedAssets);
+        }
+
         uint256 amountToTransfer = s_withdrawReturn;
         if (s_useExpectedWithdrawAmount) {
             if (amount != s_expectedWithdrawAmount) {
@@ -80,7 +92,6 @@ contract MockAaveV4Spoke {
             amountToTransfer = amount;
         }
 
-        uint256 suppliedAssets = s_suppliedAssets[reserveId][onBehalfOf];
         if (amountToTransfer >= suppliedAssets) s_suppliedAssets[reserveId][onBehalfOf] = 0;
         else s_suppliedAssets[reserveId][onBehalfOf] = suppliedAssets - amountToTransfer;
 

@@ -4,7 +4,6 @@ pragma solidity 0.8.28;
 import {BaseIntegrationTest} from "../../../BaseIntegrationTest.t.sol";
 
 import {Types} from "../../../../../src/libraries/Types.sol";
-import {MockAaveV3Pool} from "../../../../mocks/MockAaveV3Pool.sol";
 import {MockAaveV4Spoke} from "../../../../mocks/MockAaveV4Spoke.sol";
 
 import {Vm} from "forge-std/Test.sol";
@@ -22,14 +21,8 @@ contract ParentToParent_RebalanceIntegrationTest is BaseIntegrationTest {
     function test_Rebalance_parentToParent_FinalizesSynchronouslyIntoParentTargetStrategy() external {
         uint256 tvl = DEPOSIT_AMOUNT;
         _seedParentLocalTvl(tvl);
-        address oldPool = parent.aaveV3Adapter.getProtocolPool();
         address targetSpoke = parent.aaveV4Adapter.getProtocolPool();
         uint256 targetReserveId = parent.aaveV4Adapter.getReserveId();
-
-        MockAaveV3Pool(oldPool).setATokenAddress(parent.usdc);
-        deal(parent.usdc, address(parent.aaveV3Adapter), tvl);
-        deal(parent.usdc, oldPool, tvl);
-        MockAaveV3Pool(oldPool).setWithdrawReturn(tvl);
 
         uint256 targetTvlBefore =
             MockAaveV4Spoke(targetSpoke).getUserSuppliedAssets(targetReserveId, address(parent.aaveV4Adapter));

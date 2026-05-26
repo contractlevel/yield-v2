@@ -46,6 +46,17 @@ contract MockComet {
     function withdraw(address asset, uint256 amount) external {
         if (s_withdrawReverts) revert MockComet__WithdrawReverts();
 
+        uint256 balance = s_balances[msg.sender];
+        if (amount == type(uint256).max) {
+            if (s_useExpectedWithdrawAmount && amount != s_expectedWithdrawAmount) {
+                revert MockComet__UnexpectedWithdrawAmount(amount, s_expectedWithdrawAmount);
+            }
+
+            s_balances[msg.sender] = 0;
+            IERC20(asset).transfer(msg.sender, balance);
+            return;
+        }
+
         uint256 amountToTransfer = s_withdrawReturn;
         if (s_useExpectedWithdrawAmount) {
             if (amount != s_expectedWithdrawAmount) {
@@ -54,8 +65,7 @@ contract MockComet {
             amountToTransfer = amount;
         }
 
-        uint256 balance = s_balances[msg.sender];
-        if (amount == type(uint256).max || amountToTransfer >= balance) s_balances[msg.sender] = 0;
+        if (amountToTransfer >= balance) s_balances[msg.sender] = 0;
         else s_balances[msg.sender] = balance - amountToTransfer;
 
         IERC20(asset).transfer(msg.sender, amountToTransfer);

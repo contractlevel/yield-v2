@@ -6,6 +6,8 @@ import {BaseCompoundV3AdapterUnitTest, Vm} from "../BaseCompoundV3AdapterUnitTes
 import {CompoundV3Adapter} from "../../../../src/modules/adapters/CompoundV3Adapter.sol";
 import {IProtocolAdapter} from "../../../../src/interfaces/IProtocolAdapter.sol";
 
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 contract CompoundV3Adapter_WithdrawUnitTest is BaseCompoundV3AdapterUnitTest {
     uint256 internal constant TVL = 1000 * 1e6;
     uint256 internal constant WITHDRAW_AMOUNT = 500 * 1e6;
@@ -30,12 +32,13 @@ contract CompoundV3Adapter_WithdrawUnitTest is BaseCompoundV3AdapterUnitTest {
     }
 
     function test_CompoundV3Adapter_withdraw_RevertWhen_RebalanceWithdrawAmountIsLessThanTVL() external {
-        s_mockComet.setBalance(address(s_compoundV3Adapter), TVL);
-        deal(address(s_mockUsdc), address(s_mockComet), INSUFFICIENT_AMOUNT);
-        s_mockComet.setWithdrawReturn(INSUFFICIENT_AMOUNT);
+        UnderpayingComet underpayingComet = new UnderpayingComet(TVL, INSUFFICIENT_AMOUNT);
+        CompoundV3Adapter adapter =
+            new CompoundV3Adapter(address(s_parentVault), address(s_mockUsdc), address(underpayingComet));
+        deal(address(s_mockUsdc), address(underpayingComet), INSUFFICIENT_AMOUNT);
 
         vm.expectRevert(CompoundV3Adapter.CompoundV3Adapter__IncorrectWithdrawAmount.selector);
-        s_compoundV3Adapter.withdraw(type(uint256).max);
+        adapter.withdraw(type(uint256).max);
     }
 
     function test_CompoundV3Adapter_withdraw_Success_RebalanceWithdraw() external {
@@ -84,5 +87,23 @@ contract CompoundV3Adapter_WithdrawUnitTest is BaseCompoundV3AdapterUnitTest {
 
         assertEq(actualAmount, EXCESS_AMOUNT);
         assertEq(s_mockUsdc.balanceOf(address(s_parentVault)), EXCESS_AMOUNT);
+    }
+}
+
+contract UnderpayingComet {
+    uint256 internal immutable i_tvl;
+    uint256 internal immutable i_withdrawReturn;
+
+    constructor(uint256 tvl, uint256 withdrawReturn) {
+        i_tvl = tvl;
+        i_withdrawReturn = withdrawReturn;
+    }
+
+    function withdraw(address asset, uint256) external {
+        IERC20(asset).transfer(msg.sender, i_withdrawReturn);
+    }
+
+    function balanceOf(address) external view returns (uint256) {
+        return i_tvl;
     }
 }

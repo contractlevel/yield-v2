@@ -4,7 +4,6 @@ pragma solidity 0.8.28;
 import {BaseIntegrationTest} from "../../../BaseIntegrationTest.t.sol";
 
 import {Types} from "../../../../../src/libraries/Types.sol";
-import {MockAaveV3Pool} from "../../../../mocks/MockAaveV3Pool.sol";
 import {MockAaveV4Spoke} from "../../../../mocks/MockAaveV4Spoke.sol";
 
 import {Vm} from "forge-std/Test.sol";
@@ -37,14 +36,8 @@ contract ChildToSameChild_RebalanceIntegrationTest is BaseIntegrationTest {
     function test_Rebalance_childToSameChild_CompletesAfterLocalChildStrategyMove() external {
         uint256 tvl = DEPOSIT_AMOUNT;
         _seedChildLocalTvl(tvl);
-        address oldPool = child.aaveV3Adapter.getProtocolPool();
         address targetSpoke = child.aaveV4Adapter.getProtocolPool();
         uint256 targetReserveId = child.aaveV4Adapter.getReserveId();
-
-        MockAaveV3Pool(oldPool).setATokenAddress(parent.usdc);
-        deal(parent.usdc, address(child.aaveV3Adapter), tvl);
-        deal(parent.usdc, oldPool, tvl);
-        MockAaveV3Pool(oldPool).setWithdrawReturn(tvl);
 
         uint256 routerBalanceBeforeRebalance = IERC20(parent.usdc).balanceOf(address(local.mockCcipRouter));
         uint256 targetTvlBefore =

@@ -22,7 +22,7 @@ contract CryticToFoundry is TargetFunctions, FoundryAsserts {
     }
 
     function test_crytic() public {
-        /// @dev Actor seed 0 selects the first configured actor for this deterministic smoke test.
+        /// @dev Actor seed 0 selects the first configured actor
         handler_deposit(0, MIN_DEPOSIT_AMOUNT);
         handler_cancelDeposit(0, MIN_DEPOSIT_AMOUNT);
         handler_closeEpoch(0);
