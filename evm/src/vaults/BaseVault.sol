@@ -440,6 +440,21 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         emit EmergencyDrainExecuted(msg.sender, balance);
     }
 
+    /// @notice Donates USDC to the active strategy without minting shares or creating a claim
+    /// @param amount The amount of USDC to donate
+    /// @dev This is permissionless and intentionally allowed while paused for incident recapitalization.
+    /// @dev Precondition: amount must be more than 0
+    /// @dev Precondition: the strategy deposit operation must succeed
+    /// @dev Precondition: the call must not be reentered
+    function donate(uint256 amount) external nonReentrant {
+        if (amount == 0) revert BaseVault__NoZeroAmount();
+
+        IERC20(i_usdc).safeTransferFrom(msg.sender, address(this), amount);
+        _executeDeposit(amount, true);
+
+        emit Donation(msg.sender, amount);
+    }
+
     /*//////////////////////////////////////////////////////////////
                             INTERNAL GETTER
     //////////////////////////////////////////////////////////////*/

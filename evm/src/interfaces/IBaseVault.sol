@@ -124,6 +124,19 @@ interface IBaseVault is IPauseable {
     /// @notice Emitted when failed rebalance deposit recovery state is cleared
     /// @param rebalanceNonce The nonce of the recovered rebalance deposit
     event RebalanceDepositRecoveryCleared(uint256 indexed rebalanceNonce);
+    /// @notice Emitted when USDC is donated to the active strategy without minting shares
+    /// @param donor The address that donated USDC
+    /// @param amount The amount of USDC donated
+    event Donation(address indexed donor, uint256 indexed amount);
+
+    /*//////////////////////////////////////////////////////////////
+                               DONATION
+    //////////////////////////////////////////////////////////////*/
+    /// @notice Donates USDC to the active strategy without minting shares or creating a claim
+    /// @param amount The amount of USDC to donate
+    /// @dev Precondition: This vault must be on the active strategy chain
+    /// @dev Precondition: Deposit into the active strategy must succeed
+    function donate(uint256 amount) external;
 
     /*//////////////////////////////////////////////////////////////
                                RECOVERY

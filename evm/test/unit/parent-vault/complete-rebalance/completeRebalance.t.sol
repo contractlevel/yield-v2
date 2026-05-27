@@ -34,9 +34,8 @@ contract ParentVault_CompleteRebalanceUnitTest is BaseUnitTest {
     }
 
     function test_ParentVault_completeRebalance_RevertWhen_RecoveryExists() public {
-        stdstore.target(address(s_parentVault)).sig("getRebalanceDepositRecovery()").depth(1).checked_write(
-            TOTAL_SHARES
-        );
+        stdstore.target(address(s_parentVault)).sig("getRebalanceDepositRecovery()").depth(1)
+            .checked_write(TOTAL_SHARES);
 
         vm.expectRevert(IBaseVault.BaseVault__RecoveryAlreadyPending.selector);
         s_parentVault.completeRebalance(1);

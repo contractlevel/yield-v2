@@ -42,9 +42,8 @@ contract ParentVault_InitiateRebalanceUnitTest is BaseUnitTest {
     }
 
     function test_ParentVault_initiateRebalance_RevertWhen_RecoveryExists() public {
-        stdstore.target(address(s_parentVault)).sig("getRebalanceDepositRecovery()").depth(1).checked_write(
-            REBALANCE_AMOUNT
-        );
+        stdstore.target(address(s_parentVault)).sig("getRebalanceDepositRecovery()").depth(1)
+            .checked_write(REBALANCE_AMOUNT);
 
         vm.expectRevert(IBaseVault.BaseVault__RecoveryAlreadyPending.selector);
         s_parentVault.initiateRebalance(_localStrategy(AAVE_V4_PROTOCOL_ID));
