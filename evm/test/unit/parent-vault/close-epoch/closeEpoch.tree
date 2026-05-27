@@ -3,6 +3,8 @@ ParentVault_closeEpoch
 │   └── it should revert
 ├── when rebalance is in progress
 │   └── it should revert with ParentVault__RebalanceInProgress
+├── when recovery exists
+│   └── it should revert with BaseVault__RecoveryAlreadyPending
 ├── when epoch is not open
 │   └── it should revert with ParentVault__EpochNotOpen
 ├── when epoch period is too short

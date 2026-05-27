@@ -30,6 +30,14 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
         s_childVault.executeRebalance(REBALANCE_NONCE, _sameChildStrategy());
     }
 
+    function test_ChildVault_executeRebalance_RevertWhen_RecoveryExists() public {
+        s_mockProtocolAdapter.setWithdrawReverts(true);
+        s_childVault.executeRebalance(REBALANCE_NONCE, _remoteChildStrategy());
+
+        vm.expectRevert(IBaseVault.BaseVault__RecoveryAlreadyPending.selector);
+        s_childVault.executeRebalance(REBALANCE_NONCE + 1, _remoteChildStrategy());
+    }
+
     function test_ChildVault_executeRebalance_SameChild_RevertWhen_TargetProtocolAdapterIsNotRegistered() public {
         bytes32 unknownProtocolId = keccak256("unknown-protocol");
 
@@ -128,19 +136,6 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
         assertEq(s_mockUsdc.balanceOf(address(s_mockCcipRouter)), routerBefore);
     }
 
-    function test_ChildVault_executeRebalance_WhenWithdrawAdapterReverts_StoresRebalanceWithdrawRecovery() public {
-        s_mockProtocolAdapter.setWithdrawReverts(true);
-
-        s_childVault.executeRebalance(REBALANCE_NONCE, _remoteChildStrategy());
-
-        Types.RebalanceWithdrawRecovery memory recovery = s_childVault.getRebalanceWithdrawRecovery();
-        assertEq(recovery.rebalanceNonce, REBALANCE_NONCE);
-        assertEq(recovery.strategy.protocolId, AAVE_V4_PROTOCOL_ID);
-        assertEq(recovery.strategy.chainSelector, REMOTE_CHILD_CHAIN_SELECTOR);
-        assertEq(recovery.createdAt, block.timestamp);
-        assertTrue(s_childVault.getRecoveryExists());
-    }
-
     function test_ChildVault_executeRebalance_WhenWithdrawAdapterReverts_EmitsRebalanceWithdrawRecoveryStored() public {
         s_mockProtocolAdapter.setWithdrawReverts(true);
 
@@ -155,8 +150,35 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
         assertEq(uint64(uint256(log.topics[3])), REMOTE_CHILD_CHAIN_SELECTOR);
     }
 
-    function test_ChildVault_executeRebalance_WhenWithdrawAdapterReturnsZero_StoresRebalanceWithdrawRecovery() public {
+    function test_ChildVault_executeRebalance_WhenWithdrawAdapterReturnsZero_DoesNotStoreRebalanceWithdrawRecovery()
+        public
+    {
         s_mockProtocolAdapter.setWithdrawReturnAmount(0);
+
+        s_childVault.executeRebalance(REBALANCE_NONCE, _remoteChildStrategy());
+
+        Types.RebalanceWithdrawRecovery memory recovery = s_childVault.getRebalanceWithdrawRecovery();
+        assertEq(recovery.rebalanceNonce, 0);
+        assertEq(recovery.strategy.protocolId, bytes32(0));
+        assertEq(recovery.strategy.chainSelector, 0);
+        assertEq(recovery.createdAt, 0);
+        assertFalse(s_childVault.getRecoveryExists());
+    }
+
+    function test_ChildVault_executeRebalance_WhenWithdrawAdapterReturnsZero_EmitsRebalanceWithdrawSuccess() public {
+        s_mockProtocolAdapter.setWithdrawReturnAmount(0);
+
+        vm.recordLogs();
+        s_childVault.executeRebalance(REBALANCE_NONCE, _remoteChildStrategy());
+
+        Vm.Log memory log =
+            _assertEmittedBy(keccak256("RebalanceWithdrawSuccess(uint256,uint256)"), address(s_childVault));
+        assertEq(uint256(log.topics[1]), REBALANCE_NONCE);
+        assertEq(uint256(log.topics[2]), 0);
+    }
+
+    function test_ChildVault_executeRebalance_WhenWithdrawReturnsFalse_StoresRebalanceWithdrawRecovery() public {
+        s_mockProtocolAdapter.setWithdrawReverts(true);
 
         s_childVault.executeRebalance(REBALANCE_NONCE, _remoteChildStrategy());
 

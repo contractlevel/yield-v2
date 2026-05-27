@@ -1,12 +1,17 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
+import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
+
 import {BaseUnitTest, Vm} from "../../BaseUnitTest.t.sol";
 
+import {IBaseVault} from "../../../../src/interfaces/IBaseVault.sol";
 import {IParentVault} from "../../../../src/interfaces/IParentVault.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
 
 contract ParentVault_CompleteRebalanceUnitTest is BaseUnitTest {
+    using stdStorage for StdStorage;
+
     uint256 internal constant TOTAL_SHARES = 1_000_000 * 1e6;
     uint256 internal constant MANAGEMENT_FEE_BPS = 1_000;
     uint256 internal constant BPS_DENOMINATOR = 100_000; // @review 10_000 in contracts
@@ -25,6 +30,15 @@ contract ParentVault_CompleteRebalanceUnitTest is BaseUnitTest {
     function test_ParentVault_completeRebalance_RevertWhen_NoRebalanceInProgress() public {
         _setParentRebalanceState(Types.RebalanceState.NONE);
         vm.expectRevert(IParentVault.ParentVault__NoRebalanceInProgress.selector);
+        s_parentVault.completeRebalance(1);
+    }
+
+    function test_ParentVault_completeRebalance_RevertWhen_RecoveryExists() public {
+        stdstore.target(address(s_parentVault)).sig("getRebalanceDepositRecovery()").depth(1).checked_write(
+            TOTAL_SHARES
+        );
+
+        vm.expectRevert(IBaseVault.BaseVault__RecoveryAlreadyPending.selector);
         s_parentVault.completeRebalance(1);
     }
 

@@ -152,8 +152,10 @@ contract ChildVault is BaseVault, IChildVault {
         nonReentrant
         onlyRole(Roles.EPOCH_OPERATOR_ROLE)
     {
-        uint256 amountOut = _executeWithdraw(amount, false);
-        if (amountOut > 0) {
+        _requireNoRecovery();
+
+        (bool success, uint256 amountOut) = _executeWithdraw(amount, false);
+        if (success) {
             emit WithdrawFromStrategySuccess(epochNonce, amountOut);
             _ccipSend(amountOut, i_parentChainSelector, Types.CcipTx.EPOCH_NET_WITHDRAW, abi.encode(epochNonce));
         } else {
@@ -175,9 +177,10 @@ contract ChildVault is BaseVault, IChildVault {
         nonReentrant
         onlyRole(Roles.REBALANCE_OPERATOR_ROLE)
     {
-        uint256 amountRebalanced = _executeRebalance(rebalanceNonce, newStrategy);
-        //slither-disable-next-line incorrect-equality
-        if (amountRebalanced == 0) {
+        _requireNoRecovery();
+
+        (bool success,) = _executeRebalance(rebalanceNonce, newStrategy);
+        if (!success) {
             _storeRebalanceWithdrawRecovery(rebalanceNonce, newStrategy);
         }
     }
@@ -305,7 +308,8 @@ contract ChildVault is BaseVault, IChildVault {
     /// @notice Recovers a failed epoch deposit into the active Child strategy
     /// @dev Precondition: epoch deposit recovery state must exist
     /// @dev Precondition: active strategy adapter must be set
-    function recoverFailedEpochDeposit() external {
+    /// @dev Precondition: function must not be reentered
+    function recoverFailedEpochDeposit() external nonReentrant {
         Types.EpochRecovery memory recovery = _requireEpochDepositRecovery();
         uint256 epochNonce = recovery.epochNonce;
 
@@ -318,11 +322,12 @@ contract ChildVault is BaseVault, IChildVault {
     /// @notice Recovers a failed epoch withdraw from the active Child strategy
     /// @dev Precondition: epoch withdraw recovery state must exist
     /// @dev Precondition: active strategy adapter must be set
-    function recoverFailedEpochWithdraw() external {
+    /// @dev Precondition: function must not be reentered
+    function recoverFailedEpochWithdraw() external nonReentrant {
         Types.EpochRecovery memory recovery = _requireEpochWithdrawRecovery();
         uint256 epochNonce = recovery.epochNonce;
 
-        uint256 amountOut = _executeWithdraw(recovery.amount, true);
+        (, uint256 amountOut) = _executeWithdraw(recovery.amount, true);
         //slither-disable-next-line incorrect-equality
         if (amountOut == 0) revert BaseVault__ZeroRecoveryAmount();
 
@@ -334,11 +339,12 @@ contract ChildVault is BaseVault, IChildVault {
     /// @notice Recovers a failed rebalance withdraw from the active Child strategy
     /// @dev Precondition: rebalance withdraw recovery state must exist
     /// @dev Precondition: active strategy adapter must be set
+    /// @dev Precondition: function must not be reentered
     function recoverFailedRebalanceWithdraw() external nonReentrant {
         Types.RebalanceWithdrawRecovery memory recovery = _requireRebalanceWithdrawRecovery();
         uint256 rebalanceNonce = recovery.rebalanceNonce;
 
-        uint256 amountRebalanced = _executeWithdraw(type(uint256).max, true);
+        (, uint256 amountRebalanced) = _executeWithdraw(type(uint256).max, true);
         //slither-disable-next-line incorrect-equality
         if (amountRebalanced == 0) revert BaseVault__ZeroRecoveryAmount();
 
@@ -350,12 +356,14 @@ contract ChildVault is BaseVault, IChildVault {
     /// @notice Recovers a failed rebalance deposit into the active Child strategy
     /// @dev Precondition: rebalance deposit recovery state must exist
     /// @dev Precondition: active strategy adapter must be set
-    function recoverFailedRebalanceDeposit() external override(BaseVault, IChildVault) {
+    /// @dev Precondition: function must not be reentered
+    function recoverFailedRebalanceDeposit() external override(BaseVault, IChildVault) nonReentrant {
         _recoverFailedRebalanceDeposit();
     }
 
     /// @notice Retries a failed ChildVault CCIP send
     /// @dev Precondition: CCIP send recovery state must exist
+    /// @dev Precondition: function must not be reentered
     function recoverFailedCcipSend() external nonReentrant {
         Types.CcipSendRecovery memory recovery = s_ccipSendRecovery;
         if (recovery.amount == 0) revert BaseVault__NoPendingRecovery();
@@ -405,6 +413,11 @@ contract ChildVault is BaseVault, IChildVault {
     /// @return recoveryExists true if recovery exists, false if not
     /// @dev This is used for Workflow-level checks
     function getRecoveryExists() external view override returns (bool recoveryExists) {
+        recoveryExists = _recoveryExists();
+    }
+
+    /// @inheritdoc BaseVault
+    function _recoveryExists() internal view override returns (bool recoveryExists) {
         recoveryExists = s_rebalanceDepositRecovery.amount != 0 || s_epochDepositRecovery.amount != 0
             || s_epochWithdrawRecovery.amount != 0 || s_rebalanceWithdrawRecovery.rebalanceNonce != 0
             || s_ccipSendRecovery.amount != 0;

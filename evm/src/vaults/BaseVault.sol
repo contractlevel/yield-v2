@@ -268,15 +268,18 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @notice Executes a withdraw from the active strategy
     /// @param amount The amount to withdraw
     /// @param revertOnFailure Indicates whether the call should revert if the withdraw from strategy fails or not
+    /// @return success Whether the withdraw succeeded or not
     /// @return amountOut The amount withdrawn. This will be 0 if revertOnFailure is false and the withdraw failed
     /// @notice This function uses a trycatch to handle cases where the withdraw from strategy fails
-    function _executeWithdraw(uint256 amount, bool revertOnFailure) internal returns (uint256 amountOut) {
+    function _executeWithdraw(uint256 amount, bool revertOnFailure) internal returns (bool success, uint256 amountOut) {
         address activeAdapter = s_activeProtocolAdapter;
         if (activeAdapter == address(0)) revert BaseVault__NoActiveAdapter();
         try IProtocolAdapter(activeAdapter).withdraw(amount) returns (uint256 actual) {
+            success = true;
             amountOut = actual;
         } catch {
             if (revertOnFailure) revert BaseVault__WithdrawFailed(amount);
+            success = false;
             amountOut = 0;
         }
     }
@@ -284,14 +287,15 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @notice Executes a rebalance by attempting to withdraw from the old strategy with _executeWithdraw. If that was successful, then attempts to rebalance with _rebalanceToNewStrategy
     /// @param rebalanceNonce The nonce of the rebalance
     /// @param newStrategy The new strategy to rebalance to
+    /// @return success Whether the withdraw from the old strategy succeeded or not
     /// @return amountRebalanced The amount rebalanced
     /// @notice This function uses a trycatch to handle cases where the withdraw from the old strategy failed
     function _executeRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy)
         internal
-        returns (uint256 amountRebalanced)
+        returns (bool success, uint256 amountRebalanced)
     {
-        amountRebalanced = _executeWithdraw(type(uint256).max, false);
-        if (amountRebalanced > 0) {
+        (success, amountRebalanced) = _executeWithdraw(type(uint256).max, false);
+        if (success) {
             emit RebalanceWithdrawSuccess(rebalanceNonce, amountRebalanced);
             _rebalanceToNewStrategy(rebalanceNonce, amountRebalanced, newStrategy);
         } else {
@@ -381,6 +385,18 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         recovery = s_rebalanceDepositRecovery;
         //slither-disable-next-line incorrect-equality
         if (recovery.amount == 0) revert BaseVault__NoPendingRecovery();
+    }
+
+    /// @notice Reverts if any recovery state is pending
+    /// @dev ChildVault overrides _recoveryExists to include child-specific recovery modes
+    function _requireNoRecovery() internal view {
+        if (_recoveryExists()) revert BaseVault__RecoveryAlreadyPending();
+    }
+
+    /// @notice Checks whether any recovery state is pending
+    /// @dev ParentVault only has rebalance deposit recovery in BaseVault
+    function _recoveryExists() internal view virtual returns (bool recoveryExists) {
+        recoveryExists = s_rebalanceDepositRecovery.amount != 0;
     }
 
     /// @notice Inherited and implemented by ParentVault and ChildVault
@@ -599,7 +615,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @return recoveryExists true if recovery exists, false if not
     /// @dev This is used for Workflow-level checks
     function getRecoveryExists() external view virtual returns (bool recoveryExists) {
-        recoveryExists = s_rebalanceDepositRecovery.amount != 0;
+        recoveryExists = _recoveryExists();
     }
 
     /*//////////////////////////////////////////////////////////////

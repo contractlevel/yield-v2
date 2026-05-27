@@ -21,9 +21,7 @@ contract RoundTrip_EpochIntegrationTest is BaseIntegrationTest {
         super.setUp();
         _deployLocalParentChildTopology();
         _registerKyc(i_depositor);
-        _configureCloseEpochWorkflow(
-            parent.workflowRouter, CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner
-        );
+        _configureCloseEpochWorkflow(parent.workflowRouter, CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner);
         _configureInitiateRebalanceWorkflow(
             parent.workflowRouter, REBALANCE_WORKFLOW_ID, REBALANCE_WORKFLOW_NAME, i_owner
         );
@@ -57,8 +55,7 @@ contract RoundTrip_EpochIntegrationTest is BaseIntegrationTest {
             _parentStrategy(AAVE_V4_PROTOCOL_ID)
         );
 
-        uint256 feeShares =
-            _expectedManagementFeeShares(shareAmount, block.timestamp - initialRebalanceCompletedAt);
+        uint256 feeShares = _expectedManagementFeeShares(shareAmount, block.timestamp - initialRebalanceCompletedAt);
         uint256 totalSharesAfterFee = shareAmount + feeShares;
         uint256 tvl = depositAmount;
         uint256 expectedPricePerShare = tvl * SHARE_PRECISION / totalSharesAfterFee;

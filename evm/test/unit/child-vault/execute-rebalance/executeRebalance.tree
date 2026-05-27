@@ -1,6 +1,8 @@
 ChildVault_executeRebalance
   ├── when caller does not have REBALANCE_OPERATOR_ROLE
   │   └── it should revert
+  ├── when recovery exists
+  │   └── it should revert with BaseVault__RecoveryAlreadyPending
   ├── when withdraw from the active adapter fails
   │   ├── when adapter reverts
   │   │   ├── it should emit failure without bridging
@@ -11,13 +13,8 @@ ChildVault_executeRebalance
   │   │       └── when recovery state already exists
   │   │           └── it should revert with BaseVault__RecoveryAlreadyPending
   │   └── when adapter returns zero
-  │       ├── it should emit failure without bridging
-  │       ├── it should store rebalance withdraw recovery
-  │       ├── it should emit RebalanceWithdrawRecoveryStored
-  │       └── when rebalance withdraw recovery already exists
-  │           ├── it should revert with BaseVault__RecoveryAlreadyPending
-  │           └── when recovery state already exists
-  │               └── it should revert with BaseVault__RecoveryAlreadyPending
+  │       ├── it should not store rebalance withdraw recovery
+  │       └── it should emit RebalanceWithdrawSuccess
   ├── when rebalance is to the same child
   │   ├── when the target protocol adapter is not registered
   │   │   └── it should revert with BaseVault__NoAdapterRegistered

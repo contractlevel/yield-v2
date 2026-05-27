@@ -405,6 +405,8 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     function closeEpoch(uint256 tvl) external nonReentrant onlyRole(Roles.EPOCH_OPERATOR_ROLE) {
         if (s_rebalance.state != Types.RebalanceState.NONE) revert ParentVault__RebalanceInProgress();
 
+        _requireNoRecovery();
+
         uint256 epochNonce = s_epochNonce;
         uint256 previousEpochNonce = epochNonce - 1;
         if (previousEpochNonce != 0 && s_epochs[previousEpochNonce].status != Types.EpochStatus.CLAIMABLE) {
@@ -483,7 +485,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
             if (isLocalStrategy) {
                 // local strategy: withdraw directly and finalise immediately
                 /// @dev true for revertOnFail because this is local
-                uint256 amountOut = _executeWithdraw(netWithdrawAmount, true);
+                (, uint256 amountOut) = _executeWithdraw(netWithdrawAmount, true);
                 epoch.totalWithdrawClaimAmount = epoch.totalDepositAmount + amountOut;
                 epoch.remainingWithdrawClaimAmount = epoch.totalWithdrawClaimAmount;
                 emit WithdrawFromStrategySuccess(epochNonce, amountOut);
@@ -507,6 +509,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @return pricePerShare USDC value of a Yieldcoin share token
     function _calculatePricePerShare(uint256 tvl) internal view returns (uint256 pricePerShare) {
         uint256 totalShares = s_totalShares;
+        // @review Zero‑TVL fallback misprices shares and lets old holders drain new deposits
         if (totalShares != 0 && tvl != 0) {
             pricePerShare = tvl * SHARE_PRECISION / totalShares;
         } else {
@@ -554,6 +557,8 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         // revert if rebalance is already in progress
         if (s_rebalance.state != Types.RebalanceState.NONE) revert ParentVault__RebalanceInProgress();
 
+        _requireNoRecovery();
+
         // revert if the new strategy is the same as the active strategy
         if (
             s_rebalance.activeStrategy.protocolId == newStrategy.protocolId
@@ -581,10 +586,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         //slither-disable-next-line incorrect-equality
         if (s_rebalance.activeStrategy.chainSelector == i_thisChainSelector) {
             // withdraw from local strategy
-            uint256 amountOut = _executeWithdraw(type(uint256).max, true);
-            /// @dev This condition should never be hit as the _executeWithdraw call reverts on failure
-            //slither-disable-next-line incorrect-equality
-            if (amountOut == 0) revert ParentVault__WithdrawFailed(s_rebalance.nonce, type(uint256).max);
+            (, uint256 amountOut) = _executeWithdraw(type(uint256).max, true);
             emit RebalanceWithdrawSuccess(s_rebalance.nonce, amountOut);
             if (newStrategy.chainSelector == i_thisChainSelector) {
                 // deposit into local strategy
@@ -609,6 +611,8 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @dev Precondition: caller must have REBALANCE_OPERATOR_ROLE
     /// @notice The WorkflowRouter calls this
     function completeRebalance(uint256 rebalanceNonce) external nonReentrant onlyRole(Roles.REBALANCE_OPERATOR_ROLE) {
+        _requireNoRecovery();
+
         _finalizeRebalance(rebalanceNonce);
     }
 

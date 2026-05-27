@@ -30,6 +30,14 @@ contract ChildVault_ExecuteEpochWithdrawUnitTest is BaseUnitTest {
         s_childVault.executeEpochWithdraw(EPOCH_NONCE, WITHDRAW_AMOUNT);
     }
 
+    function test_ChildVault_executeEpochWithdraw_RevertWhen_RecoveryExists() public {
+        s_mockProtocolAdapter.setWithdrawReverts(true);
+        s_childVault.executeEpochWithdraw(EPOCH_NONCE, WITHDRAW_AMOUNT);
+
+        vm.expectRevert(IBaseVault.BaseVault__RecoveryAlreadyPending.selector);
+        s_childVault.executeEpochWithdraw(EPOCH_NONCE + 1, WITHDRAW_AMOUNT);
+    }
+
     function test_ChildVault_executeEpochWithdraw_Success_WithdrawsFromAdapter() public {
         s_childVault.executeEpochWithdraw(EPOCH_NONCE, WITHDRAW_AMOUNT);
 
@@ -89,18 +97,6 @@ contract ChildVault_ExecuteEpochWithdrawUnitTest is BaseUnitTest {
         assertEq(s_mockUsdc.balanceOf(address(s_mockCcipRouter)), routerBefore);
     }
 
-    function test_ChildVault_executeEpochWithdraw_WhenAdapterReverts_StoresEpochWithdrawRecovery() public {
-        s_mockProtocolAdapter.setWithdrawReverts(true);
-
-        s_childVault.executeEpochWithdraw(EPOCH_NONCE, WITHDRAW_AMOUNT);
-
-        Types.EpochRecovery memory recovery = s_childVault.getEpochWithdrawRecovery();
-        assertEq(recovery.epochNonce, EPOCH_NONCE);
-        assertEq(recovery.amount, WITHDRAW_AMOUNT);
-        assertEq(recovery.createdAt, block.timestamp);
-        assertTrue(s_childVault.getRecoveryExists());
-    }
-
     function test_ChildVault_executeEpochWithdraw_WhenAdapterReverts_EmitsEpochWithdrawRecoveryStored() public {
         s_mockProtocolAdapter.setWithdrawReverts(true);
 
@@ -114,8 +110,32 @@ contract ChildVault_ExecuteEpochWithdrawUnitTest is BaseUnitTest {
         assertEq(uint256(log.topics[2]), WITHDRAW_AMOUNT);
     }
 
-    function test_ChildVault_executeEpochWithdraw_WhenAdapterReturnsZero_StoresEpochWithdrawRecovery() public {
+    function test_ChildVault_executeEpochWithdraw_WhenAdapterReturnsZero_DoesNotStoreEpochWithdrawRecovery() public {
         s_mockProtocolAdapter.setWithdrawReturnAmount(0);
+
+        s_childVault.executeEpochWithdraw(EPOCH_NONCE, WITHDRAW_AMOUNT);
+
+        Types.EpochRecovery memory recovery = s_childVault.getEpochWithdrawRecovery();
+        assertEq(recovery.epochNonce, 0);
+        assertEq(recovery.amount, 0);
+        assertEq(recovery.createdAt, 0);
+        assertFalse(s_childVault.getRecoveryExists());
+    }
+
+    function test_ChildVault_executeEpochWithdraw_WhenAdapterReturnsZero_EmitsWithdrawFromStrategySuccess() public {
+        s_mockProtocolAdapter.setWithdrawReturnAmount(0);
+
+        vm.recordLogs();
+        s_childVault.executeEpochWithdraw(EPOCH_NONCE, WITHDRAW_AMOUNT);
+
+        Vm.Log memory log =
+            _assertEmittedBy(keccak256("WithdrawFromStrategySuccess(uint256,uint256)"), address(s_childVault));
+        assertEq(uint256(log.topics[1]), EPOCH_NONCE);
+        assertEq(uint256(log.topics[2]), 0);
+    }
+
+    function test_ChildVault_executeEpochWithdraw_WhenWithdrawReturnsFalse_StoresEpochWithdrawRecovery() public {
+        s_mockProtocolAdapter.setWithdrawReverts(true);
 
         s_childVault.executeEpochWithdraw(EPOCH_NONCE, WITHDRAW_AMOUNT);
 

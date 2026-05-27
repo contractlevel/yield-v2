@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
+import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
+
 import {BaseUnitTest, Vm} from "../../BaseUnitTest.t.sol";
 
 import {IBaseVault} from "../../../../src/interfaces/IBaseVault.sol";
@@ -10,6 +12,8 @@ import {MockProtocolAdapter} from "../../../mocks/MockProtocolAdapter.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
 
 contract ParentVault_InitiateRebalanceUnitTest is BaseUnitTest {
+    using stdStorage for StdStorage;
+
     uint256 internal constant REBALANCE_AMOUNT = 500 * 1e6;
 
     MockProtocolAdapter internal s_newMockProtocolAdapter;
@@ -37,6 +41,15 @@ contract ParentVault_InitiateRebalanceUnitTest is BaseUnitTest {
         s_parentVault.initiateRebalance(_localStrategy(AAVE_V4_PROTOCOL_ID));
     }
 
+    function test_ParentVault_initiateRebalance_RevertWhen_RecoveryExists() public {
+        stdstore.target(address(s_parentVault)).sig("getRebalanceDepositRecovery()").depth(1).checked_write(
+            REBALANCE_AMOUNT
+        );
+
+        vm.expectRevert(IBaseVault.BaseVault__RecoveryAlreadyPending.selector);
+        s_parentVault.initiateRebalance(_localStrategy(AAVE_V4_PROTOCOL_ID));
+    }
+
     function test_ParentVault_initiateRebalance_RevertWhen_SameStrategy() public {
         vm.expectRevert(IParentVault.ParentVault__SameStrategy.selector);
         s_parentVault.initiateRebalance(_localStrategy(AAVE_V3_PROTOCOL_ID));
@@ -57,11 +70,16 @@ contract ParentVault_InitiateRebalanceUnitTest is BaseUnitTest {
         s_parentVault.initiateRebalance(_localStrategy(AAVE_V4_PROTOCOL_ID));
     }
 
-    function test_ParentVault_initiateRebalance_RevertWhen_LocalWithdrawReturnsZero() public {
+    function test_ParentVault_initiateRebalance_WhenLocalWithdrawReturnsZero_EmitsRebalanceWithdrawSuccess() public {
         s_mockProtocolAdapter.setWithdrawReturnAmount(0);
 
-        vm.expectRevert(abi.encodeWithSelector(IParentVault.ParentVault__WithdrawFailed.selector, 1, type(uint256).max));
+        vm.recordLogs();
         s_parentVault.initiateRebalance(_localStrategy(AAVE_V4_PROTOCOL_ID));
+
+        Vm.Log memory log =
+            _assertEmittedBy(keccak256("RebalanceWithdrawSuccess(uint256,uint256)"), address(s_parentVault));
+        assertEq(uint256(log.topics[1]), 1);
+        assertEq(uint256(log.topics[2]), 0);
     }
 
     function test_ParentVault_initiateRebalance_RevertWhen_LocalDepositAdapterReverts() public {
