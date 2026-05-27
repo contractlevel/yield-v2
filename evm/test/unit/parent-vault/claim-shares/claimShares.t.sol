@@ -143,6 +143,8 @@ contract ParentVault_ClaimSharesUnitTest is BaseUnitTest {
         uint256 pricePerShare = 2 * SHARE_PRECISION;
         uint256 epochOneTotalMinted = epochOneTotalDeposit * SHARE_PRECISION / pricePerShare;
         uint256 firstMint = firstDeposit * epochOneTotalMinted / epochOneTotalDeposit;
+        uint256 epochTwoPricePerShare = tvl * SHARE_PRECISION / (totalShares + epochOneTotalMinted);
+        uint256 epochTwoTotalMinted = DEPOSIT_AMOUNT * SHARE_PRECISION / epochTwoPricePerShare;
 
         _setParentTotalShares(totalShares);
         _setParentPerformanceFeeHighWaterMark(pricePerShare);
@@ -155,12 +157,12 @@ contract ParentVault_ClaimSharesUnitTest is BaseUnitTest {
         s_parentVault.claimShares(1);
 
         _submitDeposit(i_depositor, DEPOSIT_AMOUNT);
-        _closeEpoch(0);
+        _closeEpoch(tvl);
 
         assertEq(s_parentVault.getEpoch(1).remainingDepositClaimAmount, secondDeposit + thirdDeposit);
         assertEq(s_parentVault.getEpoch(1).remainingShareMintAmount, epochOneTotalMinted - firstMint);
         assertEq(s_parentVault.getEpoch(2).remainingDepositClaimAmount, DEPOSIT_AMOUNT);
-        assertEq(s_parentVault.getEpoch(2).remainingShareMintAmount, DEPOSIT_AMOUNT);
+        assertEq(s_parentVault.getEpoch(2).remainingShareMintAmount, epochTwoTotalMinted);
 
         _changePrank(i_recipient1);
         s_parentVault.claimShares(1);
@@ -170,7 +172,7 @@ contract ParentVault_ClaimSharesUnitTest is BaseUnitTest {
         assertEq(s_parentVault.getEpoch(1).remainingDepositClaimAmount, 0);
         assertEq(s_parentVault.getEpoch(1).remainingShareMintAmount, 0);
         assertEq(s_parentVault.getEpoch(2).remainingDepositClaimAmount, DEPOSIT_AMOUNT);
-        assertEq(s_parentVault.getEpoch(2).remainingShareMintAmount, DEPOSIT_AMOUNT);
+        assertEq(s_parentVault.getEpoch(2).remainingShareMintAmount, epochTwoTotalMinted);
     }
 
     function _deployFreshParentVault() internal {

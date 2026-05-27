@@ -379,6 +379,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @param tvl The Total Value Locked in the active strategy of the Yieldcoin v2 system
     /// @dev Precondition: the caller must have the EPOCH_OPERATOR_ROLE
     /// @dev Precondition: there must not be an active rebalance
+    /// @dev Precondition: there must not be a stored recovery mode
     /// @dev Precondition: the previous epoch must be claimable, if a previous epoch exists
     /// @dev Precondition: the epoch must be open
     /// @dev Precondition: the epoch period must have exceeded the MIN_EPOCH_PERIOD
@@ -402,6 +403,9 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     ///         the same standard as this contract. No onchain validation of this value is performed;
     ///         an incorrect value will corrupt epoch share accounting irrecoverably once any user
     ///         claims against the affected epoch.
+    /// @dev Precondition: `tvl == 0 && s_totalShares > 0` will cause a revert
+    /// @notice If TVL goes to zero with shares outstanding, closeEpoch will revert.
+    ///         Anyone can call donate() to restore TVL; the next close will price shares against the donated amount.
     function closeEpoch(uint256 tvl) external nonReentrant onlyRole(Roles.EPOCH_OPERATOR_ROLE) {
         if (s_rebalance.state != Types.RebalanceState.NONE) revert ParentVault__RebalanceInProgress();
 
@@ -509,12 +513,14 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @return pricePerShare USDC value of a Yieldcoin share token
     function _calculatePricePerShare(uint256 tvl) internal view returns (uint256 pricePerShare) {
         uint256 totalShares = s_totalShares;
-        // @review Zero‑TVL fallback misprices shares and lets old holders drain new deposits
         if (totalShares != 0 && tvl != 0) {
             pricePerShare = tvl * SHARE_PRECISION / totalShares;
-        } else {
-            // bootstrap: 1 USDC = 1 share (adjusted for decimal difference)
+        } else if (totalShares == 0) {
+            /// @dev Bootstrap: no shares exist yet, so define 1 USDC = 1 share.
             pricePerShare = SHARE_PRECISION; // 1e12
+        } else {
+            /// @dev This is a rare edgecase that should never happen. To prevent the protocol from being bricked, call donate(tvl)
+            revert ParentVault__ZeroTvlWithOutstandingShares();
         }
     }
 
@@ -549,6 +555,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @dev Precondition: An epoch must not be EXECUTING
     /// @dev Precondition: If current/active/previous strategy is on this chain, withdrawing tvl from the old strategy must succeed
     /// @dev Precondition: If current/active/previous strategy and newStrategy is on this chain, depositing tvl into the new strategy must succeed
+    /// @dev Precondition: there must not be a stored recovery mode
     function initiateRebalance(Types.Strategy memory newStrategy)
         external
         nonReentrant
@@ -608,11 +615,11 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     }
 
     /// @notice Completes a rebalance
-    /// @dev Precondition: caller must have REBALANCE_OPERATOR_ROLE
     /// @notice The WorkflowRouter calls this
+    /// @dev Precondition: caller must have REBALANCE_OPERATOR_ROLE
+    /// @dev Precondition: there must not be a stored recovery mode
     function completeRebalance(uint256 rebalanceNonce) external nonReentrant onlyRole(Roles.REBALANCE_OPERATOR_ROLE) {
         _requireNoRecovery();
-
         _finalizeRebalance(rebalanceNonce);
     }
 
@@ -634,7 +641,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
 
         emit RebalanceCompleted(rebalanceNonce);
         ++s_rebalance.nonce;
-        _collectManagementFee(lastRebalanceCompletedTimestamp);
+        _collectManagementFee(rebalanceNonce, lastRebalanceCompletedTimestamp);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -657,8 +664,9 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @notice Calculates and collects the management fee based on time elapsed since the last rebalance completed
     /// @notice Roughly 1% of the TVL is taken annually. The actual amount is proportional to time elapsed and current total shares
     /// @notice The management fee is taken in Yieldcoin share tokens and minted to s_treasury
+    /// @param rebalanceNonce The nonce of the rebalance collecting the fee
     /// @param lastRebalanceCompletedTimestamp The timestamp when the rebalance last completed
-    function _collectManagementFee(uint256 lastRebalanceCompletedTimestamp) internal {
+    function _collectManagementFee(uint256 rebalanceNonce, uint256 lastRebalanceCompletedTimestamp) internal {
         uint256 elapsed = block.timestamp - lastRebalanceCompletedTimestamp;
         uint256 totalShares = s_totalShares;
         uint256 denominator = BPS_DENOMINATOR * 365 days;
@@ -666,7 +674,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         if (feeShares != 0) {
             s_totalShares = totalShares + feeShares;
             IShare(i_share).mint(s_treasury, feeShares);
-            emit ManagementFeeCollected(feeShares);
+            emit ManagementFeeCollected(rebalanceNonce, feeShares);
         }
     }
 

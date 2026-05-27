@@ -35,6 +35,8 @@ interface IParentVault is IBaseVault {
     /// @dev Thrown when closeEpoch is called with no deposits and no withdrawals
     /// @param epochNonce The nonce for the empty epoch
     error ParentVault__EmptyEpoch(uint256 epochNonce);
+    /// @dev Thrown when closeEpoch is called with zero TVL while shares are outstanding
+    error ParentVault__ZeroTvlWithOutstandingShares();
     /// @dev Thrown when the epoch is not executing
     /// @param epochNonce The nonce for the epoch that is not executing
     error ParentVault__EpochNotExecuting(uint256 epochNonce);
@@ -104,8 +106,9 @@ interface IParentVault is IBaseVault {
     /// @param rebalanceNonce The nonce of the completed rebalance
     event RebalanceCompleted(uint256 indexed rebalanceNonce);
     /// @notice Emitted when management fees are collected
+    /// @param rebalanceNonce The nonce of the rebalance that collected the fee
     /// @param feeShares The number of shares minted to the treasury
-    event ManagementFeeCollected(uint256 indexed feeShares);
+    event ManagementFeeCollected(uint256 indexed rebalanceNonce, uint256 indexed feeShares);
     /// @notice Emitted when performance fees are collected
     /// @param epochNonce The epoch nonce that collected the fee
     /// @param feeShares The number of shares minted to the treasury

@@ -98,8 +98,10 @@ contract ParentVault_CompleteRebalanceUnitTest is BaseUnitTest {
 
         vm.recordLogs();
         s_parentVault.completeRebalance(1);
-        Vm.Log memory log = _assertEmittedBy(keccak256("ManagementFeeCollected(uint256)"), address(s_parentVault));
-        assertEq(uint256(log.topics[1]), expectedFeeShares);
+        Vm.Log memory log =
+            _assertEmittedBy(keccak256("ManagementFeeCollected(uint256,uint256)"), address(s_parentVault));
+        assertEq(uint256(log.topics[1]), 1);
+        assertEq(uint256(log.topics[2]), expectedFeeShares);
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -70,6 +70,16 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         s_parentVault.closeEpoch(0);
     }
 
+    function test_ParentVault_closeEpoch_RevertWhen_ZeroTvlWithOutstandingShares() public {
+        _setParentTotalShares(SEEDED_SHARES);
+        _submitDeposit();
+
+        _warpPastMinEpoch();
+        _changePrank(i_epochOperator);
+        vm.expectRevert(IParentVault.ParentVault__ZeroTvlWithOutstandingShares.selector);
+        s_parentVault.closeEpoch(0);
+    }
+
     function test_ParentVault_closeEpoch_RevertWhen_LocalNetDepositAdapterReverts() public {
         _submitDeposit();
         s_mockProtocolAdapter.setDepositReverts(true);
@@ -199,12 +209,40 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         assertEq(s_parentVault.getEpochNonce(), 3);
     }
 
+    function test_ParentVault_closeEpoch_WhenTvlRestoredByDonation_ClosesCurrentEpoch() public {
+        _setParentTotalShares(SEEDED_SHARES);
+        _setParentPerformanceFeeHighWaterMark(TVL * SHARE_PRECISION / SEEDED_SHARES);
+        _submitDeposit();
+
+        _warpPastMinEpoch();
+        _changePrank(i_epochOperator);
+        vm.expectRevert(IParentVault.ParentVault__ZeroTvlWithOutstandingShares.selector);
+        s_parentVault.closeEpoch(0);
+
+        _donateToStrategy(TVL);
+        _changePrank(i_epochOperator);
+        s_parentVault.closeEpoch(TVL);
+
+        assertEq(uint8(s_parentVault.getEpoch(1).status), uint8(Types.EpochStatus.CLAIMABLE));
+        assertEq(s_parentVault.getEpoch(1).pricePerShare, TVL * SHARE_PRECISION / SEEDED_SHARES);
+        assertEq(s_parentVault.getEpochNonce(), 2);
+    }
+
     function test_ParentVault_closeEpoch_Success_StoresPricePerShareOnEpoch() public {
+        _submitDeposit();
+        _closeEpoch(0);
+
+        // totalShares == 0 before close -> bootstrap pricePerShare == SHARE_PRECISION.
+        assertEq(s_parentVault.getEpoch(1).pricePerShare, SHARE_PRECISION);
+    }
+
+    function test_ParentVault_closeEpoch_Success_StoresCalculatedPricePerShareWhenSharesExist() public {
+        _setParentTotalShares(SEEDED_SHARES);
+        _setParentPerformanceFeeHighWaterMark(TVL * SHARE_PRECISION / SEEDED_SHARES);
         _submitDeposit();
         _closeEpoch(TVL);
 
-        // totalShares == 0 before close → bootstrap pricePerShare == SHARE_PRECISION
-        assertEq(s_parentVault.getEpoch(1).pricePerShare, SHARE_PRECISION);
+        assertEq(s_parentVault.getEpoch(1).pricePerShare, TVL * SHARE_PRECISION / SEEDED_SHARES);
     }
 
     function test_ParentVault_closeEpoch_Success_StoresTotalWithdrawClaimAmountOnEpoch() public {
@@ -459,6 +497,13 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
     function _submitDeposit() internal {
         _changePrank(i_depositor);
         s_parentVault.deposit(DEPOSIT_AMOUNT);
+    }
+
+    function _donateToStrategy(uint256 amount) internal {
+        deal(address(s_mockUsdc), i_depositor, amount);
+        _changePrank(i_depositor);
+        s_mockUsdc.approve(address(s_parentVault), amount);
+        s_parentVault.donate(amount);
     }
 
     function _prepareNetWithdraw() internal {

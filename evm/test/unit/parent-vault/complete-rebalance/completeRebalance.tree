@@ -13,4 +13,4 @@ ParentVault_completeRebalance
   └── when fee shares are non-zero
       ├── it should mint fee shares to treasury
       ├── it should increment totalShares by fee shares
-      └── it should emit ManagementFeeCollected
+      └── it should emit ManagementFeeCollected with rebalanceNonce and feeShares
