@@ -446,6 +446,8 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @dev Precondition: amount must be more than 0
     /// @dev Precondition: the strategy deposit operation must succeed
     /// @dev Precondition: the call must not be reentered
+    // @review should this be kyc gated? argument for: consistent with protocol, regulators know who donated
+    // argument against: generated yield from strategy protocol borrowers are not kyc'd, and it puts significant limitation on this feature
     function donate(uint256 amount) external nonReentrant {
         if (amount == 0) revert BaseVault__NoZeroAmount();
 
