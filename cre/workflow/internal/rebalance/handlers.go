@@ -295,11 +295,11 @@ func onRebalanceInitiatedWithDeps(config *helper.Config, runtime cre.Runtime, lo
 	return &workflowtypes.ExecutionResult{Result: "submitted executeRebalance"}, nil
 }
 
-func OnRebalanceDepositSuccess(config *helper.Config, runtime cre.Runtime, log *evm.Log, chainSelector uint64) (*workflowtypes.ExecutionResult, error) {
-	return onRebalanceDepositSuccessWithDeps(config, runtime, log, chainSelector, defaultCompleterDeps)
+func OnRebalanceDepositSuccess(config *helper.Config, runtime cre.Runtime, log *evm.Log) (*workflowtypes.ExecutionResult, error) {
+	return onRebalanceDepositSuccessWithDeps(config, runtime, log, defaultCompleterDeps)
 }
 
-func onRebalanceDepositSuccessWithDeps(config *helper.Config, runtime cre.Runtime, log *evm.Log, _ uint64, deps CompleterDeps) (*workflowtypes.ExecutionResult, error) {
+func onRebalanceDepositSuccessWithDeps(config *helper.Config, runtime cre.Runtime, log *evm.Log, deps CompleterDeps) (*workflowtypes.ExecutionResult, error) {
 	logger := runtime.Logger()
 
 	pvCodec, err := newParentCodec()

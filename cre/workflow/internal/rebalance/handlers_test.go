@@ -604,7 +604,7 @@ func Test_OnRebalanceDepositSuccess_wrapper(t *testing.T) {
 	})
 	defaultCompleterDeps = baseCompleterDeps()
 
-	result, err := OnRebalanceDepositSuccess(testConfig(), testutils.NewRuntime(t, nil), &evm.Log{}, childChainSelector)
+	result, err := OnRebalanceDepositSuccess(testConfig(), testutils.NewRuntime(t, nil), &evm.Log{})
 	require.NoError(t, err, "expected wrapper to use default deps")
 	require.Equal(t, "submitted completeRebalance", result.Result)
 }
@@ -647,7 +647,7 @@ func Test_OnRebalanceDepositSuccess_withDeps(t *testing.T) {
 				installParentCodec(t, tt.codec)
 			}
 
-			result, err := onRebalanceDepositSuccessWithDeps(cfg, testutils.NewRuntime(t, nil), &evm.Log{}, childChainSelector, tt.deps)
+			result, err := onRebalanceDepositSuccessWithDeps(cfg, testutils.NewRuntime(t, nil), &evm.Log{}, tt.deps)
 			if tt.wantErr != "" {
 				require.Error(t, err, "expected error")
 				require.Nil(t, result, "expected nil result on error")

@@ -71,8 +71,6 @@ func InitWorkflow(config *Config, logger *slog.Logger, _ cre.SecretsProvider) (c
 			continue // skip parent chain
 		}
 		vaultAddr := common.HexToAddress(evmCfg.VaultAddress)
-		chainSelector := evmCfg.ChainSelector
-
 		handlers = append(handlers, cre.Handler(
 			evm.LogTrigger(evmCfg.ChainSelector, &evm.FilterLogTriggerRequest{
 				Addresses:  [][]byte{vaultAddr.Bytes()},
@@ -80,7 +78,7 @@ func InitWorkflow(config *Config, logger *slog.Logger, _ cre.SecretsProvider) (c
 				Confidence: evm.ConfidenceLevel_CONFIDENCE_LEVEL_FINALIZED,
 			}),
 			func(cfg *Config, runtime cre.Runtime, log *evm.Log) (*ExecutionResult, error) {
-				return rebalance.OnRebalanceDepositSuccess(cfg, runtime, log, chainSelector)
+				return rebalance.OnRebalanceDepositSuccess(cfg, runtime, log)
 			},
 		))
 	}
