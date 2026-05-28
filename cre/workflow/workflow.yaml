@@ -32,3 +32,12 @@ production-settings:
     workflow-path: "."
     config-path: "./config.production.json"
     secrets-path: ""
+
+# ==========================================================================
+local-fork-settings:
+  user-workflow:
+    workflow-name: "yieldcoin-v2-workflow-local-fork"
+  workflow-artifacts:
+    workflow-path: "."
+    config-path: "./config.local-fork.generated.json"
+    secrets-path: ""

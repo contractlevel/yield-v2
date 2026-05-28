@@ -3,22 +3,22 @@ package offchain
 import (
 	"bytes"
 	"compress/gzip"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
-	"net/url"
+	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
+	crehttp "github.com/smartcontractkit/cre-sdk-go/capabilities/networking/http"
 	"github.com/smartcontractkit/cre-sdk-go/cre"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 var (
 	defiLlamaURL        = "https://yields.llama.fi/pools"
-	defiLlamaHTTPClient = &http.Client{Timeout: defiLlamaRequestTimeout}
+	defiLlamaHTTPClient = &crehttp.Client{}
 )
 
 const (
@@ -63,6 +63,10 @@ type fetchResult struct {
 	HasCurrent  bool `json:"hasCurrent"`
 }
 
+type defiLlamaRequester interface {
+	SendRequest(*crehttp.Request) cre.Promise[*crehttp.Response]
+}
+
 // FetchAndSelectPools queries DefiLlama and returns the best approved pool and the
 // currently active pool. activeChainSelector is the CCIP selector of the active
 // strategy's chain; it is used to match against the DefiLlama "chain" field.
@@ -78,7 +82,7 @@ func FetchAndSelectPools(runtime cre.Runtime, cfg Config, activeProtocolId [32]b
 		ActiveChainName:  activeChainName,
 	}
 
-	raw, err := cre.RunInNodeMode(params, runtime, fetchAndParse, cre.ConsensusIdenticalAggregation[fetchResult]()).Await()
+	raw, err := crehttp.SendRequest(params, runtime, defiLlamaHTTPClient, fetchAndParse, cre.ConsensusIdenticalAggregation[fetchResult]()).Await()
 	if err != nil {
 		return nil, nil, fmt.Errorf("fetch pools: %w", err)
 	}
@@ -95,38 +99,35 @@ func FetchAndSelectPools(runtime cre.Runtime, cfg Config, activeProtocolId [32]b
 	return best, current, nil
 }
 
-// fetchAndParse is the node-mode function executed on each DON node.
-func fetchAndParse(params fetchParams, _ cre.NodeRuntime) (fetchResult, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), defiLlamaRequestTimeout)
-	defer cancel()
+// fetchAndParse is the HTTP capability callback executed on each DON node.
+func fetchAndParse(params fetchParams, _ *slog.Logger, sendRequester *crehttp.SendRequester) (fetchResult, error) {
+	return fetchAndParseWithRequester(params, sendRequester)
+}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, defiLlamaURL, nil)
-	if err != nil {
-		return fetchResult{}, fmt.Errorf("build request: %w", err)
+func fetchAndParseWithRequester(params fetchParams, requester defiLlamaRequester) (fetchResult, error) {
+	req := &crehttp.Request{
+		Url:     defiLlamaURL,
+		Method:  "GET",
+		Headers: map[string]string{"Accept-Encoding": "gzip"},
+		Timeout: durationpb.New(defiLlamaRequestTimeout),
 	}
-	req.Header.Set("Accept-Encoding", "gzip")
 
-	resp, err := defiLlamaHTTPClient.Do(req)
+	resp, err := requester.SendRequest(req).Await()
 	if err != nil {
 		return fetchResult{}, fmt.Errorf("do request: %w", err)
 	}
-	defer resp.Body.Close()
 
-	if err := validateDefiLlamaResponseURL(resp); err != nil {
-		return fetchResult{}, err
-	}
-
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != 200 {
 		return fetchResult{}, fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}
 
-	rawBody, err := readLimited(resp.Body, defiLlamaMaxCompressedBytes, "compressed response body")
+	rawBody, err := readLimited(bytes.NewReader(resp.Body), defiLlamaMaxCompressedBytes, "compressed response body")
 	if err != nil {
 		return fetchResult{}, err
 	}
 
 	var reader io.Reader = bytes.NewReader(rawBody)
-	if strings.Contains(strings.ToLower(resp.Header.Get("Content-Encoding")), "gzip") {
+	if strings.Contains(strings.ToLower(responseHeader(resp, "Content-Encoding")), "gzip") {
 		gz, gzErr := gzip.NewReader(bytes.NewReader(rawBody))
 		if gzErr != nil {
 			return fetchResult{}, fmt.Errorf("gzip reader: %w", gzErr)
@@ -143,18 +144,18 @@ func fetchAndParse(params fetchParams, _ cre.NodeRuntime) (fetchResult, error) {
 	return parsePools(bytes.NewReader(body), params.Config, params.ActiveProtocolId, params.ActiveChainName)
 }
 
-func validateDefiLlamaResponseURL(resp *http.Response) error {
-	expected, err := url.Parse(defiLlamaURL)
-	if err != nil {
-		return fmt.Errorf("parse expected URL: %w", err)
+func responseHeader(resp *crehttp.Response, key string) string {
+	for name, value := range resp.Headers {
+		if strings.EqualFold(name, key) {
+			return value
+		}
 	}
-	if resp.Request == nil || resp.Request.URL == nil {
-		return fmt.Errorf("missing final response URL")
+	for name, values := range resp.MultiHeaders {
+		if strings.EqualFold(name, key) {
+			return strings.Join(values.Values, ",")
+		}
 	}
-	if !strings.EqualFold(resp.Request.URL.Scheme, expected.Scheme) || !strings.EqualFold(resp.Request.URL.Host, expected.Host) {
-		return fmt.Errorf("unexpected final response URL %q", resp.Request.URL.String())
-	}
-	return nil
+	return ""
 }
 
 func readLimited(r io.Reader, limit int64, label string) ([]byte, error) {

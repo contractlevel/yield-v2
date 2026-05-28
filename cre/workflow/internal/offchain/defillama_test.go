@@ -3,22 +3,26 @@ package offchain
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"errors"
-	"io"
-	"net/http"
-	"net/url"
 	"strings"
 	"testing"
 
+	crehttp "github.com/smartcontractkit/cre-sdk-go/capabilities/networking/http"
+	httpmock "github.com/smartcontractkit/cre-sdk-go/capabilities/networking/http/mock"
+	"github.com/smartcontractkit/cre-sdk-go/cre"
 	"github.com/smartcontractkit/cre-sdk-go/cre/testutils"
 	"github.com/stretchr/testify/require"
 )
 
-type roundTripFunc func(*http.Request) (*http.Response, error)
+type fakeDefiLlamaRequester struct {
+	send func(*crehttp.Request) (*crehttp.Response, error)
+}
 
-func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
-	return f(req)
+func (f fakeDefiLlamaRequester) SendRequest(req *crehttp.Request) cre.Promise[*crehttp.Response] {
+	resp, err := f.send(req)
+	return cre.PromiseFromResult(resp, err)
 }
 
 func testConfig() Config {
@@ -46,16 +50,6 @@ func testPoolsJSON() string {
 			{"chain":"Ethereum","project":"aave-v3","symbol":"DAI","apy":99.0}
 		]
 	}`
-}
-
-func withDefiLlamaHTTPClient(t *testing.T, client *http.Client) {
-	t.Helper()
-
-	original := defiLlamaHTTPClient
-	defiLlamaHTTPClient = client
-	t.Cleanup(func() {
-		defiLlamaHTTPClient = original
-	})
 }
 
 func withDefiLlamaURL(t *testing.T, url string) {

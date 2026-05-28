@@ -42,3 +42,16 @@ production-settings:
     - chain-name: ethereum-testnet-sepolia
       url: https://ethereum-sepolia-rpc.publicnode.com
 
+# ==========================================================================
+local-fork-settings:
+  rpcs:
+    - chain-name: ethereum-mainnet-arbitrum-1
+      url: http://127.0.0.1:8545
+    - chain-name: avalanche-mainnet
+      url: http://127.0.0.1:8546
+    - chain-name: ethereum-mainnet
+      url: http://127.0.0.1:8547
+    - chain-name: ethereum-mainnet-base-1
+      url: http://127.0.0.1:8548
+    - chain-name: ethereum-mainnet-optimism-1
+      url: http://127.0.0.1:8549

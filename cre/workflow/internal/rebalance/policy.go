@@ -4,7 +4,7 @@ import "cre/workflow/internal/offchain"
 
 const (
 	DifferentialThreshold       = 1.0         // 1 percentage point
-	minRebalanceIntervalSeconds = 6 * 60 * 60 // every 6 hours
+	minRebalanceIntervalSeconds = 1 * 60 * 60 // every hour
 )
 
 // NeedRebalance returns true when a rebalance to the optimal pool is warranted.
