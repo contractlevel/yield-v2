@@ -2,6 +2,7 @@ package helper
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -69,17 +70,18 @@ func ValidateConfig(cfg *Config) error {
 		}
 		seenSelectors[e.ChainSelector] = struct{}{}
 
-		if e.VaultAddress == "" || !common.IsHexAddress(e.VaultAddress) {
+		if !isRequiredAddress(e.VaultAddress) {
 			return fmt.Errorf("evms[%d] (chain %d): invalid vaultAddress %q", i, e.ChainSelector, e.VaultAddress)
 		}
-		if e.WorkflowRouterAddress == "" || !common.IsHexAddress(e.WorkflowRouterAddress) {
+		if !isRequiredAddress(e.WorkflowRouterAddress) {
 			return fmt.Errorf("evms[%d] (chain %d): invalid workflowRouterAddress %q", i, e.ChainSelector, e.WorkflowRouterAddress)
 		}
 		if e.DefiLlamaChainName != "" {
-			if _, dup := seenDefiLlamaChains[e.DefiLlamaChainName]; dup {
+			canonicalName := canonicalDefiLlamaValue(e.DefiLlamaChainName)
+			if _, dup := seenDefiLlamaChains[canonicalName]; dup {
 				return fmt.Errorf("evms[%d] (chain %d): duplicate defiLlamaChainName %q", i, e.ChainSelector, e.DefiLlamaChainName)
 			}
-			seenDefiLlamaChains[e.DefiLlamaChainName] = struct{}{}
+			seenDefiLlamaChains[canonicalName] = struct{}{}
 		}
 
 		if e.IsParent {
@@ -93,6 +95,13 @@ func ValidateConfig(cfg *Config) error {
 	}
 	_ = parentSelector // reserved for any future cross-field checks
 	return nil
+}
+
+func isRequiredAddress(value string) bool {
+	if value == "" || !common.IsHexAddress(value) {
+		return false
+	}
+	return common.HexToAddress(value) != (common.Address{})
 }
 
 func validateDefiLlamaConfig(cfg DefiLlama) error {
@@ -112,16 +121,21 @@ func validateUniqueNonEmptyStrings(field string, values []string) error {
 
 	seen := make(map[string]struct{}, len(values))
 	for i, value := range values {
-		if value == "" {
+		canonicalValue := canonicalDefiLlamaValue(value)
+		if canonicalValue == "" {
 			return fmt.Errorf("%s[%d]: value must be non-empty", field, i)
 		}
-		if _, dup := seen[value]; dup {
+		if _, dup := seen[canonicalValue]; dup {
 			return fmt.Errorf("%s[%d]: duplicate value %q", field, i, value)
 		}
-		seen[value] = struct{}{}
+		seen[canonicalValue] = struct{}{}
 	}
 
 	return nil
+}
+
+func canonicalDefiLlamaValue(value string) string {
+	return strings.ToLower(strings.TrimSpace(value))
 }
 
 // FindParent returns the single parent EvmConfig. Safe to call only after

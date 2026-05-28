@@ -173,26 +173,38 @@ func readLimited(r io.Reader, limit int64, label string) ([]byte, error) {
 func parsePools(r io.Reader, cfg Config, activeProtocolId [32]byte, activeChainName string) (fetchResult, error) {
 	decoder := json.NewDecoder(r)
 
-	// Navigate to the "data" array.
-	foundData := false
-	for {
-		t, err := decoder.Token()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return fetchResult{}, fmt.Errorf("token scan: %w", err)
-		}
-		if key, ok := t.(string); ok && strings.EqualFold(key, "data") {
-			foundData = true
-			break
-		}
+	t, err := decoder.Token()
+	if err != nil {
+		return fetchResult{}, fmt.Errorf("read object start: %w", err)
 	}
+	if delim, ok := t.(json.Delim); !ok || delim != '{' {
+		return fetchResult{}, fmt.Errorf("expected top-level object")
+	}
+
+	foundData := false
+	for decoder.More() {
+		t, err := decoder.Token()
+		if err != nil {
+			return fetchResult{}, fmt.Errorf("read top-level key: %w", err)
+		}
+		key := t.(string)
+
+		if !strings.EqualFold(key, "data") {
+			if err := skipJSONValue(decoder); err != nil {
+				return fetchResult{}, fmt.Errorf("skip top-level key %q: %w", key, err)
+			}
+			continue
+		}
+
+		foundData = true
+		break
+	}
+
 	if !foundData {
 		return fetchResult{}, fmt.Errorf("'data' key not found in response")
 	}
 
-	t, err := decoder.Token()
+	t, err = decoder.Token()
 	if err != nil {
 		return fetchResult{}, fmt.Errorf("read array start: %w", err)
 	}
@@ -212,23 +224,67 @@ func parsePools(r io.Reader, cfg Config, activeProtocolId [32]byte, activeChainN
 			return fetchResult{}, fmt.Errorf("decode pool: %w", err)
 		}
 
-		if !allowedSymbol[p.Symbol] || !allowedProject[p.Project] || !allowedChain[p.Chain] {
+		chainName, chainOK := allowedChain[canonicalDefiLlamaValue(p.Chain)]
+		projectName, projectOK := allowedProject[canonicalDefiLlamaValue(p.Project)]
+		symbolName, symbolOK := allowedSymbol[canonicalDefiLlamaValue(p.Symbol)]
+		if !symbolOK || !projectOK || !chainOK {
 			continue
 		}
 
-		if p.Apy > maxApy {
-			maxApy = p.Apy
-			result.BestPool = p
+		pool := p
+		pool.Chain = chainName
+		pool.Project = projectName
+		pool.Symbol = symbolName
+
+		if pool.Apy > maxApy {
+			maxApy = pool.Apy
+			result.BestPool = pool
 			result.HasBest = true
 		}
 
-		if p.Chain == activeChainName && PoolToProtocolId(p.Project) == activeProtocolId {
-			result.CurrentPool = p
+		if pool.Chain == activeChainName && PoolToProtocolId(pool.Project) == activeProtocolId {
+			result.CurrentPool = pool
 			result.HasCurrent = true
 		}
 	}
 
 	return result, nil
+}
+
+func skipJSONValue(decoder *json.Decoder) error {
+	t, err := decoder.Token()
+	if err != nil {
+		return err
+	}
+
+	delim, ok := t.(json.Delim)
+	if !ok {
+		return nil
+	}
+
+	switch delim {
+	case '{':
+		for decoder.More() {
+			if _, err := decoder.Token(); err != nil {
+				return err
+			}
+			if err := skipJSONValue(decoder); err != nil {
+				return err
+			}
+		}
+		_, err := decoder.Token()
+		return err
+	case '[':
+		for decoder.More() {
+			if err := skipJSONValue(decoder); err != nil {
+				return err
+			}
+		}
+		_, err := decoder.Token()
+		return err
+	default:
+		return nil
+	}
 }
 
 // PoolToProtocolId computes keccak256(project) as a [32]byte protocol ID.
@@ -242,7 +298,7 @@ func PoolToProtocolId(project string) [32]byte {
 // PoolToChainSelector converts a DefiLlama chain name to a CCIP chain selector.
 func PoolToChainSelector(cfg Config, chain string) (uint64, error) {
 	for sel, name := range chainSelectorToName(cfg) {
-		if name == chain {
+		if canonicalDefiLlamaValue(name) == canonicalDefiLlamaValue(chain) {
 			return sel, nil
 		}
 	}
@@ -260,21 +316,25 @@ func chainSelectorToName(cfg Config) map[uint64]string {
 	return result
 }
 
-func allowedChains(cfg Config) map[string]bool {
-	result := make(map[string]bool, len(cfg.Chains))
+func allowedChains(cfg Config) map[string]string {
+	result := make(map[string]string, len(cfg.Chains))
 	for _, chain := range cfg.Chains {
 		if chain.DefiLlamaChainName == "" {
 			continue
 		}
-		result[chain.DefiLlamaChainName] = true
+		result[canonicalDefiLlamaValue(chain.DefiLlamaChainName)] = chain.DefiLlamaChainName
 	}
 	return result
 }
 
-func allowedValues(values []string) map[string]bool {
-	result := make(map[string]bool, len(values))
+func allowedValues(values []string) map[string]string {
+	result := make(map[string]string, len(values))
 	for _, value := range values {
-		result[value] = true
+		result[canonicalDefiLlamaValue(value)] = value
 	}
 	return result
+}
+
+func canonicalDefiLlamaValue(value string) string {
+	return strings.ToLower(strings.TrimSpace(value))
 }

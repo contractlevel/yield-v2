@@ -16,15 +16,36 @@ func Test_NeedRebalance(t *testing.T) {
 		want    bool
 	}{
 		{name: "no optimal", want: false},
-		{name: "no current", optimal: &offchain.Pool{Apy: 1}, want: true},
-		{name: "below threshold", optimal: &offchain.Pool{Apy: 1.009}, current: &offchain.Pool{Apy: 1}, want: false},
-		{name: "at threshold", optimal: &offchain.Pool{Apy: 1.01}, current: &offchain.Pool{Apy: 1}, want: true},
-		{name: "above threshold", optimal: &offchain.Pool{Apy: 2}, current: &offchain.Pool{Apy: 1}, want: true},
+		{name: "no current", optimal: &offchain.Pool{Apy: 1}, want: false},
+		{name: "below threshold", optimal: &offchain.Pool{Apy: 1.99}, current: &offchain.Pool{Apy: 1}, want: false},
+		{name: "at threshold", optimal: &offchain.Pool{Apy: 2}, current: &offchain.Pool{Apy: 1}, want: true},
+		{name: "above threshold", optimal: &offchain.Pool{Apy: 2.01}, current: &offchain.Pool{Apy: 1}, want: true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			require.Equal(t, tt.want, NeedRebalance(tt.optimal, tt.current), "unexpected rebalance decision")
+		})
+	}
+}
+
+func Test_RebalanceCooldownElapsed(t *testing.T) {
+	tests := []struct {
+		name          string
+		lastCompleted int64
+		now           int64
+		want          bool
+	}{
+		{name: "never completed", now: 1, want: true},
+		{name: "negative timestamp", lastCompleted: -1, now: 1, want: true},
+		{name: "before interval", lastCompleted: 100, now: 100 + minRebalanceIntervalSeconds - 1, want: false},
+		{name: "at interval", lastCompleted: 100, now: 100 + minRebalanceIntervalSeconds, want: true},
+		{name: "after interval", lastCompleted: 100, now: 100 + minRebalanceIntervalSeconds + 1, want: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, RebalanceCooldownElapsed(tt.lastCompleted, tt.now), "unexpected cooldown decision")
 		})
 	}
 }

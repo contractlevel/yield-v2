@@ -145,6 +145,21 @@ func Test_ValidateConfig_invalidVaultAddress(t *testing.T) {
 	require.ErrorContains(t, err, `invalid vaultAddress "not-an-address"`)
 }
 
+func Test_ValidateConfig_zeroVaultAddress(t *testing.T) {
+	cfg := &Config{
+		DefiLlama: validDefiLlamaConfig(),
+		Evms: []EvmConfig{
+			validEvmConfig(func(e *EvmConfig) {
+				e.VaultAddress = "0x0000000000000000000000000000000000000000"
+			}),
+		},
+	}
+
+	err := ValidateConfig(cfg)
+	require.Error(t, err, "expected error when vault address is zero")
+	require.ErrorContains(t, err, `invalid vaultAddress "0x0000000000000000000000000000000000000000"`)
+}
+
 func Test_ValidateConfig_emptyWorkflowRouterAddress(t *testing.T) {
 	cfg := &Config{
 		DefiLlama: validDefiLlamaConfig(),
@@ -173,6 +188,21 @@ func Test_ValidateConfig_invalidWorkflowRouterAddress(t *testing.T) {
 	err := ValidateConfig(cfg)
 	require.Error(t, err, "expected error when workflow router address is invalid")
 	require.ErrorContains(t, err, `invalid workflowRouterAddress "not-an-address"`)
+}
+
+func Test_ValidateConfig_zeroWorkflowRouterAddress(t *testing.T) {
+	cfg := &Config{
+		DefiLlama: validDefiLlamaConfig(),
+		Evms: []EvmConfig{
+			validEvmConfig(func(e *EvmConfig) {
+				e.WorkflowRouterAddress = "0x0000000000000000000000000000000000000000"
+			}),
+		},
+	}
+
+	err := ValidateConfig(cfg)
+	require.Error(t, err, "expected error when workflow router address is zero")
+	require.ErrorContains(t, err, `invalid workflowRouterAddress "0x0000000000000000000000000000000000000000"`)
 }
 
 func Test_ValidateConfig_noParent(t *testing.T) {
@@ -231,6 +261,17 @@ func Test_ValidateConfig_emptyDefiLlamaProjectValue(t *testing.T) {
 	require.ErrorContains(t, err, "defiLlama.projects[0]: value must be non-empty")
 }
 
+func Test_ValidateConfig_whitespaceDefiLlamaProjectValue(t *testing.T) {
+	cfg := &Config{
+		DefiLlama: DefiLlama{Projects: []string{" "}, Symbols: []string{"USDC"}},
+		Evms:      []EvmConfig{validEvmConfig()},
+	}
+
+	err := ValidateConfig(cfg)
+	require.Error(t, err, "expected error when DeFiLlama project is whitespace")
+	require.ErrorContains(t, err, "defiLlama.projects[0]: value must be non-empty")
+}
+
 func Test_ValidateConfig_duplicateDefiLlamaProject(t *testing.T) {
 	cfg := &Config{
 		DefiLlama: DefiLlama{Projects: []string{"aave-v3", "aave-v3"}, Symbols: []string{"USDC"}},
@@ -240,6 +281,17 @@ func Test_ValidateConfig_duplicateDefiLlamaProject(t *testing.T) {
 	err := ValidateConfig(cfg)
 	require.Error(t, err, "expected error when DeFiLlama project is duplicated")
 	require.ErrorContains(t, err, `defiLlama.projects[1]: duplicate value "aave-v3"`)
+}
+
+func Test_ValidateConfig_duplicateDefiLlamaProjectDifferentCase(t *testing.T) {
+	cfg := &Config{
+		DefiLlama: DefiLlama{Projects: []string{"aave-v3", "AAVE-V3"}, Symbols: []string{"USDC"}},
+		Evms:      []EvmConfig{validEvmConfig()},
+	}
+
+	err := ValidateConfig(cfg)
+	require.Error(t, err, "expected error when DeFiLlama project differs only by case")
+	require.ErrorContains(t, err, `defiLlama.projects[1]: duplicate value "AAVE-V3"`)
 }
 
 func Test_ValidateConfig_emptyDefiLlamaSymbols(t *testing.T) {
@@ -264,6 +316,17 @@ func Test_ValidateConfig_emptyDefiLlamaSymbolValue(t *testing.T) {
 	require.ErrorContains(t, err, "defiLlama.symbols[0]: value must be non-empty")
 }
 
+func Test_ValidateConfig_whitespaceDefiLlamaSymbolValue(t *testing.T) {
+	cfg := &Config{
+		DefiLlama: DefiLlama{Projects: []string{"aave-v3"}, Symbols: []string{" "}},
+		Evms:      []EvmConfig{validEvmConfig()},
+	}
+
+	err := ValidateConfig(cfg)
+	require.Error(t, err, "expected error when DeFiLlama symbol is whitespace")
+	require.ErrorContains(t, err, "defiLlama.symbols[0]: value must be non-empty")
+}
+
 func Test_ValidateConfig_duplicateDefiLlamaSymbol(t *testing.T) {
 	cfg := &Config{
 		DefiLlama: DefiLlama{Projects: []string{"aave-v3"}, Symbols: []string{"USDC", "USDC"}},
@@ -273,6 +336,17 @@ func Test_ValidateConfig_duplicateDefiLlamaSymbol(t *testing.T) {
 	err := ValidateConfig(cfg)
 	require.Error(t, err, "expected error when DeFiLlama symbol is duplicated")
 	require.ErrorContains(t, err, `defiLlama.symbols[1]: duplicate value "USDC"`)
+}
+
+func Test_ValidateConfig_duplicateDefiLlamaSymbolDifferentCase(t *testing.T) {
+	cfg := &Config{
+		DefiLlama: DefiLlama{Projects: []string{"aave-v3"}, Symbols: []string{"USDC", "usdc"}},
+		Evms:      []EvmConfig{validEvmConfig()},
+	}
+
+	err := ValidateConfig(cfg)
+	require.Error(t, err, "expected error when DeFiLlama symbol differs only by case")
+	require.ErrorContains(t, err, `defiLlama.symbols[1]: duplicate value "usdc"`)
 }
 
 func Test_ValidateConfig_duplicateDefiLlamaChainName(t *testing.T) {
@@ -296,6 +370,29 @@ func Test_ValidateConfig_duplicateDefiLlamaChainName(t *testing.T) {
 	err := ValidateConfig(cfg)
 	require.Error(t, err, "expected error when DeFiLlama chain name is duplicated")
 	require.ErrorContains(t, err, `evms[1] (chain 2): duplicate defiLlamaChainName "Arbitrum"`)
+}
+
+func Test_ValidateConfig_duplicateDefiLlamaChainNameDifferentCase(t *testing.T) {
+	cfg := &Config{
+		DefiLlama: validDefiLlamaConfig(),
+		Evms: []EvmConfig{
+			validEvmConfig(func(e *EvmConfig) {
+				e.DefiLlamaChainName = "Arbitrum"
+			}),
+			validEvmConfig(func(e *EvmConfig) {
+				e.IsParent = false
+				e.ChainName = "chain-b"
+				e.ChainSelector = 2
+				e.VaultAddress = "0x0000000000000000000000000000000000000003"
+				e.WorkflowRouterAddress = "0x0000000000000000000000000000000000000004"
+				e.DefiLlamaChainName = "arbitrum"
+			}),
+		},
+	}
+
+	err := ValidateConfig(cfg)
+	require.Error(t, err, "expected error when DeFiLlama chain name differs only by case")
+	require.ErrorContains(t, err, `evms[1] (chain 2): duplicate defiLlamaChainName "arbitrum"`)
 }
 
 func Test_FindParent_found(t *testing.T) {

@@ -1,3 +1,4 @@
 *.env
 workflow/coverage.out
 coverage.out
+offchain.cover

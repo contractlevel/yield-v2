@@ -3,6 +3,7 @@ package offchain
 import (
 	"bytes"
 	"compress/gzip"
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -35,6 +36,8 @@ func testConfig() Config {
 func testPoolsJSON() string {
 	return `{
 		"ignored": true,
+		"ignoredObject": {"data": [{"chain":"Ethereum","project":"aave-v3","symbol":"USDC","apy":99.0}]},
+		"ignoredArray": [{"data": [{"chain":"Ethereum","project":"aave-v3","symbol":"USDC","apy":99.0}]}],
 		"data": [
 			{"chain":"Ethereum","project":"aave-v3","symbol":"USDC","apy":4.5},
 			{"chain":"Arbitrum","project":"compound-v3","symbol":"USDC","apy":6.25},
@@ -90,6 +93,20 @@ func Test_ParsePools_currentRequiresActiveChainAndProtocol(t *testing.T) {
 	require.False(t, result.HasCurrent, "expected no current pool when protocol does not match active chain")
 }
 
+func Test_ParsePools_matchesCaseInsensitiveAndReturnsConfiguredValues(t *testing.T) {
+	body := `{"data":[
+		{"chain":"ethereum","project":"AAVE-V3","symbol":"usdc","apy":4.5},
+		{"chain":"ARBITRUM","project":"COMPOUND-V3","symbol":"usdc","apy":6.25}
+	]}`
+
+	result, err := parsePools(strings.NewReader(body), testConfig(), PoolToProtocolId("aave-v3"), "Ethereum")
+	require.NoError(t, err, "expected valid response to parse")
+	require.True(t, result.HasBest, "expected best pool")
+	require.Equal(t, Pool{Chain: "Arbitrum", Project: "compound-v3", Symbol: "USDC", Apy: 6.25}, result.BestPool)
+	require.True(t, result.HasCurrent, "expected current pool")
+	require.Equal(t, Pool{Chain: "Ethereum", Project: "aave-v3", Symbol: "USDC", Apy: 4.5}, result.CurrentPool)
+}
+
 func Test_ParsePools_errors(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -99,7 +116,7 @@ func Test_ParsePools_errors(t *testing.T) {
 		{
 			name:    "invalid json token",
 			body:    `{"x": tru`,
-			wantErr: "token scan",
+			wantErr: `skip top-level key "x"`,
 		},
 		{
 			name:    "missing data",
@@ -120,6 +137,41 @@ func Test_ParsePools_errors(t *testing.T) {
 			name:    "missing array start",
 			body:    `{"data":`,
 			wantErr: "read array start",
+		},
+		{
+			name:    "top-level value is not object",
+			body:    `[]`,
+			wantErr: "expected top-level object",
+		},
+		{
+			name:    "empty response",
+			body:    ``,
+			wantErr: "read object start",
+		},
+		{
+			name:    "malformed top-level key",
+			body:    `{"ignored": true,`,
+			wantErr: "read top-level key",
+		},
+		{
+			name:    "nested data key ignored",
+			body:    `{"meta":{"data":[{"chain":"Ethereum","project":"aave-v3","symbol":"USDC","apy":4.5}]}}`,
+			wantErr: "'data' key not found in response",
+		},
+		{
+			name:    "malformed skipped object key",
+			body:    `{"meta":{"nested": true,},"data":[]}`,
+			wantErr: `skip top-level key "meta"`,
+		},
+		{
+			name:    "malformed skipped object value",
+			body:    `{"meta":{"nested":},"data":[]}`,
+			wantErr: `skip top-level key "meta"`,
+		},
+		{
+			name:    "malformed skipped array value",
+			body:    `{"meta":[true,],"data":[]}`,
+			wantErr: `skip top-level key "meta"`,
 		},
 	}
 
@@ -337,6 +389,16 @@ func Test_ValidateDefiLlamaResponseURL_parseExpectedURLError(t *testing.T) {
 	require.ErrorContains(t, err, "parse expected URL")
 }
 
+func Test_SkipJSONValue_closingDelimiter(t *testing.T) {
+	decoder := json.NewDecoder(strings.NewReader(`[]`))
+
+	token, err := decoder.Token()
+	require.NoError(t, err, "expected array start")
+	require.Equal(t, json.Delim('['), token, "unexpected first token")
+
+	require.NoError(t, skipJSONValue(decoder), "expected closing delimiter to be skipped")
+}
+
 func Test_PoolToProtocolId(t *testing.T) {
 	id := PoolToProtocolId("aave-v3")
 	require.Equal(t, id, PoolToProtocolId("aave-v3"), "expected deterministic protocol ID")
@@ -346,6 +408,10 @@ func Test_PoolToProtocolId(t *testing.T) {
 func Test_PoolToChainSelector(t *testing.T) {
 	selector, err := PoolToChainSelector(testConfig(), "Arbitrum")
 	require.NoError(t, err, "expected configured chain to map")
+	require.Equal(t, uint64(2), selector, "unexpected selector")
+
+	selector, err = PoolToChainSelector(testConfig(), "arbitrum")
+	require.NoError(t, err, "expected configured chain to map case-insensitively")
 	require.Equal(t, uint64(2), selector, "unexpected selector")
 
 	selector, err = PoolToChainSelector(testConfig(), "Base")
@@ -358,8 +424,8 @@ func Test_ConfigHelpers(t *testing.T) {
 	cfg := testConfig()
 
 	require.Equal(t, map[uint64]string{1: "Ethereum", 2: "Arbitrum"}, chainSelectorToName(cfg))
-	require.Equal(t, map[string]bool{"Ethereum": true, "Arbitrum": true}, allowedChains(cfg))
-	require.Equal(t, map[string]bool{"USDC": true}, allowedValues([]string{"USDC"}))
+	require.Equal(t, map[string]string{"ethereum": "Ethereum", "arbitrum": "Arbitrum"}, allowedChains(cfg))
+	require.Equal(t, map[string]string{"usdc": "USDC"}, allowedValues([]string{"USDC"}))
 }
 
 func gzipBytes(t *testing.T, body []byte) []byte {

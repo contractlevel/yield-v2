@@ -109,6 +109,14 @@ func onCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, _ *cron.P
 		return &workflowtypes.ExecutionResult{Result: "no-op: rebalance in progress"}, nil
 	}
 
+	if rebalance.LastRebalanceCompletedTimestamp != nil && !RebalanceCooldownElapsed(rebalance.LastRebalanceCompletedTimestamp.Int64(), runtime.Now().Unix()) {
+		logger.Info("Rebalance cooldown active; skipping",
+			slog.Int64("lastCompletedAt", rebalance.LastRebalanceCompletedTimestamp.Int64()),
+			slog.Int64("minNextRebalanceAt", rebalance.LastRebalanceCompletedTimestamp.Int64()+minRebalanceIntervalSeconds),
+		)
+		return &workflowtypes.ExecutionResult{Result: "no-op: rebalance cooldown active"}, nil
+	}
+
 	activeStrategy := rebalance.ActiveStrategy
 	defiLlamaConfig := newDefiLlamaConfig(config)
 
@@ -140,12 +148,15 @@ func onCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, _ *cron.P
 
 	// @review this is where we would read the TVL of the active strategy and pass it to onchain helper to calculate APY impact
 
+	if currentPool == nil {
+		logger.Info("Current pool missing from DefiLlama response; skipping rebalance")
+		return &workflowtypes.ExecutionResult{Result: "no-op: current pool missing"}, nil
+	}
+
 	// Check that the APY improvement exceeds the differential threshold.
 	if !NeedRebalance(bestPool, currentPool) {
 		delta := bestPool.Apy
-		if currentPool != nil {
-			delta -= currentPool.Apy
-		}
+		delta -= currentPool.Apy
 		logger.Info("APY delta below threshold; skipping rebalance",
 			slog.Float64("delta", delta),
 			slog.Float64("threshold", DifferentialThreshold),

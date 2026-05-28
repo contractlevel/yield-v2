@@ -10,8 +10,8 @@ import (
 )
 
 func Fuzz_NeedRebalance_threshold(f *testing.F) {
-	f.Add(1.01, 1.0)
-	f.Add(1.009, 1.0)
+	f.Add(2.0, 1.0)
+	f.Add(1.99, 1.0)
 	f.Add(0.0, 0.0)
 
 	f.Fuzz(func(t *testing.T, optimalApy, currentApy float64) {

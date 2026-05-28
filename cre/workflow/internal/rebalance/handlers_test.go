@@ -27,8 +27,8 @@ var (
 	aaveProtocolID     = offchain.PoolToProtocolId("aave-v3")
 	compoundProtocolID = offchain.PoolToProtocolId("compound-v3")
 
-	aaveChildPool  = &offchain.Pool{Chain: "Arbitrum", Project: "aave-v3", Symbol: "USDC", Apy: 5.0}
-	compParentPool = &offchain.Pool{Chain: "Ethereum", Project: "compound-v3", Symbol: "USDC", Apy: 7.0}
+	aaveParentPool = &offchain.Pool{Chain: "Arbitrum", Project: "aave-v3", Symbol: "USDC", Apy: 5.0}
+	compChildPool  = &offchain.Pool{Chain: "Ethereum", Project: "compound-v3", Symbol: "USDC", Apy: 7.0}
 )
 
 type fakeParentCodec struct {
@@ -183,7 +183,7 @@ func rebalanceState(protocolID [32]byte, chainSelector uint64) parent_vault.Type
 func baseCronDeps() CronDeps {
 	return CronDeps{
 		FetchAndSelectPools: func(cre.Runtime, offchain.Config, [32]byte, uint64) (*offchain.Pool, *offchain.Pool, error) {
-			return compParentPool, aaveChildPool, nil
+			return compChildPool, aaveParentPool, nil
 		},
 		GetRebalance: func(cre.Runtime, onchain.ParentVaultInterface, *big.Int) (parent_vault.TypesRebalance, error) {
 			return rebalanceState(aaveProtocolID, parentChainSelector), nil
@@ -294,6 +294,24 @@ func Test_OnCronTrigger_withDeps(t *testing.T) {
 			wantErr: "fetch pools: fetch failed",
 		},
 		{
+			name:  "rebalance cooldown active",
+			codec: &fakeParentCodec{},
+			deps: func() CronDeps {
+				deps := baseCronDeps()
+				deps.GetRebalance = func(cre.Runtime, onchain.ParentVaultInterface, *big.Int) (parent_vault.TypesRebalance, error) {
+					rebalance := rebalanceState(aaveProtocolID, parentChainSelector)
+					rebalance.LastRebalanceCompletedTimestamp = big.NewInt(1<<62 - minRebalanceIntervalSeconds)
+					return rebalance, nil
+				}
+				deps.FetchAndSelectPools = func(cre.Runtime, offchain.Config, [32]byte, uint64) (*offchain.Pool, *offchain.Pool, error) {
+					t.Fatal("FetchAndSelectPools must not be called during cooldown")
+					return nil, nil, nil
+				}
+				return deps
+			}(),
+			wantResult: "no-op: rebalance cooldown active",
+		},
+		{
 			name:  "no approved pool",
 			codec: &fakeParentCodec{},
 			deps: func() CronDeps {
@@ -323,7 +341,7 @@ func Test_OnCronTrigger_withDeps(t *testing.T) {
 			deps: func() CronDeps {
 				deps := baseCronDeps()
 				deps.FetchAndSelectPools = func(cre.Runtime, offchain.Config, [32]byte, uint64) (*offchain.Pool, *offchain.Pool, error) {
-					return aaveChildPool, aaveChildPool, nil
+					return aaveParentPool, aaveParentPool, nil
 				}
 				return deps
 			}(),
@@ -335,11 +353,23 @@ func Test_OnCronTrigger_withDeps(t *testing.T) {
 			deps: func() CronDeps {
 				deps := baseCronDeps()
 				deps.FetchAndSelectPools = func(cre.Runtime, offchain.Config, [32]byte, uint64) (*offchain.Pool, *offchain.Pool, error) {
-					return &offchain.Pool{Chain: "Ethereum", Project: "compound-v3", Symbol: "USDC", Apy: 5.005}, aaveChildPool, nil
+					return &offchain.Pool{Chain: "Ethereum", Project: "compound-v3", Symbol: "USDC", Apy: 5.99}, aaveParentPool, nil
 				}
 				return deps
 			}(),
 			wantResult: "no-op: below threshold",
+		},
+		{
+			name:  "missing current pool",
+			codec: &fakeParentCodec{},
+			deps: func() CronDeps {
+				deps := baseCronDeps()
+				deps.FetchAndSelectPools = func(cre.Runtime, offchain.Config, [32]byte, uint64) (*offchain.Pool, *offchain.Pool, error) {
+					return compChildPool, nil, nil
+				}
+				return deps
+			}(),
+			wantResult: "no-op: current pool missing",
 		},
 		{
 			name:    "encode initiate error",
