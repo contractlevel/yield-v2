@@ -23,3 +23,20 @@ func Fuzz_NeedRebalance_threshold(f *testing.F) {
 		require.Equal(t, optimalApy-currentApy >= DifferentialThreshold, got, "unexpected rebalance decision")
 	})
 }
+
+func Fuzz_RebalanceCooldownElapsed(f *testing.F) {
+	f.Add(int64(0), int64(1))
+	f.Add(int64(-1), int64(1))
+	f.Add(int64(100), int64(100+minRebalanceIntervalSeconds-1))
+	f.Add(int64(100), int64(100+minRebalanceIntervalSeconds))
+
+	f.Fuzz(func(t *testing.T, lastCompletedTimestamp, now int64) {
+		got := RebalanceCooldownElapsed(lastCompletedTimestamp, now)
+		if lastCompletedTimestamp <= 0 {
+			require.True(t, got, "expected unset cooldown timestamp to pass")
+			return
+		}
+
+		require.Equal(t, now >= lastCompletedTimestamp+minRebalanceIntervalSeconds, got, "unexpected cooldown decision")
+	})
+}

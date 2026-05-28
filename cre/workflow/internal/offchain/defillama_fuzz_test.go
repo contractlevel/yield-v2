@@ -19,7 +19,10 @@ func Fuzz_PoolToProtocolId_deterministic(f *testing.F) {
 
 func Fuzz_PoolToChainSelector_configuredOrMissing(f *testing.F) {
 	f.Add("Ethereum")
+	f.Add("ethereum")
 	f.Add("Arbitrum")
+	f.Add("arbitrum")
+	f.Add(" ARBITRUM ")
 	f.Add("Base")
 	f.Add("")
 
@@ -33,11 +36,11 @@ func Fuzz_PoolToChainSelector_configuredOrMissing(f *testing.F) {
 		}
 
 		selector, err := PoolToChainSelector(cfg, chain)
-		switch chain {
-		case "Ethereum":
+		switch canonicalDefiLlamaValue(chain) {
+		case "ethereum":
 			require.NoError(t, err, "expected configured chain to map")
 			require.Equal(t, uint64(1), selector, "unexpected selector")
-		case "Arbitrum":
+		case "arbitrum":
 			require.NoError(t, err, "expected configured chain to map")
 			require.Equal(t, uint64(2), selector, "unexpected selector")
 		default:

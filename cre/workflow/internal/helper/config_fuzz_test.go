@@ -92,3 +92,51 @@ func Fuzz_ValidateConfig_parentCount(f *testing.F) {
 		}
 	})
 }
+
+func Fuzz_ValidateConfig_defiLlamaProjectCanonicalDuplicates(f *testing.F) {
+	f.Add("aave-v3", "compound-v3")
+	f.Add("aave-v3", "AAVE-V3")
+	f.Add(" aave-v3 ", "AAVE-V3")
+	f.Add("", "aave-v3")
+	f.Add(" ", "aave-v3")
+
+	f.Fuzz(func(t *testing.T, projectA, projectB string) {
+		cfg := &Config{
+			DefiLlama: DefiLlama{Projects: []string{projectA, projectB}, Symbols: []string{"USDC"}},
+			Evms:      []EvmConfig{validEvmConfig()},
+		}
+
+		err := ValidateConfig(cfg)
+		canonicalA := canonicalDefiLlamaValue(projectA)
+		canonicalB := canonicalDefiLlamaValue(projectB)
+		if canonicalA == "" || canonicalB == "" || canonicalA == canonicalB {
+			require.Error(t, err, "expected empty or duplicate canonical project values to fail")
+			return
+		}
+		require.NoError(t, err, "expected distinct canonical project values to pass")
+	})
+}
+
+func Fuzz_ValidateConfig_defiLlamaSymbolCanonicalDuplicates(f *testing.F) {
+	f.Add("USDC", "DAI")
+	f.Add("USDC", "usdc")
+	f.Add(" USDC ", "usdc")
+	f.Add("", "USDC")
+	f.Add(" ", "USDC")
+
+	f.Fuzz(func(t *testing.T, symbolA, symbolB string) {
+		cfg := &Config{
+			DefiLlama: DefiLlama{Projects: []string{"aave-v3"}, Symbols: []string{symbolA, symbolB}},
+			Evms:      []EvmConfig{validEvmConfig()},
+		}
+
+		err := ValidateConfig(cfg)
+		canonicalA := canonicalDefiLlamaValue(symbolA)
+		canonicalB := canonicalDefiLlamaValue(symbolB)
+		if canonicalA == "" || canonicalB == "" || canonicalA == canonicalB {
+			require.Error(t, err, "expected empty or duplicate canonical symbol values to fail")
+			return
+		}
+		require.NoError(t, err, "expected distinct canonical symbol values to pass")
+	})
+}
