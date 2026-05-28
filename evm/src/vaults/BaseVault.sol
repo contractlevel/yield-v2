@@ -425,11 +425,12 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     }
 
     /// @dev Precondition: Caller must have the EMERGENCY_DRAINER_ROLE
+    /// @dev Precondition: must be paused
     /// @dev Precondition: Vault must have been paused for at least EMERGENCY_DRAIN_DELAY
     /// @dev Withdraws all USDC from the vault to the emergency drainer
     /// @param revertOnFailure Whether to revert if the withdraw from strategy fails
     /// @notice If the vault has the TVL, it will be withdrawn from the strategy and transferred to the emergency drainer
-    function emergencyDrain(bool revertOnFailure) external onlyRole(Roles.EMERGENCY_DRAINER_ROLE) {
+    function emergencyDrain(bool revertOnFailure) external onlyRole(Roles.EMERGENCY_DRAINER_ROLE) whenPaused {
         //slither-disable-next-line timestamp
         if (block.timestamp - s_pausedAt < EMERGENCY_DRAIN_DELAY) revert BaseVault__EmergencyDrainDelayNotMet();
 

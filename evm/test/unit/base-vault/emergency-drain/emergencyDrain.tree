@@ -2,6 +2,8 @@ emergencyDrain
   ├── when the caller does not have the EMERGENCY_DRAINER_ROLE
   │   └── it should revert
   └── when the caller has the EMERGENCY_DRAINER_ROLE
+      ├── when the vault is not paused
+      │   └── it should revert with ExpectedPause
       ├── when the emergency drain delay has not been met
       │   └── it should revert
       └── when the emergency drain delay has been met

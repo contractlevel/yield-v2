@@ -7,6 +7,7 @@ import {BaseVault, IBaseVault} from "../../../../src/vaults/BaseVault.sol";
 import {Roles} from "../../../../src/libraries/Roles.sol";
 
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 abstract contract BaseVault_EmergencyDrainUnitTest is BaseUnitTest {
     BaseVault internal s_vault;
@@ -38,6 +39,11 @@ abstract contract BaseVault_EmergencyDrainUnitTest is BaseUnitTest {
 
         _changePrank(i_emergencyDrainer);
         vm.expectRevert(IBaseVault.BaseVault__EmergencyDrainDelayNotMet.selector);
+        s_vault.emergencyDrain(true);
+    }
+
+    function test_BaseVault_emergencyDrain_RevertWhen_NotPaused() external {
+        vm.expectRevert(Pausable.ExpectedPause.selector);
         s_vault.emergencyDrain(true);
     }
 
