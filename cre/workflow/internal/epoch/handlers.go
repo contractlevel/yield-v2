@@ -180,8 +180,6 @@ func onEpochCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, _ *c
 	return &workflowtypes.ExecutionResult{Result: "closed epoch"}, nil
 }
 
-// EpochExecuting is only emitted when the active strategy is on a remote chain,
-// so no same-chain guard is needed here.
 func OnEpochExecuting(config *helper.Config, runtime cre.Runtime, log *evm.Log) (*workflowtypes.ExecutionResult, error) {
 	return onEpochExecutingWithDeps(config, runtime, log, defaultExecutorDeps)
 }
@@ -220,6 +218,13 @@ func onEpochExecutingWithDeps(config *helper.Config, runtime cre.Runtime, log *e
 	rebalance, err := deps.GetRebalance(runtime, parentVaultBinding, big.NewInt(config.BlockNumber))
 	if err != nil {
 		return nil, fmt.Errorf("get rebalance: %w", err)
+	}
+
+	if rebalance.ActiveStrategy.ChainSelector == parentCfg.ChainSelector {
+		logger.Info("EpochExecuting: active strategy on parent; no action required",
+			slog.Any("nonce", evt.EpochNonce),
+		)
+		return &workflowtypes.ExecutionResult{Result: "no-op: active strategy on parent"}, nil
 	}
 
 	stratCfg, err := helper.FindEvmConfigByChainSelector(config.Evms, rebalance.ActiveStrategy.ChainSelector)

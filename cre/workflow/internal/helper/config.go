@@ -76,6 +76,9 @@ func ValidateConfig(cfg *Config) error {
 		if !isRequiredAddress(e.WorkflowRouterAddress) {
 			return fmt.Errorf("evms[%d] (chain %d): invalid workflowRouterAddress %q", i, e.ChainSelector, e.WorkflowRouterAddress)
 		}
+		if e.GasLimit == 0 {
+			return fmt.Errorf("evms[%d] (chain %d): gasLimit must be non-zero", i, e.ChainSelector)
+		}
 		if e.DefiLlamaChainName != "" {
 			canonicalName := canonicalDefiLlamaValue(e.DefiLlamaChainName)
 			if _, dup := seenDefiLlamaChains[canonicalName]; dup {

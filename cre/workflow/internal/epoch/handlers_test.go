@@ -491,6 +491,21 @@ func Test_OnEpochExecuting_withDeps(t *testing.T) {
 			},
 			wantErr: "find strategy chain: no evm config found for chainSelector 999",
 		},
+		{
+			name:        "active strategy on parent",
+			parentCodec: &fakeParentCodec{epochExecuting: &parent_vault.EpochExecutingDecoded{EpochNonce: big.NewInt(1)}},
+			childCodec:  &fakeChildCodec{},
+			deps: ExecutorDeps{
+				GetRebalance: func(cre.Runtime, onchain.ParentVaultInterface, *big.Int) (parent_vault.TypesRebalance, error) {
+					return rebalanceState(parentChainSelector), nil
+				},
+				SubmitReport: func(cre.Runtime, *evm.Client, common.Address, []byte, uint64) error {
+					t.Fatal("SubmitReport must not be called when active strategy is on parent")
+					return nil
+				},
+			},
+			wantResult: "no-op: active strategy on parent",
+		},
 		{name: "encode error", parentCodec: &fakeParentCodec{epochExecuting: &parent_vault.EpochExecutingDecoded{}}, childCodec: &fakeChildCodec{withdrawErr: errors.New("encode failed")}, deps: baseExecutorDeps(), wantErr: "encode executeEpochWithdraw: encode failed"},
 		{
 			name:        "submit error",

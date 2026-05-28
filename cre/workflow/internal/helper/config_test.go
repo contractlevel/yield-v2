@@ -205,6 +205,21 @@ func Test_ValidateConfig_zeroWorkflowRouterAddress(t *testing.T) {
 	require.ErrorContains(t, err, `invalid workflowRouterAddress "0x0000000000000000000000000000000000000000"`)
 }
 
+func Test_ValidateConfig_zeroGasLimit(t *testing.T) {
+	cfg := &Config{
+		DefiLlama: validDefiLlamaConfig(),
+		Evms: []EvmConfig{
+			validEvmConfig(func(e *EvmConfig) {
+				e.GasLimit = 0
+			}),
+		},
+	}
+
+	err := ValidateConfig(cfg)
+	require.Error(t, err, "expected error when gas limit is zero")
+	require.ErrorContains(t, err, "evms[0] (chain 1): gasLimit must be non-zero")
+}
+
 func Test_ValidateConfig_noParent(t *testing.T) {
 	cfg := &Config{
 		DefiLlama: validDefiLlamaConfig(),
