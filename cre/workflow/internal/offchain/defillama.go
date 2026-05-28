@@ -3,11 +3,14 @@ package offchain
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/smartcontractkit/cre-sdk-go/cre"
@@ -15,7 +18,13 @@ import (
 
 var (
 	defiLlamaURL        = "https://yields.llama.fi/pools"
-	defiLlamaHTTPClient = http.DefaultClient
+	defiLlamaHTTPClient = &http.Client{Timeout: defiLlamaRequestTimeout}
+)
+
+const (
+	defiLlamaRequestTimeout     = 10 * time.Second
+	defiLlamaMaxCompressedBytes = 10 << 20
+	defiLlamaMaxDecodedBytes    = 10 << 20
 )
 
 // Config contains the workflow's DefiLlama selection policy.
@@ -88,7 +97,10 @@ func FetchAndSelectPools(runtime cre.Runtime, cfg Config, activeProtocolId [32]b
 
 // fetchAndParse is the node-mode function executed on each DON node.
 func fetchAndParse(params fetchParams, _ cre.NodeRuntime) (fetchResult, error) {
-	req, err := http.NewRequest(http.MethodGet, defiLlamaURL, nil)
+	ctx, cancel := context.WithTimeout(context.Background(), defiLlamaRequestTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, defiLlamaURL, nil)
 	if err != nil {
 		return fetchResult{}, fmt.Errorf("build request: %w", err)
 	}
@@ -100,13 +112,22 @@ func fetchAndParse(params fetchParams, _ cre.NodeRuntime) (fetchResult, error) {
 	}
 	defer resp.Body.Close()
 
+	if err := validateDefiLlamaResponseURL(resp); err != nil {
+		return fetchResult{}, err
+	}
+
 	if resp.StatusCode != http.StatusOK {
 		return fetchResult{}, fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}
 
-	var reader io.Reader = resp.Body
+	rawBody, err := readLimited(resp.Body, defiLlamaMaxCompressedBytes, "compressed response body")
+	if err != nil {
+		return fetchResult{}, err
+	}
+
+	var reader io.Reader = bytes.NewReader(rawBody)
 	if strings.Contains(strings.ToLower(resp.Header.Get("Content-Encoding")), "gzip") {
-		gz, gzErr := gzip.NewReader(resp.Body)
+		gz, gzErr := gzip.NewReader(bytes.NewReader(rawBody))
 		if gzErr != nil {
 			return fetchResult{}, fmt.Errorf("gzip reader: %w", gzErr)
 		}
@@ -114,12 +135,38 @@ func fetchAndParse(params fetchParams, _ cre.NodeRuntime) (fetchResult, error) {
 		reader = gz
 	}
 
-	body, err := io.ReadAll(reader)
+	body, err := readLimited(reader, defiLlamaMaxDecodedBytes, "decoded response body")
 	if err != nil {
-		return fetchResult{}, fmt.Errorf("read body: %w", err)
+		return fetchResult{}, err
 	}
 
 	return parsePools(bytes.NewReader(body), params.Config, params.ActiveProtocolId, params.ActiveChainName)
+}
+
+func validateDefiLlamaResponseURL(resp *http.Response) error {
+	expected, err := url.Parse(defiLlamaURL)
+	if err != nil {
+		return fmt.Errorf("parse expected URL: %w", err)
+	}
+	if resp.Request == nil || resp.Request.URL == nil {
+		return fmt.Errorf("missing final response URL")
+	}
+	if !strings.EqualFold(resp.Request.URL.Scheme, expected.Scheme) || !strings.EqualFold(resp.Request.URL.Host, expected.Host) {
+		return fmt.Errorf("unexpected final response URL %q", resp.Request.URL.String())
+	}
+	return nil
+}
+
+func readLimited(r io.Reader, limit int64, label string) ([]byte, error) {
+	limited := io.LimitReader(r, limit+1)
+	body, err := io.ReadAll(limited)
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", label, err)
+	}
+	if int64(len(body)) > limit {
+		return nil, fmt.Errorf("%s exceeds %d bytes", label, limit)
+	}
+	return body, nil
 }
 
 // parsePools streams the DefiLlama JSON response, filtering and selecting pools.

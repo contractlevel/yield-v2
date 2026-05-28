@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -154,11 +155,14 @@ func Test_FetchAndParse_successPlainAndGzip(t *testing.T) {
 				require.Equal(t, http.MethodGet, req.Method, "unexpected method")
 				require.Equal(t, defiLlamaURL, req.URL.String(), "unexpected URL")
 				require.Equal(t, "gzip", req.Header.Get("Accept-Encoding"), "unexpected encoding header")
+				_, hasDeadline := req.Context().Deadline()
+				require.True(t, hasDeadline, "expected request context deadline")
 
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Header:     http.Header{"Content-Encoding": []string{tt.contentType}},
 					Body:       io.NopCloser(bytes.NewReader(body)),
+					Request:    req,
 				}, nil
 			})})
 
@@ -197,28 +201,69 @@ func Test_FetchAndParse_errors(t *testing.T) {
 		},
 		{
 			name: "unexpected status",
-			roundTrip: func(*http.Request) (*http.Response, error) {
-				return &http.Response{StatusCode: http.StatusBadGateway, Body: io.NopCloser(strings.NewReader(""))}, nil
+			roundTrip: func(req *http.Request) (*http.Response, error) {
+				return &http.Response{StatusCode: http.StatusBadGateway, Body: io.NopCloser(strings.NewReader("")), Request: req}, nil
 			},
 			wantErr: "unexpected status 502",
 		},
 		{
 			name: "invalid gzip body",
-			roundTrip: func(*http.Request) (*http.Response, error) {
+			roundTrip: func(req *http.Request) (*http.Response, error) {
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Header:     http.Header{"Content-Encoding": []string{"gzip"}},
 					Body:       io.NopCloser(strings.NewReader("not gzip")),
+					Request:    req,
 				}, nil
 			},
 			wantErr: "gzip reader",
 		},
 		{
 			name: "read body error",
-			roundTrip: func(*http.Request) (*http.Response, error) {
-				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(errReader{})}, nil
+			roundTrip: func(req *http.Request) (*http.Response, error) {
+				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(errReader{}), Request: req}, nil
 			},
-			wantErr: "read body: read failed",
+			wantErr: "read compressed response body: read failed",
+		},
+		{
+			name: "redirected final URL",
+			roundTrip: func(req *http.Request) (*http.Response, error) {
+				finalReq := req.Clone(req.Context())
+				finalReq.URL.Scheme = "http"
+				finalReq.URL.Host = "169.254.169.254"
+				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(testPoolsJSON())), Request: finalReq}, nil
+			},
+			wantErr: `unexpected final response URL "http://169.254.169.254/pools"`,
+		},
+		{
+			name: "missing final URL",
+			roundTrip: func(*http.Request) (*http.Response, error) {
+				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(testPoolsJSON()))}, nil
+			},
+			wantErr: "missing final response URL",
+		},
+		{
+			name: "compressed body too large",
+			roundTrip: func(req *http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(io.LimitReader(zeroReader{}, defiLlamaMaxCompressedBytes+1)),
+					Request:    req,
+				}, nil
+			},
+			wantErr: "compressed response body exceeds 10485760 bytes",
+		},
+		{
+			name: "decoded gzip body too large",
+			roundTrip: func(req *http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Header:     http.Header{"Content-Encoding": []string{"gzip"}},
+					Body:       io.NopCloser(bytes.NewReader(gzipBytes(t, bytes.Repeat([]byte("x"), defiLlamaMaxDecodedBytes+1)))),
+					Request:    req,
+				}, nil
+			},
+			wantErr: "decoded response body exceeds 10485760 bytes",
 		},
 	}
 
@@ -238,10 +283,11 @@ func Test_FetchAndParse_errors(t *testing.T) {
 }
 
 func Test_FetchAndSelectPools(t *testing.T) {
-	withDefiLlamaHTTPClient(t, &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+	withDefiLlamaHTTPClient(t, &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 		return &http.Response{
 			StatusCode: http.StatusOK,
 			Body:       io.NopCloser(strings.NewReader(testPoolsJSON())),
+			Request:    req,
 		}, nil
 	})})
 
@@ -253,10 +299,11 @@ func Test_FetchAndSelectPools(t *testing.T) {
 }
 
 func Test_FetchAndSelectPools_noPools(t *testing.T) {
-	withDefiLlamaHTTPClient(t, &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+	withDefiLlamaHTTPClient(t, &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 		return &http.Response{
 			StatusCode: http.StatusOK,
 			Body:       io.NopCloser(strings.NewReader(`{"data":[]}`)),
+			Request:    req,
 		}, nil
 	})})
 
@@ -278,6 +325,16 @@ func Test_FetchAndSelectPools_error(t *testing.T) {
 	require.Nil(t, best, "expected nil best pool")
 	require.Nil(t, current, "expected nil current pool")
 	require.ErrorContains(t, err, `fetch pools: do request: Get "https://yields.llama.fi/pools": network failed`)
+}
+
+func Test_ValidateDefiLlamaResponseURL_parseExpectedURLError(t *testing.T) {
+	withDefiLlamaURL(t, "://bad-url")
+
+	err := validateDefiLlamaResponseURL(&http.Response{
+		Request: &http.Request{URL: mustParseURL(t, "https://yields.llama.fi/pools")},
+	})
+	require.Error(t, err, "expected parse error")
+	require.ErrorContains(t, err, "parse expected URL")
 }
 
 func Test_PoolToProtocolId(t *testing.T) {
@@ -316,8 +373,25 @@ func gzipBytes(t *testing.T, body []byte) []byte {
 	return buf.Bytes()
 }
 
+func mustParseURL(t *testing.T, raw string) *url.URL {
+	t.Helper()
+
+	u, err := url.Parse(raw)
+	require.NoError(t, err, "expected test URL to parse")
+	return u
+}
+
 type errReader struct{}
 
 func (errReader) Read([]byte) (int, error) {
 	return 0, errors.New("read failed")
+}
+
+type zeroReader struct{}
+
+func (zeroReader) Read(p []byte) (int, error) {
+	for i := range p {
+		p[i] = 0
+	}
+	return len(p), nil
 }
