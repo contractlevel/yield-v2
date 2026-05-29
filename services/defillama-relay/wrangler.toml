@@ -1,6 +1,8 @@
 name = "yield-v2-defillama-relay"
 main = "build/worker/shim.mjs"
 compatibility_date = "2026-04-28"
+workers_dev = true
+preview_urls = false
 
 [build]
 command = "worker-build --release"

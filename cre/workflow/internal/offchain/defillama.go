@@ -2,7 +2,6 @@ package offchain
 
 import (
 	"bytes"
-	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,24 +10,25 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/smartcontractkit/chainlink-protos/cre/go/sdk"
 	crehttp "github.com/smartcontractkit/cre-sdk-go/capabilities/networking/http"
 	"github.com/smartcontractkit/cre-sdk-go/cre"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 var (
-	defiLlamaURL        = "https://yields.llama.fi/pools"
 	defiLlamaHTTPClient = &crehttp.Client{}
 )
 
 const (
-	defiLlamaRequestTimeout     = 10 * time.Second
-	defiLlamaMaxCompressedBytes = 10 << 20
-	defiLlamaMaxDecodedBytes    = 10 << 20
+	defiLlamaRelayBearerTokenSecret = "DEFILLAMA_RELAY_BEARER_TOKEN"
+	defiLlamaRequestTimeout         = 10 * time.Second
+	defiLlamaMaxResponseBytes       = 100 << 10
 )
 
-// Config contains the workflow's DefiLlama selection policy.
+// Config contains the workflow's DefiLlama relay endpoint and selection policy.
 type Config struct {
+	RelayURL string
 	Chains   []ChainConfig
 	Projects []string
 	Symbols  []string
@@ -41,10 +41,11 @@ type ChainConfig struct {
 
 // Pool is a liquidity pool returned by the DefiLlama API.
 type Pool struct {
+	Pool    string  `json:"pool"`
 	Chain   string  `json:"chain"`
 	Project string  `json:"project"`
 	Symbol  string  `json:"symbol"`
-	Apy     float64 `json:"apy"`
+	Apy     float64 `json:"apyBase"`
 }
 
 // fetchParams holds the inputs for the node-mode fetch function.
@@ -52,6 +53,7 @@ type fetchParams struct {
 	Config           Config
 	ActiveProtocolId [32]byte
 	ActiveChainName  string
+	BearerToken      string
 }
 
 // fetchResult holds the output of the node-mode fetch function.
@@ -75,11 +77,19 @@ type defiLlamaRequester interface {
 func FetchAndSelectPools(runtime cre.Runtime, cfg Config, activeProtocolId [32]byte, activeChainSelector uint64) (*Pool, *Pool, error) {
 	selectorToName := chainSelectorToName(cfg)
 	activeChainName := selectorToName[activeChainSelector] // empty string if unknown
+	secret, err := runtime.GetSecret(&sdk.SecretRequest{Id: defiLlamaRelayBearerTokenSecret}).Await()
+	if err != nil {
+		return nil, nil, fmt.Errorf("get relay bearer token: %w", err)
+	}
+	if secret == nil || strings.TrimSpace(secret.Value) == "" {
+		return nil, nil, fmt.Errorf("get relay bearer token: empty secret")
+	}
 
 	params := fetchParams{
 		Config:           cfg,
 		ActiveProtocolId: activeProtocolId,
 		ActiveChainName:  activeChainName,
+		BearerToken:      secret.Value,
 	}
 
 	raw, err := crehttp.SendRequest(params, runtime, defiLlamaHTTPClient, fetchAndParse, cre.ConsensusIdenticalAggregation[fetchResult]()).Await()
@@ -106,9 +116,12 @@ func fetchAndParse(params fetchParams, _ *slog.Logger, sendRequester *crehttp.Se
 
 func fetchAndParseWithRequester(params fetchParams, requester defiLlamaRequester) (fetchResult, error) {
 	req := &crehttp.Request{
-		Url:     defiLlamaURL,
-		Method:  "GET",
-		Headers: map[string]string{"Accept-Encoding": "gzip"},
+		Url:    params.Config.RelayURL,
+		Method: "GET",
+		Headers: map[string]string{
+			"Accept":        "application/json",
+			"Authorization": "Bearer " + params.BearerToken,
+		},
 		Timeout: durationpb.New(defiLlamaRequestTimeout),
 	}
 
@@ -121,41 +134,12 @@ func fetchAndParseWithRequester(params fetchParams, requester defiLlamaRequester
 		return fetchResult{}, fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}
 
-	rawBody, err := readLimited(bytes.NewReader(resp.Body), defiLlamaMaxCompressedBytes, "compressed response body")
-	if err != nil {
-		return fetchResult{}, err
-	}
-
-	var reader io.Reader = bytes.NewReader(rawBody)
-	if strings.Contains(strings.ToLower(responseHeader(resp, "Content-Encoding")), "gzip") {
-		gz, gzErr := gzip.NewReader(bytes.NewReader(rawBody))
-		if gzErr != nil {
-			return fetchResult{}, fmt.Errorf("gzip reader: %w", gzErr)
-		}
-		defer gz.Close()
-		reader = gz
-	}
-
-	body, err := readLimited(reader, defiLlamaMaxDecodedBytes, "decoded response body")
+	body, err := readLimited(bytes.NewReader(resp.Body), defiLlamaMaxResponseBytes, "relay response body")
 	if err != nil {
 		return fetchResult{}, err
 	}
 
 	return parsePools(bytes.NewReader(body), params.Config, params.ActiveProtocolId, params.ActiveChainName)
-}
-
-func responseHeader(resp *crehttp.Response, key string) string {
-	for name, value := range resp.Headers {
-		if strings.EqualFold(name, key) {
-			return value
-		}
-	}
-	for name, values := range resp.MultiHeaders {
-		if strings.EqualFold(name, key) {
-			return strings.Join(values.Values, ",")
-		}
-	}
-	return ""
 }
 
 func readLimited(r io.Reader, limit int64, label string) ([]byte, error) {

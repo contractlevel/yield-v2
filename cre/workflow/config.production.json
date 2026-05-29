@@ -1,3 +1,8 @@
 {
-  "blockNumber": -3
+  "blockNumber": -3,
+  "defiLlama": {
+    "relayUrl": "https://yield-v2-defillama-relay.contractlevel.workers.dev/v1/defillama/pools",
+    "projects": ["aave-v3", "compound-v3", "aave-v4"],
+    "symbols": ["USDC"]
+  }
 }

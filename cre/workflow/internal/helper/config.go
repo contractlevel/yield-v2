@@ -2,6 +2,7 @@ package helper
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -17,6 +18,7 @@ type Config struct {
 }
 
 type DefiLlama struct {
+	RelayURL string   `json:"relayUrl"`
 	Projects []string `json:"projects"`
 	Symbols  []string `json:"symbols"`
 }
@@ -108,11 +110,29 @@ func isRequiredAddress(value string) bool {
 }
 
 func validateDefiLlamaConfig(cfg DefiLlama) error {
+	if err := validateRelayURL(cfg.RelayURL); err != nil {
+		return err
+	}
 	if err := validateUniqueNonEmptyStrings("defiLlama.projects", cfg.Projects); err != nil {
 		return err
 	}
 	if err := validateUniqueNonEmptyStrings("defiLlama.symbols", cfg.Symbols); err != nil {
 		return err
+	}
+	return nil
+}
+
+func validateRelayURL(value string) error {
+	if strings.TrimSpace(value) == "" {
+		return fmt.Errorf("defiLlama.relayUrl must be non-empty")
+	}
+
+	parsed, err := url.Parse(value)
+	if err != nil {
+		return fmt.Errorf("defiLlama.relayUrl invalid: %w", err)
+	}
+	if parsed.Scheme != "https" || parsed.Host == "" {
+		return fmt.Errorf("defiLlama.relayUrl must be an https URL")
 	}
 	return nil
 }

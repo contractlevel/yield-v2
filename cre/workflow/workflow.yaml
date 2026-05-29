@@ -21,7 +21,7 @@ staging-settings:
   workflow-artifacts:
     workflow-path: "."
     config-path: "./config.staging.json"
-    secrets-path: ""
+    secrets-path: "../secrets.yaml"
     
 
 # ==========================================================================
@@ -31,7 +31,7 @@ production-settings:
   workflow-artifacts:
     workflow-path: "."
     config-path: "./config.production.json"
-    secrets-path: ""
+    secrets-path: "../secrets.yaml"
 
 # ==========================================================================
 local-fork-settings:
@@ -40,4 +40,4 @@ local-fork-settings:
   workflow-artifacts:
     workflow-path: "."
     config-path: "./config.local-fork.generated.json"
-    secrets-path: ""
+    secrets-path: "../secrets.yaml"

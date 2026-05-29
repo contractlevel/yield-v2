@@ -7,7 +7,7 @@ Cloudflare Worker that filters live DefiLlama pool data into the compact shape c
 CRE's production HTTP response quota is `100 KB`. DefiLlama's full `/pools` response is larger than that, so the workflow calls this relay instead. The relay fetches the live DefiLlama response, filters to approved pools, and returns only:
 
 ```json
-{"data":[{"chain":"Arbitrum","project":"compound-v3","symbol":"USDC","apy":6.25}]}
+{"data":[{"pool":"d9c395b9-00d0-4426-a6b3-572a6dd68e54","chain":"Arbitrum","project":"compound-v3","symbol":"USDC","apyBase":6.25}]}
 ```
 
 ## Dependencies
@@ -40,9 +40,7 @@ Do not use `wrangler@latest` or `npx wrangler`.
 Current vars:
 
 ```toml
-ALLOWED_CHAINS = "Arbitrum,Avalanche,Ethereum,Base,Optimism"
-ALLOWED_PROJECTS = "aave-v3,compound-v3,aave-v4"
-ALLOWED_SYMBOLS = "USDC"
+ALLOWED_POOLS = "aa70268e-4b52-42bf-a116-608b370f9501,..."
 DEFILLAMA_UPSTREAM_URL = "https://yields.llama.fi/pools"
 ```
 
@@ -66,7 +64,16 @@ Set the bearer token as a Worker secret:
 npm exec wrangler -- secret put RELAY_BEARER_TOKEN
 ```
 
-Do not put `RELAY_BEARER_TOKEN` in `wrangler.toml`, `.env`, shell history examples, or committed docs.
+`RELAY_BEARER_TOKEN` is the access control for this public Worker URL. The token used during local testing or initial setup must be rotated before production use.
+
+Production rules:
+
+- Use a fresh high-entropy production token.
+- Store it in Cloudflare only as the Worker secret `RELAY_BEARER_TOKEN`.
+- Store the same value in CRE only as the workflow secret `DEFILLAMA_RELAY_BEARER_TOKEN`.
+- Do not put the production token in `.env`.
+- Do not put the production token in `wrangler.toml`, workflow config JSON, README examples, shell history, or committed docs.
+- A local `.env` may hold a development-only token and must remain ignored by git.
 
 ## Tooling Setup
 
@@ -132,7 +139,7 @@ RUN_LIVE_DEFILLAMA_TESTS=1 cargo test
 
 ## Deploy
 
-Set the production bearer token before deploying:
+Generate a fresh production bearer token, then set it as a Cloudflare Worker secret. Do not reuse the local development token.
 
 ```bash
 npm exec wrangler -- secret put RELAY_BEARER_TOKEN
@@ -155,7 +162,7 @@ curl \
 Expected response:
 
 ```json
-{"data":[{"chain":"Arbitrum","project":"compound-v3","symbol":"USDC","apy":6.25}]}
+{"data":[{"pool":"d9c395b9-00d0-4426-a6b3-572a6dd68e54","chain":"Arbitrum","project":"compound-v3","symbol":"USDC","apyBase":6.25}]}
 ```
 
 Also verify an unauthenticated request returns `401`.
@@ -166,8 +173,10 @@ The CRE workflow should call the deployed Worker URL instead of `https://yields.
 
 Use CRE secrets/config for:
 
-- `YIELD_DEFILLAMA_RELAY_URL`
-- `YIELD_DEFILLAMA_RELAY_BEARER_TOKEN`
+- `defiLlama.relayUrl` in the workflow config
+- `DEFILLAMA_RELAY_BEARER_TOKEN` in CRE secrets
+
+The deployed Worker URL is public. The bearer token is secret. The production token must be uploaded to CRE secrets, not placed in `.env` or committed config.
 
 The workflow should include:
 

@@ -190,6 +190,7 @@ func onCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, _ *cron.P
 	logger.Info("Initiated rebalance",
 		slog.String("toProject", bestPool.Project),
 		slog.String("toChain", bestPool.Chain),
+		slog.Float64("apyBase", bestPool.Apy),
 	)
 	return &workflowtypes.ExecutionResult{Result: "initiated rebalance"}, nil
 }
@@ -204,6 +205,7 @@ func newDefiLlamaConfig(config *helper.Config) offchain.Config {
 	}
 
 	return offchain.Config{
+		RelayURL: config.DefiLlama.RelayURL,
 		Chains:   chains,
 		Projects: config.DefiLlama.Projects,
 		Symbols:  config.DefiLlama.Symbols,

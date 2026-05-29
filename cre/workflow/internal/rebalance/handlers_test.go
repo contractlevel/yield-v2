@@ -110,6 +110,7 @@ func testConfig() *helper.Config {
 	return &helper.Config{
 		BlockNumber: -2,
 		DefiLlama: helper.DefiLlama{
+			RelayURL: "https://yield-v2-defillama-relay.contractlevel.workers.dev/v1/defillama/pools",
 			Projects: []string{"aave-v3", "compound-v3"},
 			Symbols:  []string{"USDC"},
 		},

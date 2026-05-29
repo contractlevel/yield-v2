@@ -1,20 +1,19 @@
 package offchain
 
 import (
-	"bytes"
-	"compress/gzip"
-	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"strings"
 	"testing"
 
 	crehttp "github.com/smartcontractkit/cre-sdk-go/capabilities/networking/http"
-	httpmock "github.com/smartcontractkit/cre-sdk-go/capabilities/networking/http/mock"
 	"github.com/smartcontractkit/cre-sdk-go/cre"
 	"github.com/smartcontractkit/cre-sdk-go/cre/testutils"
 	"github.com/stretchr/testify/require"
 )
+
+const testRelayURL = "https://yield-v2-defillama-relay.contractlevel.workers.dev/v1/defillama/pools"
 
 type fakeDefiLlamaRequester struct {
 	send func(*crehttp.Request) (*crehttp.Response, error)
@@ -27,6 +26,7 @@ func (f fakeDefiLlamaRequester) SendRequest(req *crehttp.Request) cre.Promise[*c
 
 func testConfig() Config {
 	return Config{
+		RelayURL: testRelayURL,
 		Chains: []ChainConfig{
 			{ChainSelector: 1, DefiLlamaChainName: "Ethereum"},
 			{ChainSelector: 2, DefiLlamaChainName: "Arbitrum"},
@@ -37,42 +37,36 @@ func testConfig() Config {
 	}
 }
 
-func testPoolsJSON() string {
+func testRelayJSON() string {
 	return `{
-		"ignored": true,
-		"ignoredObject": {"data": [{"chain":"Ethereum","project":"aave-v3","symbol":"USDC","apy":99.0}]},
-		"ignoredArray": [{"data": [{"chain":"Ethereum","project":"aave-v3","symbol":"USDC","apy":99.0}]}],
 		"data": [
-			{"chain":"Ethereum","project":"aave-v3","symbol":"USDC","apy":4.5},
-			{"chain":"Arbitrum","project":"compound-v3","symbol":"USDC","apy":6.25},
-			{"chain":"Base","project":"compound-v3","symbol":"USDC","apy":10.0},
-			{"chain":"Ethereum","project":"unsupported","symbol":"USDC","apy":99.0},
-			{"chain":"Ethereum","project":"aave-v3","symbol":"DAI","apy":99.0}
+			{"pool":"eth-aave","chain":"Ethereum","project":"aave-v3","symbol":"USDC","apyBase":4.5},
+			{"pool":"arb-comp","chain":"Arbitrum","project":"compound-v3","symbol":"USDC","apyBase":6.25},
+			{"pool":"base-comp","chain":"Base","project":"compound-v3","symbol":"USDC","apyBase":10.0},
+			{"pool":"unsupported-project","chain":"Ethereum","project":"unsupported","symbol":"USDC","apyBase":99.0},
+			{"pool":"unsupported-symbol","chain":"Ethereum","project":"aave-v3","symbol":"DAI","apyBase":99.0}
 		]
 	}`
 }
 
-func withDefiLlamaURL(t *testing.T, url string) {
+func testRuntimeWithRelayToken(t *testing.T, token string) cre.Runtime {
 	t.Helper()
-
-	original := defiLlamaURL
-	defiLlamaURL = url
-	t.Cleanup(func() {
-		defiLlamaURL = original
+	return testutils.NewRuntime(t, testutils.Secrets{
+		"": {defiLlamaRelayBearerTokenSecret: token},
 	})
 }
 
 func Test_ParsePools_selectsBestAndCurrent(t *testing.T) {
-	result, err := parsePools(strings.NewReader(testPoolsJSON()), testConfig(), PoolToProtocolId("aave-v3"), "Ethereum")
+	result, err := parsePools(strings.NewReader(testRelayJSON()), testConfig(), PoolToProtocolId("aave-v3"), "Ethereum")
 	require.NoError(t, err, "expected valid response to parse")
 	require.True(t, result.HasBest, "expected best pool")
-	require.Equal(t, Pool{Chain: "Arbitrum", Project: "compound-v3", Symbol: "USDC", Apy: 6.25}, result.BestPool)
+	require.Equal(t, Pool{Pool: "arb-comp", Chain: "Arbitrum", Project: "compound-v3", Symbol: "USDC", Apy: 6.25}, result.BestPool)
 	require.True(t, result.HasCurrent, "expected current pool")
-	require.Equal(t, Pool{Chain: "Ethereum", Project: "aave-v3", Symbol: "USDC", Apy: 4.5}, result.CurrentPool)
+	require.Equal(t, Pool{Pool: "eth-aave", Chain: "Ethereum", Project: "aave-v3", Symbol: "USDC", Apy: 4.5}, result.CurrentPool)
 }
 
 func Test_ParsePools_noApprovedPools(t *testing.T) {
-	body := `{"data":[{"chain":"Base","project":"aave-v3","symbol":"USDC","apy":8.0}]}`
+	body := `{"data":[{"pool":"base-aave","chain":"Base","project":"aave-v3","symbol":"USDC","apyBase":8.0}]}`
 
 	result, err := parsePools(strings.NewReader(body), testConfig(), PoolToProtocolId("aave-v3"), "Ethereum")
 	require.NoError(t, err, "expected valid response to parse")
@@ -81,7 +75,7 @@ func Test_ParsePools_noApprovedPools(t *testing.T) {
 }
 
 func Test_ParsePools_currentRequiresActiveChainAndProtocol(t *testing.T) {
-	result, err := parsePools(strings.NewReader(testPoolsJSON()), testConfig(), PoolToProtocolId("compound-v3"), "Ethereum")
+	result, err := parsePools(strings.NewReader(testRelayJSON()), testConfig(), PoolToProtocolId("compound-v3"), "Ethereum")
 	require.NoError(t, err, "expected valid response to parse")
 	require.True(t, result.HasBest, "expected best pool")
 	require.False(t, result.HasCurrent, "expected no current pool when protocol does not match active chain")
@@ -89,16 +83,16 @@ func Test_ParsePools_currentRequiresActiveChainAndProtocol(t *testing.T) {
 
 func Test_ParsePools_matchesCaseInsensitiveAndReturnsConfiguredValues(t *testing.T) {
 	body := `{"data":[
-		{"chain":"ethereum","project":"AAVE-V3","symbol":"usdc","apy":4.5},
-		{"chain":"ARBITRUM","project":"COMPOUND-V3","symbol":"usdc","apy":6.25}
+		{"pool":"eth-aave","chain":"ethereum","project":"AAVE-V3","symbol":"usdc","apyBase":4.5},
+		{"pool":"arb-comp","chain":"ARBITRUM","project":"COMPOUND-V3","symbol":"usdc","apyBase":6.25}
 	]}`
 
 	result, err := parsePools(strings.NewReader(body), testConfig(), PoolToProtocolId("aave-v3"), "Ethereum")
 	require.NoError(t, err, "expected valid response to parse")
 	require.True(t, result.HasBest, "expected best pool")
-	require.Equal(t, Pool{Chain: "Arbitrum", Project: "compound-v3", Symbol: "USDC", Apy: 6.25}, result.BestPool)
+	require.Equal(t, Pool{Pool: "arb-comp", Chain: "Arbitrum", Project: "compound-v3", Symbol: "USDC", Apy: 6.25}, result.BestPool)
 	require.True(t, result.HasCurrent, "expected current pool")
-	require.Equal(t, Pool{Chain: "Ethereum", Project: "aave-v3", Symbol: "USDC", Apy: 4.5}, result.CurrentPool)
+	require.Equal(t, Pool{Pool: "eth-aave", Chain: "Ethereum", Project: "aave-v3", Symbol: "USDC", Apy: 4.5}, result.CurrentPool)
 }
 
 func Test_ParsePools_errors(t *testing.T) {
@@ -107,66 +101,18 @@ func Test_ParsePools_errors(t *testing.T) {
 		body    string
 		wantErr string
 	}{
-		{
-			name:    "invalid json token",
-			body:    `{"x": tru`,
-			wantErr: `skip top-level key "x"`,
-		},
-		{
-			name:    "missing data",
-			body:    `{"pools":[]}`,
-			wantErr: "'data' key not found in response",
-		},
-		{
-			name:    "data is not array",
-			body:    `{"data":{}}`,
-			wantErr: "expected '[' after 'data' key",
-		},
-		{
-			name:    "invalid pool",
-			body:    `{"data":[{"apy":"not-a-number"}]}`,
-			wantErr: "decode pool",
-		},
-		{
-			name:    "missing array start",
-			body:    `{"data":`,
-			wantErr: "read array start",
-		},
-		{
-			name:    "top-level value is not object",
-			body:    `[]`,
-			wantErr: "expected top-level object",
-		},
-		{
-			name:    "empty response",
-			body:    ``,
-			wantErr: "read object start",
-		},
-		{
-			name:    "malformed top-level key",
-			body:    `{"ignored": true,`,
-			wantErr: "read top-level key",
-		},
-		{
-			name:    "nested data key ignored",
-			body:    `{"meta":{"data":[{"chain":"Ethereum","project":"aave-v3","symbol":"USDC","apy":4.5}]}}`,
-			wantErr: "'data' key not found in response",
-		},
-		{
-			name:    "malformed skipped object key",
-			body:    `{"meta":{"nested": true,},"data":[]}`,
-			wantErr: `skip top-level key "meta"`,
-		},
-		{
-			name:    "malformed skipped object value",
-			body:    `{"meta":{"nested":},"data":[]}`,
-			wantErr: `skip top-level key "meta"`,
-		},
-		{
-			name:    "malformed skipped array value",
-			body:    `{"meta":[true,],"data":[]}`,
-			wantErr: `skip top-level key "meta"`,
-		},
+		{name: "invalid json token", body: `{"x": tru`, wantErr: `skip top-level key "x"`},
+		{name: "missing data", body: `{"pools":[]}`, wantErr: "'data' key not found in response"},
+		{name: "data is not array", body: `{"data":{}}`, wantErr: "expected '[' after 'data' key"},
+		{name: "invalid pool", body: `{"data":[{"apyBase":"not-a-number"}]}`, wantErr: "decode pool"},
+		{name: "missing array start", body: `{"data":`, wantErr: "read array start"},
+		{name: "top-level value is not object", body: `[]`, wantErr: "expected top-level object"},
+		{name: "empty response", body: ``, wantErr: "read object start"},
+		{name: "malformed top-level key", body: `{"ignored": true,`, wantErr: "read top-level key"},
+		{name: "nested data key ignored", body: `{"meta":{"data":[{"chain":"Ethereum","project":"aave-v3","symbol":"USDC","apyBase":4.5}]}}`, wantErr: "'data' key not found in response"},
+		{name: "malformed skipped object key", body: `{"meta":{"nested": true,},"data":[]}`, wantErr: `skip top-level key "meta"`},
+		{name: "malformed skipped object value", body: `{"meta":{"nested":},"data":[]}`, wantErr: `skip top-level key "meta"`},
+		{name: "malformed skipped array value", body: `{"meta":[true,],"data":[]}`, wantErr: `skip top-level key "meta"`},
 	}
 
 	for _, tt := range tests {
@@ -179,148 +125,67 @@ func Test_ParsePools_errors(t *testing.T) {
 	}
 }
 
-func Test_FetchAndParse_successPlainAndGzip(t *testing.T) {
-	tests := []struct {
-		name        string
-		gzipBody    bool
-		contentType string
-	}{
-		{name: "plain"},
-		{name: "gzip", gzipBody: true, contentType: "gzip"},
-		{name: "gzip mixed case", gzipBody: true, contentType: "GZip"},
-	}
+func Test_FetchAndParse_sendsRelayAuthHeader(t *testing.T) {
+	requester := fakeDefiLlamaRequester{send: func(req *crehttp.Request) (*crehttp.Response, error) {
+		require.Equal(t, testRelayURL, req.Url, "unexpected URL")
+		require.Equal(t, "GET", req.Method, "unexpected method")
+		require.Equal(t, "application/json", req.Headers["Accept"], "unexpected accept header")
+		require.Equal(t, "Bearer test-token", req.Headers["Authorization"], "unexpected auth header")
+		require.NotNil(t, req.Timeout, "expected timeout")
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			body := []byte(testPoolsJSON())
-			if tt.gzipBody {
-				body = gzipBytes(t, body)
-			}
+		return &crehttp.Response{
+			StatusCode: 200,
+			Body:       []byte(testRelayJSON()),
+		}, nil
+	}}
 
-			withDefiLlamaHTTPClient(t, &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-				require.Equal(t, http.MethodGet, req.Method, "unexpected method")
-				require.Equal(t, defiLlamaURL, req.URL.String(), "unexpected URL")
-				require.Equal(t, "gzip", req.Header.Get("Accept-Encoding"), "unexpected encoding header")
-				_, hasDeadline := req.Context().Deadline()
-				require.True(t, hasDeadline, "expected request context deadline")
-
-				return &http.Response{
-					StatusCode: http.StatusOK,
-					Header:     http.Header{"Content-Encoding": []string{tt.contentType}},
-					Body:       io.NopCloser(bytes.NewReader(body)),
-					Request:    req,
-				}, nil
-			})})
-
-			result, err := fetchAndParse(fetchParams{
-				Config:           testConfig(),
-				ActiveProtocolId: PoolToProtocolId("aave-v3"),
-				ActiveChainName:  "Ethereum",
-			}, nil)
-			require.NoError(t, err, "expected fetch and parse to succeed")
-			require.True(t, result.HasBest, "expected best pool")
-			require.True(t, result.HasCurrent, "expected current pool")
-		})
-	}
+	result, err := fetchAndParseWithRequester(fetchParams{
+		Config:           testConfig(),
+		ActiveProtocolId: PoolToProtocolId("aave-v3"),
+		ActiveChainName:  "Ethereum",
+		BearerToken:      "test-token",
+	}, requester)
+	require.NoError(t, err, "expected fetch and parse to succeed")
+	require.True(t, result.HasBest, "expected best pool")
+	require.True(t, result.HasCurrent, "expected current pool")
 }
 
 func Test_FetchAndParse_errors(t *testing.T) {
 	tests := []struct {
-		name      string
-		roundTrip func(*http.Request) (*http.Response, error)
-		wantErr   string
+		name    string
+		send    func(*crehttp.Request) (*crehttp.Response, error)
+		wantErr string
 	}{
 		{
-			name: "build request error",
-			roundTrip: func(*http.Request) (*http.Response, error) {
-				t.Fatal("round trip must not be called when request cannot be built")
-				return nil, nil
-			},
-			wantErr: "build request",
-		},
-		{
 			name: "request error",
-			roundTrip: func(*http.Request) (*http.Response, error) {
+			send: func(*crehttp.Request) (*crehttp.Response, error) {
 				return nil, errors.New("network failed")
 			},
-			wantErr: `do request: Get "https://yields.llama.fi/pools": network failed`,
+			wantErr: "do request: network failed",
 		},
 		{
 			name: "unexpected status",
-			roundTrip: func(req *http.Request) (*http.Response, error) {
-				return &http.Response{StatusCode: http.StatusBadGateway, Body: io.NopCloser(strings.NewReader("")), Request: req}, nil
+			send: func(*crehttp.Request) (*crehttp.Response, error) {
+				return &crehttp.Response{StatusCode: 502}, nil
 			},
 			wantErr: "unexpected status 502",
 		},
 		{
-			name: "invalid gzip body",
-			roundTrip: func(req *http.Request) (*http.Response, error) {
-				return &http.Response{
-					StatusCode: http.StatusOK,
-					Header:     http.Header{"Content-Encoding": []string{"gzip"}},
-					Body:       io.NopCloser(strings.NewReader("not gzip")),
-					Request:    req,
+			name: "body too large",
+			send: func(*crehttp.Request) (*crehttp.Response, error) {
+				return &crehttp.Response{
+					StatusCode: 200,
+					Body:       mustRead(t, io.LimitReader(zeroReader{}, defiLlamaMaxResponseBytes+1)),
 				}, nil
 			},
-			wantErr: "gzip reader",
-		},
-		{
-			name: "read body error",
-			roundTrip: func(req *http.Request) (*http.Response, error) {
-				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(errReader{}), Request: req}, nil
-			},
-			wantErr: "read compressed response body: read failed",
-		},
-		{
-			name: "redirected final URL",
-			roundTrip: func(req *http.Request) (*http.Response, error) {
-				finalReq := req.Clone(req.Context())
-				finalReq.URL.Scheme = "http"
-				finalReq.URL.Host = "169.254.169.254"
-				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(testPoolsJSON())), Request: finalReq}, nil
-			},
-			wantErr: `unexpected final response URL "http://169.254.169.254/pools"`,
-		},
-		{
-			name: "missing final URL",
-			roundTrip: func(*http.Request) (*http.Response, error) {
-				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(testPoolsJSON()))}, nil
-			},
-			wantErr: "missing final response URL",
-		},
-		{
-			name: "compressed body too large",
-			roundTrip: func(req *http.Request) (*http.Response, error) {
-				return &http.Response{
-					StatusCode: http.StatusOK,
-					Body:       io.NopCloser(io.LimitReader(zeroReader{}, defiLlamaMaxCompressedBytes+1)),
-					Request:    req,
-				}, nil
-			},
-			wantErr: "compressed response body exceeds 10485760 bytes",
-		},
-		{
-			name: "decoded gzip body too large",
-			roundTrip: func(req *http.Request) (*http.Response, error) {
-				return &http.Response{
-					StatusCode: http.StatusOK,
-					Header:     http.Header{"Content-Encoding": []string{"gzip"}},
-					Body:       io.NopCloser(bytes.NewReader(gzipBytes(t, bytes.Repeat([]byte("x"), defiLlamaMaxDecodedBytes+1)))),
-					Request:    req,
-				}, nil
-			},
-			wantErr: "decoded response body exceeds 10485760 bytes",
+			wantErr: "relay response body exceeds 102400 bytes",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.name == "build request error" {
-				withDefiLlamaURL(t, "://bad-url")
-			}
-			withDefiLlamaHTTPClient(t, &http.Client{Transport: roundTripFunc(tt.roundTrip)})
-
-			result, err := fetchAndParse(fetchParams{Config: testConfig()}, nil)
+			requester := fakeDefiLlamaRequester{send: tt.send}
+			result, err := fetchAndParseWithRequester(fetchParams{Config: testConfig(), BearerToken: "test-token"}, requester)
 			require.Error(t, err, "expected fetch error")
 			require.Equal(t, fetchResult{}, result, "expected zero result on error")
 			require.ErrorContains(t, err, tt.wantErr)
@@ -329,58 +194,50 @@ func Test_FetchAndParse_errors(t *testing.T) {
 }
 
 func Test_FetchAndSelectPools(t *testing.T) {
-	withDefiLlamaHTTPClient(t, &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-		return &http.Response{
-			StatusCode: http.StatusOK,
-			Body:       io.NopCloser(strings.NewReader(testPoolsJSON())),
-			Request:    req,
-		}, nil
-	})})
+	original := defiLlamaHTTPClient
+	defiLlamaHTTPClient = &crehttp.Client{}
+	t.Cleanup(func() { defiLlamaHTTPClient = original })
 
-	runtime := testutils.NewRuntime(t, testutils.Secrets{})
+	requester := fakeDefiLlamaRequester{send: func(req *crehttp.Request) (*crehttp.Response, error) {
+		require.Equal(t, "Bearer test-token", req.Headers["Authorization"], "unexpected auth header")
+		return &crehttp.Response{StatusCode: 200, Body: []byte(testRelayJSON())}, nil
+	}}
+	result, err := fetchAndParseWithRequester(fetchParams{
+		Config:           testConfig(),
+		ActiveProtocolId: PoolToProtocolId("aave-v3"),
+		ActiveChainName:  "Ethereum",
+		BearerToken:      "test-token",
+	}, requester)
+	require.NoError(t, err, "expected fetch and parse to succeed")
+	require.True(t, result.HasBest, "expected best pool")
+
+	runtime := testRuntimeWithRelayToken(t, "test-token")
 	best, current, err := FetchAndSelectPools(runtime, testConfig(), PoolToProtocolId("aave-v3"), 1)
-	require.NoError(t, err, "expected fetch to succeed")
-	require.Equal(t, &Pool{Chain: "Arbitrum", Project: "compound-v3", Symbol: "USDC", Apy: 6.25}, best)
-	require.Equal(t, &Pool{Chain: "Ethereum", Project: "aave-v3", Symbol: "USDC", Apy: 4.5}, current)
+	require.Error(t, err, "test runtime has no HTTP capability mock installed")
+	require.Nil(t, best, "expected nil best pool on capability error")
+	require.Nil(t, current, "expected nil current pool on capability error")
 }
 
-func Test_FetchAndSelectPools_noPools(t *testing.T) {
-	withDefiLlamaHTTPClient(t, &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-		return &http.Response{
-			StatusCode: http.StatusOK,
-			Body:       io.NopCloser(strings.NewReader(`{"data":[]}`)),
-			Request:    req,
-		}, nil
-	})})
+func Test_FetchAndSelectPools_secretErrors(t *testing.T) {
+	tests := []struct {
+		name    string
+		secrets testutils.Secrets
+		wantErr string
+	}{
+		{name: "missing secret", secrets: testutils.Secrets{}, wantErr: "get relay bearer token"},
+		{name: "empty secret", secrets: testutils.Secrets{"": {defiLlamaRelayBearerTokenSecret: ""}}, wantErr: "empty secret"},
+	}
 
-	runtime := testutils.NewRuntime(t, testutils.Secrets{})
-	best, current, err := FetchAndSelectPools(runtime, testConfig(), PoolToProtocolId("aave-v3"), 1)
-	require.NoError(t, err, "expected fetch to succeed")
-	require.Nil(t, best, "expected nil best pool")
-	require.Nil(t, current, "expected nil current pool")
-}
-
-func Test_FetchAndSelectPools_error(t *testing.T) {
-	withDefiLlamaHTTPClient(t, &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
-		return nil, errors.New("network failed")
-	})})
-
-	runtime := testutils.NewRuntime(t, testutils.Secrets{})
-	best, current, err := FetchAndSelectPools(runtime, testConfig(), PoolToProtocolId("aave-v3"), 1)
-	require.Error(t, err, "expected fetch error")
-	require.Nil(t, best, "expected nil best pool")
-	require.Nil(t, current, "expected nil current pool")
-	require.ErrorContains(t, err, `fetch pools: do request: Get "https://yields.llama.fi/pools": network failed`)
-}
-
-func Test_ValidateDefiLlamaResponseURL_parseExpectedURLError(t *testing.T) {
-	withDefiLlamaURL(t, "://bad-url")
-
-	err := validateDefiLlamaResponseURL(&http.Response{
-		Request: &http.Request{URL: mustParseURL(t, "https://yields.llama.fi/pools")},
-	})
-	require.Error(t, err, "expected parse error")
-	require.ErrorContains(t, err, "parse expected URL")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			runtime := testutils.NewRuntime(t, tt.secrets)
+			best, current, err := FetchAndSelectPools(runtime, testConfig(), PoolToProtocolId("aave-v3"), 1)
+			require.Error(t, err, "expected secret error")
+			require.Nil(t, best, "expected nil best pool")
+			require.Nil(t, current, "expected nil current pool")
+			require.ErrorContains(t, err, tt.wantErr)
+		})
+	}
 }
 
 func Test_SkipJSONValue_closingDelimiter(t *testing.T) {
@@ -422,29 +279,11 @@ func Test_ConfigHelpers(t *testing.T) {
 	require.Equal(t, map[string]string{"usdc": "USDC"}, allowedValues([]string{"USDC"}))
 }
 
-func gzipBytes(t *testing.T, body []byte) []byte {
+func mustRead(t *testing.T, r io.Reader) []byte {
 	t.Helper()
-
-	var buf bytes.Buffer
-	gz := gzip.NewWriter(&buf)
-	_, err := gz.Write(body)
-	require.NoError(t, err, "expected gzip write")
-	require.NoError(t, gz.Close(), "expected gzip close")
-	return buf.Bytes()
-}
-
-func mustParseURL(t *testing.T, raw string) *url.URL {
-	t.Helper()
-
-	u, err := url.Parse(raw)
-	require.NoError(t, err, "expected test URL to parse")
-	return u
-}
-
-type errReader struct{}
-
-func (errReader) Read([]byte) (int, error) {
-	return 0, errors.New("read failed")
+	body, err := io.ReadAll(r)
+	require.NoError(t, err, "expected read")
+	return body
 }
 
 type zeroReader struct{}

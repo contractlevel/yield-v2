@@ -84,6 +84,19 @@ load_env() {
   set +a
 }
 
+load_cre_env() {
+  local env_file="$CRE_DIR/.env"
+  if [[ ! -f "$env_file" ]]; then
+    echo "ERROR: expected env file at $env_file" >&2
+    exit 1
+  fi
+
+  set -a
+  # shellcheck disable=SC1090
+  . "$env_file"
+  set +a
+}
+
 kill_recorded_anvils() {
   if [[ ! -f "$PID_FILE" ]]; then
     echo "No local fork PID file found at $PID_FILE"
@@ -346,6 +359,9 @@ fi
 trap warn_on_error ERR
 
 load_env
+if [[ "$SIMULATE" == true ]]; then
+  load_cre_env
+fi
 DEFAULT_ANVIL_PRIVATE_KEY="${DEFAULT_ANVIL_PRIVATE_KEY:-0xac0974bec39a17e36ba4a6f4d238ff944bacb478cbed5efcae784d7bf4f2ff80}"
 
 require_command anvil
@@ -362,13 +378,16 @@ require_env AVALANCHE_MAINNET_RPC_URL
 require_env ETHEREUM_MAINNET_RPC_URL
 require_env BASE_MAINNET_RPC_URL
 require_env OPTIMISM_MAINNET_RPC_URL
+if [[ "$SIMULATE" == true ]]; then
+  require_env YIELD_RELAY_TOKEN_VAR
+fi
 
 DEPLOYER_ADDRESS="$(cast wallet address --private-key "$DEFAULT_ANVIL_PRIVATE_KEY")"
 
 mkdir -p "$LOG_DIR"
 check_ports_available
 
-start_anvil "arbitrum" "$ARBITRUM_MAINNET_RPC_URL" 8545 34000
+start_anvil "arbitrum" "$ARBITRUM_MAINNET_RPC_URL" 8545 30000
 start_anvil "avalanche" "$AVALANCHE_MAINNET_RPC_URL" 8546 12600
 start_anvil "ethereum" "$ETHEREUM_MAINNET_RPC_URL" 8547 2100
 start_anvil "base" "$BASE_MAINNET_RPC_URL" 8548 12600
