@@ -24,6 +24,7 @@ contract ParentVault_InitiateRebalanceUnitTest is BaseUnitTest {
         _registerAdapter(AAVE_V4_PROTOCOL_ID, address(s_newMockProtocolAdapter));
         deal(address(s_mockUsdc), address(s_parentVault), REBALANCE_AMOUNT);
         s_mockProtocolAdapter.setWithdrawReturnAmount(REBALANCE_AMOUNT);
+        _setParentEpochNonce(2);
 
         _changePrank(i_rebalanceOperator);
     }
@@ -52,6 +53,13 @@ contract ParentVault_InitiateRebalanceUnitTest is BaseUnitTest {
     function test_ParentVault_initiateRebalance_RevertWhen_SameStrategy() public {
         vm.expectRevert(IParentVault.ParentVault__SameStrategy.selector);
         s_parentVault.initiateRebalance(_localStrategy(AAVE_V3_PROTOCOL_ID));
+    }
+
+    function test_ParentVault_initiateRebalance_RevertWhen_NoCompletedEpoch() public {
+        _setParentEpochNonce(1);
+
+        vm.expectRevert(IParentVault.ParentVault__NoCompletedEpoch.selector);
+        s_parentVault.initiateRebalance(_localStrategy(AAVE_V4_PROTOCOL_ID));
     }
 
     function test_ParentVault_initiateRebalance_RevertWhen_PriorEpochExecuting() public {

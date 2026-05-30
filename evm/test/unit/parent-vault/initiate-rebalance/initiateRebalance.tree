@@ -7,6 +7,8 @@ ParentVault_initiateRebalance
 │   └── it should revert with BaseVault__RecoveryAlreadyPending
 ├── when new strategy is the active strategy
 │   └── it should revert with ParentVault__SameStrategy
+├── when no epoch has completed
+│   └── it should revert with ParentVault__NoCompletedEpoch
 ├── when prior epoch is executing
 │   └── it should revert with ParentVault__EpochExecuting
 ├── when parent rebalances local to local

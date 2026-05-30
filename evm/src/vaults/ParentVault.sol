@@ -574,10 +574,10 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
             revert ParentVault__SameStrategy();
         }
 
-        // @review revert if currentEpochNonce == 1
-
         // revert if an epoch is in flight
         uint256 currentEpochNonce = s_epochNonce;
+        if (currentEpochNonce == 1) revert ParentVault__NoCompletedEpoch();
+
         // Cannot rebalance if any epoch is still EXECUTING
         // The previous epoch may still be awaiting CCIP confirmation
         if (currentEpochNonce > 1 && s_epochs[currentEpochNonce - 1].status == Types.EpochStatus.EXECUTING) {

@@ -239,6 +239,7 @@ abstract contract BaseCcipForkTest is BaseForkTest {
 
     function _initiateRebalanceThroughWorkflow(bytes32 workflowId, Types.Strategy memory newStrategy) internal {
         _selectArbitrumFork();
+        _markParentFirstEpochCompleted();
         _callWorkflowRouter(
             parent.workflowRouter,
             workflowId,
@@ -246,6 +247,12 @@ abstract contract BaseCcipForkTest is BaseForkTest {
             i_owner,
             abi.encodeWithSelector(ParentVault.initiateRebalance.selector, newStrategy)
         );
+    }
+
+    function _markParentFirstEpochCompleted() internal {
+        if (parent.vault.getEpochNonce() == 1) {
+            stdstore.target(address(parent.vault)).sig("getEpochNonce()").checked_write(2);
+        }
     }
 
     function _completeRebalanceThroughWorkflow(bytes32 workflowId) internal {

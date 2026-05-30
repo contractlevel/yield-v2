@@ -44,6 +44,8 @@ interface IParentVault is IBaseVault {
     error ParentVault__RebalanceInProgress();
     /// @dev Thrown when no rebalance is in progress
     error ParentVault__NoRebalanceInProgress();
+    /// @dev Thrown when initiateRebalance is called before any epoch has completed
+    error ParentVault__NoCompletedEpoch();
     /// @dev Thrown when the new strategy matches the active strategy
     error ParentVault__SameStrategy();
     /// @dev Thrown when a prior epoch is still executing
