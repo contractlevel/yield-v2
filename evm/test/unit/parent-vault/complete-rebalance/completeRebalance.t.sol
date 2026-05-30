@@ -13,8 +13,8 @@ contract ParentVault_CompleteRebalanceUnitTest is BaseUnitTest {
     using stdStorage for StdStorage;
 
     uint256 internal constant TOTAL_SHARES = 1_000_000 * 1e6;
-    uint256 internal constant MANAGEMENT_FEE_BPS = 1_000;
-    uint256 internal constant BPS_DENOMINATOR = 100_000; // @review 10_000 in contracts
+    uint256 internal constant MANAGEMENT_FEE_BPS = 100;
+    uint256 internal constant BPS_DENOMINATOR = 10_000;
 
     function setUp() public {
         _setParentRebalanceState(Types.RebalanceState.REBALANCING);

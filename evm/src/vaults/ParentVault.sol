@@ -34,7 +34,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
                                CONSTANTS
     //////////////////////////////////////////////////////////////*/
     /// @dev Minimum time an epoch must be open
-    uint256 internal constant MIN_EPOCH_PERIOD = 1 hours; // @review this value
+    uint256 internal constant MIN_EPOCH_PERIOD = 1 hours;
     /// @dev Basis points denominator (100% = 10_000 bps)
     uint256 internal constant BPS_DENOMINATOR = 10_000;
     /// @dev Performance fee rate (7.77%)
