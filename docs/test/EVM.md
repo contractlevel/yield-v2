@@ -1,5 +1,11 @@
 # EVM Testing
 
+## Build
+
+```
+forge build --build-info
+```
+
 ## Coverage with via_ir
 
 Run for coverage:
@@ -48,4 +54,17 @@ medusa fuzz \
 
 ```
 open medusa/coverage/coverage_report.html
+```
+
+```
+recon fuzz . --config echidna.yaml --contract CryticTester
+```
+
+```
+recon fuzz . \
+    --config echidna.yaml \
+    --contract CryticTester \
+    --recon-corpus-dir recon-corpus \
+    --workers 10 \
+    --stop-on-fail
 ```
