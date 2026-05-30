@@ -500,7 +500,6 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
             else {
                 // remote strategy: CRE handles the withdrawal
                 epoch.status = Types.EpochStatus.EXECUTING;
-                // @review is there ever a case where the netWithdrawAmount is less than the lowest denomination of underlying asset/usdc?
                 emit EpochExecuting(epochNonce, netWithdrawAmount);
             }
         }
