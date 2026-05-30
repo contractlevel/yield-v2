@@ -17,6 +17,7 @@ import {CompoundV3Adapter} from "../src/modules/adapters/CompoundV3Adapter.sol";
 import {WorkflowRouter} from "../src/modules/WorkflowRouter.sol";
 import {YieldcoinShare} from "../src/token/YieldcoinShare.sol";
 import {IProtocolAdapter} from "../src/interfaces/IProtocolAdapter.sol";
+import {IAaveV4Spoke} from "../src/interfaces/IAaveV4Spoke.sol";
 import {Roles} from "../src/libraries/Roles.sol";
 
 import {CredentialRegistry} from "@chainlink/cross-chain-identity/CredentialRegistry.sol";
@@ -208,7 +209,7 @@ abstract contract BaseDeploymentTest is BaseTest {
         _assertAdapterRegistered(registry, AAVE_V4_PROTOCOL_ID, address(adapter));
         _assertProtocolAdapterConfigured(adapter, vault, usdc);
         assertEq(adapter.getProtocolPool(), configuredSpoke);
-        // assertGt(adapter.getReserveId(), 0); // @review. mocks use 0, but forks dont (or at least eth fork doesnt)
+        assertEq(IAaveV4Spoke(configuredSpoke).getReserve(adapter.getReserveId()).underlying, usdc);
     }
 
     function _assertOptionalCompoundV3Adapter(
