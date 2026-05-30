@@ -97,7 +97,7 @@ These refine the invariant statements. They are not invariant violations.
 | Misconfigured ACE policy stacks                  | See `ENV-003`.                 |
 | Malicious or incorrect protocol adapters         | See `ENV-004`.                 |
 | Treasury set to zero                             | See `CFG-001` and `DEV-005`.   |
-| Emergency drainer role held by an unsafe account | See `PAUSE-005` and `DEV-006`. |
+| Emergency drainer role held by an unsafe account | See `PAUSE-005` and `DEV-005`. |
 
 ## Non-Invariants
 
@@ -136,7 +136,7 @@ These are desired configuration properties. Address zero-checks are not currentl
 | `PAUSE-002` | Vault `unpause` requires `UNPAUSER_ROLE` and clears `s_pausedAt`.                                                                                                           | `unit`                   | candidate |
 | `PAUSE-003` | WorkflowRouter `pause` and `unpause` require their respective roles.                                                                                                        | `unit`                   | candidate |
 | `PAUSE-004` | `emergencyDrain` requires `EMERGENCY_DRAINER_ROLE` and can execute only after the emergency drain delay has elapsed.                                                        | `unit`                   | candidate |
-| `PAUSE-005` | Emergency drain is allowed to break normal accounting expectations; after drain, recovery slots and withdraw claim amounts are not automatically reconciled. See `DEV-006`. | `postcondition + manual` | candidate |
+| `PAUSE-005` | Emergency drain is allowed to break normal accounting expectations; after drain, recovery slots and withdraw claim amounts are not automatically reconciled. See `DEV-005`. | `postcondition + manual` | candidate |
 
 ## Epoch Lifecycle
 
