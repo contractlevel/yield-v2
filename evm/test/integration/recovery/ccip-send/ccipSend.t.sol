@@ -23,7 +23,7 @@ contract CcipSend_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
             _childStrategy(AAVE_V3_PROTOCOL_ID)
         );
         _completeRebalanceThroughWorkflow(
-            parent.workflowRouter, COMPLETE_REBALANCE_WORKFLOW_ID, COMPLETE_REBALANCE_WORKFLOW_NAME, i_owner, 1
+            parent.workflowRouter, COMPLETE_REBALANCE_WORKFLOW_ID, COMPLETE_REBALANCE_WORKFLOW_NAME, i_owner
         );
 
         _approveShares(i_depositor, address(parent.vault), shareAmount);

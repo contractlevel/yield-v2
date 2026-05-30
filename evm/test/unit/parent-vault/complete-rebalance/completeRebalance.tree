@@ -5,8 +5,6 @@ ParentVault_completeRebalance
   │   └── it should revert with ParentVault__NoRebalanceInProgress
   ├── when recovery exists
   │   └── it should revert with BaseVault__RecoveryAlreadyPending
-  ├── when rebalance nonce is invalid
-  │   └── it should revert with ParentVault__InvalidRebalanceNonce
   ├── it should set rebalance state to NONE
   ├── it should increment the rebalance nonce
   ├── it should update lastRebalanceCompletedTimestamp to block.timestamp

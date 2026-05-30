@@ -5,8 +5,6 @@ import {BaseForkTest} from "../BaseForkTest.t.sol";
 import {HelperConfig} from "../../../script/HelperConfig.s.sol";
 import {Roles} from "../../../src/libraries/Roles.sol";
 
-// @review aave v4 constructor assertions
-
 abstract contract BaseForkDeploymentTest is BaseForkTest {
     function _assertParentForkDeployment() internal view {
         assertEq(parent.vault.defaultAdmin(), parentForkDeployer);

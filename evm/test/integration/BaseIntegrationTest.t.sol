@@ -406,15 +406,14 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
         WorkflowRouter router,
         bytes32 workflowId,
         bytes10 workflowName,
-        address workflowOwner,
-        uint256 rebalanceNonce
+        address workflowOwner
     ) internal {
         _callWorkflowRouter(
             router,
             workflowId,
             workflowName,
             workflowOwner,
-            abi.encodeWithSelector(ParentVault.completeRebalance.selector, rebalanceNonce)
+            abi.encodeWithSelector(ParentVault.completeRebalance.selector)
         );
     }
 

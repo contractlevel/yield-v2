@@ -30,7 +30,7 @@ contract ParentToChild_CcipForkTest is BaseCcipForkTest {
         assertEq(uint256(pendingRebalance.state), uint256(Types.RebalanceState.REBALANCING));
         assertEq(parent.vault.getActiveProtocolAdapter(), address(0));
 
-        _completeRebalanceThroughWorkflow(COMPLETE_WORKFLOW_ID, 1);
+        _completeRebalanceThroughWorkflow(COMPLETE_WORKFLOW_ID);
 
         Types.Rebalance memory completedRebalance = parent.vault.getRebalance();
         assertEq(uint256(completedRebalance.state), uint256(Types.RebalanceState.NONE));

@@ -104,9 +104,7 @@ contract ChildToRemoteChild_RebalanceIntegrationTest is BaseIntegrationTest {
         );
 
         vm.recordLogs();
-        _completeRebalanceThroughWorkflow(
-            parent.workflowRouter, COMPLETE_WORKFLOW_ID, COMPLETE_WORKFLOW_NAME, i_owner, 1
-        );
+        _completeRebalanceThroughWorkflow(parent.workflowRouter, COMPLETE_WORKFLOW_ID, COMPLETE_WORKFLOW_NAME, i_owner);
         Vm.Log[] memory completeLogs = vm.getRecordedLogs();
 
         Vm.Log memory completedLog =

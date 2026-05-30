@@ -352,11 +352,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         if (parent.vault.getRebalance().state == Types.RebalanceState.REBALANCING) {
             _completeRebalanceThroughWorkflow(
-                parent.workflowRouter,
-                COMPLETE_REBALANCE_WORKFLOW_ID,
-                COMPLETE_REBALANCE_WORKFLOW_NAME,
-                i_owner,
-                beforeRebalance.nonce
+                parent.workflowRouter, COMPLETE_REBALANCE_WORKFLOW_ID, COMPLETE_REBALANCE_WORKFLOW_NAME, i_owner
             );
         }
 

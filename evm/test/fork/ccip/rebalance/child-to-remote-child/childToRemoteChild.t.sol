@@ -42,7 +42,7 @@ contract ChildToRemoteChild_CcipForkTest is BaseCcipForkTest {
         assertApproxEqAbs(ethereumChild.aaveV3Adapter.getTVL(), DEPOSIT_AMOUNT, PROTOCOL_FORK_TOLERANCE);
         assertEq(ethereumChild.vault.getActiveProtocolAdapter(), address(ethereumChild.aaveV3Adapter));
 
-        _completeRebalanceThroughWorkflow(COMPLETE_WORKFLOW_ID, 1);
+        _completeRebalanceThroughWorkflow(COMPLETE_WORKFLOW_ID);
 
         Types.Rebalance memory completedRebalance = parent.vault.getRebalance();
         assertEq(uint256(completedRebalance.state), uint256(Types.RebalanceState.NONE));

@@ -358,7 +358,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         else if (ccipTxType == Types.CcipTx.REBALANCE) {
             (uint256 rebalanceNonce, bytes32 protocolId) = abi.decode(data, (uint256, bytes32));
             bool success = _handleCCIPRebalance(rebalanceNonce, protocolId, receivedUsdcAmount);
-            if (success) _finalizeRebalance(rebalanceNonce);
+            if (success) _finalizeRebalance();
         } else {
             revert BaseVault__InvalidTxType(ccipTxType);
         }
@@ -442,7 +442,8 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
 
         // 5. Mint new shares and burn withdrawn shares
         uint256 newShares = epoch.totalDepositAmount * SHARE_PRECISION / settlementPricePerShare;
-        s_totalShares = s_totalShares + newShares - epoch.totalShareBurnAmount; // @review gas optimization
+        // @review-gas
+        s_totalShares = s_totalShares + newShares - epoch.totalShareBurnAmount;
 
         // 6. Store epoch settlement data
         epoch.totalWithdrawClaimAmount = totalWithdrawUsdc;
@@ -599,7 +600,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
                 _setActiveAdapter(newStrategy.protocolId);
                 _executeDeposit(amountOut, true);
                 emit RebalanceDepositSuccess(s_rebalance.nonce, amountOut);
-                _finalizeRebalance(s_rebalance.nonce);
+                _finalizeRebalance();
             } else {
                 // ccip send to new strategy chain
                 s_activeProtocolAdapter = address(0);
@@ -617,20 +618,18 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @notice The WorkflowRouter calls this
     /// @dev Precondition: caller must have REBALANCE_OPERATOR_ROLE
     /// @dev Precondition: there must not be a stored recovery mode
-    function completeRebalance(uint256 rebalanceNonce) external nonReentrant onlyRole(Roles.REBALANCE_OPERATOR_ROLE) {
+    function completeRebalance() external nonReentrant onlyRole(Roles.REBALANCE_OPERATOR_ROLE) {
         _requireNoRecovery();
-        _finalizeRebalance(rebalanceNonce);
+        _finalizeRebalance();
     }
 
     /// @notice Finalizes a rebalance
-    /// @param rebalanceNonce the nonce of the rebalance to finalize
     /// @dev Precondition: a rebalance must be in progress
-    /// @dev Precondition: rebalanceNonce must be the current rebalanceNonce @review we can probably delete this param
     /// @notice Collects a management fee based on time elapsed since the last rebalance completed
-    function _finalizeRebalance(uint256 rebalanceNonce) internal {
+    function _finalizeRebalance() internal {
         if (s_rebalance.state != Types.RebalanceState.REBALANCING) revert ParentVault__NoRebalanceInProgress();
-        if (s_rebalance.nonce != rebalanceNonce) revert ParentVault__InvalidRebalanceNonce(rebalanceNonce);
 
+        uint256 rebalanceNonce = s_rebalance.nonce;
         uint256 lastRebalanceCompletedTimestamp = s_rebalance.lastRebalanceCompletedTimestamp;
 
         s_rebalance.activeStrategy = s_rebalance.pendingStrategy;
@@ -653,8 +652,8 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @dev Precondition: pending recovery nonce must be the current nonce
     /// @notice This Parent implemention overrides the BaseVault because we can finalize the rebalance in same atomic tx
     function recoverFailedRebalanceDeposit() external override(BaseVault, IParentVault) {
-        (uint256 rebalanceNonce,) = _recoverFailedRebalanceDeposit();
-        _finalizeRebalance(rebalanceNonce);
+        _recoverFailedRebalanceDeposit();
+        _finalizeRebalance();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -713,7 +712,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
             emit PerformanceFeeCollected(epochNonce, feeShares, highWaterMark);
         }
 
-        // @review definite gas optimization in here with s_totalShares reads
+        // @review-gas
         settlementPricePerShare = _calculatePricePerShare(tvl);
         s_performanceFeeHighWaterMark = settlementPricePerShare;
     }
@@ -725,7 +724,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @param numerator The numerator
     /// @param denominator The denominator
     /// @return result The rounded-up quotient
-    // @review replacing this with OZ mulDiv or solady
+    // @review-deploy replacing this with OZ mulDiv or solady
     function _ceilDiv(uint256 numerator, uint256 denominator) internal pure returns (uint256 result) {
         result = numerator == 0 ? 0 : (numerator - 1) / denominator + 1;
     }

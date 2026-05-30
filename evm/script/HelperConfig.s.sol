@@ -114,7 +114,8 @@ contract HelperConfig is Script {
             }),
             protocols: ProtocolsConfig({
                 aaveV3PoolAddressesProvider: 0xa97684ead0e402dC232d5A977953DF7ECBaB3CDb,
-                aaveV4Spoke: address(0), // @review update when aave v4 is deployed
+                // @review-deploy update when aave v4 is deployed
+                aaveV4Spoke: address(0),
                 compoundV3Comet: 0x9c4ec768c28520B50860ea7a15bd7213a9fF58bf
             }),
             ccip: CCIPConfig({
@@ -149,7 +150,8 @@ contract HelperConfig is Script {
             }),
             protocols: ProtocolsConfig({
                 aaveV3PoolAddressesProvider: 0xe20fCBdBfFC4Dd138cE8b2E6FBb6CB49777ad64D,
-                aaveV4Spoke: address(0), // @review update when aave v4 is deployed
+                // @review-deploy update when aave v4 is deployed
+                aaveV4Spoke: address(0),
                 compoundV3Comet: 0xb125E6687d4313864e53df431d5425969c15Eb2F
             }),
             ccip: CCIPConfig({

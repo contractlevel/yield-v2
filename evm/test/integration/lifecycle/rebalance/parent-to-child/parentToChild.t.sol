@@ -63,9 +63,7 @@ contract ParentToChild_RebalanceIntegrationTest is BaseIntegrationTest {
         assertEq(child.vault.getActiveProtocolAdapter(), address(child.aaveV3Adapter));
 
         vm.recordLogs();
-        _completeRebalanceThroughWorkflow(
-            parent.workflowRouter, COMPLETE_WORKFLOW_ID, COMPLETE_WORKFLOW_NAME, i_owner, 1
-        );
+        _completeRebalanceThroughWorkflow(parent.workflowRouter, COMPLETE_WORKFLOW_ID, COMPLETE_WORKFLOW_NAME, i_owner);
         Vm.Log[] memory completeLogs = vm.getRecordedLogs();
 
         Vm.Log memory completedLog =

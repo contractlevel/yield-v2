@@ -50,7 +50,7 @@ contract ChildDeposit_RebalanceRecoveryIntegrationTest is BaseRecoveryIntegratio
         assertEq(IERC20(parent.usdc).balanceOf(childPool), childPoolBalanceBefore + tvl);
 
         _completeRebalanceThroughWorkflow(
-            parent.workflowRouter, COMPLETE_REBALANCE_WORKFLOW_ID, COMPLETE_REBALANCE_WORKFLOW_NAME, i_owner, 1
+            parent.workflowRouter, COMPLETE_REBALANCE_WORKFLOW_ID, COMPLETE_REBALANCE_WORKFLOW_NAME, i_owner
         );
         _assertCompletedRebalance(AAVE_V3_PROTOCOL_ID, CHILD_CHAIN_SELECTOR);
     }

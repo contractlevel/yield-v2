@@ -47,7 +47,7 @@ contract ChildDeposit_RebalanceRecoveryCcipForkTest is BaseCcipRecoveryForkTest 
 
         _selectArbitrumFork();
         _configureCompleteRebalanceWorkflow(COMPLETE_WORKFLOW_ID);
-        _completeRebalanceThroughWorkflow(COMPLETE_WORKFLOW_ID, 1);
+        _completeRebalanceThroughWorkflow(COMPLETE_WORKFLOW_ID);
         _assertCompletedRebalance(AAVE_V3_PROTOCOL_ID, baseConfig.ccip.thisChainSelector);
     }
 }

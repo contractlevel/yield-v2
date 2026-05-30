@@ -195,7 +195,7 @@ Old strategy on Parent, new strategy on a Child chain.
 
 - Child \_handleCCIPRebalance() → \_setActiveAdapter(protocolId) → \_executeDeposit(amount, false). Emits RebalanceDepositSuccess on success. On failure, stores rebalance deposit recovery and emits RebalanceDepositFailure; recovery calls recoverFailedRebalanceDeposit().
 
-- **CRE log trigger** (RebalanceDepositSuccess) → parent.completeRebalance(rebalanceNonce).
+- **CRE log trigger** (RebalanceDepositSuccess) → parent.completeRebalance().
 
 - \_finalizeRebalance() → activeStrategy = pendingStrategy, state → NONE, s_rebalance.nonce++, lastRebalanceTimestamp updated, management fee minted. Emits RebalanceCompleted.
 
@@ -259,7 +259,7 @@ Old and new strategy are both locally on the same Child chain. Different protoco
 
 - \_executeDeposit(amountOut, false). Emits RebalanceDepositSuccess on success. On failure, stores rebalance deposit recovery and emits RebalanceDepositFailure; recovery calls recoverFailedRebalanceDeposit().
 
-- **CRE log trigger** (RebalanceDepositSuccess) → parent.completeRebalance(rebalanceNonce).
+- **CRE log trigger** (RebalanceDepositSuccess) → parent.completeRebalance().
 
 - \_finalizeRebalance() → activeStrategy = pendingStrategy, state → NONE, s_rebalance.nonce++, lastRebalanceTimestamp updated, management fee minted. Emits RebalanceCompleted.
 
@@ -291,7 +291,7 @@ Old strategy on one Child A chain, new strategy on a different Child B chain.
 
 - New Child B \_handleCCIPRebalance() → \_setActiveAdapter(protocolId) → \_executeDeposit(amount, false). Emits RebalanceDepositSuccess on success. On failure, stores rebalance deposit recovery and emits RebalanceDepositFailure; recovery calls recoverFailedRebalanceDeposit().
 
-- **CRE log trigger** (RebalanceDepositSuccess) → parent.completeRebalance(rebalanceNonce).
+- **CRE log trigger** (RebalanceDepositSuccess) → parent.completeRebalance().
 
 - \_finalizeRebalance() → activeStrategy = pendingStrategy, state → NONE, s_rebalance.nonce++, lastRebalanceTimestamp updated, management fee minted. Emits RebalanceCompleted.
 

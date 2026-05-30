@@ -248,14 +248,14 @@ abstract contract BaseCcipForkTest is BaseForkTest {
         );
     }
 
-    function _completeRebalanceThroughWorkflow(bytes32 workflowId, uint256 rebalanceNonce) internal {
+    function _completeRebalanceThroughWorkflow(bytes32 workflowId) internal {
         _selectArbitrumFork();
         _callWorkflowRouter(
             parent.workflowRouter,
             workflowId,
             COMPLETE_REBALANCE_WORKFLOW_NAME,
             i_owner,
-            abi.encodeWithSelector(ParentVault.completeRebalance.selector, rebalanceNonce)
+            abi.encodeWithSelector(ParentVault.completeRebalance.selector)
         );
     }
 

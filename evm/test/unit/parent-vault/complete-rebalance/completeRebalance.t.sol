@@ -24,13 +24,13 @@ contract ParentVault_CompleteRebalanceUnitTest is BaseUnitTest {
     function test_ParentVault_completeRebalance_RevertWhen_CallerDoesNotHaveREBALANCE_OPERATOR_ROLE() public {
         _changePrank(i_nonOwner);
         vm.expectRevert();
-        s_parentVault.completeRebalance(1);
+        s_parentVault.completeRebalance();
     }
 
     function test_ParentVault_completeRebalance_RevertWhen_NoRebalanceInProgress() public {
         _setParentRebalanceState(Types.RebalanceState.NONE);
         vm.expectRevert(IParentVault.ParentVault__NoRebalanceInProgress.selector);
-        s_parentVault.completeRebalance(1);
+        s_parentVault.completeRebalance();
     }
 
     function test_ParentVault_completeRebalance_RevertWhen_RecoveryExists() public {
@@ -38,27 +38,22 @@ contract ParentVault_CompleteRebalanceUnitTest is BaseUnitTest {
             .checked_write(TOTAL_SHARES);
 
         vm.expectRevert(IBaseVault.BaseVault__RecoveryAlreadyPending.selector);
-        s_parentVault.completeRebalance(1);
-    }
-
-    function test_ParentVault_completeRebalance_RevertWhen_InvalidRebalanceNonce() public {
-        vm.expectRevert(abi.encodeWithSelector(IParentVault.ParentVault__InvalidRebalanceNonce.selector, 2));
-        s_parentVault.completeRebalance(2);
+        s_parentVault.completeRebalance();
     }
 
     function test_ParentVault_completeRebalance_Success_SetsRebalanceStateToNone() public {
-        s_parentVault.completeRebalance(1);
+        s_parentVault.completeRebalance();
         assertEq(uint256(s_parentVault.getRebalance().state), uint256(Types.RebalanceState.NONE));
     }
 
     function test_ParentVault_completeRebalance_Success_IncrementsRebalanceNonce() public {
-        s_parentVault.completeRebalance(1);
+        s_parentVault.completeRebalance();
         assertEq(s_parentVault.getRebalance().nonce, 2);
     }
 
     function test_ParentVault_completeRebalance_Success_UpdatesLastRebalanceCompletedTimestamp() public {
         vm.warp(block.timestamp + 30 days);
-        s_parentVault.completeRebalance(1);
+        s_parentVault.completeRebalance();
         assertEq(s_parentVault.getRebalance().lastRebalanceCompletedTimestamp, block.timestamp);
     }
 
@@ -67,7 +62,7 @@ contract ParentVault_CompleteRebalanceUnitTest is BaseUnitTest {
         uint256 elapsed = 365 days;
         vm.warp(s_parentVault.getRebalance().lastRebalanceCompletedTimestamp + elapsed);
 
-        s_parentVault.completeRebalance(1);
+        s_parentVault.completeRebalance();
 
         assertEq(s_yieldcoin.balanceOf(i_treasury), _expectedFeeShares(TOTAL_SHARES, elapsed));
     }
@@ -77,14 +72,14 @@ contract ParentVault_CompleteRebalanceUnitTest is BaseUnitTest {
         uint256 elapsed = 365 days;
         vm.warp(s_parentVault.getRebalance().lastRebalanceCompletedTimestamp + elapsed);
 
-        s_parentVault.completeRebalance(1);
+        s_parentVault.completeRebalance();
 
         assertEq(s_parentVault.getTotalShares(), TOTAL_SHARES + _expectedFeeShares(TOTAL_SHARES, elapsed));
     }
 
     function test_ParentVault_completeRebalance_Success_Emits_RebalanceCompleted() public {
         vm.recordLogs();
-        s_parentVault.completeRebalance(1);
+        s_parentVault.completeRebalance();
         Vm.Log memory log = _assertEmittedBy(keccak256("RebalanceCompleted(uint256)"), address(s_parentVault));
         assertEq(uint256(log.topics[1]), 1);
     }
@@ -97,7 +92,7 @@ contract ParentVault_CompleteRebalanceUnitTest is BaseUnitTest {
         uint256 expectedFeeShares = _expectedFeeShares(TOTAL_SHARES, elapsed);
 
         vm.recordLogs();
-        s_parentVault.completeRebalance(1);
+        s_parentVault.completeRebalance();
         Vm.Log memory log =
             _assertEmittedBy(keccak256("ManagementFeeCollected(uint256,uint256)"), address(s_parentVault));
         assertEq(uint256(log.topics[1]), 1);
