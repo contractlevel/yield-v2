@@ -13,6 +13,7 @@ contract ChildVault_ConstructorUnitTest is BaseUnitTest {
         assertEq(address(s_childVault.getUsdc()), address(s_mockUsdc));
         assertEq(address(s_childVault.getRouter()), address(s_mockCcipRouter));
         assertEq(address(s_childVault.getAdapterRegistry()), address(s_adapterRegistry));
+        assertEq(s_childVault.getEmergencyReceiver(), i_emergencyReceiver);
         assertEq(s_childVault.hasRole(Roles.DEFAULT_ADMIN_ROLE, address(i_owner)), true);
         assertEq(s_childVault.hasRole(Roles.PAUSER_ROLE, i_pauser), true);
         assertEq(s_childVault.hasRole(Roles.UNPAUSER_ROLE, i_unpauser), true);

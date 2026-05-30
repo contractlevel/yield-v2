@@ -70,7 +70,8 @@ contract DeployChild is Script {
             unpauser: networkConfig.roles.unpauser,
             configOperator: deployer,
             adapterRegistry: address(deploy.adapterRegistry),
-            thisChainSelector: networkConfig.ccip.thisChainSelector
+            thisChainSelector: networkConfig.ccip.thisChainSelector,
+            emergencyReceiver: networkConfig.emergencyReceiver
         });
         deploy.childVault = new ChildVault(baseVaultParams, networkConfig.ccip.parentChainSelector);
 

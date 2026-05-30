@@ -3,6 +3,7 @@ ChildVault_constructor
   ├── it should set i_parentChainSelector
   ├── it should set i_link
   ├── it should set i_usdc
+  ├── it should set the emergency receiver
   ├── it should set the CCIP router
   ├── it should attach the policy engine
   ├── it should grant DEFAULT_ADMIN_ROLE to defaultAdmin

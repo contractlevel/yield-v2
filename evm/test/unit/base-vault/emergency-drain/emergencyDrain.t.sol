@@ -59,12 +59,13 @@ abstract contract BaseVault_EmergencyDrainUnitTest is BaseUnitTest {
         vm.recordLogs();
         s_vault.emergencyDrain(true);
 
-        assertEq(s_mockUsdc.balanceOf(i_emergencyDrainer), USDC_AMOUNT);
+        assertEq(s_mockUsdc.balanceOf(i_emergencyReceiver), USDC_AMOUNT);
+        assertEq(s_mockUsdc.balanceOf(i_emergencyDrainer), 0);
         assertEq(s_mockUsdc.balanceOf(address(s_vault)), 0);
         assertEq(s_mockProtocolAdapter.getWithdrawCalls(), 0);
 
         Vm.Log memory log = _assertEmittedBy(keccak256("EmergencyDrainExecuted(address,uint256)"), address(s_vault));
-        assertEq(address(uint160(uint256(log.topics[1]))), i_emergencyDrainer);
+        assertEq(address(uint160(uint256(log.topics[1]))), i_emergencyReceiver);
         assertEq(uint256(log.topics[2]), USDC_AMOUNT);
     }
 
@@ -83,7 +84,8 @@ abstract contract BaseVault_EmergencyDrainUnitTest is BaseUnitTest {
 
         assertEq(s_mockProtocolAdapter.getLastWithdrawAmount(), type(uint256).max);
         assertEq(s_mockProtocolAdapter.getWithdrawCalls(), 1);
-        assertEq(s_mockUsdc.balanceOf(i_emergencyDrainer), USDC_AMOUNT);
+        assertEq(s_mockUsdc.balanceOf(i_emergencyReceiver), USDC_AMOUNT);
+        assertEq(s_mockUsdc.balanceOf(i_emergencyDrainer), 0);
         assertEq(s_mockUsdc.balanceOf(address(s_vault)), 0);
     }
 
@@ -120,7 +122,8 @@ abstract contract BaseVault_EmergencyDrainUnitTest is BaseUnitTest {
         );
         s_vault.emergencyDrain(false);
 
-        assertEq(s_mockUsdc.balanceOf(i_emergencyDrainer), USDC_AMOUNT);
+        assertEq(s_mockUsdc.balanceOf(i_emergencyReceiver), USDC_AMOUNT);
+        assertEq(s_mockUsdc.balanceOf(i_emergencyDrainer), 0);
         assertEq(s_mockUsdc.balanceOf(address(s_vault)), 0);
     }
 

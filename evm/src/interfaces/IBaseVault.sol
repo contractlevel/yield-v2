@@ -13,6 +13,8 @@ interface IBaseVault is IPauseable {
     //////////////////////////////////////////////////////////////*/
     /// @dev Thrown when a zero amount is provided
     error BaseVault__NoZeroAmount();
+    /// @dev Thrown when the zero address is provided
+    error BaseVault__NoZeroAddress();
     /// @dev Thrown when the emergency drain delay has not been met
     error BaseVault__EmergencyDrainDelayNotMet();
 
@@ -113,10 +115,13 @@ interface IBaseVault is IPauseable {
     /// @param operator The address of the LINK operator
     /// @param amount The amount of LINK withdrawn
     event LinkWithdrawn(address indexed operator, uint256 indexed amount);
-    /// @notice Emitted when an emergency drain is executed by an EMERGENCY_DRAINER
-    /// @param drainer The address of the emergency drainer
+    /// @notice Emitted when an emergency drain transfers USDC to the emergency receiver
+    /// @param emergencyReceiver The address of the emergency receiver
     /// @param amount The amount of USDC drained
-    event EmergencyDrainExecuted(address indexed drainer, uint256 indexed amount);
+    event EmergencyDrainExecuted(address indexed emergencyReceiver, uint256 indexed amount);
+    /// @notice Emitted when the emergency receiver is set by a CONFIG_OPERATOR
+    /// @param emergencyReceiver The address of the emergency receiver
+    event EmergencyReceiverSet(address indexed emergencyReceiver);
     /// @notice Emitted when failed rebalance deposit recovery state is stored
     /// @param rebalanceNonce The nonce of the failed rebalance deposit
     /// @param amount The amount of USDC to retry depositing
@@ -143,9 +148,9 @@ interface IBaseVault is IPauseable {
     //////////////////////////////////////////////////////////////*/
     /// @dev Precondition: Caller must have the EMERGENCY_DRAINER_ROLE
     /// @dev Precondition: Vault must have been paused for at least EMERGENCY_DRAIN_DELAY
-    /// @dev Withdraws all USDC from the vault to the emergency drainer
+    /// @dev Withdraws all USDC from the vault to the emergency receiver
     /// @param revertOnFailure Whether to revert if the withdraw from strategy fails
-    /// @notice If the vault has the TVL, it will be withdrawn from the strategy and transferred to the emergency drainer
+    /// @notice If the vault has the TVL, it will be withdrawn from the strategy and transferred to the emergency receiver
     function emergencyDrain(bool revertOnFailure) external;
 
     /*//////////////////////////////////////////////////////////////
@@ -173,6 +178,12 @@ interface IBaseVault is IPauseable {
     /// @dev Sets the default CCIP gas limit
     /// @dev Emits the DefaultCcipGasLimitSet event
     function setDefaultCcipGasLimit(uint256 gasLimit) external;
+    /// @notice Sets the emergency receiver
+    /// @param emergencyReceiver The address that receives USDC during emergency drain
+    /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
+    /// @dev Precondition: emergencyReceiver must not be the zero address
+    /// @dev Emits the EmergencyReceiverSet event
+    function setEmergencyReceiver(address emergencyReceiver) external;
 
     /*//////////////////////////////////////////////////////////////
                             LINK OPERATOR
@@ -210,6 +221,9 @@ interface IBaseVault is IPauseable {
     /// @notice Gets the default CCIP gas limit
     /// @return defaultCcipGasLimit The default CCIP gas limit
     function getDefaultCcipGasLimit() external view returns (uint256 defaultCcipGasLimit);
+    /// @notice Gets the emergency receiver
+    /// @return emergencyReceiver The address that receives USDC during emergency drain
+    function getEmergencyReceiver() external view returns (address emergencyReceiver);
     /// @notice Gets the timestamp when the vault was paused
     /// @return pausedAt The timestamp when the vault was paused
     /// @dev Returns 0 if the vault is not paused

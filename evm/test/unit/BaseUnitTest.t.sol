@@ -103,7 +103,8 @@ abstract contract BaseUnitTest is BaseTest {
             unpauser: address(i_unpauser),
             configOperator: address(i_configOperator),
             adapterRegistry: address(s_adapterRegistry),
-            thisChainSelector: chainSelector
+            thisChainSelector: chainSelector,
+            emergencyReceiver: address(i_emergencyReceiver)
         });
     }
 

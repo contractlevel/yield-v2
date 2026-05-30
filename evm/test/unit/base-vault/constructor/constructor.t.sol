@@ -17,6 +17,7 @@ abstract contract BaseVault_ConstructorUnitTest is BaseUnitTest {
         assertEq(address(s_vault.getUsdc()), address(s_mockUsdc));
         assertEq(address(s_vault.getRouter()), address(s_mockCcipRouter));
         assertEq(address(s_vault.getAdapterRegistry()), address(s_adapterRegistry));
+        assertEq(s_vault.getEmergencyReceiver(), i_emergencyReceiver);
         assertEq(s_vault.hasRole(Roles.DEFAULT_ADMIN_ROLE, i_owner), true);
         assertEq(s_vault.hasRole(Roles.PAUSER_ROLE, i_pauser), true);
         assertEq(s_vault.hasRole(Roles.UNPAUSER_ROLE, i_unpauser), true);

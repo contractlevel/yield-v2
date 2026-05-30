@@ -2,6 +2,7 @@ ParentVault_constructor
   ├── it should set i_thisChainSelector
   ├── it should set i_link
   ├── it should set i_usdc
+  ├── it should set the emergency receiver
   ├── it should set i_yieldcoinToken
   ├── it should set s_treasury
   ├── it should set the CCIP router

@@ -53,6 +53,7 @@ import {TerminalAllowPolicy} from "../../src/modules/policies/TerminalAllowPolic
 ///      ParentVault.EPOCH_OPERATOR_ROLE: address(workflowRouter)
 ///      ParentVault.REBALANCE_OPERATOR_ROLE: address(workflowRouter)
 ///      ParentVault.EMERGENCY_DRAINER_ROLE: networkConfig.roles.emergencyDrainer
+///      ParentVault emergency receiver: networkConfig.emergencyReceiver
 ///      ParentVault.LINK_OPERATOR_ROLE: networkConfig.roles.linkOperator
 ///      ParentVault.POLICY_ENGINE_MANAGER_ROLE: networkConfig.roles.policyEngineManager
 ///      ParentVault.PAUSER_ROLE: networkConfig.roles.pauser
@@ -171,7 +172,8 @@ contract DeployParent is Script {
             unpauser: networkConfig.roles.unpauser,
             configOperator: deployer,
             adapterRegistry: address(deploy.adapterRegistry),
-            thisChainSelector: networkConfig.ccip.parentChainSelector
+            thisChainSelector: networkConfig.ccip.parentChainSelector,
+            emergencyReceiver: networkConfig.emergencyReceiver
         });
         deploy.parentVault = new ParentVault(
             baseVaultParams,

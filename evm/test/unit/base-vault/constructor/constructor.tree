@@ -3,6 +3,7 @@ constructor
   ├── it should set i_link
   ├── it should set i_usdc
   ├── it should set the CCIP router
+  ├── it should set the emergency receiver
   ├── it should grant DEFAULT_ADMIN_ROLE to defaultAdmin
   ├── it should grant PAUSER_ROLE to pauser  
   ├── it should grant UNPAUSER_ROLE to unpauser  

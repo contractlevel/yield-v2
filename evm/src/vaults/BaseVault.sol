@@ -66,6 +66,8 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @dev Timestamp when the vault was paused. Deleted when the vault is unpaused.
     /// @notice This is used for emergency recovery modes.
     uint96 internal s_pausedAt;
+    /// @dev Address that receives USDC during emergency drain.
+    address internal s_emergencyReceiver;
     /// @dev Recovery state for failed rebalance deposit operations. This can exist on Parent or Child.
     Types.RebalanceDepositRecovery internal s_rebalanceDepositRecovery;
 
@@ -113,6 +115,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         address configOperator;
         address adapterRegistry;
         uint64 thisChainSelector;
+        address emergencyReceiver;
     }
 
     /// @param params Constructor parameters
@@ -127,6 +130,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         i_link = params.link;
         i_usdc = params.usdc;
         i_adapterRegistry = params.adapterRegistry;
+        s_emergencyReceiver = params.emergencyReceiver;
         _grantRole(Roles.PAUSER_ROLE, params.pauser);
         _grantRole(Roles.UNPAUSER_ROLE, params.unpauser);
         _grantRole(Roles.CONFIG_OPERATOR_ROLE, params.configOperator);
@@ -427,9 +431,9 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @dev Precondition: Caller must have the EMERGENCY_DRAINER_ROLE
     /// @dev Precondition: must be paused
     /// @dev Precondition: Vault must have been paused for at least EMERGENCY_DRAIN_DELAY
-    /// @dev Withdraws all USDC from the vault to the emergency drainer
+    /// @dev Withdraws all USDC from the vault to the emergency receiver
     /// @param revertOnFailure Whether to revert if the withdraw from strategy fails
-    /// @notice If the vault has the TVL, it will be withdrawn from the strategy and transferred to the emergency drainer
+    /// @notice If the vault has the TVL, it will be withdrawn from the strategy and transferred to the emergency receiver
     function emergencyDrain(bool revertOnFailure) external onlyRole(Roles.EMERGENCY_DRAINER_ROLE) whenPaused {
         //slither-disable-next-line timestamp
         if (block.timestamp - s_pausedAt < EMERGENCY_DRAIN_DELAY) revert BaseVault__EmergencyDrainDelayNotMet();
@@ -437,8 +441,9 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         if (_getTVL() > 0) _executeWithdraw(type(uint256).max, revertOnFailure);
 
         uint256 balance = IERC20(i_usdc).balanceOf(address(this));
-        IERC20(i_usdc).safeTransfer(msg.sender, balance); // @review instead of sending to msg.sender, send to a specific address?
-        emit EmergencyDrainExecuted(msg.sender, balance);
+        address emergencyReceiver = s_emergencyReceiver;
+        IERC20(i_usdc).safeTransfer(emergencyReceiver, balance);
+        emit EmergencyDrainExecuted(emergencyReceiver, balance);
     }
 
     /// @notice Donates USDC to the active strategy without minting shares or creating a claim
@@ -537,6 +542,17 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         emit DefaultCcipGasLimitSet(gasLimit);
     }
 
+    /// @notice Sets the emergency receiver
+    /// @param emergencyReceiver The address that receives USDC during emergency drain
+    /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
+    /// @dev Precondition: emergencyReceiver must not be the zero address
+    /// @dev Emits the EmergencyReceiverSet event
+    function setEmergencyReceiver(address emergencyReceiver) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
+        if (emergencyReceiver == address(0)) revert BaseVault__NoZeroAddress();
+        s_emergencyReceiver = emergencyReceiver;
+        emit EmergencyReceiverSet(emergencyReceiver);
+    }
+
     /*//////////////////////////////////////////////////////////////
                              LINK OPERATOR
     //////////////////////////////////////////////////////////////*/
@@ -596,6 +612,12 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @return defaultCcipGasLimit The default CCIP gas limit
     function getDefaultCcipGasLimit() external view returns (uint256 defaultCcipGasLimit) {
         defaultCcipGasLimit = s_defaultCcipGasLimit;
+    }
+
+    /// @notice Gets the emergency receiver
+    /// @return emergencyReceiver The address that receives USDC during emergency drain
+    function getEmergencyReceiver() external view returns (address emergencyReceiver) {
+        emergencyReceiver = s_emergencyReceiver;
     }
 
     /// @notice Gets the timestamp when the vault was paused

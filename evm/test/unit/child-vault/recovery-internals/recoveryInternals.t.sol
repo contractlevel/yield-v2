@@ -184,7 +184,8 @@ contract ChildVault_RecoveryInternalsUnitTest is BaseUnitTest {
             unpauser: address(i_unpauser),
             configOperator: address(i_configOperator),
             adapterRegistry: address(s_adapterRegistry),
-            thisChainSelector: CHILD_CHAIN_SELECTOR
+            thisChainSelector: CHILD_CHAIN_SELECTOR,
+            emergencyReceiver: address(i_emergencyReceiver)
         });
     }
 }

@@ -24,6 +24,7 @@ contract ParentVault_ConstructorUnitTest is BaseUnitTest {
         assertEq(address(parentVault.getRouter()), address(s_mockCcipRouter));
         assertEq(address(parentVault.getPolicyEngine()), address(s_mockPolicyEngine));
         assertEq(address(parentVault.getAdapterRegistry()), address(s_adapterRegistry));
+        assertEq(parentVault.getEmergencyReceiver(), i_emergencyReceiver);
         assertEq(parentVault.hasRole(Roles.DEFAULT_ADMIN_ROLE, address(i_owner)), true);
         assertEq(parentVault.hasRole(Roles.PAUSER_ROLE, i_pauser), true);
         assertEq(parentVault.hasRole(Roles.UNPAUSER_ROLE, i_unpauser), true);
