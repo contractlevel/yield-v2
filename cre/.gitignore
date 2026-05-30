@@ -4,3 +4,4 @@ coverage.out
 offchain.cover
 
 workflow/limits.local-fork.json
+.gotmp
