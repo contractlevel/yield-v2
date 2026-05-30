@@ -111,6 +111,7 @@ func testConfig() *helper.Config {
 		BlockNumber: -2,
 		DefiLlama: helper.DefiLlama{
 			RelayURL: "https://yield-v2-defillama-relay.contractlevel.workers.dev/v1/defillama/pools",
+			PoolIDs:  []string{"aa70268e-4b52-42bf-a116-608b370f9501", "d9c395b9-00d0-4426-a6b3-572a6dd68e54"},
 			Projects: []string{"aave-v3", "compound-v3"},
 			Symbols:  []string{"USDC"},
 		},
@@ -436,6 +437,7 @@ func Test_NewDefiLlamaConfig(t *testing.T) {
 		{ChainSelector: parentChainSelector, DefiLlamaChainName: "Arbitrum"},
 		{ChainSelector: childChainSelector, DefiLlamaChainName: "Ethereum"},
 	}, cfg.Chains)
+	require.Equal(t, []string{"aa70268e-4b52-42bf-a116-608b370f9501", "d9c395b9-00d0-4426-a6b3-572a6dd68e54"}, cfg.PoolIDs)
 	require.Equal(t, []string{"aave-v3", "compound-v3"}, cfg.Projects)
 	require.Equal(t, []string{"USDC"}, cfg.Symbols)
 }

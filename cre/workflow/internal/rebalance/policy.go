@@ -16,6 +16,9 @@ func NeedRebalance(optimal, current *offchain.Pool) bool {
 	if current == nil {
 		return false
 	}
+	if !offchain.ValidPoolAPY(optimal.Apy) || !offchain.ValidPoolAPY(current.Apy) {
+		return false
+	}
 	return optimal.Apy-current.Apy >= DifferentialThreshold
 }
 

@@ -206,6 +206,7 @@ func newDefiLlamaConfig(config *helper.Config) offchain.Config {
 
 	return offchain.Config{
 		RelayURL: config.DefiLlama.RelayURL,
+		PoolIDs:  config.DefiLlama.PoolIDs,
 		Chains:   chains,
 		Projects: config.DefiLlama.Projects,
 		Symbols:  config.DefiLlama.Symbols,

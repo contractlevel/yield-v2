@@ -3,6 +3,7 @@ package offchain
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 	"testing"
@@ -14,6 +15,12 @@ import (
 )
 
 const testRelayURL = "https://yield-v2-defillama-relay.contractlevel.workers.dev/v1/defillama/pools"
+const (
+	ethereumAaveV3PoolID     = "aa70268e-4b52-42bf-a116-608b370f9501"
+	ethereumCompoundV3PoolID = "7da72d09-56ca-4ec5-a45f-59114353e487"
+	arbitrumAaveV3PoolID     = "d9fa8e14-0447-4207-9ae8-7810199dfa1f"
+	arbitrumCompoundV3PoolID = "d9c395b9-00d0-4426-a6b3-572a6dd68e54"
+)
 
 type fakeDefiLlamaRequester struct {
 	send func(*crehttp.Request) (*crehttp.Response, error)
@@ -32,6 +39,7 @@ func testConfig() Config {
 			{ChainSelector: 2, DefiLlamaChainName: "Arbitrum"},
 			{ChainSelector: 3, DefiLlamaChainName: ""},
 		},
+		PoolIDs:  []string{ethereumAaveV3PoolID, ethereumCompoundV3PoolID, arbitrumAaveV3PoolID, arbitrumCompoundV3PoolID},
 		Projects: []string{"aave-v3", "compound-v3"},
 		Symbols:  []string{"USDC"},
 	}
@@ -40,11 +48,11 @@ func testConfig() Config {
 func testRelayJSON() string {
 	return `{
 		"data": [
-			{"pool":"eth-aave","chain":"Ethereum","project":"aave-v3","symbol":"USDC","apyBase":4.5},
-			{"pool":"arb-comp","chain":"Arbitrum","project":"compound-v3","symbol":"USDC","apyBase":6.25},
+			{"pool":"aa70268e-4b52-42bf-a116-608b370f9501","chain":"Ethereum","project":"aave-v3","symbol":"USDC","apyBase":4.5},
+			{"pool":"d9c395b9-00d0-4426-a6b3-572a6dd68e54","chain":"Arbitrum","project":"compound-v3","symbol":"USDC","apyBase":6.25},
 			{"pool":"base-comp","chain":"Base","project":"compound-v3","symbol":"USDC","apyBase":10.0},
-			{"pool":"unsupported-project","chain":"Ethereum","project":"unsupported","symbol":"USDC","apyBase":99.0},
-			{"pool":"unsupported-symbol","chain":"Ethereum","project":"aave-v3","symbol":"DAI","apyBase":99.0}
+			{"pool":"7da72d09-56ca-4ec5-a45f-59114353e487","chain":"Ethereum","project":"unsupported","symbol":"USDC","apyBase":99.0},
+			{"pool":"d9fa8e14-0447-4207-9ae8-7810199dfa1f","chain":"Arbitrum","project":"aave-v3","symbol":"DAI","apyBase":99.0}
 		]
 	}`
 }
@@ -60,18 +68,32 @@ func Test_ParsePools_selectsBestAndCurrent(t *testing.T) {
 	result, err := parsePools(strings.NewReader(testRelayJSON()), testConfig(), PoolToProtocolId("aave-v3"), "Ethereum")
 	require.NoError(t, err, "expected valid response to parse")
 	require.True(t, result.HasBest, "expected best pool")
-	require.Equal(t, Pool{Pool: "arb-comp", Chain: "Arbitrum", Project: "compound-v3", Symbol: "USDC", Apy: 6.25}, result.BestPool)
+	require.Equal(t, Pool{Pool: arbitrumCompoundV3PoolID, Chain: "Arbitrum", Project: "compound-v3", Symbol: "USDC", Apy: 6.25}, result.BestPool)
 	require.True(t, result.HasCurrent, "expected current pool")
-	require.Equal(t, Pool{Pool: "eth-aave", Chain: "Ethereum", Project: "aave-v3", Symbol: "USDC", Apy: 4.5}, result.CurrentPool)
+	require.Equal(t, Pool{Pool: ethereumAaveV3PoolID, Chain: "Ethereum", Project: "aave-v3", Symbol: "USDC", Apy: 4.5}, result.CurrentPool)
 }
 
 func Test_ParsePools_noApprovedPools(t *testing.T) {
-	body := `{"data":[{"pool":"base-aave","chain":"Base","project":"aave-v3","symbol":"USDC","apyBase":8.0}]}`
+	body := `{"data":[{"pool":"not-allowed","chain":"Ethereum","project":"aave-v3","symbol":"USDC","apyBase":8.0}]}`
 
 	result, err := parsePools(strings.NewReader(body), testConfig(), PoolToProtocolId("aave-v3"), "Ethereum")
 	require.NoError(t, err, "expected valid response to parse")
 	require.False(t, result.HasBest, "expected no best pool")
 	require.False(t, result.HasCurrent, "expected no current pool")
+}
+
+func Test_ParsePools_ignoresOutOfRangeAPY(t *testing.T) {
+	body := `{"data":[
+		{"pool":"aa70268e-4b52-42bf-a116-608b370f9501","chain":"Ethereum","project":"aave-v3","symbol":"USDC","apyBase":-0.01},
+		{"pool":"d9c395b9-00d0-4426-a6b3-572a6dd68e54","chain":"Arbitrum","project":"compound-v3","symbol":"USDC","apyBase":1000.01},
+		{"pool":"7da72d09-56ca-4ec5-a45f-59114353e487","chain":"Ethereum","project":"compound-v3","symbol":"USDC","apyBase":5.0}
+	]}`
+
+	result, err := parsePools(strings.NewReader(body), testConfig(), PoolToProtocolId("aave-v3"), "Ethereum")
+	require.NoError(t, err, "expected valid response to parse")
+	require.True(t, result.HasBest, "expected valid pool to remain")
+	require.Equal(t, Pool{Pool: ethereumCompoundV3PoolID, Chain: "Ethereum", Project: "compound-v3", Symbol: "USDC", Apy: 5.0}, result.BestPool)
+	require.False(t, result.HasCurrent, "expected invalid active pool to be ignored")
 }
 
 func Test_ParsePools_currentRequiresActiveChainAndProtocol(t *testing.T) {
@@ -81,18 +103,38 @@ func Test_ParsePools_currentRequiresActiveChainAndProtocol(t *testing.T) {
 	require.False(t, result.HasCurrent, "expected no current pool when protocol does not match active chain")
 }
 
+func Test_ParsePools_selectsDeterministicallyAcrossEquivalentOrderings(t *testing.T) {
+	first := `{"data":[
+		{"pool":"aa70268e-4b52-42bf-a116-608b370f9501","chain":"Ethereum","project":"aave-v3","symbol":"USDC","apyBase":6.25},
+		{"pool":"d9c395b9-00d0-4426-a6b3-572a6dd68e54","chain":"Arbitrum","project":"compound-v3","symbol":"USDC","apyBase":6.25}
+	]}`
+	second := `{"data":[
+		{"pool":"d9c395b9-00d0-4426-a6b3-572a6dd68e54","chain":"Arbitrum","project":"compound-v3","symbol":"USDC","apyBase":6.25},
+		{"pool":"aa70268e-4b52-42bf-a116-608b370f9501","chain":"Ethereum","project":"aave-v3","symbol":"USDC","apyBase":6.25}
+	]}`
+
+	firstResult, err := parsePools(strings.NewReader(first), testConfig(), PoolToProtocolId("aave-v3"), "Ethereum")
+	require.NoError(t, err, "expected first response to parse")
+	secondResult, err := parsePools(strings.NewReader(second), testConfig(), PoolToProtocolId("aave-v3"), "Ethereum")
+	require.NoError(t, err, "expected second response to parse")
+
+	require.Equal(t, firstResult, secondResult, "expected equivalent responses to produce identical consensus output")
+	require.Equal(t, Pool{Pool: arbitrumCompoundV3PoolID, Chain: "Arbitrum", Project: "compound-v3", Symbol: "USDC", Apy: 6.25}, firstResult.BestPool)
+	require.Equal(t, Pool{Pool: ethereumAaveV3PoolID, Chain: "Ethereum", Project: "aave-v3", Symbol: "USDC", Apy: 6.25}, firstResult.CurrentPool)
+}
+
 func Test_ParsePools_matchesCaseInsensitiveAndReturnsConfiguredValues(t *testing.T) {
 	body := `{"data":[
-		{"pool":"eth-aave","chain":"ethereum","project":"AAVE-V3","symbol":"usdc","apyBase":4.5},
-		{"pool":"arb-comp","chain":"ARBITRUM","project":"COMPOUND-V3","symbol":"usdc","apyBase":6.25}
+		{"pool":"AA70268E-4B52-42BF-A116-608B370F9501","chain":"ethereum","project":"AAVE-V3","symbol":"usdc","apyBase":4.5},
+		{"pool":"D9C395B9-00D0-4426-A6B3-572A6DD68E54","chain":"ARBITRUM","project":"COMPOUND-V3","symbol":"usdc","apyBase":6.25}
 	]}`
 
 	result, err := parsePools(strings.NewReader(body), testConfig(), PoolToProtocolId("aave-v3"), "Ethereum")
 	require.NoError(t, err, "expected valid response to parse")
 	require.True(t, result.HasBest, "expected best pool")
-	require.Equal(t, Pool{Pool: "arb-comp", Chain: "Arbitrum", Project: "compound-v3", Symbol: "USDC", Apy: 6.25}, result.BestPool)
+	require.Equal(t, Pool{Pool: arbitrumCompoundV3PoolID, Chain: "Arbitrum", Project: "compound-v3", Symbol: "USDC", Apy: 6.25}, result.BestPool)
 	require.True(t, result.HasCurrent, "expected current pool")
-	require.Equal(t, Pool{Pool: "eth-aave", Chain: "Ethereum", Project: "aave-v3", Symbol: "USDC", Apy: 4.5}, result.CurrentPool)
+	require.Equal(t, Pool{Pool: ethereumAaveV3PoolID, Chain: "Ethereum", Project: "aave-v3", Symbol: "USDC", Apy: 4.5}, result.CurrentPool)
 }
 
 func Test_ParsePools_errors(t *testing.T) {
@@ -169,6 +211,13 @@ func Test_FetchAndParse_errors(t *testing.T) {
 				return &crehttp.Response{StatusCode: 502}, nil
 			},
 			wantErr: "unexpected status 502",
+		},
+		{
+			name: "nil response",
+			send: func(*crehttp.Request) (*crehttp.Response, error) {
+				return nil, nil
+			},
+			wantErr: "do request: nil response",
 		},
 		{
 			name: "body too large",
@@ -248,6 +297,41 @@ func Test_SkipJSONValue_closingDelimiter(t *testing.T) {
 	require.Equal(t, json.Delim('['), token, "unexpected first token")
 
 	require.NoError(t, skipJSONValue(decoder), "expected closing delimiter to be skipped")
+}
+
+func Test_ParsePools_skipsNestedJSONWithinLimit(t *testing.T) {
+	var nested strings.Builder
+	for i := 0; i < maxJSONNestingDepth; i++ {
+		nested.WriteByte('[')
+	}
+	nested.WriteString(`true`)
+	for i := 0; i < maxJSONNestingDepth; i++ {
+		nested.WriteByte(']')
+	}
+
+	body := fmt.Sprintf(`{"meta":%s,"data":[]}`, nested.String())
+
+	result, err := parsePools(strings.NewReader(body), testConfig(), PoolToProtocolId("aave-v3"), "Ethereum")
+	require.NoError(t, err, "expected nested skipped value within limit to parse")
+	require.Equal(t, fetchResult{}, result, "expected empty result")
+}
+
+func Test_ParsePools_rejectsExcessiveSkippedJSONNesting(t *testing.T) {
+	var nested strings.Builder
+	for i := 0; i < maxJSONNestingDepth+1; i++ {
+		nested.WriteByte('[')
+	}
+	nested.WriteString(`true`)
+	for i := 0; i < maxJSONNestingDepth+1; i++ {
+		nested.WriteByte(']')
+	}
+
+	body := fmt.Sprintf(`{"meta":%s,"data":[]}`, nested.String())
+
+	result, err := parsePools(strings.NewReader(body), testConfig(), PoolToProtocolId("aave-v3"), "Ethereum")
+	require.Error(t, err, "expected excessive nesting to fail")
+	require.Equal(t, fetchResult{}, result, "expected zero result on error")
+	require.ErrorContains(t, err, "maximum JSON nesting depth exceeded")
 }
 
 func Test_PoolToProtocolId(t *testing.T) {

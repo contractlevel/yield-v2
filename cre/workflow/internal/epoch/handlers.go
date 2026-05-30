@@ -109,6 +109,9 @@ func onEpochCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, _ *c
 	if err != nil {
 		return nil, fmt.Errorf("get epoch nonce: %w", err)
 	}
+	if epochNonce == nil {
+		return nil, fmt.Errorf("get epoch nonce: nil epoch nonce")
+	}
 	epoch, err := deps.GetEpoch(runtime, parentVaultBinding, epochNonce, blockNumber)
 	if err != nil {
 		return nil, fmt.Errorf("get epoch: %w", err)
@@ -118,6 +121,9 @@ func onEpochCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, _ *c
 	if epoch.Status != 1 {
 		logger.Info("Epoch not open; skipping", slog.Uint64("status", uint64(epoch.Status)))
 		return &workflowtypes.ExecutionResult{Result: "no-op: epoch not open"}, nil
+	}
+	if err := validateEpochCloseFields(epoch); err != nil {
+		return nil, fmt.Errorf("get epoch: %w", err)
 	}
 
 	// Guard 4: skip if there is no activity to settle.
@@ -158,6 +164,9 @@ func onEpochCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, _ *c
 	if err != nil {
 		return nil, fmt.Errorf("read tvl: %w", err)
 	}
+	if tvl == nil {
+		return nil, fmt.Errorf("read tvl: nil tvl")
+	}
 
 	calldata, err := pvCodec.EncodeCloseEpochMethodCall(
 		parent_vault.CloseEpochInput{EpochNonce: epochNonce, Tvl: tvl},
@@ -178,6 +187,19 @@ func onEpochCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, _ *c
 
 	logger.Info("Closed epoch", slog.Any("nonce", epochNonce), slog.Any("tvl", tvl))
 	return &workflowtypes.ExecutionResult{Result: "closed epoch"}, nil
+}
+
+func validateEpochCloseFields(epoch parent_vault.TypesEpoch) error {
+	if epoch.TotalDepositAmount == nil {
+		return fmt.Errorf("nil total deposit amount")
+	}
+	if epoch.TotalShareBurnAmount == nil {
+		return fmt.Errorf("nil total share burn amount")
+	}
+	if epoch.OpenedAtTimestamp == nil {
+		return fmt.Errorf("nil opened at timestamp")
+	}
+	return nil
 }
 
 func OnEpochExecuting(config *helper.Config, runtime cre.Runtime, log *evm.Log) (*workflowtypes.ExecutionResult, error) {

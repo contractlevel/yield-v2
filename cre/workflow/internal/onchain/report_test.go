@@ -33,9 +33,10 @@ type mockRuntime struct {
 func newMockRuntime(t *testing.T) *mockRuntime {
 	t.Helper()
 
+	contractStatus := evm.ReceiverContractExecutionStatus_RECEIVER_CONTRACT_EXECUTION_STATUS_SUCCESS
 	return &mockRuntime{
 		report:          validReport(t),
-		capabilityReply: writeReportReply(evm.TxStatus_TX_STATUS_SUCCESS, nil, ""),
+		capabilityReply: writeReportReply(evm.TxStatus_TX_STATUS_SUCCESS, &contractStatus, ""),
 		logger:          slog.New(slog.NewTextHandler(io.Discard, nil)),
 	}
 }
@@ -164,6 +165,15 @@ func Test_SubmitReport_txNotSuccessWithoutErrorMessage(t *testing.T) {
 	err := SubmitReport(runtime, &evm.Client{}, common.Address{}, nil, 1)
 	require.Error(t, err, "expected fatal tx error")
 	require.ErrorContains(t, err, "tx not success: status=TX_STATUS_FATAL err=unknown error")
+}
+
+func Test_SubmitReport_contractExecutionStatusMissing(t *testing.T) {
+	runtime := newMockRuntime(t)
+	runtime.capabilityReply = writeReportReply(evm.TxStatus_TX_STATUS_SUCCESS, nil, "")
+
+	err := SubmitReport(runtime, &evm.Client{}, common.Address{}, nil, 1)
+	require.Error(t, err, "expected missing contract execution status error")
+	require.ErrorContains(t, err, "contract execution status missing")
 }
 
 func Test_SubmitReport_contractExecutionFailed(t *testing.T) {

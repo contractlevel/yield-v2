@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::{cmp::Ordering, collections::BTreeMap};
 use worker::{event, Env, Fetch, Headers, Method, Request, Response, Result};
 
 /// Production DefiLlama endpoint used when no override is configured.
@@ -22,6 +23,12 @@ const MAX_RESPONSE_BYTES: usize = 90 * 1024;
 
 /// Maximum DefiLlama success response size accepted by `Content-Length` precheck.
 const MAX_UPSTREAM_BYTES: usize = 25 * 1024 * 1024;
+
+/// Maximum number of compact pool entries returned to CRE.
+const MAX_RELAY_POOLS: usize = 32;
+
+/// Maximum accepted byte length for an upstream DefiLlama pool ID.
+const MAX_POOL_ID_BYTES: usize = 128;
 
 /// Pool shape read from DefiLlama's `/pools` response.
 #[derive(Debug, Deserialize)]
@@ -128,16 +135,20 @@ fn authorize_header(header: Option<&str>, expected_token: &str) -> bool {
     constant_time_eq(value, &format!("Bearer {expected_token}"))
 }
 
-/// Compares equal-length strings without short-circuiting on the first mismatch.
+/// Compares strings without short-circuiting on mismatched lengths or bytes.
 fn constant_time_eq(left: &str, right: &str) -> bool {
-    if left.len() != right.len() {
-        return false;
+    let left = left.as_bytes();
+    let right = right.as_bytes();
+    let max_len = left.len().max(right.len());
+    let mut diff = left.len() ^ right.len();
+
+    for index in 0..max_len {
+        let left_byte = left.get(index).copied().unwrap_or(0);
+        let right_byte = right.get(index).copied().unwrap_or(0);
+        diff |= usize::from(left_byte ^ right_byte);
     }
 
-    left.bytes()
-        .zip(right.bytes())
-        .fold(0u8, |acc, (left, right)| acc | (left ^ right))
-        == 0
+    diff == 0
 }
 
 /// Builds allowlists from Worker environment variables, falling back to defaults.
@@ -172,22 +183,67 @@ fn parse_csv(input: &str) -> Vec<String> {
 /// Pools with `null` base APY are dropped because the CRE workflow needs
 /// protocol-native yield values to compare candidate pools.
 fn filter_payload(upstream: DefiLlamaResponse, allowlists: &Allowlists) -> RelayResponse {
-    let data = upstream
-        .data
-        .into_iter()
-        .filter(|pool| contains_canonical(&allowlists.pools, &pool.pool))
-        .filter_map(|pool| {
-            pool.apy_base.map(|apy_base| RelayPool {
-                pool: pool.pool,
-                chain: pool.chain,
-                project: pool.project,
-                symbol: pool.symbol,
-                apy_base,
-            })
-        })
-        .collect();
+    let max_pools = allowlists.pools.len().min(MAX_RELAY_POOLS);
+    let mut by_pool = BTreeMap::new();
+
+    for pool in upstream.data {
+        let Some(key) = canonical_pool_id(&pool.pool) else {
+            continue;
+        };
+        if !allowlists.pools.iter().any(|value| value == &key) {
+            continue;
+        }
+
+        let Some(apy_base) = pool.apy_base else {
+            continue;
+        };
+        if !apy_base.is_finite() {
+            continue;
+        }
+
+        let relay_pool = RelayPool {
+            pool: pool.pool,
+            chain: pool.chain,
+            project: pool.project,
+            symbol: pool.symbol,
+            apy_base,
+        };
+
+        if let Some(existing) = by_pool.get_mut(&key) {
+            if relay_pool_sorts_before(&relay_pool, existing) {
+                *existing = relay_pool;
+            }
+            continue;
+        }
+
+        if by_pool.len() < max_pools {
+            by_pool.insert(key, relay_pool);
+        }
+    }
+
+    let mut data: Vec<_> = by_pool.into_values().collect();
+    sort_relay_pools(&mut data);
 
     RelayResponse { data }
+}
+
+/// Sorts relay pools deterministically for stable CRE-facing responses.
+fn sort_relay_pools(pools: &mut [RelayPool]) {
+    pools.sort_by(compare_relay_pools);
+}
+
+fn relay_pool_sorts_before(left: &RelayPool, right: &RelayPool) -> bool {
+    compare_relay_pools(left, right) == Ordering::Less
+}
+
+fn compare_relay_pools(left: &RelayPool, right: &RelayPool) -> Ordering {
+    right
+        .apy_base
+        .total_cmp(&left.apy_base)
+        .then_with(|| left.chain.cmp(&right.chain))
+        .then_with(|| left.project.cmp(&right.project))
+        .then_with(|| left.symbol.cmp(&right.symbol))
+        .then_with(|| left.pool.cmp(&right.pool))
 }
 
 /// Builds canonical allowlists from optional configured values.
@@ -209,7 +265,10 @@ fn upstream_url(value: Option<&str>) -> String {
 
 /// Checks whether a successful upstream response declares a body too large to parse.
 fn upstream_success_too_large(content_length: Option<usize>) -> bool {
-    content_length > Some(MAX_UPSTREAM_BYTES)
+    match content_length {
+        Some(length) => length >= MAX_UPSTREAM_BYTES,
+        None => true,
+    }
 }
 
 /// Checks whether a response body exceeds the relay's CRE-facing size limit.
@@ -224,15 +283,18 @@ fn json_response(body: Vec<u8>) -> Result<Response> {
     Ok(Response::from_bytes(body)?.with_headers(headers))
 }
 
-/// Checks whether a candidate matches a canonical allowlist.
-fn contains_canonical(values: &[String], candidate: &str) -> bool {
-    let candidate = canonical(candidate);
-    values.iter().any(|value| value == &candidate)
-}
-
 /// Converts a DefiLlama string value into the relay's comparison form.
 fn canonical(value: &str) -> String {
     value.trim().to_ascii_lowercase()
+}
+
+/// Converts an untrusted upstream pool ID into comparison form after bounding size.
+fn canonical_pool_id(value: &str) -> Option<String> {
+    let value = value.trim();
+    if value.len() > MAX_POOL_ID_BYTES {
+        return None;
+    }
+    Some(value.to_ascii_lowercase())
 }
 
 /// Builds a plain text Worker response with the provided status code.
@@ -242,10 +304,10 @@ fn response_with_status(message: &str, status: u16) -> Result<Response> {
 
 /// Reads and parses a response `Content-Length` header when present.
 fn upstream_content_length(resp: &Response) -> Result<Option<usize>> {
-    let Some(value) = resp.headers().get("Content-Length")? else {
-        return Ok(None);
-    };
-    Ok(parse_content_length(&value))
+    match resp.headers().get("Content-Length") {
+        Ok(Some(value)) => Ok(parse_content_length(&value)),
+        Ok(None) | Err(_) => Ok(None),
+    }
 }
 
 /// Parses a `Content-Length` header value.
@@ -312,11 +374,106 @@ mod tests {
             filtered.data,
             vec![
                 RelayPool {
+                    pool: "d9c395b9-00d0-4426-a6b3-572a6dd68e54".to_string(),
+                    chain: "Arbitrum".to_string(),
+                    project: "compound-v3".to_string(),
+                    symbol: "USDC".to_string(),
+                    apy_base: 6.25,
+                },
+                RelayPool {
                     pool: "aa70268e-4b52-42bf-a116-608b370f9501".to_string(),
                     chain: "Ethereum".to_string(),
                     project: "aave-v3".to_string(),
                     symbol: "USDC".to_string(),
                     apy_base: 4.5,
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn filter_payload_sorts_pools_deterministically() {
+        let upstream = DefiLlamaResponse {
+            data: vec![
+                pool(
+                    "aa70268e-4b52-42bf-a116-608b370f9501",
+                    "Ethereum",
+                    "aave-v3",
+                    "USDC",
+                    Some(6.25),
+                ),
+                pool(
+                    "d9c395b9-00d0-4426-a6b3-572a6dd68e54",
+                    "Arbitrum",
+                    "compound-v3",
+                    "USDC",
+                    Some(6.25),
+                ),
+            ],
+        };
+
+        let filtered = filter_payload(upstream, &test_allowlists());
+
+        assert_eq!(
+            filtered.data,
+            vec![
+                RelayPool {
+                    pool: "d9c395b9-00d0-4426-a6b3-572a6dd68e54".to_string(),
+                    chain: "Arbitrum".to_string(),
+                    project: "compound-v3".to_string(),
+                    symbol: "USDC".to_string(),
+                    apy_base: 6.25,
+                },
+                RelayPool {
+                    pool: "aa70268e-4b52-42bf-a116-608b370f9501".to_string(),
+                    chain: "Ethereum".to_string(),
+                    project: "aave-v3".to_string(),
+                    symbol: "USDC".to_string(),
+                    apy_base: 6.25,
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn filter_payload_deduplicates_pool_ids_deterministically() {
+        let upstream = DefiLlamaResponse {
+            data: vec![
+                pool(
+                    "aa70268e-4b52-42bf-a116-608b370f9501",
+                    "Ethereum",
+                    "aave-v3",
+                    "USDC",
+                    Some(4.5),
+                ),
+                pool(
+                    "AA70268E-4B52-42BF-A116-608B370F9501",
+                    "Ethereum",
+                    "aave-v3",
+                    "USDC",
+                    Some(7.0),
+                ),
+                pool(
+                    "d9c395b9-00d0-4426-a6b3-572a6dd68e54",
+                    "Arbitrum",
+                    "compound-v3",
+                    "USDC",
+                    Some(6.25),
+                ),
+            ],
+        };
+
+        let filtered = filter_payload(upstream, &test_allowlists());
+
+        assert_eq!(
+            filtered.data,
+            vec![
+                RelayPool {
+                    pool: "AA70268E-4B52-42BF-A116-608B370F9501".to_string(),
+                    chain: "Ethereum".to_string(),
+                    project: "aave-v3".to_string(),
+                    symbol: "USDC".to_string(),
+                    apy_base: 7.0,
                 },
                 RelayPool {
                     pool: "d9c395b9-00d0-4426-a6b3-572a6dd68e54".to_string(),
@@ -376,6 +533,16 @@ mod tests {
         assert!(!authorize_header(None, "secret"));
         assert!(!authorize_header(Some("secret"), "secret"));
         assert!(!authorize_header(Some("Bearer other"), "secret"));
+        assert!(!authorize_header(Some("Bearer secre"), "secret"));
+        assert!(!authorize_header(Some("Bearer secrett"), "secret"));
+    }
+
+    #[test]
+    fn constant_time_eq_handles_length_mismatches_without_requiring_equal_lengths() {
+        assert!(constant_time_eq("Bearer secret", "Bearer secret"));
+        assert!(!constant_time_eq("Bearer secre", "Bearer secret"));
+        assert!(!constant_time_eq("Bearer secrett", "Bearer secret"));
+        assert!(!constant_time_eq("", "Bearer secret"));
     }
 
     #[test]
@@ -387,6 +554,87 @@ mod tests {
         let filtered = filter_payload(upstream, &test_allowlists());
 
         assert!(filtered.data.is_empty());
+    }
+
+    #[test]
+    fn filter_payload_drops_non_finite_base_apy_pools() {
+        let upstream = DefiLlamaResponse {
+            data: vec![
+                pool(
+                    "aa70268e-4b52-42bf-a116-608b370f9501",
+                    "Ethereum",
+                    "aave-v3",
+                    "USDC",
+                    Some(f64::INFINITY),
+                ),
+                pool(
+                    "d9c395b9-00d0-4426-a6b3-572a6dd68e54",
+                    "Arbitrum",
+                    "compound-v3",
+                    "USDC",
+                    Some(f64::NAN),
+                ),
+            ],
+        };
+
+        let filtered = filter_payload(upstream, &test_allowlists());
+
+        assert!(filtered.data.is_empty());
+    }
+
+    #[test]
+    fn filter_payload_drops_overlong_pool_ids() {
+        let upstream = DefiLlamaResponse {
+            data: vec![
+                pool(
+                    &"a".repeat(MAX_POOL_ID_BYTES + 1),
+                    "Ethereum",
+                    "aave-v3",
+                    "USDC",
+                    Some(99.0),
+                ),
+                pool(
+                    "aa70268e-4b52-42bf-a116-608b370f9501",
+                    "Ethereum",
+                    "aave-v3",
+                    "USDC",
+                    Some(4.5),
+                ),
+            ],
+        };
+
+        let filtered = filter_payload(upstream, &test_allowlists());
+
+        assert_eq!(
+            filtered.data,
+            vec![RelayPool {
+                pool: "aa70268e-4b52-42bf-a116-608b370f9501".to_string(),
+                chain: "Ethereum".to_string(),
+                project: "aave-v3".to_string(),
+                symbol: "USDC".to_string(),
+                apy_base: 4.5,
+            }]
+        );
+    }
+
+    #[test]
+    fn filter_payload_caps_relay_pool_count() {
+        let allowed_pools: Vec<_> = (0..MAX_RELAY_POOLS + 1)
+            .map(|index| format!("pool-{index}"))
+            .collect();
+        let upstream = DefiLlamaResponse {
+            data: allowed_pools
+                .iter()
+                .map(|pool_id| pool(pool_id, "Ethereum", "aave-v3", "USDC", Some(4.5)))
+                .collect(),
+        };
+        let allowlists = Allowlists {
+            pools: allowed_pools,
+        };
+
+        let filtered = filter_payload(upstream, &allowlists);
+
+        assert_eq!(filtered.data.len(), MAX_RELAY_POOLS);
     }
 
     #[test]
@@ -408,26 +656,25 @@ mod tests {
 
     #[test]
     fn default_allowed_pools_include_optimism_native_usdc_markets() {
-        assert!(contains_canonical(
-            &parse_csv(DEFAULT_ALLOWED_POOLS),
-            "0758c3b8-4ffb-4176-b0a9-f446e367db46"
-        ));
-        assert!(contains_canonical(
-            &parse_csv(DEFAULT_ALLOWED_POOLS),
-            "b828f0cb-853d-4b32-aebb-2e20d7fd70a8"
-        ));
+        let pools = parse_csv(DEFAULT_ALLOWED_POOLS);
+        assert!(pools.contains(&"0758c3b8-4ffb-4176-b0a9-f446e367db46".to_string()));
+        assert!(pools.contains(&"b828f0cb-853d-4b32-aebb-2e20d7fd70a8".to_string()));
     }
 
     #[test]
     fn build_allowlists_uses_defaults_and_overrides() {
         let defaults = build_allowlists(None);
-        assert!(contains_canonical(
-            &defaults.pools,
-            "aa70268e-4b52-42bf-a116-608b370f9501"
-        ));
+        assert!(defaults
+            .pools
+            .contains(&"aa70268e-4b52-42bf-a116-608b370f9501".to_string()));
 
         let custom = build_allowlists(Some(" pool-a, POOL-B "));
         assert_eq!(custom.pools, vec!["pool-a", "pool-b"]);
+    }
+
+    #[test]
+    fn canonical_pool_id_rejects_overlong_values() {
+        assert_eq!(canonical_pool_id(&"a".repeat(MAX_POOL_ID_BYTES + 1)), None);
     }
 
     #[test]
@@ -441,14 +688,16 @@ mod tests {
 
     #[test]
     fn upstream_success_size_limit_uses_upstream_limit() {
-        assert!(!upstream_success_too_large(None));
-        assert!(!upstream_success_too_large(Some(MAX_UPSTREAM_BYTES)));
+        assert!(upstream_success_too_large(None));
+        assert!(!upstream_success_too_large(Some(MAX_UPSTREAM_BYTES - 1)));
+        assert!(upstream_success_too_large(Some(MAX_UPSTREAM_BYTES)));
         assert!(upstream_success_too_large(Some(MAX_UPSTREAM_BYTES + 1)));
     }
 
     #[test]
-    fn parse_content_length_handles_invalid_and_valid_values() {
+    fn parse_content_length_treats_invalid_values_as_unknown() {
         assert_eq!(parse_content_length("not-a-number"), None);
+        assert_eq!(parse_content_length("9999999999999999999999999999"), None);
         assert_eq!(parse_content_length(" 42 "), Some(42));
     }
 

@@ -102,7 +102,7 @@ func Fuzz_ValidateConfig_defiLlamaProjectCanonicalDuplicates(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, projectA, projectB string) {
 		cfg := &Config{
-			DefiLlama: DefiLlama{Projects: []string{projectA, projectB}, Symbols: []string{"USDC"}},
+			DefiLlama: DefiLlama{PoolIDs: []string{"pool-a"}, Projects: []string{projectA, projectB}, Symbols: []string{"USDC"}},
 			Evms:      []EvmConfig{validEvmConfig()},
 		}
 
@@ -126,7 +126,7 @@ func Fuzz_ValidateConfig_defiLlamaSymbolCanonicalDuplicates(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, symbolA, symbolB string) {
 		cfg := &Config{
-			DefiLlama: DefiLlama{Projects: []string{"aave-v3"}, Symbols: []string{symbolA, symbolB}},
+			DefiLlama: DefiLlama{PoolIDs: []string{"pool-a"}, Projects: []string{"aave-v3"}, Symbols: []string{symbolA, symbolB}},
 			Evms:      []EvmConfig{validEvmConfig()},
 		}
 

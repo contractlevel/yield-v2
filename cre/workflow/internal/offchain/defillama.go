@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
+	"sort"
 	"strings"
 	"time"
 
@@ -24,11 +26,15 @@ const (
 	defiLlamaRelayBearerTokenSecret = "DEFILLAMA_RELAY_BEARER_TOKEN"
 	defiLlamaRequestTimeout         = 10 * time.Second
 	defiLlamaMaxResponseBytes       = 100 << 10
+	maxJSONNestingDepth             = 256
+	minPoolAPY                      = 0.0
+	maxPoolAPY                      = 1000.0
 )
 
 // Config contains the workflow's DefiLlama relay endpoint and selection policy.
 type Config struct {
 	RelayURL string
+	PoolIDs  []string
 	Chains   []ChainConfig
 	Projects []string
 	Symbols  []string
@@ -129,6 +135,9 @@ func fetchAndParseWithRequester(params fetchParams, requester defiLlamaRequester
 	if err != nil {
 		return fetchResult{}, fmt.Errorf("do request: %w", err)
 	}
+	if resp == nil {
+		return fetchResult{}, fmt.Errorf("do request: nil response")
+	}
 
 	if resp.StatusCode != 200 {
 		return fetchResult{}, fmt.Errorf("unexpected status %d", resp.StatusCode)
@@ -197,8 +206,8 @@ func parsePools(r io.Reader, cfg Config, activeProtocolId [32]byte, activeChainN
 		return fetchResult{}, fmt.Errorf("expected '[' after 'data' key")
 	}
 
-	var result fetchResult
-	var maxApy float64
+	var candidates []Pool
+	allowedPool := allowedValues(cfg.PoolIDs)
 	allowedChain := allowedChains(cfg)
 	allowedProject := allowedValues(cfg.Projects)
 	allowedSymbol := allowedValues(cfg.Symbols)
@@ -209,34 +218,77 @@ func parsePools(r io.Reader, cfg Config, activeProtocolId [32]byte, activeChainN
 			return fetchResult{}, fmt.Errorf("decode pool: %w", err)
 		}
 
+		poolID, poolOK := allowedPool[canonicalDefiLlamaValue(p.Pool)]
 		chainName, chainOK := allowedChain[canonicalDefiLlamaValue(p.Chain)]
 		projectName, projectOK := allowedProject[canonicalDefiLlamaValue(p.Project)]
 		symbolName, symbolOK := allowedSymbol[canonicalDefiLlamaValue(p.Symbol)]
-		if !symbolOK || !projectOK || !chainOK {
+		if !poolOK || !symbolOK || !projectOK || !chainOK {
+			continue
+		}
+		if !ValidPoolAPY(p.Apy) {
 			continue
 		}
 
 		pool := p
+		pool.Pool = poolID
 		pool.Chain = chainName
 		pool.Project = projectName
 		pool.Symbol = symbolName
 
-		if pool.Apy > maxApy {
-			maxApy = pool.Apy
-			result.BestPool = pool
-			result.HasBest = true
-		}
+		candidates = append(candidates, pool)
+	}
 
+	sortPools(candidates)
+
+	var result fetchResult
+	if len(candidates) > 0 {
+		result.BestPool = candidates[0]
+		result.HasBest = true
+	}
+	for _, pool := range candidates {
 		if pool.Chain == activeChainName && PoolToProtocolId(pool.Project) == activeProtocolId {
 			result.CurrentPool = pool
 			result.HasCurrent = true
+			break
 		}
 	}
 
 	return result, nil
 }
 
+func ValidPoolAPY(apy float64) bool {
+	return !math.IsNaN(apy) && !math.IsInf(apy, 0) && apy >= minPoolAPY && apy <= maxPoolAPY
+}
+
+func sortPools(pools []Pool) {
+	sort.SliceStable(pools, func(i, j int) bool {
+		left := pools[i]
+		right := pools[j]
+		if left.Apy != right.Apy {
+			return left.Apy > right.Apy
+		}
+		if left.Chain != right.Chain {
+			return left.Chain < right.Chain
+		}
+		if left.Project != right.Project {
+			return left.Project < right.Project
+		}
+		if left.Symbol != right.Symbol {
+			return left.Symbol < right.Symbol
+		}
+		return left.Pool < right.Pool
+	})
+}
+
 func skipJSONValue(decoder *json.Decoder) error {
+	return skipJSONValueDepth(decoder, 0)
+}
+
+func skipJSONValueDepth(decoder *json.Decoder, depth int) error {
+	if depth > maxJSONNestingDepth {
+		return fmt.Errorf("maximum JSON nesting depth exceeded")
+	}
+
 	t, err := decoder.Token()
 	if err != nil {
 		return err
@@ -253,7 +305,7 @@ func skipJSONValue(decoder *json.Decoder) error {
 			if _, err := decoder.Token(); err != nil {
 				return err
 			}
-			if err := skipJSONValue(decoder); err != nil {
+			if err := skipJSONValueDepth(decoder, depth+1); err != nil {
 				return err
 			}
 		}
@@ -261,7 +313,7 @@ func skipJSONValue(decoder *json.Decoder) error {
 		return err
 	case '[':
 		for decoder.More() {
-			if err := skipJSONValue(decoder); err != nil {
+			if err := skipJSONValueDepth(decoder, depth+1); err != nil {
 				return err
 			}
 		}

@@ -43,9 +43,10 @@ func SubmitReport(
 		return fmt.Errorf("tx not success: status=%s err=%s", resp.TxStatus, msg)
 	}
 
-	// Optional but recommended: check contract-level execution
-	if resp.ReceiverContractExecutionStatus != nil &&
-		*resp.ReceiverContractExecutionStatus != evm.ReceiverContractExecutionStatus_RECEIVER_CONTRACT_EXECUTION_STATUS_SUCCESS {
+	if resp.ReceiverContractExecutionStatus == nil {
+		return fmt.Errorf("contract execution status missing")
+	}
+	if *resp.ReceiverContractExecutionStatus != evm.ReceiverContractExecutionStatus_RECEIVER_CONTRACT_EXECUTION_STATUS_SUCCESS {
 		return fmt.Errorf("contract execution failed: status=%s", *resp.ReceiverContractExecutionStatus)
 	}
 

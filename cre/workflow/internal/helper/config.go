@@ -19,6 +19,7 @@ type Config struct {
 
 type DefiLlama struct {
 	RelayURL string   `json:"relayUrl"`
+	PoolIDs  []string `json:"poolIds"`
 	Projects []string `json:"projects"`
 	Symbols  []string `json:"symbols"`
 }
@@ -111,6 +112,9 @@ func isRequiredAddress(value string) bool {
 
 func validateDefiLlamaConfig(cfg DefiLlama) error {
 	if err := validateRelayURL(cfg.RelayURL); err != nil {
+		return err
+	}
+	if err := validateUniqueNonEmptyStrings("defiLlama.poolIds", cfg.PoolIDs); err != nil {
 		return err
 	}
 	if err := validateUniqueNonEmptyStrings("defiLlama.projects", cfg.Projects); err != nil {

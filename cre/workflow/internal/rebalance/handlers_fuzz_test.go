@@ -14,7 +14,7 @@ func Fuzz_NewDefiLlamaConfig(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, parentSelector uint64, parentName string, childSelector uint64, childName string) {
 		cfg := &helper.Config{
-			DefiLlama: helper.DefiLlama{Projects: []string{"aave-v3"}, Symbols: []string{"USDC"}},
+			DefiLlama: helper.DefiLlama{PoolIDs: []string{"pool-a"}, Projects: []string{"aave-v3"}, Symbols: []string{"USDC"}},
 			Evms: []helper.EvmConfig{
 				{IsParent: true, ChainSelector: parentSelector, DefiLlamaChainName: parentName},
 				{ChainSelector: childSelector, DefiLlamaChainName: childName},
@@ -22,6 +22,7 @@ func Fuzz_NewDefiLlamaConfig(f *testing.F) {
 		}
 
 		got := newDefiLlamaConfig(cfg)
+		require.Equal(t, []string{"pool-a"}, got.PoolIDs, "unexpected pool IDs")
 		require.Equal(t, []string{"aave-v3"}, got.Projects, "unexpected projects")
 		require.Equal(t, []string{"USDC"}, got.Symbols, "unexpected symbols")
 		require.Len(t, got.Chains, len(cfg.Evms), "unexpected chain count")

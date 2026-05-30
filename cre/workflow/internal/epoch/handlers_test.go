@@ -276,6 +276,18 @@ func Test_OnEpochCronTrigger_withDeps(t *testing.T) {
 			wantErr: "get epoch nonce: nonce failed",
 		},
 		{
+			name:  "nil epoch nonce",
+			codec: &fakeParentCodec{},
+			deps: func() InitiatorDeps {
+				deps := baseInitiatorDeps()
+				deps.GetEpochNonce = func(cre.Runtime, onchain.ParentVaultInterface, *big.Int) (*big.Int, error) {
+					return nil, nil
+				}
+				return deps
+			}(),
+			wantErr: "get epoch nonce: nil epoch nonce",
+		},
+		{
 			name:  "get epoch error",
 			codec: &fakeParentCodec{},
 			deps: func() InitiatorDeps {
@@ -286,6 +298,48 @@ func Test_OnEpochCronTrigger_withDeps(t *testing.T) {
 				return deps
 			}(),
 			wantErr: "get epoch: epoch failed",
+		},
+		{
+			name:  "nil epoch total deposit amount",
+			codec: &fakeParentCodec{},
+			deps: func() InitiatorDeps {
+				deps := baseInitiatorDeps()
+				deps.GetEpoch = func(cre.Runtime, onchain.ParentVaultInterface, *big.Int, *big.Int) (parent_vault.TypesEpoch, error) {
+					epoch := openEpoch(0)
+					epoch.TotalDepositAmount = nil
+					return epoch, nil
+				}
+				return deps
+			}(),
+			wantErr: "get epoch: nil total deposit amount",
+		},
+		{
+			name:  "nil epoch total share burn amount",
+			codec: &fakeParentCodec{},
+			deps: func() InitiatorDeps {
+				deps := baseInitiatorDeps()
+				deps.GetEpoch = func(cre.Runtime, onchain.ParentVaultInterface, *big.Int, *big.Int) (parent_vault.TypesEpoch, error) {
+					epoch := openEpoch(0)
+					epoch.TotalShareBurnAmount = nil
+					return epoch, nil
+				}
+				return deps
+			}(),
+			wantErr: "get epoch: nil total share burn amount",
+		},
+		{
+			name:  "nil epoch opened at timestamp",
+			codec: &fakeParentCodec{},
+			deps: func() InitiatorDeps {
+				deps := baseInitiatorDeps()
+				deps.GetEpoch = func(cre.Runtime, onchain.ParentVaultInterface, *big.Int, *big.Int) (parent_vault.TypesEpoch, error) {
+					epoch := openEpoch(0)
+					epoch.OpenedAtTimestamp = nil
+					return epoch, nil
+				}
+				return deps
+			}(),
+			wantErr: "get epoch: nil opened at timestamp",
 		},
 		{
 			name:  "epoch not open",
@@ -359,6 +413,18 @@ func Test_OnEpochCronTrigger_withDeps(t *testing.T) {
 				return deps
 			}(),
 			wantErr: "read tvl: tvl failed",
+		},
+		{
+			name:  "nil tvl",
+			codec: &fakeParentCodec{},
+			deps: func() InitiatorDeps {
+				deps := baseInitiatorDeps()
+				deps.ReadTVL = func(cre.Runtime, onchain.BaseVaultInterface, *big.Int) (*big.Int, error) {
+					return nil, nil
+				}
+				return deps
+			}(),
+			wantErr: "read tvl: nil tvl",
 		},
 		{name: "encode close error", codec: &fakeParentCodec{closeErr: errors.New("encode failed")}, deps: baseInitiatorDeps(), wantErr: "encode closeEpoch: encode failed"},
 		{
