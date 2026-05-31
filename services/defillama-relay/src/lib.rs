@@ -1,3 +1,4 @@
+use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::{cmp::Ordering, collections::BTreeMap};
 use worker::{event, Env, Fetch, Headers, Method, Request, Response, Result};
@@ -29,6 +30,30 @@ const MAX_RELAY_POOLS: usize = 32;
 
 /// Maximum accepted byte length for an upstream DefiLlama pool ID.
 const MAX_POOL_ID_BYTES: usize = 128;
+
+/// DefiLlama metadata is untrusted input. Bounding response fields before JSON
+/// serialization prevents a compromised upstream from inflating the CRE-facing
+/// response or forcing large encoder allocations.
+///
+/// These limits intentionally cover only the compact metadata returned to CRE,
+/// not the larger upstream response. Overlong metadata is treated as malformed
+/// and the containing pool is dropped.
+///
+/// Maximum accepted byte length for an upstream chain name returned to CRE.
+const MAX_CHAIN_BYTES: usize = 32;
+
+/// Maximum accepted byte length for an upstream project name returned to CRE.
+const MAX_PROJECT_BYTES: usize = 64;
+
+/// Maximum accepted byte length for an upstream symbol returned to CRE.
+const MAX_SYMBOL_BYTES: usize = 64;
+
+/// Maximum accepted byte length for a request Authorization header.
+///
+/// The bearer token is short and fixed by deployment policy. Rejecting oversized
+/// headers before comparison prevents unauthenticated clients from making auth
+/// cost scale with attacker-controlled input size.
+const MAX_AUTH_HEADER_BYTES: usize = 1024;
 
 /// Pool shape read from DefiLlama's `/pools` response.
 #[derive(Debug, Deserialize)]
@@ -108,7 +133,7 @@ async fn handle_pools(req: Request, env: Env) -> Result<Response> {
         return response_with_status("upstream response too large", 502);
     }
 
-    let upstream: DefiLlamaResponse = upstream_resp.json().await?;
+    let upstream = read_upstream_json(&mut upstream_resp).await?;
     let payload = filter_payload(upstream, &allowlists);
 
     let encoded = encode_payload(&payload)?;
@@ -128,23 +153,40 @@ fn is_authorized(req: &Request, expected_token: &str) -> bool {
 }
 
 /// Checks whether an optional authorization header is the expected bearer token.
+///
+/// Accepted input is exactly `Bearer <token>`. The full header is capped before
+/// parsing so unauthenticated requests cannot force comparison work proportional
+/// to an attacker-chosen header length. After the prefix check, only the token
+/// bytes are compared against the configured secret.
 fn authorize_header(header: Option<&str>, expected_token: &str) -> bool {
+    const BEARER_PREFIX: &str = "Bearer ";
+
     let Some(value) = header else {
         return false;
     };
-    constant_time_eq(value, &format!("Bearer {expected_token}"))
+    if value.len() > MAX_AUTH_HEADER_BYTES {
+        return false;
+    }
+
+    let Some(token) = value.strip_prefix(BEARER_PREFIX) else {
+        return false;
+    };
+    constant_time_eq(token, expected_token)
 }
 
-/// Compares strings without short-circuiting on mismatched lengths or bytes.
+/// Compares bounded strings without byte-value short-circuiting.
+///
+/// The loop count is derived from the trusted expected value. This keeps runtime
+/// independent of the provided token length after `authorize_header` has applied
+/// the header cap, while still folding length mismatches into the result.
 fn constant_time_eq(left: &str, right: &str) -> bool {
     let left = left.as_bytes();
     let right = right.as_bytes();
-    let max_len = left.len().max(right.len());
     let mut diff = left.len() ^ right.len();
 
-    for index in 0..max_len {
+    for index in 0..right.len() {
         let left_byte = left.get(index).copied().unwrap_or(0);
-        let right_byte = right.get(index).copied().unwrap_or(0);
+        let right_byte = right[index];
         diff |= usize::from(left_byte ^ right_byte);
     }
 
@@ -182,6 +224,16 @@ fn parse_csv(input: &str) -> Vec<String> {
 ///
 /// Pools with `null` base APY are dropped because the CRE workflow needs
 /// protocol-native yield values to compare candidate pools.
+///
+/// Returned string fields are trimmed and bounded before they enter the relay
+/// payload. Overlong metadata is rejected instead of truncated so CRE never
+/// receives ambiguous chain/project/symbol values. The returned pool ID uses the
+/// canonical, validated allowlist key rather than the raw upstream string, which
+/// prevents padded IDs from amplifying the serialized response size.
+///
+/// Selection is intentionally independent of upstream ordering: the relay keeps
+/// the best candidate per pool ID, sorts all candidates, then applies the
+/// CRE-facing response count cap.
 fn filter_payload(upstream: DefiLlamaResponse, allowlists: &Allowlists) -> RelayResponse {
     let max_pools = allowlists.pools.len().min(MAX_RELAY_POOLS);
     let mut by_pool = BTreeMap::new();
@@ -201,28 +253,39 @@ fn filter_payload(upstream: DefiLlamaResponse, allowlists: &Allowlists) -> Relay
             continue;
         }
 
+        let Some(chain) = bounded_field(&pool.chain, MAX_CHAIN_BYTES) else {
+            continue;
+        };
+        let Some(project) = bounded_field(&pool.project, MAX_PROJECT_BYTES) else {
+            continue;
+        };
+        let Some(symbol) = bounded_field(&pool.symbol, MAX_SYMBOL_BYTES) else {
+            continue;
+        };
+
         let relay_pool = RelayPool {
-            pool: pool.pool,
-            chain: pool.chain,
-            project: pool.project,
-            symbol: pool.symbol,
+            pool: key.clone(),
+            chain,
+            project,
+            symbol,
             apy_base,
         };
 
-        if let Some(existing) = by_pool.get_mut(&key) {
-            if relay_pool_sorts_before(&relay_pool, existing) {
-                *existing = relay_pool;
+        match by_pool.get_mut(&key) {
+            Some(existing) => {
+                if relay_pool_sorts_before(&relay_pool, existing) {
+                    *existing = relay_pool;
+                }
             }
-            continue;
-        }
-
-        if by_pool.len() < max_pools {
-            by_pool.insert(key, relay_pool);
+            None => {
+                by_pool.insert(key, relay_pool);
+            }
         }
     }
 
     let mut data: Vec<_> = by_pool.into_values().collect();
     sort_relay_pools(&mut data);
+    data.truncate(max_pools);
 
     RelayResponse { data }
 }
@@ -258,6 +321,52 @@ fn encode_payload(payload: &RelayResponse) -> Result<Vec<u8>> {
     serde_json::to_vec(payload).map_err(|err| worker::Error::RustError(err.to_string()))
 }
 
+/// Reads and parses upstream JSON while enforcing the relay's hard byte cap.
+///
+/// `Content-Length` is only a cheap early reject. The authoritative protection
+/// is this chunked read, which stops as soon as the actual body exceeds
+/// `MAX_UPSTREAM_BYTES`, including chunked or incorrectly reported responses.
+async fn read_upstream_json(resp: &mut Response) -> Result<DefiLlamaResponse> {
+    let body = read_upstream_body(resp, MAX_UPSTREAM_BYTES).await?;
+    parse_upstream_json(&body)
+}
+
+/// Reads a Worker response body without allowing it to grow past `limit` bytes.
+async fn read_upstream_body(resp: &mut Response, limit: usize) -> Result<Vec<u8>> {
+    let mut body = Vec::new();
+    let Ok(mut stream) = resp.stream() else {
+        let body = resp.bytes().await?;
+        if upstream_body_too_large(body.len(), limit) {
+            return Err(upstream_too_large_error());
+        }
+        return Ok(body);
+    };
+
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk?;
+        if upstream_body_too_large(body.len().saturating_add(chunk.len()), limit) {
+            return Err(upstream_too_large_error());
+        }
+        body.extend_from_slice(&chunk);
+    }
+
+    Ok(body)
+}
+
+/// Parses the bounded upstream body into the subset of DefiLlama data we use.
+fn parse_upstream_json(body: &[u8]) -> Result<DefiLlamaResponse> {
+    serde_json::from_slice(body).map_err(worker::Error::from)
+}
+
+/// Checks whether the actual upstream body bytes exceed the hard read limit.
+fn upstream_body_too_large(body_len: usize, limit: usize) -> bool {
+    body_len > limit
+}
+
+fn upstream_too_large_error() -> worker::Error {
+    worker::Error::RustError("upstream response too large".to_string())
+}
+
 /// Returns the configured upstream URL or the production DefiLlama default.
 fn upstream_url(value: Option<&str>) -> String {
     value.unwrap_or(DEFAULT_UPSTREAM_URL).to_string()
@@ -267,7 +376,7 @@ fn upstream_url(value: Option<&str>) -> String {
 fn upstream_success_too_large(content_length: Option<usize>) -> bool {
     match content_length {
         Some(length) => length >= MAX_UPSTREAM_BYTES,
-        None => true,
+        None => false,
     }
 }
 
@@ -295,6 +404,18 @@ fn canonical_pool_id(value: &str) -> Option<String> {
         return None;
     }
     Some(value.to_ascii_lowercase())
+}
+
+/// Trims and bounds an untrusted upstream string before returning it to CRE.
+///
+/// Empty or overlong fields indicate malformed upstream metadata for this relay
+/// and are dropped with their containing pool entry.
+fn bounded_field(value: &str, max_bytes: usize) -> Option<String> {
+    let value = value.trim();
+    if value.is_empty() || value.len() > max_bytes {
+        return None;
+    }
+    Some(value.to_string())
 }
 
 /// Builds a plain text Worker response with the provided status code.
@@ -469,7 +590,7 @@ mod tests {
             filtered.data,
             vec![
                 RelayPool {
-                    pool: "AA70268E-4B52-42BF-A116-608B370F9501".to_string(),
+                    pool: "aa70268e-4b52-42bf-a116-608b370f9501".to_string(),
                     chain: "Ethereum".to_string(),
                     project: "aave-v3".to_string(),
                     symbol: "USDC".to_string(),
@@ -504,6 +625,84 @@ mod tests {
     }
 
     #[test]
+    fn filter_payload_returns_canonical_pool_id_for_padded_upstream_id() {
+        let upstream = DefiLlamaResponse {
+            data: vec![pool(
+                "   AA70268E-4B52-42BF-A116-608B370F9501   ",
+                "Ethereum",
+                "aave-v3",
+                "USDC",
+                Some(4.5),
+            )],
+        };
+
+        let filtered = filter_payload(upstream, &test_allowlists());
+
+        assert_eq!(
+            filtered.data,
+            vec![RelayPool {
+                pool: "aa70268e-4b52-42bf-a116-608b370f9501".to_string(),
+                chain: "Ethereum".to_string(),
+                project: "aave-v3".to_string(),
+                symbol: "USDC".to_string(),
+                apy_base: 4.5,
+            }]
+        );
+    }
+
+    #[test]
+    fn filter_payload_drops_overlong_output_fields() {
+        let upstream = DefiLlamaResponse {
+            data: vec![
+                pool(
+                    "aa70268e-4b52-42bf-a116-608b370f9501",
+                    &"a".repeat(MAX_CHAIN_BYTES + 1),
+                    "aave-v3",
+                    "USDC",
+                    Some(4.5),
+                ),
+                pool(
+                    "d9c395b9-00d0-4426-a6b3-572a6dd68e54",
+                    "Arbitrum",
+                    "compound-v3",
+                    &"U".repeat(MAX_SYMBOL_BYTES + 1),
+                    Some(6.25),
+                ),
+            ],
+        };
+
+        let filtered = filter_payload(upstream, &test_allowlists());
+
+        assert!(filtered.data.is_empty());
+    }
+
+    #[test]
+    fn filter_payload_trims_output_fields() {
+        let upstream = DefiLlamaResponse {
+            data: vec![pool(
+                "aa70268e-4b52-42bf-a116-608b370f9501",
+                " Ethereum ",
+                " aave-v3 ",
+                " USDC ",
+                Some(4.5),
+            )],
+        };
+
+        let filtered = filter_payload(upstream, &test_allowlists());
+
+        assert_eq!(
+            filtered.data,
+            vec![RelayPool {
+                pool: "aa70268e-4b52-42bf-a116-608b370f9501".to_string(),
+                chain: "Ethereum".to_string(),
+                project: "aave-v3".to_string(),
+                symbol: "USDC".to_string(),
+                apy_base: 4.5,
+            }]
+        );
+    }
+
+    #[test]
     fn filter_payload_drops_null_base_apy_pools() {
         let upstream = DefiLlamaResponse {
             data: vec![pool(
@@ -532,9 +731,19 @@ mod tests {
         assert!(authorize_header(Some("Bearer secret"), "secret"));
         assert!(!authorize_header(None, "secret"));
         assert!(!authorize_header(Some("secret"), "secret"));
+        assert!(!authorize_header(Some("bearer secret"), "secret"));
+        assert!(!authorize_header(Some("Bearersecret"), "secret"));
         assert!(!authorize_header(Some("Bearer other"), "secret"));
         assert!(!authorize_header(Some("Bearer secre"), "secret"));
         assert!(!authorize_header(Some("Bearer secrett"), "secret"));
+    }
+
+    #[test]
+    fn authorize_header_rejects_oversized_headers_before_comparison() {
+        let oversized = format!("Bearer {}", "a".repeat(MAX_AUTH_HEADER_BYTES));
+
+        assert!(oversized.len() > MAX_AUTH_HEADER_BYTES);
+        assert!(!authorize_header(Some(&oversized), "secret"));
     }
 
     #[test]
@@ -638,6 +847,34 @@ mod tests {
     }
 
     #[test]
+    fn filter_payload_applies_pool_count_cap_after_sorting_all_candidates() {
+        let allowed_pools: Vec<_> = (0..MAX_RELAY_POOLS + 1)
+            .map(|index| format!("pool-{index}"))
+            .collect();
+        let upstream = DefiLlamaResponse {
+            data: allowed_pools
+                .iter()
+                .enumerate()
+                .map(|(index, pool_id)| {
+                    let apy_base = if index == MAX_RELAY_POOLS { 10.0 } else { 1.0 };
+                    pool(pool_id, "Ethereum", "aave-v3", "USDC", Some(apy_base))
+                })
+                .collect(),
+        };
+        let allowlists = Allowlists {
+            pools: allowed_pools,
+        };
+
+        let filtered = filter_payload(upstream, &allowlists);
+
+        assert_eq!(filtered.data.len(), MAX_RELAY_POOLS);
+        assert!(filtered
+            .data
+            .iter()
+            .any(|pool| pool.pool == format!("pool-{MAX_RELAY_POOLS}")));
+    }
+
+    #[test]
     fn relay_response_stays_under_size_limit_for_small_payload() {
         let response = RelayResponse {
             data: vec![RelayPool {
@@ -688,10 +925,31 @@ mod tests {
 
     #[test]
     fn upstream_success_size_limit_uses_upstream_limit() {
-        assert!(upstream_success_too_large(None));
+        assert!(!upstream_success_too_large(None));
         assert!(!upstream_success_too_large(Some(MAX_UPSTREAM_BYTES - 1)));
         assert!(upstream_success_too_large(Some(MAX_UPSTREAM_BYTES)));
         assert!(upstream_success_too_large(Some(MAX_UPSTREAM_BYTES + 1)));
+    }
+
+    #[test]
+    fn upstream_body_size_limit_uses_actual_body_length() {
+        assert!(!upstream_body_too_large(MAX_UPSTREAM_BYTES, MAX_UPSTREAM_BYTES));
+        assert!(upstream_body_too_large(
+            MAX_UPSTREAM_BYTES + 1,
+            MAX_UPSTREAM_BYTES
+        ));
+    }
+
+    #[test]
+    fn parse_upstream_json_reads_defillama_response_shape() {
+        let parsed = parse_upstream_json(
+            br#"{"data":[{"pool":"pool-a","chain":"Ethereum","project":"aave-v3","symbol":"USDC","apyBase":4.5}]}"#,
+        )
+        .expect("valid upstream JSON parses");
+
+        assert_eq!(parsed.data.len(), 1);
+        assert_eq!(parsed.data[0].pool, "pool-a");
+        assert_eq!(parsed.data[0].apy_base, Some(4.5));
     }
 
     #[test]
