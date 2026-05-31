@@ -133,7 +133,10 @@ async fn handle_pools(req: Request, env: Env) -> Result<Response> {
         return response_with_status("upstream response too large", 502);
     }
 
-    let upstream = read_upstream_json(&mut upstream_resp).await?;
+    let upstream = match read_upstream_json(&mut upstream_resp).await {
+        Ok(upstream) => upstream,
+        Err(_) => return response_with_status("upstream error", 502),
+    };
     let payload = filter_payload(upstream, &allowlists);
 
     let encoded = encode_payload(&payload)?;
@@ -332,15 +335,15 @@ async fn read_upstream_json(resp: &mut Response) -> Result<DefiLlamaResponse> {
 }
 
 /// Reads a Worker response body without allowing it to grow past `limit` bytes.
+///
+/// Upstream responses must be stream-readable. Falling back to a one-shot
+/// `bytes()` read would allocate the whole body before this function can enforce
+/// `limit`, so non-streamable bodies are treated as upstream failures.
 async fn read_upstream_body(resp: &mut Response, limit: usize) -> Result<Vec<u8>> {
     let mut body = Vec::new();
-    let Ok(mut stream) = resp.stream() else {
-        let body = resp.bytes().await?;
-        if upstream_body_too_large(body.len(), limit) {
-            return Err(upstream_too_large_error());
-        }
-        return Ok(body);
-    };
+    let mut stream = resp
+        .stream()
+        .map_err(|_| upstream_stream_unavailable_error())?;
 
     while let Some(chunk) = stream.next().await {
         let chunk = chunk?;
@@ -354,8 +357,11 @@ async fn read_upstream_body(resp: &mut Response, limit: usize) -> Result<Vec<u8>
 }
 
 /// Parses the bounded upstream body into the subset of DefiLlama data we use.
+///
+/// Parser details are intentionally hidden from the caller. Malformed upstream
+/// JSON is an upstream failure, not a client-facing diagnostic surface.
 fn parse_upstream_json(body: &[u8]) -> Result<DefiLlamaResponse> {
-    serde_json::from_slice(body).map_err(worker::Error::from)
+    serde_json::from_slice(body).map_err(|_| upstream_parse_error())
 }
 
 /// Checks whether the actual upstream body bytes exceed the hard read limit.
@@ -367,15 +373,27 @@ fn upstream_too_large_error() -> worker::Error {
     worker::Error::RustError("upstream response too large".to_string())
 }
 
+fn upstream_stream_unavailable_error() -> worker::Error {
+    worker::Error::RustError("upstream response is not streamable".to_string())
+}
+
+fn upstream_parse_error() -> worker::Error {
+    worker::Error::RustError("upstream parse error".to_string())
+}
+
 /// Returns the configured upstream URL or the production DefiLlama default.
 fn upstream_url(value: Option<&str>) -> String {
     value.unwrap_or(DEFAULT_UPSTREAM_URL).to_string()
 }
 
 /// Checks whether a successful upstream response declares a body too large to parse.
+///
+/// This is only a cheap header precheck. A declared size equal to the hard read
+/// limit is allowed so the header path matches `read_upstream_body`, which
+/// rejects only actual bodies that exceed the limit.
 fn upstream_success_too_large(content_length: Option<usize>) -> bool {
     match content_length {
-        Some(length) => length >= MAX_UPSTREAM_BYTES,
+        Some(length) => length > MAX_UPSTREAM_BYTES,
         None => false,
     }
 }
@@ -927,13 +945,16 @@ mod tests {
     fn upstream_success_size_limit_uses_upstream_limit() {
         assert!(!upstream_success_too_large(None));
         assert!(!upstream_success_too_large(Some(MAX_UPSTREAM_BYTES - 1)));
-        assert!(upstream_success_too_large(Some(MAX_UPSTREAM_BYTES)));
+        assert!(!upstream_success_too_large(Some(MAX_UPSTREAM_BYTES)));
         assert!(upstream_success_too_large(Some(MAX_UPSTREAM_BYTES + 1)));
     }
 
     #[test]
     fn upstream_body_size_limit_uses_actual_body_length() {
-        assert!(!upstream_body_too_large(MAX_UPSTREAM_BYTES, MAX_UPSTREAM_BYTES));
+        assert!(!upstream_body_too_large(
+            MAX_UPSTREAM_BYTES,
+            MAX_UPSTREAM_BYTES
+        ));
         assert!(upstream_body_too_large(
             MAX_UPSTREAM_BYTES + 1,
             MAX_UPSTREAM_BYTES
@@ -950,6 +971,16 @@ mod tests {
         assert_eq!(parsed.data.len(), 1);
         assert_eq!(parsed.data[0].pool, "pool-a");
         assert_eq!(parsed.data[0].apy_base, Some(4.5));
+    }
+
+    #[test]
+    fn parse_upstream_json_returns_generic_error_for_invalid_json() {
+        let err = parse_upstream_json(br#"{"data":["#).expect_err("invalid JSON fails");
+
+        match err {
+            worker::Error::RustError(message) => assert_eq!(message, "upstream parse error"),
+            other => panic!("expected generic RustError, got {other:?}"),
+        }
     }
 
     #[test]
