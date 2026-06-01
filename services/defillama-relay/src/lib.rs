@@ -1,7 +1,12 @@
-use futures_util::StreamExt;
+use futures_util::{
+    future::{select, Either},
+    pin_mut, StreamExt,
+};
 use serde::{Deserialize, Serialize};
-use std::{cmp::Ordering, collections::BTreeMap};
-use worker::{event, Env, Fetch, Headers, Method, Request, Response, Result};
+use std::{cmp::Ordering, collections::BTreeMap, time::Duration};
+use worker::{
+    event, AbortController, Delay, Env, Fetch, Headers, Method, Request, Response, Result,
+};
 
 /// Production DefiLlama endpoint used when no override is configured.
 const DEFAULT_UPSTREAM_URL: &str = "https://yields.llama.fi/pools";
@@ -24,6 +29,12 @@ const MAX_RESPONSE_BYTES: usize = 90 * 1024;
 
 /// Maximum DefiLlama success response size accepted by `Content-Length` precheck.
 const MAX_UPSTREAM_BYTES: usize = 25 * 1024 * 1024;
+
+/// Wall-clock budget for the complete upstream fetch and body read.
+///
+/// The byte cap limits total response size, but it does not stop an upstream
+/// from slowly streaming bytes forever.
+const UPSTREAM_READ_TIMEOUT_SECS: u64 = 30;
 
 /// Maximum number of compact pool entries returned to CRE.
 const MAX_RELAY_POOLS: usize = 32;
@@ -125,17 +136,35 @@ async fn handle_pools(req: Request, env: Env) -> Result<Response> {
         .headers_mut()?
         .set("Accept", "application/json")?;
 
-    let mut upstream_resp = Fetch::Request(upstream_req).send().await?;
-    if upstream_resp.status_code() != 200 {
-        return response_with_status("upstream error", 502);
-    }
-    if upstream_success_too_large(upstream_content_length(&upstream_resp)?) {
-        return response_with_status("upstream response too large", 502);
-    }
+    let abort = AbortController::default();
+    let signal = abort.signal();
+    let fetch = async move {
+        let mut upstream_resp = Fetch::Request(upstream_req)
+            .send_with_signal(&signal)
+            .await?;
 
-    let upstream = match read_upstream_json(&mut upstream_resp).await {
-        Ok(upstream) => upstream,
-        Err(_) => return response_with_status("upstream error", 502),
+        if upstream_resp.status_code() != 200 {
+            return Err(upstream_error());
+        }
+        if upstream_success_too_large(upstream_content_length(&upstream_resp)?) {
+            return Err(upstream_too_large_error());
+        }
+
+        read_upstream_json(&mut upstream_resp).await
+    };
+    let timeout = Delay::from(Duration::from_secs(UPSTREAM_READ_TIMEOUT_SECS));
+    pin_mut!(fetch);
+    pin_mut!(timeout);
+
+    // Abort the Fetch signal before returning on timeout so a slow response
+    // body is cancelled rather than only dropping the Rust future.
+    let upstream = match select(fetch, timeout).await {
+        Either::Left((Ok(upstream), _)) => upstream,
+        Either::Left((Err(_), _)) => return response_with_status("upstream error", 502),
+        Either::Right(((), _)) => {
+            abort.abort();
+            return response_with_status("upstream timeout", 504);
+        }
     };
     let payload = filter_payload(upstream, &allowlists);
 
@@ -371,6 +400,10 @@ fn upstream_body_too_large(body_len: usize, limit: usize) -> bool {
 
 fn upstream_too_large_error() -> worker::Error {
     worker::Error::RustError("upstream response too large".to_string())
+}
+
+fn upstream_error() -> worker::Error {
+    worker::Error::RustError("upstream error".to_string())
 }
 
 fn upstream_stream_unavailable_error() -> worker::Error {
