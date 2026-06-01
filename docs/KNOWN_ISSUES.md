@@ -1,0 +1,145 @@
+# Known Issues
+
+This document records security-relevant issues that are known to the protocol team and have been explicitly accepted, deferred, or judged to be outside the trust boundary of the system. Each entry describes the issue, why it is not being mitigated in code (or is only partially mitigated), and the operational or design assumptions that bound its impact.
+
+Entries here are intentionally **not assigned a severity rating** — they are accepted properties of the system, not open findings.
+
+IDs are stable. Once assigned, a KI-XXX identifier is never reused or renumbered, even after the underlying issue is resolved. Resolved issues remain in this document with their status updated.
+
+---
+
+## KI-001 — Underlying asset issuer can blacklist or pause the protocol
+
+**Status:** Accepted — inherent to the choice of underlying asset.
+**Last reviewed:** 2026-06-01
+**Component:** Protocol vaults (any vault whose underlying is an issuer-controlled token).
+**Applies to:** Yieldcoin v2 USDC vault (first deployment) and any future vault whose underlying token grants its issuer blacklist, freeze, or pause authority.
+
+### Summary
+
+Yieldcoin v2 vaults hold and transact in an underlying ERC-20 asset chosen at deployment time. For the first vault, that asset is **USDC**, issued by Circle. USDC's contract includes administrative controls that allow the issuer to:
+
+- **Blacklist** specific addresses, preventing them from sending or receiving USDC.
+- **Pause** all USDC transfers globally.
+
+These controls are properties of the underlying token contract, not of the Yieldcoin v2 protocol. If Circle (or the issuer of any future underlying) exercises them against a Yieldcoin v2 contract address, against strategy contracts, or against the token globally, the protocol's ability to move funds is impaired regardless of how the protocol itself is written.
+
+### Impact if exercised
+
+- **Vault address blacklisted:** the vault cannot send or receive USDC. Deposits and withdrawals revert. Funds already held by the vault are frozen until the blacklist is lifted.
+- **Strategy / adapter address blacklisted:** rebalances into or out of that strategy revert; funds parked in that strategy are stuck there until lifted.
+- **Global pause:** all USDC transfers revert protocol-wide until unpaused.
+
+In all cases the failure mode is **availability / liveness**, not loss of accounting integrity. Share accounting, rate calculations, and on-chain state remain correct; users cannot exit until the underlying becomes transferable again.
+
+### Why this is accepted, not mitigated
+
+This risk is intrinsic to using an issuer-controlled stablecoin as the underlying asset. It cannot be mitigated inside the protocol's own contracts:
+
+- The protocol does not control the USDC contract and cannot override blacklist or pause decisions.
+- Wrapping or substituting the underlying at runtime would itself require moving funds through USDC, which is exactly what the blacklist/pause prevents.
+- Using a non-issuer-controlled asset would change the product (Yieldcoin v2 is intentionally a yield-bearing wrapper over a major stablecoin).
+
+The protocol team accepts issuer risk as the cost of denominating vaults in widely-used regulated stablecoins. Vault selection and underlying-asset choice are governance / product decisions, not security bugs.
+
+### Operational assumptions
+
+- Issuer action against a legitimate protocol address is treated as an external incident, handled through off-chain communication with the issuer, not through on-chain mitigations.
+- Users are informed (via product documentation and disclosures) that withdrawals depend on the continued transferability of the underlying asset.
+- Future vaults using underlyings with similar issuer powers (e.g., other regulated stablecoins) inherit this same accepted risk; vaults whose underlying has no such powers do not.
+
+---
+
+## KI-002 — Share burns worth less than one unit of the underlying asset round down to a zero-asset withdrawal
+
+**Status:** Accepted — standard ERC-4626 rounding behavior; documented for user awareness.
+**Last reviewed:** 2026-06-01
+**Component:** Yieldcoin v2 vault (ERC-4626 share accounting)
+
+### Summary
+
+When a user submits a `shareBurnAmount` whose pro-rata value in the underlying asset is less than one unit of that asset's smallest denomination (e.g. < 1 wei of a 6-decimal USDC = effectively any sub-microdollar dust), the conversion `convertToAssets(shares)` rounds down to zero. The vault will accept the share burn and transfer zero underlying assets to the user. The user loses those shares with no asset received in return.
+
+### Why this is accepted
+
+- This is the standard ERC-4626 rounding-down-in-favor-of-the-vault behavior, which protects remaining depositors from inflation/rounding attacks.
+- The economically rational action for any user is to never submit a share burn whose underlying value is below the asset's smallest denomination — the gas cost alone vastly exceeds the value at stake.
+- Frontends integrating with the vault are expected to preview the redemption (`previewRedeem`) and block or warn on zero-asset outcomes before the user signs.
+- Enforcing a non-zero minimum on-chain would add gas cost to every redemption for a scenario that is never economically rational and is trivially preventable client-side.
+
+### User-facing mitigation
+
+- Integrators MUST call `previewRedeem(shares)` before submitting a redemption and reject the transaction if the returned asset amount is zero.
+- Users interacting directly with the contract should verify the same via a static call.
+
+### Residual risk
+
+- A user who bypasses these checks and submits a dust share burn will burn their shares for zero assets. This is a self-inflicted loss bounded by the dust amount; it does not affect other depositors or protocol solvency.
+
+---
+
+## KI-003 — Residual CPU/memory DoS surface in `defillama-relay` JSON deserialization
+
+**Status:** Accepted — mitigated but not eliminated.
+**Last reviewed:** 2026-06-01
+**Component:** `services/defillama-relay` (`src/lib.rs`, `read_upstream_json` → `serde_json::from_slice::<DefiLlamaResponse>`).
+**Threat model:** Hostile upstream response (DefiLlama compromise, MITM at the relay's egress, or DNS / routing manipulation). Direct attacker-to-relay traffic is not in scope here — only the response path from the configured upstream is.
+
+### Summary
+
+The relay fetches DefiLlama's pool list, enforces a hard byte cap while streaming the response body, and then deserializes the entire body in one shot via `serde_json::from_slice` into a `DefiLlamaResponse { data: Vec<Pool> }`. Filtering, allowlisting, and field bounding all happen **after** deserialization.
+
+This means a malicious upstream response that is well-formed JSON and within the byte cap is still parsed in full before any per-pool limits apply. An attacker controlling the upstream response can therefore force the Worker to:
+
+- Tokenize up to the full byte cap of JSON, and
+- Allocate a `Vec<Pool>` and associated `String` fields proportional to that size,
+
+within the Worker's CPU and memory budget for the request.
+
+### Mitigations already in place
+
+1. **Hard upstream byte cap.** `MAX_UPSTREAM_BYTES` is set to **12 MiB**, enforced by `read_upstream_body` via chunked reads. `Content-Length` is used as a cheap early reject; the streamed-read enforcement is authoritative and handles chunked / lying upstream responses.
+2. **Per-field byte bounds applied post-parse.** `bounded_field` trims and length-checks every string field; pools with empty or overlong `chain`, `project`, `symbol`, or `pool` values are dropped.
+3. **Per-response pool cap applied post-parse.** Filtered output is capped at `MAX_RELAY_POOLS`, so even a maximally large upstream cannot push an unbounded list downstream.
+4. **Non-finite numeric rejection.** Pools with non-finite `apyBase` are dropped.
+5. **Allowlist filtering.** Only pools whose IDs are in the configured allowlist are returned to CRE; unknown pool IDs are discarded.
+
+Together these reduce both the attacker's bandwidth budget (12 MiB vs. the original 25 MiB) and the blast radius of any successfully-parsed response.
+
+### Residual risk
+
+The mitigations bound **output size and shape**, but the deserialization step itself still runs over up to 12 MiB of attacker-influenced JSON before any of them apply. Practical residual effects, if a hostile upstream response is delivered:
+
+- Elevated CPU and memory for that single request.
+- Possible Worker resource-limit termination for the request, producing a 502 / 504 to CRE.
+- CRE's rebalance simulation / execution for that cycle fails or stalls until the next successful fetch.
+
+The failure mode is **denial of service for the affected request only**:
+
+- No funds are at risk — the relay holds no assets and signs no transactions.
+- No secrets are exposed — the relay has no privileged credentials beyond the outbound fetch.
+- No on-chain state is written — the relay is read-only from CRE's perspective.
+- Accounting and on-chain protocol state are unaffected; only the data feed is degraded.
+
+### Why this is accepted, not further mitigated
+
+Eliminating the residual would require one of:
+
+- **A bounded `serde` deserializer** (custom `SeqAccess` visitor capping pool count during parse). This is feasible with no new dependencies and would cap both allocation and tokenization at `N` pools, but adds non-trivial custom `Deserialize` code to a small relay whose threat surface is already narrow.
+- **Streaming / incremental JSON parsing.** Adds a dependency and meaningful complexity for a service whose role is intentionally minimal.
+- **Further lowering the byte cap.** 12 MiB is already chosen as the smallest value that comfortably fits a legitimate DefiLlama response with margin; going lower risks rejecting valid upstream payloads.
+
+Given:
+
+- The attack requires upstream compromise (not direct attacker access to the relay).
+- The worst case is per-request DoS of a read-only data feed, not loss of funds or state.
+- All downstream consumers (CRE, vaults) are designed to tolerate transient relay unavailability.
+
+The team accepts the residual as commensurate with the impact and the simplicity goals of the relay. This entry exists so that any future change increasing the relay's privilege, the underlying asset's sensitivity to the feed, or the relay's role in on-chain decisions triggers a re-evaluation.
+
+### Conditions that would warrant revisiting
+
+- The relay gains write authority or signing capability.
+- The relay's output begins driving automated on-chain actions without independent sanity checks downstream.
+- DefiLlama's response format changes in a way that makes 12 MiB an uncomfortable fit, forcing the cap upward.
+- A bounded-deserializer or streaming-parse implementation becomes cheap enough (in code complexity terms) to justify closing the residual.
