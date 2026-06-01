@@ -73,7 +73,7 @@ Because this is integer division, it rounds down. For very small `shareBurnAmoun
 
 ### User-facing mitigation
 
-- Integrators should pre-check expected claim amounts from on-chain state (`getWithdrawShareBurnAmount`, `getEpoch`) and block or warn on zero-claim outcomes.
+- Integrators cannot pre-check exact claim amounts from contract view methods alone; claim settlement depends on epoch state at execution time and claim ordering.
 - Before sending a claim transaction, integrators can run a static simulation of `claimUsdc(epochNonce)` and reject if the returned amount is zero.
 - Users interacting directly should avoid dust-sized withdraw intents and claims.
 
