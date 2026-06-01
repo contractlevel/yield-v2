@@ -28,7 +28,7 @@ const DEFAULT_ALLOWED_POOLS: &str = concat!(
 const MAX_RESPONSE_BYTES: usize = 90 * 1024;
 
 /// Maximum DefiLlama success response size accepted by `Content-Length` precheck.
-const MAX_UPSTREAM_BYTES: usize = 25 * 1024 * 1024;
+const MAX_UPSTREAM_BYTES: usize = 12 * 1024 * 1024;
 
 /// Wall-clock budget for the complete upstream fetch and body read.
 ///
