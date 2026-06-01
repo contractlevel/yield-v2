@@ -50,31 +50,36 @@ The protocol team accepts issuer risk as the cost of denominating vaults in wide
 
 ---
 
-## KI-002 — Share burns worth less than one unit of the underlying asset round down to a zero-asset withdrawal
+## KI-002 — Dust withdraw intents can round down to a zero-USDC claim
 
-**Status:** Accepted — standard ERC-4626 rounding behavior; documented for user awareness.
+**Status:** Accepted — integer-floor pro-rata settlement in `claimUsdc`; documented for user awareness.
 **Last reviewed:** 2026-06-01
-**Component:** Yieldcoin v2 vault (ERC-4626 share accounting)
+**Component:** Yieldcoin v2 vault withdraw lifecycle (`withdraw` / `claimUsdc` in `ParentVault`)
 
 ### Summary
 
-When a user submits a `shareBurnAmount` whose pro-rata value in the underlying asset is less than one unit of that asset's smallest denomination (e.g. < 1 wei of a 6-decimal USDC = effectively any sub-microdollar dust), the conversion `convertToAssets(shares)` rounds down to zero. The vault will accept the share burn and transfer zero underlying assets to the user. The user loses those shares with no asset received in return.
+Withdraw claims are settled pro-rata per epoch in `claimUsdc(epochNonce)`. For non-final claimants, the amount is calculated as:
+
+`usdcWithdrawAmount = shareBurnAmount * epoch.remainingWithdrawClaimAmount / epoch.remainingShareBurnAmount`
+
+Because this is integer division, it rounds down. For very small `shareBurnAmount`, `usdcWithdrawAmount` can be zero even though shares are burned. In that case, the withdraw intent is deleted and `IShare(i_share).burn(address(this), shareBurnAmount)` still executes, while the USDC transfer is skipped by `if (usdcWithdrawAmount != 0)`.
 
 ### Why this is accepted
 
-- This is the standard ERC-4626 rounding-down-in-favor-of-the-vault behavior, which protects remaining depositors from inflation/rounding attacks.
-- The economically rational action for any user is to never submit a share burn whose underlying value is below the asset's smallest denomination — the gas cost alone vastly exceeds the value at stake.
-- Frontends integrating with the vault are expected to preview the redemption (`previewRedeem`) and block or warn on zero-asset outcomes before the user signs.
-- Enforcing a non-zero minimum on-chain would add gas cost to every redemption for a scenario that is never economically rational and is trivially preventable client-side.
+- This is expected behavior of integer-floor pro-rata accounting and prevents over-distribution of USDC across claimants.
+- The final-claimant branch (`shareBurnAmount == epoch.remainingShareBurnAmount`) assigns the entire remainder to the last claim, preserving epoch-level conservation.
+- Adding an on-chain non-zero minimum payout check would either reject otherwise-valid proportional claims or add complexity/gas overhead for an uneconomic dust edge case.
+- The economically rational user action is to avoid submitting tiny withdraw intents whose expected claim is zero.
 
 ### User-facing mitigation
 
-- Integrators MUST call `previewRedeem(shares)` before submitting a redemption and reject the transaction if the returned asset amount is zero.
-- Users interacting directly with the contract should verify the same via a static call.
+- Integrators should pre-check expected claim amounts from on-chain state (`getWithdrawShareBurnAmount`, `getEpoch`) and block or warn on zero-claim outcomes.
+- Before sending a claim transaction, integrators can run a static simulation of `claimUsdc(epochNonce)` and reject if the returned amount is zero.
+- Users interacting directly should avoid dust-sized withdraw intents and claims.
 
 ### Residual risk
 
-- A user who bypasses these checks and submits a dust share burn will burn their shares for zero assets. This is a self-inflicted loss bounded by the dust amount; it does not affect other depositors or protocol solvency.
+- A user who submits and claims a dust-sized withdraw intent can burn shares and receive zero USDC for that claim. This loss is self-inflicted and bounded by the dust amount; it does not affect protocol solvency or other users' balances.
 
 ---
 
