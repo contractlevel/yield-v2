@@ -51,10 +51,6 @@ interface IParentVault is IBaseVault {
     /// @dev Thrown when a prior epoch is still executing
     /// @param epochNonce The nonce of the executing epoch
     error ParentVault__EpochExecuting(uint256 epochNonce);
-    /// @dev Thrown when the withdraw fails
-    /// @param epochNonce The nonce for the epoch that the withdraw failed
-    /// @param amount The amount of USDC that was withdrawn
-    error ParentVault__WithdrawFailed(uint256 epochNonce, uint256 amount);
     /// @dev Thrown when the initial active protocol adapter has already been set
     error ParentVault__InitialActiveProtocolAdapterAlreadySet();
 
