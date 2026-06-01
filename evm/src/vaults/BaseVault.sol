@@ -470,9 +470,9 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @notice Gets the CCIP gas limit for a given chain selector
     /// @param chainSelector The CCIP selector of the chain
     /// @return gasLimit The CCIP gas limit
-    function _getCcipGasLimit(uint64 chainSelector) internal view returns (uint256) {
-        uint256 gasLimit = s_ccipGasLimits[chainSelector];
-        return gasLimit != 0 ? gasLimit : s_defaultCcipGasLimit;
+    function _getCcipGasLimit(uint64 chainSelector) internal view returns (uint256 gasLimit) {
+        gasLimit = s_ccipGasLimits[chainSelector];
+        if (gasLimit == 0) gasLimit = s_defaultCcipGasLimit;
     }
 
     /// @notice Gets the Yieldcoin TVL if this chain is the active strategy chain
