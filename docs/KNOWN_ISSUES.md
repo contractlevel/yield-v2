@@ -4,15 +4,18 @@ This document records security-relevant issues that are known to the protocol te
 
 Entries here are intentionally **not assigned a severity rating** — they are accepted properties of the system, not open findings.
 
-IDs are intended to remain stable after this revision. This PR introduces an initial restructuring of KI numbering into the current KI-001..KI-004 sequence.
+IDs are intended to remain stable after this revision.
 
 ---
 
 ## KI-001 — Centralized trust in privileged operator/admin roles
 
 **Status:** Accepted.
+
 **Last reviewed:** 2026-06-02
+
 **Component:** Access control across vaults, router, registry, token, and PolicyEngine.
+
 **Applies to:** ParentVault, ChildVault, WorkflowRouter, AdapterRegistry, YieldcoinShare, and PolicyEngine-governed ACE policy administration.
 
 ### Summary
@@ -29,6 +32,8 @@ Yieldcoin v2 relies on multiple privileged roles for governance and operations. 
 - **PolicyEngine `ADMIN_ROLE` / `POLICY_CONFIG_ADMIN_ROLE`** for policy wiring and policy configuration.
 
 The system also includes contract-held or infrastructure roles such as `KEYSTONE_FORWARDER_ROLE` (CRE report ingress) and token `MINTER_ROLE`/`BURNER_ROLE` held by ParentVault.
+
+_Note: `DEFAULT_ADMIN_ROLE` for ACE components does not have the same `AccessControlDefaultAdminRules` safeguards as `DEFAULT_ADMIN_ROLE` for the native Yieldcoin v2 components. Please see [ACCESS_CONTROL_MATRIX](./ACCESS_CONTROL_MATRIX.md) for further info._
 
 ### Threat model
 
@@ -49,8 +54,11 @@ This design still depends on trusted operators and governance signers acting cor
 ## KI-002 — Underlying asset issuer can blacklist or pause the protocol
 
 **Status:** Accepted — inherent to the choice of underlying asset.
+
 **Last reviewed:** 2026-06-01
+
 **Component:** Protocol vaults (any vault whose underlying is an issuer-controlled token).
+
 **Applies to:** Yieldcoin v2 USDC vault (first deployment) and any future vault whose underlying token grants its issuer blacklist, freeze, or pause authority.
 
 ### Summary
@@ -91,7 +99,9 @@ The protocol team accepts issuer risk as the cost of denominating vaults in wide
 ## KI-003 — Dust withdraw intents can round down to a zero-USDC claim
 
 **Status:** Accepted — integer-floor pro-rata settlement in `claimUsdc`; documented for user awareness.
+
 **Last reviewed:** 2026-06-01
+
 **Component:** Yieldcoin v2 vault withdraw lifecycle (`withdraw` / `claimUsdc` in `ParentVault`)
 
 ### Summary
@@ -122,8 +132,11 @@ Because this is integer division, it rounds down. For very small `shareBurnAmoun
 ## KI-004 — Residual CPU/memory DoS surface in `defillama-relay` JSON deserialization
 
 **Status:** Accepted — mitigated but not eliminated.
+
 **Last reviewed:** 2026-06-02
+
 **Component:** `services/defillama-relay` (`src/lib.rs`, `read_upstream_json` → `serde_json::from_slice::<DefiLlamaResponse>`).
+
 **Threat model:** DefiLlama compromise, TLS-terminating/MITM compromise, or misconfiguration of DEFILLAMA_UPSTREAM_URL to an attacker-controlled endpoint.
 
 ### Summary
