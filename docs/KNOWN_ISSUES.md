@@ -119,7 +119,7 @@ Because this is integer division, it rounds down. For very small `shareBurnAmoun
 
 ---
 
-## KI-004 — Residual CPU/memory DoS surface in `defillama-relay` JSON deserialization
+## KI-004 — Upstream can trigger memory exhaustion by returning a single oversized stream chunk
 
 **Status:** Accepted — mitigated but not eliminated.
 **Last reviewed:** 2026-06-02
