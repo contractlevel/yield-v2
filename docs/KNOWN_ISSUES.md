@@ -129,30 +129,36 @@ Because this is integer division, it rounds down. For very small `shareBurnAmoun
 
 ---
 
-## KI-004 — Residual CPU/memory DoS surface in `defillama-relay` JSON deserialization
+## KI-004 — Residual CPU/memory DoS surface in `defillama-relay` upstream processing
 
 **Status:** Accepted — mitigated but not eliminated.
 
 **Last reviewed:** 2026-06-02
 
-**Component:** `services/defillama-relay` (`src/lib.rs`, `read_upstream_json` → `serde_json::from_slice::<DefiLlamaResponse>`).
+**Component:** `services/defillama-relay` (`src/lib.rs`, `read_upstream_body` → `read_upstream_json` → `serde_json::from_slice::<DefiLlamaResponse>`).
 
 **Threat model:** DefiLlama compromise, TLS-terminating/MITM compromise, or misconfiguration of DEFILLAMA_UPSTREAM_URL to an attacker-controlled endpoint.
 
 ### Summary
 
-The relay fetches DefiLlama's pool list, enforces a hard byte cap while streaming the response body, and then deserializes the entire body in one shot via `serde_json::from_slice` into a `DefiLlamaResponse { data: Vec<Pool> }`. Filtering, allowlisting, and field bounding all happen **after** deserialization.
+The relay fetches DefiLlama's pool list and enforces a hard byte cap while streaming the response body. The cap prevents the relay from accumulating more than `MAX_UPSTREAM_BYTES` into its own body buffer, and oversized chunks are rejected before being copied into that buffer.
 
-This means a malicious upstream response that is well-formed JSON and within the byte cap is still parsed in full before any per-pool limits apply. An attacker controlling the upstream response can therefore force the Worker to:
+Two residual resource-exhaustion surfaces remain:
 
-- Tokenize up to the full byte cap of JSON, and
-- Allocate a `Vec<Pool>` and associated `String` fields proportional to that size,
+1. The Cloudflare Worker runtime materializes each stream chunk before application code can inspect its size. A malicious or broken upstream that causes the runtime to deliver an unusually large chunk can therefore create transient memory pressure before `read_upstream_body` can reject it.
+2. After the bounded body is read, `serde_json::from_slice` deserializes the full response into a `DefiLlamaResponse { data: Vec<Pool> }`. Filtering, allowlisting, and field bounding all happen **after** deserialization.
+
+This means an attacker controlling the upstream response can still force the Worker to:
+
+- Temporarily hold runtime-provided stream chunks before application-level size checks run,
+- Tokenize up to the full accepted byte cap of JSON, and
+- Allocate a `Vec<Pool>` and associated `String` fields proportional to that accepted body size,
 
 within the Worker's CPU and memory budget for the request.
 
 ### Mitigations already in place
 
-1. **Hard upstream byte cap.** `MAX_UPSTREAM_BYTES` is set to **12 MiB**, enforced by `read_upstream_body` via chunked reads. `Content-Length` is used as a cheap early reject; the streamed-read enforcement is authoritative and handles chunked / lying upstream responses.
+1. **Hard accumulated-body byte cap.** `MAX_UPSTREAM_BYTES` is set to **12 MiB**, enforced by `read_upstream_body` via chunked reads. `Content-Length` is used as a cheap early reject; the streamed-read enforcement is authoritative for bytes copied into the relay-owned body buffer and handles chunked / lying upstream responses. This does not prevent the Worker runtime from transiently materializing a stream chunk before application code receives it.
 2. **Per-field byte bounds applied post-parse.** Pool IDs are length-bounded by canonical_pool_id; returned metadata fields chain, project, and symbol are trimmed and length-bounded by bounded_field.
 3. **Per-response pool cap applied post-parse.** Filtered output is capped at `MAX_RELAY_POOLS`, so even a maximally large upstream cannot push an unbounded list downstream.
 4. **Non-finite numeric rejection.** Pools with non-finite `apyBase` are dropped.
@@ -162,9 +168,10 @@ The byte cap reduces parser exposure. The post-parse checks bound the CRE-facing
 
 ### Residual risk
 
-The mitigations bound **output size and shape**, but the deserialization step itself still runs over up to 12 MiB of attacker-influenced JSON before any of them apply. Practical residual effects, if a hostile upstream response is delivered:
+The mitigations bound the relay-owned body buffer, output size, and output shape, but they do not eliminate all upstream-triggered resource use before validation completes. Practical residual effects, if a hostile upstream response is delivered:
 
-- Elevated CPU and memory for that single request.
+- Transient memory pressure while the Worker runtime materializes a large stream chunk before `read_upstream_body` can reject it.
+- Elevated CPU and memory while `serde_json` parses up to 12 MiB of attacker-influenced JSON before post-parse filtering and field bounds apply.
 - Possible Worker resource-limit termination or relay error, producing a 502/504 or platform-level failure to CRE.
 - CRE's rebalance simulation / execution for that cycle fails or stalls until the next successful fetch.
 
@@ -179,6 +186,7 @@ The failure mode is **denial of service for the affected request only**:
 
 Eliminating the residual would require one of:
 
+- **Platform-level chunk/read controls.** This would be needed to prevent runtime chunk materialization before application code receives each chunk. The relay currently does not have lower-level control over Cloudflare's internal chunk allocation.
 - **A bounded `serde` deserializer** (custom `SeqAccess` visitor capping pool count during parse). This is feasible with no new dependencies and would cap Pool allocation and data-array parsing after N pools, while the existing byte cap would still bound raw body buffering.
 - **Streaming / incremental JSON parsing.** Adds meaningful complexity, and may require adapter code or additional dependencies in this Worker runtime.
 - **Further lowering the byte cap.** 12 MiB is already chosen as the smallest value that comfortably fits a legitimate DefiLlama response with margin; going lower risks rejecting valid upstream payloads.
