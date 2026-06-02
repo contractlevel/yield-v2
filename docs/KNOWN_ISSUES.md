@@ -135,7 +135,7 @@ Because this is integer division, it rounds down. For very small `shareBurnAmoun
 
 **Last reviewed:** 2026-06-02
 
-**Component:** `services/defillama-relay` (`src/lib.rs`, `read_upstream_body` → `read_upstream_json` → `serde_json::from_slice::<DefiLlamaResponse>`).
+**Component:** `services/defillama-relay` (`src/lib.rs`, `read_upstream_json`, `read_upstream_body`, and `parse_upstream_json` → `serde_json::from_slice::<DefiLlamaResponse>`).
 
 **Threat model:** DefiLlama compromise, TLS-terminating/MITM compromise, or misconfiguration of DEFILLAMA_UPSTREAM_URL to an attacker-controlled endpoint.
 
