@@ -4,7 +4,7 @@ This document records security-relevant issues that are known to the protocol te
 
 Entries here are intentionally **not assigned a severity rating** — they are accepted properties of the system, not open findings.
 
-IDs are intended to remain stable after this revision.
+IDs are stable. Once assigned, a KI-XXX identifier is never reused or renumbered, even after the underlying issue is resolved. Resolved issues remain in this document with their status updated.
 
 ---
 
