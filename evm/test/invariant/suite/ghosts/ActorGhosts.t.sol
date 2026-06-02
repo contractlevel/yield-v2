@@ -24,6 +24,8 @@ abstract contract ActorGhosts is Setup {
             MockUSDC(parent.vault.getUsdc()).mint(s_actors[i], INVARIANT_ACTOR_USDC_BALANCE);
             _changePrank(s_actors[i]);
             IERC20(parent.vault.getUsdc()).approve(address(parent.vault), type(uint256).max);
+            IERC20(parent.vault.getUsdc()).approve(address(child.vault), type(uint256).max);
+            IERC20(parent.vault.getUsdc()).approve(address(remoteChild.vault), type(uint256).max);
             parent.share.approve(address(parent.vault), type(uint256).max);
         }
 

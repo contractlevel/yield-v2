@@ -49,6 +49,7 @@ Use these ID prefixes:
 | `REC-*`     | Recovery behavior.                                                 |
 | `ROUTER-*`  | WorkflowRouter behavior.                                           |
 | `ADAPTER-*` | Adapter registry and protocol adapter behavior.                    |
+| `DONATE-*`  | Permissionless donation behavior.                                  |
 | `MIG-*`     | Reserved for future migration, upgrade, or state handoff behavior. |
 
 ## Solvency
@@ -180,6 +181,15 @@ These are desired configuration properties. Address zero-checks are not currentl
 | `FEE-001` | Performance fee is collected only when gross price per share is greater than the high-water mark. This is also covered by `SHARE-003`.                              | `unit`      | candidate |
 | `FEE-002` | Fee shares mint to treasury, not to caller or vault. This property depends on `CFG-001` because a zero treasury is operationally invalid.                           | `unit`      | candidate |
 | `FEE-003` | The performance fee high-water mark is monotonically non-decreasing, except that it remains unchanged when fee collection is intentionally skipped under `DEV-001`. | `invariant` | candidate |
+
+## Donations
+
+| ID           | Statement                                                                                                  | Type            | Status    |
+| ------------ | ---------------------------------------------------------------------------------------------------------- | --------------- | --------- |
+| `DONATE-001` | A successful donation increases active strategy TVL by the donated amount.                                 | `postcondition` | implemented: Foundry + Medusa |
+| `DONATE-002` | A successful donation does not mint shares or change `ParentVault.s_totalShares`.                         | `postcondition` | implemented: Foundry + Medusa |
+| `DONATE-003` | A successful donation does not change the current epoch.                                                   | `postcondition` | implemented: Foundry + Medusa |
+| `DONATE-004` | Donation can only succeed on the vault that owns the active strategy.                                      | `postcondition` | implemented: Foundry + Medusa |
 
 ## Rebalance Lifecycle
 

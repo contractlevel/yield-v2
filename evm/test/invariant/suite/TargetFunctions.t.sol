@@ -6,6 +6,9 @@ import {Properties} from "./Properties.t.sol";
 import {Types} from "../../../src/libraries/Types.sol";
 
 abstract contract TargetFunctions is BaseTargetFunctions, Properties {
+    uint256 internal constant BPS_DENOMINATOR = 10_000;
+    uint256 internal constant PERFORMANCE_FEE_BPS = 777;
+
     function handler_deposit(uint256 actorSeed, uint256 amountSeed) public {
         address actor = _actor(actorSeed);
         s_currentActor = actor;
@@ -80,8 +83,8 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             handler_deposit(tvlSeed, MIN_DEPOSIT_AMOUNT);
         }
 
-        uint256 tvl = epochNonce == 1 ? 0 : _activeStrategyTvl();
-        uint256 settlementPricePerShare = _settlementPricePerShare(tvl);
+        uint256 tvl = _activeStrategyTvl();
+        uint256 settlementPricePerShare = _closeEpochSettlementPricePerShare(tvl);
         uint256 totalWithdrawUsdc =
             parent.vault.getEpoch(epochNonce).totalShareBurnAmount * settlementPricePerShare / SHARE_PRECISION;
         uint256 totalDepositAmount = parent.vault.getEpoch(epochNonce).totalDepositAmount;
@@ -128,7 +131,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
     function handler_initiateRebalance(uint256 pathSeed, uint256 protocolSeed, uint256 actorSeed, uint256 amountSeed)
         public
     {
-        if (_activeStrategyTvl() == 0) {
+        if (parent.vault.getEpochNonce() == 1 || _activeStrategyTvl() == 0) {
             handler_claimShares(actorSeed, 0, amountSeed);
         }
 
@@ -316,10 +319,45 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         eq(_after.actorUsdcBalance, _before.actorUsdcBalance + usdcWithdrawAmount, "claimUsdc did not transfer USDC");
     }
 
+    function handler_donate(uint256 actorSeed, uint256 amountSeed) public {
+        address actor = _actor(actorSeed);
+        s_currentActor = actor;
+
+        uint256 amount = _clampDepositAmount(amountSeed);
+        uint256 tvlBefore = _activeStrategyTvl();
+        uint256 totalSharesBefore = parent.vault.getTotalShares();
+        uint256 epochNonceBefore = parent.vault.getEpochNonce();
+
+        _changePrank(actor);
+        _donateToActiveVault(amount);
+
+        eq(_activeStrategyTvl(), tvlBefore + amount, "DONATE-001: active strategy TVL did not increase");
+        eq(parent.vault.getTotalShares(), totalSharesBefore, "DONATE-002: donation minted shares");
+        eq(parent.vault.getEpochNonce(), epochNonceBefore, "DONATE-003: donation changed epoch nonce");
+    }
+
     function _settlementPricePerShare(uint256 tvl) internal view returns (uint256 pricePerShare) {
         uint256 totalShares = parent.vault.getTotalShares();
         if (totalShares != 0 && tvl != 0) return tvl * SHARE_PRECISION / totalShares;
         return SHARE_PRECISION;
+    }
+
+    function _closeEpochSettlementPricePerShare(uint256 tvl) internal view returns (uint256 settlementPricePerShare) {
+        uint256 grossPricePerShare = _settlementPricePerShare(tvl);
+        uint256 highWaterMark = parent.vault.getPerformanceFeeHighWaterMark();
+        if (grossPricePerShare <= highWaterMark) return grossPricePerShare;
+
+        uint256 totalShares = parent.vault.getTotalShares();
+        uint256 totalYield = _ceilDiv((grossPricePerShare - highWaterMark) * totalShares, SHARE_PRECISION);
+        uint256 feeUsdc = _ceilDiv(totalYield * PERFORMANCE_FEE_BPS, BPS_DENOMINATOR);
+        if (feeUsdc >= tvl) return grossPricePerShare;
+
+        uint256 feeShares = _ceilDiv(feeUsdc * totalShares, tvl - feeUsdc);
+        return tvl * SHARE_PRECISION / (totalShares + feeShares);
+    }
+
+    function _ceilDiv(uint256 numerator, uint256 denominator) internal pure returns (uint256) {
+        return numerator == 0 ? 0 : (numerator - 1) / denominator + 1;
     }
 
     function _rebalanceTo(Types.Strategy memory target) internal {
@@ -393,6 +431,20 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
                 epochNonce,
                 amount
             );
+        }
+    }
+
+    function _donateToActiveVault(uint256 amount) internal {
+        uint64 chainSelector = parent.vault.getRebalance().activeStrategy.chainSelector;
+
+        if (chainSelector == PARENT_CHAIN_SELECTOR) {
+            parent.vault.donate(amount);
+        } else if (chainSelector == CHILD_CHAIN_SELECTOR) {
+            child.vault.donate(amount);
+        } else if (chainSelector == REMOTE_CHILD_CHAIN_SELECTOR) {
+            remoteChild.vault.donate(amount);
+        } else {
+            t(false, "DONATE-004: active strategy chain is unsupported");
         }
     }
 
