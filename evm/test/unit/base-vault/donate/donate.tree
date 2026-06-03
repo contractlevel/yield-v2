@@ -1,4 +1,6 @@
 BaseVault_donate
+├── when caller does not have DONATE_OPERATOR_ROLE
+│   └── it should revert with AccessControlUnauthorizedAccount
 ├── when amount is zero
 │   └── it should revert with BaseVault__NoZeroAmount
 ├── when the chain is not the active strategy
@@ -13,4 +15,4 @@ BaseVault_donate
 │   ├── it should not mint shares
 │   └── for ParentVault, it should not change totalShares
 └── when the vault is paused
-    └── it should still allow donations
+    └── it should still allow role-gated donations

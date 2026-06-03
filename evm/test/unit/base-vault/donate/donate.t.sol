@@ -4,16 +4,28 @@ pragma solidity 0.8.28;
 import {BaseUnitTest, Vm} from "../../BaseUnitTest.t.sol";
 
 import {BaseVault, IBaseVault} from "../../../../src/vaults/BaseVault.sol";
+import {Roles} from "../../../../src/libraries/Roles.sol";
+
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 abstract contract BaseVault_DonateUnitTest is BaseUnitTest {
     BaseVault internal s_vault;
-    address internal immutable i_donor = makeAddr("donor");
 
     function _setUpDonateTest(BaseVault vault) internal {
         s_vault = vault;
-        deal(address(s_mockUsdc), i_donor, DEPOSIT_AMOUNT);
-        _changePrank(i_donor);
+        deal(address(s_mockUsdc), i_donateOperator, DEPOSIT_AMOUNT);
+        _changePrank(i_donateOperator);
         s_mockUsdc.approve(address(s_vault), DEPOSIT_AMOUNT);
+    }
+
+    function test_BaseVault_donate_RevertWhen_CallerDoesNotHaveDONATE_OPERATOR_ROLE() external {
+        _changePrank(i_nonOwner);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, i_nonOwner, Roles.DONATE_OPERATOR_ROLE
+            )
+        );
+        s_vault.donate(DEPOSIT_AMOUNT);
     }
 
     function test_BaseVault_donate_RevertWhen_AmountIsZero() external {
@@ -36,7 +48,7 @@ abstract contract BaseVault_DonateUnitTest is BaseUnitTest {
     }
 
     function test_BaseVault_donate_Success_DepositsUsdcIntoActiveStrategy() external {
-        uint256 donorBalanceBefore = s_mockUsdc.balanceOf(i_donor);
+        uint256 donorBalanceBefore = s_mockUsdc.balanceOf(i_donateOperator);
 
         s_vault.donate(DEPOSIT_AMOUNT);
 
@@ -44,7 +56,7 @@ abstract contract BaseVault_DonateUnitTest is BaseUnitTest {
         assertEq(s_mockProtocolAdapter.getLastDepositAmount(), DEPOSIT_AMOUNT);
         assertEq(s_mockUsdc.balanceOf(address(s_mockProtocolAdapter)), DEPOSIT_AMOUNT);
         assertEq(s_mockUsdc.balanceOf(address(s_vault)), 0);
-        assertEq(s_mockUsdc.balanceOf(i_donor), donorBalanceBefore - DEPOSIT_AMOUNT);
+        assertEq(s_mockUsdc.balanceOf(i_donateOperator), donorBalanceBefore - DEPOSIT_AMOUNT);
     }
 
     function test_BaseVault_donate_Success_EmitsDonation() external {
@@ -52,7 +64,7 @@ abstract contract BaseVault_DonateUnitTest is BaseUnitTest {
         s_vault.donate(DEPOSIT_AMOUNT);
 
         Vm.Log memory log = _assertEmittedBy(keccak256("Donation(address,uint256)"), address(s_vault));
-        assertEq(address(uint160(uint256(log.topics[1]))), i_donor);
+        assertEq(address(uint160(uint256(log.topics[1]))), i_donateOperator);
         assertEq(uint256(log.topics[2]), DEPOSIT_AMOUNT);
     }
 
@@ -68,7 +80,7 @@ abstract contract BaseVault_DonateUnitTest is BaseUnitTest {
         _changePrank(i_pauser);
         s_vault.pause();
 
-        _changePrank(i_donor);
+        _changePrank(i_donateOperator);
         s_vault.donate(DEPOSIT_AMOUNT);
 
         assertEq(s_mockProtocolAdapter.getDepositCalls(), 1);

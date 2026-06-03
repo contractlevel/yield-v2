@@ -404,8 +404,9 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     ///         an incorrect value will corrupt epoch share accounting irrecoverably once any user
     ///         claims against the affected epoch.
     /// @dev Precondition: `tvl == 0 && s_totalShares > 0` will cause a revert
+    /// @dev Precondition: If deposits exist, aggregate minted shares must cover at least one share per minimum deposit amount.
     /// @notice If TVL goes to zero with shares outstanding, closeEpoch will revert.
-    ///         Anyone can call donate() to restore TVL; the next close will price shares against the donated amount.
+    ///         A DONATE_OPERATOR_ROLE holder can call donate() to restore TVL; the next close will price shares against the donated amount.
     function closeEpoch(uint256 tvl) external nonReentrant onlyRole(Roles.EPOCH_OPERATOR_ROLE) {
         if (s_rebalance.state != Types.RebalanceState.NONE) revert ParentVault__RebalanceInProgress();
 
@@ -442,6 +443,9 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
 
         // 5. Mint new shares and burn withdrawn shares
         uint256 newShares = epoch.totalDepositAmount * SHARE_PRECISION / settlementPricePerShare;
+        if (epoch.totalDepositAmount != 0 && newShares * MIN_DEPOSIT_AMOUNT < epoch.totalDepositAmount) {
+            revert ParentVault__DepositWouldMintZeroShares();
+        }
         // @review-gas
         s_totalShares = s_totalShares + newShares - epoch.totalShareBurnAmount;
 

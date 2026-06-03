@@ -19,6 +19,8 @@ contract ChildVault_DeploymentIntegrationTest is BaseIntegrationTest {
         assertTrue(child.vault.hasRole(Roles.REBALANCE_OPERATOR_ROLE, address(child.workflowRouter)));
         assertTrue(child.vault.hasRole(Roles.EMERGENCY_DRAINER_ROLE, networkConfig.roles.emergencyDrainer));
         assertTrue(child.vault.hasRole(Roles.LINK_OPERATOR_ROLE, networkConfig.roles.linkOperator));
+        assertTrue(child.vault.hasRole(Roles.DONATE_OPERATOR_ROLE, networkConfig.roles.donateOperator));
+        assertFalse(child.vault.hasRole(Roles.DONATE_OPERATOR_ROLE, address(this)));
         assertEq(child.vault.getEmergencyReceiver(), networkConfig.emergencyReceiver);
         assertTrue(child.vault.hasRole(Roles.PAUSER_ROLE, networkConfig.roles.pauser));
         assertTrue(child.vault.hasRole(Roles.UNPAUSER_ROLE, networkConfig.roles.unpauser));

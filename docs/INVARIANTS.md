@@ -49,7 +49,7 @@ Use these ID prefixes:
 | `REC-*`     | Recovery behavior.                                                 |
 | `ROUTER-*`  | WorkflowRouter behavior.                                           |
 | `ADAPTER-*` | Adapter registry and protocol adapter behavior.                    |
-| `DONATE-*`  | Permissionless donation behavior.                                  |
+| `DONATE-*`  | Role-gated donation behavior.                                      |
 | `MIG-*`     | Reserved for future migration, upgrade, or state handoff behavior. |
 
 ## Solvency
@@ -128,6 +128,7 @@ These are desired configuration properties. Address zero-checks are not currentl
 | `AC-002` | Config setters require `CONFIG_OPERATOR_ROLE`.                                                          | `unit`          | candidate |
 | `AC-003` | Epoch and rebalance execution require the WorkflowRouter-held operator roles.                           | `unit`          | candidate |
 | `AC-004` | Parent user functions and share token privileged functions rely on ACE policy checks where implemented. | `manual + unit` | candidate |
+| `AC-005` | Vault donations require `DONATE_OPERATOR_ROLE`, which is distinct from `CONFIG_OPERATOR_ROLE`.          | `unit`          | candidate |
 
 ## Pause And Emergency Behavior
 
@@ -190,6 +191,7 @@ These are desired configuration properties. Address zero-checks are not currentl
 | `DONATE-002` | A successful donation does not mint shares or change `ParentVault.s_totalShares`.                         | `postcondition` | implemented: Foundry + Medusa |
 | `DONATE-003` | A successful donation does not change the current epoch.                                                   | `postcondition` | implemented: Foundry + Medusa |
 | `DONATE-004` | Donation can only succeed on the vault that owns the active strategy.                                      | `postcondition` | implemented: Foundry + Medusa |
+| `DONATE-005` | Donation requires `DONATE_OPERATOR_ROLE`.                                                                 | `unit`          | candidate |
 
 ## Rebalance Lifecycle
 

@@ -37,6 +37,8 @@ interface IParentVault is IBaseVault {
     error ParentVault__EmptyEpoch(uint256 epochNonce);
     /// @dev Thrown when closeEpoch is called with zero TVL while shares are outstanding
     error ParentVault__ZeroTvlWithOutstandingShares();
+    /// @dev Thrown when closeEpoch would settle deposits into too few shares for minimum-size depositors
+    error ParentVault__DepositWouldMintZeroShares();
     /// @dev Thrown when the epoch is not executing
     /// @param epochNonce The nonce for the epoch that is not executing
     error ParentVault__EpochNotExecuting(uint256 epochNonce);

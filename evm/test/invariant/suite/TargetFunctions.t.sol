@@ -4,10 +4,14 @@ pragma solidity 0.8.28;
 import {BaseTargetFunctions} from "@chimera/BaseTargetFunctions.sol";
 import {Properties} from "./Properties.t.sol";
 import {Types} from "../../../src/libraries/Types.sol";
+import {ChildVault} from "../../../src/vaults/ChildVault.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 abstract contract TargetFunctions is BaseTargetFunctions, Properties {
     uint256 internal constant BPS_DENOMINATOR = 10_000;
     uint256 internal constant PERFORMANCE_FEE_BPS = 777;
+    uint256 internal constant SHARE_BOOTSTRAP_DEPOSIT_AMOUNT = 1_000_000_000_000 * 1e6;
+    address internal constant INVALID_CCIP_RECEIVER = address(1);
 
     function handler_deposit(uint256 actorSeed, uint256 amountSeed) public {
         address actor = _actor(actorSeed);
@@ -109,8 +113,8 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         __after();
 
-        _recordFeeBurden(treasuryShareBalanceBefore, totalSharesBefore);
         _recordEpochClosed(epochNonce);
+        _recordFeeBurden(treasuryShareBalanceBefore, totalSharesBefore);
 
         eq(_after.epochNonce, epochNonce + 1, "EPOCH-004: closeEpoch did not increment epoch nonce");
         t(
@@ -201,11 +205,11 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         eq(_after.actorShareBalance, _before.actorShareBalance + shareMintAmount, "claimShares did not mint shares");
     }
 
-    function handler_withdraw(uint256 actorSeed, uint256 shareSeed, uint256 epochSeed, uint256 amountSeed) public {
+    function handler_withdraw(uint256 actorSeed, uint256 shareSeed, uint256 amountSeed) public {
         address actor = _actor(actorSeed);
 
         if (parent.share.balanceOf(actor) == 0) {
-            handler_claimShares(actorSeed, epochSeed, amountSeed);
+            _ensureActorHasShares(actorSeed, amountSeed);
         }
 
         s_currentActor = actor;
@@ -240,7 +244,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         address actor = _actor(actorSeed);
 
         if (parent.vault.getWithdrawShareBurnAmount(actor, parent.vault.getEpochNonce()) == 0) {
-            handler_withdraw(actorSeed, shareSeed, epochSeed, amountSeed);
+            handler_withdraw(actorSeed, shareSeed, amountSeed);
         }
 
         s_currentActor = actor;
@@ -280,7 +284,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         uint256 claimEpochNonce = _claimableWithdrawEpoch(actor, epochSeed);
 
         if (claimEpochNonce == 0) {
-            handler_withdraw(actorSeed, shareSeed, epochSeed, amountSeed);
+            handler_withdraw(actorSeed, shareSeed, amountSeed);
             handler_closeEpoch(0);
             claimEpochNonce = _claimableWithdrawEpoch(actor, epochSeed);
         }
@@ -319,21 +323,116 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         eq(_after.actorUsdcBalance, _before.actorUsdcBalance + usdcWithdrawAmount, "claimUsdc did not transfer USDC");
     }
 
-    function handler_donate(uint256 actorSeed, uint256 amountSeed) public {
-        address actor = _actor(actorSeed);
-        s_currentActor = actor;
-
+    function handler_donate(uint256, uint256 amountSeed) public {
+        s_currentActor = i_donateOperator;
         uint256 amount = _clampDepositAmount(amountSeed);
         uint256 tvlBefore = _activeStrategyTvl();
+        if (tvlBefore > 1 && amount > MAX_DONATE_AMOUNT_WHEN_FUNDED) amount = MAX_DONATE_AMOUNT_WHEN_FUNDED;
         uint256 totalSharesBefore = parent.vault.getTotalShares();
         uint256 epochNonceBefore = parent.vault.getEpochNonce();
 
-        _changePrank(actor);
+        // @review if epochNonceBefore == 1, then we should not donate and instead advance the state in another way
+
+        _changePrank(i_donateOperator);
         _donateToActiveVault(amount);
 
         eq(_activeStrategyTvl(), tvlBefore + amount, "DONATE-001: active strategy TVL did not increase");
         eq(parent.vault.getTotalShares(), totalSharesBefore, "DONATE-002: donation minted shares");
         eq(parent.vault.getEpochNonce(), epochNonceBefore, "DONATE-003: donation changed epoch nonce");
+    }
+
+    function handler_recoverFailedCcipSend(
+        uint256,
+        uint256 childSeed,
+        uint256 protocolSeed,
+        uint256 actorSeed,
+        uint256 amountSeed
+    ) public {
+        ChildVault activeChild = _childVaultBySeed(childSeed);
+        _closeCurrentEpochIfNotEmpty();
+        _ensureActorHasShares(actorSeed, amountSeed);
+        _ensureActiveStrategyOnChild(activeChild, protocolSeed, actorSeed, amountSeed);
+        _closeCurrentEpochIfNotEmpty();
+
+        address actor = _actor(actorSeed);
+        s_currentActor = actor;
+        uint256 shareBurnAmount = parent.share.balanceOf(actor);
+        uint256 epochNonce = parent.vault.getEpochNonce();
+        eq(parent.vault.getEpoch(epochNonce).totalDepositAmount, 0, "CCIP recovery: staged epoch has deposits");
+        t(shareBurnAmount != 0, "CCIP recovery: actor has no shares");
+
+        __before();
+
+        _changePrank(actor);
+        parent.vault.withdraw(shareBurnAmount);
+
+        __after();
+
+        _recordWithdraw(actor, shareBurnAmount);
+
+        eq(_after.epochNonce, _before.epochNonce, "CCIP recovery: withdraw changed epoch nonce");
+        eq(
+            _after.currentEpochTotalShareBurnAmount,
+            _before.currentEpochTotalShareBurnAmount + shareBurnAmount,
+            "CCIP recovery: withdraw did not increase current epoch share burn total"
+        );
+        eq(
+            _after.actorCurrentEpochWithdrawShareBurnAmount,
+            _before.actorCurrentEpochWithdrawShareBurnAmount + shareBurnAmount,
+            "CCIP recovery: withdraw did not increase actor current epoch share burn amount"
+        );
+        eq(_after.actorShareBalance, _before.actorShareBalance - shareBurnAmount, "CCIP recovery: shares not escrowed");
+
+        uint256 tvl = _activeStrategyTvl();
+        uint256 settlementPricePerShare = _closeEpochSettlementPricePerShare(tvl);
+        uint256 totalWithdrawUsdc = shareBurnAmount * settlementPricePerShare / SHARE_PRECISION;
+        uint256 totalDepositAmount = parent.vault.getEpoch(epochNonce).totalDepositAmount;
+        uint256 netWithdrawAmount = totalWithdrawUsdc - totalDepositAmount;
+        t(netWithdrawAmount != 0, "CCIP recovery: net withdraw is zero");
+
+        _setActiveStrategyWithdrawReturn(netWithdrawAmount);
+
+        uint256 treasuryShareBalanceBefore = parent.share.balanceOf(parent.vault.getTreasury());
+        uint256 totalSharesBefore = parent.vault.getTotalShares();
+
+        vm.warp(block.timestamp + MIN_EPOCH_PERIOD + 1);
+        _closeEpochThroughWorkflow(
+            parent.workflowRouter, CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner, tvl
+        );
+
+        t(
+            parent.vault.getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING,
+            "CCIP recovery: parent epoch did not enter executing"
+        );
+
+        _breakParentDestination(activeChild);
+        _executeEpochWithdraw(activeChild, epochNonce, netWithdrawAmount);
+        _restoreParentDestination(activeChild);
+
+        _assertPendingCcipSendRecovery(
+            activeChild,
+            Types.CcipTx.EPOCH_NET_WITHDRAW,
+            PARENT_CHAIN_SELECTOR,
+            netWithdrawAmount,
+            abi.encode(epochNonce)
+        );
+        lte(
+            netWithdrawAmount,
+            IERC20(parent.vault.getUsdc()).balanceOf(address(activeChild)),
+            "CCIP recovery: pending send is not collateralized"
+        );
+
+        activeChild.recoverFailedCcipSend();
+        _assertCcipSendRecoveryCleared(activeChild);
+
+        t(
+            parent.vault.getEpoch(epochNonce).status == Types.EpochStatus.CLAIMABLE,
+            "CCIP recovery: parent epoch not claimable after retry"
+        );
+        t(!activeChild.getRecoveryExists(), "CCIP recovery: child still has recovery");
+
+        _recordEpochClosed(epochNonce);
+        _recordFeeBurden(treasuryShareBalanceBefore, totalSharesBefore);
     }
 
     function _settlementPricePerShare(uint256 tvl) internal view returns (uint256 pricePerShare) {
@@ -432,6 +531,151 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
                 amount
             );
         }
+    }
+
+    function _ensureActiveStrategyOnChild(ChildVault vault, uint256 protocolSeed, uint256 actorSeed, uint256 amountSeed)
+        internal
+    {
+        uint64 selectedChainSelector = _childChainSelector(vault);
+
+        if (parent.vault.getRebalance().activeStrategy.chainSelector == selectedChainSelector) {
+            if (_activeStrategyTvl() == 0) handler_donate(actorSeed, amountSeed);
+        } else {
+            if (parent.vault.getEpochNonce() == 1 || _activeStrategyTvl() == 0) {
+                handler_claimShares(actorSeed, 0, amountSeed);
+            }
+
+            Types.Strategy memory target = selectedChainSelector == CHILD_CHAIN_SELECTOR
+                ? _childStrategy(_protocolId(protocolSeed))
+                : _remoteChildStrategy(_protocolId(protocolSeed));
+            uint256 treasuryShareBalanceBefore = parent.share.balanceOf(parent.vault.getTreasury());
+            uint256 totalSharesBefore = parent.vault.getTotalShares();
+
+            __before();
+            _rebalanceTo(target);
+            __after();
+
+            _recordFeeBurden(treasuryShareBalanceBefore, totalSharesBefore);
+        }
+    }
+
+    function _ensureActorHasShares(uint256 actorSeed, uint256 amountSeed) internal {
+        address actor = _actor(actorSeed);
+        if (parent.share.balanceOf(actor) == 0) {
+            handler_claimShares(actorSeed, 0, _shareBootstrapAmount(amountSeed));
+        }
+        if (parent.share.balanceOf(actor) == 0) {
+            _bootstrapActorShares(actor);
+        }
+    }
+
+    function _closeCurrentEpochIfNotEmpty() internal {
+        uint256 epochNonce = parent.vault.getEpochNonce();
+        Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
+
+        if (epoch.totalDepositAmount != 0 || epoch.totalShareBurnAmount != 0) {
+            handler_closeEpoch(0);
+        }
+    }
+
+    function _shareBootstrapAmount(uint256 amountSeed) internal pure returns (uint256 amount) {
+        amount = _clampDepositAmount(amountSeed);
+        if (amount < MAX_DEPOSIT_AMOUNT) amount = MAX_DEPOSIT_AMOUNT;
+    }
+
+    function _bootstrapActorShares(address actor) internal {
+        _closeCurrentEpochIfNotEmpty();
+
+        s_currentActor = actor;
+        uint256 depositEpochNonce = parent.vault.getEpochNonce();
+
+        _changePrank(actor);
+        parent.vault.deposit(SHARE_BOOTSTRAP_DEPOSIT_AMOUNT);
+        _recordDeposit(actor, SHARE_BOOTSTRAP_DEPOSIT_AMOUNT);
+
+        handler_closeEpoch(0);
+
+        s_currentActor = actor;
+        s_targetEpochNonce = depositEpochNonce;
+
+        _changePrank(actor);
+        uint256 shareMintAmount = parent.vault.claimShares(depositEpochNonce);
+        _recordSharesClaimed(actor, depositEpochNonce, shareMintAmount);
+        _checkAndUpdateDepositRemainingCounterMax(depositEpochNonce);
+
+        t(parent.share.balanceOf(actor) != 0, "CCIP recovery: actor has no shares");
+    }
+
+    function _childVaultBySeed(uint256 childSeed) internal view returns (ChildVault vault) {
+        vault = childSeed % 2 == 0 ? child.vault : remoteChild.vault;
+    }
+
+    function _childChainSelector(ChildVault vault) internal view returns (uint64 chainSelector) {
+        if (address(vault) == address(child.vault)) {
+            chainSelector = CHILD_CHAIN_SELECTOR;
+        } else if (address(vault) == address(remoteChild.vault)) {
+            chainSelector = REMOTE_CHILD_CHAIN_SELECTOR;
+        }
+    }
+
+    function _breakParentDestination(ChildVault vault) internal {
+        _setCrosschainVault(vault, PARENT_CHAIN_SELECTOR, INVALID_CCIP_RECEIVER);
+    }
+
+    function _restoreParentDestination(ChildVault vault) internal {
+        _setCrosschainVault(vault, PARENT_CHAIN_SELECTOR, address(parent.vault));
+    }
+
+    function _executeEpochWithdraw(ChildVault vault, uint256 epochNonce, uint256 amount) internal {
+        if (address(vault) == address(child.vault)) {
+            _executeEpochWithdrawThroughWorkflow(
+                child.workflowRouter,
+                EXECUTE_EPOCH_WITHDRAW_WORKFLOW_ID,
+                EXECUTE_EPOCH_WITHDRAW_WORKFLOW_NAME,
+                i_owner,
+                epochNonce,
+                amount
+            );
+        } else {
+            _executeEpochWithdrawThroughWorkflow(
+                remoteChild.workflowRouter,
+                EXECUTE_EPOCH_WITHDRAW_WORKFLOW_ID,
+                EXECUTE_EPOCH_WITHDRAW_WORKFLOW_NAME,
+                i_owner,
+                epochNonce,
+                amount
+            );
+        }
+    }
+
+    function _assertPendingCcipSendRecovery(
+        ChildVault vault,
+        Types.CcipTx ccipTxType,
+        uint64 destinationChainSelector,
+        uint256 amount,
+        bytes memory txData
+    ) internal {
+        Types.CcipSendRecovery memory recovery = vault.getCcipSendRecovery();
+
+        eq(uint256(recovery.ccipTxType), uint256(ccipTxType), "CCIP recovery: wrong tx type");
+        eq(
+            uint256(recovery.destinationChainSelector),
+            uint256(destinationChainSelector),
+            "CCIP recovery: wrong destination"
+        );
+        eq(recovery.amount, amount, "CCIP recovery: wrong amount");
+        t(keccak256(recovery.txData) == keccak256(txData), "CCIP recovery: wrong tx data");
+        t(recovery.createdAt != 0, "CCIP recovery: timestamp not set");
+    }
+
+    function _assertCcipSendRecoveryCleared(ChildVault vault) internal {
+        Types.CcipSendRecovery memory recovery = vault.getCcipSendRecovery();
+
+        eq(uint256(recovery.ccipTxType), 0, "CCIP recovery: tx type not cleared");
+        eq(recovery.amount, 0, "CCIP recovery: amount not cleared");
+        eq(uint256(recovery.destinationChainSelector), 0, "CCIP recovery: destination not cleared");
+        eq(recovery.txData.length, 0, "CCIP recovery: tx data not cleared");
+        eq(recovery.createdAt, 0, "CCIP recovery: timestamp not cleared");
     }
 
     function _donateToActiveVault(uint256 amount) internal {

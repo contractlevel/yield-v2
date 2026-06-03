@@ -8,7 +8,7 @@ contract CryticToFoundry is TargetFunctions, FoundryAsserts {
     function setUp() public override {
         setup();
 
-        bytes4[] memory selectors = new bytes4[](9);
+        bytes4[] memory selectors = new bytes4[](10);
         selectors[0] = TargetFunctions.handler_deposit.selector;
         selectors[1] = TargetFunctions.handler_cancelDeposit.selector;
         selectors[2] = TargetFunctions.handler_closeEpoch.selector;
@@ -18,6 +18,7 @@ contract CryticToFoundry is TargetFunctions, FoundryAsserts {
         selectors[6] = TargetFunctions.handler_claimUsdc.selector;
         selectors[7] = TargetFunctions.handler_initiateRebalance.selector;
         selectors[8] = TargetFunctions.handler_donate.selector;
+        selectors[9] = TargetFunctions.handler_recoverFailedCcipSend.selector;
 
         targetSelector(FuzzSelector({addr: address(this), selectors: selectors}));
         targetContract(address(this));
@@ -27,15 +28,15 @@ contract CryticToFoundry is TargetFunctions, FoundryAsserts {
         /// @dev Actor seed 0 selects the first configured actor
         handler_deposit(0, MIN_DEPOSIT_AMOUNT);
         handler_cancelDeposit(0, MIN_DEPOSIT_AMOUNT);
+        handler_withdraw(0, MIN_DEPOSIT_AMOUNT, MIN_DEPOSIT_AMOUNT);
+        handler_cancelWithdraw(0, MIN_DEPOSIT_AMOUNT, 0, MIN_DEPOSIT_AMOUNT);
         handler_closeEpoch(0);
         handler_claimShares(0, 0, MIN_DEPOSIT_AMOUNT);
-        handler_withdraw(0, MIN_DEPOSIT_AMOUNT, 0, MIN_DEPOSIT_AMOUNT);
-        handler_cancelWithdraw(0, MIN_DEPOSIT_AMOUNT, 0, MIN_DEPOSIT_AMOUNT);
         handler_claimUsdc(0, 0, MIN_DEPOSIT_AMOUNT, MIN_DEPOSIT_AMOUNT);
         handler_initiateRebalance(0, 1, 0, MIN_DEPOSIT_AMOUNT);
         handler_initiateRebalance(1, 0, 0, MIN_DEPOSIT_AMOUNT);
-        handler_donate(0, MIN_DEPOSIT_AMOUNT);
         handler_initiateRebalance(2, 1, 0, MIN_DEPOSIT_AMOUNT);
         handler_donate(0, MIN_DEPOSIT_AMOUNT);
+        handler_recoverFailedCcipSend(0, 0, 0, 0, MIN_DEPOSIT_AMOUNT);
     }
 }

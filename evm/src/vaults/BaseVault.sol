@@ -448,14 +448,12 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
 
     /// @notice Donates USDC to the active strategy without minting shares or creating a claim
     /// @param amount The amount of USDC to donate
-    /// @dev This is permissionless and intentionally allowed while paused for incident recapitalization.
+    /// @dev This is a privileged recovery/recapitalization operation and intentionally allowed while paused.
+    /// @dev Precondition: Caller must have the DONATE_OPERATOR_ROLE
     /// @dev Precondition: amount must be more than 0
     /// @dev Precondition: the strategy deposit operation must succeed
     /// @dev Precondition: the call must not be reentered
-    // @review-legal should this be kyc gated? argument for: consistent with protocol, regulators know who donated
-    // argument against: generated yield from strategy protocol borrowers are not kyc'd, and it puts significant limitation on this feature
-    // only ParentVault currently has ACE PolicyProtection
-    function donate(uint256 amount) external nonReentrant {
+    function donate(uint256 amount) external nonReentrant onlyRole(Roles.DONATE_OPERATOR_ROLE) {
         if (amount == 0) revert BaseVault__NoZeroAmount();
 
         IERC20(i_usdc).safeTransferFrom(msg.sender, address(this), amount);

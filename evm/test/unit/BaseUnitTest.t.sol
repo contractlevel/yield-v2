@@ -69,6 +69,8 @@ abstract contract BaseUnitTest is BaseTest {
         s_childVault.grantRole(Roles.EPOCH_OPERATOR_ROLE, i_epochOperator);
         s_parentVault.grantRole(Roles.REBALANCE_OPERATOR_ROLE, i_rebalanceOperator);
         s_childVault.grantRole(Roles.REBALANCE_OPERATOR_ROLE, i_rebalanceOperator);
+        s_parentVault.grantRole(Roles.DONATE_OPERATOR_ROLE, i_donateOperator);
+        s_childVault.grantRole(Roles.DONATE_OPERATOR_ROLE, i_donateOperator);
 
         vm.label(address(s_parentVault), "ParentVault");
         vm.label(address(s_childVault), "ChildVault");

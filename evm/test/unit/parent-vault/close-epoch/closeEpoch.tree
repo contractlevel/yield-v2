@@ -13,6 +13,10 @@ ParentVault_closeEpoch
 │   └── it should revert with ParentVault__EmptyEpoch
 ├── when TVL is zero and shares are outstanding
 │   └── it should revert with ParentVault__ZeroTvlWithOutstandingShares
+├── when deposits would settle into too few aggregate shares
+│   ├── it should revert with ParentVault__DepositWouldMintZeroShares
+│   ├── it should leave the epoch open
+│   └── it should allow the depositor to cancel the deposit
 ├── when previous epoch is not claimable
 │   └── it should revert with ParentVault__EpochNotClaimable
 ├── when TVL is restored by donation

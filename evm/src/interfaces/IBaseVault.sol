@@ -139,6 +139,7 @@ interface IBaseVault is IPauseable {
     //////////////////////////////////////////////////////////////*/
     /// @notice Donates USDC to the active strategy without minting shares or creating a claim
     /// @param amount The amount of USDC to donate
+    /// @dev Precondition: Caller must have the DONATE_OPERATOR_ROLE
     /// @dev Precondition: This vault must be on the active strategy chain
     /// @dev Precondition: Deposit into the active strategy must succeed
     function donate(uint256 amount) external;

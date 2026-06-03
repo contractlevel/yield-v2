@@ -55,6 +55,7 @@ import {TerminalAllowPolicy} from "../../src/modules/policies/TerminalAllowPolic
 ///      ParentVault.EMERGENCY_DRAINER_ROLE: networkConfig.roles.emergencyDrainer
 ///      ParentVault emergency receiver: networkConfig.emergencyReceiver
 ///      ParentVault.LINK_OPERATOR_ROLE: networkConfig.roles.linkOperator
+///      ParentVault.DONATE_OPERATOR_ROLE: networkConfig.roles.donateOperator
 ///      ParentVault.POLICY_ENGINE_MANAGER_ROLE: networkConfig.roles.policyEngineManager
 ///      ParentVault.PAUSER_ROLE: networkConfig.roles.pauser
 ///      ParentVault.UNPAUSER_ROLE: networkConfig.roles.unpauser
@@ -282,6 +283,7 @@ contract DeployParent is Script {
         deploy.parentVault.grantRole(Roles.REBALANCE_OPERATOR_ROLE, address(deploy.workflowRouter));
         deploy.parentVault.grantRole(Roles.EMERGENCY_DRAINER_ROLE, networkConfig.roles.emergencyDrainer);
         deploy.parentVault.grantRole(Roles.LINK_OPERATOR_ROLE, networkConfig.roles.linkOperator);
+        deploy.parentVault.grantRole(Roles.DONATE_OPERATOR_ROLE, networkConfig.roles.donateOperator);
 
         deploy.parentVault.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
         deploy.adapterRegistry.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);

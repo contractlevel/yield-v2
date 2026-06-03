@@ -80,6 +80,26 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         s_parentVault.closeEpoch(0);
     }
 
+    function test_ParentVault_closeEpoch_RevertWhen_DepositWouldMintZeroShares() public {
+        uint256 totalShares = 1;
+        uint256 tvl = DEPOSIT_AMOUNT + 1;
+        _setParentTotalShares(totalShares);
+        _setParentPerformanceFeeHighWaterMark(tvl * SHARE_PRECISION / totalShares);
+        _submitDeposit();
+
+        _warpPastMinEpoch();
+        _changePrank(i_epochOperator);
+        vm.expectRevert(IParentVault.ParentVault__DepositWouldMintZeroShares.selector);
+        s_parentVault.closeEpoch(tvl);
+
+        assertEq(uint8(s_parentVault.getEpoch(1).status), uint8(Types.EpochStatus.OPEN));
+
+        _changePrank(i_depositor);
+        s_parentVault.cancelDeposit();
+        assertEq(s_parentVault.getDepositAmount(i_depositor, 1), 0);
+        assertEq(uint8(s_parentVault.getEpoch(1).status), uint8(Types.EpochStatus.OPEN));
+    }
+
     function test_ParentVault_closeEpoch_RevertWhen_LocalNetDepositAdapterReverts() public {
         _submitDeposit();
         s_mockProtocolAdapter.setDepositReverts(true);
@@ -500,8 +520,8 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
     }
 
     function _donateToStrategy(uint256 amount) internal {
-        deal(address(s_mockUsdc), i_depositor, amount);
-        _changePrank(i_depositor);
+        deal(address(s_mockUsdc), i_donateOperator, amount);
+        _changePrank(i_donateOperator);
         s_mockUsdc.approve(address(s_parentVault), amount);
         s_parentVault.donate(amount);
     }

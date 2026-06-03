@@ -36,6 +36,7 @@ It is the source of truth for how authority should be named, assigned, implement
 | Epoch execution             | Vaults                                  | `WorkflowRouter` holding `EPOCH_OPERATOR_ROLE`                                   | Epoch execution (`closeEpoch`, `executeEpochWithdraw`)                                      | Keep operational vault roles local; only user-facing functions should move through ACE        |
 | Rebalance execution         | Vaults                                  | `WorkflowRouter` holding `REBALANCE_OPERATOR_ROLE`                               | Rebalance execution (`initiateRebalance`, `completeRebalance`, `executeRebalance`)          | Keep operational vault roles local; only user-facing functions should move through ACE        |
 | Vault recovery              | Vaults                                  | Public stored-state retry                                                        | Execute recovery from previously stored recovery state                                      | Caller must not choose amount, strategy, destination, or recipient                            |
+| Vault recapitalization      | Vaults                                  | `DONATE_OPERATOR_ROLE`                                                           | Donate USDC into the active strategy without minting shares or creating claims              | Privileged recovery/recapitalization authority; distinct from `CONFIG_OPERATOR_ROLE`          |
 | Protocol config             | Vaults, routers, registry               | `CONFIG_OPERATOR_ROLE`                                                           | Set vault/router config, adapters, workflow metadata/selectors, emergency receiver          | Explicit and narrow                                                                           |
 | Emergency receiver          | Vaults                                  | Configured receiver address                                                      | Receives USDC from `emergencyDrain`                                                        | Fund destination only; does not grant execution or configuration authority                    |
 | CCIP token admin            | `YieldcoinShare`                        | `CONFIG_OPERATOR_ROLE` actor through ACE RBAC                                    | Set Chainlink CCIP token admin identity                                                     | `getCCIPAdmin()` returns stored CCIP admin state, never token `owner()`                       |
@@ -54,6 +55,7 @@ It is the source of truth for how authority should be named, assigned, implement
 | Epoch (`closeEpoch`)                                 | `EPOCH_OPERATOR_ROLE` granted to `WorkflowRouter`                  |
 | Rebalance (`initiateRebalance`, `completeRebalance`) | `REBALANCE_OPERATOR_ROLE` granted to `WorkflowRouter`              |
 | Recovery                                             | Public stored-state retry                                          |
+| `donate()`                                           | `DONATE_OPERATOR_ROLE`                                             |
 | Emergency drain                                      | `EMERGENCY_DRAINER_ROLE` executes; `CONFIG_OPERATOR_ROLE` sets receiver |
 | LINK withdrawal                                      | `LINK_OPERATOR_ROLE`                                               |
 | `attachPolicyEngine`                                 | `POLICY_ENGINE_MANAGER_ROLE`                                       |
@@ -69,6 +71,7 @@ It is the source of truth for how authority should be named, assigned, implement
 | Epoch (`executeEpochWithdraw`) | `EPOCH_OPERATOR_ROLE` granted to `WorkflowRouter`     |
 | Rebalance (`executeRebalance`) | `REBALANCE_OPERATOR_ROLE` granted to `WorkflowRouter` |
 | Recovery                       | Public stored-state retry                             |
+| `donate()`                      | `DONATE_OPERATOR_ROLE`                                |
 | Emergency drain                | `EMERGENCY_DRAINER_ROLE` executes; `CONFIG_OPERATOR_ROLE` sets receiver |
 | LINK withdrawal                | `LINK_OPERATOR_ROLE`                                  |
 

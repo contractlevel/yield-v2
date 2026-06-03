@@ -23,6 +23,7 @@ abstract contract Setup is BaseSetup, BaseIntegrationTest {
     bytes10 internal constant EXECUTE_EPOCH_WITHDRAW_WORKFLOW_NAME = bytes10("epochDraw");
 
     uint256 internal constant MAX_DEPOSIT_AMOUNT = 1_000_000 * 1e6;
+    uint256 internal constant MAX_DONATE_AMOUNT_WHEN_FUNDED = 1_000 * 1e6;
     uint256 internal constant INVARIANT_PROTOCOL_USDC_LIQUIDITY = type(uint128).max;
 
     function setup() internal virtual override {
