@@ -358,8 +358,8 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         s_currentActor = actor;
         uint256 shareBurnAmount = parent.share.balanceOf(actor);
         uint256 epochNonce = parent.vault.getEpochNonce();
-        eq(parent.vault.getEpoch(epochNonce).totalDepositAmount, 0, "CCIP recovery: staged epoch has deposits");
-        t(shareBurnAmount != 0, "CCIP recovery: actor has no shares");
+        eq(parent.vault.getEpoch(epochNonce).totalDepositAmount, 0, "EPOCH-014: staged epoch has deposits");
+        t(shareBurnAmount != 0, "EPOCH-014: recovery actor has no shares");
 
         __before();
 
@@ -370,25 +370,25 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         _recordWithdraw(actor, shareBurnAmount);
 
-        eq(_after.epochNonce, _before.epochNonce, "CCIP recovery: withdraw changed epoch nonce");
+        eq(_after.epochNonce, _before.epochNonce, "EPOCH-005: withdraw changed epoch nonce");
         eq(
             _after.currentEpochTotalShareBurnAmount,
             _before.currentEpochTotalShareBurnAmount + shareBurnAmount,
-            "CCIP recovery: withdraw did not increase current epoch share burn total"
+            "EPOCH-005: withdraw did not increase current epoch share burn total"
         );
         eq(
             _after.actorCurrentEpochWithdrawShareBurnAmount,
             _before.actorCurrentEpochWithdrawShareBurnAmount + shareBurnAmount,
-            "CCIP recovery: withdraw did not increase actor current epoch share burn amount"
+            "EPOCH-005: withdraw did not increase actor current epoch share burn amount"
         );
-        eq(_after.actorShareBalance, _before.actorShareBalance - shareBurnAmount, "CCIP recovery: shares not escrowed");
+        eq(_after.actorShareBalance, _before.actorShareBalance - shareBurnAmount, "EPOCH-005: shares not escrowed");
 
         uint256 tvl = _activeStrategyTvl();
         uint256 settlementPricePerShare = _closeEpochSettlementPricePerShare(tvl);
         uint256 totalWithdrawUsdc = shareBurnAmount * settlementPricePerShare / SHARE_PRECISION;
         uint256 totalDepositAmount = parent.vault.getEpoch(epochNonce).totalDepositAmount;
         uint256 netWithdrawAmount = totalWithdrawUsdc - totalDepositAmount;
-        t(netWithdrawAmount != 0, "CCIP recovery: net withdraw is zero");
+        t(netWithdrawAmount != 0, "EPOCH-014: net withdraw is zero");
 
         _setActiveStrategyWithdrawReturn(netWithdrawAmount);
 
@@ -402,7 +402,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         t(
             parent.vault.getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING,
-            "CCIP recovery: parent epoch did not enter executing"
+            "EPOCH-014: parent epoch did not enter executing"
         );
 
         _breakParentDestination(activeChild);
@@ -419,7 +419,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         lte(
             netWithdrawAmount,
             IERC20(parent.vault.getUsdc()).balanceOf(address(activeChild)),
-            "CCIP recovery: pending send is not collateralized"
+            "CCIP-005b: pending send is not collateralized"
         );
 
         activeChild.recoverFailedCcipSend();
@@ -427,9 +427,9 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         t(
             parent.vault.getEpoch(epochNonce).status == Types.EpochStatus.CLAIMABLE,
-            "CCIP recovery: parent epoch not claimable after retry"
+            "CCIP-005c: parent epoch not claimable after retry"
         );
-        t(!activeChild.getRecoveryExists(), "CCIP recovery: child still has recovery");
+        t(!activeChild.getRecoveryExists(), "REC-003: child still has recovery");
 
         _recordEpochClosed(epochNonce);
         _recordFeeBurden(treasuryShareBalanceBefore, totalSharesBefore);
@@ -603,7 +603,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _recordSharesClaimed(actor, depositEpochNonce, shareMintAmount);
         _checkAndUpdateDepositRemainingCounterMax(depositEpochNonce);
 
-        t(parent.share.balanceOf(actor) != 0, "CCIP recovery: actor has no shares");
+        t(parent.share.balanceOf(actor) != 0, "EPOCH-014: recovery actor has no shares");
     }
 
     function _childVaultBySeed(uint256 childSeed) internal view returns (ChildVault vault) {
@@ -657,25 +657,25 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
     ) internal {
         Types.CcipSendRecovery memory recovery = vault.getCcipSendRecovery();
 
-        eq(uint256(recovery.ccipTxType), uint256(ccipTxType), "CCIP recovery: wrong tx type");
+        eq(uint256(recovery.ccipTxType), uint256(ccipTxType), "CCIP-005a: wrong recovery tx type");
         eq(
             uint256(recovery.destinationChainSelector),
             uint256(destinationChainSelector),
-            "CCIP recovery: wrong destination"
+            "CCIP-005a: wrong recovery destination"
         );
-        eq(recovery.amount, amount, "CCIP recovery: wrong amount");
-        t(keccak256(recovery.txData) == keccak256(txData), "CCIP recovery: wrong tx data");
-        t(recovery.createdAt != 0, "CCIP recovery: timestamp not set");
+        eq(recovery.amount, amount, "CCIP-005a: wrong recovery amount");
+        t(keccak256(recovery.txData) == keccak256(txData), "CCIP-005a: wrong recovery tx data");
+        t(recovery.createdAt != 0, "CCIP-005a: recovery timestamp not set");
     }
 
     function _assertCcipSendRecoveryCleared(ChildVault vault) internal {
         Types.CcipSendRecovery memory recovery = vault.getCcipSendRecovery();
 
-        eq(uint256(recovery.ccipTxType), 0, "CCIP recovery: tx type not cleared");
-        eq(recovery.amount, 0, "CCIP recovery: amount not cleared");
-        eq(uint256(recovery.destinationChainSelector), 0, "CCIP recovery: destination not cleared");
-        eq(recovery.txData.length, 0, "CCIP recovery: tx data not cleared");
-        eq(recovery.createdAt, 0, "CCIP recovery: timestamp not cleared");
+        eq(uint256(recovery.ccipTxType), 0, "REC-003: recovery tx type not cleared");
+        eq(recovery.amount, 0, "REC-003: recovery amount not cleared");
+        eq(uint256(recovery.destinationChainSelector), 0, "REC-003: recovery destination not cleared");
+        eq(recovery.txData.length, 0, "REC-003: recovery tx data not cleared");
+        eq(recovery.createdAt, 0, "REC-003: recovery timestamp not cleared");
     }
 
     function _donateToActiveVault(uint256 amount) internal {
