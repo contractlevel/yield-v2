@@ -6,6 +6,9 @@ import {Properties} from "./Properties.t.sol";
 import {Types} from "../../../src/libraries/Types.sol";
 import {BaseVault} from "../../../src/vaults/BaseVault.sol";
 import {ChildVault} from "../../../src/vaults/ChildVault.sol";
+import {MockAaveV3Pool} from "../../mocks/MockAaveV3Pool.sol";
+import {MockAaveV4Spoke} from "../../mocks/MockAaveV4Spoke.sol";
+import {MockComet} from "../../mocks/MockComet.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 abstract contract TargetFunctions is BaseTargetFunctions, Properties {
@@ -104,7 +107,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         __before();
 
-        vm.warp(block.timestamp + MIN_EPOCH_PERIOD + 1);
+        _warpPastEpoch(epochNonce);
         _closeEpochThroughWorkflow(
             parent.workflowRouter, CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner, tvl
         );
@@ -300,6 +303,9 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         eq(_after.actorUsdcBalance, _before.actorUsdcBalance + usdcWithdrawAmount, "claimUsdc did not transfer USDC");
     }
 
+    /// @notice The donate() function is intended as an emergency recovery/recapitalization operation. 
+    ///         The below handling demonstrates intended operational behavior.
+    ///         Malicious operator/admin control is acknowledged in ../docs/KNOWN_ISSUES.md and ../docs/THREAT_MODEL.md
     function handler_emergencyDrainAndDonate() public {
         BaseVault activeVault = _activeVault();
         IERC20 usdc = IERC20(parent.vault.getUsdc());
@@ -353,6 +359,20 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         uint256 actorSeed,
         uint256 amountSeed
     ) public {
+        if (childSeed % 2 == 0) {
+            _recoverFailedCcipSendEpochWithdraw(childSeed / 2, protocolSeed, actorSeed, amountSeed);
+        } else {
+            _recoverFailedCcipSendRebalance(childSeed / 2, protocolSeed, actorSeed, amountSeed);
+        }
+    }
+
+    /// @notice When the outbound CCIP send message fails for a Types.CcipTx.EPOCH_NET_WITHDRAW
+    function _recoverFailedCcipSendEpochWithdraw(
+        uint256 childSeed,
+        uint256 protocolSeed,
+        uint256 actorSeed,
+        uint256 amountSeed
+    ) internal {
         ChildVault activeChild = _childVaultBySeed(childSeed);
         _closeCurrentEpochIfNotEmpty();
         _ensureActorHasShares(actorSeed, amountSeed);
@@ -379,7 +399,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         uint256 treasuryShareBalanceBefore = parent.share.balanceOf(parent.vault.getTreasury());
         uint256 totalSharesBefore = parent.vault.getTotalShares();
 
-        vm.warp(block.timestamp + MIN_EPOCH_PERIOD + 1);
+        _warpPastEpoch(epochNonce);
         _closeEpochThroughWorkflow(
             parent.workflowRouter, CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner, tvl
         );
@@ -417,6 +437,216 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         _recordEpochClosed(epochNonce);
         _recordFeeBurden(treasuryShareBalanceBefore, totalSharesBefore);
+    }
+
+    /// @notice When the outbound CCIP send message fails for a Types.CcipTx.REBALANCE
+    function _recoverFailedCcipSendRebalance(
+        uint256 childSeed,
+        uint256 protocolSeed,
+        uint256 actorSeed,
+        uint256 amountSeed
+    ) internal {
+        ChildVault sourceChild = _childVaultBySeed(childSeed);
+        _ensureActiveStrategyOnChild(sourceChild, protocolSeed, actorSeed, amountSeed);
+
+        uint64 destinationChainSelector = _rebalanceRecoveryDestination(sourceChild, protocolSeed);
+        address destinationVault = _crosschainVault(destinationChainSelector);
+        Types.Strategy memory target = _strategy(destinationChainSelector, _protocolId(protocolSeed / 2));
+        uint256 amount = _activeStrategyTvl();
+        Types.Rebalance memory beforeRebalance = parent.vault.getRebalance();
+
+        t(amount != 0, "CCIP-005a: rebalance amount is zero");
+
+        __before();
+
+        _initiateRebalanceThroughWorkflow(
+            parent.workflowRouter, INITIATE_REBALANCE_WORKFLOW_ID, INITIATE_REBALANCE_WORKFLOW_NAME, i_owner, target
+        );
+
+        Types.Rebalance memory pendingRebalance = parent.vault.getRebalance();
+        eq(pendingRebalance.nonce, beforeRebalance.nonce, "REBAL-005: nonce changed before completion");
+        eq(
+            uint256(pendingRebalance.state),
+            uint256(Types.RebalanceState.REBALANCING),
+            "REBAL-004: state is not rebalancing"
+        );
+        t(pendingRebalance.pendingStrategy.protocolId == target.protocolId, "REBAL-004: pending protocol mismatch");
+        eq(
+            uint256(pendingRebalance.pendingStrategy.chainSelector),
+            uint256(target.chainSelector),
+            "REBAL-004: pending chain mismatch"
+        );
+
+        _setActiveStrategyWithdrawReturn(amount);
+        _breakDestination(sourceChild, destinationChainSelector);
+        _executeRebalance(sourceChild, pendingRebalance.nonce, target);
+        _restoreDestination(sourceChild, destinationChainSelector, destinationVault);
+
+        _assertPendingCcipSendRecovery(
+            sourceChild,
+            Types.CcipTx.REBALANCE,
+            destinationChainSelector,
+            amount,
+            abi.encode(pendingRebalance.nonce, target.protocolId)
+        );
+        lte(
+            amount,
+            IERC20(parent.vault.getUsdc()).balanceOf(address(sourceChild)),
+            "CCIP-005b: pending send is not collateralized"
+        );
+
+        sourceChild.recoverFailedCcipSend();
+        _assertCcipSendRecoveryCleared(sourceChild);
+
+        if (destinationChainSelector != PARENT_CHAIN_SELECTOR) {
+            _completeRebalanceThroughWorkflow(
+                parent.workflowRouter, COMPLETE_REBALANCE_WORKFLOW_ID, COMPLETE_REBALANCE_WORKFLOW_NAME, i_owner
+            );
+        }
+
+        __after();
+
+        Types.Rebalance memory afterRebalance = parent.vault.getRebalance();
+        eq(afterRebalance.nonce, beforeRebalance.nonce + 1, "REBAL-005: nonce did not increment");
+        eq(
+            uint256(afterRebalance.state),
+            uint256(Types.RebalanceState.NONE),
+            "CCIP-005c: parent rebalance not finalized after retry"
+        );
+        t(afterRebalance.activeStrategy.protocolId == target.protocolId, "REBAL-006: wrong active protocol");
+        eq(
+            uint256(afterRebalance.activeStrategy.chainSelector),
+            uint256(target.chainSelector),
+            "REBAL-006: wrong active chain"
+        );
+        t(afterRebalance.pendingStrategy.protocolId == bytes32(0), "REBAL-004: pending protocol still set");
+        eq(uint256(afterRebalance.pendingStrategy.chainSelector), 0, "REBAL-004: pending chain still set");
+        _assertActiveAdapterFor(target);
+        t(!sourceChild.getRecoveryExists(), "REC-003: child still has recovery");
+
+        _recordFeeBurden(_before.treasuryShareBalance, _before.totalShares);
+    }
+
+    /// @notice When an epoch deposit to the active strategy fails
+    function handler_recoverFailedEpochDeposit(
+        uint256 childSeed,
+        uint256 protocolSeed,
+        uint256 actorSeed,
+        uint256 amountSeed
+    ) public {
+        ChildVault activeChild = _childVaultBySeed(childSeed);
+        _closeCurrentEpochIfNotEmpty();
+        _ensureActiveStrategyOnChild(activeChild, protocolSeed, actorSeed, amountSeed);
+        _closeCurrentEpochIfNotEmpty();
+
+        uint256 epochNonce = parent.vault.getEpochNonce();
+        uint256 amount = _clampDepositAmount(amountSeed);
+
+        _setActiveChildDepositReverts(activeChild, true);
+        handler_deposit(actorSeed, amountSeed);
+        handler_closeEpoch(0);
+        _setActiveChildDepositReverts(activeChild, false);
+
+        _assertPendingEpochDepositRecovery(activeChild, epochNonce, amount);
+        t(activeChild.getRecoveryExists(), "REC-002: child recovery sentinel not set");
+        t(
+            parent.vault.getEpoch(epochNonce).status == Types.EpochStatus.CLAIMABLE,
+            "EPOCH-014: remote deposit epoch not claimable"
+        );
+
+        __before();
+
+        activeChild.recoverFailedEpochDeposit();
+
+        __after();
+
+        _assertEpochDepositRecoveryCleared(activeChild);
+        t(!activeChild.getRecoveryExists(), "REC-003: child still has recovery");
+        eq(_after.epochNonce, _before.epochNonce, "REC-008: epoch deposit recovery changed epoch nonce");
+        eq(_after.totalShares, _before.totalShares, "REC-008: epoch deposit recovery changed total shares");
+        eq(_after.tvl, _before.tvl, "REC-008: epoch deposit recovery changed TVL");
+    }
+
+    /// @notice When an epoch withdraw from the active strategy fails
+    function handler_recoverFailedEpochWithdraw(
+        uint256 childSeed,
+        uint256 protocolSeed,
+        uint256 actorSeed,
+        uint256 amountSeed
+    ) public {
+        ChildVault activeChild = _childVaultBySeed(childSeed);
+        _closeCurrentEpochIfNotEmpty();
+        _ensureActorHasShares(actorSeed, amountSeed);
+        _ensureActiveStrategyOnChild(activeChild, protocolSeed, actorSeed, amountSeed);
+        _closeCurrentEpochIfNotEmpty();
+
+        address actor = _actor(actorSeed);
+        uint256 shareBurnAmount = parent.share.balanceOf(actor);
+        uint256 epochNonce = parent.vault.getEpochNonce();
+        t(shareBurnAmount != 0, "EPOCH-014: recovery actor has no shares");
+
+        _withdrawAndAssert(actor, shareBurnAmount, "EPOCH-005: shares not escrowed");
+
+        uint256 tvl = _activeStrategyTvl();
+        uint256 settlementPricePerShare = _closeEpochSettlementPricePerShare(tvl);
+        uint256 netWithdrawAmount = shareBurnAmount * settlementPricePerShare / SHARE_PRECISION;
+
+        if (netWithdrawAmount == 0) {
+            _bootstrapActorShares(actor);
+            _ensureActiveStrategyOnChild(activeChild, protocolSeed, actorSeed, amountSeed);
+            _closeCurrentEpochIfNotEmpty();
+
+            shareBurnAmount = parent.share.balanceOf(actor);
+            epochNonce = parent.vault.getEpochNonce();
+            t(shareBurnAmount != 0, "EPOCH-014: recovery actor has no shares");
+
+            _withdrawAndAssert(actor, shareBurnAmount, "EPOCH-005: shares not escrowed");
+
+            tvl = _activeStrategyTvl();
+            settlementPricePerShare = _closeEpochSettlementPricePerShare(tvl);
+            netWithdrawAmount = shareBurnAmount * settlementPricePerShare / SHARE_PRECISION;
+        }
+
+        t(netWithdrawAmount != 0, "EPOCH-014: net withdraw is zero");
+
+        uint256 treasuryShareBalanceBefore = parent.share.balanceOf(parent.vault.getTreasury());
+        uint256 totalSharesBefore = parent.vault.getTotalShares();
+
+        _warpPastEpoch(epochNonce);
+        _closeEpochThroughWorkflow(
+            parent.workflowRouter, CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner, tvl
+        );
+
+        t(
+            parent.vault.getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING,
+            "EPOCH-014: parent epoch did not enter executing"
+        );
+
+        _setActiveChildWithdrawReverts(activeChild, true);
+        _executeEpochWithdraw(activeChild, epochNonce, netWithdrawAmount);
+        _setActiveChildWithdrawReverts(activeChild, false);
+
+        _recordEpochClosed(epochNonce);
+        _recordFeeBurden(treasuryShareBalanceBefore, totalSharesBefore);
+        _assertPendingEpochWithdrawRecovery(activeChild, epochNonce, netWithdrawAmount);
+        t(activeChild.getRecoveryExists(), "REC-002: child recovery sentinel not set");
+
+        _setActiveStrategyWithdrawReturn(netWithdrawAmount);
+
+        __before();
+
+        activeChild.recoverFailedEpochWithdraw();
+
+        __after();
+
+        _assertEpochWithdrawRecoveryCleared(activeChild);
+        t(!activeChild.getRecoveryExists(), "REC-003: child still has recovery");
+        t(
+            parent.vault.getEpoch(epochNonce).status == Types.EpochStatus.CLAIMABLE,
+            "EPOCH-014: parent epoch not claimable after epoch withdraw recovery"
+        );
+        eq(_after.epochNonce, _before.epochNonce, "REC-008: epoch withdraw recovery changed epoch nonce");
+        eq(_after.totalShares, _before.totalShares, "REC-008: epoch withdraw recovery changed total shares");
     }
 
     function _settlementPricePerShare(uint256 tvl) internal view returns (uint256 pricePerShare) {
@@ -588,6 +818,11 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         }
     }
 
+    function _warpPastEpoch(uint256 epochNonce) internal {
+        uint256 targetTimestamp = parent.vault.getEpoch(epochNonce).openedAtTimestamp + MIN_EPOCH_PERIOD + 1;
+        if (block.timestamp < targetTimestamp) vm.warp(targetTimestamp);
+    }
+
     function _shareBootstrapAmount(uint256 amountSeed) internal pure returns (uint256 amount) {
         amount = _clampDepositAmount(amountSeed);
         if (amount < MAX_DEPOSIT_AMOUNT) amount = MAX_DEPOSIT_AMOUNT;
@@ -628,12 +863,47 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         }
     }
 
+    function _rebalanceRecoveryDestination(ChildVault sourceChild, uint256 destinationSeed)
+        internal
+        view
+        returns (uint64 chainSelector)
+    {
+        if (destinationSeed % 2 == 0) return PARENT_CHAIN_SELECTOR;
+        if (address(sourceChild) == address(child.vault)) return REMOTE_CHILD_CHAIN_SELECTOR;
+        return CHILD_CHAIN_SELECTOR;
+    }
+
+    function _crosschainVault(uint64 chainSelector) internal view returns (address vault) {
+        if (chainSelector == PARENT_CHAIN_SELECTOR) return address(parent.vault);
+        if (chainSelector == CHILD_CHAIN_SELECTOR) return address(child.vault);
+        if (chainSelector == REMOTE_CHILD_CHAIN_SELECTOR) return address(remoteChild.vault);
+        return address(0);
+    }
+
+    function _strategy(uint64 chainSelector, bytes32 protocolId)
+        internal
+        pure
+        returns (Types.Strategy memory strategy)
+    {
+        if (chainSelector == PARENT_CHAIN_SELECTOR) return _parentStrategy(protocolId);
+        if (chainSelector == CHILD_CHAIN_SELECTOR) return _childStrategy(protocolId);
+        return _remoteChildStrategy(protocolId);
+    }
+
     function _breakParentDestination(ChildVault vault) internal {
-        _setCrosschainVault(vault, PARENT_CHAIN_SELECTOR, INVALID_CCIP_RECEIVER);
+        _breakDestination(vault, PARENT_CHAIN_SELECTOR);
     }
 
     function _restoreParentDestination(ChildVault vault) internal {
-        _setCrosschainVault(vault, PARENT_CHAIN_SELECTOR, address(parent.vault));
+        _restoreDestination(vault, PARENT_CHAIN_SELECTOR, address(parent.vault));
+    }
+
+    function _breakDestination(ChildVault vault, uint64 chainSelector) internal {
+        _setCrosschainVault(vault, chainSelector, INVALID_CCIP_RECEIVER);
+    }
+
+    function _restoreDestination(ChildVault vault, uint64 chainSelector, address destination) internal {
+        _setCrosschainVault(vault, chainSelector, destination);
     }
 
     function _executeEpochWithdraw(ChildVault vault, uint256 epochNonce, uint256 amount) internal {
@@ -656,6 +926,154 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
                 amount
             );
         }
+    }
+
+    function _executeRebalance(ChildVault vault, uint256 rebalanceNonce, Types.Strategy memory target) internal {
+        if (address(vault) == address(child.vault)) {
+            _executeRebalanceThroughWorkflow(
+                child.workflowRouter,
+                EXECUTE_REBALANCE_WORKFLOW_ID,
+                EXECUTE_REBALANCE_WORKFLOW_NAME,
+                i_owner,
+                rebalanceNonce,
+                target
+            );
+        } else {
+            _executeRebalanceThroughWorkflow(
+                remoteChild.workflowRouter,
+                EXECUTE_REBALANCE_WORKFLOW_ID,
+                EXECUTE_REBALANCE_WORKFLOW_NAME,
+                i_owner,
+                rebalanceNonce,
+                target
+            );
+        }
+    }
+
+    function _setActiveChildDepositReverts(ChildVault vault, bool reverts) internal {
+        address activeAdapter = vault.getActiveProtocolAdapter();
+
+        if (address(vault) == address(child.vault)) {
+            _setProtocolDepositReverts(
+                activeAdapter,
+                address(child.aaveV3Adapter),
+                address(child.aaveV4Adapter),
+                address(child.compoundV3Adapter),
+                child.aaveV3Adapter.getProtocolPool(),
+                child.aaveV4Adapter.getProtocolPool(),
+                child.compoundV3Adapter.getProtocolPool(),
+                reverts
+            );
+        } else {
+            _setProtocolDepositReverts(
+                activeAdapter,
+                address(remoteChild.aaveV3Adapter),
+                address(remoteChild.aaveV4Adapter),
+                address(remoteChild.compoundV3Adapter),
+                remoteChild.aaveV3Adapter.getProtocolPool(),
+                remoteChild.aaveV4Adapter.getProtocolPool(),
+                remoteChild.compoundV3Adapter.getProtocolPool(),
+                reverts
+            );
+        }
+    }
+
+    function _setActiveChildWithdrawReverts(ChildVault vault, bool reverts) internal {
+        address activeAdapter = vault.getActiveProtocolAdapter();
+
+        if (address(vault) == address(child.vault)) {
+            _setProtocolWithdrawReverts(
+                activeAdapter,
+                address(child.aaveV3Adapter),
+                address(child.aaveV4Adapter),
+                address(child.compoundV3Adapter),
+                child.aaveV3Adapter.getProtocolPool(),
+                child.aaveV4Adapter.getProtocolPool(),
+                child.compoundV3Adapter.getProtocolPool(),
+                reverts
+            );
+        } else {
+            _setProtocolWithdrawReverts(
+                activeAdapter,
+                address(remoteChild.aaveV3Adapter),
+                address(remoteChild.aaveV4Adapter),
+                address(remoteChild.compoundV3Adapter),
+                remoteChild.aaveV3Adapter.getProtocolPool(),
+                remoteChild.aaveV4Adapter.getProtocolPool(),
+                remoteChild.compoundV3Adapter.getProtocolPool(),
+                reverts
+            );
+        }
+    }
+
+    function _setProtocolDepositReverts(
+        address activeAdapter,
+        address aaveV3Adapter,
+        address aaveV4Adapter,
+        address compoundV3Adapter,
+        address aaveV3Pool,
+        address aaveV4Spoke,
+        address comet,
+        bool reverts
+    ) internal {
+        if (activeAdapter == aaveV3Adapter) {
+            MockAaveV3Pool(aaveV3Pool).setSupplyReverts(reverts);
+        } else if (activeAdapter == aaveV4Adapter) {
+            MockAaveV4Spoke(aaveV4Spoke).setSupplyReverts(reverts);
+        } else if (activeAdapter == compoundV3Adapter) {
+            MockComet(comet).setSupplyReverts(reverts);
+        }
+    }
+
+    function _setProtocolWithdrawReverts(
+        address activeAdapter,
+        address aaveV3Adapter,
+        address aaveV4Adapter,
+        address compoundV3Adapter,
+        address aaveV3Pool,
+        address aaveV4Spoke,
+        address comet,
+        bool reverts
+    ) internal {
+        if (activeAdapter == aaveV3Adapter) {
+            MockAaveV3Pool(aaveV3Pool).setWithdrawReverts(reverts);
+        } else if (activeAdapter == aaveV4Adapter) {
+            MockAaveV4Spoke(aaveV4Spoke).setWithdrawReverts(reverts);
+        } else if (activeAdapter == compoundV3Adapter) {
+            MockComet(comet).setWithdrawReverts(reverts);
+        }
+    }
+
+    function _assertPendingEpochDepositRecovery(ChildVault vault, uint256 epochNonce, uint256 amount) internal {
+        Types.EpochRecovery memory recovery = vault.getEpochDepositRecovery();
+
+        eq(recovery.epochNonce, epochNonce, "REC-002: wrong epoch deposit recovery nonce");
+        eq(recovery.amount, amount, "REC-002: wrong epoch deposit recovery amount");
+        t(recovery.createdAt != 0, "REC-002: epoch deposit recovery timestamp not set");
+    }
+
+    function _assertEpochDepositRecoveryCleared(ChildVault vault) internal {
+        Types.EpochRecovery memory recovery = vault.getEpochDepositRecovery();
+
+        eq(recovery.epochNonce, 0, "REC-003: epoch deposit recovery nonce not cleared");
+        eq(recovery.amount, 0, "REC-003: epoch deposit recovery amount not cleared");
+        eq(recovery.createdAt, 0, "REC-003: epoch deposit recovery timestamp not cleared");
+    }
+
+    function _assertPendingEpochWithdrawRecovery(ChildVault vault, uint256 epochNonce, uint256 amount) internal {
+        Types.EpochRecovery memory recovery = vault.getEpochWithdrawRecovery();
+
+        eq(recovery.epochNonce, epochNonce, "REC-002: wrong epoch withdraw recovery nonce");
+        eq(recovery.amount, amount, "REC-002: wrong epoch withdraw recovery amount");
+        t(recovery.createdAt != 0, "REC-002: epoch withdraw recovery timestamp not set");
+    }
+
+    function _assertEpochWithdrawRecoveryCleared(ChildVault vault) internal {
+        Types.EpochRecovery memory recovery = vault.getEpochWithdrawRecovery();
+
+        eq(recovery.epochNonce, 0, "REC-003: epoch withdraw recovery nonce not cleared");
+        eq(recovery.amount, 0, "REC-003: epoch withdraw recovery amount not cleared");
+        eq(recovery.createdAt, 0, "REC-003: epoch withdraw recovery timestamp not cleared");
     }
 
     function _assertPendingCcipSendRecovery(
