@@ -655,7 +655,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @dev Precondition: rebalance state must be REBALANCING
     /// @dev Precondition: pending recovery nonce must be the current nonce
     /// @notice This Parent implemention overrides the BaseVault because we can finalize the rebalance in same atomic tx
-    function recoverFailedRebalanceDeposit() external nonReentrant override(BaseVault, IParentVault) {
+    function recoverFailedRebalanceDeposit() external override(BaseVault, IParentVault) nonReentrant {
         _recoverFailedRebalanceDeposit();
         _finalizeRebalance();
     }

@@ -8,7 +8,7 @@ contract CryticToFoundry is TargetFunctions, FoundryAsserts {
     function setUp() public override {
         setup();
 
-        bytes4[] memory selectors = new bytes4[](12);
+        bytes4[] memory selectors = new bytes4[](13);
         selectors[0] = TargetFunctions.handler_deposit.selector;
         selectors[1] = TargetFunctions.handler_cancelDeposit.selector;
         selectors[2] = TargetFunctions.handler_closeEpoch.selector;
@@ -21,6 +21,7 @@ contract CryticToFoundry is TargetFunctions, FoundryAsserts {
         selectors[9] = TargetFunctions.handler_recoverFailedCcipSend.selector;
         selectors[10] = TargetFunctions.handler_recoverFailedEpochDeposit.selector;
         selectors[11] = TargetFunctions.handler_recoverFailedEpochWithdraw.selector;
+        selectors[12] = TargetFunctions.handler_recoverFailedRebalanceDeposit.selector;
 
         targetSelector(FuzzSelector({addr: address(this), selectors: selectors}));
         targetContract(address(this));
@@ -42,5 +43,7 @@ contract CryticToFoundry is TargetFunctions, FoundryAsserts {
         handler_recoverFailedCcipSend(0, 0, 0, MIN_DEPOSIT_AMOUNT);
         handler_recoverFailedEpochDeposit(0, 0, 0, MIN_DEPOSIT_AMOUNT);
         handler_recoverFailedEpochWithdraw(0, 0, 0, MIN_DEPOSIT_AMOUNT);
+        handler_recoverFailedRebalanceDeposit(0, 0, 0, MIN_DEPOSIT_AMOUNT);
+        handler_recoverFailedRebalanceDeposit(1, 0, 0, MIN_DEPOSIT_AMOUNT);
     }
 }

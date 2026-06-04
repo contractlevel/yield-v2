@@ -167,6 +167,8 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     ) internal {
         /// @dev Get the vault address for receiving the message
         address vault = s_crosschainVaults[destinationChainSelector];
+        // // @review unit test this
+        // if (vault == address(0)) revert BaseVault__InvalidDestinationChainSelector(destinationChainSelector);
         /// @dev Get the CCIP gas limit for the strategy chain
         uint256 gasLimit = _getCcipGasLimit(destinationChainSelector);
 
