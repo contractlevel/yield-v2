@@ -17,7 +17,7 @@ contract CryticToFoundry is TargetFunctions, FoundryAsserts {
         selectors[5] = TargetFunctions.handler_cancelWithdraw.selector;
         selectors[6] = TargetFunctions.handler_claimUsdc.selector;
         selectors[7] = TargetFunctions.handler_initiateRebalance.selector;
-        selectors[8] = TargetFunctions.handler_donate.selector;
+        selectors[8] = TargetFunctions.handler_emergencyDrainAndDonate.selector;
         selectors[9] = TargetFunctions.handler_recoverFailedCcipSend.selector;
 
         targetSelector(FuzzSelector({addr: address(this), selectors: selectors}));
@@ -29,14 +29,14 @@ contract CryticToFoundry is TargetFunctions, FoundryAsserts {
         handler_deposit(0, MIN_DEPOSIT_AMOUNT);
         handler_cancelDeposit(0, MIN_DEPOSIT_AMOUNT);
         handler_withdraw(0, MIN_DEPOSIT_AMOUNT, MIN_DEPOSIT_AMOUNT);
-        handler_cancelWithdraw(0, MIN_DEPOSIT_AMOUNT, 0, MIN_DEPOSIT_AMOUNT);
+        handler_cancelWithdraw(0, MIN_DEPOSIT_AMOUNT, MIN_DEPOSIT_AMOUNT);
         handler_closeEpoch(0);
         handler_claimShares(0, 0, MIN_DEPOSIT_AMOUNT);
         handler_claimUsdc(0, 0, MIN_DEPOSIT_AMOUNT, MIN_DEPOSIT_AMOUNT);
         handler_initiateRebalance(0, 1, 0, MIN_DEPOSIT_AMOUNT);
         handler_initiateRebalance(1, 0, 0, MIN_DEPOSIT_AMOUNT);
         handler_initiateRebalance(2, 1, 0, MIN_DEPOSIT_AMOUNT);
-        handler_donate(0, MIN_DEPOSIT_AMOUNT);
-        handler_recoverFailedCcipSend(0, 0, 0, 0, MIN_DEPOSIT_AMOUNT);
+        handler_emergencyDrainAndDonate();
+        handler_recoverFailedCcipSend(0, 0, 0, MIN_DEPOSIT_AMOUNT);
     }
 }

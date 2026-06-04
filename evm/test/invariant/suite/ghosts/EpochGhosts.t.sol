@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {CcipGhosts} from "./CcipGhosts.t.sol";
+import {ActorGhosts} from "./ActorGhosts.t.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
 
-abstract contract EpochGhosts is CcipGhosts {
+abstract contract EpochGhosts is ActorGhosts {
+    enum ClaimKind {
+        DEPOSIT,
+        WITHDRAW
+    }
+
     uint256 internal ghost_totalDeposited;
     mapping(address actor => uint256 amount) internal ghost_totalDepositedByActor;
     mapping(uint256 epochNonce => uint256 amount) internal ghost_totalDepositedByEpoch;
@@ -122,6 +127,18 @@ abstract contract EpochGhosts is CcipGhosts {
     }
 
     function _claimableDepositEpoch(address actor, uint256 epochSeed) internal view returns (uint256 epochNonce) {
+        return _claimableEpoch(actor, epochSeed, ClaimKind.DEPOSIT);
+    }
+
+    function _claimableWithdrawEpoch(address actor, uint256 epochSeed) internal view returns (uint256 epochNonce) {
+        return _claimableEpoch(actor, epochSeed, ClaimKind.WITHDRAW);
+    }
+
+    function _claimableEpoch(address actor, uint256 epochSeed, ClaimKind claimKind)
+        internal
+        view
+        returns (uint256 epochNonce)
+    {
         uint256 claimableEpochCount = ghost_claimableEpochs.length;
         if (claimableEpochCount == 0) return 0;
 
@@ -129,24 +146,15 @@ abstract contract EpochGhosts is CcipGhosts {
         for (uint256 i; i < claimableEpochCount; ++i) {
             uint256 index = (startIndex + i) % claimableEpochCount;
             uint256 candidate = ghost_claimableEpochs[index];
-            if (ghost_depositedByActorByEpoch[actor][candidate] != 0) return candidate;
+            if (_claimableAmount(actor, candidate, claimKind) != 0) return candidate;
         }
 
         return 0;
     }
 
-    function _claimableWithdrawEpoch(address actor, uint256 epochSeed) internal view returns (uint256 epochNonce) {
-        uint256 claimableEpochCount = ghost_claimableEpochs.length;
-        if (claimableEpochCount == 0) return 0;
-
-        uint256 startIndex = _boundToRange(epochSeed, 0, claimableEpochCount - 1);
-        for (uint256 i; i < claimableEpochCount; ++i) {
-            uint256 index = (startIndex + i) % claimableEpochCount;
-            uint256 candidate = ghost_claimableEpochs[index];
-            if (ghost_shareBurnedByActorByEpoch[actor][candidate] != 0) return candidate;
-        }
-
-        return 0;
+    function _claimableAmount(address actor, uint256 epochNonce, ClaimKind claimKind) internal view returns (uint256) {
+        if (claimKind == ClaimKind.DEPOSIT) return ghost_depositedByActorByEpoch[actor][epochNonce];
+        return ghost_shareBurnedByActorByEpoch[actor][epochNonce];
     }
 
     function _recordFeeBurden(uint256 treasuryShareBalanceBefore, uint256 totalSharesBefore) internal {

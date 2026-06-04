@@ -9,8 +9,6 @@ abstract contract ActorGhosts is Setup {
     address[] internal s_actors;
     address internal s_currentActor;
 
-    mapping(address actor => bool seen) internal ghost_actorSeen;
-
     uint256 internal constant INVARIANT_ACTOR_USDC_BALANCE = type(uint128).max;
 
     function _setupInvariantActors() internal virtual override {
@@ -40,7 +38,6 @@ abstract contract ActorGhosts is Setup {
 
     function _addActor(address actor) internal {
         s_actors.push(actor);
-        ghost_actorSeen[actor] = true;
     }
 
     function _actor(uint256 actorSeed) internal view returns (address) {

@@ -9,6 +9,7 @@ import {MockAaveV4Spoke} from "../../mocks/MockAaveV4Spoke.sol";
 import {MockComet} from "../../mocks/MockComet.sol";
 import {MockUSDC} from "../../mocks/MockUSDC.sol";
 import {Types} from "../../../src/libraries/Types.sol";
+import {BaseVault} from "../../../src/vaults/BaseVault.sol";
 
 abstract contract Setup is BaseSetup, BaseIntegrationTest {
     bytes32 internal constant CLOSE_EPOCH_WORKFLOW_ID = keccak256("invariant-close-epoch");
@@ -23,7 +24,6 @@ abstract contract Setup is BaseSetup, BaseIntegrationTest {
     bytes10 internal constant EXECUTE_EPOCH_WITHDRAW_WORKFLOW_NAME = bytes10("epochDraw");
 
     uint256 internal constant MAX_DEPOSIT_AMOUNT = 1_000_000 * 1e6;
-    uint256 internal constant MAX_DONATE_AMOUNT_WHEN_FUNDED = 1_000 * 1e6;
     uint256 internal constant INVARIANT_PROTOCOL_USDC_LIQUIDITY = type(uint128).max;
 
     function setup() internal virtual override {
@@ -172,5 +172,15 @@ abstract contract Setup is BaseSetup, BaseIntegrationTest {
         if (chainSelector == REMOTE_CHILD_CHAIN_SELECTOR) return remoteChild.vault.getTVL();
 
         return 0;
+    }
+
+    function _activeVault() internal view returns (BaseVault) {
+        uint64 chainSelector = parent.vault.getRebalance().activeStrategy.chainSelector;
+
+        if (chainSelector == PARENT_CHAIN_SELECTOR) return parent.vault;
+        if (chainSelector == CHILD_CHAIN_SELECTOR) return child.vault;
+        if (chainSelector == REMOTE_CHILD_CHAIN_SELECTOR) return remoteChild.vault;
+
+        return parent.vault;
     }
 }

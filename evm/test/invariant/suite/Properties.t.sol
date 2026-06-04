@@ -5,7 +5,6 @@ import {BeforeAfter} from "./BeforeAfter.t.sol";
 import {Asserts} from "@chimera/Asserts.sol";
 import {Types} from "../../../src/libraries/Types.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {console2} from "forge-std/console2.sol";
 
 abstract contract Properties is BeforeAfter, Asserts {
     /*//////////////////////////////////////////////////////////////
@@ -81,16 +80,6 @@ abstract contract Properties is BeforeAfter, Asserts {
             Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
             bool depositCountersMatch =
                 (epoch.remainingDepositClaimAmount == 0) == (epoch.remainingShareMintAmount == 0);
-
-            if (!depositCountersMatch) {
-                console2.log("EPOCH-009 failure epochNonce", epochNonce);
-                console2.log("EPOCH-009 totalDepositAmount", epoch.totalDepositAmount);
-                console2.log("EPOCH-009 remainingDepositClaimAmount", epoch.remainingDepositClaimAmount);
-                console2.log("EPOCH-009 remainingShareMintAmount", epoch.remainingShareMintAmount);
-                console2.log("EPOCH-009 pricePerShare", epoch.pricePerShare);
-                console2.log("EPOCH-009 ghost totalShareMinted", ghost_totalShareMintedByEpoch[epochNonce]);
-                console2.log("EPOCH-009 ghost claimable epochs", ghost_claimableEpochs.length);
-            }
 
             t(depositCountersMatch, "EPOCH-009: deposit-side remaining counters did not reach zero together");
         }

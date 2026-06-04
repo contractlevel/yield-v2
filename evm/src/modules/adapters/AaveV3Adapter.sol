@@ -72,7 +72,7 @@ contract AaveV3Adapter is ProtocolAdapter {
             /// @dev Precondition: the actual withdrawn amount must not be less than the requested amount
             if (actualWithdrawnAmount < amount) revert AaveV3Adapter__IncorrectWithdrawAmount();
         }
-        /// @dev Scenario 1: Rebalance Withdraw - when the amount is type(uint256).max
+        /// @dev Scenario 2: Rebalance Withdraw - when the amount is type(uint256).max
         else {
             uint256 tvl = _getTVL(pool);
 

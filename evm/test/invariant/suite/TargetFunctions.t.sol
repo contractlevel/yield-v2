@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 import {BaseTargetFunctions} from "@chimera/BaseTargetFunctions.sol";
 import {Properties} from "./Properties.t.sol";
 import {Types} from "../../../src/libraries/Types.sol";
+import {BaseVault} from "../../../src/vaults/BaseVault.sol";
 import {ChildVault} from "../../../src/vaults/ChildVault.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -150,15 +151,15 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _recordFeeBurden(treasuryShareBalanceBefore, totalSharesBefore);
 
         Types.Rebalance memory rebalance = parent.vault.getRebalance();
-        t(rebalance.activeStrategy.protocolId == target.protocolId, "REBALANCE: active protocol mismatch");
+        t(rebalance.activeStrategy.protocolId == target.protocolId, "REBAL-006: active protocol mismatch");
         eq(
             uint256(rebalance.activeStrategy.chainSelector),
             uint256(target.chainSelector),
-            "REBALANCE: active chain mismatch"
+            "REBAL-006: active chain mismatch"
         );
-        t(rebalance.pendingStrategy.protocolId == bytes32(0), "REBALANCE: pending protocol not cleared");
-        eq(uint256(rebalance.pendingStrategy.chainSelector), 0, "REBALANCE: pending chain not cleared");
-        eq(uint256(rebalance.state), uint256(Types.RebalanceState.NONE), "REBALANCE: state not cleared");
+        t(rebalance.pendingStrategy.protocolId == bytes32(0), "REBAL-004: pending protocol not cleared");
+        eq(uint256(rebalance.pendingStrategy.chainSelector), 0, "REBAL-004: pending chain not cleared");
+        eq(uint256(rebalance.state), uint256(Types.RebalanceState.NONE), "REBAL-004: state not cleared");
     }
 
     function handler_claimShares(uint256 actorSeed, uint256 epochSeed, uint256 amountSeed) public {
@@ -212,35 +213,11 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             _ensureActorHasShares(actorSeed, amountSeed);
         }
 
-        s_currentActor = actor;
         uint256 shareBurnAmount = _clampWithdrawShareBurnAmount(shareSeed, parent.share.balanceOf(actor));
-
-        __before();
-
-        _changePrank(actor);
-        parent.vault.withdraw(shareBurnAmount);
-
-        __after();
-
-        _recordWithdraw(actor, shareBurnAmount);
-
-        eq(_after.epochNonce, _before.epochNonce, "EPOCH-005: withdraw changed epoch nonce");
-        eq(
-            _after.currentEpochTotalShareBurnAmount,
-            _before.currentEpochTotalShareBurnAmount + shareBurnAmount,
-            "EPOCH-005: withdraw did not increase current epoch share burn total"
-        );
-        eq(
-            _after.actorCurrentEpochWithdrawShareBurnAmount,
-            _before.actorCurrentEpochWithdrawShareBurnAmount + shareBurnAmount,
-            "EPOCH-005: withdraw did not increase actor current epoch share burn amount"
-        );
-        eq(_after.actorShareBalance, _before.actorShareBalance - shareBurnAmount, "withdraw did not transfer shares");
+        _withdrawAndAssert(actor, shareBurnAmount, "withdraw did not transfer shares");
     }
 
-    function handler_cancelWithdraw(uint256 actorSeed, uint256 shareSeed, uint256 epochSeed, uint256 amountSeed)
-        public
-    {
+    function handler_cancelWithdraw(uint256 actorSeed, uint256 shareSeed, uint256 amountSeed) public {
         address actor = _actor(actorSeed);
 
         if (parent.vault.getWithdrawShareBurnAmount(actor, parent.vault.getEpochNonce()) == 0) {
@@ -323,26 +300,54 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         eq(_after.actorUsdcBalance, _before.actorUsdcBalance + usdcWithdrawAmount, "claimUsdc did not transfer USDC");
     }
 
-    function handler_donate(uint256, uint256 amountSeed) public {
+    function handler_emergencyDrainAndDonate() public {
+        BaseVault activeVault = _activeVault();
+        IERC20 usdc = IERC20(parent.vault.getUsdc());
         s_currentActor = i_donateOperator;
-        uint256 amount = _clampDepositAmount(amountSeed);
-        uint256 tvlBefore = _activeStrategyTvl();
-        if (tvlBefore > 1 && amount > MAX_DONATE_AMOUNT_WHEN_FUNDED) amount = MAX_DONATE_AMOUNT_WHEN_FUNDED;
-        uint256 totalSharesBefore = parent.vault.getTotalShares();
-        uint256 epochNonceBefore = parent.vault.getEpochNonce();
 
-        // @review if epochNonceBefore == 1, then we should not donate and instead advance the state in another way
+        __before();
 
-        _changePrank(i_donateOperator);
-        _donateToActiveVault(amount);
+        _setActiveStrategyWithdrawReturn(_before.tvl);
 
-        eq(_activeStrategyTvl(), tvlBefore + amount, "DONATE-001: active strategy TVL did not increase");
-        eq(parent.vault.getTotalShares(), totalSharesBefore, "DONATE-002: donation minted shares");
-        eq(parent.vault.getEpochNonce(), epochNonceBefore, "DONATE-003: donation changed epoch nonce");
+        _changePrank(i_pauser);
+        activeVault.pause();
+
+        vm.warp(block.timestamp + 1 days);
+
+        uint256 receiverBalanceBefore = usdc.balanceOf(i_emergencyReceiver);
+
+        _changePrank(i_emergencyDrainer);
+        activeVault.emergencyDrain(true);
+
+        uint256 drainedAmount = usdc.balanceOf(i_emergencyReceiver) - receiverBalanceBefore;
+        lte(_before.vaultBalance, drainedAmount, "emergency drain did not recover vault balance");
+        uint256 donationAmount = drainedAmount - _before.vaultBalance;
+
+        if (_before.vaultBalance != 0) {
+            _changePrank(i_emergencyReceiver);
+            usdc.transfer(address(activeVault), _before.vaultBalance);
+        }
+
+        if (donationAmount != 0) {
+            _changePrank(i_emergencyReceiver);
+            usdc.transfer(i_donateOperator, donationAmount);
+
+            _changePrank(i_donateOperator);
+            activeVault.donate(donationAmount);
+        }
+
+        _changePrank(i_unpauser);
+        activeVault.unpause();
+
+        __after();
+
+        eq(_after.tvl, _before.tvl, "DONATE-001: emergency donation did not restore active strategy TVL");
+        eq(_after.totalShares, _before.totalShares, "DONATE-002: emergency donation minted shares");
+        eq(_after.epochNonce, _before.epochNonce, "DONATE-003: emergency donation changed epoch nonce");
+        eq(_after.vaultBalance, _before.vaultBalance, "emergency donation changed vault balance");
     }
 
     function handler_recoverFailedCcipSend(
-        uint256,
         uint256 childSeed,
         uint256 protocolSeed,
         uint256 actorSeed,
@@ -355,33 +360,12 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _closeCurrentEpochIfNotEmpty();
 
         address actor = _actor(actorSeed);
-        s_currentActor = actor;
         uint256 shareBurnAmount = parent.share.balanceOf(actor);
         uint256 epochNonce = parent.vault.getEpochNonce();
         eq(parent.vault.getEpoch(epochNonce).totalDepositAmount, 0, "EPOCH-014: staged epoch has deposits");
         t(shareBurnAmount != 0, "EPOCH-014: recovery actor has no shares");
 
-        __before();
-
-        _changePrank(actor);
-        parent.vault.withdraw(shareBurnAmount);
-
-        __after();
-
-        _recordWithdraw(actor, shareBurnAmount);
-
-        eq(_after.epochNonce, _before.epochNonce, "EPOCH-005: withdraw changed epoch nonce");
-        eq(
-            _after.currentEpochTotalShareBurnAmount,
-            _before.currentEpochTotalShareBurnAmount + shareBurnAmount,
-            "EPOCH-005: withdraw did not increase current epoch share burn total"
-        );
-        eq(
-            _after.actorCurrentEpochWithdrawShareBurnAmount,
-            _before.actorCurrentEpochWithdrawShareBurnAmount + shareBurnAmount,
-            "EPOCH-005: withdraw did not increase actor current epoch share burn amount"
-        );
-        eq(_after.actorShareBalance, _before.actorShareBalance - shareBurnAmount, "EPOCH-005: shares not escrowed");
+        _withdrawAndAssert(actor, shareBurnAmount, "EPOCH-005: shares not escrowed");
 
         uint256 tvl = _activeStrategyTvl();
         uint256 settlementPricePerShare = _closeEpochSettlementPricePerShare(tvl);
@@ -495,17 +479,17 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         Types.Rebalance memory afterRebalance = parent.vault.getRebalance();
 
-        eq(afterRebalance.nonce, beforeRebalance.nonce + 1, "REBALANCE: nonce did not increment");
-        eq(uint256(afterRebalance.state), uint256(Types.RebalanceState.NONE), "REBALANCE: state is not none");
-        t(afterRebalance.activeStrategy.protocolId == target.protocolId, "REBALANCE: wrong active protocol");
+        eq(afterRebalance.nonce, beforeRebalance.nonce + 1, "REBAL-005: nonce did not increment");
+        eq(uint256(afterRebalance.state), uint256(Types.RebalanceState.NONE), "REBAL-004: state is not none");
+        t(afterRebalance.activeStrategy.protocolId == target.protocolId, "REBAL-006: wrong active protocol");
         eq(
             uint256(afterRebalance.activeStrategy.chainSelector),
             uint256(target.chainSelector),
-            "REBALANCE: wrong active chain"
+            "REBAL-006: wrong active chain"
         );
-        t(afterRebalance.pendingStrategy.protocolId == bytes32(0), "REBALANCE: pending protocol still set");
-        eq(uint256(afterRebalance.pendingStrategy.chainSelector), 0, "REBALANCE: pending chain still set");
-        eq(_activeStrategyTvl(), tvlBefore, "REBALANCE: TVL changed during rebalance");
+        t(afterRebalance.pendingStrategy.protocolId == bytes32(0), "REBAL-004: pending protocol still set");
+        eq(uint256(afterRebalance.pendingStrategy.chainSelector), 0, "REBAL-004: pending chain still set");
+        eq(_activeStrategyTvl(), tvlBefore, "REBAL-006: TVL changed during rebalance");
         _assertActiveAdapterFor(target);
     }
 
@@ -533,13 +517,39 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         }
     }
 
+    function _withdrawAndAssert(address actor, uint256 shareBurnAmount, string memory shareBalanceMessage) internal {
+        s_currentActor = actor;
+
+        __before();
+
+        _changePrank(actor);
+        parent.vault.withdraw(shareBurnAmount);
+
+        __after();
+
+        _recordWithdraw(actor, shareBurnAmount);
+
+        eq(_after.epochNonce, _before.epochNonce, "EPOCH-005: withdraw changed epoch nonce");
+        eq(
+            _after.currentEpochTotalShareBurnAmount,
+            _before.currentEpochTotalShareBurnAmount + shareBurnAmount,
+            "EPOCH-005: withdraw did not increase current epoch share burn total"
+        );
+        eq(
+            _after.actorCurrentEpochWithdrawShareBurnAmount,
+            _before.actorCurrentEpochWithdrawShareBurnAmount + shareBurnAmount,
+            "EPOCH-005: withdraw did not increase actor current epoch share burn amount"
+        );
+        eq(_after.actorShareBalance, _before.actorShareBalance - shareBurnAmount, shareBalanceMessage);
+    }
+
     function _ensureActiveStrategyOnChild(ChildVault vault, uint256 protocolSeed, uint256 actorSeed, uint256 amountSeed)
         internal
     {
         uint64 selectedChainSelector = _childChainSelector(vault);
 
         if (parent.vault.getRebalance().activeStrategy.chainSelector == selectedChainSelector) {
-            if (_activeStrategyTvl() == 0) handler_donate(actorSeed, amountSeed);
+            if (_activeStrategyTvl() == 0) handler_claimShares(actorSeed, 0, amountSeed);
         } else {
             if (parent.vault.getEpochNonce() == 1 || _activeStrategyTvl() == 0) {
                 handler_claimShares(actorSeed, 0, amountSeed);
@@ -678,20 +688,6 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         eq(recovery.createdAt, 0, "REC-003: recovery timestamp not cleared");
     }
 
-    function _donateToActiveVault(uint256 amount) internal {
-        uint64 chainSelector = parent.vault.getRebalance().activeStrategy.chainSelector;
-
-        if (chainSelector == PARENT_CHAIN_SELECTOR) {
-            parent.vault.donate(amount);
-        } else if (chainSelector == CHILD_CHAIN_SELECTOR) {
-            child.vault.donate(amount);
-        } else if (chainSelector == REMOTE_CHILD_CHAIN_SELECTOR) {
-            remoteChild.vault.donate(amount);
-        } else {
-            t(false, "DONATE-004: active strategy chain is unsupported");
-        }
-    }
-
     function _rebalanceTarget(uint256 pathSeed, uint256 protocolSeed)
         internal
         view
@@ -728,15 +724,15 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
     function _assertActiveAdapterFor(Types.Strategy memory strategy) internal {
         if (strategy.chainSelector == PARENT_CHAIN_SELECTOR) {
-            t(parent.vault.getActiveProtocolAdapter() == _adapterFor(strategy), "REBALANCE: wrong parent adapter");
+            t(parent.vault.getActiveProtocolAdapter() == _adapterFor(strategy), "REBAL-006: wrong parent adapter");
         } else if (strategy.chainSelector == CHILD_CHAIN_SELECTOR) {
-            t(parent.vault.getActiveProtocolAdapter() == address(0), "REBALANCE: parent adapter is not remote");
-            t(child.vault.getActiveProtocolAdapter() == _adapterFor(strategy), "REBALANCE: wrong child adapter");
+            t(parent.vault.getActiveProtocolAdapter() == address(0), "REBAL-006: parent adapter is not remote");
+            t(child.vault.getActiveProtocolAdapter() == _adapterFor(strategy), "REBAL-006: wrong child adapter");
         } else if (strategy.chainSelector == REMOTE_CHILD_CHAIN_SELECTOR) {
-            t(parent.vault.getActiveProtocolAdapter() == address(0), "REBALANCE: parent adapter is not remote");
+            t(parent.vault.getActiveProtocolAdapter() == address(0), "REBAL-006: parent adapter is not remote");
             t(
                 remoteChild.vault.getActiveProtocolAdapter() == _adapterFor(strategy),
-                "REBALANCE: wrong remote child adapter"
+                "REBAL-006: wrong remote child adapter"
             );
         }
     }
