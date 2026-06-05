@@ -42,6 +42,8 @@ forge test --match-contract CryticToFoundry -vv
 medusa fuzz --config medusa.json --test-limit 1000 --timeout 60
 ```
 
+Do not delete medusa/ between runs if you want it to build on prior corpus. Delete it only when you need a clean rerun.
+
 ```
 rm -rf medusa
 medusa fuzz \

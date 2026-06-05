@@ -82,6 +82,10 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
     }
 
     function handler_closeEpoch(uint256 tvlSeed) public {
+        if (_recoveryModeExists()) {
+            _resolvePendingRecovery();
+        }
+
         uint256 epochNonce = parent.vault.getEpochNonce();
 
         if (
@@ -139,6 +143,10 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
     function handler_initiateRebalance(uint256 pathSeed, uint256 protocolSeed, uint256 actorSeed, uint256 amountSeed)
         public
     {
+        if (_recoveryModeExists()) {
+            _resolvePendingRecovery();
+        }
+
         if (parent.vault.getEpochNonce() == 1 || _activeStrategyTvl() == 0) {
             handler_claimShares(actorSeed, 0, amountSeed);
         }
@@ -353,21 +361,86 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         eq(_after.vaultBalance, _before.vaultBalance, "emergency donation changed vault balance");
     }
 
-    function handler_recoverFailedCcipSend(
-        uint256 childSeed,
-        uint256 protocolSeed,
-        uint256 actorSeed,
-        uint256 amountSeed
-    ) public {
-        if (childSeed % 2 == 0) {
-            _recoverFailedCcipSendEpochWithdraw(childSeed / 2, protocolSeed, actorSeed, amountSeed);
+    /*//////////////////////////////////////////////////////////////
+                             RECOVERY MODES
+    //////////////////////////////////////////////////////////////*/
+    function handler_recoveryModes(uint256 scenarioSeed, uint256 protocolSeed, uint256 actorSeed, uint256 amountSeed)
+        public
+    {
+        if (_recoveryModeExists()) {
+            _resolvePendingRecovery();
         } else {
-            _recoverFailedCcipSendRebalance(childSeed / 2, protocolSeed, actorSeed, amountSeed);
+            _stageRecovery(scenarioSeed, protocolSeed, actorSeed, amountSeed);
+        }
+    }
+
+    function _stageRecovery(uint256 scenarioSeed, uint256 protocolSeed, uint256 actorSeed, uint256 amountSeed)
+        internal
+    {
+        uint256 scenario = scenarioSeed % 8;
+
+        if (scenario < 2) {
+            _stageFailedCcipSend(scenario, protocolSeed, actorSeed, amountSeed);
+        } else if (scenario == 2) {
+            _stageFailedEpochDeposit(0, protocolSeed, actorSeed, amountSeed);
+        } else if (scenario == 3) {
+            _stageFailedEpochWithdraw(0, protocolSeed, actorSeed, amountSeed);
+        } else if (scenario < 6) {
+            _stageFailedRebalanceDeposit(scenario - 4, protocolSeed, actorSeed, amountSeed);
+        } else {
+            _stageFailedRebalanceWithdraw(scenario - 6, protocolSeed, actorSeed, amountSeed);
+        }
+    }
+
+    function _resolvePendingRecovery() internal {
+        eq(_recoveryModeCount(), 1, "REC-009: expected one pending recovery");
+
+        if (_rebalanceDepositRecoveryPending(parent.vault.getRebalanceDepositRecovery())) {
+            _recoverFailedRebalanceDeposit(parent.vault);
+            return;
+        }
+
+        if (_resolveChildPendingRecovery(child.vault)) return;
+        if (_resolveChildPendingRecovery(remoteChild.vault)) return;
+
+        t(false, "REC-009: pending recovery not found");
+    }
+
+    function _resolveChildPendingRecovery(ChildVault vault) internal returns (bool recovered) {
+        if (_rebalanceDepositRecoveryPending(vault.getRebalanceDepositRecovery())) {
+            _recoverFailedRebalanceDeposit(vault);
+            return true;
+        }
+        if (_epochRecoveryPending(vault.getEpochDepositRecovery())) {
+            _recoverFailedEpochDeposit(vault);
+            return true;
+        }
+        if (_epochRecoveryPending(vault.getEpochWithdrawRecovery())) {
+            _recoverFailedEpochWithdraw(vault);
+            return true;
+        }
+        if (_rebalanceWithdrawRecoveryPending(vault.getRebalanceWithdrawRecovery())) {
+            _recoverFailedRebalanceWithdraw(vault);
+            return true;
+        }
+        if (_ccipSendRecoveryPending(vault.getCcipSendRecovery())) {
+            _recoverFailedCcipSend(vault);
+            return true;
+        }
+    }
+
+    function _stageFailedCcipSend(uint256 childSeed, uint256 protocolSeed, uint256 actorSeed, uint256 amountSeed)
+        internal
+    {
+        if (childSeed % 2 == 0) {
+            _stageFailedCcipSendEpochWithdraw(childSeed / 2, protocolSeed, actorSeed, amountSeed);
+        } else {
+            _stageFailedCcipSendRebalance(childSeed / 2, protocolSeed, actorSeed, amountSeed);
         }
     }
 
     /// @notice When the outbound CCIP send message fails for a Types.CcipTx.EPOCH_NET_WITHDRAW
-    function _recoverFailedCcipSendEpochWithdraw(
+    function _stageFailedCcipSendEpochWithdraw(
         uint256 childSeed,
         uint256 protocolSeed,
         uint256 actorSeed,
@@ -382,17 +455,17 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         address actor = _actor(actorSeed);
         uint256 shareBurnAmount = parent.share.balanceOf(actor);
         uint256 epochNonce = parent.vault.getEpochNonce();
-        eq(parent.vault.getEpoch(epochNonce).totalDepositAmount, 0, "EPOCH-014: staged epoch has deposits");
-        t(shareBurnAmount != 0, "EPOCH-014: recovery actor has no shares");
+        eq(parent.vault.getEpoch(epochNonce).totalDepositAmount, 0, "recovery setup: staged epoch has deposits");
+        t(shareBurnAmount != 0, "recovery setup: actor has no shares");
 
-        _withdrawAndAssert(actor, shareBurnAmount, "EPOCH-005: shares not escrowed");
+        _withdrawAndAssert(actor, shareBurnAmount, "recovery setup: shares not escrowed");
 
         uint256 tvl = _activeStrategyTvl();
         uint256 settlementPricePerShare = _closeEpochSettlementPricePerShare(tvl);
         uint256 totalWithdrawUsdc = shareBurnAmount * settlementPricePerShare / SHARE_PRECISION;
         uint256 totalDepositAmount = parent.vault.getEpoch(epochNonce).totalDepositAmount;
         uint256 netWithdrawAmount = totalWithdrawUsdc - totalDepositAmount;
-        t(netWithdrawAmount != 0, "EPOCH-014: net withdraw is zero");
+        t(netWithdrawAmount != 0, "recovery setup: net withdraw is zero");
 
         _setActiveStrategyWithdrawReturn(netWithdrawAmount);
 
@@ -426,26 +499,17 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             "CCIP-005b: pending send is not collateralized"
         );
 
-        activeChild.recoverFailedCcipSend();
-        _assertCcipSendRecoveryCleared(activeChild);
-
-        t(
-            parent.vault.getEpoch(epochNonce).status == Types.EpochStatus.CLAIMABLE,
-            "CCIP-005c: parent epoch not claimable after retry"
-        );
-        t(!activeChild.getRecoveryExists(), "REC-003: child still has recovery");
-
-        _recordEpochClosed(epochNonce);
         _recordFeeBurden(treasuryShareBalanceBefore, totalSharesBefore);
     }
 
     /// @notice When the outbound CCIP send message fails for a Types.CcipTx.REBALANCE
-    function _recoverFailedCcipSendRebalance(
+    function _stageFailedCcipSendRebalance(
         uint256 childSeed,
         uint256 protocolSeed,
         uint256 actorSeed,
         uint256 amountSeed
     ) internal {
+        /// @dev ccip send rebalance fails are only stored on Child because we atomic revert on Parent
         ChildVault sourceChild = _childVaultBySeed(childSeed);
         _ensureActiveStrategyOnChild(sourceChild, protocolSeed, actorSeed, amountSeed);
 
@@ -455,7 +519,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         uint256 amount = _activeStrategyTvl();
         Types.Rebalance memory beforeRebalance = parent.vault.getRebalance();
 
-        t(amount != 0, "CCIP-005a: rebalance amount is zero");
+        t(amount != 0, "recovery setup: rebalance amount is zero");
 
         __before();
 
@@ -464,7 +528,11 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         );
 
         Types.Rebalance memory pendingRebalance = parent.vault.getRebalance();
-        eq(pendingRebalance.nonce, beforeRebalance.nonce, "REBAL-005: nonce changed before completion");
+        eq(
+            pendingRebalance.nonce,
+            beforeRebalance.nonce,
+            "CCIP send rebalance: REBAL-005 nonce changed before completion"
+        );
         eq(
             uint256(pendingRebalance.state),
             uint256(Types.RebalanceState.REBALANCING),
@@ -494,46 +562,52 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             IERC20(parent.vault.getUsdc()).balanceOf(address(sourceChild)),
             "CCIP-005b: pending send is not collateralized"
         );
-
-        sourceChild.recoverFailedCcipSend();
-        _assertCcipSendRecoveryCleared(sourceChild);
-
-        if (destinationChainSelector != PARENT_CHAIN_SELECTOR) {
-            _completeRebalanceThroughWorkflow(
-                parent.workflowRouter, COMPLETE_REBALANCE_WORKFLOW_ID, COMPLETE_REBALANCE_WORKFLOW_NAME, i_owner
-            );
-        }
-
-        __after();
-
-        Types.Rebalance memory afterRebalance = parent.vault.getRebalance();
-        eq(afterRebalance.nonce, beforeRebalance.nonce + 1, "REBAL-005: nonce did not increment");
-        eq(
-            uint256(afterRebalance.state),
-            uint256(Types.RebalanceState.NONE),
-            "CCIP-005c: parent rebalance not finalized after retry"
-        );
-        t(afterRebalance.activeStrategy.protocolId == target.protocolId, "REBAL-006: wrong active protocol");
-        eq(
-            uint256(afterRebalance.activeStrategy.chainSelector),
-            uint256(target.chainSelector),
-            "REBAL-006: wrong active chain"
-        );
-        t(afterRebalance.pendingStrategy.protocolId == bytes32(0), "REBAL-004: pending protocol still set");
-        eq(uint256(afterRebalance.pendingStrategy.chainSelector), 0, "REBAL-004: pending chain still set");
-        _assertActiveAdapterFor(target);
-        t(!sourceChild.getRecoveryExists(), "REC-003: child still has recovery");
-
-        _recordFeeBurden(_before.treasuryShareBalance, _before.totalShares);
     }
 
-    /// @notice When an epoch deposit to the active strategy fails
-    function handler_recoverFailedEpochDeposit(
-        uint256 childSeed,
-        uint256 protocolSeed,
-        uint256 actorSeed,
-        uint256 amountSeed
-    ) public {
+    function _recoverFailedCcipSend(ChildVault vault) internal {
+        Types.CcipSendRecovery memory recovery = vault.getCcipSendRecovery();
+
+        if (recovery.ccipTxType == Types.CcipTx.EPOCH_NET_WITHDRAW) {
+            uint256 epochNonce = abi.decode(recovery.txData, (uint256));
+
+            vault.recoverFailedCcipSend();
+            _assertCcipSendRecoveryCleared(vault);
+
+            t(
+                parent.vault.getEpoch(epochNonce).status == Types.EpochStatus.CLAIMABLE,
+                "CCIP-005c: parent epoch not claimable after retry"
+            );
+            _recordEpochClosed(epochNonce);
+        } else if (recovery.ccipTxType == Types.CcipTx.REBALANCE) {
+            Types.Rebalance memory beforeRebalance = parent.vault.getRebalance();
+            Types.Strategy memory target = beforeRebalance.pendingStrategy;
+
+            __before();
+
+            vault.recoverFailedCcipSend();
+            _assertCcipSendRecoveryCleared(vault);
+
+            if (recovery.destinationChainSelector != PARENT_CHAIN_SELECTOR) {
+                _completeRebalanceThroughWorkflow(
+                    parent.workflowRouter, COMPLETE_REBALANCE_WORKFLOW_ID, COMPLETE_REBALANCE_WORKFLOW_NAME, i_owner
+                );
+            }
+
+            __after();
+
+            _assertRebalanceFinalized(beforeRebalance, target, "CCIP-005c: parent rebalance not finalized after retry");
+            _recordFeeBurden(_before.treasuryShareBalance, _before.totalShares);
+        } else {
+            t(false, "REC-002: invalid CCIP recovery tx type");
+        }
+
+        t(!vault.getRecoveryExists(), "REC-003: child still has recovery");
+        eq(_recoveryModeCount(), 0, "REC-003: recovery mode not cleared");
+    }
+
+    function _stageFailedEpochDeposit(uint256 childSeed, uint256 protocolSeed, uint256 actorSeed, uint256 amountSeed)
+        internal
+    {
         ChildVault activeChild = _childVaultBySeed(childSeed);
         _closeCurrentEpochIfNotEmpty();
         _ensureActiveStrategyOnChild(activeChild, protocolSeed, actorSeed, amountSeed);
@@ -548,32 +622,24 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _setActiveChildDepositReverts(activeChild, false);
 
         _assertPendingEpochDepositRecovery(activeChild, epochNonce, amount);
-        t(activeChild.getRecoveryExists(), "REC-002: child recovery sentinel not set");
+        t(activeChild.getRecoveryExists(), "REC-002: child epoch deposit recovery sentinel not set");
         t(
             parent.vault.getEpoch(epochNonce).status == Types.EpochStatus.CLAIMABLE,
-            "EPOCH-014: remote deposit epoch not claimable"
+            "EPOCH-002: remote deposit epoch not claimable"
         );
-
-        __before();
-
-        activeChild.recoverFailedEpochDeposit();
-
-        __after();
-
-        _assertEpochDepositRecoveryCleared(activeChild);
-        t(!activeChild.getRecoveryExists(), "REC-003: child still has recovery");
-        eq(_after.epochNonce, _before.epochNonce, "REC-008: epoch deposit recovery changed epoch nonce");
-        eq(_after.totalShares, _before.totalShares, "REC-008: epoch deposit recovery changed total shares");
-        eq(_after.tvl, _before.tvl, "REC-008: epoch deposit recovery changed TVL");
     }
 
-    /// @notice When an epoch withdraw from the active strategy fails
-    function handler_recoverFailedEpochWithdraw(
-        uint256 childSeed,
-        uint256 protocolSeed,
-        uint256 actorSeed,
-        uint256 amountSeed
-    ) public {
+    function _recoverFailedEpochDeposit(ChildVault vault) internal {
+        vault.recoverFailedEpochDeposit();
+
+        _assertEpochDepositRecoveryCleared(vault);
+        t(!vault.getRecoveryExists(), "REC-003: child still has recovery");
+        eq(_recoveryModeCount(), 0, "REC-003: recovery mode not cleared");
+    }
+
+    function _stageFailedEpochWithdraw(uint256 childSeed, uint256 protocolSeed, uint256 actorSeed, uint256 amountSeed)
+        internal
+    {
         ChildVault activeChild = _childVaultBySeed(childSeed);
         _closeCurrentEpochIfNotEmpty();
         _ensureActorHasShares(actorSeed, amountSeed);
@@ -583,9 +649,9 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         address actor = _actor(actorSeed);
         uint256 shareBurnAmount = parent.share.balanceOf(actor);
         uint256 epochNonce = parent.vault.getEpochNonce();
-        t(shareBurnAmount != 0, "EPOCH-014: recovery actor has no shares");
+        t(shareBurnAmount != 0, "recovery setup: actor has no shares");
 
-        _withdrawAndAssert(actor, shareBurnAmount, "EPOCH-005: shares not escrowed");
+        _withdrawAndAssert(actor, shareBurnAmount, "recovery setup: shares not escrowed");
 
         uint256 tvl = _activeStrategyTvl();
         uint256 settlementPricePerShare = _closeEpochSettlementPricePerShare(tvl);
@@ -598,16 +664,16 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
             shareBurnAmount = parent.share.balanceOf(actor);
             epochNonce = parent.vault.getEpochNonce();
-            t(shareBurnAmount != 0, "EPOCH-014: recovery actor has no shares");
+            t(shareBurnAmount != 0, "recovery setup: actor has no shares");
 
-            _withdrawAndAssert(actor, shareBurnAmount, "EPOCH-005: shares not escrowed");
+            _withdrawAndAssert(actor, shareBurnAmount, "recovery setup: shares not escrowed");
 
             tvl = _activeStrategyTvl();
             settlementPricePerShare = _closeEpochSettlementPricePerShare(tvl);
             netWithdrawAmount = shareBurnAmount * settlementPricePerShare / SHARE_PRECISION;
         }
 
-        t(netWithdrawAmount != 0, "EPOCH-014: net withdraw is zero");
+        t(netWithdrawAmount != 0, "recovery setup: net withdraw is zero");
 
         uint256 treasuryShareBalanceBefore = parent.share.balanceOf(parent.vault.getTreasury());
         uint256 totalSharesBefore = parent.vault.getTotalShares();
@@ -626,44 +692,43 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _executeEpochWithdraw(activeChild, epochNonce, netWithdrawAmount);
         _setActiveChildWithdrawReverts(activeChild, false);
 
-        _recordEpochClosed(epochNonce);
         _recordFeeBurden(treasuryShareBalanceBefore, totalSharesBefore);
         _assertPendingEpochWithdrawRecovery(activeChild, epochNonce, netWithdrawAmount);
-        t(activeChild.getRecoveryExists(), "REC-002: child recovery sentinel not set");
+        t(activeChild.getRecoveryExists(), "REC-002: child epoch withdraw recovery sentinel not set");
 
         _setActiveStrategyWithdrawReturn(netWithdrawAmount);
-
-        __before();
-
-        activeChild.recoverFailedEpochWithdraw();
-
-        __after();
-
-        _assertEpochWithdrawRecoveryCleared(activeChild);
-        t(!activeChild.getRecoveryExists(), "REC-003: child still has recovery");
-        t(
-            parent.vault.getEpoch(epochNonce).status == Types.EpochStatus.CLAIMABLE,
-            "EPOCH-014: parent epoch not claimable after epoch withdraw recovery"
-        );
-        eq(_after.epochNonce, _before.epochNonce, "REC-008: epoch withdraw recovery changed epoch nonce");
-        eq(_after.totalShares, _before.totalShares, "REC-008: epoch withdraw recovery changed total shares");
     }
 
-    function handler_recoverFailedRebalanceDeposit(
+    function _recoverFailedEpochWithdraw(ChildVault vault) internal {
+        Types.EpochRecovery memory recovery = vault.getEpochWithdrawRecovery();
+        _setActiveStrategyWithdrawReturn(recovery.amount);
+
+        vault.recoverFailedEpochWithdraw();
+
+        _assertEpochWithdrawRecoveryCleared(vault);
+        t(
+            parent.vault.getEpoch(recovery.epochNonce).status == Types.EpochStatus.CLAIMABLE,
+            "EPOCH-014: parent epoch not claimable after recovery"
+        );
+        t(!vault.getRecoveryExists(), "REC-003: child still has recovery");
+        _recordEpochClosed(recovery.epochNonce);
+        eq(_recoveryModeCount(), 0, "REC-003: recovery mode not cleared");
+    }
+
+    function _stageFailedRebalanceDeposit(
         uint256 childSeed,
         uint256 protocolSeed,
         uint256 actorSeed,
         uint256 amountSeed
-    ) public {
+    ) internal {
         if (childSeed % 2 == 0) {
-            // Even and odd seeds choose the recovery branch; the remaining seed still chooses the source child.
-            _recoverFailedRebalanceDepositParent(childSeed / 2, protocolSeed, actorSeed, amountSeed);
+            _stageFailedRebalanceDepositParent(childSeed / 2, protocolSeed, actorSeed, amountSeed);
         } else {
-            _recoverFailedRebalanceDepositChild(childSeed / 2, protocolSeed, actorSeed, amountSeed);
+            _stageFailedRebalanceDepositChild(childSeed / 2, protocolSeed, actorSeed, amountSeed);
         }
     }
 
-    function _recoverFailedRebalanceDepositParent(
+    function _stageFailedRebalanceDepositParent(
         uint256 childSeed,
         uint256 protocolSeed,
         uint256 actorSeed,
@@ -678,16 +743,18 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         Types.Strategy memory target = _parentStrategy(_protocolId(protocolSeed));
         uint256 amount = _activeStrategyTvl();
 
-        t(amount != 0, "REC-005b: rebalance deposit recovery amount is zero");
-
-        __before();
+        t(amount != 0, "REC-002: rebalance deposit recovery amount is zero");
 
         _initiateRebalanceThroughWorkflow(
             parent.workflowRouter, INITIATE_REBALANCE_WORKFLOW_ID, INITIATE_REBALANCE_WORKFLOW_NAME, i_owner, target
         );
 
         Types.Rebalance memory pendingRebalance = parent.vault.getRebalance();
-        eq(pendingRebalance.nonce, beforeRebalance.nonce, "REBAL-005: nonce changed before completion");
+        eq(
+            pendingRebalance.nonce,
+            beforeRebalance.nonce,
+            "rebalance deposit parent: REBAL-005 nonce changed before completion"
+        );
         eq(
             uint256(pendingRebalance.state),
             uint256(Types.RebalanceState.REBALANCING),
@@ -712,30 +779,32 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             uint256(Types.RebalanceState.REBALANCING),
             "REBAL-004: state is not rebalancing after deposit failure"
         );
+    }
 
-        parent.vault.recoverFailedRebalanceDeposit();
+    function _recoverFailedRebalanceDeposit(BaseVault vault) internal {
+        Types.Rebalance memory beforeRebalance = parent.vault.getRebalance();
+        Types.Strategy memory target = beforeRebalance.pendingStrategy;
+
+        __before();
+
+        vault.recoverFailedRebalanceDeposit();
+
+        if (address(vault) != address(parent.vault)) {
+            _completeRebalanceThroughWorkflow(
+                parent.workflowRouter, COMPLETE_REBALANCE_WORKFLOW_ID, COMPLETE_REBALANCE_WORKFLOW_NAME, i_owner
+            );
+        }
 
         __after();
 
-        _assertRebalanceDepositRecoveryCleared(parent.vault);
-
-        Types.Rebalance memory afterRebalance = parent.vault.getRebalance();
-        eq(afterRebalance.nonce, beforeRebalance.nonce + 1, "REBAL-005: nonce did not increment");
-        eq(uint256(afterRebalance.state), uint256(Types.RebalanceState.NONE), "REBAL-004: state is not none");
-        t(afterRebalance.activeStrategy.protocolId == target.protocolId, "REBAL-006: wrong active protocol");
-        eq(
-            uint256(afterRebalance.activeStrategy.chainSelector),
-            uint256(target.chainSelector),
-            "REBAL-006: wrong active chain"
-        );
-        t(afterRebalance.pendingStrategy.protocolId == bytes32(0), "REBAL-004: pending protocol still set");
-        eq(uint256(afterRebalance.pendingStrategy.chainSelector), 0, "REBAL-004: pending chain still set");
-        _assertActiveAdapterFor(target);
-
+        _assertRebalanceDepositRecoveryCleared(vault);
+        _assertRebalanceFinalized(beforeRebalance, target, "REBAL-004: state is not none");
+        t(!vault.getRecoveryExists(), "REC-003: vault still has recovery");
         _recordFeeBurden(_before.treasuryShareBalance, _before.totalShares);
+        eq(_recoveryModeCount(), 0, "REC-003: recovery mode not cleared");
     }
 
-    function _recoverFailedRebalanceDepositChild(
+    function _stageFailedRebalanceDepositChild(
         uint256 childSeed,
         uint256 protocolSeed,
         uint256 actorSeed,
@@ -753,16 +822,18 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         Types.Rebalance memory beforeRebalance = parent.vault.getRebalance();
         uint256 amount = _activeStrategyTvl();
 
-        t(amount != 0, "REC-005b: rebalance deposit recovery amount is zero");
-
-        __before();
+        t(amount != 0, "REC-002: rebalance deposit recovery amount is zero");
 
         _initiateRebalanceThroughWorkflow(
             parent.workflowRouter, INITIATE_REBALANCE_WORKFLOW_ID, INITIATE_REBALANCE_WORKFLOW_NAME, i_owner, target
         );
 
         Types.Rebalance memory pendingRebalance = parent.vault.getRebalance();
-        eq(pendingRebalance.nonce, beforeRebalance.nonce, "REBAL-005: nonce changed before completion");
+        eq(
+            pendingRebalance.nonce,
+            beforeRebalance.nonce,
+            "rebalance deposit child: REBAL-005 nonce changed before completion"
+        );
         eq(
             uint256(pendingRebalance.state),
             uint256(Types.RebalanceState.REBALANCING),
@@ -781,47 +852,21 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _setChildDepositReverts(destinationChild, target, false);
 
         _assertPendingRebalanceDepositRecovery(destinationChild, pendingRebalance.nonce, amount);
-        t(destinationChild.getRecoveryExists(), "REC-002: child recovery sentinel not set");
+        t(destinationChild.getRecoveryExists(), "REC-002: child rebalance deposit recovery sentinel not set");
         eq(
             uint256(parent.vault.getRebalance().state),
             uint256(Types.RebalanceState.REBALANCING),
             "REBAL-004: state is not rebalancing after deposit failure"
         );
-
-        destinationChild.recoverFailedRebalanceDeposit();
-
-        _assertRebalanceDepositRecoveryCleared(destinationChild);
-        t(!destinationChild.getRecoveryExists(), "REC-003: child still has recovery");
-
-        _completeRebalanceThroughWorkflow(
-            parent.workflowRouter, COMPLETE_REBALANCE_WORKFLOW_ID, COMPLETE_REBALANCE_WORKFLOW_NAME, i_owner
-        );
-
-        __after();
-
-        Types.Rebalance memory afterRebalance = parent.vault.getRebalance();
-        eq(afterRebalance.nonce, beforeRebalance.nonce + 1, "REBAL-005: nonce did not increment");
-        eq(uint256(afterRebalance.state), uint256(Types.RebalanceState.NONE), "REBAL-004: state is not none");
-        t(afterRebalance.activeStrategy.protocolId == target.protocolId, "REBAL-006: wrong active protocol");
-        eq(
-            uint256(afterRebalance.activeStrategy.chainSelector),
-            uint256(target.chainSelector),
-            "REBAL-006: wrong active chain"
-        );
-        t(afterRebalance.pendingStrategy.protocolId == bytes32(0), "REBAL-004: pending protocol still set");
-        eq(uint256(afterRebalance.pendingStrategy.chainSelector), 0, "REBAL-004: pending chain still set");
-        _assertActiveAdapterFor(target);
-
-        _recordFeeBurden(_before.treasuryShareBalance, _before.totalShares);
     }
 
     /// @notice When a rebalance withdraw from the active Child strategy fails
-    function handler_recoverFailedRebalanceWithdraw(
+    function _stageFailedRebalanceWithdraw(
         uint256 childSeed,
         uint256 protocolSeed,
         uint256 actorSeed,
         uint256 amountSeed
-    ) public {
+    ) internal {
         ChildVault sourceChild = _childVaultBySeed(childSeed);
         _closeCurrentEpochIfNotEmpty();
         _ensureActiveStrategyOnChild(sourceChild, protocolSeed, actorSeed, amountSeed);
@@ -832,16 +877,18 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         Types.Rebalance memory beforeRebalance = parent.vault.getRebalance();
         uint256 amount = _activeStrategyTvl();
 
-        t(amount != 0, "REC-008: rebalance withdraw recovery amount is zero");
-
-        __before();
+        t(amount != 0, "recovery setup: rebalance withdraw amount is zero");
 
         _initiateRebalanceThroughWorkflow(
             parent.workflowRouter, INITIATE_REBALANCE_WORKFLOW_ID, INITIATE_REBALANCE_WORKFLOW_NAME, i_owner, target
         );
 
         Types.Rebalance memory pendingRebalance = parent.vault.getRebalance();
-        eq(pendingRebalance.nonce, beforeRebalance.nonce, "REBAL-005: nonce changed before completion");
+        eq(
+            pendingRebalance.nonce,
+            beforeRebalance.nonce,
+            "rebalance withdraw: REBAL-005 nonce changed before completion"
+        );
         eq(
             uint256(pendingRebalance.state),
             uint256(Types.RebalanceState.REBALANCING),
@@ -859,19 +906,29 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _setActiveChildWithdrawReverts(sourceChild, false);
 
         _assertPendingRebalanceWithdrawRecovery(sourceChild, pendingRebalance.nonce, target);
-        t(sourceChild.getRecoveryExists(), "REC-002: child recovery sentinel not set");
+        t(sourceChild.getRecoveryExists(), "REC-002: child rebalance withdraw recovery sentinel not set");
         eq(
             uint256(parent.vault.getRebalance().state),
             uint256(Types.RebalanceState.REBALANCING),
             "REBAL-004: state is not rebalancing after withdraw failure"
         );
+    }
+
+    function _recoverFailedRebalanceWithdraw(ChildVault vault) internal {
+        Types.Rebalance memory beforeRebalance = parent.vault.getRebalance();
+        Types.RebalanceWithdrawRecovery memory recovery = vault.getRebalanceWithdrawRecovery();
+        Types.Strategy memory target = recovery.strategy;
+        uint256 amount = _activeStrategyTvl();
+        t(amount != 0, "recovery setup: rebalance withdraw amount is zero");
+
+        __before();
 
         _setActiveStrategyWithdrawReturn(amount);
-        sourceChild.recoverFailedRebalanceWithdraw();
-        _assertRebalanceWithdrawRecoveryCleared(sourceChild);
-        t(!sourceChild.getRecoveryExists(), "REC-003: child still has recovery");
+        vault.recoverFailedRebalanceWithdraw();
+        _assertRebalanceWithdrawRecoveryCleared(vault);
+        t(!vault.getRecoveryExists(), "REC-003: child still has recovery");
 
-        if (destinationChainSelector != PARENT_CHAIN_SELECTOR) {
+        if (target.chainSelector != PARENT_CHAIN_SELECTOR) {
             _completeRebalanceThroughWorkflow(
                 parent.workflowRouter, COMPLETE_REBALANCE_WORKFLOW_ID, COMPLETE_REBALANCE_WORKFLOW_NAME, i_owner
             );
@@ -879,9 +936,23 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         __after();
 
+        _assertRebalanceFinalized(beforeRebalance, target, "REBAL-004: state is not none");
+        _recordFeeBurden(_before.treasuryShareBalance, _before.totalShares);
+        eq(_recoveryModeCount(), 0, "REC-003: recovery mode not cleared");
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                            HELPER / UTILITY
+    //////////////////////////////////////////////////////////////*/
+    function _assertRebalanceFinalized(
+        Types.Rebalance memory beforeRebalance,
+        Types.Strategy memory target,
+        string memory stateMessage
+    ) internal {
         Types.Rebalance memory afterRebalance = parent.vault.getRebalance();
+
         eq(afterRebalance.nonce, beforeRebalance.nonce + 1, "REBAL-005: nonce did not increment");
-        eq(uint256(afterRebalance.state), uint256(Types.RebalanceState.NONE), "REBAL-004: state is not none");
+        eq(uint256(afterRebalance.state), uint256(Types.RebalanceState.NONE), stateMessage);
         t(afterRebalance.activeStrategy.protocolId == target.protocolId, "REBAL-006: wrong active protocol");
         eq(
             uint256(afterRebalance.activeStrategy.chainSelector),
@@ -891,8 +962,6 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         t(afterRebalance.pendingStrategy.protocolId == bytes32(0), "REBAL-004: pending protocol still set");
         eq(uint256(afterRebalance.pendingStrategy.chainSelector), 0, "REBAL-004: pending chain still set");
         _assertActiveAdapterFor(target);
-
-        _recordFeeBurden(_before.treasuryShareBalance, _before.totalShares);
     }
 
     function _settlementPricePerShare(uint256 tvl) internal view returns (uint256 pricePerShare) {
@@ -1094,7 +1163,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _recordSharesClaimed(actor, depositEpochNonce, shareMintAmount);
         _checkAndUpdateDepositRemainingCounterMax(depositEpochNonce);
 
-        t(parent.share.balanceOf(actor) != 0, "EPOCH-014: recovery actor has no shares");
+        t(parent.share.balanceOf(actor) != 0, "recovery setup: actor has no shares");
     }
 
     function _childVaultBySeed(uint256 childSeed) internal view returns (ChildVault vault) {

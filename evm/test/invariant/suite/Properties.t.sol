@@ -4,6 +4,8 @@ pragma solidity 0.8.28;
 import {BeforeAfter} from "./BeforeAfter.t.sol";
 import {Asserts} from "@chimera/Asserts.sol";
 import {Types} from "../../../src/libraries/Types.sol";
+import {BaseVault} from "../../../src/vaults/BaseVault.sol";
+import {ChildVault} from "../../../src/vaults/ChildVault.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 abstract contract Properties is BeforeAfter, Asserts {
@@ -31,6 +33,8 @@ abstract contract Properties is BeforeAfter, Asserts {
     }
 
     function invariant_SOLV_005_userRedemptionEntitlementCoversPrincipalNetOfFees() public {
+        if (_recoveryModeExists()) return;
+
         for (uint256 i; i < s_actors.length; ++i) {
             address actor = s_actors[i];
             uint256 principal = ghost_totalDepositedByActor[actor];
@@ -138,7 +142,10 @@ abstract contract Properties is BeforeAfter, Asserts {
     }
 
     function invariant_REBAL_006_activeStrategyAdapterMatchesActiveChain() public {
-        Types.Strategy memory activeStrategy = parent.vault.getRebalance().activeStrategy;
+        Types.Rebalance memory rebalance = parent.vault.getRebalance();
+        if (rebalance.state == Types.RebalanceState.REBALANCING) return;
+
+        Types.Strategy memory activeStrategy = rebalance.activeStrategy;
 
         if (activeStrategy.chainSelector == PARENT_CHAIN_SELECTOR) {
             _assertActiveStrategyAdapter(
@@ -183,6 +190,157 @@ abstract contract Properties is BeforeAfter, Asserts {
             rebalance.state != Types.RebalanceState.REBALANCING || previousEpoch.status != Types.EpochStatus.EXECUTING,
             "REBAL-008: rebalance active while previous epoch is executing"
         );
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                                RECOVERY
+    //////////////////////////////////////////////////////////////*/
+    function invariant_REC_002_recoverySentinelsAreConsistent() public {
+        _assertRebalanceDepositRecoverySentinel(parent.vault);
+        _assertChildRecoverySentinels(child.vault);
+        _assertChildRecoverySentinels(remoteChild.vault);
+    }
+
+    function invariant_REC_004_childEpochRecoveriesAreMutuallyExclusive() public {
+        _assertChildEpochRecoveryMutex(child.vault);
+        _assertChildEpochRecoveryMutex(remoteChild.vault);
+    }
+
+    function invariant_REC_007_rebalanceDepositAndCcipSendRecoveriesAreMutuallyExclusive() public {
+        _assertRebalanceDepositAndCcipSendMutex(child.vault);
+        _assertRebalanceDepositAndCcipSendMutex(remoteChild.vault);
+    }
+
+    function invariant_REC_009_onlyOneGlobalRecoveryModeIsPending() public {
+        lte(_recoveryModeCount(), 1, "REC-009: more than one recovery mode is pending");
+    }
+
+    function invariant_CCIP_005b_pendingChildCcipSendRecoveryIsCollateralized() public {
+        _assertPendingCcipSendRecoveryIsCollateralized(child.vault);
+        _assertPendingCcipSendRecoveryIsCollateralized(remoteChild.vault);
+    }
+
+    function _recoveryModeExists() internal view returns (bool) {
+        return _recoveryModeCount() != 0;
+    }
+
+    function _recoveryModeCount() internal view returns (uint256 count) {
+        if (_rebalanceDepositRecoveryPending(parent.vault.getRebalanceDepositRecovery())) ++count;
+        count += _childRecoveryModeCount(child.vault);
+        count += _childRecoveryModeCount(remoteChild.vault);
+    }
+
+    function _childRecoveryModeCount(ChildVault vault) internal view returns (uint256 count) {
+        if (_rebalanceDepositRecoveryPending(vault.getRebalanceDepositRecovery())) ++count;
+        if (_epochRecoveryPending(vault.getEpochDepositRecovery())) ++count;
+        if (_epochRecoveryPending(vault.getEpochWithdrawRecovery())) ++count;
+        if (_rebalanceWithdrawRecoveryPending(vault.getRebalanceWithdrawRecovery())) ++count;
+        if (_ccipSendRecoveryPending(vault.getCcipSendRecovery())) ++count;
+    }
+
+    function _assertChildRecoverySentinels(ChildVault vault) internal {
+        _assertRebalanceDepositRecoverySentinel(vault);
+        _assertEpochRecoverySentinel(vault.getEpochDepositRecovery(), "REC-002: epoch deposit recovery");
+        _assertEpochRecoverySentinel(vault.getEpochWithdrawRecovery(), "REC-002: epoch withdraw recovery");
+        _assertRebalanceWithdrawRecoverySentinel(vault.getRebalanceWithdrawRecovery());
+        _assertCcipSendRecoverySentinel(vault.getCcipSendRecovery());
+    }
+
+    function _assertRebalanceDepositRecoverySentinel(BaseVault vault) internal {
+        Types.RebalanceDepositRecovery memory recovery = vault.getRebalanceDepositRecovery();
+
+        if (_rebalanceDepositRecoveryPending(recovery)) {
+            t(recovery.createdAt != 0, "REC-002: rebalance deposit recovery timestamp missing");
+        } else {
+            eq(recovery.rebalanceNonce, 0, "REC-002: cleared rebalance deposit recovery nonce set");
+            eq(recovery.createdAt, 0, "REC-002: cleared rebalance deposit recovery timestamp set");
+        }
+    }
+
+    function _assertEpochRecoverySentinel(Types.EpochRecovery memory recovery, string memory label) internal {
+        if (_epochRecoveryPending(recovery)) {
+            t(recovery.epochNonce != 0, label);
+            t(recovery.createdAt != 0, label);
+        } else {
+            eq(recovery.epochNonce, 0, label);
+            eq(recovery.createdAt, 0, label);
+        }
+    }
+
+    function _assertRebalanceWithdrawRecoverySentinel(Types.RebalanceWithdrawRecovery memory recovery) internal {
+        if (_rebalanceWithdrawRecoveryPending(recovery)) {
+            t(recovery.strategy.protocolId != bytes32(0), "REC-002: rebalance withdraw recovery protocol missing");
+            t(recovery.createdAt != 0, "REC-002: rebalance withdraw recovery timestamp missing");
+        } else {
+            eq(recovery.rebalanceNonce, 0, "REC-002: cleared rebalance withdraw recovery nonce set");
+            t(recovery.strategy.protocolId == bytes32(0), "REC-002: cleared rebalance withdraw recovery protocol set");
+            eq(recovery.createdAt, 0, "REC-002: cleared rebalance withdraw recovery timestamp set");
+        }
+    }
+
+    function _assertCcipSendRecoverySentinel(Types.CcipSendRecovery memory recovery) internal {
+        if (_ccipSendRecoveryPending(recovery)) {
+            t(recovery.ccipTxType != Types.CcipTx.EPOCH_NET_DEPOSIT, "REC-002: invalid child CCIP recovery tx type");
+            t(recovery.destinationChainSelector != 0, "REC-002: CCIP recovery destination missing");
+            t(recovery.txData.length != 0, "REC-002: CCIP recovery tx data missing");
+            t(recovery.createdAt != 0, "REC-002: CCIP recovery timestamp missing");
+        } else {
+            eq(uint256(recovery.ccipTxType), 0, "REC-002: cleared CCIP recovery tx type set");
+            eq(uint256(recovery.destinationChainSelector), 0, "REC-002: cleared CCIP recovery destination set");
+            eq(recovery.txData.length, 0, "REC-002: cleared CCIP recovery tx data set");
+            eq(recovery.createdAt, 0, "REC-002: cleared CCIP recovery timestamp set");
+        }
+    }
+
+    function _assertChildEpochRecoveryMutex(ChildVault vault) internal {
+        uint256 pendingEpochRecoveries;
+        if (_epochRecoveryPending(vault.getEpochDepositRecovery())) ++pendingEpochRecoveries;
+        if (_epochRecoveryPending(vault.getEpochWithdrawRecovery())) ++pendingEpochRecoveries;
+
+        lte(pendingEpochRecoveries, 1, "REC-004: child epoch recoveries are both pending");
+    }
+
+    function _assertRebalanceDepositAndCcipSendMutex(ChildVault vault) internal {
+        uint256 pendingRecoveries;
+        if (_rebalanceDepositRecoveryPending(vault.getRebalanceDepositRecovery())) ++pendingRecoveries;
+        if (_ccipSendRecoveryPending(vault.getCcipSendRecovery())) ++pendingRecoveries;
+
+        lte(pendingRecoveries, 1, "REC-007: rebalance deposit and CCIP send recoveries are both pending");
+    }
+
+    function _assertPendingCcipSendRecoveryIsCollateralized(ChildVault vault) internal {
+        Types.CcipSendRecovery memory recovery = vault.getCcipSendRecovery();
+        if (!_ccipSendRecoveryPending(recovery)) return;
+
+        lte(
+            recovery.amount,
+            IERC20(parent.vault.getUsdc()).balanceOf(address(vault)),
+            "CCIP-005b: pending child CCIP send recovery is not collateralized"
+        );
+    }
+
+    function _epochRecoveryPending(Types.EpochRecovery memory recovery) internal pure returns (bool) {
+        return recovery.amount != 0;
+    }
+
+    function _rebalanceDepositRecoveryPending(Types.RebalanceDepositRecovery memory recovery)
+        internal
+        pure
+        returns (bool)
+    {
+        return recovery.amount != 0;
+    }
+
+    function _rebalanceWithdrawRecoveryPending(Types.RebalanceWithdrawRecovery memory recovery)
+        internal
+        pure
+        returns (bool)
+    {
+        return recovery.strategy.chainSelector != 0;
+    }
+
+    function _ccipSendRecoveryPending(Types.CcipSendRecovery memory recovery) internal pure returns (bool) {
+        return recovery.amount != 0;
     }
 
     function _strategyIsEmpty(Types.Strategy memory strategy) internal pure returns (bool) {
