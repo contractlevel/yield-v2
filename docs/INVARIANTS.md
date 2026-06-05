@@ -61,7 +61,7 @@ Solvency properties are the headline safety properties. Other sections may refer
 | `SOLV-001` | Parent withdraw solvency must be explicitly modeled: ParentVault USDC balance plus handler-tracked in-flight CCIP withdraw amounts must cover the sum of `remainingWithdrawClaimAmount` for all `CLAIMABLE` epochs. Current invariant coverage tracks settled claimable withdraw obligations; async in-flight CCIP withdraw modeling remains a future extension. | `invariant + fv` | partial: Foundry + Medusa |
 | `SOLV-002` | Recovery actions must not bypass solvency: executing any recovery must preserve `SOLV-001` and `CCIP-005b`.                                                                                                                                                                              | `invariant`      | partial: Foundry + Medusa |
 | `SOLV-003` | ParentVault share escrow must be attributable to outstanding withdraw intents or claimable withdraw settlement; the vault may intentionally hold shares before `claimUsdc` burns them.                                                                                                   | `invariant`      | candidate |
-| `SOLV-004` | Child outbound CCIP recovery is fully collateralized by local USDC while pending. See `CCIP-005b`.                                                                                                                                                                                       | `invariant`      | candidate |
+| `SOLV-004` | Child outbound CCIP recovery is fully collateralized by local USDC while pending. See `CCIP-005b`.                                                                                                                                                                                       | `invariant`      | implemented: Foundry + Medusa |
 | `SOLV-005` | Per-user redemption integrity: each actor's total economic entitlement across wallet shares, open deposits, claimable deposit shares, open withdraw intents, claimable withdraw USDC, and already claimed USDC must cover contributed principal net of management/performance fees and documented rounding or dust. | `invariant + integration` | implemented: Foundry + Medusa |
 
 ## External Assumptions
@@ -278,4 +278,4 @@ Treat `ENV-*` entries as assumptions verified through deployment checks, integra
 
 This document does not require Solidity API, interface, storage, or type changes.
 
-`CCIP-006` and `REC-005b` must be verified during test implementation. If either property is false or too broad, update this document with the actual permitted overlap or balance model instead of forcing the invariant.
+`REC-005b` must be verified during test implementation. If the property is false or too broad, update this document with the actual balance model instead of forcing the invariant.
