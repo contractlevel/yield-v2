@@ -815,6 +815,86 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _recordFeeBurden(_before.treasuryShareBalance, _before.totalShares);
     }
 
+    /// @notice When a rebalance withdraw from the active Child strategy fails
+    function handler_recoverFailedRebalanceWithdraw(
+        uint256 childSeed,
+        uint256 protocolSeed,
+        uint256 actorSeed,
+        uint256 amountSeed
+    ) public {
+        ChildVault sourceChild = _childVaultBySeed(childSeed);
+        _closeCurrentEpochIfNotEmpty();
+        _ensureActiveStrategyOnChild(sourceChild, protocolSeed, actorSeed, amountSeed);
+        _closeCurrentEpochIfNotEmpty();
+
+        uint64 destinationChainSelector = _rebalanceRecoveryDestination(sourceChild, protocolSeed);
+        Types.Strategy memory target = _strategy(destinationChainSelector, _protocolId(protocolSeed / 2));
+        Types.Rebalance memory beforeRebalance = parent.vault.getRebalance();
+        uint256 amount = _activeStrategyTvl();
+
+        t(amount != 0, "REC-008: rebalance withdraw recovery amount is zero");
+
+        __before();
+
+        _initiateRebalanceThroughWorkflow(
+            parent.workflowRouter, INITIATE_REBALANCE_WORKFLOW_ID, INITIATE_REBALANCE_WORKFLOW_NAME, i_owner, target
+        );
+
+        Types.Rebalance memory pendingRebalance = parent.vault.getRebalance();
+        eq(pendingRebalance.nonce, beforeRebalance.nonce, "REBAL-005: nonce changed before completion");
+        eq(
+            uint256(pendingRebalance.state),
+            uint256(Types.RebalanceState.REBALANCING),
+            "REBAL-004: state is not rebalancing"
+        );
+        t(pendingRebalance.pendingStrategy.protocolId == target.protocolId, "REBAL-004: pending protocol mismatch");
+        eq(
+            uint256(pendingRebalance.pendingStrategy.chainSelector),
+            uint256(target.chainSelector),
+            "REBAL-004: pending chain mismatch"
+        );
+
+        _setActiveChildWithdrawReverts(sourceChild, true);
+        _executeRebalance(sourceChild, pendingRebalance.nonce, target);
+        _setActiveChildWithdrawReverts(sourceChild, false);
+
+        _assertPendingRebalanceWithdrawRecovery(sourceChild, pendingRebalance.nonce, target);
+        t(sourceChild.getRecoveryExists(), "REC-002: child recovery sentinel not set");
+        eq(
+            uint256(parent.vault.getRebalance().state),
+            uint256(Types.RebalanceState.REBALANCING),
+            "REBAL-004: state is not rebalancing after withdraw failure"
+        );
+
+        _setActiveStrategyWithdrawReturn(amount);
+        sourceChild.recoverFailedRebalanceWithdraw();
+        _assertRebalanceWithdrawRecoveryCleared(sourceChild);
+        t(!sourceChild.getRecoveryExists(), "REC-003: child still has recovery");
+
+        if (destinationChainSelector != PARENT_CHAIN_SELECTOR) {
+            _completeRebalanceThroughWorkflow(
+                parent.workflowRouter, COMPLETE_REBALANCE_WORKFLOW_ID, COMPLETE_REBALANCE_WORKFLOW_NAME, i_owner
+            );
+        }
+
+        __after();
+
+        Types.Rebalance memory afterRebalance = parent.vault.getRebalance();
+        eq(afterRebalance.nonce, beforeRebalance.nonce + 1, "REBAL-005: nonce did not increment");
+        eq(uint256(afterRebalance.state), uint256(Types.RebalanceState.NONE), "REBAL-004: state is not none");
+        t(afterRebalance.activeStrategy.protocolId == target.protocolId, "REBAL-006: wrong active protocol");
+        eq(
+            uint256(afterRebalance.activeStrategy.chainSelector),
+            uint256(target.chainSelector),
+            "REBAL-006: wrong active chain"
+        );
+        t(afterRebalance.pendingStrategy.protocolId == bytes32(0), "REBAL-004: pending protocol still set");
+        eq(uint256(afterRebalance.pendingStrategy.chainSelector), 0, "REBAL-004: pending chain still set");
+        _assertActiveAdapterFor(target);
+
+        _recordFeeBurden(_before.treasuryShareBalance, _before.totalShares);
+    }
+
     function _settlementPricePerShare(uint256 tvl) internal view returns (uint256 pricePerShare) {
         uint256 totalShares = parent.vault.getTotalShares();
         if (totalShares != 0 && tvl != 0) return tvl * SHARE_PRECISION / totalShares;
@@ -1301,6 +1381,32 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         eq(recovery.rebalanceNonce, 0, "REC-003: rebalance deposit recovery nonce not cleared");
         eq(recovery.amount, 0, "REC-003: rebalance deposit recovery amount not cleared");
         eq(recovery.createdAt, 0, "REC-003: rebalance deposit recovery timestamp not cleared");
+    }
+
+    function _assertPendingRebalanceWithdrawRecovery(
+        ChildVault vault,
+        uint256 rebalanceNonce,
+        Types.Strategy memory strategy
+    ) internal {
+        Types.RebalanceWithdrawRecovery memory recovery = vault.getRebalanceWithdrawRecovery();
+
+        eq(recovery.rebalanceNonce, rebalanceNonce, "REC-002: wrong rebalance withdraw recovery nonce");
+        t(recovery.strategy.protocolId == strategy.protocolId, "REC-002: wrong rebalance withdraw recovery protocol");
+        eq(
+            uint256(recovery.strategy.chainSelector),
+            uint256(strategy.chainSelector),
+            "REC-002: wrong rebalance withdraw recovery chain"
+        );
+        t(recovery.createdAt != 0, "REC-002: rebalance withdraw recovery timestamp not set");
+    }
+
+    function _assertRebalanceWithdrawRecoveryCleared(ChildVault vault) internal {
+        Types.RebalanceWithdrawRecovery memory recovery = vault.getRebalanceWithdrawRecovery();
+
+        eq(recovery.rebalanceNonce, 0, "REC-003: rebalance withdraw recovery nonce not cleared");
+        t(recovery.strategy.protocolId == bytes32(0), "REC-003: rebalance withdraw recovery protocol not cleared");
+        eq(uint256(recovery.strategy.chainSelector), 0, "REC-003: rebalance withdraw recovery chain not cleared");
+        eq(recovery.createdAt, 0, "REC-003: rebalance withdraw recovery timestamp not cleared");
     }
 
     function _assertPendingCcipSendRecovery(

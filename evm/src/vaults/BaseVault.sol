@@ -105,6 +105,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @param configOperator The address of the config operator for setters - trusted actor in the system
     /// @param adapterRegistry The address of the Yieldcoin v2 AdapterRegistry
     /// @param thisChainSelector The CCIP selector for this chain
+    // @review include initialDefaultCcipGasLimit
     struct ConstructorParams {
         address link;
         address usdc;
@@ -165,6 +166,10 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         Types.CcipTx ccipTxType,
         bytes memory txData
     ) internal {
+        // // @review
+        // if (bridgeAmount == 0) revert BaseVault__NoZeroAmount();
+        // if (destinationChainSelector == 0) revert BaseVault__NoZeroAddress();
+        // if (destinationChainSelector == i_thisChainSelector) revert BaseVault__InvalidDestinationChainSelector(destinationChainSelector);
         /// @dev Get the vault address for receiving the message
         address vault = s_crosschainVaults[destinationChainSelector];
         // // @review unit test this
