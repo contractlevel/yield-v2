@@ -79,6 +79,23 @@ abstract contract Properties is BeforeAfter, Asserts {
         }
     }
 
+    function invariant_EPOCH_005_closedEpochTotalsAreFrozen() public {
+        for (uint256 i; i < ghost_claimableEpochs.length; ++i) {
+            uint256 epochNonce = ghost_claimableEpochs[i];
+            Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
+            eq(
+                epoch.totalDepositAmount,
+                ghost_totalDepositedByEpoch[epochNonce],
+                "EPOCH-005: deposit amount changed in closed epoch"
+            );
+            eq(
+                epoch.totalShareBurnAmount,
+                ghost_totalShareBurnedByEpoch[epochNonce],
+                "EPOCH-005: share burn amount changed in closed epoch"
+            );
+        }
+    }
+
     function invariant_EPOCH_007_depositRemainingCountersAreMonotonicallyNonIncreasing() public {
         for (uint256 i; i < ghost_claimableEpochs.length; ++i) {
             uint256 epochNonce = ghost_claimableEpochs[i];
@@ -180,6 +197,42 @@ abstract contract Properties is BeforeAfter, Asserts {
             parent.share.totalSupply(),
             _expectedShareTokenSupply(),
             "SHARE-001: token supply does not match authoritative shares adjusted for lazy settlement"
+        );
+    }
+
+    function invariant_SHARE_005_allFeeSharesMintToTreasury() public {
+        uint256 totalUserSharesMinted;
+        uint256 totalSharesBurned;
+        for (uint256 i; i < ghost_claimableEpochs.length; ++i) {
+            uint256 epochNonce = ghost_claimableEpochs[i];
+            totalUserSharesMinted += ghost_totalShareMintedByEpoch[epochNonce];
+            totalSharesBurned += parent.vault.getEpoch(epochNonce).totalShareBurnAmount;
+        }
+
+        // An EXECUTING epoch's burns have already reduced getTotalShares() but it is not yet in
+        // ghost_claimableEpochs. Include its burns and user-deposit mints so the formula balances.
+        uint256 currentNonce = parent.vault.getEpochNonce();
+        if (currentNonce > 1) {
+            Types.Epoch memory prevEpoch = parent.vault.getEpoch(currentNonce - 1);
+            if (prevEpoch.status == Types.EpochStatus.EXECUTING) {
+                totalSharesBurned += prevEpoch.totalShareBurnAmount;
+                totalUserSharesMinted += prevEpoch.remainingShareMintAmount;
+            }
+        }
+
+        uint256 expectedTreasuryShares = parent.vault.getTotalShares() + totalSharesBurned - totalUserSharesMinted;
+        eq(
+            parent.share.balanceOf(parent.vault.getTreasury()),
+            expectedTreasuryShares,
+            "SHARE-005: treasury share balance doesn't match total fee shares minted"
+        );
+    }
+
+    function invariant_FEE_003_performanceFeeHighWaterMarkIsMonotonicallyNonDecreasing() public {
+        lte(
+            ghost_maxPerformanceFeeHighWaterMark,
+            parent.vault.getPerformanceFeeHighWaterMark(),
+            "FEE-003: performance fee high-water mark decreased from historical max"
         );
     }
 

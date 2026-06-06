@@ -22,6 +22,7 @@ abstract contract EpochGhosts is ActorGhosts {
     mapping(uint256 epochNonce => uint256 shares) internal ghost_maxRemainingShareMintAmountByEpoch;
     mapping(uint256 epochNonce => uint256 shares) internal ghost_maxRemainingShareBurnAmountByEpoch;
     mapping(uint256 epochNonce => uint256 amount) internal ghost_maxRemainingWithdrawClaimAmountByEpoch;
+    uint256 internal ghost_maxPerformanceFeeHighWaterMark;
     mapping(uint256 epochNonce => bool isClaimable) internal ghost_epochIsClaimable;
     uint256[] internal ghost_claimableEpochs;
     mapping(uint256 epochNonce => bool isTracked) internal ghost_epochShareAccountingTracked;

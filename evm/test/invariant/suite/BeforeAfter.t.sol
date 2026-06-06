@@ -62,6 +62,9 @@ abstract contract BeforeAfter is EpochGhosts {
         _after.totalShares = parent.vault.getTotalShares();
         _after.treasuryShareBalance = parent.share.balanceOf(parent.vault.getTreasury());
         _after.performanceFeeHighWaterMark = parent.vault.getPerformanceFeeHighWaterMark();
+        if (_after.performanceFeeHighWaterMark > ghost_maxPerformanceFeeHighWaterMark) {
+            ghost_maxPerformanceFeeHighWaterMark = _after.performanceFeeHighWaterMark;
+        }
         _after.tvl = _activeStrategyTvl();
         _after.vaultBalance = IERC20(parent.vault.getUsdc()).balanceOf(address(_activeVault()));
         _after.currentEpochTotalDepositAmount = parent.vault.getEpoch(epochNonce).totalDepositAmount;
