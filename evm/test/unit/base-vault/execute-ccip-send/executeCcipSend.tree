@@ -1,0 +1,7 @@
+BaseVault_executeCcipSend
+├── when bridgeAmount is zero
+│   └── it should revert with BaseVault__NoZeroAmount
+├── when destinationChainSelector is zero or equals the current chain selector
+│   └── it should revert with BaseVault__InvalidDestinationChainSelector
+└── when destinationChainSelector is not a registered crosschain vault
+    └── it should revert with BaseVault__DestinationVaultNotSet

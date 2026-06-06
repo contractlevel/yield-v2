@@ -62,6 +62,8 @@ contract ChildVault is BaseVault, IChildVault {
         nonReentrant
         onlyAllowedSender(abi.decode(message.sender, (address)), message.sourceChainSelector)
     {
+        // @review
+        // _requireNoRecovery();
         uint256 receivedUsdcAmount = _validateReceivedTokenAndGetAmount(message);
 
         /// @dev data decodes to a uint256 epochNonce for epoch net deposits/withdraws and a (uint256 rebalanceNonce, bytes32 protocolId) for rebalances

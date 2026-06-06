@@ -145,7 +145,10 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @param destinationChainSelector The CCIP selector of the destination chain
     /// @param ccipTxType The type of CCIP transaction
     /// @param txData abi.encode(epochNonce) for epoch net deposit/withdraw, or abi.encode(rebalanceNonce, newStrategy.protocolId) for rebalance
-    /// @dev Precondition: Destination chain selector must be a valid crosschain vault
+    /// @dev Precondition: bridgeAmount must be more than 0
+    /// @dev Precondition: destinationChainSelector must be non-zero
+    /// @dev Precondition: destinationChainSelector must not equal the current chain selector
+    /// @dev Precondition: destinationChainSelector must be a valid, registered crosschain vault
     function _ccipSend(
         uint256 bridgeAmount,
         uint64 destinationChainSelector,
@@ -160,20 +163,23 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @param destinationChainSelector The CCIP selector of the destination chain
     /// @param ccipTxType The type of CCIP transaction
     /// @param txData abi.encode(epochNonce) for epoch net deposit/withdraw, or abi.encode(rebalanceNonce, newStrategy.protocolId) for rebalance
+    /// @dev Precondition: bridgeAmount must be more than 0
+    /// @dev Precondition: destinationChainSelector must be non-zero
+    /// @dev Precondition: destinationChainSelector must not equal the current chain selector
+    /// @dev Precondition: destinationChainSelector must be a valid, registered crosschain vault
     function _executeCcipSend(
         uint256 bridgeAmount,
         uint64 destinationChainSelector,
         Types.CcipTx ccipTxType,
         bytes memory txData
     ) internal {
-        // // @review
-        // if (bridgeAmount == 0) revert BaseVault__NoZeroAmount();
-        // if (destinationChainSelector == 0) revert BaseVault__NoZeroAddress();
-        // if (destinationChainSelector == i_thisChainSelector) revert BaseVault__InvalidDestinationChainSelector(destinationChainSelector);
+        if (bridgeAmount == 0) revert BaseVault__NoZeroAmount();
+        if (destinationChainSelector == 0 || destinationChainSelector == i_thisChainSelector) {
+            revert BaseVault__InvalidDestinationChainSelector(destinationChainSelector);
+        }
         /// @dev Get the vault address for receiving the message
         address vault = s_crosschainVaults[destinationChainSelector];
-        // // @review unit test this
-        // if (vault == address(0)) revert BaseVault__InvalidDestinationChainSelector(destinationChainSelector);
+        if (vault == address(0)) revert BaseVault__DestinationVaultNotSet(destinationChainSelector);
         /// @dev Get the CCIP gas limit for the strategy chain
         uint256 gasLimit = _getCcipGasLimit(destinationChainSelector);
 
@@ -190,7 +196,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
             data: data,
             tokenAmounts: tokenAmounts,
             extraArgs: Client._argsToBytes(
-                Client.GenericExtraArgsV2({gasLimit: gasLimit, allowOutOfOrderExecution: true})
+                Client.GenericExtraArgsV2({gasLimit: gasLimit, allowOutOfOrderExecution: false})
             ),
             feeToken: i_link
         });
@@ -438,10 +444,11 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @dev Precondition: Caller must have the EMERGENCY_DRAINER_ROLE
     /// @dev Precondition: must be paused
     /// @dev Precondition: Vault must have been paused for at least EMERGENCY_DRAIN_DELAY
+    /// @dev Precondition: must not be reentered
     /// @dev Withdraws all USDC from the vault to the emergency receiver
     /// @param revertOnFailure Whether to revert if the withdraw from strategy fails
     /// @notice If the vault has the TVL, it will be withdrawn from the strategy and transferred to the emergency receiver
-    function emergencyDrain(bool revertOnFailure) external onlyRole(Roles.EMERGENCY_DRAINER_ROLE) whenPaused {
+    function emergencyDrain(bool revertOnFailure) external onlyRole(Roles.EMERGENCY_DRAINER_ROLE) nonReentrant whenPaused {
         //slither-disable-next-line timestamp
         if (block.timestamp - s_pausedAt < EMERGENCY_DRAIN_DELAY) revert BaseVault__EmergencyDrainDelayNotMet();
 
@@ -460,6 +467,9 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @dev Precondition: amount must be more than 0
     /// @dev Precondition: the strategy deposit operation must succeed
     /// @dev Precondition: the call must not be reentered
+    /// @notice First-depositor captures full donation when `s_totalShares == 0` due to bootstrap pricing ignoring existing TVL
+    ///         Donations should not be made before the first deposit.
+    /// @notice This is an operator emergency function that can destroy the system if used improperly.
     function donate(uint256 amount) external nonReentrant onlyRole(Roles.DONATE_OPERATOR_ROLE) {
         if (amount == 0) revert BaseVault__NoZeroAmount();
 
@@ -515,6 +525,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @dev Precondition: chainSelectors and vaults must have the same length
     /// @dev Sets the crosschain vaults
     /// @dev Emits the CrosschainVaultSet event
+    /// @notice This can orphan in-flight CCIP messages. Operator should ensure there are no active crosschain rebalance or epoch operations in progress.
     function setCrosschainVaults(uint64[] calldata chainSelectors, address[] calldata vaults)
         external
         onlyRole(Roles.CONFIG_OPERATOR_ROLE)

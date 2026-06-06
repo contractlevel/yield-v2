@@ -33,14 +33,6 @@ library Types {
         REBALANCE // 2
     }
 
-    /// @notice Data for a rebalance CCIP message
-    /// @param rebalanceNonce The nonce of the rebalance
-    /// @param targetProtocolId The protocol ID of the target strategy protocol to rebalance into
-    struct RebalanceCcipData {
-        uint256 rebalanceNonce;
-        bytes32 targetProtocolId;
-    }
-
     /*//////////////////////////////////////////////////////////////
                                RECOVERY
     //////////////////////////////////////////////////////////////*/

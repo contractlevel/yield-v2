@@ -46,6 +46,12 @@ interface IBaseVault is IPauseable {
     /// @param sender The address of the sender
     /// @param srcChainSelector The CCIP selector of the chain
     error BaseVault__InvalidSender(address sender, uint64 srcChainSelector);
+    /// @dev Thrown when the destination chain selector is zero or equals the current chain selector
+    /// @param destinationChainSelector The invalid destination chain selector
+    error BaseVault__InvalidDestinationChainSelector(uint64 destinationChainSelector);
+    /// @dev Thrown when no crosschain vault is registered for the destination chain selector
+    /// @param destinationChainSelector The destination chain selector with no registered vault
+    error BaseVault__DestinationVaultNotSet(uint64 destinationChainSelector);
     /// @dev Thrown when a CCIP message does not deliver the vault's configured USDC token
     /// @param receivedToken The token address delivered by CCIP
     /// @param expectedToken The vault's configured USDC token

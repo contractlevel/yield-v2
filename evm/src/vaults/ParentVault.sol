@@ -335,6 +335,8 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         nonReentrant
         onlyAllowedSender(abi.decode(message.sender, (address)), message.sourceChainSelector)
     {
+        // @review
+        // _requireNoRecovery();
         uint256 receivedUsdcAmount = _validateReceivedTokenAndGetAmount(message);
 
         /// @dev data decodes to a uint256 epochNonce for epoch net withdraws and a (uint256 rebalanceNonce, bytes32 protocolId) for rebalances
@@ -356,7 +358,12 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         }
         /// @dev see BaseVault::_handleCCIPRebalance
         else if (ccipTxType == Types.CcipTx.REBALANCE) {
+            // @review
+            // Types.Rebalance rebalance = s_rebalance;
+            // if (rebalance.state != Types.RebalanceState.REBALANCING) revert 
             (uint256 rebalanceNonce, bytes32 protocolId) = abi.decode(data, (uint256, bytes32));
+            // if (rebalance.nonce != rebalanceNonce) revert
+            // if (rebalance.pendingStrategy.protocolId != protocolId) revert
             bool success = _handleCCIPRebalance(rebalanceNonce, protocolId, receivedUsdcAmount);
             if (success) _finalizeRebalance();
         } else {

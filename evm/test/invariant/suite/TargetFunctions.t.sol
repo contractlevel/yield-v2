@@ -610,9 +610,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             vault.recoverFailedCcipSend();
             _assertCcipSendRecoveryCleared(vault);
 
-            _assertEpochTransition(
-                epochNonce, Types.EpochStatus.EXECUTING, parent.vault.getEpoch(epochNonce).status
-            );
+            _assertEpochTransition(epochNonce, Types.EpochStatus.EXECUTING, parent.vault.getEpoch(epochNonce).status);
             t(
                 parent.vault.getEpoch(epochNonce).status == Types.EpochStatus.CLAIMABLE,
                 "CCIP-005c: parent epoch not claimable after retry"
@@ -1023,11 +1021,9 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _assertActiveAdapterFor(target);
     }
 
-    function _assertEpochTransition(
-        uint256 epochNonce,
-        Types.EpochStatus beforeStatus,
-        Types.EpochStatus afterStatus
-    ) internal {
+    function _assertEpochTransition(uint256 epochNonce, Types.EpochStatus beforeStatus, Types.EpochStatus afterStatus)
+        internal
+    {
         bool allowed = beforeStatus == afterStatus
             || (beforeStatus == Types.EpochStatus.OPEN && afterStatus == Types.EpochStatus.EXECUTING)
             || (beforeStatus == Types.EpochStatus.OPEN && afterStatus == Types.EpochStatus.CLAIMABLE)
