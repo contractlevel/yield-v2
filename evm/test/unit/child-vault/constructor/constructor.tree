@@ -11,5 +11,4 @@ ChildVault_constructor
   ├── it should grant UNPAUSER_ROLE to unpauser
   ├── it should grant CONFIG_OPERATOR_ROLE to configOperator
   ├── it should grant COMPLIANCE_OPERATOR_ROLE to complianceOperator
-  ├── it should set the deposit nonce to 1
-  └── it should set the withdraw nonce to 1
+  └── it should set s_defaultCcipGasLimit

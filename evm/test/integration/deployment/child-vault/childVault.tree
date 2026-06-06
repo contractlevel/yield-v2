@@ -3,6 +3,8 @@ ChildVault_deployment
 │   └── it should grant expected vault roles
 ├── core addresses
 │   └── it should configure vault addresses from deployment config
+├── CCIP config
+│   └── it should set the default CCIP gas limit
 ├── adapters
 │   ├── it should register Aave V3, Aave V4, and Compound V3 adapters
 │   └── it should configure deployed adapters

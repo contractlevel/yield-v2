@@ -33,6 +33,7 @@ abstract contract BaseForkDeploymentTest is BaseForkTest {
         assertEq(parent.vault.getUsdc(), parent.usdc);
         assertEq(parent.vault.getLink(), parent.link);
         assertEq(parent.vault.getThisChainSelector(), arbitrumConfig.ccip.parentChainSelector);
+        assertEq(parent.vault.getDefaultCcipGasLimit(), arbitrumConfig.ccip.initialDefaultCcipGasLimit);
         assertEq(parent.workflowRouter.getVault(), address(parent.vault));
 
         _assertOptionalAaveV3Adapter(
@@ -91,6 +92,7 @@ abstract contract BaseForkDeploymentTest is BaseForkTest {
         assertEq(forkChild.vault.getLink(), forkChild.link);
         assertEq(forkChild.vault.getThisChainSelector(), config.ccip.thisChainSelector);
         assertEq(forkChild.vault.getParentChainSelector(), config.ccip.parentChainSelector);
+        assertEq(forkChild.vault.getDefaultCcipGasLimit(), config.ccip.initialDefaultCcipGasLimit);
         assertEq(forkChild.vault.getCrosschainVault(arbitrumConfig.ccip.thisChainSelector), address(parent.vault));
         assertEq(forkChild.workflowRouter.getVault(), address(forkChild.vault));
 

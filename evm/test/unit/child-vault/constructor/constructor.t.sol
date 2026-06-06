@@ -18,5 +18,6 @@ contract ChildVault_ConstructorUnitTest is BaseUnitTest {
         assertEq(s_childVault.hasRole(Roles.PAUSER_ROLE, i_pauser), true);
         assertEq(s_childVault.hasRole(Roles.UNPAUSER_ROLE, i_unpauser), true);
         assertEq(s_childVault.hasRole(Roles.CONFIG_OPERATOR_ROLE, address(i_configOperator)), true);
+        assertEq(s_childVault.getDefaultCcipGasLimit(), DEFAULT_CCIP_GAS_LIMIT);
     }
 }

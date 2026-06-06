@@ -106,7 +106,8 @@ abstract contract BaseUnitTest is BaseTest {
             configOperator: address(i_configOperator),
             adapterRegistry: address(s_adapterRegistry),
             thisChainSelector: chainSelector,
-            emergencyReceiver: address(i_emergencyReceiver)
+            emergencyReceiver: address(i_emergencyReceiver),
+            initialDefaultCcipGasLimit: DEFAULT_CCIP_GAS_LIMIT
         });
     }
 

@@ -185,7 +185,8 @@ contract ChildVault_RecoveryInternalsUnitTest is BaseUnitTest {
             configOperator: address(i_configOperator),
             adapterRegistry: address(s_adapterRegistry),
             thisChainSelector: CHILD_CHAIN_SELECTOR,
-            emergencyReceiver: address(i_emergencyReceiver)
+            emergencyReceiver: address(i_emergencyReceiver),
+            initialDefaultCcipGasLimit: DEFAULT_CCIP_GAS_LIMIT
         });
     }
 }

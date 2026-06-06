@@ -22,6 +22,7 @@ abstract contract BaseVault_ConstructorUnitTest is BaseUnitTest {
         assertEq(s_vault.hasRole(Roles.PAUSER_ROLE, i_pauser), true);
         assertEq(s_vault.hasRole(Roles.UNPAUSER_ROLE, i_unpauser), true);
         assertEq(s_vault.hasRole(Roles.CONFIG_OPERATOR_ROLE, i_configOperator), true);
+        assertEq(s_vault.getDefaultCcipGasLimit(), DEFAULT_CCIP_GAS_LIMIT);
     }
 }
 

@@ -42,6 +42,10 @@ contract ChildVault_DeploymentIntegrationTest is BaseIntegrationTest {
         assertEq(child.vault.getParentChainSelector(), networkConfig.ccip.parentChainSelector);
     }
 
+    function test_ChildVault_deployment_SetsDefaultCcipGasLimit() external view {
+        assertEq(child.vault.getDefaultCcipGasLimit(), networkConfig.ccip.initialDefaultCcipGasLimit);
+    }
+
     function test_ChildVault_deployment_RegistersAdapters() external view {
         _assertOptionalAaveV3Adapter(
             child.adapterRegistry,

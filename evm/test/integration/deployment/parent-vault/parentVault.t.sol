@@ -94,6 +94,10 @@ contract ParentVault_DeploymentIntegrationTest is BaseIntegrationTest {
         assertFalse(parent.adapterRegistry.hasRole(Roles.CONFIG_OPERATOR_ROLE, address(this)));
     }
 
+    function test_ParentVault_deployment_SetsDefaultCcipGasLimit() external view {
+        assertEq(parent.vault.getDefaultCcipGasLimit(), networkConfig.ccip.initialDefaultCcipGasLimit);
+    }
+
     function test_ParentVault_deployment_SetsInitialActiveAdapter() external view {
         assertTrue(parent.vault.getInitialActiveProtocolAdapterSet());
         if (parent.aaveV3PoolAddressesProvider != address(0)) {

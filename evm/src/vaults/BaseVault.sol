@@ -38,8 +38,6 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @dev Delay for emergency draining
     uint256 internal constant EMERGENCY_DRAIN_DELAY = 1 days;
 
-    // uint256 internal constant INITIAL_DEFAULT_CCIP_GAS_LIMIT = 500_000; // @review
-
     /*//////////////////////////////////////////////////////////////
                                IMMUTABLE
     //////////////////////////////////////////////////////////////*/
@@ -107,7 +105,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @param configOperator The address of the config operator for setters - trusted actor in the system
     /// @param adapterRegistry The address of the Yieldcoin v2 AdapterRegistry
     /// @param thisChainSelector The CCIP selector for this chain
-    // @review include initialDefaultCcipGasLimit
+    /// @param initialDefaultCcipGasLimit The initial s_defaultCcipGasLimit
     struct ConstructorParams {
         address link;
         address usdc;
@@ -119,6 +117,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         address adapterRegistry;
         uint64 thisChainSelector;
         address emergencyReceiver;
+        uint256 initialDefaultCcipGasLimit;
     }
 
     /// @param params Constructor parameters
@@ -134,6 +133,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         i_usdc = params.usdc;
         i_adapterRegistry = params.adapterRegistry;
         s_emergencyReceiver = params.emergencyReceiver;
+        s_defaultCcipGasLimit = params.initialDefaultCcipGasLimit;
         _grantRole(Roles.PAUSER_ROLE, params.pauser);
         _grantRole(Roles.UNPAUSER_ROLE, params.unpauser);
         _grantRole(Roles.CONFIG_OPERATOR_ROLE, params.configOperator);

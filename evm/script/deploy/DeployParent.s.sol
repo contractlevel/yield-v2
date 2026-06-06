@@ -174,7 +174,8 @@ contract DeployParent is Script {
             configOperator: deployer,
             adapterRegistry: address(deploy.adapterRegistry),
             thisChainSelector: networkConfig.ccip.parentChainSelector,
-            emergencyReceiver: networkConfig.emergencyReceiver
+            emergencyReceiver: networkConfig.emergencyReceiver,
+            initialDefaultCcipGasLimit: networkConfig.ccip.initialDefaultCcipGasLimit
         });
         deploy.parentVault = new ParentVault(
             baseVaultParams,

@@ -17,6 +17,7 @@ contract HelperConfig is Script {
     //////////////////////////////////////////////////////////////*/
     address internal constant BURNER_EOA = 0x07b788B6f616D93434Ce20665cCDbbeDAf446B41;
     uint64 internal constant ARBITRUM_CHAIN_SELECTOR = 4949039107694359620;
+    uint256 internal constant INITIAL_DEFAULT_CCIP_GAS_LIMIT = 500_000;
 
     /*//////////////////////////////////////////////////////////////
                              NETWORK CONFIG
@@ -62,6 +63,7 @@ contract HelperConfig is Script {
         address router;
         uint64 thisChainSelector;
         uint64 parentChainSelector;
+        uint256 initialDefaultCcipGasLimit;
     }
 
     struct CREConfig {
@@ -123,7 +125,8 @@ contract HelperConfig is Script {
             ccip: CCIPConfig({
                 router: 0x141fa059441E0ca23ce184B6A78bafD2A517DdE8,
                 thisChainSelector: 4949039107694359620,
-                parentChainSelector: ARBITRUM_CHAIN_SELECTOR
+                parentChainSelector: ARBITRUM_CHAIN_SELECTOR,
+                initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
             cre: CREConfig({keystoneForwarder: 0xF8344CFd5c43616a4366C34E3EEE75af79a74482})
         });
@@ -160,7 +163,8 @@ contract HelperConfig is Script {
             ccip: CCIPConfig({
                 router: 0x881e3A65B4d4a04dD529061dd0071cf975F58bCD,
                 thisChainSelector: 15971525489660198786,
-                parentChainSelector: ARBITRUM_CHAIN_SELECTOR
+                parentChainSelector: ARBITRUM_CHAIN_SELECTOR,
+                initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
             cre: CREConfig({keystoneForwarder: 0xF8344CFd5c43616a4366C34E3EEE75af79a74482})
         });
@@ -196,7 +200,8 @@ contract HelperConfig is Script {
             ccip: CCIPConfig({
                 router: 0x80226fc0Ee2b096224EeAc085Bb9a8cba1146f7D,
                 thisChainSelector: 5009297550715157269,
-                parentChainSelector: ARBITRUM_CHAIN_SELECTOR
+                parentChainSelector: ARBITRUM_CHAIN_SELECTOR,
+                initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
             cre: CREConfig({keystoneForwarder: 0x0b93082D9b3C7C97fAcd250082899BAcf3af3885})
         });
@@ -232,7 +237,8 @@ contract HelperConfig is Script {
             ccip: CCIPConfig({
                 router: 0x27F39D0af3303703750D4001fCc1844c6491563c,
                 thisChainSelector: 6433500567565415381,
-                parentChainSelector: ARBITRUM_CHAIN_SELECTOR
+                parentChainSelector: ARBITRUM_CHAIN_SELECTOR,
+                initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
             cre: CREConfig({keystoneForwarder: 0x76c9cf548b4179F8901cda1f8623568b58215E62})
         });
@@ -268,7 +274,8 @@ contract HelperConfig is Script {
             ccip: CCIPConfig({
                 router: 0x3206695CaE29952f4b0c22a169725a865bc8Ce0f,
                 thisChainSelector: 3734403246176062136,
-                parentChainSelector: ARBITRUM_CHAIN_SELECTOR
+                parentChainSelector: ARBITRUM_CHAIN_SELECTOR,
+                initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
             cre: CREConfig({keystoneForwarder: 0xF8344CFd5c43616a4366C34E3EEE75af79a74482})
         });
@@ -327,10 +334,12 @@ contract HelperConfig is Script {
     }
 
     function _getMockCcipConfig(address usdc) private returns (CCIPConfig memory) {
-        return
-            CCIPConfig({
-                router: address(new MockCCIPRouter(usdc)), thisChainSelector: 12345, parentChainSelector: 12345
-            });
+        return CCIPConfig({
+            router: address(new MockCCIPRouter(usdc)),
+            thisChainSelector: 12345,
+            parentChainSelector: 12345,
+            initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
+        });
     }
 
     function _getMockCreConfig() private returns (CREConfig memory) {

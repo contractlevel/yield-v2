@@ -40,5 +40,6 @@ contract ParentVault_ConstructorUnitTest is BaseUnitTest {
         assertEq(parentVault.getRebalance().activeStrategy.protocolId, bytes32(0));
         assertEq(parentVault.getRebalance().activeStrategy.chainSelector, 0);
         assertEq(parentVault.getActiveProtocolAdapter(), address(0));
+        assertEq(parentVault.getDefaultCcipGasLimit(), DEFAULT_CCIP_GAS_LIMIT);
     }
 }

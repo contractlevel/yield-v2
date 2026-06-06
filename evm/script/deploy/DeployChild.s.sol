@@ -71,7 +71,8 @@ contract DeployChild is Script {
             configOperator: deployer,
             adapterRegistry: address(deploy.adapterRegistry),
             thisChainSelector: networkConfig.ccip.thisChainSelector,
-            emergencyReceiver: networkConfig.emergencyReceiver
+            emergencyReceiver: networkConfig.emergencyReceiver,
+            initialDefaultCcipGasLimit: networkConfig.ccip.initialDefaultCcipGasLimit
         });
         deploy.childVault = new ChildVault(baseVaultParams, networkConfig.ccip.parentChainSelector);
 
