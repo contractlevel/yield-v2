@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
+/// @title Yieldcoin v2 Types
 /// @author @contractlevel
 /// @notice Types for the Yieldcoin v2 protocol
 /// @dev The types are divided into the following categories:
 /// @dev - Strategy: Defining an onchain strategy
 /// @dev - CCIP: Crosschain transaction type discriminators and their corresponding data
+/// @dev - Recovery: Recovery modes stored in the event of failures
 /// @dev - Rebalance: Defining an individual rebalance
 /// @dev - Epoch: Defining an individual epoch period
 library Types {

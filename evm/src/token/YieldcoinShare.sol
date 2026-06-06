@@ -19,6 +19,8 @@ contract YieldcoinShare is ComplianceTokenERC3643, YieldcoinShareStore {
     /*//////////////////////////////////////////////////////////////
                                INITIALIZE
     //////////////////////////////////////////////////////////////*/
+    /// @param policyEngine Chainlink ACE PolicyEngine component
+    /// @param initialCcipAdmin Initial address for CCIP admin
     function initialize(address policyEngine, address initialCcipAdmin) external initializer {
         __ComplianceTokenERC3643_init("Yieldcoin", "YIELD", 18, policyEngine);
         _setCCIPAdmin(initialCcipAdmin);

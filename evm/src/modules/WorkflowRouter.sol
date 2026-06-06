@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 import {IReceiver, IERC165} from "@chainlink/contracts/src/v0.8/shared/interfaces/IReceiver.sol";
 import {
-    AccessControlDefaultAdminRules,
-    IAccessControlDefaultAdminRules
+    AccessControlDefaultAdminRules
 } from "@openzeppelin/contracts/access/extensions/AccessControlDefaultAdminRules.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {IWorkflowRouter} from "../interfaces/IWorkflowRouter.sol";

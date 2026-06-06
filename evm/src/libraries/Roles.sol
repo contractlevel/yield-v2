@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
+/// @title Yieldcoin v2 Roles
 /// @author @contractlevel
 /// @notice Roles for the Yieldcoin v2 protocol
 library Roles {

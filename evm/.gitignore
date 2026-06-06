@@ -28,3 +28,4 @@ coverage-echidna/
 coverage-medusa/
 crytic-export/
 recon-corpus
+.audit-prep
