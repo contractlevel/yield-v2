@@ -55,6 +55,15 @@ medusa fuzz \
 ```
 
 ```
+medusa fuzz \
+    --config medusa.json \
+    --compilation-target test/invariant/suite/CryticTester.t.sol \
+    --target-contracts CryticTester \
+    --test-limit 5000 \
+    --timeout 600
+```
+
+```
 open medusa/coverage/coverage_report.html
 ```
 

@@ -60,6 +60,42 @@ abstract contract Properties is BeforeAfter, Asserts {
         );
     }
 
+    function invariant_EPOCH_002_epochTransitionsAreValid() public {
+        uint256 currentEpochNonce = parent.vault.getEpochNonce();
+
+        for (uint256 i; i < ghost_claimableEpochs.length; ++i) {
+            t(
+                parent.vault.getEpoch(ghost_claimableEpochs[i]).status == Types.EpochStatus.CLAIMABLE,
+                "EPOCH-002: epoch transitioned out of CLAIMABLE"
+            );
+        }
+
+        if (currentEpochNonce > 1) {
+            Types.EpochStatus prevStatus = parent.vault.getEpoch(currentEpochNonce - 1).status;
+            t(
+                prevStatus == Types.EpochStatus.CLAIMABLE || prevStatus == Types.EpochStatus.EXECUTING,
+                "EPOCH-002: previous epoch in invalid state"
+            );
+        }
+    }
+
+    function invariant_EPOCH_007_depositRemainingCountersAreMonotonicallyNonIncreasing() public {
+        for (uint256 i; i < ghost_claimableEpochs.length; ++i) {
+            uint256 epochNonce = ghost_claimableEpochs[i];
+            Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
+            lte(
+                epoch.remainingDepositClaimAmount,
+                ghost_maxRemainingDepositClaimAmountByEpoch[epochNonce],
+                "EPOCH-007: remaining deposit claims increased"
+            );
+            lte(
+                epoch.remainingShareMintAmount,
+                ghost_maxRemainingShareMintAmountByEpoch[epochNonce],
+                "EPOCH-007: remaining share mints increased"
+            );
+        }
+    }
+
     function invariant_EPOCH_008_depositRemainingCountersStayBounded() public {
         for (uint256 i; i < ghost_claimableEpochs.length; ++i) {
             uint256 epochNonce = ghost_claimableEpochs[i];
@@ -86,6 +122,23 @@ abstract contract Properties is BeforeAfter, Asserts {
                 (epoch.remainingDepositClaimAmount == 0) == (epoch.remainingShareMintAmount == 0);
 
             t(depositCountersMatch, "EPOCH-009: deposit-side remaining counters did not reach zero together");
+        }
+    }
+
+    function invariant_EPOCH_010_withdrawRemainingCountersAreMonotonicallyNonIncreasing() public {
+        for (uint256 i; i < ghost_claimableEpochs.length; ++i) {
+            uint256 epochNonce = ghost_claimableEpochs[i];
+            Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
+            lte(
+                epoch.remainingShareBurnAmount,
+                ghost_maxRemainingShareBurnAmountByEpoch[epochNonce],
+                "EPOCH-010: remaining share burns increased"
+            );
+            lte(
+                epoch.remainingWithdrawClaimAmount,
+                ghost_maxRemainingWithdrawClaimAmountByEpoch[epochNonce],
+                "EPOCH-010: remaining withdraw claims increased"
+            );
         }
     }
 
@@ -117,6 +170,17 @@ abstract contract Properties is BeforeAfter, Asserts {
                 "EPOCH-012: withdraw claim amount remains after all share burns processed"
             );
         }
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                            SHARE / FEES
+    //////////////////////////////////////////////////////////////*/
+    function invariant_SHARE_001_totalSupplyEqualsAuthoritativeSharesPlusLazyBurns() public {
+        eq(
+            parent.share.totalSupply(),
+            _expectedShareTokenSupply(),
+            "SHARE-001: token supply does not match authoritative shares adjusted for lazy settlement"
+        );
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -220,6 +284,17 @@ abstract contract Properties is BeforeAfter, Asserts {
         _assertPendingCcipSendRecoveryIsCollateralized(remoteChild.vault);
     }
 
+    /*//////////////////////////////////////////////////////////////
+                                ADAPTERS
+    //////////////////////////////////////////////////////////////*/
+    function invariant_ADAPTER_004_nonActiveStrategyChainsReportZeroTvl() public {
+        uint64 activeChainSelector = parent.vault.getRebalance().activeStrategy.chainSelector;
+
+        _assertNonActiveTvlIsZero(parent.vault, PARENT_CHAIN_SELECTOR, activeChainSelector);
+        _assertNonActiveTvlIsZero(child.vault, CHILD_CHAIN_SELECTOR, activeChainSelector);
+        _assertNonActiveTvlIsZero(remoteChild.vault, REMOTE_CHILD_CHAIN_SELECTOR, activeChainSelector);
+    }
+
     function _recoveryModeExists() internal view returns (bool) {
         return _recoveryModeCount() != 0;
     }
@@ -317,6 +392,41 @@ abstract contract Properties is BeforeAfter, Asserts {
             IERC20(parent.vault.getUsdc()).balanceOf(address(vault)),
             "CCIP-005b: pending child CCIP send recovery is not collateralized"
         );
+    }
+
+    function _expectedShareTokenSupply() internal view returns (uint256 supply) {
+        uint256 lazyShareMints;
+        uint256 lazyShareBurns;
+
+        for (uint256 i; i < ghost_shareAccountingEpochs.length; ++i) {
+            Types.Epoch memory epoch = parent.vault.getEpoch(ghost_shareAccountingEpochs[i]);
+            lazyShareMints += epoch.remainingShareMintAmount;
+            lazyShareBurns += epoch.remainingShareBurnAmount;
+        }
+
+        supply = parent.vault.getTotalShares() + lazyShareBurns - lazyShareMints;
+    }
+
+    function _assertNonActiveTvlIsZero(BaseVault vault, uint64 vaultChainSelector, uint64 activeChainSelector)
+        internal
+    {
+        if (vaultChainSelector == activeChainSelector) return;
+
+        uint256 expectedTvl;
+        Types.RebalanceDepositRecovery memory rebalanceDepositRecovery = vault.getRebalanceDepositRecovery();
+        if (_rebalanceDepositRecoveryPending(rebalanceDepositRecovery)) {
+            expectedTvl += rebalanceDepositRecovery.amount;
+        }
+
+        if (vaultChainSelector != PARENT_CHAIN_SELECTOR) {
+            ChildVault childVault = ChildVault(address(vault));
+            Types.EpochRecovery memory epochDepositRecovery = childVault.getEpochDepositRecovery();
+            if (_epochRecoveryPending(epochDepositRecovery)) {
+                expectedTvl += epochDepositRecovery.amount;
+            }
+        }
+
+        eq(vault.getTVL(), expectedTvl, "ADAPTER-004: non-active strategy chain reports unexpected TVL");
     }
 
     function _epochRecoveryPending(Types.EpochRecovery memory recovery) internal pure returns (bool) {

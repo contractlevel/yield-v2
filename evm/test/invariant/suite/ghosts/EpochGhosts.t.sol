@@ -24,6 +24,8 @@ abstract contract EpochGhosts is ActorGhosts {
     mapping(uint256 epochNonce => uint256 amount) internal ghost_maxRemainingWithdrawClaimAmountByEpoch;
     mapping(uint256 epochNonce => bool isClaimable) internal ghost_epochIsClaimable;
     uint256[] internal ghost_claimableEpochs;
+    mapping(uint256 epochNonce => bool isTracked) internal ghost_epochShareAccountingTracked;
+    uint256[] internal ghost_shareAccountingEpochs;
     uint256 internal ghost_claimableWithdrawObligation;
     mapping(address actor => uint256 amount) internal ghost_totalUsdcClaimedByActor;
     mapping(address actor => uint256 amount) internal ghost_feeBurdenByActor;
@@ -61,6 +63,7 @@ abstract contract EpochGhosts is ActorGhosts {
     function _recordEpochClosed(uint256 epochNonce) internal {
         Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
 
+        _recordEpochShareAccounting(epochNonce);
         ghost_epochIsClaimable[epochNonce] = true;
         ghost_totalShareMintedByEpoch[epochNonce] = epoch.remainingShareMintAmount;
         ghost_maxRemainingDepositClaimAmountByEpoch[epochNonce] = epoch.remainingDepositClaimAmount;
@@ -71,21 +74,20 @@ abstract contract EpochGhosts is ActorGhosts {
         ghost_claimableEpochs.push(epochNonce);
     }
 
+    function _recordEpochShareAccounting(uint256 epochNonce) internal {
+        if (ghost_epochShareAccountingTracked[epochNonce]) return;
+
+        ghost_epochShareAccountingTracked[epochNonce] = true;
+        ghost_shareAccountingEpochs.push(epochNonce);
+    }
+
     function _recordSharesClaimed(address actor, uint256 epochNonce, uint256 shareMintAmount) internal {
         ghost_depositedByActorByEpoch[actor][epochNonce] = 0;
         ghost_shareBalanceByActor[actor] += shareMintAmount;
     }
 
-    function _checkAndUpdateDepositRemainingCounterMax(uint256 epochNonce) internal {
+    function _updateDepositRemainingCounterMax(uint256 epochNonce) internal {
         Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
-
-        if (epoch.remainingDepositClaimAmount > ghost_maxRemainingDepositClaimAmountByEpoch[epochNonce]) {
-            revert("EPOCH-007: remaining deposit claims increased");
-        }
-        if (epoch.remainingShareMintAmount > ghost_maxRemainingShareMintAmountByEpoch[epochNonce]) {
-            revert("EPOCH-007: remaining share mints increased");
-        }
-
         ghost_maxRemainingDepositClaimAmountByEpoch[epochNonce] = epoch.remainingDepositClaimAmount;
         ghost_maxRemainingShareMintAmountByEpoch[epochNonce] = epoch.remainingShareMintAmount;
     }
@@ -112,16 +114,8 @@ abstract contract EpochGhosts is ActorGhosts {
         ghost_totalUsdcClaimedByActor[actor] += usdcWithdrawAmount;
     }
 
-    function _checkAndUpdateWithdrawRemainingCounterMax(uint256 epochNonce) internal {
+    function _updateWithdrawRemainingCounterMax(uint256 epochNonce) internal {
         Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
-
-        if (epoch.remainingShareBurnAmount > ghost_maxRemainingShareBurnAmountByEpoch[epochNonce]) {
-            revert("EPOCH-010: remaining share burns increased");
-        }
-        if (epoch.remainingWithdrawClaimAmount > ghost_maxRemainingWithdrawClaimAmountByEpoch[epochNonce]) {
-            revert("EPOCH-010: remaining withdraw claims increased");
-        }
-
         ghost_maxRemainingShareBurnAmountByEpoch[epochNonce] = epoch.remainingShareBurnAmount;
         ghost_maxRemainingWithdrawClaimAmountByEpoch[epochNonce] = epoch.remainingWithdrawClaimAmount;
     }

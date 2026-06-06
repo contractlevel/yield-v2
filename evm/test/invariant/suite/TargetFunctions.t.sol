@@ -115,14 +115,19 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _closeEpochThroughWorkflow(
             parent.workflowRouter, CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner, tvl
         );
+        _assertEpochTransition(epochNonce, Types.EpochStatus.OPEN, parent.vault.getEpoch(epochNonce).status);
         if (parent.vault.getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING) {
             _settleRemoteEpochWithdraw(epochNonce, netWithdrawAmount);
+            _assertEpochTransition(epochNonce, Types.EpochStatus.EXECUTING, parent.vault.getEpoch(epochNonce).status);
         }
 
         __after();
 
         _recordEpochClosed(epochNonce);
         _recordFeeBurden(treasuryShareBalanceBefore, totalSharesBefore);
+        _assertCloseEpochShareAccounting(epochNonce);
+        _assertPerformanceFeeMintedToTreasury();
+        _assertPerformanceFeeHighWaterMarkNotDecreased();
 
         eq(_after.epochNonce, epochNonce + 1, "EPOCH-004: closeEpoch did not increment epoch nonce");
         t(
@@ -160,6 +165,8 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         __after();
 
         _recordFeeBurden(treasuryShareBalanceBefore, totalSharesBefore);
+        _assertManagementFeeMintedToTreasury();
+        _assertPerformanceFeeHighWaterMarkNotDecreased();
 
         Types.Rebalance memory rebalance = parent.vault.getRebalance();
         t(rebalance.activeStrategy.protocolId == target.protocolId, "REBAL-006: active protocol mismatch");
@@ -195,7 +202,17 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         __after();
 
         _recordSharesClaimed(actor, claimEpochNonce, shareMintAmount);
-        _checkAndUpdateDepositRemainingCounterMax(claimEpochNonce);
+        lte(
+            _after.targetEpochRemainingDepositClaimAmount,
+            ghost_maxRemainingDepositClaimAmountByEpoch[claimEpochNonce],
+            "EPOCH-007: remaining deposit claims increased"
+        );
+        lte(
+            _after.targetEpochRemainingShareMintAmount,
+            ghost_maxRemainingShareMintAmountByEpoch[claimEpochNonce],
+            "EPOCH-007: remaining share mints increased"
+        );
+        _updateDepositRemainingCounterMax(claimEpochNonce);
 
         eq(_after.epochNonce, _before.epochNonce, "claimShares changed current epoch nonce");
         eq(_after.actorTargetEpochDepositAmount, 0, "EPOCH-013: claimShares did not clear actor deposit");
@@ -289,7 +306,17 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         __after();
 
         _recordUsdcClaimed(actor, claimEpochNonce, usdcWithdrawAmount);
-        _checkAndUpdateWithdrawRemainingCounterMax(claimEpochNonce);
+        lte(
+            _after.targetEpochRemainingShareBurnAmount,
+            ghost_maxRemainingShareBurnAmountByEpoch[claimEpochNonce],
+            "EPOCH-010: remaining share burns increased"
+        );
+        lte(
+            _after.targetEpochRemainingWithdrawClaimAmount,
+            ghost_maxRemainingWithdrawClaimAmountByEpoch[claimEpochNonce],
+            "EPOCH-010: remaining withdraw claims increased"
+        );
+        _updateWithdrawRemainingCounterMax(claimEpochNonce);
 
         eq(_after.epochNonce, _before.epochNonce, "claimUsdc changed current epoch nonce");
         eq(_after.actorTargetEpochWithdrawShareBurnAmount, 0, "EPOCH-013: claimUsdc did not clear actor withdraw");
@@ -472,15 +499,24 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         uint256 treasuryShareBalanceBefore = parent.share.balanceOf(parent.vault.getTreasury());
         uint256 totalSharesBefore = parent.vault.getTotalShares();
 
+        __before();
+
         _warpPastEpoch(epochNonce);
         _closeEpochThroughWorkflow(
             parent.workflowRouter, CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner, tvl
         );
+        _assertEpochTransition(epochNonce, Types.EpochStatus.OPEN, parent.vault.getEpoch(epochNonce).status);
 
         t(
             parent.vault.getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING,
             "EPOCH-014: parent epoch did not enter executing"
         );
+
+        __after();
+
+        _assertCloseEpochShareAccounting(epochNonce);
+        _assertPerformanceFeeMintedToTreasury();
+        _assertPerformanceFeeHighWaterMarkNotDecreased();
 
         _breakParentDestination(activeChild);
         _executeEpochWithdraw(activeChild, epochNonce, netWithdrawAmount);
@@ -499,6 +535,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             "CCIP-005b: pending send is not collateralized"
         );
 
+        _recordEpochShareAccounting(epochNonce);
         _recordFeeBurden(treasuryShareBalanceBefore, totalSharesBefore);
     }
 
@@ -573,6 +610,9 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             vault.recoverFailedCcipSend();
             _assertCcipSendRecoveryCleared(vault);
 
+            _assertEpochTransition(
+                epochNonce, Types.EpochStatus.EXECUTING, parent.vault.getEpoch(epochNonce).status
+            );
             t(
                 parent.vault.getEpoch(epochNonce).status == Types.EpochStatus.CLAIMABLE,
                 "CCIP-005c: parent epoch not claimable after retry"
@@ -597,6 +637,8 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
             _assertRebalanceFinalized(beforeRebalance, target, "CCIP-005c: parent rebalance not finalized after retry");
             _recordFeeBurden(_before.treasuryShareBalance, _before.totalShares);
+            _assertManagementFeeMintedToTreasury();
+            _assertPerformanceFeeHighWaterMarkNotDecreased();
         } else {
             t(false, "REC-002: invalid CCIP recovery tx type");
         }
@@ -678,21 +720,31 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         uint256 treasuryShareBalanceBefore = parent.share.balanceOf(parent.vault.getTreasury());
         uint256 totalSharesBefore = parent.vault.getTotalShares();
 
+        __before();
+
         _warpPastEpoch(epochNonce);
         _closeEpochThroughWorkflow(
             parent.workflowRouter, CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner, tvl
         );
+        _assertEpochTransition(epochNonce, Types.EpochStatus.OPEN, parent.vault.getEpoch(epochNonce).status);
 
         t(
             parent.vault.getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING,
             "EPOCH-014: parent epoch did not enter executing"
         );
 
+        __after();
+
+        _assertCloseEpochShareAccounting(epochNonce);
+        _assertPerformanceFeeMintedToTreasury();
+        _assertPerformanceFeeHighWaterMarkNotDecreased();
+
         _setActiveChildWithdrawReverts(activeChild, true);
         _executeEpochWithdraw(activeChild, epochNonce, netWithdrawAmount);
         _setActiveChildWithdrawReverts(activeChild, false);
 
         _recordFeeBurden(treasuryShareBalanceBefore, totalSharesBefore);
+        _recordEpochShareAccounting(epochNonce);
         _assertPendingEpochWithdrawRecovery(activeChild, epochNonce, netWithdrawAmount);
         t(activeChild.getRecoveryExists(), "REC-002: child epoch withdraw recovery sentinel not set");
 
@@ -706,6 +758,9 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         vault.recoverFailedEpochWithdraw();
 
         _assertEpochWithdrawRecoveryCleared(vault);
+        _assertEpochTransition(
+            recovery.epochNonce, Types.EpochStatus.EXECUTING, parent.vault.getEpoch(recovery.epochNonce).status
+        );
         t(
             parent.vault.getEpoch(recovery.epochNonce).status == Types.EpochStatus.CLAIMABLE,
             "EPOCH-014: parent epoch not claimable after recovery"
@@ -801,6 +856,8 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _assertRebalanceFinalized(beforeRebalance, target, "REBAL-004: state is not none");
         t(!vault.getRecoveryExists(), "REC-003: vault still has recovery");
         _recordFeeBurden(_before.treasuryShareBalance, _before.totalShares);
+        _assertManagementFeeMintedToTreasury();
+        _assertPerformanceFeeHighWaterMarkNotDecreased();
         eq(_recoveryModeCount(), 0, "REC-003: recovery mode not cleared");
     }
 
@@ -938,6 +995,8 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         _assertRebalanceFinalized(beforeRebalance, target, "REBAL-004: state is not none");
         _recordFeeBurden(_before.treasuryShareBalance, _before.totalShares);
+        _assertManagementFeeMintedToTreasury();
+        _assertPerformanceFeeHighWaterMarkNotDecreased();
         eq(_recoveryModeCount(), 0, "REC-003: recovery mode not cleared");
     }
 
@@ -962,6 +1021,59 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         t(afterRebalance.pendingStrategy.protocolId == bytes32(0), "REBAL-004: pending protocol still set");
         eq(uint256(afterRebalance.pendingStrategy.chainSelector), 0, "REBAL-004: pending chain still set");
         _assertActiveAdapterFor(target);
+    }
+
+    function _assertEpochTransition(
+        uint256 epochNonce,
+        Types.EpochStatus beforeStatus,
+        Types.EpochStatus afterStatus
+    ) internal {
+        bool allowed = beforeStatus == afterStatus
+            || (beforeStatus == Types.EpochStatus.OPEN && afterStatus == Types.EpochStatus.EXECUTING)
+            || (beforeStatus == Types.EpochStatus.OPEN && afterStatus == Types.EpochStatus.CLAIMABLE)
+            || (beforeStatus == Types.EpochStatus.EXECUTING && afterStatus == Types.EpochStatus.CLAIMABLE);
+
+        t(allowed, "EPOCH-002: invalid epoch transition");
+
+        if (epochNonce == 0) {
+            t(afterStatus == Types.EpochStatus.NONE, "EPOCH-002: epoch zero status changed");
+        }
+    }
+
+    function _assertCloseEpochShareAccounting(uint256 epochNonce) internal {
+        Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
+        uint256 feeShares = _after.treasuryShareBalance - _before.treasuryShareBalance;
+        uint256 expectedTotalShares =
+            _before.totalShares + feeShares + epoch.remainingShareMintAmount - epoch.totalShareBurnAmount;
+
+        eq(_after.totalShares, expectedTotalShares, "SHARE-002: closeEpoch total share accounting mismatch");
+    }
+
+    function _assertPerformanceFeeMintedToTreasury() internal {
+        Types.Epoch memory epoch = parent.vault.getEpoch(_before.epochNonce);
+        uint256 treasuryShareIncrease = _after.treasuryShareBalance - _before.treasuryShareBalance;
+        uint256 derivedFeeShares =
+            _after.totalShares + epoch.totalShareBurnAmount - _before.totalShares - epoch.remainingShareMintAmount;
+
+        eq(derivedFeeShares, treasuryShareIncrease, "SHARE-005: performance fee did not mint to treasury");
+    }
+
+    function _assertManagementFeeMintedToTreasury() internal {
+        uint256 treasuryShareIncrease = _after.treasuryShareBalance - _before.treasuryShareBalance;
+
+        eq(
+            _after.totalShares,
+            _before.totalShares + treasuryShareIncrease,
+            "SHARE-005: management fee did not mint to treasury"
+        );
+    }
+
+    function _assertPerformanceFeeHighWaterMarkNotDecreased() internal {
+        lte(
+            _before.performanceFeeHighWaterMark,
+            _after.performanceFeeHighWaterMark,
+            "FEE-003: performance fee high-water mark decreased"
+        );
     }
 
     function _settlementPricePerShare(uint256 tvl) internal view returns (uint256 pricePerShare) {
@@ -1161,7 +1273,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _changePrank(actor);
         uint256 shareMintAmount = parent.vault.claimShares(depositEpochNonce);
         _recordSharesClaimed(actor, depositEpochNonce, shareMintAmount);
-        _checkAndUpdateDepositRemainingCounterMax(depositEpochNonce);
+        _updateDepositRemainingCounterMax(depositEpochNonce);
 
         t(parent.share.balanceOf(actor) != 0, "recovery setup: actor has no shares");
     }

@@ -145,7 +145,7 @@ These are desired configuration properties. Address zero-checks are not currentl
 | ID          | Statement                                                                                                    | Type            | Status    |
 | ----------- | ------------------------------------------------------------------------------------------------------------ | --------------- | --------- |
 | `EPOCH-001` | Exactly one current epoch is `OPEN` at transaction boundaries.                                               | `invariant`     | implemented: Foundry + Medusa |
-| `EPOCH-002` | Epoch transitions are limited to `OPEN -> CLAIMABLE` or `OPEN -> EXECUTING -> CLAIMABLE`.                    | `invariant`     | candidate |
+| `EPOCH-002` | Epoch transitions are limited to `OPEN -> CLAIMABLE` or `OPEN -> EXECUTING -> CLAIMABLE`.                    | `invariant`     | implemented: Foundry + Medusa |
 | `EPOCH-003` | `closeEpoch` cannot run while rebalance is active or the previous epoch is still `EXECUTING`.                | `unit`          | candidate |
 | `EPOCH-004` | Closing an epoch always opens the next epoch.                                                                | `postcondition` | implemented: Foundry + Medusa |
 | `EPOCH-005` | Deposits, withdraw intents, and cancels only affect the current open epoch.                                  | `invariant`     | implemented: Foundry + Medusa |
@@ -169,11 +169,11 @@ These are desired configuration properties. Address zero-checks are not currentl
 
 | ID          | Statement                                                                                                                              | Type                 | Status    |
 | ----------- | -------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | --------- |
-| `SHARE-001` | `ParentVault.s_totalShares` is authoritative, not token `totalSupply()`.                                                               | `manual + invariant` | candidate |
-| `SHARE-002` | At epoch close, tracked shares change by new deposit shares minus submitted burn shares, plus any fee shares minted before settlement. | `postcondition`      | candidate |
+| `SHARE-001` | `ParentVault.s_totalShares` is authoritative, not token `totalSupply()`.                                                               | `manual + invariant` | implemented: Foundry + Medusa |
+| `SHARE-002` | At epoch close, tracked shares change by new deposit shares minus submitted burn shares, plus any fee shares minted before settlement. | `postcondition`      | implemented: Foundry + Medusa |
 | `SHARE-003` | Performance fee shares mint only when gross price exceeds the high-water mark and the fee does not consume all TVL.                    | `unit`               | candidate |
 | `SHARE-004` | Management fee shares mint only on rebalance finalization.                                                                             | `postcondition`      | candidate |
-| `SHARE-005` | All fee shares mint to treasury.                                                                                                       | `invariant`          | candidate |
+| `SHARE-005` | All fee shares mint to treasury.                                                                                                       | `invariant`          | implemented: Foundry + Medusa |
 
 ## Fees
 
@@ -181,7 +181,7 @@ These are desired configuration properties. Address zero-checks are not currentl
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | --------- |
 | `FEE-001` | Performance fee is collected only when gross price per share is greater than the high-water mark. This is also covered by `SHARE-003`.                              | `unit`      | candidate |
 | `FEE-002` | Fee shares mint to treasury, not to caller or vault. This property depends on `CFG-001` because a zero treasury is operationally invalid.                           | `unit`      | candidate |
-| `FEE-003` | The performance fee high-water mark is monotonically non-decreasing, except that it remains unchanged when fee collection is intentionally skipped under `DEV-001`. | `invariant` | candidate |
+| `FEE-003` | The performance fee high-water mark is monotonically non-decreasing, except that it remains unchanged when fee collection is intentionally skipped under `DEV-001`. | `invariant` | implemented: Foundry + Medusa |
 
 ## Donations
 
@@ -252,7 +252,7 @@ These are desired configuration properties. Address zero-checks are not currentl
 | `ADAPTER-001` | Only config role can mutate protocol adapter registry mappings.                         | `unit`      | candidate |
 | `ADAPTER-002` | Vault cannot set or use an unregistered adapter.                                        | `unit`      | candidate |
 | `ADAPTER-003` | Protocol adapters only accept deposit and withdraw calls from their configured vault.   | `unit`      | candidate |
-| `ADAPTER-004` | Non-active strategy chains report zero TVL except documented recovery-state accounting. | `invariant` | candidate |
+| `ADAPTER-004` | Non-active strategy chains report zero TVL except documented recovery-state accounting. | `invariant` | implemented: Foundry + Medusa |
 
 ## Migration And Upgrade Placeholder
 
