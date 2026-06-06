@@ -103,7 +103,9 @@ interface IParentVault is IBaseVault {
     /// @param rebalanceNonce The nonce of the completed rebalance
     /// @param newProtocolId The protocol ID for the new strategy
     /// @param newChainSelector The chain selector for the new strategy
-    event RebalanceCompleted(uint256 indexed rebalanceNonce, bytes32 indexed newProtocolId, uint64 indexed newChainSelector);
+    event RebalanceCompleted(
+        uint256 indexed rebalanceNonce, bytes32 indexed newProtocolId, uint64 indexed newChainSelector
+    );
     /// @notice Emitted when management fees are collected
     /// @param rebalanceNonce The nonce of the rebalance that collected the fee
     /// @param feeShares The number of shares minted to the treasury

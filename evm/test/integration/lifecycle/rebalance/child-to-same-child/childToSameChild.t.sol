@@ -100,8 +100,9 @@ contract ChildToSameChild_RebalanceIntegrationTest is BaseIntegrationTest {
         _completeRebalanceThroughWorkflow(parent.workflowRouter, COMPLETE_WORKFLOW_ID, COMPLETE_WORKFLOW_NAME, i_owner);
         Vm.Log[] memory completeLogs = vm.getRecordedLogs();
 
-        Vm.Log memory completedLog =
-            _assertEmittedBy(completeLogs, keccak256("RebalanceCompleted(uint256,bytes32,uint64)"), address(parent.vault));
+        Vm.Log memory completedLog = _assertEmittedBy(
+            completeLogs, keccak256("RebalanceCompleted(uint256,bytes32,uint64)"), address(parent.vault)
+        );
         assertEq(uint256(completedLog.topics[1]), 1);
         assertEq(bytes32(completedLog.topics[2]), AAVE_V4_PROTOCOL_ID);
         assertEq(uint64(uint256(completedLog.topics[3])), CHILD_CHAIN_SELECTOR);

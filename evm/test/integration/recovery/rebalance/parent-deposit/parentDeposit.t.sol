@@ -60,8 +60,9 @@ contract ParentDeposit_RebalanceRecoveryIntegrationTest is BaseRecoveryIntegrati
 
         _assertEmittedBy(recoveryLogs, keccak256("RebalanceDepositRecoveryCleared(uint256)"), address(parent.vault));
         _assertEmittedBy(recoveryLogs, keccak256("RebalanceDepositSuccess(uint256,uint256)"), address(parent.vault));
-        Vm.Log memory completedLog =
-            _assertEmittedBy(recoveryLogs, keccak256("RebalanceCompleted(uint256,bytes32,uint64)"), address(parent.vault));
+        Vm.Log memory completedLog = _assertEmittedBy(
+            recoveryLogs, keccak256("RebalanceCompleted(uint256,bytes32,uint64)"), address(parent.vault)
+        );
         assertEq(uint256(completedLog.topics[1]), 1);
         assertEq(bytes32(completedLog.topics[2]), AAVE_V4_PROTOCOL_ID);
         assertEq(uint64(uint256(completedLog.topics[3])), PARENT_CHAIN_SELECTOR);
