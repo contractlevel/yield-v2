@@ -38,6 +38,8 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @dev Delay for emergency draining
     uint256 internal constant EMERGENCY_DRAIN_DELAY = 1 days;
 
+    // uint256 internal constant INITIAL_DEFAULT_CCIP_GAS_LIMIT = 500_000; // @review
+
     /*//////////////////////////////////////////////////////////////
                                IMMUTABLE
     //////////////////////////////////////////////////////////////*/
@@ -448,7 +450,12 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @dev Withdraws all USDC from the vault to the emergency receiver
     /// @param revertOnFailure Whether to revert if the withdraw from strategy fails
     /// @notice If the vault has the TVL, it will be withdrawn from the strategy and transferred to the emergency receiver
-    function emergencyDrain(bool revertOnFailure) external onlyRole(Roles.EMERGENCY_DRAINER_ROLE) nonReentrant whenPaused {
+    function emergencyDrain(bool revertOnFailure)
+        external
+        onlyRole(Roles.EMERGENCY_DRAINER_ROLE)
+        nonReentrant
+        whenPaused
+    {
         //slither-disable-next-line timestamp
         if (block.timestamp - s_pausedAt < EMERGENCY_DRAIN_DELAY) revert BaseVault__EmergencyDrainDelayNotMet();
 

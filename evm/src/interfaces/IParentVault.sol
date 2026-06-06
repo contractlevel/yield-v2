@@ -101,7 +101,9 @@ interface IParentVault is IBaseVault {
     event RebalanceInitiated(uint256 indexed rebalanceNonce, uint64 indexed chainSelector, bytes32 indexed protocolId);
     /// @notice Emitted when a rebalance is completed
     /// @param rebalanceNonce The nonce of the completed rebalance
-    event RebalanceCompleted(uint256 indexed rebalanceNonce);
+    /// @param newProtocolId The protocol ID for the new strategy
+    /// @param newChainSelector The chain selector for the new strategy
+    event RebalanceCompleted(uint256 indexed rebalanceNonce, bytes32 indexed newProtocolId, uint64 indexed newChainSelector);
     /// @notice Emitted when management fees are collected
     /// @param rebalanceNonce The nonce of the rebalance that collected the fee
     /// @param feeShares The number of shares minted to the treasury
@@ -109,7 +111,7 @@ interface IParentVault is IBaseVault {
     /// @notice Emitted when performance fees are collected
     /// @param epochNonce The epoch nonce that collected the fee
     /// @param feeShares The number of shares minted to the treasury
-    /// @param highWaterMark The prior performance fee high water mark
+    /// @param highWaterMark The prior performance fee high water mark // @review change this to new HWM
     event PerformanceFeeCollected(uint256 indexed epochNonce, uint256 indexed feeShares, uint256 indexed highWaterMark);
     /// @notice Emitted when a deposit is cancelled
     /// @param epochNonce The epoch nonce of the deposit

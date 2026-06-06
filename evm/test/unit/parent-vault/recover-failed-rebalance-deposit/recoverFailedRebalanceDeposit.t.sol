@@ -104,8 +104,11 @@ contract ParentVault_RecoverFailedRebalanceDepositUnitTest is BaseUnitTest {
         vm.recordLogs();
         s_parentVault.recoverFailedRebalanceDeposit();
 
-        Vm.Log memory log = _assertEmittedBy(keccak256("RebalanceCompleted(uint256)"), address(s_parentVault));
+        Vm.Log memory log =
+            _assertEmittedBy(keccak256("RebalanceCompleted(uint256,bytes32,uint64)"), address(s_parentVault));
         assertEq(uint256(log.topics[1]), REBALANCE_NONCE);
+        assertEq(log.topics[2], AAVE_V3_PROTOCOL_ID);
+        assertEq(uint256(log.topics[3]), PARENT_CHAIN_SELECTOR);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -119,12 +122,6 @@ contract ParentVault_RecoverFailedRebalanceDepositUnitTest is BaseUnitTest {
         s_parentVault.ccipReceive(_rebalanceMessage(REBALANCE_NONCE, AAVE_V3_PROTOCOL_ID));
 
         s_mockProtocolAdapter.setDepositReverts(false);
-    }
-
-    function _setParentPendingRebalance(bytes32 protocolId, uint64 chainSelector) internal {
-        _setParentRebalanceState(Types.RebalanceState.REBALANCING);
-        stdstore.target(address(s_parentVault)).sig("getRebalance()").depth(4).checked_write(protocolId);
-        stdstore.target(address(s_parentVault)).sig("getRebalance()").depth(5).checked_write(chainSelector);
     }
 
     function _rebalanceMessage(uint256 rebalanceNonce, bytes32 protocolId)

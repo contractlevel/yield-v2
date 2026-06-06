@@ -90,8 +90,10 @@ contract ChildToParent_RebalanceIntegrationTest is BaseIntegrationTest {
         assertEq(uint256(depositLog.topics[2]), tvl);
 
         Vm.Log memory completedLog =
-            _assertEmittedBy(executeLogs, keccak256("RebalanceCompleted(uint256)"), address(parent.vault));
+            _assertEmittedBy(executeLogs, keccak256("RebalanceCompleted(uint256,bytes32,uint64)"), address(parent.vault));
         assertEq(uint256(completedLog.topics[1]), 1);
+        assertEq(bytes32(completedLog.topics[2]), AAVE_V4_PROTOCOL_ID);
+        assertEq(uint64(uint256(completedLog.topics[3])), PARENT_CHAIN_SELECTOR);
 
         assertEq(IERC20(parent.usdc).balanceOf(address(local.mockCcipRouter)), routerBalanceBeforeRebalance);
         assertEq(child.vault.getActiveProtocolAdapter(), address(0));

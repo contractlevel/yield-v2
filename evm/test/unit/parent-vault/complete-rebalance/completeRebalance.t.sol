@@ -78,10 +78,16 @@ contract ParentVault_CompleteRebalanceUnitTest is BaseUnitTest {
     }
 
     function test_ParentVault_completeRebalance_Success_Emits_RebalanceCompleted() public {
+        _setParentPendingRebalance(AAVE_V3_PROTOCOL_ID, PARENT_CHAIN_SELECTOR);
+
         vm.recordLogs();
         s_parentVault.completeRebalance();
-        Vm.Log memory log = _assertEmittedBy(keccak256("RebalanceCompleted(uint256)"), address(s_parentVault));
+
+        Vm.Log memory log =
+            _assertEmittedBy(keccak256("RebalanceCompleted(uint256,bytes32,uint64)"), address(s_parentVault));
         assertEq(uint256(log.topics[1]), 1);
+        assertEq(log.topics[2], AAVE_V3_PROTOCOL_ID);
+        assertEq(uint256(log.topics[3]), PARENT_CHAIN_SELECTOR);
     }
 
     function test_ParentVault_completeRebalance_Success_Emits_ManagementFeeCollected() public {

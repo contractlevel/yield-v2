@@ -101,8 +101,10 @@ contract ChildToSameChild_RebalanceIntegrationTest is BaseIntegrationTest {
         Vm.Log[] memory completeLogs = vm.getRecordedLogs();
 
         Vm.Log memory completedLog =
-            _assertEmittedBy(completeLogs, keccak256("RebalanceCompleted(uint256)"), address(parent.vault));
+            _assertEmittedBy(completeLogs, keccak256("RebalanceCompleted(uint256,bytes32,uint64)"), address(parent.vault));
         assertEq(uint256(completedLog.topics[1]), 1);
+        assertEq(bytes32(completedLog.topics[2]), AAVE_V4_PROTOCOL_ID);
+        assertEq(uint64(uint256(completedLog.topics[3])), CHILD_CHAIN_SELECTOR);
 
         Types.Rebalance memory completedRebalance = parent.vault.getRebalance();
         assertEq(uint256(completedRebalance.state), uint256(Types.RebalanceState.NONE));

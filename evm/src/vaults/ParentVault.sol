@@ -360,7 +360,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         else if (ccipTxType == Types.CcipTx.REBALANCE) {
             // @review
             // Types.Rebalance rebalance = s_rebalance;
-            // if (rebalance.state != Types.RebalanceState.REBALANCING) revert 
+            // if (rebalance.state != Types.RebalanceState.REBALANCING) revert
             (uint256 rebalanceNonce, bytes32 protocolId) = abi.decode(data, (uint256, bytes32));
             // if (rebalance.nonce != rebalanceNonce) revert
             // if (rebalance.pendingStrategy.protocolId != protocolId) revert
@@ -643,12 +643,13 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         uint256 rebalanceNonce = s_rebalance.nonce;
         uint256 lastRebalanceCompletedTimestamp = s_rebalance.lastRebalanceCompletedTimestamp;
 
-        s_rebalance.activeStrategy = s_rebalance.pendingStrategy;
+        Types.Strategy memory newStrategy = s_rebalance.pendingStrategy;
+        s_rebalance.activeStrategy = newStrategy;
         s_rebalance.state = Types.RebalanceState.NONE;
         s_rebalance.lastRebalanceCompletedTimestamp = block.timestamp;
         delete s_rebalance.pendingStrategy;
 
-        emit RebalanceCompleted(rebalanceNonce);
+        emit RebalanceCompleted(rebalanceNonce, newStrategy.protocolId, newStrategy.chainSelector);
         ++s_rebalance.nonce;
         _collectManagementFee(rebalanceNonce, lastRebalanceCompletedTimestamp);
     }

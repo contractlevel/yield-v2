@@ -264,8 +264,11 @@ contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
         vm.recordLogs();
         s_parentVault.ccipReceive(_rebalanceMessage(REBALANCE_NONCE, AAVE_V3_PROTOCOL_ID, BRIDGED_AMOUNT));
 
-        Vm.Log memory log = _assertEmittedBy(keccak256("RebalanceCompleted(uint256)"), address(s_parentVault));
+        Vm.Log memory log =
+            _assertEmittedBy(keccak256("RebalanceCompleted(uint256,bytes32,uint64)"), address(s_parentVault));
         assertEq(uint256(log.topics[1]), REBALANCE_NONCE);
+        assertEq(log.topics[2], AAVE_V3_PROTOCOL_ID);
+        assertEq(uint256(log.topics[3]), PARENT_CHAIN_SELECTOR);
     }
 
     function test_ParentVault_ccipReceive_Rebalance_WhenTargetAdapterDepositReverts_EmitsRebalanceDepositFailure()
@@ -340,12 +343,6 @@ contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
     /*//////////////////////////////////////////////////////////////
                              HELPER UTILITY
     //////////////////////////////////////////////////////////////*/
-    function _setParentPendingRebalance(bytes32 protocolId, uint64 chainSelector) internal {
-        _setParentRebalanceState(Types.RebalanceState.REBALANCING);
-        stdstore.target(address(s_parentVault)).sig("getRebalance()").depth(4).checked_write(protocolId);
-        stdstore.target(address(s_parentVault)).sig("getRebalance()").depth(5).checked_write(chainSelector);
-    }
-
     function _setParentEpochWithdrawAccounting(uint256 epochNonce) internal {
         stdstore.target(address(s_parentVault)).sig("getEpoch(uint256)").with_key(epochNonce).depth(0)
             .checked_write(TOTAL_DEPOSIT_AMOUNT);

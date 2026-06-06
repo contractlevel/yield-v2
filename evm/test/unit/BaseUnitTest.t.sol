@@ -172,6 +172,12 @@ abstract contract BaseUnitTest is BaseTest {
         stdstore.target(address(s_parentVault)).sig("getRebalance()").depth(3).checked_write(chainSelector);
     }
 
+    function _setParentPendingRebalance(bytes32 protocolId, uint64 chainSelector) internal {
+        _setParentRebalanceState(Types.RebalanceState.REBALANCING);
+        stdstore.target(address(s_parentVault)).sig("getRebalance()").depth(4).checked_write(protocolId);
+        stdstore.target(address(s_parentVault)).sig("getRebalance()").depth(5).checked_write(chainSelector);
+    }
+
     function _setParentRebalanceState(Types.RebalanceState state) internal {
         stdstore.target(address(s_parentVault)).sig("getRebalance()").depth(1).checked_write(uint256(state));
     }

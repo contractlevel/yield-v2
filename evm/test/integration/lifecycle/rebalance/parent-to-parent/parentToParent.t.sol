@@ -44,8 +44,10 @@ contract ParentToParent_RebalanceIntegrationTest is BaseIntegrationTest {
         assertEq(uint256(depositLog.topics[2]), tvl);
 
         Vm.Log memory completedLog =
-            _assertEmittedBy(logs, keccak256("RebalanceCompleted(uint256)"), address(parent.vault));
+            _assertEmittedBy(logs, keccak256("RebalanceCompleted(uint256,bytes32,uint64)"), address(parent.vault));
         assertEq(uint256(completedLog.topics[1]), 1);
+        assertEq(bytes32(completedLog.topics[2]), AAVE_V4_PROTOCOL_ID);
+        assertEq(uint64(uint256(completedLog.topics[3])), PARENT_CHAIN_SELECTOR);
 
         Types.Rebalance memory rebalance = parent.vault.getRebalance();
         assertEq(uint256(rebalance.state), uint256(Types.RebalanceState.NONE));
