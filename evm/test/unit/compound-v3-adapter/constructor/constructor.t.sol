@@ -8,6 +8,7 @@ contract CompoundV3Adapter_ConstructorUnitTest is BaseCompoundV3AdapterUnitTest 
         assertEq(s_compoundV3Adapter.getVault(), address(s_parentVault));
         assertEq(s_compoundV3Adapter.getUsdc(), address(s_mockUsdc));
         assertEq(s_compoundV3Adapter.getProtocolPool(), address(s_mockComet));
+        assertEq(s_compoundV3Adapter.getCometRewards(), address(s_mockCometRewards));
         assertEq(s_compoundV3Adapter.getTVL(), 0);
     }
 }

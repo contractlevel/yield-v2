@@ -56,6 +56,7 @@ import {TerminalAllowPolicy} from "../../src/modules/policies/TerminalAllowPolic
 ///      ParentVault emergency receiver: networkConfig.emergencyReceiver
 ///      ParentVault.LINK_OPERATOR_ROLE: networkConfig.roles.linkOperator
 ///      ParentVault.DONATE_OPERATOR_ROLE: networkConfig.roles.donateOperator
+///      ParentVault.REWARDS_OPERATOR_ROLE: networkConfig.roles.rewardsOperator
 ///      ParentVault.POLICY_ENGINE_MANAGER_ROLE: networkConfig.roles.policyEngineManager
 ///      ParentVault.PAUSER_ROLE: networkConfig.roles.pauser
 ///      ParentVault.UNPAUSER_ROLE: networkConfig.roles.unpauser
@@ -99,6 +100,7 @@ contract DeployParent is Script {
         address aaveV3PoolAddressesProvider;
         address aaveV4Spoke;
         address compoundV3Comet;
+        address compoundV3CometRewards;
         AdapterRegistry adapterRegistry;
         YieldcoinShare yieldcoinImpl;
         YieldcoinShare yieldcoinProxy;
@@ -141,6 +143,7 @@ contract DeployParent is Script {
         deploy.aaveV3PoolAddressesProvider = networkConfig.protocols.aaveV3PoolAddressesProvider;
         deploy.aaveV4Spoke = networkConfig.protocols.aaveV4Spoke;
         deploy.compoundV3Comet = networkConfig.protocols.compoundV3Comet;
+        deploy.compoundV3CometRewards = networkConfig.protocols.compoundV3CometRewards;
 
         /// @dev Deploy the PolicyEngine, IdentityRegistry, and CredentialRegistry
         (deploy.policyEngine, deploy.identityRegistry, deploy.credentialRegistry) = _deployACEComponents(deployer);
@@ -210,7 +213,10 @@ contract DeployParent is Script {
         bytes32 compoundV3ProtocolId = keccak256("compound-v3");
         if (networkConfig.protocols.compoundV3Comet != address(0)) {
             deploy.compoundV3Adapter = new CompoundV3Adapter(
-                address(deploy.parentVault), networkConfig.tokens.usdc, networkConfig.protocols.compoundV3Comet
+                address(deploy.parentVault),
+                networkConfig.tokens.usdc,
+                networkConfig.protocols.compoundV3Comet,
+                networkConfig.protocols.compoundV3CometRewards
             );
             deploy.adapterRegistry.setAdapter(compoundV3ProtocolId, address(deploy.compoundV3Adapter));
             if (initialActiveProtocolId == bytes32(0)) initialActiveProtocolId = compoundV3ProtocolId;
@@ -285,6 +291,7 @@ contract DeployParent is Script {
         deploy.parentVault.grantRole(Roles.EMERGENCY_DRAINER_ROLE, networkConfig.roles.emergencyDrainer);
         deploy.parentVault.grantRole(Roles.LINK_OPERATOR_ROLE, networkConfig.roles.linkOperator);
         deploy.parentVault.grantRole(Roles.DONATE_OPERATOR_ROLE, networkConfig.roles.donateOperator);
+        deploy.parentVault.grantRole(Roles.REWARDS_OPERATOR_ROLE, networkConfig.roles.rewardsOperator);
 
         deploy.parentVault.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
         deploy.adapterRegistry.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);

@@ -10,6 +10,7 @@ import {MockAaveV3Pool} from "../test/mocks/MockAaveV3Pool.sol";
 import {MockAaveV3PoolAddressesProvider} from "../test/mocks/MockAaveV3PoolAddressesProvider.sol";
 import {MockAaveV4Spoke} from "../test/mocks/MockAaveV4Spoke.sol";
 import {MockComet} from "../test/mocks/MockComet.sol";
+import {MockCometRewards} from "../test/mocks/MockCometRewards.sol";
 
 contract HelperConfig is Script {
     /*//////////////////////////////////////////////////////////////
@@ -46,6 +47,7 @@ contract HelperConfig is Script {
         address emergencyDrainer;
         address linkOperator;
         address donateOperator;
+        address rewardsOperator;
     }
 
     struct TokensConfig {
@@ -57,6 +59,7 @@ contract HelperConfig is Script {
         address aaveV3PoolAddressesProvider;
         address aaveV4Spoke;
         address compoundV3Comet;
+        address compoundV3CometRewards;
     }
 
     struct CCIPConfig {
@@ -111,7 +114,8 @@ contract HelperConfig is Script {
                 policyEngineManager: BURNER_EOA,
                 emergencyDrainer: BURNER_EOA,
                 linkOperator: BURNER_EOA,
-                donateOperator: BURNER_EOA
+                donateOperator: BURNER_EOA,
+                rewardsOperator: BURNER_EOA
             }),
             tokens: TokensConfig({
                 link: 0xf97f4df75117a78c1A5a0DBb814Af92458539FB4, usdc: 0xaf88d065e77c8cC2239327C5EDb3A432268e5831
@@ -120,7 +124,8 @@ contract HelperConfig is Script {
                 aaveV3PoolAddressesProvider: 0xa97684ead0e402dC232d5A977953DF7ECBaB3CDb,
                 // @review-deploy update when aave v4 is deployed
                 aaveV4Spoke: address(0),
-                compoundV3Comet: 0x9c4ec768c28520B50860ea7a15bd7213a9fF58bf
+                compoundV3Comet: 0x9c4ec768c28520B50860ea7a15bd7213a9fF58bf,
+                compoundV3CometRewards: 0x88730d254A2f7e6AC8388c3198aFd694bA9f7fae
             }),
             ccip: CCIPConfig({
                 router: 0x141fa059441E0ca23ce184B6A78bafD2A517DdE8,
@@ -149,7 +154,8 @@ contract HelperConfig is Script {
                 policyEngineManager: BURNER_EOA,
                 emergencyDrainer: BURNER_EOA,
                 linkOperator: BURNER_EOA,
-                donateOperator: BURNER_EOA
+                donateOperator: BURNER_EOA,
+                rewardsOperator: BURNER_EOA
             }),
             tokens: TokensConfig({
                 link: 0x88Fb150BDc53A65fe94Dea0c9BA0a6dAf8C6e196, usdc: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
@@ -158,7 +164,8 @@ contract HelperConfig is Script {
                 aaveV3PoolAddressesProvider: 0xe20fCBdBfFC4Dd138cE8b2E6FBb6CB49777ad64D,
                 // @review-deploy update when aave v4 is deployed
                 aaveV4Spoke: address(0),
-                compoundV3Comet: 0xb125E6687d4313864e53df431d5425969c15Eb2F
+                compoundV3Comet: 0xb125E6687d4313864e53df431d5425969c15Eb2F,
+                compoundV3CometRewards: 0x123964802e6ABabBE1Bc9547D72Ef1B69B00A6b1
             }),
             ccip: CCIPConfig({
                 router: 0x881e3A65B4d4a04dD529061dd0071cf975F58bCD,
@@ -187,7 +194,8 @@ contract HelperConfig is Script {
                 policyEngineManager: BURNER_EOA,
                 emergencyDrainer: BURNER_EOA,
                 linkOperator: BURNER_EOA,
-                donateOperator: BURNER_EOA
+                donateOperator: BURNER_EOA,
+                rewardsOperator: BURNER_EOA
             }),
             tokens: TokensConfig({
                 link: 0x514910771AF9Ca656af840dff83E8264EcF986CA, usdc: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
@@ -195,7 +203,8 @@ contract HelperConfig is Script {
             protocols: ProtocolsConfig({
                 aaveV3PoolAddressesProvider: 0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e,
                 aaveV4Spoke: 0x94e7A5dCbE816e498b89aB752661904E2F56c485,
-                compoundV3Comet: 0xc3d688B66703497DAA19211EEdff47f25384cdc3
+                compoundV3Comet: 0xc3d688B66703497DAA19211EEdff47f25384cdc3,
+                compoundV3CometRewards: 0x1B0e765F6224C21223AeA2af16c1C46E38885a40
             }),
             ccip: CCIPConfig({
                 router: 0x80226fc0Ee2b096224EeAc085Bb9a8cba1146f7D,
@@ -224,7 +233,8 @@ contract HelperConfig is Script {
                 policyEngineManager: BURNER_EOA,
                 emergencyDrainer: BURNER_EOA,
                 linkOperator: BURNER_EOA,
-                donateOperator: BURNER_EOA
+                donateOperator: BURNER_EOA,
+                rewardsOperator: BURNER_EOA
             }),
             tokens: TokensConfig({
                 link: 0x5947BB275c521040051D82396192181b413227A3, usdc: 0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E
@@ -232,7 +242,8 @@ contract HelperConfig is Script {
             protocols: ProtocolsConfig({
                 aaveV3PoolAddressesProvider: 0xa97684ead0e402dC232d5A977953DF7ECBaB3CDb,
                 aaveV4Spoke: address(0),
-                compoundV3Comet: address(0)
+                compoundV3Comet: address(0),
+                compoundV3CometRewards: address(0)
             }),
             ccip: CCIPConfig({
                 router: 0x27F39D0af3303703750D4001fCc1844c6491563c,
@@ -261,7 +272,8 @@ contract HelperConfig is Script {
                 policyEngineManager: BURNER_EOA,
                 emergencyDrainer: BURNER_EOA,
                 linkOperator: BURNER_EOA,
-                donateOperator: BURNER_EOA
+                donateOperator: BURNER_EOA,
+                rewardsOperator: BURNER_EOA
             }),
             tokens: TokensConfig({
                 link: 0x350a791Bfc2C21F9Ed5d10980Dad2e2638ffa7f6, usdc: 0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85
@@ -269,7 +281,8 @@ contract HelperConfig is Script {
             protocols: ProtocolsConfig({
                 aaveV3PoolAddressesProvider: 0xa97684ead0e402dC232d5A977953DF7ECBaB3CDb,
                 aaveV4Spoke: address(0),
-                compoundV3Comet: 0x2e44e174f7D53F0212823acC11C01A11d58c5bCB
+                compoundV3Comet: 0x2e44e174f7D53F0212823acC11C01A11d58c5bCB,
+                compoundV3CometRewards: 0x443EA0340cb75a160F31A440722dec7b5bc3C2E9
             }),
             ccip: CCIPConfig({
                 router: 0x3206695CaE29952f4b0c22a169725a865bc8Ce0f,
@@ -315,7 +328,8 @@ contract HelperConfig is Script {
             policyEngineManager: makeAddr("policyEngineManager"),
             emergencyDrainer: makeAddr("emergencyDrainer"),
             linkOperator: makeAddr("linkOperator"),
-            donateOperator: makeAddr("donateOperator")
+            donateOperator: makeAddr("donateOperator"),
+            rewardsOperator: makeAddr("rewardsOperator")
         });
     }
 
@@ -329,7 +343,8 @@ contract HelperConfig is Script {
         return ProtocolsConfig({
             aaveV3PoolAddressesProvider: address(new MockAaveV3PoolAddressesProvider(aaveV3Pool)),
             aaveV4Spoke: address(new MockAaveV4Spoke(usdc)),
-            compoundV3Comet: address(new MockComet())
+            compoundV3Comet: address(new MockComet()),
+            compoundV3CometRewards: address(new MockCometRewards())
         });
     }
 

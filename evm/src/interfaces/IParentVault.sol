@@ -132,8 +132,8 @@ interface IParentVault is IBaseVault {
     /// @notice Emitted when a withdraw is cancelled
     /// @param epochNonce The epoch nonce of the withdraw
     /// @param withdrawer The address of the withdrawer
-    /// @param amount The amount of USDC that was cancelled
-    event WithdrawCancelled(uint256 indexed epochNonce, address indexed withdrawer, uint256 indexed amount);
+    /// @param shareBurnAmount The amount of shares that were intended to burn to redeem the underlying asset
+    event WithdrawCancelled(uint256 indexed epochNonce, address indexed withdrawer, uint256 indexed shareBurnAmount);
     /// @notice Emitted when the initial active protocol adapter is set
     /// @param protocolId The protocol ID of the initial active strategy
     /// @param adapter The registered adapter for the protocol ID

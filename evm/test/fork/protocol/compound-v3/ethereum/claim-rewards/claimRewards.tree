@@ -1,0 +1,7 @@
+Ethereum Compound V3 Fork ClaimRewards
+
+GIVEN the Ethereum child Compound v3 adapter
+  WHEN a caller without REWARDS_OPERATOR_ROLE on the vault calls claimRewards
+    THEN it reverts
+  WHEN a caller with REWARDS_OPERATOR_ROLE on the vault calls claimRewards
+    THEN it emits RewardsClaimed and succeeds

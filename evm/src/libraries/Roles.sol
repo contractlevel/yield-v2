@@ -35,4 +35,6 @@ library Roles {
     bytes32 internal constant MINTER_ROLE = keccak256("MINTER_ROLE");
     /// @notice Burner role for burning Yieldcoin shares. Granted to ParentVault through ACE RoleBasedAccessControlPolicy.
     bytes32 internal constant BURNER_ROLE = keccak256("BURNER_ROLE");
+    /// @notice Rewards operator role for claiming Compound V3 protocol rewards from the CompoundV3Adapter
+    bytes32 internal constant REWARDS_OPERATOR_ROLE = keccak256("REWARDS_OPERATOR_ROLE");
 }

@@ -43,6 +43,7 @@ abstract contract BaseDeploymentTest is BaseTest {
         address aaveV3PoolAddressesProvider;
         address aaveV4Spoke;
         address compoundV3Comet;
+        address compoundV3CometRewards;
         AdapterRegistry adapterRegistry;
         YieldcoinShare shareImpl;
         YieldcoinShare share;
@@ -67,6 +68,7 @@ abstract contract BaseDeploymentTest is BaseTest {
         address aaveV3PoolAddressesProvider;
         address aaveV4Spoke;
         address compoundV3Comet;
+        address compoundV3CometRewards;
         AdapterRegistry adapterRegistry;
         ChildVault vault;
         AaveV3Adapter aaveV3Adapter;
@@ -117,6 +119,7 @@ abstract contract BaseDeploymentTest is BaseTest {
             aaveV3PoolAddressesProvider: parentDeployment.aaveV3PoolAddressesProvider,
             aaveV4Spoke: parentDeployment.aaveV4Spoke,
             compoundV3Comet: parentDeployment.compoundV3Comet,
+            compoundV3CometRewards: parentDeployment.compoundV3CometRewards,
             adapterRegistry: parentDeployment.adapterRegistry,
             shareImpl: parentDeployment.yieldcoinImpl,
             share: parentDeployment.yieldcoinProxy,
@@ -147,6 +150,7 @@ abstract contract BaseDeploymentTest is BaseTest {
             aaveV3PoolAddressesProvider: childDeployment.aaveV3PoolAddressesProvider,
             aaveV4Spoke: childDeployment.aaveV4Spoke,
             compoundV3Comet: childDeployment.compoundV3Comet,
+            compoundV3CometRewards: childDeployment.compoundV3CometRewards,
             adapterRegistry: childDeployment.adapterRegistry,
             vault: childDeployment.childVault,
             aaveV3Adapter: childDeployment.aaveV3Adapter,
@@ -216,6 +220,7 @@ abstract contract BaseDeploymentTest is BaseTest {
         AdapterRegistry registry,
         CompoundV3Adapter adapter,
         address configuredComet,
+        address configuredCometRewards,
         address vault,
         address usdc
     ) internal view {
@@ -228,6 +233,7 @@ abstract contract BaseDeploymentTest is BaseTest {
         _assertAdapterRegistered(registry, COMPOUND_V3_PROTOCOL_ID, address(adapter));
         _assertProtocolAdapterConfigured(adapter, vault, usdc);
         assertEq(adapter.getProtocolPool(), configuredComet);
+        assertEq(adapter.getCometRewards(), configuredCometRewards);
     }
 
     function _labelParentIntegrationContracts() internal virtual {

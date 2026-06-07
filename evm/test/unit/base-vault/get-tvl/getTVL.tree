@@ -3,9 +3,7 @@ BaseVault_getTVL
 │   └── it should return 0
 └── when there is an active adapter
     ├── on ParentVault
-    │   └── it should return the adapter TVL
-    │       └── when adapter TVL is zero
-    │           └── it should return the rebalance deposit recovery amount
+    │   └── it should return the adapter TVL plus rebalance deposit recovery
     └── on ChildVault
         └── it should return adapter TVL plus epoch deposit recovery
             └── when adapter TVL is zero

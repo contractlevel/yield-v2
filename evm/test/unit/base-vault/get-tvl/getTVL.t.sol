@@ -34,12 +34,12 @@ abstract contract BaseVault_GetTVLUnitTest is BaseUnitTest {
         assertEq(s_vault.getTVL(), RECOVERY_AMOUNT);
     }
 
-    function test_BaseVault_getTVL_ReturnsAdapterTVL_WhenAdapterTVLAndRebalanceDepositRecoveryExist() external {
+    function test_BaseVault_getTVL_ReturnsAdapterTVLPlusRebalanceDepositRecovery_WhenBothExist() external {
         _setActiveAdapter();
         s_mockProtocolAdapter.setTVL(TVL);
         _setRebalanceDepositRecoveryAmount(RECOVERY_AMOUNT);
 
-        assertEq(s_vault.getTVL(), TVL);
+        assertEq(s_vault.getTVL(), TVL + RECOVERY_AMOUNT);
     }
 
     function _setActiveAdapter() internal virtual;

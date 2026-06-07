@@ -20,6 +20,7 @@ contract ChildVault_DeploymentIntegrationTest is BaseIntegrationTest {
         assertTrue(child.vault.hasRole(Roles.EMERGENCY_DRAINER_ROLE, networkConfig.roles.emergencyDrainer));
         assertTrue(child.vault.hasRole(Roles.LINK_OPERATOR_ROLE, networkConfig.roles.linkOperator));
         assertTrue(child.vault.hasRole(Roles.DONATE_OPERATOR_ROLE, networkConfig.roles.donateOperator));
+        assertTrue(child.vault.hasRole(Roles.REWARDS_OPERATOR_ROLE, networkConfig.roles.rewardsOperator));
         assertFalse(child.vault.hasRole(Roles.DONATE_OPERATOR_ROLE, address(this)));
         assertEq(child.vault.getEmergencyReceiver(), networkConfig.emergencyReceiver);
         assertTrue(child.vault.hasRole(Roles.PAUSER_ROLE, networkConfig.roles.pauser));
@@ -58,7 +59,12 @@ contract ChildVault_DeploymentIntegrationTest is BaseIntegrationTest {
             child.adapterRegistry, child.aaveV4Adapter, child.aaveV4Spoke, address(child.vault), child.usdc
         );
         _assertOptionalCompoundV3Adapter(
-            child.adapterRegistry, child.compoundV3Adapter, child.compoundV3Comet, address(child.vault), child.usdc
+            child.adapterRegistry,
+            child.compoundV3Adapter,
+            child.compoundV3Comet,
+            child.compoundV3CometRewards,
+            address(child.vault),
+            child.usdc
         );
     }
 
@@ -74,7 +80,12 @@ contract ChildVault_DeploymentIntegrationTest is BaseIntegrationTest {
             child.adapterRegistry, child.aaveV4Adapter, child.aaveV4Spoke, address(child.vault), child.usdc
         );
         _assertOptionalCompoundV3Adapter(
-            child.adapterRegistry, child.compoundV3Adapter, child.compoundV3Comet, address(child.vault), child.usdc
+            child.adapterRegistry,
+            child.compoundV3Adapter,
+            child.compoundV3Comet,
+            child.compoundV3CometRewards,
+            address(child.vault),
+            child.usdc
         );
     }
 

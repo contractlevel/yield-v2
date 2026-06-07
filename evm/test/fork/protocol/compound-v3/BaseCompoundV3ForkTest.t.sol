@@ -4,7 +4,9 @@ pragma solidity 0.8.28;
 import {BaseForkTest} from "../../BaseForkTest.t.sol";
 import {CompoundV3Adapter} from "../../../../src/modules/adapters/CompoundV3Adapter.sol";
 import {IProtocolAdapter} from "../../../../src/interfaces/IProtocolAdapter.sol";
+import {Roles} from "../../../../src/libraries/Roles.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 abstract contract BaseCompoundV3ForkTest is BaseForkTest {
     function _assertCompoundV3DepositRevertsWhenCallerIsNotVault(CompoundV3Adapter adapter) internal {
@@ -78,6 +80,31 @@ abstract contract BaseCompoundV3ForkTest is BaseForkTest {
         adapter.deposit(amount);
 
         assertEq(uint256(_assertEmittedBy(keccak256("Deposit(uint256)"), address(adapter)).topics[1]), amount);
+    }
+
+    function _assertCompoundV3ClaimRewardsRevertsWhenCallerIsNotRewardsOperator(CompoundV3Adapter adapter) internal {
+        _changePrank(i_nonOwner);
+
+        vm.expectRevert(CompoundV3Adapter.CompoundV3Adapter__CallerNotRewardsOperator.selector);
+        adapter.claimRewards(i_nonOwner);
+    }
+
+    function _assertCompoundV3ClaimRewardsSucceeds(CompoundV3Adapter adapter, address vault, address deployer)
+        internal
+    {
+        address operator = makeAddr("forkRewardsOperator");
+
+        _changePrank(deployer);
+        IAccessControl(vault).grantRole(Roles.REWARDS_OPERATOR_ROLE, operator);
+
+        vm.recordLogs();
+        _changePrank(operator);
+        adapter.claimRewards(operator);
+
+        assertEq(
+            address(uint160(uint256(_assertEmittedBy(keccak256("RewardsClaimed(address)"), address(adapter)).topics[1]))),
+            operator
+        );
     }
 
     function test_baseCompoundV3ForkTest() public virtual {}

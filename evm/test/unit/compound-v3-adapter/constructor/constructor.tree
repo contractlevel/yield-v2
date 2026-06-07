@@ -1,2 +1,3 @@
 constructor
-  └── it should set the Comet
+  ├── it should set the Comet
+  └── it should set the CometRewards

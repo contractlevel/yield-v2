@@ -34,7 +34,7 @@ contract CompoundV3Adapter_WithdrawUnitTest is BaseCompoundV3AdapterUnitTest {
     function test_CompoundV3Adapter_withdraw_RevertWhen_RebalanceWithdrawAmountIsLessThanTVL() external {
         UnderpayingComet underpayingComet = new UnderpayingComet(TVL, INSUFFICIENT_AMOUNT);
         CompoundV3Adapter adapter =
-            new CompoundV3Adapter(address(s_parentVault), address(s_mockUsdc), address(underpayingComet));
+            new CompoundV3Adapter(address(s_parentVault), address(s_mockUsdc), address(underpayingComet), address(s_mockCometRewards));
         deal(address(s_mockUsdc), address(underpayingComet), INSUFFICIENT_AMOUNT);
 
         vm.expectRevert(CompoundV3Adapter.CompoundV3Adapter__IncorrectWithdrawAmount.selector);

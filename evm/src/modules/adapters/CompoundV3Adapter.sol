@@ -3,8 +3,11 @@ pragma solidity 0.8.28;
 
 import {ProtocolAdapter} from "../ProtocolAdapter.sol";
 import {IComet} from "../../interfaces/IComet.sol";
+import {ICometRewards} from "../../interfaces/ICometRewards.sol";
+import {Roles} from "../../libraries/Roles.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 /// @title Yieldcoin v2 Compound v3 Adapter
 /// @author @contractlevel
@@ -22,12 +25,24 @@ contract CompoundV3Adapter is ProtocolAdapter {
     error CompoundV3Adapter__IncorrectWithdrawAmount();
     /// @dev Thrown when the `amount` for an epoch withdraw exceeds the TVL
     error CompoundV3Adapter__WithdrawAmountExceedsTotalValue();
+    /// @dev Thrown when zero address passed as param
+    error CompoundV3Adapter__NoZeroAddress();
+    /// @dev Thrown when the caller does not have REWARDS_OPERATOR_ROLE on the vault
+    error CompoundV3Adapter__CallerNotRewardsOperator();
+
+    /*//////////////////////////////////////////////////////////////
+                                 EVENTS
+    //////////////////////////////////////////////////////////////*/
+    /// @dev Emitted when rewards are claimed
+    event RewardsClaimed(address indexed to);
 
     /*//////////////////////////////////////////////////////////////
                                VARIABLES
     //////////////////////////////////////////////////////////////*/
     /// @notice The address of the Compound V3 pool
     address internal immutable i_comet;
+    /// @notice The address of the Compound V3 rewards contract
+    address internal immutable i_cometRewards;
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
@@ -35,9 +50,11 @@ contract CompoundV3Adapter is ProtocolAdapter {
     /// @param vault The address of the Yieldcoin v2 Vault
     /// @param usdc The address of the USDC token
     /// @param comet The address of the Compound V3 pool
+    /// @param cometRewards The address of the Compound V3 rewards contract
     //slither-disable-next-line missing-zero-check
-    constructor(address vault, address usdc, address comet) ProtocolAdapter(vault, usdc) {
+    constructor(address vault, address usdc, address comet, address cometRewards) ProtocolAdapter(vault, usdc) {
         i_comet = comet;
+        i_cometRewards = cometRewards;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -95,6 +112,19 @@ contract CompoundV3Adapter is ProtocolAdapter {
         IERC20(i_usdc).safeTransfer(i_vault, actualWithdrawnAmount);
     }
 
+    /// @notice Claims any rewards from the Comet Rewards contract
+    /// @param to The address to receive the claimed rewards
+    /// @dev Precondition: caller must have REWARDS_OPERATOR_ROLE on the vault
+    /// @dev Precondition: to must not be zero address
+    function claimRewards(address to) external {
+        if (!IAccessControl(i_vault).hasRole(Roles.REWARDS_OPERATOR_ROLE, msg.sender)) {
+            revert CompoundV3Adapter__CallerNotRewardsOperator();
+        }
+        if (to == address(0)) revert CompoundV3Adapter__NoZeroAddress();
+        emit RewardsClaimed(to);
+        ICometRewards(i_cometRewards).claimTo(i_comet, address(this), to, true);
+    }
+
     /*//////////////////////////////////////////////////////////////
                                 INTERNAL
     //////////////////////////////////////////////////////////////*/
@@ -118,5 +148,11 @@ contract CompoundV3Adapter is ProtocolAdapter {
     /// @return comet The Compound V3 pool address
     function getProtocolPool() external view returns (address comet) {
         return i_comet;
+    }
+
+    /// @notice Gets the Compound V3 rewards contract address
+    /// @return cometRewards The Compound V3 rewards contract address
+    function getCometRewards() external view returns (address cometRewards) {
+        return i_cometRewards;
     }
 }

@@ -1,0 +1,8 @@
+claimRewards
+  ├── when the caller does not have REWARDS_OPERATOR_ROLE on the vault
+  │   └── it should revert
+  ├── when the to address is zero
+  │   └── it should revert
+  └── when the caller has REWARDS_OPERATOR_ROLE on the vault
+      ├── it should emit a RewardsClaimed event
+      └── it should call claimTo on the CometRewards contract

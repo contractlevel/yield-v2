@@ -54,6 +54,7 @@ abstract contract BaseForkDeploymentTest is BaseForkTest {
             parent.adapterRegistry,
             parent.compoundV3Adapter,
             arbitrumConfig.protocols.compoundV3Comet,
+            arbitrumConfig.protocols.compoundV3CometRewards,
             address(parent.vault),
             parent.usdc
         );
@@ -114,6 +115,7 @@ abstract contract BaseForkDeploymentTest is BaseForkTest {
             forkChild.adapterRegistry,
             forkChild.compoundV3Adapter,
             config.protocols.compoundV3Comet,
+            config.protocols.compoundV3CometRewards,
             address(forkChild.vault),
             forkChild.usdc
         );

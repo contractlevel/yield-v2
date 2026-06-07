@@ -22,6 +22,7 @@ contract DeployChild is Script {
         address aaveV3PoolAddressesProvider;
         address aaveV4Spoke;
         address compoundV3Comet;
+        address compoundV3CometRewards;
         AdapterRegistry adapterRegistry;
         ChildVault childVault;
         AaveV3Adapter aaveV3Adapter;
@@ -52,6 +53,7 @@ contract DeployChild is Script {
         deploy.aaveV3PoolAddressesProvider = networkConfig.protocols.aaveV3PoolAddressesProvider;
         deploy.aaveV4Spoke = networkConfig.protocols.aaveV4Spoke;
         deploy.compoundV3Comet = networkConfig.protocols.compoundV3Comet;
+        deploy.compoundV3CometRewards = networkConfig.protocols.compoundV3CometRewards;
 
         /// @dev Deploy the AdapterRegistry
         deploy.adapterRegistry = new AdapterRegistry(
@@ -97,7 +99,10 @@ contract DeployChild is Script {
         bytes32 compoundV3ProtocolId = keccak256("compound-v3");
         if (networkConfig.protocols.compoundV3Comet != address(0)) {
             deploy.compoundV3Adapter = new CompoundV3Adapter(
-                address(deploy.childVault), networkConfig.tokens.usdc, networkConfig.protocols.compoundV3Comet
+                address(deploy.childVault),
+                networkConfig.tokens.usdc,
+                networkConfig.protocols.compoundV3Comet,
+                networkConfig.protocols.compoundV3CometRewards
             );
             deploy.adapterRegistry.setAdapter(compoundV3ProtocolId, address(deploy.compoundV3Adapter));
         }
@@ -122,6 +127,7 @@ contract DeployChild is Script {
         deploy.childVault.grantRole(Roles.EMERGENCY_DRAINER_ROLE, networkConfig.roles.emergencyDrainer);
         deploy.childVault.grantRole(Roles.LINK_OPERATOR_ROLE, networkConfig.roles.linkOperator);
         deploy.childVault.grantRole(Roles.DONATE_OPERATOR_ROLE, networkConfig.roles.donateOperator);
+        deploy.childVault.grantRole(Roles.REWARDS_OPERATOR_ROLE, networkConfig.roles.rewardsOperator);
 
         deploy.childVault.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
         deploy.adapterRegistry.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
