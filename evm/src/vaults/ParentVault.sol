@@ -11,7 +11,9 @@ import {IProtocolAdapter} from "../interfaces/IProtocolAdapter.sol";
 
 import {Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
 import {CCIPReceiver, IAny2EVMMessageReceiver} from "@chainlink/contracts-ccip/contracts/applications/CCIPReceiver.sol";
-import {PolicyProtected, IPolicyProtected, Ownable} from "@chainlink/policy-management/core/PolicyProtected.sol";
+import {PolicyProtected, Ownable} from "@chainlink/policy-management/core/PolicyProtected.sol";
+import {PolicyProtectedBase} from "@chainlink/policy-management/core/PolicyProtectedBase.sol";
+import {IPolicyProtected} from "@chainlink/policy-management/interfaces/IPolicyProtected.sol";
 
 import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {
@@ -832,7 +834,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         _attachPolicyEngine(policyEngine);
     }
 
-    function supportsInterface(bytes4 interfaceId) public pure override(BaseVault, PolicyProtected) returns (bool) {
+    function supportsInterface(bytes4 interfaceId) public pure override(BaseVault, PolicyProtectedBase) returns (bool) {
         return interfaceId == type(IERC165).interfaceId
             || interfaceId == type(IAccessControlDefaultAdminRules).interfaceId
             || interfaceId == type(IAny2EVMMessageReceiver).interfaceId

@@ -38,4 +38,5 @@ contract MockPolicyEngine is IPolicyEngine {
     }
     function setDefaultPolicyAllow(bool) external override {}
     function setTargetDefaultPolicyAllow(address, bool) external override {}
+    function upgradePolicy(address, address, bytes calldata) external override {}
 }
