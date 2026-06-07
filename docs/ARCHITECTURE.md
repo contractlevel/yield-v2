@@ -20,9 +20,9 @@ See `ACCESS_CONTROL_MATRIX.md` for the roles that gate each privileged entry poi
 ## 3. How they connect
 
 ```
-        DefiLlama relay (off-chain yield data)
-                          │
-                          ▼
+        DefiLlama relay (off-chain yield data)             cron schedule
+                          │                                      │
+                          ▼                                      ▼ triggers
                 ┌──────────────────────────────────────────────────────────────┐
                 │     Chainlink CRE workflow                                   │
                 │  (off-chain orchestrator)                                    │
