@@ -23,18 +23,18 @@ See `ACCESS_CONTROL_MATRIX.md` for the roles that gate each privileged entry poi
         DefiLlama relay (off-chain yield data)
                           │
                           ▼
-                ┌────────────────────────────────┐
-                │     Chainlink CRE workflow     │
-                │  (off-chain orchestrator)      │
-                └──────────────┬───────────────┬────────────┘
-                               │ triggers      │ triggers
-                               ▼               ▼
-                     ┌────────────────────┐   ┌────────────────────┐
-                     │   WorkflowRouter   │   │   WorkflowRouter   │
-                     │    (parent chain)  │   │    (child chain)   │
-                     └──────────┬─────────┘   └──────────┬─────────┘
-                                │  ▲                     │  ▲
-                                ▼  │                     ▼  │
+                ┌──────────────────────────────────────────────────────────────┐
+                │     Chainlink CRE workflow                                   │
+                │  (off-chain orchestrator)                                    │
+                └─┬───────────────────────────────────────────────────────┬────┘
+                  │ calls          ▲ triggers              ▲              │ calls
+                  ▼                │                       │              ▼
+                 ┌───────────────┐ │                       │   ┌───────────────┐
+                 │WorkflowRouter │ │                       │   │WorkflowRouter │
+                 │(parent chain) │ │               triggers│   │(child chain)  │
+                 └─────────┬─────┘ │                       │   └───┬───────────┘
+                           │       │                       │       │
+                           ▼       │                       │       ▼
    User ──(ACE-gated)──▶  ParentVault ◀═CCIP═══════CCIP═▶ ChildVault ──▶ Remote adapter
                                 │                                              │
                                 ▼                                              ▼
