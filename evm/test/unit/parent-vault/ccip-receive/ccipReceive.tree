@@ -14,6 +14,8 @@ ParentVault_ccipReceive
 ├── when tx type is invalid
 │   └── it should revert with BaseVault__InvalidTxType
 ├── when message is a withdraw
+│   ├── when the decoded epoch nonce does not match the previous epoch nonce
+│   │   └── it should revert with ParentVault__InvalidEpochNonce
 │   ├── when the epoch is not executing
 │   │   └── it should revert with ParentVault__EpochNotExecuting
 │   ├── when the received USDC amount is less than the epoch withdraw obligation
@@ -29,6 +31,12 @@ ParentVault_ccipReceive
 │       ├── it should update the withdraw claim amount and remaining withdraw claim amount
 │       └── it should emit EpochClaimable
 └── when message is a rebalance
+    ├── when there is no rebalance in progress
+    │   └── it should revert with ParentVault__NoRebalanceInProgress
+    ├── when the decoded rebalance nonce does not match
+    │   └── it should revert with ParentVault__InvalidRebalanceNonce
+    ├── when the decoded protocol id does not match the pending protocol id
+    │   └── it should revert with ParentVault__InvalidPendingProtocolId
     ├── when the target protocol adapter is not registered
     │   └── it should revert with BaseVault__NoAdapterRegistered
     ├── when the target adapter deposit succeeds

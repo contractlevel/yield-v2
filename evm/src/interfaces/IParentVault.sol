@@ -46,6 +46,15 @@ interface IParentVault is IBaseVault {
     error ParentVault__RebalanceInProgress();
     /// @dev Thrown when no rebalance is in progress
     error ParentVault__NoRebalanceInProgress();
+    /// @dev Thrown when the decoded epoch nonce does not match s_epochNonce - 1
+    /// @param epochNonce The decoded epoch nonce from the CCIP message
+    error ParentVault__InvalidEpochNonce(uint256 epochNonce);
+    /// @dev Thrown when the decoded rebalance nonce does not match s_rebalance.nonce
+    /// @param rebalanceNonce The decoded rebalance nonce from the CCIP message
+    error ParentVault__InvalidRebalanceNonce(uint256 rebalanceNonce);
+    /// @dev Thrown when the decoded protocol ID does not match s_rebalance.pendingStrategy.protocolId
+    /// @param protocolId The decoded protocol ID from the CCIP message
+    error ParentVault__InvalidPendingProtocolId(bytes32 protocolId);
     /// @dev Thrown when initiateRebalance is called before any epoch has completed
     error ParentVault__NoCompletedEpoch();
     /// @dev Thrown when the new strategy matches the active strategy

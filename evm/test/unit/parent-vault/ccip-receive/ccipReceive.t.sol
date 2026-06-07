@@ -25,6 +25,7 @@ contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
 
     function setUp() public {
         _setParentCrosschainVault(CHILD_CHAIN_SELECTOR, address(s_childVault));
+        _setParentEpochNonce(EPOCH_NONCE + 1);
         deal(address(s_mockUsdc), address(s_parentVault), BRIDGED_AMOUNT);
         _changePrank(address(s_mockCcipRouter));
     }
@@ -95,6 +96,13 @@ contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
     /*//////////////////////////////////////////////////////////////
                              WITHDRAW PATH
     //////////////////////////////////////////////////////////////*/
+    function test_ParentVault_ccipReceive_Withdraw_RevertWhen_EpochNonceDoesNotMatchPrevious() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(IParentVault.ParentVault__InvalidEpochNonce.selector, EPOCH_NONCE + 1)
+        );
+        s_parentVault.ccipReceive(_withdrawMessage(EPOCH_NONCE + 1, EXPECTED_WITHDRAW_USDC));
+    }
+
     function test_ParentVault_ccipReceive_Withdraw_RevertWhen_EpochIsNotExecuting() public {
         _setParentEpochWithdrawAccounting(EPOCH_NONCE);
 
@@ -210,8 +218,32 @@ contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
     /*//////////////////////////////////////////////////////////////
                              REBALANCE PATH
     //////////////////////////////////////////////////////////////*/
+    function test_ParentVault_ccipReceive_Rebalance_RevertWhen_NoRebalanceInProgress() public {
+        // s_rebalance.state == NONE by default
+        vm.expectRevert(IParentVault.ParentVault__NoRebalanceInProgress.selector);
+        s_parentVault.ccipReceive(_rebalanceMessage(REBALANCE_NONCE, AAVE_V3_PROTOCOL_ID, BRIDGED_AMOUNT));
+    }
+
+    function test_ParentVault_ccipReceive_Rebalance_RevertWhen_RebalanceNonceDoesNotMatch() public {
+        _setParentPendingRebalance(AAVE_V3_PROTOCOL_ID, PARENT_CHAIN_SELECTOR);
+        uint256 wrongNonce = REBALANCE_NONCE + 1;
+        vm.expectRevert(
+            abi.encodeWithSelector(IParentVault.ParentVault__InvalidRebalanceNonce.selector, wrongNonce)
+        );
+        s_parentVault.ccipReceive(_rebalanceMessage(wrongNonce, AAVE_V3_PROTOCOL_ID, BRIDGED_AMOUNT));
+    }
+
+    function test_ParentVault_ccipReceive_Rebalance_RevertWhen_PendingProtocolIdDoesNotMatch() public {
+        _setParentPendingRebalance(AAVE_V4_PROTOCOL_ID, PARENT_CHAIN_SELECTOR);
+        vm.expectRevert(
+            abi.encodeWithSelector(IParentVault.ParentVault__InvalidPendingProtocolId.selector, AAVE_V3_PROTOCOL_ID)
+        );
+        s_parentVault.ccipReceive(_rebalanceMessage(REBALANCE_NONCE, AAVE_V3_PROTOCOL_ID, BRIDGED_AMOUNT));
+    }
+
     function test_ParentVault_ccipReceive_Rebalance_RevertWhen_TargetProtocolAdapterIsNotRegistered() public {
         bytes32 unknownProtocolId = keccak256("unknown-protocol");
+        _setParentPendingRebalance(unknownProtocolId, CHILD_CHAIN_SELECTOR);
 
         vm.expectRevert(abi.encodeWithSelector(IBaseVault.BaseVault__NoAdapterRegistered.selector, unknownProtocolId));
         s_parentVault.ccipReceive(_rebalanceMessage(REBALANCE_NONCE, unknownProtocolId, BRIDGED_AMOUNT));

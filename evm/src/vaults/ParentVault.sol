@@ -329,20 +329,25 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @param message Any2EVMMessage.
     /// @dev Precondition: the message must be sent by an allowed sender (a crosschain vault mapped to an allowed source chain selector)
     /// @dev Precondition: the received token must be i_usdc
+    /// @dev Precondition: there must not be an existent recovery mode
+    /// @dev Precondition: if epoch tx: the decoded nonce must match the previous
+    /// @dev Precondition: if rebalance tx: the state must be REBALANCING
+    /// @dev Precondition: if rebalance tx: the decoded nonce must match the current
+    /// @dev Precondition: if rebalance tx: the decoded protocolId must match the pending protocolId
     function _ccipReceive(Client.Any2EVMMessage memory message)
         internal
         override
         nonReentrant
         onlyAllowedSender(abi.decode(message.sender, (address)), message.sourceChainSelector)
     {
-        // @review
-        // _requireNoRecovery();
+        _requireNoRecovery();
         uint256 receivedUsdcAmount = _validateReceivedTokenAndGetAmount(message);
 
         /// @dev data decodes to a uint256 epochNonce for epoch net withdraws and a (uint256 rebalanceNonce, bytes32 protocolId) for rebalances
         (Types.CcipTx ccipTxType, bytes memory data) = abi.decode(message.data, (Types.CcipTx, bytes));
         if (ccipTxType == Types.CcipTx.EPOCH_NET_WITHDRAW) {
             uint256 epochNonce = abi.decode(data, (uint256));
+            if (epochNonce != s_epochNonce - 1) revert ParentVault__InvalidEpochNonce(epochNonce);
             Types.Epoch storage epoch = s_epochs[epochNonce];
 
             /// @dev calculate the expected withdraw amount bridged back to the parent for the epoch
@@ -358,12 +363,11 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         }
         /// @dev see BaseVault::_handleCCIPRebalance
         else if (ccipTxType == Types.CcipTx.REBALANCE) {
-            // @review
-            // Types.Rebalance rebalance = s_rebalance;
-            // if (rebalance.state != Types.RebalanceState.REBALANCING) revert
+            Types.Rebalance memory rebalance = s_rebalance;
+            if (rebalance.state != Types.RebalanceState.REBALANCING) revert ParentVault__NoRebalanceInProgress();
             (uint256 rebalanceNonce, bytes32 protocolId) = abi.decode(data, (uint256, bytes32));
-            // if (rebalance.nonce != rebalanceNonce) revert
-            // if (rebalance.pendingStrategy.protocolId != protocolId) revert
+            if (rebalance.nonce != rebalanceNonce) revert ParentVault__InvalidRebalanceNonce(rebalanceNonce);
+            if (rebalance.pendingStrategy.protocolId != protocolId) revert ParentVault__InvalidPendingProtocolId(protocolId);
             bool success = _handleCCIPRebalance(rebalanceNonce, protocolId, receivedUsdcAmount);
             if (success) _finalizeRebalance();
         } else {
@@ -843,7 +847,6 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     function _getTVL() internal view override returns (uint256 tvl) {
         address activeAdapter = s_activeProtocolAdapter;
         if (activeAdapter == address(0)) return 0;
-        tvl = IProtocolAdapter(activeAdapter).getTVL();
-        if (tvl == 0) tvl = s_rebalanceDepositRecovery.amount;
+        tvl = IProtocolAdapter(activeAdapter).getTVL() + s_rebalanceDepositRecovery.amount;
     }
 }

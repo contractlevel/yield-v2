@@ -69,6 +69,15 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
         s_childVault.ccipReceive(_depositMessage(EPOCH_NONCE, 0));
     }
 
+    function test_ChildVault_ccipReceive_RevertWhen_RecoveryAlreadyPending() public {
+        _setChildActiveAdapter(address(s_mockProtocolAdapter));
+        s_mockProtocolAdapter.setDepositReverts(true);
+        s_childVault.ccipReceive(_depositMessage(EPOCH_NONCE));
+
+        vm.expectRevert(IBaseVault.BaseVault__RecoveryAlreadyPending.selector);
+        s_childVault.ccipReceive(_rebalanceMessage(REBALANCE_NONCE, AAVE_V3_PROTOCOL_ID));
+    }
+
     function test_ChildVault_ccipReceive_RevertWhen_TxTypeIsInvalid() public {
         Client.Any2EVMMessage memory message = _message(
             PARENT_CHAIN_SELECTOR,

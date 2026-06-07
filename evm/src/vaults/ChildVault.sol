@@ -56,14 +56,14 @@ contract ChildVault is BaseVault, IChildVault {
     /// @param message Any2EVMMessage.
     /// @dev Precondition: the message must be sent by an allowed sender (a crosschain vault mapped to an allowed source chain selector)
     /// @dev Precondition: the received token must be i_usdc
+    /// @dev Precondition: there must not be an existent recovery mode
     function _ccipReceive(Client.Any2EVMMessage memory message)
         internal
         override
         nonReentrant
         onlyAllowedSender(abi.decode(message.sender, (address)), message.sourceChainSelector)
     {
-        // @review
-        // _requireNoRecovery();
+        _requireNoRecovery();
         uint256 receivedUsdcAmount = _validateReceivedTokenAndGetAmount(message);
 
         /// @dev data decodes to a uint256 epochNonce for epoch net deposits/withdraws and a (uint256 rebalanceNonce, bytes32 protocolId) for rebalances
@@ -436,7 +436,6 @@ contract ChildVault is BaseVault, IChildVault {
     function _getTVL() internal view override returns (uint256 tvl) {
         address activeAdapter = s_activeProtocolAdapter;
         if (activeAdapter == address(0)) return 0;
-        tvl = IProtocolAdapter(activeAdapter).getTVL() + s_epochDepositRecovery.amount;
-        if (tvl == 0) tvl = s_rebalanceDepositRecovery.amount;
+        tvl = IProtocolAdapter(activeAdapter).getTVL() + s_epochDepositRecovery.amount + s_rebalanceDepositRecovery.amount;
     }
 }

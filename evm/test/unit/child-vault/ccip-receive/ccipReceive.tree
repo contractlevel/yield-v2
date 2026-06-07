@@ -11,6 +11,8 @@ ChildVault_ccipReceive
 │   └── it should revert with BaseVault__InvalidTokenAmountsLength
 ├── when received amount is zero
 │   └── it should revert with BaseVault__NoZeroAmount
+├── when there is a recovery already pending
+│   └── it should revert with BaseVault__RecoveryAlreadyPending
 ├── when tx type is invalid
 │   └── it should revert with BaseVault__InvalidTxType
 ├── when message is a deposit
