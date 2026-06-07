@@ -33,8 +33,8 @@ See `ACCESS_CONTROL_MATRIX.md` for the roles that gate each privileged entry poi
                      │   WorkflowRouter   │   │   WorkflowRouter   │
                      │    (parent chain)  │   │    (child chain)   │
                      └──────────┬─────────┘   └──────────┬─────────┘
-                                │                        │
-                                ▼                        ▼
+                                │  ▲                     │  ▲
+                                ▼  │                     ▼  │
    User ──(ACE-gated)──▶  ParentVault ◀═CCIP═══════CCIP═▶ ChildVault ──▶ Remote adapter
                                 │                                              │
                                 ▼                                              ▼
@@ -46,7 +46,7 @@ See `ACCESS_CONTROL_MATRIX.md` for the roles that gate each privileged entry poi
 
 - Users only touch `ParentVault`.
 - `ParentVault` deploys capital either locally (adapter) or remotely (CCIP → `ChildVault` → adapter).
-- The CRE workflow reaches `ParentVault` and `ChildVault` via each chain's `WorkflowRouter` to close epochs and rebalance.
+- The CRE workflow reaches `ParentVault` and `ChildVault` via each chain's `WorkflowRouter` to close epochs and rebalance, and both vaults can trigger CRE workflow runs back through those routers.
 - `YieldcoinShare` transfers consult ACE on every move.
 
 ## 4. Lifecycle
