@@ -6,7 +6,7 @@ Yieldcoin v2 is a multichain yield vault. Users interact only with `ParentVault`
 
 ## 2. Components
 
-- **ParentVault** — single user-facing entry point. Holds the underlying asset (USDC in the initial deployment) only transiently (between deposit and epoch close, or between epoch close and user claim/withdrawal); otherwise capital is deployed into strategies via adapters. Tracks epochs and share accounting. ACE-gated on user functions.
+- **ParentVault** — single user-facing entry point. Holds the underlying asset (USDC in the initial deployment) only transiently (between deposit and epoch close, or between epoch close and user claim/withdrawal); otherwise capital is deployed into strategies via adapters. Tracks epochs, rebalances and share accounting. ACE-gated on user functions.
 - **ChildVault** — one per remote chain. Receives funds from `ParentVault` via CCIP and routes to local adapters.
 - **Strategy adapters** — thin wrappers over external lending protocols (e.g. Aave). One per protocol per chain.
 - **YieldcoinShare** — ERC-3643 compliance token. Transfers and mints/burns are checked against ACE.
