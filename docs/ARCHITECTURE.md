@@ -26,28 +26,27 @@ See `ACCESS_CONTROL_MATRIX.md` for the roles that gate each privileged entry poi
                 ┌────────────────────────────────┐
                 │     Chainlink CRE workflow     │
                 │  (off-chain orchestrator)      │
-                └──────────────┬─────────────────┘
-                               │ triggers
-                               ▼
-                     ┌────────────────────┐
-                     │   WorkflowRouter   │
-                     └───────┬─────┬──────┘
-                             │     │
-                             │     └──────────────▶ ChildVault ──▶ Remote adapter
-                             │                               ▲             │
-                             ▼                               │             ▼
-   User ──(ACE-gated)──▶  ParentVault ──CCIP───────────────┘       Lending protocol
-                               │
-                               ▼
-                         Local adapter
-                               │
-                               ▼
-                         Lending protocol
+                └──────────────┬───────────────┬────────────┘
+                               │ triggers      │ triggers
+                               ▼               ▼
+                     ┌────────────────────┐   ┌────────────────────┐
+                     │   WorkflowRouter   │   │   WorkflowRouter   │
+                     │    (parent chain)  │   │    (child chain)   │
+                     └──────────┬─────────┘   └──────────┬─────────┘
+                                │                        │
+                                ▼                        ▼
+   User ──(ACE-gated)──▶  ParentVault ◀═CCIP═══════CCIP═▶ ChildVault ──▶ Remote adapter
+                                │                                              │
+                                ▼                                              ▼
+                          Local adapter                                  Lending protocol
+                                │
+                                ▼
+                          Lending protocol
 ```
 
 - Users only touch `ParentVault`.
 - `ParentVault` deploys capital either locally (adapter) or remotely (CCIP → `ChildVault` → adapter).
-- The CRE workflow reaches `ParentVault` and `ChildVault` via `WorkflowRouter` on each chain to close epochs and rebalance.
+- The CRE workflow reaches `ParentVault` and `ChildVault` via each chain's `WorkflowRouter` to close epochs and rebalance.
 - `YieldcoinShare` transfers consult ACE on every move.
 
 ## 4. Lifecycle
