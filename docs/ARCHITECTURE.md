@@ -9,7 +9,7 @@ Yieldcoin v2 is a multichain yield vault. Users interact only with `ParentVault`
 - **ParentVault** — single user-facing entry point. Holds the underlying asset (USDC in the initial deployment) only transiently (between deposit and epoch close, or between epoch close and user claim/withdrawal); otherwise capital is deployed into strategies via adapters. Tracks epochs, rebalances and share accounting. ACE-gated on user functions.
 - **ChildVault** — one per remote chain. Receives funds from `ParentVault` via CCIP and routes to local adapters.
 - **Strategy adapters** — thin wrappers over external lending protocols (e.g. Aave). One per protocol per chain.
-- **YieldcoinShare** — ERC-3643 compliance token. Transfers are checked against ACE. Only ParentVault mints and burns.
+- **YieldcoinShare** — [`ComplianceTokenERC3643`](https://github.com/smartcontractkit/chainlink-ace/blob/main/packages/tokens/erc-3643/src/ComplianceTokenERC3643.sol). Transfers are checked against ACE. Only ParentVault mints and burns.
 - **ACE (Automated Compliance Engine)** — compliance framework. Gates share transfers and ParentVault user entry points.
 - **Chainlink CRE workflow** — off-chain orchestrator. Triggers epoch close and rebalance actions on-chain.
 - **CCIP** — cross-chain messaging and token transport between parent and child vaults.
