@@ -63,7 +63,10 @@ contract MockAaveV4Spoke {
         s_suppliedAssets[reserveId][user] = amount;
     }
 
-    function supply(uint256 reserveId, uint256 amount, address onBehalfOf) external returns (uint256, uint256) {
+    function supply(uint256 reserveId, uint256 amount, address onBehalfOf)
+        external
+        returns (uint256 suppliedShares, uint256 suppliedAmount)
+    {
         if (s_supplyReverts) revert MockAaveV4Spoke__SupplyReverts();
         IERC20(i_underlying).transferFrom(msg.sender, address(this), amount);
         s_suppliedAssets[reserveId][onBehalfOf] += amount;

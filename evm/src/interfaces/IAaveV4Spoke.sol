@@ -14,7 +14,9 @@ interface IAaveV4Spoke {
         uint32 dynamicConfigKey;
     }
 
-    function supply(uint256 reserveId, uint256 amount, address onBehalfOf) external;
+    function supply(uint256 reserveId, uint256 amount, address onBehalfOf)
+        external
+        returns (uint256 suppliedShares, uint256 suppliedAmount);
 
     function withdraw(uint256 reserveId, uint256 amount, address to) external returns (uint256, uint256);
 

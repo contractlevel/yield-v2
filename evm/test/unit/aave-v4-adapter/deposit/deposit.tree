@@ -2,5 +2,8 @@ AaveV4Adapter_deposit
   ├── when the caller is not the vault
   │   └── it should revert
   └── when the caller is the vault
-      ├── it should emit a Deposit event
-      └── it should supply USDC to the Aave V4 spoke
+      ├── when the actual deposited amount is less than the amount supplied
+      │   └── it should revert
+      └── when the actual deposited amount equals the amount supplied
+          ├── it should emit a Deposit event
+          └── it should supply USDC to the Aave V4 spoke

@@ -20,6 +20,8 @@ contract AaveV4Adapter is ProtocolAdapter {
     //////////////////////////////////////////////////////////////*/
     /// @dev Thrown when the actual withdrawn amount is less than the amount requested
     error AaveV4Adapter__IncorrectWithdrawAmount();
+    /// @dev Thrown when the actual deposited amount is less than the amount supplied
+    error AaveV4Adapter__IncompleteDeposit();
     /// @dev Thrown when the configured USDC token is not listed as a reserve on the Spoke
     error AaveV4Adapter__ReserveNotFound();
     /// @dev Thrown when the configured USDC token is listed more than once on the Spoke
@@ -56,7 +58,9 @@ contract AaveV4Adapter is ProtocolAdapter {
         emit Deposit(amount);
 
         IERC20(i_usdc).safeIncreaseAllowance(i_spoke, amount);
-        IAaveV4Spoke(i_spoke).supply(i_reserveId, amount, address(this));
+        //slither-disable-next-line unused-return
+        (, uint256 suppliedAmount) = IAaveV4Spoke(i_spoke).supply(i_reserveId, amount, address(this));
+        if (suppliedAmount < amount) revert AaveV4Adapter__IncompleteDeposit();
     }
 
     /// @notice Withdraws USDC from the Aave v4 Spoke
