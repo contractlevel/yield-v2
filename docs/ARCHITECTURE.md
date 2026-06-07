@@ -56,7 +56,7 @@ See [`ACCESS_CONTROL_MATRIX`](./ACCESS_CONTROL_MATRIX.md) for the roles that gat
 3. **Rebalance** — CRE issues rebalance instructions informed by DefiLlama data. Capital moves between adapters and across chains via CCIP.
 4. **Withdraw** — user requests a withdrawal; on the next epoch settlement, shares are burned and the underlying asset is returned.
 
-See [`PATHS`](PATHS.md) for the full step-by-step paths, including failure and recovery modes (recovery on `ChildVault` is permissionless and uses stored state).
+See [`PATHS`](PATHS.md) for the full step-by-step paths, including failure and recovery modes (recovery is permissionless and uses stored state).
 
 ## 5. Further reading
 
