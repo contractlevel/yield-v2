@@ -57,7 +57,7 @@ contract AaveV4Adapter is ProtocolAdapter {
     function deposit(uint256 amount) external nonReentrant onlyVault {
         emit Deposit(amount);
 
-        IERC20(i_usdc).safeIncreaseAllowance(i_spoke, amount);
+        IERC20(i_usdc).forceApprove(i_spoke, amount);
         //slither-disable-next-line unused-return
         (, uint256 suppliedAmount) = IAaveV4Spoke(i_spoke).supply(i_reserveId, amount, address(this));
         if (suppliedAmount < amount) revert AaveV4Adapter__IncompleteDeposit();

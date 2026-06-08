@@ -204,8 +204,8 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         });
 
         uint256 fee = IRouterClient(i_ccipRouter).getFee(destinationChainSelector, message);
-        IERC20(i_link).safeIncreaseAllowance(i_ccipRouter, fee);
-        IERC20(i_usdc).safeIncreaseAllowance(i_ccipRouter, bridgeAmount);
+        IERC20(i_link).forceApprove(i_ccipRouter, fee);
+        IERC20(i_usdc).forceApprove(i_ccipRouter, bridgeAmount);
         bytes32 ccipMessageId = IRouterClient(i_ccipRouter).ccipSend(destinationChainSelector, message);
         /**
          * event CCIPMessageSent(

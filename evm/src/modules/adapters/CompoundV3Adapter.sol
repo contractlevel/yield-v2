@@ -66,7 +66,7 @@ contract CompoundV3Adapter is ProtocolAdapter {
     function deposit(uint256 amount) external nonReentrant onlyVault {
         emit Deposit(amount);
 
-        IERC20(i_usdc).safeIncreaseAllowance(i_comet, amount);
+        IERC20(i_usdc).forceApprove(i_comet, amount);
         IComet(i_comet).supply(i_usdc, amount);
     }
 

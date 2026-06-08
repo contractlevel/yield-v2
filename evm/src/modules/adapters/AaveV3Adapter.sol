@@ -51,7 +51,7 @@ contract AaveV3Adapter is ProtocolAdapter {
         emit Deposit(amount);
 
         address pool = _getAavePool();
-        IERC20(i_usdc).safeIncreaseAllowance(pool, amount);
+        IERC20(i_usdc).forceApprove(pool, amount);
         IPool(pool).supply(i_usdc, amount, address(this), 0);
     }
 
