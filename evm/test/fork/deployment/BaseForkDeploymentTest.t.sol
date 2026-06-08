@@ -30,7 +30,10 @@ abstract contract BaseForkDeploymentTest is BaseForkTest {
         assertEq(parent.identityRegistry.getIdentity(arbitrumConfig.treasury), parent.treasuryCcid);
         assertTrue(parent.vaultKycPolicy.validate(arbitrumConfig.treasury, ""));
         assertTrue(parent.shareKycPolicy.validate(arbitrumConfig.treasury, ""));
-        assertEq(parent.vault.getUsdc(), parent.usdc);
+        assertEq(parent.vault.getAsset(), parent.asset);
+        assertEq(parent.vault.getAssetPrecision(), 10 ** 6);
+        assertEq(parent.vault.getSharePrecision(), 1e18 / parent.vault.getAssetPrecision());
+        assertEq(parent.vault.getMinDepositAmount(), 100 * parent.vault.getAssetPrecision());
         assertEq(parent.vault.getLink(), parent.link);
         assertEq(parent.vault.getThisChainSelector(), arbitrumConfig.ccip.parentChainSelector);
         assertEq(parent.vault.getDefaultCcipGasLimit(), arbitrumConfig.ccip.initialDefaultCcipGasLimit);
@@ -41,14 +44,14 @@ abstract contract BaseForkDeploymentTest is BaseForkTest {
             parent.aaveV3Adapter,
             arbitrumConfig.protocols.aaveV3PoolAddressesProvider,
             address(parent.vault),
-            parent.usdc
+            parent.asset
         );
         _assertOptionalAaveV4Adapter(
             parent.adapterRegistry,
             parent.aaveV4Adapter,
             arbitrumConfig.protocols.aaveV4Spoke,
             address(parent.vault),
-            parent.usdc
+            parent.asset
         );
         _assertOptionalCompoundV3Adapter(
             parent.adapterRegistry,
@@ -56,7 +59,7 @@ abstract contract BaseForkDeploymentTest is BaseForkTest {
             arbitrumConfig.protocols.compoundV3Comet,
             arbitrumConfig.protocols.compoundV3CometRewards,
             address(parent.vault),
-            parent.usdc
+            parent.asset
         );
     }
 
@@ -89,7 +92,8 @@ abstract contract BaseForkDeploymentTest is BaseForkTest {
         assertTrue(forkChild.vault.hasRole(Roles.UNPAUSER_ROLE, config.roles.unpauser));
 
         assertEq(forkChild.vault.getAdapterRegistry(), address(forkChild.adapterRegistry));
-        assertEq(forkChild.vault.getUsdc(), forkChild.usdc);
+        assertEq(forkChild.vault.getAsset(), forkChild.asset);
+        assertEq(forkChild.vault.getAssetPrecision(), 10 ** 6);
         assertEq(forkChild.vault.getLink(), forkChild.link);
         assertEq(forkChild.vault.getThisChainSelector(), config.ccip.thisChainSelector);
         assertEq(forkChild.vault.getParentChainSelector(), config.ccip.parentChainSelector);
@@ -102,14 +106,14 @@ abstract contract BaseForkDeploymentTest is BaseForkTest {
             forkChild.aaveV3Adapter,
             config.protocols.aaveV3PoolAddressesProvider,
             address(forkChild.vault),
-            forkChild.usdc
+            forkChild.asset
         );
         _assertOptionalAaveV4Adapter(
             forkChild.adapterRegistry,
             forkChild.aaveV4Adapter,
             config.protocols.aaveV4Spoke,
             address(forkChild.vault),
-            forkChild.usdc
+            forkChild.asset
         );
         _assertOptionalCompoundV3Adapter(
             forkChild.adapterRegistry,
@@ -117,7 +121,7 @@ abstract contract BaseForkDeploymentTest is BaseForkTest {
             config.protocols.compoundV3Comet,
             config.protocols.compoundV3CometRewards,
             address(forkChild.vault),
-            forkChild.usdc
+            forkChild.asset
         );
     }
 

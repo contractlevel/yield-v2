@@ -26,8 +26,8 @@ library Types {
                                   CCIP
     //////////////////////////////////////////////////////////////*/
     /// @notice CCIP transaction type discriminators for epoch net-flow settlement and rebalances
-    /// @param EPOCH_NET_DEPOSIT Epoch netflow has more deposits than withdraws and bridges USDC to the active strategy chain
-    /// @param EPOCH_NET_WITHDRAW Epoch netflow has more withdraws than deposits and bridges USDC from the strategy to the Parent
+    /// @param EPOCH_NET_DEPOSIT Epoch netflow has more deposits than withdraws and bridges the underlying asset to the active strategy chain
+    /// @param EPOCH_NET_WITHDRAW Epoch netflow has more withdraws than deposits and bridges the underlying asset from the strategy to the Parent
     /// @param REBALANCE The system rebalances by bridging the TVL from the old strategy to the new strategy chain
     enum CcipTx {
         EPOCH_NET_DEPOSIT, // 0
@@ -70,7 +70,7 @@ library Types {
 
     /// @notice Recovery state for failed ChildVault CCIP send operations
     /// @param ccipTxType The CCIP transaction type to replay
-    /// @param amount The amount of USDC to bridge
+    /// @param amount The amount of asset to bridge
     /// @param destinationChainSelector The CCIP selector of the destination chain
     /// @param txData The encoded payload to send with the CCIP message
     /// @param createdAt The timestamp when the recovery state was stored
@@ -127,14 +127,14 @@ library Types {
     }
 
     /// @notice Data for an epoch
-    /// @param totalDepositAmount The total amount of USDC deposited during the epoch
+    /// @param totalDepositAmount The total amount of asset deposited during the epoch
     /// @param totalShareBurnAmount The total amount of shares submitted to be burned during the epoch
-    /// @param totalWithdrawClaimAmount The total amount of USDC available for withdraw claims during the epoch
+    /// @param totalWithdrawClaimAmount The total amount of asset available for withdraw claims during the epoch
     /// @param pricePerShare The price per share of the epoch
-    /// @param remainingDepositClaimAmount The unclaimed USDC deposit amount used for shrinking-pool share claims
+    /// @param remainingDepositClaimAmount The unclaimed asset deposit amount used for shrinking-pool share claims
     /// @param remainingShareMintAmount The unclaimed shares to mint for deposit claims
     /// @param remainingShareBurnAmount The unclaimed shares submitted for withdraw claims
-    /// @param remainingWithdrawClaimAmount The unclaimed USDC available for withdraw claims
+    /// @param remainingWithdrawClaimAmount The unclaimed asset available for withdraw claims
     /// @param openedAtTimestamp The timestamp when the epoch was opened
     /// @param closedAtTimestamp The timestamp when the epoch was closed
     /// @param status The status of the epoch

@@ -39,7 +39,7 @@ contract MockProtocolAdapter is IProtocolAdapter {
         return address(0);
     }
 
-    function getUsdc() external pure override returns (address) {
+    function getAsset() external pure override returns (address) {
         return address(0);
     }
 

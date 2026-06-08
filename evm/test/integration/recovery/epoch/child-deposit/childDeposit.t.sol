@@ -14,7 +14,7 @@ contract ChildDeposit_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         _setChildActiveAdapter(AAVE_V3_PROTOCOL_ID);
 
         address childPool = child.aaveV3Adapter.getProtocolPool();
-        uint256 childPoolBalanceBefore = IERC20(parent.usdc).balanceOf(childPool);
+        uint256 childPoolBalanceBefore = IERC20(parent.asset).balanceOf(childPool);
 
         MockAaveV3Pool(childPool).setSupplyReverts(true);
         _registerKyc(i_depositor);
@@ -37,7 +37,7 @@ contract ChildDeposit_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         assertEq(uint256(storedLog.topics[2]), DEPOSIT_AMOUNT);
         _assertEpochRecovery(child.vault.getEpochDepositRecovery(), 1, DEPOSIT_AMOUNT);
         assertTrue(child.vault.getRecoveryExists());
-        assertEq(IERC20(parent.usdc).balanceOf(childPool), childPoolBalanceBefore);
+        assertEq(IERC20(parent.asset).balanceOf(childPool), childPoolBalanceBefore);
 
         MockAaveV3Pool(childPool).setSupplyReverts(false);
         vm.recordLogs();
@@ -52,7 +52,7 @@ contract ChildDeposit_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         assertEq(uint256(successLog.topics[2]), DEPOSIT_AMOUNT);
         _assertEpochRecoveryCleared(child.vault.getEpochDepositRecovery());
         assertFalse(child.vault.getRecoveryExists());
-        assertEq(IERC20(parent.usdc).balanceOf(childPool), childPoolBalanceBefore + DEPOSIT_AMOUNT);
+        assertEq(IERC20(parent.asset).balanceOf(childPool), childPoolBalanceBefore + DEPOSIT_AMOUNT);
 
         _changePrank(i_depositor);
         parent.vault.claimShares(1);

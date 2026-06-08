@@ -37,7 +37,8 @@ contract ChildVault_DeploymentIntegrationTest is BaseIntegrationTest {
 
     function test_ChildVault_deployment_ConfiguresCoreAddresses() external view {
         assertEq(child.vault.getAdapterRegistry(), address(child.adapterRegistry));
-        assertEq(child.vault.getUsdc(), child.usdc);
+        assertEq(child.vault.getAsset(), child.asset);
+        assertEq(child.vault.getAssetPrecision(), 10 ** 6);
         assertEq(child.vault.getLink(), child.link);
         assertEq(child.vault.getThisChainSelector(), networkConfig.ccip.thisChainSelector);
         assertEq(child.vault.getParentChainSelector(), networkConfig.ccip.parentChainSelector);
@@ -53,10 +54,10 @@ contract ChildVault_DeploymentIntegrationTest is BaseIntegrationTest {
             child.aaveV3Adapter,
             child.aaveV3PoolAddressesProvider,
             address(child.vault),
-            child.usdc
+            child.asset
         );
         _assertOptionalAaveV4Adapter(
-            child.adapterRegistry, child.aaveV4Adapter, child.aaveV4Spoke, address(child.vault), child.usdc
+            child.adapterRegistry, child.aaveV4Adapter, child.aaveV4Spoke, address(child.vault), child.asset
         );
         _assertOptionalCompoundV3Adapter(
             child.adapterRegistry,
@@ -64,7 +65,7 @@ contract ChildVault_DeploymentIntegrationTest is BaseIntegrationTest {
             child.compoundV3Comet,
             child.compoundV3CometRewards,
             address(child.vault),
-            child.usdc
+            child.asset
         );
     }
 
@@ -74,10 +75,10 @@ contract ChildVault_DeploymentIntegrationTest is BaseIntegrationTest {
             child.aaveV3Adapter,
             child.aaveV3PoolAddressesProvider,
             address(child.vault),
-            child.usdc
+            child.asset
         );
         _assertOptionalAaveV4Adapter(
-            child.adapterRegistry, child.aaveV4Adapter, child.aaveV4Spoke, address(child.vault), child.usdc
+            child.adapterRegistry, child.aaveV4Adapter, child.aaveV4Spoke, address(child.vault), child.asset
         );
         _assertOptionalCompoundV3Adapter(
             child.adapterRegistry,
@@ -85,7 +86,7 @@ contract ChildVault_DeploymentIntegrationTest is BaseIntegrationTest {
             child.compoundV3Comet,
             child.compoundV3CometRewards,
             address(child.vault),
-            child.usdc
+            child.asset
         );
     }
 

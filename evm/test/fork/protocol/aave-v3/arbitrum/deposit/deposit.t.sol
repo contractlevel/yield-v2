@@ -14,6 +14,6 @@ contract Arbitrum_AaveV3DepositForkTest is BaseAaveV3ForkTest {
     }
 
     function test_Arbitrum_aaveV3_deposit_Success() external {
-        _assertAaveV3DepositSucceeds(parent.aaveV3Adapter, address(parent.vault), parent.usdc);
+        _assertAaveV3DepositSucceeds(parent.aaveV3Adapter, address(parent.vault), parent.asset);
     }
 }

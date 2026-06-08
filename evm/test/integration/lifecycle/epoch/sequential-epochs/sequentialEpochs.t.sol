@@ -34,7 +34,7 @@ contract SequentialEpochs_EpochIntegrationTest is BaseIntegrationTest {
     }
 
     function test_Epoch_sequential_SharePriceUpdatesAndStateIsolated() external {
-        deal(parent.usdc, s_aaveV3Pool, 2 * s_netA);
+        deal(parent.asset, s_aaveV3Pool, 2 * s_netA);
 
         _fundAndApproveUsdc(i_recipient1, DEPOSIT_AMOUNT * 2);
         _changePrank(i_recipient1);

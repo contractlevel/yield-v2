@@ -14,7 +14,7 @@ ParentVault_kycPolicy
 │   │   └── it should revert through ACE
 │   └── when the caller is KYC approved
 │       └── it should reach vault logic
-├── claimUsdc
+├── claimAsset
 │   ├── when the caller is not KYC approved
 │   │   └── it should revert through ACE
 │   └── when the caller is KYC approved

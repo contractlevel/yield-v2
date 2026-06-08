@@ -98,7 +98,7 @@ abstract contract BaseUnitTest is BaseTest {
     function _baseVaultParams(uint64 chainSelector) internal view returns (BaseVault.ConstructorParams memory params) {
         params = BaseVault.ConstructorParams({
             link: address(s_mockLink),
-            usdc: address(s_mockUsdc),
+            asset: address(s_mockUsdc),
             ccipRouter: address(s_mockCcipRouter),
             defaultAdmin: address(i_owner),
             pauser: address(i_pauser),

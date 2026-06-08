@@ -5,11 +5,11 @@ import {IProtocolAdapter} from "../../src/interfaces/IProtocolAdapter.sol";
 
 contract RevertingProtocolAdapter is IProtocolAdapter {
     address internal immutable i_vault;
-    address internal immutable i_usdc;
+    address internal immutable i_asset;
 
-    constructor(address vault, address usdc) {
+    constructor(address vault, address asset) {
         i_vault = vault;
-        i_usdc = usdc;
+        i_asset = asset;
     }
 
     function deposit(uint256) external pure {
@@ -32,7 +32,7 @@ contract RevertingProtocolAdapter is IProtocolAdapter {
         return i_vault;
     }
 
-    function getUsdc() external view returns (address usdc) {
-        return i_usdc;
+    function getAsset() external view returns (address asset) {
+        return i_asset;
     }
 }

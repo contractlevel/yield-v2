@@ -20,10 +20,10 @@ abstract contract BaseCcipRecoveryForkTest is BaseCcipForkTest {
 
     function _deployFailingAdapters() internal {
         _selectArbitrumFork();
-        parentFailingAdapter = new RevertingProtocolAdapter(address(parent.vault), parent.usdc);
+        parentFailingAdapter = new RevertingProtocolAdapter(address(parent.vault), parent.asset);
 
         _selectBaseFork();
-        baseFailingAdapter = new RevertingProtocolAdapter(address(baseChild.vault), baseChild.usdc);
+        baseFailingAdapter = new RevertingProtocolAdapter(address(baseChild.vault), baseChild.asset);
     }
 
     function _setParentActiveAdapterToAaveV3() internal {

@@ -250,9 +250,9 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
     }
 
     function _fundAndApproveUsdc(address account, uint256 amount) internal {
-        deal(parent.vault.getUsdc(), account, amount);
+        deal(parent.vault.getAsset(), account, amount);
         _changePrank(account);
-        IERC20(parent.vault.getUsdc()).approve(address(parent.vault), amount);
+        IERC20(parent.vault.getAsset()).approve(address(parent.vault), amount);
     }
 
     function _mintShares(address account, uint256 amount) internal {

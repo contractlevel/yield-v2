@@ -30,7 +30,7 @@ contract ParentToChild_RebalanceIntegrationTest is BaseIntegrationTest {
         uint256 tvl = DEPOSIT_AMOUNT;
         _seedParentLocalTvl(tvl);
         address childPool = child.aaveV3Adapter.getProtocolPool();
-        uint256 childPoolBalanceBefore = IERC20(parent.usdc).balanceOf(childPool);
+        uint256 childPoolBalanceBefore = IERC20(parent.asset).balanceOf(childPool);
 
         vm.recordLogs();
         _initiateRebalanceThroughWorkflow(
@@ -59,7 +59,7 @@ contract ParentToChild_RebalanceIntegrationTest is BaseIntegrationTest {
         assertEq(pendingRebalance.pendingStrategy.protocolId, AAVE_V3_PROTOCOL_ID);
         assertEq(pendingRebalance.pendingStrategy.chainSelector, CHILD_CHAIN_SELECTOR);
         assertEq(parent.vault.getActiveProtocolAdapter(), address(0));
-        assertEq(IERC20(parent.usdc).balanceOf(childPool), childPoolBalanceBefore + tvl);
+        assertEq(IERC20(parent.asset).balanceOf(childPool), childPoolBalanceBefore + tvl);
         assertEq(child.vault.getActiveProtocolAdapter(), address(child.aaveV3Adapter));
 
         vm.recordLogs();

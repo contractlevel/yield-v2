@@ -14,10 +14,10 @@ contract Base_AaveV3WithdrawForkTest is BaseAaveV3ForkTest {
     }
 
     function test_Base_aaveV3_withdraw_Success_EpochWithdraw() external {
-        _assertAaveV3EpochWithdrawSucceeds(baseChild.aaveV3Adapter, address(baseChild.vault), baseChild.usdc);
+        _assertAaveV3EpochWithdrawSucceeds(baseChild.aaveV3Adapter, address(baseChild.vault), baseChild.asset);
     }
 
     function test_Base_aaveV3_withdraw_Success_RebalanceWithdraw() external {
-        _assertAaveV3RebalanceWithdrawSucceeds(baseChild.aaveV3Adapter, address(baseChild.vault), baseChild.usdc);
+        _assertAaveV3RebalanceWithdrawSucceeds(baseChild.aaveV3Adapter, address(baseChild.vault), baseChild.asset);
     }
 }

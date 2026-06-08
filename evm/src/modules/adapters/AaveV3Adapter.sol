@@ -33,30 +33,30 @@ contract AaveV3Adapter is ProtocolAdapter {
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
     /// @param vault The address of the Yieldcoin v2 Vault
-    /// @param usdc The address of the USDC token
+    /// @param asset The address of the underlying asset token
     /// @param poolAddressesProvider The address of the Aave V3 pool addresses provider
     //slither-disable-next-line missing-zero-check
-    constructor(address vault, address usdc, address poolAddressesProvider) ProtocolAdapter(vault, usdc) {
+    constructor(address vault, address asset, address poolAddressesProvider) ProtocolAdapter(vault, asset) {
         i_poolAddressesProvider = poolAddressesProvider;
     }
 
     /*//////////////////////////////////////////////////////////////
                                 EXTERNAL
     //////////////////////////////////////////////////////////////*/
-    /// @notice Deposits USDC to the Aave V3 pool
-    /// @param amount The amount of USDC to deposit
-    /// @dev Deposits the USDC to the Aave V3 pool
+    /// @notice Deposits the underlying asset to the Aave V3 pool
+    /// @param amount The amount of asset to deposit
+    /// @dev Deposits the asset to the Aave V3 pool
     /// @dev Precondition: caller must be the Yieldcoin v2 Vault
     function deposit(uint256 amount) external nonReentrant onlyVault {
         emit Deposit(amount);
 
         address pool = _getAavePool();
-        IERC20(i_usdc).forceApprove(pool, amount);
-        IPool(pool).supply(i_usdc, amount, address(this), 0);
+        IERC20(i_asset).forceApprove(pool, amount);
+        IPool(pool).supply(i_asset, amount, address(this), 0);
     }
 
-    /// @notice Withdraws USDC from the Aave V3 pool
-    /// @param amount The amount of USDC to withdraw (use type(uint256).max to withdraw all)
+    /// @notice Withdraws the underlying asset from the Aave V3 pool
+    /// @param amount The amount of asset to withdraw (use type(uint256).max to withdraw all)
     /// @return actualWithdrawnAmount The actual withdrawn amount
     /// @dev Transfers the actual withdrawn amount to the Yieldcoin v2 Vault
     /// @dev Precondition: caller must be the Yieldcoin v2 Vault
@@ -68,7 +68,7 @@ contract AaveV3Adapter is ProtocolAdapter {
 
         /// @dev Scenario 1: Epoch Withdraw - when the amount is a specific amount
         if (amount != type(uint256).max) {
-            actualWithdrawnAmount = IPool(pool).withdraw(i_usdc, amount, address(this));
+            actualWithdrawnAmount = IPool(pool).withdraw(i_asset, amount, address(this));
             /// @dev Precondition: the actual withdrawn amount must not be less than the requested amount
             if (actualWithdrawnAmount < amount) revert AaveV3Adapter__IncorrectWithdrawAmount();
         }
@@ -76,13 +76,13 @@ contract AaveV3Adapter is ProtocolAdapter {
         else {
             uint256 tvl = _getTVL(pool);
 
-            actualWithdrawnAmount = IPool(pool).withdraw(i_usdc, amount, address(this));
+            actualWithdrawnAmount = IPool(pool).withdraw(i_asset, amount, address(this));
 
             /// @dev Precondition: the actual withdrawn amount must not be less than the TVL
             if (actualWithdrawnAmount < tvl) revert AaveV3Adapter__IncorrectWithdrawAmount();
         }
         emit Withdraw(actualWithdrawnAmount);
-        IERC20(i_usdc).safeTransfer(i_vault, actualWithdrawnAmount);
+        IERC20(i_asset).safeTransfer(i_vault, actualWithdrawnAmount);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -98,7 +98,7 @@ contract AaveV3Adapter is ProtocolAdapter {
     /// @param pool The Aave V3 pool address. Fetched from _getAavePool()
     /// @return tvl The TVL of the Aave V3 pool
     function _getTVL(address pool) internal view returns (uint256 tvl) {
-        DataTypes.ReserveDataLegacy memory reserveData = IPool(pool).getReserveData(i_usdc);
+        DataTypes.ReserveDataLegacy memory reserveData = IPool(pool).getReserveData(i_asset);
         address aTokenAddress = reserveData.aTokenAddress;
         tvl = IERC20(aTokenAddress).balanceOf(address(this));
     }

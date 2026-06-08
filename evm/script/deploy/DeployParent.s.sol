@@ -41,7 +41,7 @@ import {TerminalAllowPolicy} from "../../src/modules/policies/TerminalAllowPolic
 /// @dev The YieldcoinShare is a ComplianceTokenERC3643, so access control must be run as a policy.
 /// @dev All user-facing functions for ParentVault and YieldcoinShare require the user to have completed KYC with a registered provider.
 ///      This includes:
-///      ParentVault: deposit, withdraw, claimShares, claimUsdc, cancelDeposit, and cancelWithdraw functions.
+///      ParentVault: deposit, withdraw, claimShares, claimAsset, cancelDeposit, and cancelWithdraw functions.
 ///      YieldcoinShare: transfer, transferFrom, batchTransfer, approve, increaseAllowance, and decreaseAllowance functions.
 ///      Both the caller and the relevant counterparty addresses (recipient, spender) must be KYC-approved.
 /// @dev YieldcoinShare mint and burn functions are protected by a RoleBasedAccessControlPolicy.
@@ -94,7 +94,7 @@ contract DeployParent is Script {
 
     struct Deployment {
         address link;
-        address usdc;
+        address asset;
         bytes32 vaultCcid;
         bytes32 treasuryCcid;
         address aaveV3PoolAddressesProvider;
@@ -137,7 +137,7 @@ contract DeployParent is Script {
         returns (Deployment memory deploy)
     {
         deploy.link = networkConfig.tokens.link;
-        deploy.usdc = networkConfig.tokens.usdc;
+        deploy.asset = networkConfig.tokens.usdc;
         deploy.vaultCcid = PARENT_VAULT_CCID;
         deploy.treasuryCcid = TREASURY_CCID;
         deploy.aaveV3PoolAddressesProvider = networkConfig.protocols.aaveV3PoolAddressesProvider;
@@ -169,7 +169,7 @@ contract DeployParent is Script {
         /// @dev Deploy the ParentVault
         BaseVault.ConstructorParams memory baseVaultParams = BaseVault.ConstructorParams({
             link: networkConfig.tokens.link,
-            usdc: networkConfig.tokens.usdc,
+            asset: networkConfig.tokens.usdc,
             ccipRouter: networkConfig.ccip.router,
             defaultAdmin: deployer,
             pauser: networkConfig.roles.pauser,
@@ -425,7 +425,7 @@ contract DeployParent is Script {
         selectors[0] = ParentVault.deposit.selector;
         selectors[1] = ParentVault.withdraw.selector;
         selectors[2] = ParentVault.claimShares.selector;
-        selectors[3] = ParentVault.claimUsdc.selector;
+        selectors[3] = ParentVault.claimAsset.selector;
         selectors[4] = ParentVault.cancelDeposit.selector;
         selectors[5] = ParentVault.cancelWithdraw.selector;
 

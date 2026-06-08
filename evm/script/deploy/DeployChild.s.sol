@@ -18,7 +18,7 @@ import {Roles} from "../../src/libraries/Roles.sol";
 contract DeployChild is Script {
     struct Deployment {
         address link;
-        address usdc;
+        address asset;
         address aaveV3PoolAddressesProvider;
         address aaveV4Spoke;
         address compoundV3Comet;
@@ -49,7 +49,7 @@ contract DeployChild is Script {
         returns (Deployment memory deploy)
     {
         deploy.link = networkConfig.tokens.link;
-        deploy.usdc = networkConfig.tokens.usdc;
+        deploy.asset = networkConfig.tokens.usdc;
         deploy.aaveV3PoolAddressesProvider = networkConfig.protocols.aaveV3PoolAddressesProvider;
         deploy.aaveV4Spoke = networkConfig.protocols.aaveV4Spoke;
         deploy.compoundV3Comet = networkConfig.protocols.compoundV3Comet;
@@ -65,7 +65,7 @@ contract DeployChild is Script {
         /// @dev Deploy the ChildVault
         BaseVault.ConstructorParams memory baseVaultParams = BaseVault.ConstructorParams({
             link: networkConfig.tokens.link,
-            usdc: networkConfig.tokens.usdc,
+            asset: networkConfig.tokens.usdc,
             ccipRouter: networkConfig.ccip.router,
             defaultAdmin: deployer,
             pauser: networkConfig.roles.pauser,

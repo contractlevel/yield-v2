@@ -22,9 +22,9 @@ contract AaveV4Adapter is ProtocolAdapter {
     error AaveV4Adapter__IncorrectWithdrawAmount();
     /// @dev Thrown when the actual deposited amount is less than the amount supplied
     error AaveV4Adapter__IncompleteDeposit();
-    /// @dev Thrown when the configured USDC token is not listed as a reserve on the Spoke
+    /// @dev Thrown when the configured asset token is not listed as a reserve on the Spoke
     error AaveV4Adapter__ReserveNotFound();
-    /// @dev Thrown when the configured USDC token is listed more than once on the Spoke
+    /// @dev Thrown when the configured asset token is listed more than once on the Spoke
     error AaveV4Adapter__DuplicateReserveFound();
 
     /*//////////////////////////////////////////////////////////////
@@ -32,39 +32,39 @@ contract AaveV4Adapter is ProtocolAdapter {
     //////////////////////////////////////////////////////////////*/
     /// @notice The address of the Aave v4 Spoke
     address internal immutable i_spoke;
-    /// @notice The Aave v4 reserve id for USDC on the Spoke
+    /// @notice The Aave v4 reserve id for the underlying asset on the Spoke
     uint256 internal immutable i_reserveId;
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
     /// @param vault The address of the Yieldcoin v2 Vault
-    /// @param usdc The address of the USDC token
+    /// @param asset The address of the underlying asset token
     /// @param spoke The address of the Aave v4 Spoke
     //slither-disable-next-line missing-zero-check
-    constructor(address vault, address usdc, address spoke) ProtocolAdapter(vault, usdc) {
+    constructor(address vault, address asset, address spoke) ProtocolAdapter(vault, asset) {
         i_spoke = spoke;
-        i_reserveId = _getReserveId(spoke, usdc);
+        i_reserveId = _getReserveId(spoke, asset);
     }
 
     /*//////////////////////////////////////////////////////////////
                                 EXTERNAL
     //////////////////////////////////////////////////////////////*/
-    /// @notice Deposits USDC to the Aave v4 Spoke
-    /// @param amount The amount of USDC to deposit
-    /// @dev Deposits USDC into the adapter's own Aave v4 position
+    /// @notice Deposits the underlying asset to the Aave v4 Spoke
+    /// @param amount The amount of asset to deposit
+    /// @dev Deposits the asset into the adapter's own Aave v4 position
     /// @dev Precondition: caller must be the Yieldcoin v2 Vault
     function deposit(uint256 amount) external nonReentrant onlyVault {
         emit Deposit(amount);
 
-        IERC20(i_usdc).forceApprove(i_spoke, amount);
+        IERC20(i_asset).forceApprove(i_spoke, amount);
         //slither-disable-next-line unused-return
         (, uint256 suppliedAmount) = IAaveV4Spoke(i_spoke).supply(i_reserveId, amount, address(this));
         if (suppliedAmount < amount) revert AaveV4Adapter__IncompleteDeposit();
     }
 
-    /// @notice Withdraws USDC from the Aave v4 Spoke
-    /// @param amount The amount of USDC to withdraw (use type(uint256).max to withdraw all)
+    /// @notice Withdraws the underlying asset from the Aave v4 Spoke
+    /// @param amount The amount of asset to withdraw (use type(uint256).max to withdraw all)
     /// @return actualWithdrawnAmount The actual withdrawn amount
     /// @dev Transfers the actual withdrawn amount to the Yieldcoin v2 Vault
     /// @dev Precondition: caller must be the Yieldcoin v2 Vault
@@ -90,7 +90,7 @@ contract AaveV4Adapter is ProtocolAdapter {
             if (actualWithdrawnAmount < tvl) revert AaveV4Adapter__IncorrectWithdrawAmount();
         }
         emit Withdraw(actualWithdrawnAmount);
-        IERC20(i_usdc).safeTransfer(i_vault, actualWithdrawnAmount);
+        IERC20(i_asset).safeTransfer(i_vault, actualWithdrawnAmount);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -138,7 +138,7 @@ contract AaveV4Adapter is ProtocolAdapter {
         pool = i_spoke;
     }
 
-    /// @notice Gets the Aave v4 reserve id for USDC on the Spoke
+    /// @notice Gets the Aave v4 reserve id for the underlying asset on the Spoke
     /// @return reserveId The Aave v4 reserve id
     function getReserveId() external view returns (uint256 reserveId) {
         reserveId = i_reserveId;

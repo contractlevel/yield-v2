@@ -77,12 +77,12 @@ contract CcipSend_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         assertFalse(child.vault.getRecoveryExists());
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.CLAIMABLE));
 
-        uint256 depositorUsdcBeforeClaim = IERC20(parent.usdc).balanceOf(i_depositor);
+        uint256 depositorUsdcBeforeClaim = IERC20(parent.asset).balanceOf(i_depositor);
 
         _changePrank(i_depositor);
-        parent.vault.claimUsdc(2);
+        parent.vault.claimAsset(2);
 
-        assertEq(IERC20(parent.usdc).balanceOf(i_depositor), depositorUsdcBeforeClaim + shareAmount);
+        assertEq(IERC20(parent.asset).balanceOf(i_depositor), depositorUsdcBeforeClaim + shareAmount);
     }
 
     function test_Recovery_ChildVault_ccipSend_Rebalance_RetryCompletesParentRebalance() external {

@@ -30,7 +30,7 @@ contract ChildDeposit_EpochIntegrationTest is BaseIntegrationTest {
         assertEq(parent.vault.getCrosschainVault(CHILD_CHAIN_SELECTOR), address(child.vault));
         assertEq(child.vault.getCrosschainVault(PARENT_CHAIN_SELECTOR), address(parent.vault));
 
-        uint256 childPoolBalanceBefore = IERC20(parent.usdc).balanceOf(childPool);
+        uint256 childPoolBalanceBefore = IERC20(parent.asset).balanceOf(childPool);
 
         _registerKyc(i_depositor);
         _fundAndApproveUsdc(i_depositor, DEPOSIT_AMOUNT);
@@ -44,7 +44,7 @@ contract ChildDeposit_EpochIntegrationTest is BaseIntegrationTest {
         assertEq(uint256(parent.vault.getEpoch(1).status), uint256(Types.EpochStatus.CLAIMABLE));
         assertEq(parent.vault.getEpochNonce(), 2);
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.OPEN));
-        assertEq(IERC20(parent.usdc).balanceOf(childPool), childPoolBalanceBefore + DEPOSIT_AMOUNT);
+        assertEq(IERC20(parent.asset).balanceOf(childPool), childPoolBalanceBefore + DEPOSIT_AMOUNT);
 
         _changePrank(i_depositor);
         parent.vault.claimShares(1);

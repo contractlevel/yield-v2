@@ -14,6 +14,6 @@ contract Avalanche_AaveV3DepositForkTest is BaseAaveV3ForkTest {
     }
 
     function test_Avalanche_aaveV3_deposit_Success() external {
-        _assertAaveV3DepositSucceeds(avalancheChild.aaveV3Adapter, address(avalancheChild.vault), avalancheChild.usdc);
+        _assertAaveV3DepositSucceeds(avalancheChild.aaveV3Adapter, address(avalancheChild.vault), avalancheChild.asset);
     }
 }

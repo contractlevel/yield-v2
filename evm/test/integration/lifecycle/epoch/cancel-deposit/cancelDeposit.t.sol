@@ -17,11 +17,11 @@ contract CancelDeposit_EpochIntegrationTest is BaseIntegrationTest {
         _changePrank(i_depositor);
         parent.vault.deposit(DEPOSIT_AMOUNT);
 
-        uint256 usdcBefore = IERC20(parent.usdc).balanceOf(i_depositor);
+        uint256 usdcBefore = IERC20(parent.asset).balanceOf(i_depositor);
 
         parent.vault.cancelDeposit();
 
-        assertEq(IERC20(parent.usdc).balanceOf(i_depositor), usdcBefore + DEPOSIT_AMOUNT);
+        assertEq(IERC20(parent.asset).balanceOf(i_depositor), usdcBefore + DEPOSIT_AMOUNT);
         assertEq(parent.vault.getDepositAmount(i_depositor, 1), 0);
     }
 }

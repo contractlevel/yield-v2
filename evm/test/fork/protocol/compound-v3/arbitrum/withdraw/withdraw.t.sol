@@ -18,10 +18,10 @@ contract Arbitrum_CompoundV3WithdrawForkTest is BaseCompoundV3ForkTest {
     }
 
     function test_Arbitrum_compoundV3_withdraw_Success_EpochWithdraw() external {
-        _assertCompoundV3EpochWithdrawSucceeds(parent.compoundV3Adapter, address(parent.vault), parent.usdc);
+        _assertCompoundV3EpochWithdrawSucceeds(parent.compoundV3Adapter, address(parent.vault), parent.asset);
     }
 
     function test_Arbitrum_compoundV3_withdraw_Success_RebalanceWithdraw() external {
-        _assertCompoundV3RebalanceWithdrawSucceeds(parent.compoundV3Adapter, address(parent.vault), parent.usdc);
+        _assertCompoundV3RebalanceWithdrawSucceeds(parent.compoundV3Adapter, address(parent.vault), parent.asset);
     }
 }

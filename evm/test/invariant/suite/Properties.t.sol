@@ -27,7 +27,7 @@ abstract contract Properties is BeforeAfter, Asserts {
     function invariant_SOLV_001_parentCoversClaimableWithdrawObligations() public {
         lte(
             ghost_claimableWithdrawObligation,
-            IERC20(parent.vault.getUsdc()).balanceOf(address(parent.vault)),
+            IERC20(parent.vault.getAsset()).balanceOf(address(parent.vault)),
             "SOLV-001: parent USDC balance does not cover claimable withdraw obligations"
         );
     }
@@ -442,7 +442,7 @@ abstract contract Properties is BeforeAfter, Asserts {
 
         lte(
             recovery.amount,
-            IERC20(parent.vault.getUsdc()).balanceOf(address(vault)),
+            IERC20(parent.vault.getAsset()).balanceOf(address(vault)),
             "CCIP-005b: pending child CCIP send recovery is not collateralized"
         );
     }

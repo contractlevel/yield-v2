@@ -31,11 +31,11 @@ At epoch close, CRE reads TVL from the active strategy chain and writes it to Pa
 
 More deposits than withdrawals. Active strategy is on Parent chain.
 
-- Users submit deposit and withdraw intents on Parent. USDC for deposits and Yieldcoin for withdraws escrowed on Parent.
+- Users submit deposit and withdraw intents on Parent. Underlying asset for deposits and Yieldcoin for withdraws escrowed on Parent.
 
 - **CRE cron triggers** closeEpoch(tvl) on Parent.
 
-- Parent calculates pricePerShare, newShares, totalWithdrawUsdc, netFlow.
+- Parent calculates pricePerShare, newShares, totalWithdraw, netFlow.
 
 - Parent updates totalShares: += newShares, -= totalShareBurnAmount.
 
@@ -45,7 +45,7 @@ More deposits than withdrawals. Active strategy is on Parent chain.
 
 - Depositors call claimShares() on Parent. Yieldcoin minted.
 
-- Withdrawers call claimUsdc() on Parent. Escrowed Yieldcoin burned, USDC transferred.
+- Withdrawers call claimAsset() on Parent. Escrowed Yieldcoin burned, USDC transferred.
 
 **CCIP sends: 0**
 
@@ -57,11 +57,11 @@ More deposits than withdrawals. Active strategy is on Parent chain.
 
 More withdrawals than deposits. Active strategy is on Parent chain.
 
-- Users submit deposit and withdraw intents on Parent. USDC for deposits and Yieldcoin for withdraws escrowed on Parent.
+- Users submit deposit and withdraw intents on Parent. Underlying asset for deposits and Yieldcoin for withdraws escrowed on Parent.
 
 - **CRE cron triggers** closeEpoch(tvl) on Parent.
 
-- Parent calculates pricePerShare, newShares, totalWithdrawUsdc, netFlow.
+- Parent calculates pricePerShare, newShares, totalWithdraw, netFlow.
 
 - Parent updates totalShares: += newShares, -= totalShareBurnAmount.
 
@@ -71,7 +71,7 @@ More withdrawals than deposits. Active strategy is on Parent chain.
 
 - Depositors call claimShares() on Parent. Yieldcoin minted.
 
-- Withdrawers call claimUsdc() on Parent. Escrowed Yieldcoin burned, USDC transferred.
+- Withdrawers call claimAsset() on Parent. Escrowed Yieldcoin burned, USDC transferred.
 
 **CCIP sends: 0**
 
@@ -83,11 +83,11 @@ More withdrawals than deposits. Active strategy is on Parent chain.
 
 More deposits than withdrawals. Active strategy is on a Child chain.
 
-- Users submit deposit and withdraw intents on Parent. USDC for deposits and Yieldcoin for withdraws escrowed on Parent.
+- Users submit deposit and withdraw intents on Parent. Underlying asset for deposits and Yieldcoin for withdraws escrowed on Parent.
 
 - **CRE cron triggers** closeEpoch(tvl) on Parent.
 
-- Parent calculates pricePerShare, newShares, totalWithdrawUsdc, netFlow.
+- Parent calculates pricePerShare, newShares, totalWithdraw, netFlow.
 
 - Parent updates totalShares: += newShares, -= totalShareBurnAmount.
 
@@ -99,7 +99,7 @@ More deposits than withdrawals. Active strategy is on a Child chain.
 
 - Depositors call claimShares() on Parent. Yieldcoin minted.
 
-- Withdrawers call claimUsdc() on Parent. Escrowed Yieldcoin burned, USDC transferred.
+- Withdrawers call claimAsset() on Parent. Escrowed Yieldcoin burned, USDC transferred.
 
 **CCIP sends: 1**
 
@@ -111,11 +111,11 @@ More deposits than withdrawals. Active strategy is on a Child chain.
 
 More withdrawals than deposits. Active strategy is on a Child chain.
 
-- Users submit deposit and withdraw intents on Parent. USDC for deposits and Yieldcoin for withdraws escrowed on Parent.
+- Users submit deposit and withdraw intents on Parent. Underlying asset for deposits and Yieldcoin for withdraws escrowed on Parent.
 
 - **CRE cron triggers** closeEpoch(tvl) on Parent.
 
-- Parent calculates pricePerShare, newShares, totalWithdrawUsdc, netFlow.
+- Parent calculates pricePerShare, newShares, totalWithdraw, netFlow.
 
 - Parent updates totalShares: += newShares, -= totalShareBurnAmount.
 
@@ -129,11 +129,11 @@ More withdrawals than deposits. Active strategy is on a Child chain.
 
 - If Child CCIP send fails, stores CCIP send recovery; recovery calls recoverFailedCcipSend().
 
-- Parent receives EPOCH_NET_WITHDRAW, updates withdraw claim amount from actual received USDC, emits EpochWithdrawAmountShort if under expected amount, then \_finalizeEpoch(epochNonce) → epoch → CLAIMABLE.
+- Parent receives EPOCH_NET_WITHDRAW, updates withdraw claim amount from actual received asset, emits EpochWithdrawAmountShort if under expected amount, then \_finalizeEpoch(epochNonce) → epoch → CLAIMABLE.
 
 - Depositors call claimShares() on Parent. Yieldcoin minted.
 
-- Withdrawers call claimUsdc() on Parent. Escrowed Yieldcoin burned, USDC transferred.
+- Withdrawers call claimAsset() on Parent. Escrowed Yieldcoin burned, USDC transferred.
 
 **CCIP sends: 1**
 

@@ -21,13 +21,13 @@ contract Optimism_CompoundV3WithdrawForkTest is BaseCompoundV3ForkTest {
 
     function test_Optimism_compoundV3_withdraw_Success_EpochWithdraw() external {
         _assertCompoundV3EpochWithdrawSucceeds(
-            optimismChild.compoundV3Adapter, address(optimismChild.vault), optimismChild.usdc
+            optimismChild.compoundV3Adapter, address(optimismChild.vault), optimismChild.asset
         );
     }
 
     function test_Optimism_compoundV3_withdraw_Success_RebalanceWithdraw() external {
         _assertCompoundV3RebalanceWithdrawSucceeds(
-            optimismChild.compoundV3Adapter, address(optimismChild.vault), optimismChild.usdc
+            optimismChild.compoundV3Adapter, address(optimismChild.vault), optimismChild.asset
         );
     }
 }

@@ -78,12 +78,12 @@ contract CcipSend_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
         _selectArbitrumFork();
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.CLAIMABLE));
 
-        uint256 depositorUsdcBefore = IERC20(parent.usdc).balanceOf(i_depositor);
+        uint256 depositorUsdcBefore = IERC20(parent.asset).balanceOf(i_depositor);
 
         _changePrank(i_depositor);
-        parent.vault.claimUsdc(2);
+        parent.vault.claimAsset(2);
 
-        assertApproxEqAbs(IERC20(parent.usdc).balanceOf(i_depositor), depositorUsdcBefore + shareAmount, 1);
+        assertApproxEqAbs(IERC20(parent.asset).balanceOf(i_depositor), depositorUsdcBefore + shareAmount, 1);
     }
 
     function test_CcipFork_Recovery_ChildVault_ccipSend_Rebalance_RetryCompletesParentRebalance() external {

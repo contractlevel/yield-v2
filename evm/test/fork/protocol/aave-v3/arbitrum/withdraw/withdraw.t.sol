@@ -14,10 +14,10 @@ contract Arbitrum_AaveV3WithdrawForkTest is BaseAaveV3ForkTest {
     }
 
     function test_Arbitrum_aaveV3_withdraw_Success_EpochWithdraw() external {
-        _assertAaveV3EpochWithdrawSucceeds(parent.aaveV3Adapter, address(parent.vault), parent.usdc);
+        _assertAaveV3EpochWithdrawSucceeds(parent.aaveV3Adapter, address(parent.vault), parent.asset);
     }
 
     function test_Arbitrum_aaveV3_withdraw_Success_RebalanceWithdraw() external {
-        _assertAaveV3RebalanceWithdrawSucceeds(parent.aaveV3Adapter, address(parent.vault), parent.usdc);
+        _assertAaveV3RebalanceWithdrawSucceeds(parent.aaveV3Adapter, address(parent.vault), parent.asset);
     }
 }

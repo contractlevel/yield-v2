@@ -33,10 +33,10 @@ interface IBaseVault is IPauseable {
     /// @dev Thrown when an external self-call helper is called by any address other than this contract
     error BaseVault__OnlySelf();
     /// @dev Thrown when a strategy adapter deposit fails in a synchronous path
-    /// @param amount The amount of USDC that failed to deposit
+    /// @param amount The amount of asset that failed to deposit
     error BaseVault__DepositFailed(uint256 amount);
     /// @dev Thrown when a strategy adapter withdraw fails in a synchronous path
-    /// @param amount The amount of USDC that failed to withdraw
+    /// @param amount The amount of asset that failed to withdraw
     error BaseVault__WithdrawFailed(uint256 amount);
     /// @dev Thrown when the adapter is not registered
     /// @param protocolId The ID of the protocol
@@ -52,9 +52,9 @@ interface IBaseVault is IPauseable {
     /// @dev Thrown when no crosschain vault is registered for the destination chain selector
     /// @param destinationChainSelector The destination chain selector with no registered vault
     error BaseVault__DestinationVaultNotSet(uint64 destinationChainSelector);
-    /// @dev Thrown when a CCIP message does not deliver the vault's configured USDC token
+    /// @dev Thrown when a CCIP message does not deliver the vault's configured asset token
     /// @param receivedToken The token address delivered by CCIP
-    /// @param expectedToken The vault's configured USDC token
+    /// @param expectedToken The vault's configured asset token
     error BaseVault__InvalidReceivedToken(address receivedToken, address expectedToken);
     /// @dev Thrown when there is no pending recovery for the requested operation
     error BaseVault__NoPendingRecovery();
@@ -68,32 +68,32 @@ interface IBaseVault is IPauseable {
     //////////////////////////////////////////////////////////////*/
     /// @notice Emitted when a deposit to the strategy is successful
     /// @param epochNonce The nonce of the epoch
-    /// @param amount The amount of USDC deposited
+    /// @param amount The amount of asset deposited
     event DepositToStrategySuccess(uint256 indexed epochNonce, uint256 indexed amount);
     /// @notice Emitted when a deposit to the strategy fails
     /// @param epochNonce The nonce of the epoch
-    /// @param amount The amount of USDC deposited
+    /// @param amount The amount of asset deposited
     event DepositToStrategyFailure(uint256 indexed epochNonce, uint256 indexed amount);
     /// @notice Emitted when a withdraw from the strategy is successful
     /// @param epochNonce The nonce of the epoch
-    /// @param amount The amount of USDC withdrawn
+    /// @param amount The amount of asset withdrawn
     event WithdrawFromStrategySuccess(uint256 indexed epochNonce, uint256 indexed amount);
     /// @notice Emitted when a withdraw from the strategy fails
     /// @param epochNonce The nonce of the epoch
-    /// @param amount The amount of USDC withdrawn
+    /// @param amount The amount of asset withdrawn
     event WithdrawFromStrategyFailure(uint256 indexed epochNonce, uint256 indexed amount);
 
     /// @notice Emitted when a rebalance deposit to the new strategy is successful
     /// @param rebalanceNonce The nonce of the rebalance
-    /// @param amount The amount of USDC rebalanced into the new strategy
+    /// @param amount The amount of asset rebalanced into the new strategy
     event RebalanceDepositSuccess(uint256 indexed rebalanceNonce, uint256 indexed amount);
     /// @notice Emitted when a rebalance deposit to the new strategy fails
     /// @param rebalanceNonce The nonce of the rebalance
-    /// @param amount The amount of USDC that failed to rebalance into the new strategy
+    /// @param amount The amount of asset that failed to rebalance into the new strategy
     event RebalanceDepositFailure(uint256 indexed rebalanceNonce, uint256 indexed amount);
     /// @notice Emitted when a rebalance withdraw from the old strategy is successful
     /// @param rebalanceNonce The nonce of the rebalance
-    /// @param amount The amount of USDC withdrawn from the old strategy
+    /// @param amount The amount of asset withdrawn from the old strategy
     event RebalanceWithdrawSuccess(uint256 indexed rebalanceNonce, uint256 indexed amount);
     /// @notice Emitted when a rebalance withdraw from the old strategy fails
     /// @param rebalanceNonce The nonce of the rebalance
@@ -101,7 +101,7 @@ interface IBaseVault is IPauseable {
 
     /// @notice Emitted when a CCIP transfer is sent to a destination chain
     /// @param ccipMessageId The ID of the CCIP message
-    /// @param amount The amount of USDC bridged
+    /// @param amount The amount of asset bridged
     /// @param ccipTxType The type of CCIP transaction
     event CCIPBridged(bytes32 indexed ccipMessageId, uint256 indexed amount, Types.CcipTx indexed ccipTxType);
 
@@ -121,30 +121,30 @@ interface IBaseVault is IPauseable {
     /// @param operator The address of the LINK operator
     /// @param amount The amount of LINK withdrawn
     event LinkWithdrawn(address indexed operator, uint256 indexed amount);
-    /// @notice Emitted when an emergency drain transfers USDC to the emergency receiver
+    /// @notice Emitted when an emergency drain transfers the underlying asset to the emergency receiver
     /// @param emergencyReceiver The address of the emergency receiver
-    /// @param amount The amount of USDC drained
+    /// @param amount The amount of asset drained
     event EmergencyDrainExecuted(address indexed emergencyReceiver, uint256 indexed amount);
     /// @notice Emitted when the emergency receiver is set by a CONFIG_OPERATOR
     /// @param emergencyReceiver The address of the emergency receiver
     event EmergencyReceiverSet(address indexed emergencyReceiver);
     /// @notice Emitted when failed rebalance deposit recovery state is stored
     /// @param rebalanceNonce The nonce of the failed rebalance deposit
-    /// @param amount The amount of USDC to retry depositing
+    /// @param amount The amount of asset to retry depositing
     event RebalanceDepositRecoveryStored(uint256 indexed rebalanceNonce, uint256 indexed amount);
     /// @notice Emitted when failed rebalance deposit recovery state is cleared
     /// @param rebalanceNonce The nonce of the recovered rebalance deposit
     event RebalanceDepositRecoveryCleared(uint256 indexed rebalanceNonce);
-    /// @notice Emitted when USDC is donated to the active strategy without minting shares
-    /// @param donor The address that donated USDC
-    /// @param amount The amount of USDC donated
+    /// @notice Emitted when the underlying asset is donated to the active strategy without minting shares
+    /// @param donor The address that donated the underlying asset
+    /// @param amount The amount of asset donated
     event Donation(address indexed donor, uint256 indexed amount);
 
     /*//////////////////////////////////////////////////////////////
                                DONATION
     //////////////////////////////////////////////////////////////*/
-    /// @notice Donates USDC to the active strategy without minting shares or creating a claim
-    /// @param amount The amount of USDC to donate
+    /// @notice Donates the underlying asset to the active strategy without minting shares or creating a claim
+    /// @param amount The amount of asset to donate
     /// @dev Precondition: Caller must have the DONATE_OPERATOR_ROLE
     /// @dev Precondition: This vault must be on the active strategy chain
     /// @dev Precondition: Deposit into the active strategy must succeed
@@ -155,7 +155,7 @@ interface IBaseVault is IPauseable {
     //////////////////////////////////////////////////////////////*/
     /// @dev Precondition: Caller must have the EMERGENCY_DRAINER_ROLE
     /// @dev Precondition: Vault must have been paused for at least EMERGENCY_DRAIN_DELAY
-    /// @dev Withdraws all USDC from the vault to the emergency receiver
+    /// @dev Withdraws all underlying asset from the vault to the emergency receiver
     /// @param revertOnFailure Whether to revert if the withdraw from strategy fails
     /// @notice If the vault has the TVL, it will be withdrawn from the strategy and transferred to the emergency receiver
     function emergencyDrain(bool revertOnFailure) external;
@@ -186,7 +186,7 @@ interface IBaseVault is IPauseable {
     /// @dev Emits the DefaultCcipGasLimitSet event
     function setDefaultCcipGasLimit(uint256 gasLimit) external;
     /// @notice Sets the emergency receiver
-    /// @param emergencyReceiver The address that receives USDC during emergency drain
+    /// @param emergencyReceiver The address that receives the underlying asset during emergency drain
     /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
     /// @dev Precondition: emergencyReceiver must not be the zero address
     /// @dev Emits the EmergencyReceiverSet event
@@ -208,9 +208,12 @@ interface IBaseVault is IPauseable {
     /// @notice Gets the LINK token
     /// @return link The address of the LINK token
     function getLink() external view returns (address link);
-    /// @notice Gets the USDC token
-    /// @return usdc The address of the USDC token
-    function getUsdc() external view returns (address usdc);
+    /// @notice Gets the underlying asset token
+    /// @return asset The address of the underlying asset token
+    function getAsset() external view returns (address asset);
+    /// @notice Gets the underlying asset precision factor
+    /// @return assetPrecision 10 ** asset.decimals()
+    function getAssetPrecision() external view returns (uint256 assetPrecision);
     /// @notice Gets the CCIP selector for this chain
     /// @return thisChainSelector The CCIP selector for this chain
     function getThisChainSelector() external view returns (uint64 thisChainSelector);
@@ -229,7 +232,7 @@ interface IBaseVault is IPauseable {
     /// @return defaultCcipGasLimit The default CCIP gas limit
     function getDefaultCcipGasLimit() external view returns (uint256 defaultCcipGasLimit);
     /// @notice Gets the emergency receiver
-    /// @return emergencyReceiver The address that receives USDC during emergency drain
+    /// @return emergencyReceiver The address that receives the underlying asset during emergency drain
     function getEmergencyReceiver() external view returns (address emergencyReceiver);
     /// @notice Gets the timestamp when the vault was paused
     /// @return pausedAt The timestamp when the vault was paused

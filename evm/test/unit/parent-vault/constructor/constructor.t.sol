@@ -18,7 +18,10 @@ contract ParentVault_ConstructorUnitTest is BaseUnitTest {
         );
         assertEq(parentVault.getThisChainSelector(), PARENT_CHAIN_SELECTOR);
         assertEq(address(parentVault.getLink()), address(s_mockLink));
-        assertEq(address(parentVault.getUsdc()), address(s_mockUsdc));
+        assertEq(address(parentVault.getAsset()), address(s_mockUsdc));
+        assertEq(parentVault.getAssetPrecision(), 10 ** uint256(s_mockUsdc.decimals()));
+        assertEq(parentVault.getSharePrecision(), 1e18 / parentVault.getAssetPrecision());
+        assertEq(parentVault.getMinDepositAmount(), 100 * parentVault.getAssetPrecision());
         assertEq(address(parentVault.getShare()), address(s_yieldcoin));
         assertEq(address(parentVault.getTreasury()), address(i_treasury));
         assertEq(address(parentVault.getRouter()), address(s_mockCcipRouter));
@@ -31,7 +34,7 @@ contract ParentVault_ConstructorUnitTest is BaseUnitTest {
         assertEq(parentVault.hasRole(Roles.CONFIG_OPERATOR_ROLE, address(i_configOperator)), true);
         assertEq(parentVault.hasRole(Roles.POLICY_ENGINE_MANAGER_ROLE, address(i_policyEngineManager)), true);
         assertEq(parentVault.getRebalance().nonce, 1);
-        assertEq(parentVault.getPerformanceFeeHighWaterMark(), SHARE_PRECISION);
+        assertEq(parentVault.getPerformanceFeeHighWaterMark(), parentVault.getSharePrecision());
         assertEq(parentVault.getEpochNonce(), 1);
         assertEq(uint256(parentVault.getEpoch(1).status), uint256(Types.EpochStatus.OPEN));
         assertEq(parentVault.getEpoch(1).openedAtTimestamp, block.timestamp);

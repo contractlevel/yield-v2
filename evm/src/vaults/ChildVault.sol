@@ -55,7 +55,7 @@ contract ChildVault is BaseVault, IChildVault {
     /// @notice Receives CCIP messages
     /// @param message Any2EVMMessage.
     /// @dev Precondition: the message must be sent by an allowed sender (a crosschain vault mapped to an allowed source chain selector)
-    /// @dev Precondition: the received token must be i_usdc
+    /// @dev Precondition: the received token must be i_asset
     /// @dev Precondition: there must not be an existent recovery mode
     function _ccipReceive(Client.Any2EVMMessage memory message)
         internal
@@ -64,19 +64,19 @@ contract ChildVault is BaseVault, IChildVault {
         onlyAllowedSender(abi.decode(message.sender, (address)), message.sourceChainSelector)
     {
         _requireNoRecovery();
-        uint256 receivedUsdcAmount = _validateReceivedTokenAndGetAmount(message);
+        uint256 receivedAmount = _validateReceivedTokenAndGetAmount(message);
 
         /// @dev data decodes to a uint256 epochNonce for epoch net deposits/withdraws and a (uint256 rebalanceNonce, bytes32 protocolId) for rebalances
         (Types.CcipTx ccipTxType, bytes memory data) = abi.decode(message.data, (Types.CcipTx, bytes));
 
         if (ccipTxType == Types.CcipTx.EPOCH_NET_DEPOSIT) {
             uint256 epochNonce = abi.decode(data, (uint256));
-            _handleCCIPDeposit(epochNonce, receivedUsdcAmount);
+            _handleCCIPDeposit(epochNonce, receivedAmount);
         }
         /// @dev see BaseVault::_handleCCIPRebalance
         else if (ccipTxType == Types.CcipTx.REBALANCE) {
             (uint256 rebalanceNonce, bytes32 protocolId) = abi.decode(data, (uint256, bytes32));
-            _handleCCIPRebalance(rebalanceNonce, protocolId, receivedUsdcAmount);
+            _handleCCIPRebalance(rebalanceNonce, protocolId, receivedAmount);
         } else {
             revert BaseVault__InvalidTxType(ccipTxType);
         }
@@ -86,7 +86,7 @@ contract ChildVault is BaseVault, IChildVault {
     /// @notice This will only be implemented in the ChildVault.
     ///         The ParentVault sends a CCIP deposit to the active strategy chain when an epoch's net flow is positive. (more deposits than withdraws)
     /// @param epochNonce The nonce of the epoch
-    /// @param amount The amount of USDC that was bridged to deposit into the active strategy on this child chain
+    /// @param amount The amount of asset that was bridged to deposit into the active strategy on this child chain
     function _handleCCIPDeposit(uint256 epochNonce, uint256 amount) internal {
         bool success = _executeDeposit(amount, false);
         if (success) {
@@ -99,7 +99,7 @@ contract ChildVault is BaseVault, IChildVault {
 
     /// @notice Sends a ChildVault CCIP message and stores recovery state on failure
     /// @notice Overrides BaseVault::_ccipSend to use a try/catch. (Parent failures use atomic revert)
-    /// @param bridgeAmount The amount of USDC to bridge
+    /// @param bridgeAmount The amount of asset to bridge
     /// @param destinationChainSelector The CCIP selector of the destination chain
     /// @param ccipTxType The type of CCIP transaction
     /// @param txData abi.encode(epochNonce) for epoch net deposit/withdraw, or abi.encode(rebalanceNonce, newStrategy.protocolId) for rebalance
@@ -127,7 +127,7 @@ contract ChildVault is BaseVault, IChildVault {
 
     /// @notice Executes a CCIP send through an external self-call boundary for ChildVault try/catch recovery
     /// @dev Precondition: caller must be this vault
-    /// @param bridgeAmount The amount of USDC to bridge
+    /// @param bridgeAmount The amount of asset to bridge
     /// @param destinationChainSelector The CCIP selector of the destination chain
     /// @param ccipTxType The type of CCIP transaction
     /// @param txData abi.encode(epochNonce) for epoch net deposit/withdraw, or abi.encode(rebalanceNonce, newStrategy.protocolId) for rebalance
@@ -147,7 +147,7 @@ contract ChildVault is BaseVault, IChildVault {
     /// @notice Executes the epoch withdraw from a strategy
     /// @notice This is called by the WorkflowRouter when net flow is negative (more withdraws than deposits)
     /// @param epochNonce The nonce of the epoch
-    /// @param amount The amount of USDC that was withdrawn from the active strategy
+    /// @param amount The amount of asset that was withdrawn from the active strategy
     /// @dev Precondition: Caller must have the EPOCH_OPERATOR_ROLE
     function executeEpochWithdraw(uint256 epochNonce, uint256 amount)
         external
@@ -192,7 +192,7 @@ contract ChildVault is BaseVault, IChildVault {
     //////////////////////////////////////////////////////////////*/
     /// @notice Stores recovery state for a failed epoch deposit
     /// @param epochNonce The epoch nonce of the failed deposit
-    /// @param amount The amount of USDC to retry depositing
+    /// @param amount The amount of asset to retry depositing
     /// @dev Precondition: amount must not be zero
     /// @dev Precondition: epoch deposit recovery state must not already exist for the epoch
     /// @dev Precondition: epoch withdraw recovery state must not already exist for the epoch
@@ -228,7 +228,7 @@ contract ChildVault is BaseVault, IChildVault {
 
     /// @notice Stores recovery state for a failed epoch withdraw
     /// @param epochNonce The epoch nonce of the failed withdraw
-    /// @param amount The amount of USDC to retry withdrawing
+    /// @param amount The amount of asset to retry withdrawing
     /// @dev Precondition: amount must not be zero
     /// @dev Precondition: epoch withdraw recovery state must not already exist for the epoch
     /// @dev Precondition: epoch deposit recovery state must not already exist for the epoch

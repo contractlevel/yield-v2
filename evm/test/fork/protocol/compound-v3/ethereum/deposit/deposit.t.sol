@@ -15,7 +15,7 @@ contract Ethereum_CompoundV3DepositForkTest is BaseCompoundV3ForkTest {
 
     function test_Ethereum_compoundV3_deposit_Success() external {
         _assertCompoundV3DepositSucceeds(
-            ethereumChild.compoundV3Adapter, address(ethereumChild.vault), ethereumChild.usdc
+            ethereumChild.compoundV3Adapter, address(ethereumChild.vault), ethereumChild.asset
         );
     }
 }

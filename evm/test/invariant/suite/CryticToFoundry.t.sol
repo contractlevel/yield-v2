@@ -15,7 +15,7 @@ contract CryticToFoundry is TargetFunctions, FoundryAsserts {
         selectors[3] = TargetFunctions.handler_claimShares.selector;
         selectors[4] = TargetFunctions.handler_withdraw.selector;
         selectors[5] = TargetFunctions.handler_cancelWithdraw.selector;
-        selectors[6] = TargetFunctions.handler_claimUsdc.selector;
+        selectors[6] = TargetFunctions.handler_claimAsset.selector;
         selectors[7] = TargetFunctions.handler_initiateRebalance.selector;
         selectors[8] = TargetFunctions.handler_emergencyDrainAndDonate.selector;
         selectors[9] = TargetFunctions.handler_recoveryModes.selector;
@@ -31,7 +31,7 @@ contract CryticToFoundry is TargetFunctions, FoundryAsserts {
         handler_cancelWithdraw(0, MIN_DEPOSIT_AMOUNT, MIN_DEPOSIT_AMOUNT);
         handler_closeEpoch(0);
         handler_claimShares(0, 0, MIN_DEPOSIT_AMOUNT);
-        handler_claimUsdc(0, 0, MIN_DEPOSIT_AMOUNT, MIN_DEPOSIT_AMOUNT);
+        handler_claimAsset(0, 0, MIN_DEPOSIT_AMOUNT, MIN_DEPOSIT_AMOUNT);
         handler_initiateRebalance(0, 0, 0, MIN_DEPOSIT_AMOUNT);
         handler_emergencyDrainAndDonate();
         handler_recoveryModes(0, 0, 0, MIN_DEPOSIT_AMOUNT);

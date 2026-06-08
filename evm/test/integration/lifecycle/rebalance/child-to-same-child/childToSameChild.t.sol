@@ -39,7 +39,7 @@ contract ChildToSameChild_RebalanceIntegrationTest is BaseIntegrationTest {
         address targetSpoke = child.aaveV4Adapter.getProtocolPool();
         uint256 targetReserveId = child.aaveV4Adapter.getReserveId();
 
-        uint256 routerBalanceBeforeRebalance = IERC20(parent.usdc).balanceOf(address(local.mockCcipRouter));
+        uint256 routerBalanceBeforeRebalance = IERC20(parent.asset).balanceOf(address(local.mockCcipRouter));
         uint256 targetTvlBefore =
             MockAaveV4Spoke(targetSpoke).getUserSuppliedAssets(targetReserveId, address(child.aaveV4Adapter));
 
@@ -89,7 +89,7 @@ contract ChildToSameChild_RebalanceIntegrationTest is BaseIntegrationTest {
         assertEq(uint256(depositLog.topics[1]), 1);
         assertEq(uint256(depositLog.topics[2]), tvl);
 
-        assertEq(IERC20(parent.usdc).balanceOf(address(local.mockCcipRouter)), routerBalanceBeforeRebalance);
+        assertEq(IERC20(parent.asset).balanceOf(address(local.mockCcipRouter)), routerBalanceBeforeRebalance);
         assertEq(child.vault.getActiveProtocolAdapter(), address(child.aaveV4Adapter));
         assertEq(
             MockAaveV4Spoke(targetSpoke).getUserSuppliedAssets(targetReserveId, address(child.aaveV4Adapter)),

@@ -13,18 +13,18 @@ abstract contract ProtocolAdapter is IProtocolAdapter, ReentrancyGuard {
     //////////////////////////////////////////////////////////////*/
     /// @dev The Yieldcoin v2 Vault on this chain
     address internal immutable i_vault;
-    /// @dev The USDC token
-    address internal immutable i_usdc;
+    /// @dev The underlying asset token
+    address internal immutable i_asset;
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
     /// @param vault The address of the Yieldcoin v2 Vault
-    /// @param usdc The address of the USDC token
+    /// @param asset The address of the underlying asset token
     //slither-disable-next-line missing-zero-check
-    constructor(address vault, address usdc) {
+    constructor(address vault, address asset) {
         i_vault = vault;
-        i_usdc = usdc;
+        i_asset = asset;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -47,7 +47,7 @@ abstract contract ProtocolAdapter is IProtocolAdapter, ReentrancyGuard {
     }
 
     /// @inheritdoc IProtocolAdapter
-    function getUsdc() external view returns (address usdc) {
-        usdc = i_usdc;
+    function getAsset() external view returns (address asset) {
+        asset = i_asset;
     }
 }

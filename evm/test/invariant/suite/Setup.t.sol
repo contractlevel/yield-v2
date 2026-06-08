@@ -84,7 +84,7 @@ abstract contract Setup is BaseSetup, BaseIntegrationTest {
     }
 
     function _setupProtocolLiquidity(address aaveV3Pool, address aaveV4Spoke, address comet) internal {
-        MockUSDC usdc = MockUSDC(parent.vault.getUsdc());
+        MockUSDC usdc = MockUSDC(parent.vault.getAsset());
         MockAToken aToken = new MockAToken();
 
         usdc.mint(aaveV3Pool, INVARIANT_PROTOCOL_USDC_LIQUIDITY);

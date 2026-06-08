@@ -78,14 +78,14 @@ contract RoundTrip_EpochIntegrationTest is BaseIntegrationTest {
         assertEq(parent.vault.getEpoch(2).pricePerShare, expectedPricePerShare);
         assertEq(parent.vault.getEpoch(2).totalWithdrawClaimAmount, expectedUsdcOut);
 
-        uint256 depositorUsdcBeforeClaim = IERC20(parent.usdc).balanceOf(i_depositor);
+        uint256 depositorAssetBeforeClaim = IERC20(parent.asset).balanceOf(i_depositor);
 
         _changePrank(i_depositor);
-        uint256 usdcOut = parent.vault.claimUsdc(2);
+        uint256 assetOut = parent.vault.claimAsset(2);
 
-        assertEq(usdcOut, expectedUsdcOut);
-        assertEq(IERC20(parent.usdc).balanceOf(i_depositor), depositorUsdcBeforeClaim + expectedUsdcOut);
-        assertLe(usdcOut, depositAmount);
+        assertEq(assetOut, expectedUsdcOut);
+        assertEq(IERC20(parent.asset).balanceOf(i_depositor), depositorAssetBeforeClaim + expectedUsdcOut);
+        assertLe(assetOut, depositAmount);
         assertEq(parent.share.balanceOf(i_depositor), 0);
         assertEq(parent.vault.getDepositAmount(i_depositor, 1), 0);
         assertEq(parent.vault.getWithdrawShareBurnAmount(i_depositor, 2), 0);

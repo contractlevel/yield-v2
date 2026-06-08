@@ -14,6 +14,6 @@ contract Optimism_AaveV3DepositForkTest is BaseAaveV3ForkTest {
     }
 
     function test_Optimism_aaveV3_deposit_Success() external {
-        _assertAaveV3DepositSucceeds(optimismChild.aaveV3Adapter, address(optimismChild.vault), optimismChild.usdc);
+        _assertAaveV3DepositSucceeds(optimismChild.aaveV3Adapter, address(optimismChild.vault), optimismChild.asset);
     }
 }

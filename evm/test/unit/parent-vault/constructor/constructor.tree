@@ -1,7 +1,10 @@
 ParentVault_constructor
   ├── it should set i_thisChainSelector
   ├── it should set i_link
-  ├── it should set i_usdc
+  ├── it should set i_asset
+  ├── it should set i_assetPrecision
+  ├── it should set i_sharePrecision
+  ├── it should set i_minDepositAmount
   ├── it should set the emergency receiver
   ├── it should set i_yieldcoinToken
   ├── it should set s_treasury
@@ -14,7 +17,7 @@ ParentVault_constructor
   ├── it should grant POLICY_ENGINE_MANAGER_ROLE to policyEngineManager
   ├── it should set s_defaultCcipGasLimit
   ├── it should set the rebalance nonce to 1
-  ├── it should set the performance fee high water mark to SHARE_PRECISION
+  ├── it should set the performance fee high water mark to i_sharePrecision
   ├── it should set the epoch nonce to 1
   ├── it should set the first epoch to OPEN
   ├── it should set the first epoch open timestamp to block.timestamp

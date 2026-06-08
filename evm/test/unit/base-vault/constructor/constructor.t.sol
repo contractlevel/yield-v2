@@ -14,7 +14,8 @@ abstract contract BaseVault_ConstructorUnitTest is BaseUnitTest {
     function test_BaseVault_constructor() public {
         assertEq(s_vault.getThisChainSelector(), _expectedChainSelector());
         assertEq(address(s_vault.getLink()), address(s_mockLink));
-        assertEq(address(s_vault.getUsdc()), address(s_mockUsdc));
+        assertEq(address(s_vault.getAsset()), address(s_mockUsdc));
+        assertEq(s_vault.getAssetPrecision(), 10 ** uint256(s_mockUsdc.decimals()));
         assertEq(address(s_vault.getRouter()), address(s_mockCcipRouter));
         assertEq(address(s_vault.getAdapterRegistry()), address(s_adapterRegistry));
         assertEq(s_vault.getEmergencyReceiver(), i_emergencyReceiver);

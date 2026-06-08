@@ -24,7 +24,7 @@ contract MultiUser_EpochIntegrationTest is BaseIntegrationTest {
 
     function test_Epoch_multiUser_TwoDepositors_EachClaimProportionalShares() external {
         address aaveV3Pool = parent.aaveV3Adapter.getProtocolPool();
-        uint256 poolBalanceBefore = IERC20(parent.usdc).balanceOf(aaveV3Pool);
+        uint256 poolBalanceBefore = IERC20(parent.asset).balanceOf(aaveV3Pool);
 
         _fundAndApproveUsdc(i_depositor, DEPOSIT_AMOUNT);
         _changePrank(i_depositor);
@@ -41,7 +41,7 @@ contract MultiUser_EpochIntegrationTest is BaseIntegrationTest {
         assertEq(parent.vault.getEpochNonce(), 2);
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.OPEN));
         assertEq(parent.vault.getTotalShares(), DEPOSIT_AMOUNT + DEPOSIT_AMOUNT_B);
-        assertEq(IERC20(parent.usdc).balanceOf(aaveV3Pool), poolBalanceBefore + DEPOSIT_AMOUNT + DEPOSIT_AMOUNT_B);
+        assertEq(IERC20(parent.asset).balanceOf(aaveV3Pool), poolBalanceBefore + DEPOSIT_AMOUNT + DEPOSIT_AMOUNT_B);
 
         _changePrank(i_depositor);
         parent.vault.claimShares(1);
@@ -68,7 +68,7 @@ contract MultiUser_EpochIntegrationTest is BaseIntegrationTest {
         _changePrank(i_withdrawer);
         parent.vault.withdraw(sharesB);
 
-        deal(parent.usdc, aaveV3Pool, tvl);
+        deal(parent.asset, aaveV3Pool, tvl);
         MockAaveV3Pool(aaveV3Pool).setWithdrawReturn(tvl);
 
         _warpPastMinEpoch();
@@ -78,17 +78,17 @@ contract MultiUser_EpochIntegrationTest is BaseIntegrationTest {
         assertEq(parent.vault.getEpochNonce(), 3);
         assertEq(uint256(parent.vault.getEpoch(3).status), uint256(Types.EpochStatus.OPEN));
 
-        uint256 depositorUsdcBefore = IERC20(parent.usdc).balanceOf(i_depositor);
-        uint256 withdrawerUsdcBefore = IERC20(parent.usdc).balanceOf(i_withdrawer);
+        uint256 depositorUsdcBefore = IERC20(parent.asset).balanceOf(i_depositor);
+        uint256 withdrawerUsdcBefore = IERC20(parent.asset).balanceOf(i_withdrawer);
 
         _changePrank(i_depositor);
-        parent.vault.claimUsdc(2);
+        parent.vault.claimAsset(2);
 
         _changePrank(i_withdrawer);
-        parent.vault.claimUsdc(2);
+        parent.vault.claimAsset(2);
 
-        assertEq(IERC20(parent.usdc).balanceOf(i_depositor), depositorUsdcBefore + sharesA);
-        assertEq(IERC20(parent.usdc).balanceOf(i_withdrawer), withdrawerUsdcBefore + sharesB);
+        assertEq(IERC20(parent.asset).balanceOf(i_depositor), depositorUsdcBefore + sharesA);
+        assertEq(IERC20(parent.asset).balanceOf(i_withdrawer), withdrawerUsdcBefore + sharesB);
         assertEq(parent.share.balanceOf(i_depositor), 0);
         assertEq(parent.share.balanceOf(i_withdrawer), 0);
         assertEq(parent.vault.getWithdrawShareBurnAmount(i_depositor, 2), 0);
@@ -107,7 +107,7 @@ contract MultiUser_EpochIntegrationTest is BaseIntegrationTest {
         _changePrank(i_withdrawer);
         parent.vault.withdraw(withdrawerShares);
 
-        uint256 withdrawerUsdcBefore = IERC20(parent.usdc).balanceOf(i_withdrawer);
+        uint256 withdrawerUsdcBefore = IERC20(parent.asset).balanceOf(i_withdrawer);
 
         _warpPastMinEpoch();
         _closeEpochThroughWorkflow(parent.workflowRouter, WORKFLOW_ID, WORKFLOW_NAME, i_owner, withdrawerShares);
@@ -120,11 +120,11 @@ contract MultiUser_EpochIntegrationTest is BaseIntegrationTest {
         parent.vault.claimShares(2);
 
         _changePrank(i_withdrawer);
-        parent.vault.claimUsdc(2);
+        parent.vault.claimAsset(2);
 
         assertEq(parent.share.balanceOf(i_depositor), DEPOSIT_AMOUNT_B);
         assertEq(parent.vault.getDepositAmount(i_depositor, 2), 0);
-        assertEq(IERC20(parent.usdc).balanceOf(i_withdrawer), withdrawerUsdcBefore + withdrawerShares);
+        assertEq(IERC20(parent.asset).balanceOf(i_withdrawer), withdrawerUsdcBefore + withdrawerShares);
         assertEq(parent.share.balanceOf(i_withdrawer), 0);
         assertEq(parent.vault.getWithdrawShareBurnAmount(i_withdrawer, 2), 0);
     }

@@ -15,22 +15,22 @@ interface IProtocolAdapter {
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
     /// @notice Emitted when a deposit to the protocol is executed
-    /// @param amount The amount of USDC deposited
+    /// @param amount The amount of asset deposited
     event Deposit(uint256 indexed amount);
     /// @notice Emitted when a withdrawal from the protocol is executed
-    /// @param amount The amount of USDC withdrawn
+    /// @param amount The amount of asset withdrawn
     event Withdraw(uint256 indexed amount);
 
     /*//////////////////////////////////////////////////////////////
                                FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-    /// @notice Deposits USDC into the protocol
-    /// @param amount The amount of USDC to deposit
+    /// @notice Deposits the underlying asset into the protocol
+    /// @param amount The amount of asset to deposit
     /// @dev Precondition: caller must be the Yieldcoin v2 Vault
     function deposit(uint256 amount) external;
-    /// @notice Withdraws USDC from the protocol
-    /// @param amount The amount of USDC to withdraw
-    /// @return amountOut The actualamount of USDC withdrawn
+    /// @notice Withdraws the underlying asset from the protocol
+    /// @param amount The amount of asset to withdraw
+    /// @return amountOut The actual amount of asset withdrawn
     /// @dev Precondition: caller must be the Yieldcoin v2 Vault
     function withdraw(uint256 amount) external returns (uint256 amountOut);
     /// @notice Gets the total value locked in the protocol
@@ -42,7 +42,7 @@ interface IProtocolAdapter {
     /// @notice Gets the Yieldcoin v2 Vault authorized to call this adapter
     /// @return vault The vault address
     function getVault() external view returns (address vault);
-    /// @notice Gets the USDC token used by this adapter
-    /// @return usdc The USDC token address
-    function getUsdc() external view returns (address usdc);
+    /// @notice Gets the underlying asset token used by this adapter
+    /// @return asset The underlying asset token address
+    function getAsset() external view returns (address asset);
 }

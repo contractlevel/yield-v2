@@ -26,7 +26,7 @@ contract ParentWithdraw_EpochIntegrationTest is BaseIntegrationTest {
     }
 
     function test_Epoch_parentWithdraw_ClosesThroughWorkflowRouterAndDepositorClaimsUsdc() external {
-        deal(parent.usdc, s_aaveV3Pool, s_shareAmount);
+        deal(parent.asset, s_aaveV3Pool, s_shareAmount);
         MockAaveV3Pool(s_aaveV3Pool).setWithdrawReturn(s_shareAmount);
 
         _approveShares(i_depositor, address(parent.vault), s_shareAmount);
@@ -41,12 +41,12 @@ contract ParentWithdraw_EpochIntegrationTest is BaseIntegrationTest {
         assertEq(parent.vault.getEpochNonce(), 3);
         assertEq(uint256(parent.vault.getEpoch(3).status), uint256(Types.EpochStatus.OPEN));
 
-        uint256 depositorUsdcBeforeClaim = IERC20(parent.usdc).balanceOf(i_depositor);
+        uint256 depositorUsdcBeforeClaim = IERC20(parent.asset).balanceOf(i_depositor);
 
         _changePrank(i_depositor);
-        parent.vault.claimUsdc(2);
+        parent.vault.claimAsset(2);
 
-        assertEq(IERC20(parent.usdc).balanceOf(i_depositor), depositorUsdcBeforeClaim + s_shareAmount);
+        assertEq(IERC20(parent.asset).balanceOf(i_depositor), depositorUsdcBeforeClaim + s_shareAmount);
         assertEq(parent.share.balanceOf(i_depositor), 0);
         assertEq(parent.vault.getWithdrawShareBurnAmount(i_depositor, 2), 0);
         assertEq(parent.vault.getTotalShares(), 0);

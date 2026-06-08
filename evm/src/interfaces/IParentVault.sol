@@ -71,7 +71,7 @@ interface IParentVault is IBaseVault {
     /// @notice Emitted when a deposit is made
     /// @param epochNonce The epoch nonce of the deposit
     /// @param depositor The address of the depositor
-    /// @param amount The amount of USDC deposited
+    /// @param amount The amount of asset deposited
     event DepositSubmitted(uint256 indexed epochNonce, address indexed depositor, uint256 indexed amount);
     /// @notice Emitted when a withdraw is made
     /// @param epochNonce The epoch nonce of the withdraw
@@ -86,22 +86,22 @@ interface IParentVault is IBaseVault {
     /// @notice Emitted when a withdraw is claimed
     /// @param epochNonce The epoch nonce of the claim
     /// @param withdrawer The address of the withdrawer
-    /// @param amount The amount of USDC withdrawn
+    /// @param amount The amount of asset withdrawn
     event WithdrawClaimed(uint256 indexed epochNonce, address indexed withdrawer, uint256 indexed amount);
     /// @notice Emitted when an epoch is open
     /// @param epochNonce The nonce of the open epoch
     event EpochOpen(uint256 indexed epochNonce);
     /// @notice Emitted when an epoch is executing
     /// @param epochNonce The nonce of the executing epoch
-    /// @param amount The amount of USDC that needs to be withdrawn
+    /// @param amount The amount of asset that needs to be withdrawn
     event EpochExecuting(uint256 indexed epochNonce, uint256 indexed amount);
     /// @notice Emitted when an epoch is claimable
     /// @param epochNonce The nonce of the claimable epoch
     event EpochClaimable(uint256 indexed epochNonce);
-    /// @notice Emitted when a CCIP withdraw message delivers less USDC than expected
+    /// @notice Emitted when a CCIP withdraw message delivers less asset than expected
     /// @param epochNonce The nonce of the epoch with the short withdrawal
-    /// @param expectedAmount The amount of USDC expected from the remote strategy
-    /// @param actualAmount The amount of USDC delivered by the CCIP message
+    /// @param expectedAmount The amount of asset expected from the remote strategy
+    /// @param actualAmount The amount of asset delivered by the CCIP message
     event EpochWithdrawAmountShort(uint256 indexed epochNonce, uint256 expectedAmount, uint256 actualAmount);
     /// @notice Emitted when a rebalance is initiated
     /// @param rebalanceNonce The nonce of the rebalance
@@ -127,7 +127,7 @@ interface IParentVault is IBaseVault {
     /// @notice Emitted when a deposit is cancelled
     /// @param epochNonce The epoch nonce of the deposit
     /// @param depositor The address of the depositor
-    /// @param amount The amount of USDC that was cancelled
+    /// @param amount The amount of asset that was cancelled
     event DepositCancelled(uint256 indexed epochNonce, address indexed depositor, uint256 indexed amount);
     /// @notice Emitted when a withdraw is cancelled
     /// @param epochNonce The epoch nonce of the withdraw
@@ -176,4 +176,19 @@ interface IParentVault is IBaseVault {
     /// @notice Returns the performance fee high water mark
     /// @return highWaterMark The highest price per share recorded for performance fee purposes
     function getPerformanceFeeHighWaterMark() external view returns (uint256 highWaterMark);
+
+    /// @notice Returns the share precision factor (WAD_PRECISION / i_assetPrecision)
+    /// @return sharePrecision The share precision factor
+    function getSharePrecision() external view returns (uint256 sharePrecision);
+
+    /// @notice Returns the minimum deposit amount (100 * i_assetPrecision)
+    /// @return minDepositAmount The minimum deposit amount
+    function getMinDepositAmount() external view returns (uint256 minDepositAmount);
+
+    /// @notice Claims the underlying asset for a completed epoch withdrawal
+    /// @param epochNonce The nonce of the epoch to claim from
+    /// @return withdrawAmount The amount of asset transferred to the withdrawer
+    function claimAsset(uint256 epochNonce) external returns (uint256 withdrawAmount);
+
+    // @review we want to add all functions to this and all interfaces
 }

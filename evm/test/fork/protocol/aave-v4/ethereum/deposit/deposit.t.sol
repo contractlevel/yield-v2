@@ -14,6 +14,6 @@ contract Ethereum_AaveV4DepositForkTest is BaseAaveV4ForkTest {
     }
 
     function test_Ethereum_aaveV4_deposit_Success() external {
-        _assertAaveV4DepositSucceeds(ethereumChild.aaveV4Adapter, address(ethereumChild.vault), ethereumChild.usdc);
+        _assertAaveV4DepositSucceeds(ethereumChild.aaveV4Adapter, address(ethereumChild.vault), ethereumChild.asset);
     }
 }

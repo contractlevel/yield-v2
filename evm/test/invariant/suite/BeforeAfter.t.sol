@@ -37,13 +37,13 @@ abstract contract BeforeAfter is EpochGhosts {
         _before.treasuryShareBalance = parent.share.balanceOf(parent.vault.getTreasury());
         _before.performanceFeeHighWaterMark = parent.vault.getPerformanceFeeHighWaterMark();
         _before.tvl = _activeStrategyTvl();
-        _before.vaultBalance = IERC20(parent.vault.getUsdc()).balanceOf(address(_activeVault()));
+        _before.vaultBalance = IERC20(parent.vault.getAsset()).balanceOf(address(_activeVault()));
         _before.currentEpochTotalDepositAmount = parent.vault.getEpoch(epochNonce).totalDepositAmount;
         _before.actorCurrentEpochDepositAmount = parent.vault.getDepositAmount(s_currentActor, epochNonce);
         _before.currentEpochTotalShareBurnAmount = parent.vault.getEpoch(epochNonce).totalShareBurnAmount;
         _before.actorCurrentEpochWithdrawShareBurnAmount =
             parent.vault.getWithdrawShareBurnAmount(s_currentActor, epochNonce);
-        _before.actorUsdcBalance = IERC20(parent.vault.getUsdc()).balanceOf(s_currentActor);
+        _before.actorUsdcBalance = IERC20(parent.vault.getAsset()).balanceOf(s_currentActor);
         _before.actorShareBalance = parent.share.balanceOf(s_currentActor);
         _before.targetEpochRemainingDepositClaimAmount =
         parent.vault.getEpoch(s_targetEpochNonce).remainingDepositClaimAmount;
@@ -66,13 +66,13 @@ abstract contract BeforeAfter is EpochGhosts {
             ghost_maxPerformanceFeeHighWaterMark = _after.performanceFeeHighWaterMark;
         }
         _after.tvl = _activeStrategyTvl();
-        _after.vaultBalance = IERC20(parent.vault.getUsdc()).balanceOf(address(_activeVault()));
+        _after.vaultBalance = IERC20(parent.vault.getAsset()).balanceOf(address(_activeVault()));
         _after.currentEpochTotalDepositAmount = parent.vault.getEpoch(epochNonce).totalDepositAmount;
         _after.actorCurrentEpochDepositAmount = parent.vault.getDepositAmount(s_currentActor, epochNonce);
         _after.currentEpochTotalShareBurnAmount = parent.vault.getEpoch(epochNonce).totalShareBurnAmount;
         _after.actorCurrentEpochWithdrawShareBurnAmount =
             parent.vault.getWithdrawShareBurnAmount(s_currentActor, epochNonce);
-        _after.actorUsdcBalance = IERC20(parent.vault.getUsdc()).balanceOf(s_currentActor);
+        _after.actorUsdcBalance = IERC20(parent.vault.getAsset()).balanceOf(s_currentActor);
         _after.actorShareBalance = parent.share.balanceOf(s_currentActor);
         _after.targetEpochRemainingDepositClaimAmount =
         parent.vault.getEpoch(s_targetEpochNonce).remainingDepositClaimAmount;

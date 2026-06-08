@@ -14,7 +14,7 @@ contract ChildDeposit_RebalanceRecoveryIntegrationTest is BaseRecoveryIntegratio
         uint256 tvl = DEPOSIT_AMOUNT;
         _seedParentLocalTvl(tvl);
         address childPool = child.aaveV3Adapter.getProtocolPool();
-        uint256 childPoolBalanceBefore = IERC20(parent.usdc).balanceOf(childPool);
+        uint256 childPoolBalanceBefore = IERC20(parent.asset).balanceOf(childPool);
 
         MockAaveV3Pool(childPool).setSupplyReverts(true);
 
@@ -35,7 +35,7 @@ contract ChildDeposit_RebalanceRecoveryIntegrationTest is BaseRecoveryIntegratio
         assertEq(uint256(storedLog.topics[2]), tvl);
         _assertRebalanceDepositRecovery(child.vault.getRebalanceDepositRecovery(), 1, tvl);
         assertTrue(child.vault.getRecoveryExists());
-        assertEq(IERC20(parent.usdc).balanceOf(childPool), childPoolBalanceBefore);
+        assertEq(IERC20(parent.asset).balanceOf(childPool), childPoolBalanceBefore);
         assertEq(uint256(parent.vault.getRebalance().state), uint256(Types.RebalanceState.REBALANCING));
 
         MockAaveV3Pool(childPool).setSupplyReverts(false);
@@ -47,7 +47,7 @@ contract ChildDeposit_RebalanceRecoveryIntegrationTest is BaseRecoveryIntegratio
         _assertEmittedBy(recoveryLogs, keccak256("RebalanceDepositSuccess(uint256,uint256)"), address(child.vault));
         _assertRebalanceDepositRecoveryCleared(child.vault.getRebalanceDepositRecovery());
         assertFalse(child.vault.getRecoveryExists());
-        assertEq(IERC20(parent.usdc).balanceOf(childPool), childPoolBalanceBefore + tvl);
+        assertEq(IERC20(parent.asset).balanceOf(childPool), childPoolBalanceBefore + tvl);
 
         _completeRebalanceThroughWorkflow(
             parent.workflowRouter, COMPLETE_REBALANCE_WORKFLOW_ID, COMPLETE_REBALANCE_WORKFLOW_NAME, i_owner

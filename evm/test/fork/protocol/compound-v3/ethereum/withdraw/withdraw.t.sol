@@ -21,13 +21,13 @@ contract Ethereum_CompoundV3WithdrawForkTest is BaseCompoundV3ForkTest {
 
     function test_Ethereum_compoundV3_withdraw_Success_EpochWithdraw() external {
         _assertCompoundV3EpochWithdrawSucceeds(
-            ethereumChild.compoundV3Adapter, address(ethereumChild.vault), ethereumChild.usdc
+            ethereumChild.compoundV3Adapter, address(ethereumChild.vault), ethereumChild.asset
         );
     }
 
     function test_Ethereum_compoundV3_withdraw_Success_RebalanceWithdraw() external {
         _assertCompoundV3RebalanceWithdrawSucceeds(
-            ethereumChild.compoundV3Adapter, address(ethereumChild.vault), ethereumChild.usdc
+            ethereumChild.compoundV3Adapter, address(ethereumChild.vault), ethereumChild.asset
         );
     }
 }

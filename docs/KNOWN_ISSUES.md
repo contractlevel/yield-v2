@@ -25,7 +25,7 @@ Yieldcoin v2 relies on multiple privileged roles for governance and operations. 
 - **`DEFAULT_ADMIN_ROLE`** for local role administration (grant/revoke and admin-transfer acceptance via `AccessControlDefaultAdminRules`).
 - **`CONFIG_OPERATOR_ROLE`** for protocol configuration (vault/router/registry settings, adapter registration, treasury/emergency receiver, workflow metadata/selectors, token metadata/CCIP admin wiring).
 - **`PAUSER_ROLE` / `UNPAUSER_ROLE`** for pause controls across vaults, WorkflowRouter, and YieldcoinShare.
-- **`EMERGENCY_DRAINER_ROLE`** for paused-mode emergency USDC drain (subject to delay guards).
+- **`EMERGENCY_DRAINER_ROLE`** for paused-mode emergency asset drain (subject to delay guards).
 - **`LINK_OPERATOR_ROLE`** for LINK withdrawal from vaults.
 - **`POLICY_ENGINE_MANAGER_ROLE`** for replacing attached policy engines on policy-protected contracts.
 - **`COMPLIANCE_OPERATOR_ROLE`** for forced transfer and freeze/unfreeze functions on YieldcoinShare.
@@ -96,21 +96,21 @@ The protocol team accepts issuer risk as the cost of denominating vaults in wide
 
 ---
 
-## KI-003 — Dust withdraw intents can round down to a zero-USDC claim
+## KI-003 — Dust withdraw intents can round down to a zero-asset claim
 
-**Status:** Accepted — integer-floor pro-rata settlement in `claimUsdc`; documented for user awareness.
+**Status:** Accepted — integer-floor pro-rata settlement in `claimAsset`; documented for user awareness.
 
 **Last reviewed:** 2026-06-01
 
-**Component:** Yieldcoin v2 vault withdraw lifecycle (`withdraw` / `claimUsdc` in `ParentVault`)
+**Component:** Yieldcoin v2 vault withdraw lifecycle (`withdraw` / `claimAsset` in `ParentVault`)
 
 ### Summary
 
-Withdraw claims are settled pro-rata per epoch in `claimUsdc(epochNonce)`. For non-final claimants, the amount is calculated as:
+Withdraw claims are settled pro-rata per epoch in `claimAsset(epochNonce)`. For non-final claimants, the amount is calculated as:
 
-`usdcWithdrawAmount = shareBurnAmount * epoch.remainingWithdrawClaimAmount / epoch.remainingShareBurnAmount`
+`withdrawAmount = shareBurnAmount * epoch.remainingWithdrawClaimAmount / epoch.remainingShareBurnAmount`
 
-Because this is integer division, it rounds down. For very small `shareBurnAmount`, `usdcWithdrawAmount` can be zero even though shares are burned. In that case, the withdraw intent is deleted and `IShare(i_share).burn(address(this), shareBurnAmount)` still executes, while the USDC transfer is skipped by `if (usdcWithdrawAmount != 0)`.
+Because this is integer division, it rounds down. For very small `shareBurnAmount`, `withdrawAmount` can be zero even though shares are burned. In that case, the withdraw intent is deleted and `IShare(i_share).burn(address(this), shareBurnAmount)` still executes, while the asset transfer is skipped by `if (withdrawAmount != 0)`.
 
 ### Why this is accepted
 
@@ -125,7 +125,7 @@ Because this is integer division, it rounds down. For very small `shareBurnAmoun
 
 ### Residual risk
 
-- A user who submits and claims a dust-sized withdraw intent can burn shares and receive zero USDC for that claim. This loss is self-inflicted and bounded by the dust amount; it does not affect protocol solvency or other users' balances.
+- A user who submits and claims a dust-sized withdraw intent can burn shares and receive zero asset for that claim. This loss is self-inflicted and bounded by the dust amount; it does not affect protocol solvency or other users' balances.
 
 ---
 
@@ -220,10 +220,10 @@ The team accepts the residual as commensurate with the impact and the simplicity
 
 At epoch close, the vault initially price-locks an expected withdraw amount per epoch (`epoch.totalWithdrawClaimAmount`), computed from the epoch's share-to-asset price and the total shares queued for withdraw. The vault then calls the active adapter (or, for remote strategies, receives a CCIP bridged transfer from a `ChildVault`) to actually realize the withdrawn asset.
 
-In both settlement paths, the vault then **overwrites** the price-locked estimate with the actual amount produced by the adapter / bridge, and uses that actual amount as `totalWithdrawClaimAmount` for the epoch's `claimUsdc` distribution:
+In both settlement paths, the vault then **overwrites** the price-locked estimate with the actual amount produced by the adapter / bridge, and uses that actual amount as `totalWithdrawClaimAmount` for the epoch's `claimAsset` distribution:
 
 - **Local-strategy path (`closeEpoch`):** `totalWithdrawClaimAmount` is set to the adapter's reported withdraw output.
-- **Remote-strategy path (`_ccipReceive`):** `totalWithdrawClaimAmount` is set to the `receivedUsdcAmount` delivered by CCIP from the withdrawing `ChildVault`.
+- **Remote-strategy path (`_ccipReceive`):** `totalWithdrawClaimAmount` is set to the `receivedAmount` delivered by CCIP from the withdrawing `ChildVault`.
 
 If actual > expected, the surplus is attributed pro-rata to withdrawers in that epoch rather than retained by the vault. If actual < expected, withdrawers absorb the shortfall pro-rata (although in practice, this second condition should never occur, given adapters will revert if actual < expected).
 
@@ -236,12 +236,12 @@ For each path, the alternative (cap the claim at the expected amount, retain the
 - **Local-strategy path.** Redepositing any surplus into the still-active adapter in the same transaction is technically possible but was rejected to avoid an additional adapter call on the close-epoch hot path, and to remain symmetric with the remote path where redepositing is impossible.
 - **Remote-strategy path.** Redepositing is not an option at all: the surplus tokens just arrived on the parent chain from a remote `ChildVault`. There is no local adapter to redeposit it into without re-issuing a cross-chain transfer.
 
-Under the current adapter set (Aave V3 / V4, Compound V3 specific-amount withdraws), the discrepancy between requested and received is bounded by protocol-side rounding and is empirically ~0 per withdraw. Under CCIP, the bridged amount equals exactly what the `ChildVault` sent, so any surplus in the remote path originates from the same protocol-side rounding as the local path. Attributing this bounded surplus to the withdrawing cohort is acceptable in exchange for the invariant that **no idle USDC accumulates outside `adapter.getTVL()` or in-flight deposit/close/claim**.
+Under the current adapter set (Aave V3 / V4, Compound V3 specific-amount withdraws), the discrepancy between requested and received is bounded by protocol-side rounding and is empirically ~0 per withdraw. Under CCIP, the bridged amount equals exactly what the `ChildVault` sent, so any surplus in the remote path originates from the same protocol-side rounding as the local path. Attributing this bounded surplus to the withdrawing cohort is acceptable in exchange for the invariant that **no idle asset accumulates outside `adapter.getTVL()` or in-flight deposit/close/claim**.
 
 ### Residual risk
 
 - **Withdrawers absorb surplus and shortfall.** Withdrawers in the closing epoch receive any positive or negative delta between the price-locked estimate and the actual adapter / bridge output. Non-withdrawing shareholders are insulated from this delta. Given current adapters, this delta is bounded by protocol-side rounding (~0 for specific-amount withdraws) and is not materially distinguishable from normal pro-rata claim arithmetic.
-- **Trust in adapter honesty.** The overwrite trusts the adapter's reported output and (for remote strategies) the CCIP-delivered amount. A malicious or buggy adapter that over-reports its withdraw output would cause the vault to over-attribute to withdrawers without actually holding it, manifesting as a failed transfer in `claimUsdc`. This is consistent with the broader trust assumption that registered adapters are vetted; it is not introduced by the overwrite itself.
+- **Trust in adapter honesty.** The overwrite trusts the adapter's reported output and (for remote strategies) the CCIP-delivered amount. A malicious or buggy adapter that over-reports its withdraw output would cause the vault to over-attribute to withdrawers without actually holding it, manifesting as a failed transfer in `claimAsset`. This is consistent with the broader trust assumption that registered adapters are vetted; it is not introduced by the overwrite itself.
 - **No solvency impact.** Share accounting (`totalShares`) and `getTVL`-based pricing remain correct. The overwrite affects only the distribution of a single epoch's withdraw cohort, not the vault's overall solvency or other users' balances.
 
 ### Conditions that would warrant revisiting

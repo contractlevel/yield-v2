@@ -37,7 +37,7 @@ import {TerminalAllowPolicy} from "../src/modules/policies/TerminalAllowPolicy.s
 abstract contract BaseDeploymentTest is BaseTest {
     struct Parent {
         address link;
-        address usdc;
+        address asset;
         bytes32 vaultCcid;
         bytes32 treasuryCcid;
         address aaveV3PoolAddressesProvider;
@@ -64,7 +64,7 @@ abstract contract BaseDeploymentTest is BaseTest {
 
     struct Child {
         address link;
-        address usdc;
+        address asset;
         address aaveV3PoolAddressesProvider;
         address aaveV4Spoke;
         address compoundV3Comet;
@@ -113,7 +113,7 @@ abstract contract BaseDeploymentTest is BaseTest {
     {
         parent_ = Parent({
             link: parentDeployment.link,
-            usdc: parentDeployment.usdc,
+            asset: parentDeployment.asset,
             vaultCcid: parentDeployment.vaultCcid,
             treasuryCcid: parentDeployment.treasuryCcid,
             aaveV3PoolAddressesProvider: parentDeployment.aaveV3PoolAddressesProvider,
@@ -146,7 +146,7 @@ abstract contract BaseDeploymentTest is BaseTest {
     {
         child_ = Child({
             link: childDeployment.link,
-            usdc: childDeployment.usdc,
+            asset: childDeployment.asset,
             aaveV3PoolAddressesProvider: childDeployment.aaveV3PoolAddressesProvider,
             aaveV4Spoke: childDeployment.aaveV4Spoke,
             compoundV3Comet: childDeployment.compoundV3Comet,
@@ -174,9 +174,9 @@ abstract contract BaseDeploymentTest is BaseTest {
         assertEq(registry.getAdapter(protocolId), adapter);
     }
 
-    function _assertProtocolAdapterConfigured(IProtocolAdapter adapter, address vault, address usdc) internal view {
+    function _assertProtocolAdapterConfigured(IProtocolAdapter adapter, address vault, address asset) internal view {
         assertEq(adapter.getVault(), vault);
-        assertEq(adapter.getUsdc(), usdc);
+        assertEq(adapter.getAsset(), asset);
     }
 
     function _assertOptionalAaveV3Adapter(
@@ -184,7 +184,7 @@ abstract contract BaseDeploymentTest is BaseTest {
         AaveV3Adapter adapter,
         address configuredProvider,
         address vault,
-        address usdc
+        address asset
     ) internal view {
         if (configuredProvider == address(0)) {
             assertEq(address(adapter), address(0));
@@ -193,7 +193,7 @@ abstract contract BaseDeploymentTest is BaseTest {
         }
 
         _assertAdapterRegistered(registry, AAVE_V3_PROTOCOL_ID, address(adapter));
-        _assertProtocolAdapterConfigured(adapter, vault, usdc);
+        _assertProtocolAdapterConfigured(adapter, vault, asset);
         assertEq(adapter.getPoolAddressesProvider(), configuredProvider);
     }
 
@@ -202,7 +202,7 @@ abstract contract BaseDeploymentTest is BaseTest {
         AaveV4Adapter adapter,
         address configuredSpoke,
         address vault,
-        address usdc
+        address asset
     ) internal view {
         if (configuredSpoke == address(0)) {
             assertEq(address(adapter), address(0));
@@ -211,9 +211,9 @@ abstract contract BaseDeploymentTest is BaseTest {
         }
 
         _assertAdapterRegistered(registry, AAVE_V4_PROTOCOL_ID, address(adapter));
-        _assertProtocolAdapterConfigured(adapter, vault, usdc);
+        _assertProtocolAdapterConfigured(adapter, vault, asset);
         assertEq(adapter.getProtocolPool(), configuredSpoke);
-        assertEq(IAaveV4Spoke(configuredSpoke).getReserve(adapter.getReserveId()).underlying, usdc);
+        assertEq(IAaveV4Spoke(configuredSpoke).getReserve(adapter.getReserveId()).underlying, asset);
     }
 
     function _assertOptionalCompoundV3Adapter(
@@ -222,7 +222,7 @@ abstract contract BaseDeploymentTest is BaseTest {
         address configuredComet,
         address configuredCometRewards,
         address vault,
-        address usdc
+        address asset
     ) internal view {
         if (configuredComet == address(0)) {
             assertEq(address(adapter), address(0));
@@ -231,7 +231,7 @@ abstract contract BaseDeploymentTest is BaseTest {
         }
 
         _assertAdapterRegistered(registry, COMPOUND_V3_PROTOCOL_ID, address(adapter));
-        _assertProtocolAdapterConfigured(adapter, vault, usdc);
+        _assertProtocolAdapterConfigured(adapter, vault, asset);
         assertEq(adapter.getProtocolPool(), configuredComet);
         assertEq(adapter.getCometRewards(), configuredCometRewards);
     }

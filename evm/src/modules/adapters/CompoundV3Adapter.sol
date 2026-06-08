@@ -48,11 +48,11 @@ contract CompoundV3Adapter is ProtocolAdapter {
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
     /// @param vault The address of the Yieldcoin v2 Vault
-    /// @param usdc The address of the USDC token
+    /// @param asset The address of the underlying asset token
     /// @param comet The address of the Compound V3 pool
     /// @param cometRewards The address of the Compound V3 rewards contract
     //slither-disable-next-line missing-zero-check
-    constructor(address vault, address usdc, address comet, address cometRewards) ProtocolAdapter(vault, usdc) {
+    constructor(address vault, address asset, address comet, address cometRewards) ProtocolAdapter(vault, asset) {
         i_comet = comet;
         i_cometRewards = cometRewards;
     }
@@ -60,18 +60,18 @@ contract CompoundV3Adapter is ProtocolAdapter {
     /*//////////////////////////////////////////////////////////////
                                 EXTERNAL
     //////////////////////////////////////////////////////////////*/
-    /// @notice Deposits USDC to the Compound V3 pool
-    /// @param amount The amount of USDC to deposit
-    /// @dev Deposits the USDC to the Compound V3 pool
+    /// @notice Deposits the underlying asset to the Compound V3 pool
+    /// @param amount The amount of asset to deposit
+    /// @dev Deposits the asset to the Compound V3 pool
     function deposit(uint256 amount) external nonReentrant onlyVault {
         emit Deposit(amount);
 
-        IERC20(i_usdc).forceApprove(i_comet, amount);
-        IComet(i_comet).supply(i_usdc, amount);
+        IERC20(i_asset).forceApprove(i_comet, amount);
+        IComet(i_comet).supply(i_asset, amount);
     }
 
-    /// @notice Withdraws USDC from the Compound V3 pool
-    /// @param amount The amount of USDC to withdraw (use type(uint256).max to withdraw all)
+    /// @notice Withdraws the underlying asset from the Compound V3 pool
+    /// @param amount The amount of asset to withdraw (use type(uint256).max to withdraw all)
     /// @return actualWithdrawnAmount The actual withdrawn amount
     /// @dev Transfers the actual withdrawn amount to the yield peer
     /// @dev Prevents borrowing by ensuring amount <= balance when not using MAX sentinel
@@ -81,7 +81,7 @@ contract CompoundV3Adapter is ProtocolAdapter {
     /// 2. Rebalance Withdraw - when the amount is type(uint256).max
     function withdraw(uint256 amount) external nonReentrant onlyVault returns (uint256 actualWithdrawnAmount) {
         /// @dev get balance before withdraw to calculate actual withdrawn amount
-        uint256 balanceBefore = IERC20(i_usdc).balanceOf(address(this));
+        uint256 balanceBefore = IERC20(i_asset).balanceOf(address(this));
 
         uint256 tvl = _getTVL();
 
@@ -90,26 +90,26 @@ contract CompoundV3Adapter is ProtocolAdapter {
             /// @dev accidental borrow prevention
             if (amount > tvl) revert CompoundV3Adapter__WithdrawAmountExceedsTotalValue();
 
-            IComet(i_comet).withdraw(i_usdc, amount);
+            IComet(i_comet).withdraw(i_asset, amount);
 
             /// @dev calculate actual amount received from withdrawing
-            uint256 balanceAfter = IERC20(i_usdc).balanceOf(address(this));
+            uint256 balanceAfter = IERC20(i_asset).balanceOf(address(this));
             actualWithdrawnAmount = balanceAfter - balanceBefore;
             if (actualWithdrawnAmount < amount) revert CompoundV3Adapter__IncorrectWithdrawAmount();
         }
         /// @dev Scenario 2: Rebalance Withdraw - when the amount is type(uint256).max
         else {
-            IComet(i_comet).withdraw(i_usdc, amount);
+            IComet(i_comet).withdraw(i_asset, amount);
 
             /// @dev calculate actual amount received from withdrawing
-            uint256 balanceAfter = IERC20(i_usdc).balanceOf(address(this));
+            uint256 balanceAfter = IERC20(i_asset).balanceOf(address(this));
             actualWithdrawnAmount = balanceAfter - balanceBefore;
 
             if (actualWithdrawnAmount < tvl) revert CompoundV3Adapter__IncorrectWithdrawAmount();
         }
 
         emit Withdraw(actualWithdrawnAmount);
-        IERC20(i_usdc).safeTransfer(i_vault, actualWithdrawnAmount);
+        IERC20(i_asset).safeTransfer(i_vault, actualWithdrawnAmount);
     }
 
     /// @notice Claims any rewards from the Comet Rewards contract

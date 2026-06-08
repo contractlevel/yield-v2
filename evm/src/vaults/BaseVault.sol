@@ -12,6 +12,7 @@ import {
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {Roles} from "../libraries/Roles.sol";
@@ -45,8 +46,10 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     uint64 internal immutable i_thisChainSelector;
     /// @dev Chainlink LINK token
     address internal immutable i_link;
-    /// @dev USDC token
-    address internal immutable i_usdc;
+    /// @dev The underlying asset managed by the vault
+    address internal immutable i_asset;
+    /// @dev Precision factor for the underlying asset (10 ** decimals())
+    uint256 internal immutable i_assetPrecision;
     /// @dev Registry contract for strategy protocol adapters
     address internal immutable i_adapterRegistry;
 
@@ -66,7 +69,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @dev Timestamp when the vault was paused. Deleted when the vault is unpaused.
     /// @notice This is used for emergency recovery modes.
     uint96 internal s_pausedAt;
-    /// @dev Address that receives USDC during emergency drain.
+    /// @dev Address that receives the underlying asset during emergency drain.
     address internal s_emergencyReceiver;
     /// @dev Recovery state for failed rebalance deposit operations. This can exist on Parent or Child.
     Types.RebalanceDepositRecovery internal s_rebalanceDepositRecovery;
@@ -97,7 +100,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     //////////////////////////////////////////////////////////////*/
     /// @notice Parameters to initialize the contract in the constructor.
     /// @param link The address of the Chainlink LINK token
-    /// @param usdc The address of the USDC token
+    /// @param asset The address of the underlying asset token
     /// @param ccipRouter The address of the CCIP router
     /// @param defaultAdmin The address of the default admin for setting roles - trusted actor in the system
     /// @param pauser The address of the pauser for pausing the vault - trusted actor in the system
@@ -108,7 +111,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @param initialDefaultCcipGasLimit The initial s_defaultCcipGasLimit
     struct ConstructorParams {
         address link;
-        address usdc;
+        address asset;
         address ccipRouter;
         address defaultAdmin;
         address pauser;
@@ -130,7 +133,8 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     {
         i_thisChainSelector = params.thisChainSelector;
         i_link = params.link;
-        i_usdc = params.usdc;
+        i_asset = params.asset;
+        i_assetPrecision = 10 ** IERC20Metadata(params.asset).decimals();
         i_adapterRegistry = params.adapterRegistry;
         s_emergencyReceiver = params.emergencyReceiver;
         s_defaultCcipGasLimit = params.initialDefaultCcipGasLimit;
@@ -142,8 +146,8 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /*//////////////////////////////////////////////////////////////
                                   CCIP
     //////////////////////////////////////////////////////////////*/
-    /// @notice Bridges USDC to a destination chain
-    /// @param bridgeAmount The amount of USDC to bridge
+    /// @notice Bridges asset to a destination chain
+    /// @param bridgeAmount The amount of asset to bridge
     /// @param destinationChainSelector The CCIP selector of the destination chain
     /// @param ccipTxType The type of CCIP transaction
     /// @param txData abi.encode(epochNonce) for epoch net deposit/withdraw, or abi.encode(rebalanceNonce, newStrategy.protocolId) for rebalance
@@ -161,7 +165,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     }
 
     /// @notice Builds and sends a CCIP message
-    /// @param bridgeAmount The amount of USDC to bridge
+    /// @param bridgeAmount The amount of asset to bridge
     /// @param destinationChainSelector The CCIP selector of the destination chain
     /// @param ccipTxType The type of CCIP transaction
     /// @param txData abi.encode(epochNonce) for epoch net deposit/withdraw, or abi.encode(rebalanceNonce, newStrategy.protocolId) for rebalance
@@ -190,7 +194,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
 
         /// @dev Build the token amounts
         Client.EVMTokenAmount[] memory tokenAmounts = new Client.EVMTokenAmount[](1);
-        tokenAmounts[0] = Client.EVMTokenAmount({token: i_usdc, amount: bridgeAmount});
+        tokenAmounts[0] = Client.EVMTokenAmount({token: i_asset, amount: bridgeAmount});
 
         /// @dev Build the CCIP message
         Client.EVM2AnyMessage memory message = Client.EVM2AnyMessage({
@@ -205,7 +209,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
 
         uint256 fee = IRouterClient(i_ccipRouter).getFee(destinationChainSelector, message);
         IERC20(i_link).forceApprove(i_ccipRouter, fee);
-        IERC20(i_usdc).forceApprove(i_ccipRouter, bridgeAmount);
+        IERC20(i_asset).forceApprove(i_ccipRouter, bridgeAmount);
         bytes32 ccipMessageId = IRouterClient(i_ccipRouter).ccipSend(destinationChainSelector, message);
         /**
          * event CCIPMessageSent(
@@ -236,10 +240,10 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         }
     }
 
-    /// @notice Validates that a CCIP message delivered the vault's configured USDC token and returns the delivered amount
+    /// @notice Validates that a CCIP message delivered the vault's configured asset token and returns the delivered amount
     /// @param message The CCIP message received from the router
-    /// @return amount The amount of USDC delivered by CCIP
-    /// @dev Precondition: the received token must be i_usdc
+    /// @return amount The amount of asset delivered by CCIP
+    /// @dev Precondition: the received token must be i_asset
     function _validateReceivedTokenAndGetAmount(Client.Any2EVMMessage memory message)
         internal
         view
@@ -249,7 +253,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         if (tokenAmountsLength != 1) revert BaseVault__InvalidTokenAmountsLength(tokenAmountsLength, 1);
 
         Client.EVMTokenAmount memory tokenAmount = message.destTokenAmounts[0];
-        if (tokenAmount.token != i_usdc) revert BaseVault__InvalidReceivedToken(tokenAmount.token, i_usdc);
+        if (tokenAmount.token != i_asset) revert BaseVault__InvalidReceivedToken(tokenAmount.token, i_asset);
         amount = tokenAmount.amount;
         if (amount == 0) revert BaseVault__NoZeroAmount();
     }
@@ -280,7 +284,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     function tryDepositToAdapter(address adapter, uint256 amount) external {
         if (msg.sender != address(this)) revert BaseVault__OnlySelf();
 
-        IERC20(i_usdc).safeTransfer(adapter, amount);
+        IERC20(i_asset).safeTransfer(adapter, amount);
         IProtocolAdapter(adapter).deposit(amount);
     }
 
@@ -447,7 +451,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @dev Precondition: must be paused
     /// @dev Precondition: Vault must have been paused for at least EMERGENCY_DRAIN_DELAY
     /// @dev Precondition: must not be reentered
-    /// @dev Withdraws all USDC from the vault to the emergency receiver
+    /// @dev Withdraws all underlying asset from the vault to the emergency receiver
     /// @param revertOnFailure Whether to revert if the withdraw from strategy fails
     /// @notice If the vault has the TVL, it will be withdrawn from the strategy and transferred to the emergency receiver
     function emergencyDrain(bool revertOnFailure)
@@ -461,13 +465,13 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
 
         if (_getTVL() > 0) _executeWithdraw(type(uint256).max, revertOnFailure);
 
-        uint256 balance = IERC20(i_usdc).balanceOf(address(this));
+        uint256 balance = IERC20(i_asset).balanceOf(address(this));
         address emergencyReceiver = s_emergencyReceiver;
-        IERC20(i_usdc).safeTransfer(emergencyReceiver, balance);
+        IERC20(i_asset).safeTransfer(emergencyReceiver, balance);
         emit EmergencyDrainExecuted(emergencyReceiver, balance);
     }
 
-    /// @notice Donates USDC to the active strategy without minting shares or creating a claim
+    /// @notice Donates the underlying asset to the active strategy without minting shares or creating a claim
     /// @param amount The amount of USDC to donate
     /// @dev This is a privileged recovery/recapitalization operation and intentionally allowed while paused.
     /// @dev Precondition: Caller must have the DONATE_OPERATOR_ROLE
@@ -480,7 +484,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     function donate(uint256 amount) external nonReentrant onlyRole(Roles.DONATE_OPERATOR_ROLE) {
         if (amount == 0) revert BaseVault__NoZeroAmount();
 
-        IERC20(i_usdc).safeTransferFrom(msg.sender, address(this), amount);
+        IERC20(i_asset).safeTransferFrom(msg.sender, address(this), amount);
         _executeDeposit(amount, true);
 
         emit Donation(msg.sender, amount);
@@ -600,10 +604,16 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         link = i_link;
     }
 
-    /// @notice Gets the USDC token
-    /// @return usdc The address of the USDC token
-    function getUsdc() external view returns (address usdc) {
-        usdc = i_usdc;
+    /// @notice Gets the underlying asset token
+    /// @return asset The address of the underlying asset token
+    function getAsset() external view returns (address asset) {
+        asset = i_asset;
+    }
+
+    /// @notice Gets the underlying asset precision factor
+    /// @return assetPrecision 10 ** asset.decimals()
+    function getAssetPrecision() external view returns (uint256 assetPrecision) {
+        assetPrecision = i_assetPrecision;
     }
 
     /// @notice Gets the CCIP selector for this chain
@@ -639,7 +649,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     }
 
     /// @notice Gets the emergency receiver
-    /// @return emergencyReceiver The address that receives USDC during emergency drain
+    /// @return emergencyReceiver The address that receives the underlying asset during emergency drain
     function getEmergencyReceiver() external view returns (address emergencyReceiver) {
         emergencyReceiver = s_emergencyReceiver;
     }

@@ -66,12 +66,12 @@ contract ChildWithdraw_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
         _selectArbitrumFork();
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.CLAIMABLE));
 
-        uint256 depositorUsdcBefore = IERC20(parent.usdc).balanceOf(i_depositor);
+        uint256 depositorUsdcBefore = IERC20(parent.asset).balanceOf(i_depositor);
 
         _changePrank(i_depositor);
-        parent.vault.claimUsdc(2);
+        parent.vault.claimAsset(2);
 
-        assertApproxEqAbs(IERC20(parent.usdc).balanceOf(i_depositor), depositorUsdcBefore + shareAmount, 1);
+        assertApproxEqAbs(IERC20(parent.asset).balanceOf(i_depositor), depositorUsdcBefore + shareAmount, 1);
         assertEq(parent.share.balanceOf(i_depositor), 0);
         assertEq(parent.vault.getWithdrawShareBurnAmount(i_depositor, 2), 0);
     }

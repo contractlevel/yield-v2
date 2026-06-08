@@ -143,9 +143,9 @@ abstract contract BaseCcipForkTest is BaseForkTest {
 
     function _fundAndApproveParentUsdc(address account, uint256 amount) internal {
         _selectArbitrumFork();
-        deal(parent.usdc, account, amount);
+        deal(parent.asset, account, amount);
         _changePrank(account);
-        IERC20(parent.usdc).approve(address(parent.vault), amount);
+        IERC20(parent.asset).approve(address(parent.vault), amount);
     }
 
     function _approveShares(address owner, uint256 amount) internal {
@@ -319,14 +319,14 @@ abstract contract BaseCcipForkTest is BaseForkTest {
 
     function _seedParentAaveV3Tvl(uint256 amount) internal {
         _selectArbitrumFork();
-        deal(parent.usdc, address(parent.aaveV3Adapter), amount);
+        deal(parent.asset, address(parent.aaveV3Adapter), amount);
         _changePrank(address(parent.vault));
         parent.aaveV3Adapter.deposit(amount);
     }
 
     function _seedBaseChildAaveV3Tvl(uint256 amount) internal {
         _selectBaseFork();
-        deal(baseChild.usdc, address(baseChild.aaveV3Adapter), amount);
+        deal(baseChild.asset, address(baseChild.aaveV3Adapter), amount);
         _changePrank(address(baseChild.vault));
         baseChild.aaveV3Adapter.deposit(amount);
     }

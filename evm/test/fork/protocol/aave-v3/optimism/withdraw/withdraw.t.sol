@@ -15,13 +15,13 @@ contract Optimism_AaveV3WithdrawForkTest is BaseAaveV3ForkTest {
 
     function test_Optimism_aaveV3_withdraw_Success_EpochWithdraw() external {
         _assertAaveV3EpochWithdrawSucceeds(
-            optimismChild.aaveV3Adapter, address(optimismChild.vault), optimismChild.usdc
+            optimismChild.aaveV3Adapter, address(optimismChild.vault), optimismChild.asset
         );
     }
 
     function test_Optimism_aaveV3_withdraw_Success_RebalanceWithdraw() external {
         _assertAaveV3RebalanceWithdrawSucceeds(
-            optimismChild.aaveV3Adapter, address(optimismChild.vault), optimismChild.usdc
+            optimismChild.aaveV3Adapter, address(optimismChild.vault), optimismChild.asset
         );
     }
 }

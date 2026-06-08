@@ -50,9 +50,9 @@ contract ChildWithdraw_EpochIntegrationTest is BaseIntegrationTest {
         assertEq(parent.vault.getEpochNonce(), 3);
         assertEq(uint256(parent.vault.getEpoch(3).status), uint256(Types.EpochStatus.OPEN));
 
-        MockAToken(MockAaveV3Pool(s_childAaveV3Pool).getReserveData(parent.usdc).aTokenAddress)
+        MockAToken(MockAaveV3Pool(s_childAaveV3Pool).getReserveData(parent.asset).aTokenAddress)
             .mint(address(child.aaveV3Adapter), s_shareAmount);
-        deal(parent.usdc, s_childAaveV3Pool, s_shareAmount);
+        deal(parent.asset, s_childAaveV3Pool, s_shareAmount);
         MockAaveV3Pool(s_childAaveV3Pool).setWithdrawReturn(s_shareAmount);
 
         _executeEpochWithdrawThroughWorkflow(
@@ -61,12 +61,12 @@ contract ChildWithdraw_EpochIntegrationTest is BaseIntegrationTest {
 
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.CLAIMABLE));
 
-        uint256 depositorUsdcBeforeClaim = IERC20(parent.usdc).balanceOf(i_depositor);
+        uint256 depositorUsdcBeforeClaim = IERC20(parent.asset).balanceOf(i_depositor);
 
         _changePrank(i_depositor);
-        parent.vault.claimUsdc(2);
+        parent.vault.claimAsset(2);
 
-        assertEq(IERC20(parent.usdc).balanceOf(i_depositor), depositorUsdcBeforeClaim + s_shareAmount);
+        assertEq(IERC20(parent.asset).balanceOf(i_depositor), depositorUsdcBeforeClaim + s_shareAmount);
         assertEq(parent.share.balanceOf(i_depositor), 0);
         assertEq(parent.vault.getWithdrawShareBurnAmount(i_depositor, 2), 0);
         assertEq(parent.vault.getTotalShares(), 0);

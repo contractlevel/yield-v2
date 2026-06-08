@@ -44,20 +44,18 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @dev Annual management fee rate (1%)
     uint256 internal constant MANAGEMENT_FEE_BPS = 100;
 
-    /// @dev USDC precision
-    uint256 internal constant USDC_PRECISION = 1e6;
     /// @dev WAD precision
     uint256 internal constant WAD_PRECISION = 1e18;
-    /// @dev Initial Yieldcoin share mint precision
-    uint256 internal constant SHARE_PRECISION = WAD_PRECISION / USDC_PRECISION;
-    /// @dev Minimum deposit amount
-    uint256 internal constant MIN_DEPOSIT_AMOUNT = 100 * USDC_PRECISION;
 
     /*//////////////////////////////////////////////////////////////
                                IMMUTABLE
     //////////////////////////////////////////////////////////////*/
     /// @dev Yieldcoin (YIELD) share token
     address internal immutable i_share;
+    /// @dev Initial Yieldcoin share mint precision: WAD_PRECISION / i_assetPrecision
+    uint256 internal immutable i_sharePrecision;
+    /// @dev Minimum deposit amount: 100 * i_assetPrecision
+    uint256 internal immutable i_minDepositAmount;
 
     /*//////////////////////////////////////////////////////////////
                                  STATE
@@ -65,7 +63,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     Types.Rebalance internal s_rebalance;
 
     /// @dev Total number of Yieldcoin shares minted and available to claim
-    /// @notice One subtlety: between closeEpoch and the last claimUsdc call for an epoch, s_totalShares could be decremented but the actual Yieldcoin share tokens haven't been burned yet.
+    /// @notice One subtlety: between closeEpoch and the last claimAsset call for an epoch, s_totalShares could be decremented but the actual Yieldcoin share tokens haven't been burned yet.
     /// The i_share.totalSupply() will be higher than s_totalShares during this window. Therefore we never use i_share.totalSupply() as an authoritative share count — always use s_totalShares.
     uint256 internal s_totalShares;
     /// @dev Highest price per share ever recorded for performance fee purposes
@@ -75,7 +73,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @dev Epochs
     mapping(uint256 epochNonce => Types.Epoch) internal s_epochs;
     /// @dev Mapping of depositors to their deposits for each epoch
-    mapping(address depositor => mapping(uint256 epochId => uint256 usdcAmount)) s_deposits;
+    mapping(address depositor => mapping(uint256 epochId => uint256 assetAmount)) s_deposits;
     /// @dev Mapping of withdrawers to their withdraw intents for each epoch
     mapping(address withdrawer => mapping(uint256 epochId => uint256 shareBurnAmount)) s_withdraws;
     /// @dev Treasury address for collecting fees. This should be the protocol operator's multisig.
@@ -104,7 +102,9 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         address policyEngine
     ) BaseVault(params) PolicyProtected(params.defaultAdmin, policyEngine) {
         i_share = share;
-        s_performanceFeeHighWaterMark = SHARE_PRECISION;
+        i_sharePrecision = WAD_PRECISION / i_assetPrecision;
+        i_minDepositAmount = 100 * i_assetPrecision;
+        s_performanceFeeHighWaterMark = i_sharePrecision;
         s_epochNonce = 1;
         s_epochs[1].status = Types.EpochStatus.OPEN;
         s_epochs[1].openedAtTimestamp = block.timestamp;
@@ -156,8 +156,8 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /*//////////////////////////////////////////////////////////////
                              USER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-    /// @notice Deposits USDC into the vault
-    /// @param amount The amount of USDC to deposit
+    /// @notice Deposits the underlying asset into the vault
+    /// @param amount The amount of asset to deposit
     /// @return epochNonce The epoch nonce of the deposit
     /// @dev Precondition: amount must meet the minimum deposit amount requirement
     /// @dev Precondition: the function must not be reentered
@@ -165,7 +165,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @dev Precondition: tx must be compliant with the policy
     /// @dev Precondition: the current epoch must be open
     function deposit(uint256 amount) external nonReentrant whenNotPaused runPolicy returns (uint256 epochNonce) {
-        if (amount < MIN_DEPOSIT_AMOUNT) revert ParentVault__AmountTooSmall(amount);
+        if (amount < i_minDepositAmount) revert ParentVault__AmountTooSmall(amount);
         epochNonce = s_epochNonce;
         /// @dev This condition should never be hit under normal operations as the epoch nonce is incremented on openNextEpoch
         if (s_epochs[epochNonce].status != Types.EpochStatus.OPEN) revert ParentVault__EpochNotOpen(epochNonce);
@@ -173,7 +173,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         s_deposits[msg.sender][epochNonce] += amount;
         s_epochs[epochNonce].totalDepositAmount += amount;
 
-        IERC20(i_usdc).safeTransferFrom(msg.sender, address(this), amount);
+        IERC20(i_asset).safeTransferFrom(msg.sender, address(this), amount);
         emit DepositSubmitted(epochNonce, msg.sender, amount);
     }
 
@@ -224,16 +224,16 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         Types.Epoch storage epoch = s_epochs[epochNonce];
         if (epoch.status != Types.EpochStatus.CLAIMABLE) revert ParentVault__EpochNotClaimable(epochNonce);
 
-        uint256 usdcDepositAmount = s_deposits[msg.sender][epochNonce];
-        if (usdcDepositAmount == 0) revert ParentVault__NoDeposit(msg.sender, epochNonce);
+        uint256 depositAmount = s_deposits[msg.sender][epochNonce];
+        if (depositAmount == 0) revert ParentVault__NoDeposit(msg.sender, epochNonce);
 
-        if (usdcDepositAmount == epoch.remainingDepositClaimAmount) {
+        if (depositAmount == epoch.remainingDepositClaimAmount) {
             shareMintAmount = epoch.remainingShareMintAmount;
         } else {
-            shareMintAmount = usdcDepositAmount * epoch.remainingShareMintAmount / epoch.remainingDepositClaimAmount;
+            shareMintAmount = depositAmount * epoch.remainingShareMintAmount / epoch.remainingDepositClaimAmount;
         }
 
-        epoch.remainingDepositClaimAmount -= usdcDepositAmount;
+        epoch.remainingDepositClaimAmount -= depositAmount;
         epoch.remainingShareMintAmount -= shareMintAmount;
 
         delete s_deposits[msg.sender][epochNonce];
@@ -242,21 +242,21 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         emit DepositClaimed(epochNonce, msg.sender, shareMintAmount);
     }
 
-    /// @notice Claim USDC after a withdraw
+    /// @notice Claim underlying asset after a withdraw
     /// @notice Finalizes an individual withdraw
     /// @param epochNonce The epoch nonce of the withdraw
-    /// @return usdcWithdrawAmount The amount of USDC withdrawn for the withdraw
+    /// @return withdrawAmount The amount of asset withdrawn
     /// @dev Precondition: the function must not be reentered
     /// @dev Precondition: the contract must not be paused
     /// @dev Precondition: tx must be compliant with the policy
     /// @dev Precondition: the epoch nonce must be claimable
     /// @dev Precondition: the user must have a withdraw intent for the epoch nonce
-    function claimUsdc(uint256 epochNonce)
+    function claimAsset(uint256 epochNonce)
         external
         nonReentrant
         whenNotPaused
         runPolicy
-        returns (uint256 usdcWithdrawAmount)
+        returns (uint256 withdrawAmount)
     {
         Types.Epoch storage epoch = s_epochs[epochNonce];
         if (epoch.status != Types.EpochStatus.CLAIMABLE) revert ParentVault__EpochNotClaimable(epochNonce);
@@ -265,20 +265,20 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         if (shareBurnAmount == 0) revert ParentVault__NoWithdraw(msg.sender, epochNonce);
 
         if (shareBurnAmount != epoch.remainingShareBurnAmount) {
-            usdcWithdrawAmount = shareBurnAmount * epoch.remainingWithdrawClaimAmount / epoch.remainingShareBurnAmount;
+            withdrawAmount = shareBurnAmount * epoch.remainingWithdrawClaimAmount / epoch.remainingShareBurnAmount;
         } else {
-            usdcWithdrawAmount = epoch.remainingWithdrawClaimAmount;
+            withdrawAmount = epoch.remainingWithdrawClaimAmount;
         }
 
         epoch.remainingShareBurnAmount -= shareBurnAmount;
-        epoch.remainingWithdrawClaimAmount -= usdcWithdrawAmount;
+        epoch.remainingWithdrawClaimAmount -= withdrawAmount;
 
         delete s_withdraws[msg.sender][epochNonce];
 
         IShare(i_share).burn(address(this), shareBurnAmount);
 
-        emit WithdrawClaimed(epochNonce, msg.sender, usdcWithdrawAmount);
-        if (usdcWithdrawAmount != 0) IERC20(i_usdc).safeTransfer(msg.sender, usdcWithdrawAmount);
+        emit WithdrawClaimed(epochNonce, msg.sender, withdrawAmount);
+        if (withdrawAmount != 0) IERC20(i_asset).safeTransfer(msg.sender, withdrawAmount);
     }
 
     /// @notice Cancels a deposit
@@ -292,14 +292,14 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         uint256 epochNonce = s_epochNonce;
         if (s_epochs[epochNonce].status != Types.EpochStatus.OPEN) revert ParentVault__EpochNotOpen(epochNonce);
 
-        uint256 usdcDepositAmount = s_deposits[msg.sender][epochNonce];
-        if (usdcDepositAmount == 0) revert ParentVault__NoDeposit(msg.sender, epochNonce);
+        uint256 depositAmount = s_deposits[msg.sender][epochNonce];
+        if (depositAmount == 0) revert ParentVault__NoDeposit(msg.sender, epochNonce);
         delete s_deposits[msg.sender][epochNonce];
-        s_epochs[epochNonce].totalDepositAmount -= usdcDepositAmount;
+        s_epochs[epochNonce].totalDepositAmount -= depositAmount;
 
-        IERC20(i_usdc).safeTransfer(msg.sender, usdcDepositAmount);
+        IERC20(i_asset).safeTransfer(msg.sender, depositAmount);
 
-        emit DepositCancelled(epochNonce, msg.sender, usdcDepositAmount);
+        emit DepositCancelled(epochNonce, msg.sender, depositAmount);
     }
 
     /// @notice Cancels a withdraw
@@ -330,7 +330,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @notice Receives CCIP messages
     /// @param message Any2EVMMessage.
     /// @dev Precondition: the message must be sent by an allowed sender (a crosschain vault mapped to an allowed source chain selector)
-    /// @dev Precondition: the received token must be i_usdc
+    /// @dev Precondition: the received token must be i_asset
     /// @dev Precondition: there must not be an existent recovery mode
     /// @dev Precondition: if epoch tx: the decoded nonce must match the previous
     /// @dev Precondition: if rebalance tx: the state must be REBALANCING
@@ -343,7 +343,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         onlyAllowedSender(abi.decode(message.sender, (address)), message.sourceChainSelector)
     {
         _requireNoRecovery();
-        uint256 receivedUsdcAmount = _validateReceivedTokenAndGetAmount(message);
+        uint256 receivedAmount = _validateReceivedTokenAndGetAmount(message);
 
         /// @dev data decodes to a uint256 epochNonce for epoch net withdraws and a (uint256 rebalanceNonce, bytes32 protocolId) for rebalances
         (Types.CcipTx ccipTxType, bytes memory data) = abi.decode(message.data, (Types.CcipTx, bytes));
@@ -353,20 +353,20 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
             Types.Epoch storage epoch = s_epochs[epochNonce];
 
             /// @dev calculate the expected withdraw amount bridged back to the parent for the epoch
-            uint256 expectedWithdrawUsdc = epoch.totalWithdrawClaimAmount - epoch.totalDepositAmount;
+            uint256 expectedWithdraw = epoch.totalWithdrawClaimAmount - epoch.totalDepositAmount;
             /// @dev Overwrite the price-locked estimate with the actual bridged amount.
             ///      This mirrors the local-strategy path in `closeEpoch` (see that comment for full
             ///      rationale). Here, redepositing any surplus into the adapter is not an option:
-            ///      the USDC has just arrived from a remote chain and the withdrawing adapter is
+            ///      the asset has just arrived from a remote chain and the withdrawing adapter is
             ///      no longer active. Attributing the full received amount to withdrawers is the
-            ///      only way to ensure no idle USDC is stranded outside `adapter.getTVL()`.
+            ///      only way to ensure no idle asset is stranded outside `adapter.getTVL()`.
             ///      Under CCIP + CCTP the bridged amount equals exactly what the ChildVault sent,
             ///      so any surplus originates from the same protocol-side rounding as the local path.
             /// @notice See ../docs/KNOWN_ISSUES.md::KI-005
-            epoch.totalWithdrawClaimAmount = epoch.totalDepositAmount + receivedUsdcAmount;
+            epoch.totalWithdrawClaimAmount = epoch.totalDepositAmount + receivedAmount;
             epoch.remainingWithdrawClaimAmount = epoch.totalWithdrawClaimAmount;
-            if (receivedUsdcAmount < expectedWithdrawUsdc) {
-                emit EpochWithdrawAmountShort(epochNonce, expectedWithdrawUsdc, receivedUsdcAmount);
+            if (receivedAmount < expectedWithdraw) {
+                emit EpochWithdrawAmountShort(epochNonce, expectedWithdraw, receivedAmount);
             }
 
             _finalizeEpoch(epochNonce);
@@ -378,7 +378,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
             (uint256 rebalanceNonce, bytes32 protocolId) = abi.decode(data, (uint256, bytes32));
             if (rebalance.nonce != rebalanceNonce) revert ParentVault__InvalidRebalanceNonce(rebalanceNonce);
             if (rebalance.pendingStrategy.protocolId != protocolId) revert ParentVault__InvalidPendingProtocolId(protocolId);
-            bool success = _handleCCIPRebalance(rebalanceNonce, protocolId, receivedUsdcAmount);
+            bool success = _handleCCIPRebalance(rebalanceNonce, protocolId, receivedAmount);
             if (success) _finalizeRebalance();
         } else {
             revert BaseVault__InvalidTxType(ccipTxType);
@@ -390,7 +390,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     //////////////////////////////////////////////////////////////*/
     /// @notice Closes an epoch and handles the net flow
     /// @notice Called by WorkflowRouter
-    /// @notice The `netFlow` is `total USDC deposit amount` minus `calculated total USDC withdraw amount` for the given epoch
+    /// @notice The `netFlow` is `total asset deposit amount` minus `calculated total asset withdraw amount` for the given epoch
     ///         When `netFlow >= 0`: the epoch is CLAIMABLE
     ///         When `netFlow > 0` and the active strategy is local to this chain: the netFlow is deposited straight into the strategy
     ///         When `netFlow > 0` and the active strategy is remote to this chain: the netFlow is sent via CCIP to the strategy
@@ -454,29 +454,29 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         // 2. Collect performance fee on net yield and settle users at the post-fee price
         uint256 settlementPricePerShare = _collectPerformanceFee(epochNonce, tvl, grossPricePerShare);
 
-        // 3. Calculate total withdraw USDC owed
-        uint256 totalWithdrawUsdc = epoch.totalShareBurnAmount * settlementPricePerShare / SHARE_PRECISION;
+        // 3. Calculate total withdraw asset owed
+        uint256 totalWithdraw = epoch.totalShareBurnAmount * settlementPricePerShare / i_sharePrecision;
 
         // 4. Calculate net flow (signed)
         // positive: deposits exceed withdrawals, surplus goes to strategy
-        // negative: withdrawals exceed deposits, strategy must send USDC back
-        int256 netFlow = int256(epoch.totalDepositAmount) - int256(totalWithdrawUsdc);
+        // negative: withdrawals exceed deposits, strategy must send asset back
+        int256 netFlow = int256(epoch.totalDepositAmount) - int256(totalWithdraw);
 
         // 5. Mint new shares and burn withdrawn shares
-        uint256 newShares = epoch.totalDepositAmount * SHARE_PRECISION / settlementPricePerShare;
-        if (epoch.totalDepositAmount != 0 && newShares * MIN_DEPOSIT_AMOUNT < epoch.totalDepositAmount) {
+        uint256 newShares = epoch.totalDepositAmount * i_sharePrecision / settlementPricePerShare;
+        if (epoch.totalDepositAmount != 0 && newShares * i_minDepositAmount < epoch.totalDepositAmount) {
             revert ParentVault__DepositWouldMintZeroShares();
         }
         // @review-gas
         s_totalShares = s_totalShares + newShares - epoch.totalShareBurnAmount;
 
         // 6. Store epoch settlement data
-        epoch.totalWithdrawClaimAmount = totalWithdrawUsdc;
+        epoch.totalWithdrawClaimAmount = totalWithdraw;
         epoch.pricePerShare = settlementPricePerShare;
         epoch.remainingDepositClaimAmount = epoch.totalDepositAmount;
         epoch.remainingShareMintAmount = newShares;
         epoch.remainingShareBurnAmount = epoch.totalShareBurnAmount;
-        epoch.remainingWithdrawClaimAmount = totalWithdrawUsdc;
+        epoch.remainingWithdrawClaimAmount = totalWithdraw;
         epoch.closedAtTimestamp = block.timestamp;
 
         // 7. Transition epoch status and handle net flow
@@ -518,14 +518,14 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
                 (, uint256 amountOut) = _executeWithdraw(netWithdrawAmount, true);
                 /// @dev Overwrite the price-locked estimate with the actual adapter output.
                 ///      This is a deliberate design choice: `adapter.getTVL()` reads only the
-                ///      adapter-side balance, so any surplus left as idle vault USDC would be
+                ///      adapter-side balance, so any surplus left as idle vault asset would be
                 ///      invisible to the next epoch's price and stranded indefinitely.
                 ///      The alternative — cap the claim and redeposit the surplus into the adapter
                 ///      in the same tx — was rejected to avoid an extra adapter call on the
                 ///      close-epoch hot path and to stay symmetric with `_ccipReceive` (where
                 ///      redepositing is not an option at all; see that comment).
                 ///      Under current adapters (Aave V3/V4) the surplus is bounded by protocol-side
-                ///      rounding (~0 for specific-amount USDC withdraws), so attributing it entirely
+                ///      rounding (~0 for specific-amount asset withdraws), so attributing it entirely
                 ///      to withdrawers is acceptable. If a future adapter can return materially more
                 ///      than requested, revisit this.
                 /// @notice See ../docs/KNOWN_ISSUES.md::KI-005
@@ -546,16 +546,16 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         _openNextEpoch();
     }
 
-    /// @notice Calculates the USDC value of a Yieldcoin share token
+    /// @notice Calculates the asset value of a Yieldcoin share token
     /// @param tvl The Total Value Locked in the active strategy of the Yieldcoin v2 system
-    /// @return pricePerShare USDC value of a Yieldcoin share token
+    /// @return pricePerShare Asset value of a Yieldcoin share token
     function _calculatePricePerShare(uint256 tvl) internal view returns (uint256 pricePerShare) {
         uint256 totalShares = s_totalShares;
         if (totalShares != 0 && tvl != 0) {
-            pricePerShare = tvl * SHARE_PRECISION / totalShares;
+            pricePerShare = tvl * i_sharePrecision / totalShares;
         } else if (totalShares == 0) {
-            /// @dev Bootstrap: no shares exist yet, so define 1 USDC = 1 share.
-            pricePerShare = SHARE_PRECISION; // 1e12
+            /// @dev Bootstrap: no shares exist yet, price anchors at i_sharePrecision.
+            pricePerShare = i_sharePrecision;
         } else {
             /// @dev This is a rare edgecase that should never happen. To prevent the protocol from being bricked, call donate(tvl)
             revert ParentVault__ZeroTvlWithOutstandingShares();
@@ -729,21 +729,21 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
 
         uint256 totalShares = s_totalShares;
         uint256 yieldPerShare = grossPricePerShare - highWaterMark;
-        /// @dev totalYield is the USDC value created above the prior after-fee high water mark.
-        uint256 totalYield = _ceilDiv(yieldPerShare * totalShares, SHARE_PRECISION);
-        /// @dev feeUsdc is 7.77% of net yield, rounded up in favor of the protocol.
-        uint256 feeUsdc = _ceilDiv(totalYield * PERFORMANCE_FEE_BPS, BPS_DENOMINATOR);
+        /// @dev totalYield is the asset value created above the prior after-fee high water mark.
+        uint256 totalYield = _ceilDiv(yieldPerShare * totalShares, i_sharePrecision);
+        /// @dev fee is 7.77% of net yield, rounded up in favor of the protocol.
+        uint256 fee = _ceilDiv(totalYield * PERFORMANCE_FEE_BPS, BPS_DENOMINATOR);
 
         /// @dev Defensive guard: if rounding or bad TVL input would make the fee consume
         ///      all TVL, skip fee collection for this epoch and leave the HWM unchanged.
-        if (feeUsdc >= tvl) {
+        if (fee >= tvl) {
             return grossPricePerShare;
         }
 
-        /// @dev Mint enough shares so treasury's post-mint ownership is worth feeUsdc:
-        ///      feeShares / (totalShares + feeShares) * tvl = feeUsdc
-        ///      feeShares = feeUsdc * totalShares / (tvl - feeUsdc)
-        uint256 feeShares = _ceilDiv(feeUsdc * totalShares, tvl - feeUsdc);
+        /// @dev Mint enough shares so treasury's post-mint ownership is worth fee:
+        ///      feeShares / (totalShares + feeShares) * tvl = fee
+        ///      feeShares = fee * totalShares / (tvl - fee)
+        uint256 feeShares = _ceilDiv(fee * totalShares, tvl - fee);
 
         if (feeShares != 0) {
             s_totalShares = totalShares + feeShares;
@@ -797,10 +797,10 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         totalShares = s_totalShares;
     }
 
-    /// @notice Returns the USDC deposit amount submitted by a user for a given epoch
+    /// @notice Returns the asset deposit amount submitted by a user for a given epoch
     /// @param user The address of the depositor
     /// @param epochNonce The epoch nonce of the deposit
-    /// @return amount The USDC amount the user deposited into the given epoch
+    /// @return amount The asset amount the user deposited into the given epoch
     function getDepositAmount(address user, uint256 epochNonce) external view returns (uint256 amount) {
         amount = s_deposits[user][epochNonce];
     }
@@ -837,6 +837,18 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @return share The address of the Yieldcoin share token
     function getShare() external view returns (address share) {
         share = i_share;
+    }
+
+    /// @notice Gets the share precision (WAD_PRECISION / i_assetPrecision)
+    /// @return sharePrecision The share precision
+    function getSharePrecision() external view returns (uint256 sharePrecision) {
+        sharePrecision = i_sharePrecision;
+    }
+
+    /// @notice Gets the minimum deposit amount (100 * i_assetPrecision)
+    /// @return minDepositAmount The minimum deposit amount
+    function getMinDepositAmount() external view returns (uint256 minDepositAmount) {
+        minDepositAmount = i_minDepositAmount;
     }
 
     /*//////////////////////////////////////////////////////////////

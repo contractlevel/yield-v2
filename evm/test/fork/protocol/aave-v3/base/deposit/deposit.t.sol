@@ -14,6 +14,6 @@ contract Base_AaveV3DepositForkTest is BaseAaveV3ForkTest {
     }
 
     function test_Base_aaveV3_deposit_Success() external {
-        _assertAaveV3DepositSucceeds(baseChild.aaveV3Adapter, address(baseChild.vault), baseChild.usdc);
+        _assertAaveV3DepositSucceeds(baseChild.aaveV3Adapter, address(baseChild.vault), baseChild.asset);
     }
 }

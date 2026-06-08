@@ -18,12 +18,12 @@ contract Base_CompoundV3WithdrawForkTest is BaseCompoundV3ForkTest {
     }
 
     function test_Base_compoundV3_withdraw_Success_EpochWithdraw() external {
-        _assertCompoundV3EpochWithdrawSucceeds(baseChild.compoundV3Adapter, address(baseChild.vault), baseChild.usdc);
+        _assertCompoundV3EpochWithdrawSucceeds(baseChild.compoundV3Adapter, address(baseChild.vault), baseChild.asset);
     }
 
     function test_Base_compoundV3_withdraw_Success_RebalanceWithdraw() external {
         _assertCompoundV3RebalanceWithdrawSucceeds(
-            baseChild.compoundV3Adapter, address(baseChild.vault), baseChild.usdc
+            baseChild.compoundV3Adapter, address(baseChild.vault), baseChild.asset
         );
     }
 }

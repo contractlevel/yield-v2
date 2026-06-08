@@ -1,7 +1,8 @@
 constructor
   ├── it should set i_thisChainSelector
   ├── it should set i_link
-  ├── it should set i_usdc
+  ├── it should set i_asset
+  ├── it should set i_assetPrecision
   ├── it should set the CCIP router
   ├── it should set the emergency receiver
   ├── it should grant DEFAULT_ADMIN_ROLE to defaultAdmin

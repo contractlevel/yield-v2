@@ -8,12 +8,12 @@ contract MockCCIPRouter is IRouterClient {
     error MockCCIPRouter__GetFeeReverts();
     error MockCCIPRouter__CcipSendReverts();
 
-    address internal immutable i_usdc;
+    address internal immutable i_asset;
     bool internal s_getFeeReverts;
     bool internal s_ccipSendReverts;
 
-    constructor(address usdc) {
-        i_usdc = usdc;
+    constructor(address asset) {
+        i_asset = asset;
     }
 
     function setGetFeeReverts(bool getFeeReverts) external {
@@ -47,7 +47,7 @@ contract MockCCIPRouter is IRouterClient {
         returns (bytes32)
     {
         if (s_ccipSendReverts) revert MockCCIPRouter__CcipSendReverts();
-        IERC20(i_usdc).transferFrom(msg.sender, address(this), message.tokenAmounts[0].amount);
+        IERC20(i_asset).transferFrom(msg.sender, address(this), message.tokenAmounts[0].amount);
         return bytes32(0);
     }
 

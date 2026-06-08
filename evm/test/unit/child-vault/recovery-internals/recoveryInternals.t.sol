@@ -177,7 +177,7 @@ contract ChildVault_RecoveryInternalsUnitTest is BaseUnitTest {
     function _childVaultParams() internal view returns (BaseVault.ConstructorParams memory params) {
         params = BaseVault.ConstructorParams({
             link: address(s_mockLink),
-            usdc: address(s_mockUsdc),
+            asset: address(s_mockUsdc),
             ccipRouter: address(s_mockCcipRouter),
             defaultAdmin: address(i_owner),
             pauser: address(i_pauser),

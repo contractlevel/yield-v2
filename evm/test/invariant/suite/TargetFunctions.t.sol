@@ -284,7 +284,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         );
     }
 
-    function handler_claimUsdc(uint256 actorSeed, uint256 epochSeed, uint256 shareSeed, uint256 amountSeed) public {
+    function handler_claimAsset(uint256 actorSeed, uint256 epochSeed, uint256 shareSeed, uint256 amountSeed) public {
         address actor = _actor(actorSeed);
         uint256 claimEpochNonce = _claimableWithdrawEpoch(actor, epochSeed);
 
@@ -301,7 +301,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         __before();
 
         _changePrank(actor);
-        uint256 usdcWithdrawAmount = parent.vault.claimUsdc(claimEpochNonce);
+        uint256 usdcWithdrawAmount = parent.vault.claimAsset(claimEpochNonce);
 
         __after();
 
@@ -318,24 +318,24 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         );
         _updateWithdrawRemainingCounterMax(claimEpochNonce);
 
-        eq(_after.epochNonce, _before.epochNonce, "claimUsdc changed current epoch nonce");
-        eq(_after.actorTargetEpochWithdrawShareBurnAmount, 0, "EPOCH-013: claimUsdc did not clear actor withdraw");
+        eq(_after.epochNonce, _before.epochNonce, "claimAsset changed current epoch nonce");
+        eq(_after.actorTargetEpochWithdrawShareBurnAmount, 0, "EPOCH-013: claimAsset did not clear actor withdraw");
         eq(
             ghost_shareBurnedByActorByEpoch[actor][claimEpochNonce],
             0,
-            "EPOCH-013: claimUsdc did not clear actor withdraw ghost"
+            "EPOCH-013: claimAsset did not clear actor withdraw ghost"
         );
         eq(
             _after.targetEpochRemainingShareBurnAmount,
             _before.targetEpochRemainingShareBurnAmount - shareBurnAmount,
-            "claimUsdc did not decrease remaining share burns"
+            "claimAsset did not decrease remaining share burns"
         );
         eq(
             _after.targetEpochRemainingWithdrawClaimAmount,
             _before.targetEpochRemainingWithdrawClaimAmount - usdcWithdrawAmount,
-            "claimUsdc did not decrease remaining withdraw claims"
+            "claimAsset did not decrease remaining withdraw claims"
         );
-        eq(_after.actorUsdcBalance, _before.actorUsdcBalance + usdcWithdrawAmount, "claimUsdc did not transfer USDC");
+        eq(_after.actorUsdcBalance, _before.actorUsdcBalance + usdcWithdrawAmount, "claimAsset did not transfer USDC");
     }
 
     /// @notice The donate() function is intended as an emergency recovery/recapitalization operation.
@@ -343,7 +343,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
     ///         Malicious operator/admin control is acknowledged in ../docs/KNOWN_ISSUES.md and ../docs/THREAT_MODEL.md
     function handler_emergencyDrainAndDonate() public {
         BaseVault activeVault = _activeVault();
-        IERC20 usdc = IERC20(parent.vault.getUsdc());
+        IERC20 usdc = IERC20(parent.vault.getAsset());
         s_currentActor = i_donateOperator;
 
         __before();
@@ -531,7 +531,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         );
         lte(
             netWithdrawAmount,
-            IERC20(parent.vault.getUsdc()).balanceOf(address(activeChild)),
+            IERC20(parent.vault.getAsset()).balanceOf(address(activeChild)),
             "CCIP-005b: pending send is not collateralized"
         );
 
@@ -596,7 +596,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         );
         lte(
             amount,
-            IERC20(parent.vault.getUsdc()).balanceOf(address(sourceChild)),
+            IERC20(parent.vault.getAsset()).balanceOf(address(sourceChild)),
             "CCIP-005b: pending send is not collateralized"
         );
     }

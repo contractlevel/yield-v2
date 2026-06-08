@@ -48,9 +48,9 @@ contract ChildWithdraw_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         assertTrue(child.vault.getRecoveryExists());
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.EXECUTING));
 
-        MockAToken(MockAaveV3Pool(childPool).getReserveData(parent.usdc).aTokenAddress)
+        MockAToken(MockAaveV3Pool(childPool).getReserveData(parent.asset).aTokenAddress)
             .mint(address(child.aaveV3Adapter), shareAmount);
-        deal(parent.usdc, childPool, shareAmount);
+        deal(parent.asset, childPool, shareAmount);
         MockAaveV3Pool(childPool).setWithdrawReturn(shareAmount);
 
         vm.recordLogs();
@@ -63,12 +63,12 @@ contract ChildWithdraw_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         assertFalse(child.vault.getRecoveryExists());
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.CLAIMABLE));
 
-        uint256 depositorUsdcBeforeClaim = IERC20(parent.usdc).balanceOf(i_depositor);
+        uint256 depositorUsdcBeforeClaim = IERC20(parent.asset).balanceOf(i_depositor);
 
         _changePrank(i_depositor);
-        parent.vault.claimUsdc(2);
+        parent.vault.claimAsset(2);
 
-        assertEq(IERC20(parent.usdc).balanceOf(i_depositor), depositorUsdcBeforeClaim + shareAmount);
+        assertEq(IERC20(parent.asset).balanceOf(i_depositor), depositorUsdcBeforeClaim + shareAmount);
         assertEq(parent.share.balanceOf(i_depositor), 0);
         assertEq(parent.vault.getWithdrawShareBurnAmount(i_depositor, 2), 0);
     }

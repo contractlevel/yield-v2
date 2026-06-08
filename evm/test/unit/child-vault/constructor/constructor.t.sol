@@ -10,7 +10,8 @@ contract ChildVault_ConstructorUnitTest is BaseUnitTest {
         assertEq(s_childVault.getThisChainSelector(), CHILD_CHAIN_SELECTOR);
         assertEq(s_childVault.getParentChainSelector(), PARENT_CHAIN_SELECTOR);
         assertEq(address(s_childVault.getLink()), address(s_mockLink));
-        assertEq(address(s_childVault.getUsdc()), address(s_mockUsdc));
+        assertEq(address(s_childVault.getAsset()), address(s_mockUsdc));
+        assertEq(s_childVault.getAssetPrecision(), 10 ** uint256(s_mockUsdc.decimals()));
         assertEq(address(s_childVault.getRouter()), address(s_mockCcipRouter));
         assertEq(address(s_childVault.getAdapterRegistry()), address(s_adapterRegistry));
         assertEq(s_childVault.getEmergencyReceiver(), i_emergencyReceiver);

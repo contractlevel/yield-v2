@@ -68,20 +68,20 @@ contract ParentVault_KycPolicyIntegrationTest is BaseIntegrationTest {
         parent.vault.claimShares(1);
     }
 
-    function test_ParentVault_claimUsdc_RevertWhen_CallerIsNotKycApproved() external {
-        _assertParentVaultKycPolicy(ParentVault.claimUsdc.selector);
+    function test_ParentVault_claimAsset_RevertWhen_CallerIsNotKycApproved() external {
+        _assertParentVaultKycPolicy(ParentVault.claimAsset.selector);
 
         _changePrank(i_withdrawer);
         _expectPolicyRevert();
-        parent.vault.claimUsdc(1);
+        parent.vault.claimAsset(1);
     }
 
-    function test_ParentVault_claimUsdc_ReachesVaultLogicWhen_CallerIsKycApproved() external {
+    function test_ParentVault_claimAsset_ReachesVaultLogicWhen_CallerIsKycApproved() external {
         _registerKyc(i_withdrawer);
 
         _changePrank(i_withdrawer);
         vm.expectRevert(abi.encodeWithSelector(IParentVault.ParentVault__EpochNotClaimable.selector, 1));
-        parent.vault.claimUsdc(1);
+        parent.vault.claimAsset(1);
     }
 
     function test_ParentVault_cancelDeposit_RevertWhen_CallerIsNotKycApproved() external {
