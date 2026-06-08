@@ -748,7 +748,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         if (feeShares != 0) {
             s_totalShares = totalShares + feeShares;
             IShare(i_share).mint(s_treasury, feeShares);
-            emit PerformanceFeeCollected(epochNonce, feeShares, highWaterMark);
+            emit PerformanceFeeCollected(epochNonce, feeShares, settlementPricePerShare);
         }
 
         // @review-gas

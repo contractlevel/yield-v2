@@ -122,7 +122,7 @@ interface IParentVault is IBaseVault {
     /// @notice Emitted when performance fees are collected
     /// @param epochNonce The epoch nonce that collected the fee
     /// @param feeShares The number of shares minted to the treasury
-    /// @param highWaterMark The prior performance fee high water mark // @review change this to new HWM
+    /// @param highWaterMark The new performance fee high water mark
     event PerformanceFeeCollected(uint256 indexed epochNonce, uint256 indexed feeShares, uint256 indexed highWaterMark);
     /// @notice Emitted when a deposit is cancelled
     /// @param epochNonce The epoch nonce of the deposit
