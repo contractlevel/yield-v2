@@ -205,3 +205,47 @@ The team accepts the residual as commensurate with the impact and the simplicity
 - The relay's output begins driving automated on-chain actions without independent sanity checks downstream.
 - DefiLlama's response format changes in a way that makes 12 MiB an uncomfortable fit, forcing the cap upward.
 - A bounded-deserializer or streaming-parse implementation becomes cheap enough (in code complexity terms) to justify closing the residual.
+
+---
+
+## KI-005 — Settlement overwrites price-locked withdraw estimates with actual adapter/bridge output
+
+**Status:** Accepted — deliberate to prevent stranded, untracked underlying asset tokens in the `ParentVault`.
+
+**Last reviewed:** 2026-06-08
+
+**Component:** `ParentVault.closeEpoch` (local-strategy settlement path) and `ParentVault._ccipReceive` (remote-strategy settlement path), in combination with strategy adapters (`AaveV3Adapter`, `AaveV4Adapter`, `CompoundV3Adapter`, and any future adapters).
+
+### Summary
+
+At epoch close, the vault initially price-locks an expected withdraw amount per epoch (`epoch.totalWithdrawClaimAmount`), computed from the epoch's share-to-asset price and the total shares queued for withdraw. The vault then calls the active adapter (or, for remote strategies, receives a CCIP bridged transfer from a `ChildVault`) to actually realize the withdrawn asset.
+
+In both settlement paths, the vault then **overwrites** the price-locked estimate with the actual amount produced by the adapter / bridge, and uses that actual amount as `totalWithdrawClaimAmount` for the epoch's `claimUsdc` distribution:
+
+- **Local-strategy path (`closeEpoch`):** `totalWithdrawClaimAmount` is set to the adapter's reported withdraw output.
+- **Remote-strategy path (`_ccipReceive`):** `totalWithdrawClaimAmount` is set to the `receivedUsdcAmount` delivered by CCIP from the withdrawing `ChildVault`.
+
+If actual > expected, the surplus is attributed pro-rata to withdrawers in that epoch rather than retained by the vault. If actual < expected, withdrawers absorb the shortfall pro-rata (although in practice, this second condition should never occur, given adapters will revert if actual < expected).
+
+### Why this is accepted, not mitigated
+
+The vault's solvency model is anchored on `adapter.getTVL()`. The vault contract itself is treated as a transient holder of the underlying asset — funds either sit in an adapter (and are visible to `getTVL`) or are in-flight during deposit/close/claim. Any asset token left as an idle vault balance after `closeEpoch` is **invisible to `getTVL`** and therefore missing from the next epoch's share price calculation, where it would remain stranded indefinitely.
+
+For each path, the alternative (cap the claim at the expected amount, retain the surplus in the vault) was considered and rejected:
+
+- **Local-strategy path.** Redepositing any surplus into the still-active adapter in the same transaction is technically possible but was rejected to avoid an additional adapter call on the close-epoch hot path, and to remain symmetric with the remote path where redepositing is impossible.
+- **Remote-strategy path.** Redepositing is not an option at all: the surplus tokens just arrived on the parent chain from a remote `ChildVault`. There is no local adapter to redeposit it into without re-issuing a cross-chain transfer.
+
+Under the current adapter set (Aave V3 / V4, Compound V3 specific-amount withdraws), the discrepancy between requested and received is bounded by protocol-side rounding and is empirically ~0 per withdraw. Under CCIP, the bridged amount equals exactly what the `ChildVault` sent, so any surplus in the remote path originates from the same protocol-side rounding as the local path. Attributing this bounded surplus to the withdrawing cohort is acceptable in exchange for the invariant that **no idle USDC accumulates outside `adapter.getTVL()` or in-flight deposit/close/claim**.
+
+### Residual risk
+
+- **Withdrawers absorb surplus and shortfall.** Withdrawers in the closing epoch receive any positive or negative delta between the price-locked estimate and the actual adapter / bridge output. Non-withdrawing shareholders are insulated from this delta. Given current adapters, this delta is bounded by protocol-side rounding (~0 for specific-amount withdraws) and is not materially distinguishable from normal pro-rata claim arithmetic.
+- **Trust in adapter honesty.** The overwrite trusts the adapter's reported output and (for remote strategies) the CCIP-delivered amount. A malicious or buggy adapter that over-reports its withdraw output would cause the vault to over-attribute to withdrawers without actually holding it, manifesting as a failed transfer in `claimUsdc`. This is consistent with the broader trust assumption that registered adapters are vetted; it is not introduced by the overwrite itself.
+- **No solvency impact.** Share accounting (`totalShares`) and `getTVL`-based pricing remain correct. The overwrite affects only the distribution of a single epoch's withdraw cohort, not the vault's overall solvency or other users' balances.
+
+### Conditions that would warrant revisiting
+
+- A new adapter is registered whose withdraw output can deviate materially (more than protocol-rounding) from the requested amount — at which point the overwrite would shift non-trivial value between withdrawers and non-withdrawers and the cap-and-redeposit alternative should be reconsidered.
+- A new strategy topology is introduced where surplus asset token can be redeposited cheaply into an adapter on the parent chain at epoch close (e.g., a permanently-active fallback adapter), making the local-path "redeposit surplus" alternative effectively free.
+- CCIP semantics change such that the bridged amount can diverge from the `ChildVault`-sent amount, introducing a new source of remote-path delta independent of the underlying adapter's behavior.

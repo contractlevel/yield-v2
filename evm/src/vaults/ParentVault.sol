@@ -354,7 +354,15 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
 
             /// @dev calculate the expected withdraw amount bridged back to the parent for the epoch
             uint256 expectedWithdrawUsdc = epoch.totalWithdrawClaimAmount - epoch.totalDepositAmount;
-            /// @dev update the total withdraw claim amount
+            /// @dev Overwrite the price-locked estimate with the actual bridged amount.
+            ///      This mirrors the local-strategy path in `closeEpoch` (see that comment for full
+            ///      rationale). Here, redepositing any surplus into the adapter is not an option:
+            ///      the USDC has just arrived from a remote chain and the withdrawing adapter is
+            ///      no longer active. Attributing the full received amount to withdrawers is the
+            ///      only way to ensure no idle USDC is stranded outside `adapter.getTVL()`.
+            ///      Under CCIP + CCTP the bridged amount equals exactly what the ChildVault sent,
+            ///      so any surplus originates from the same protocol-side rounding as the local path.
+            /// @notice See ../docs/KNOWN_ISSUES.md::KI-005
             epoch.totalWithdrawClaimAmount = epoch.totalDepositAmount + receivedUsdcAmount;
             epoch.remainingWithdrawClaimAmount = epoch.totalWithdrawClaimAmount;
             if (receivedUsdcAmount < expectedWithdrawUsdc) {
@@ -508,6 +516,19 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
                 // local strategy: withdraw directly and finalise immediately
                 /// @dev true for revertOnFail because this is local
                 (, uint256 amountOut) = _executeWithdraw(netWithdrawAmount, true);
+                /// @dev Overwrite the price-locked estimate with the actual adapter output.
+                ///      This is a deliberate design choice: `adapter.getTVL()` reads only the
+                ///      adapter-side balance, so any surplus left as idle vault USDC would be
+                ///      invisible to the next epoch's price and stranded indefinitely.
+                ///      The alternative — cap the claim and redeposit the surplus into the adapter
+                ///      in the same tx — was rejected to avoid an extra adapter call on the
+                ///      close-epoch hot path and to stay symmetric with `_ccipReceive` (where
+                ///      redepositing is not an option at all; see that comment).
+                ///      Under current adapters (Aave V3/V4) the surplus is bounded by protocol-side
+                ///      rounding (~0 for specific-amount USDC withdraws), so attributing it entirely
+                ///      to withdrawers is acceptable. If a future adapter can return materially more
+                ///      than requested, revisit this.
+                /// @notice See ../docs/KNOWN_ISSUES.md::KI-005
                 epoch.totalWithdrawClaimAmount = epoch.totalDepositAmount + amountOut;
                 epoch.remainingWithdrawClaimAmount = epoch.totalWithdrawClaimAmount;
                 emit WithdrawFromStrategySuccess(epochNonce, amountOut);
