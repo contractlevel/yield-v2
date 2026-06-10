@@ -73,9 +73,12 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @dev Epochs
     mapping(uint256 epochNonce => Types.Epoch) internal s_epochs;
     /// @dev Mapping of depositors to their deposits for each epoch
-    mapping(address depositor => mapping(uint256 epochId => uint256 assetAmount)) s_deposits;
+    mapping(address depositor => mapping(uint256 epochId => uint256 assetAmount)) internal s_deposits;
     /// @dev Mapping of withdrawers to their withdraw intents for each epoch
-    mapping(address withdrawer => mapping(uint256 epochId => uint256 shareBurnAmount)) s_withdraws;
+    mapping(address withdrawer => mapping(uint256 epochId => uint256 shareBurnAmount)) internal s_withdraws;
+    /// @dev Mapping of protocolIds supported by Yieldcoin v2 across chains
+    /// @notice This CAN include protocols that are NOT supported on this chain. Ie if Parent is on Arb, and AaveV4 is only on Ethereum, but we support it, we don't want a check in initiateRebalance to be based on the local AdapterRegistry
+    mapping(bytes32 protocolId => bool isSupported) internal s_supportedProtocol;
     /// @dev Treasury address for collecting fees. This should be the protocol operator's multisig.
     address internal s_treasury;
     /// @dev Whether the initial active protocol adapter has been set
@@ -377,7 +380,9 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
             if (rebalance.state != Types.RebalanceState.REBALANCING) revert ParentVault__NoRebalanceInProgress();
             (uint256 rebalanceNonce, bytes32 protocolId) = abi.decode(data, (uint256, bytes32));
             if (rebalance.nonce != rebalanceNonce) revert ParentVault__InvalidRebalanceNonce(rebalanceNonce);
-            if (rebalance.pendingStrategy.protocolId != protocolId) revert ParentVault__InvalidPendingProtocolId(protocolId);
+            if (rebalance.pendingStrategy.protocolId != protocolId) {
+                revert ParentVault__InvalidPendingProtocolId(protocolId);
+            }
             bool success = _handleCCIPRebalance(rebalanceNonce, protocolId, receivedAmount);
             if (success) _finalizeRebalance();
         } else {
@@ -612,6 +617,14 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
             revert ParentVault__SameStrategy();
         }
 
+        // revert if chain / protocol not supported
+        if (s_crosschainVaults[newStrategy.chainSelector] == address(0)) {
+            revert ParentVault__InvalidChainSelector(newStrategy.chainSelector);
+        }
+        if (!s_supportedProtocol[newStrategy.protocolId]) {
+            revert ParentVault__InvalidProtocolId(newStrategy.protocolId);
+        }
+
         // revert if an epoch is in flight
         uint256 currentEpochNonce = s_epochNonce;
         if (currentEpochNonce == 1) revert ParentVault__NoCompletedEpoch();
@@ -748,12 +761,26 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         if (feeShares != 0) {
             s_totalShares = totalShares + feeShares;
             IShare(i_share).mint(s_treasury, feeShares);
-            emit PerformanceFeeCollected(epochNonce, feeShares, settlementPricePerShare);
         }
 
         // @review-gas
         settlementPricePerShare = _calculatePricePerShare(tvl);
         s_performanceFeeHighWaterMark = settlementPricePerShare;
+
+        if (feeShares != 0) emit PerformanceFeeCollected(epochNonce, feeShares, settlementPricePerShare);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                                 SETTER
+    //////////////////////////////////////////////////////////////*/
+    /// @notice Sets whether a protocol is supported on any chain across the Yieldcoin v2 system
+    /// @param protocolId The protocol identifier of the protocol to support, ie keccak256("aave-v3")
+    /// @param isSupported Whether a protocol is supported on any chain. True for supported, false for not
+    /// @dev Precondition: caller must have CONFIG_OPERATOR_ROLE
+    /// @dev Emits SupportedProtocolSet event
+    function setSupportedProtocol(bytes32 protocolId, bool isSupported) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
+        s_supportedProtocol[protocolId] = isSupported;
+        emit SupportedProtocolSet(protocolId, isSupported);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -851,6 +878,12 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         minDepositAmount = i_minDepositAmount;
     }
 
+    /// @notice Gets whether a protocolId is supported on any chain across the Yieldcoin v2 system.
+    /// @return isSupported true if supported on any chain, false if not supported on any chain
+    function getSupportedProtocol(bytes32 protocolId) external view returns (bool isSupported) {
+        isSupported = s_supportedProtocol[protocolId];
+    }
+
     /*//////////////////////////////////////////////////////////////
                                 OVERRIDE
     //////////////////////////////////////////////////////////////*/
@@ -864,6 +897,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @dev Precondition: Caller must have the POLICY_ENGINE_MANAGER_ROLE
     /// @param policyEngine The policy engine to attach
     function attachPolicyEngine(address policyEngine) external override onlyRole(Roles.POLICY_ENGINE_MANAGER_ROLE) {
+        _validatePolicyEngine(policyEngine);
         _attachPolicyEngine(policyEngine);
     }
 

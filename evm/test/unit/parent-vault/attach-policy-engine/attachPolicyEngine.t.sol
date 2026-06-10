@@ -29,6 +29,11 @@ contract ParentVault_AttachPolicyEngineUnitTest is BaseUnitTest {
         s_parentVault.attachPolicyEngine(address(s_newMockPolicyEngine));
     }
 
+    function test_ParentVault_attachPolicyEngine_RevertWhen_PolicyEngineIsZeroAddress() external {
+        vm.expectRevert("Policy engine is zero address");
+        s_parentVault.attachPolicyEngine(address(0));
+    }
+
     function test_ParentVault_attachPolicyEngine_Success() external {
         vm.recordLogs();
         s_parentVault.attachPolicyEngine(address(s_newMockPolicyEngine));

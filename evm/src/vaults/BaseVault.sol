@@ -61,7 +61,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @dev Mapping of chain selectors to CCIP gas limits
     mapping(uint64 chainSelector => uint256 gasLimit) internal s_ccipGasLimits;
     /// @dev Mapping of chain selectors to crosschain vault addresses - also trusted CCIP senders allow list
-    /// @notice The Parent chain should include itself as a trusted CCIP sender and set its own vault address
+    /// @notice The Parent chain should include itself as a trusted CCIP sender and set its own vault address because it is checked in initiateRebalance
     mapping(uint64 chainSelector => address vault) internal s_crosschainVaults;
     /// @dev Active strategy protocol adapter for this chain. If this is address(0), this chain is NOT the active strategy chain
     //slither-disable-next-line uninitialized-state

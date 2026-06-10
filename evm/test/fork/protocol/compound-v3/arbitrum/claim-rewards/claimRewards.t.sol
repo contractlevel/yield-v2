@@ -14,8 +14,6 @@ contract Arbitrum_CompoundV3ClaimRewardsForkTest is BaseCompoundV3ForkTest {
     }
 
     function test_Arbitrum_compoundV3_claimRewards_Success() external {
-        _assertCompoundV3ClaimRewardsSucceeds(
-            parent.compoundV3Adapter, address(parent.vault), parentForkDeployer
-        );
+        _assertCompoundV3ClaimRewardsSucceeds(parent.compoundV3Adapter, address(parent.vault), parentForkDeployer);
     }
 }

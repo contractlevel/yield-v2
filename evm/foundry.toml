@@ -19,4 +19,9 @@ runs = 3000
 depth = 15
 fail_on_revert = false
 
+[profile.halmos]
+evm_version = "shanghai"
+out = "out-halmos"
+ast = true
+
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

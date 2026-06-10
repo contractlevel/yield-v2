@@ -77,6 +77,12 @@ contract ParentVault_DeploymentIntegrationTest is BaseIntegrationTest {
         );
     }
 
+    function test_ParentVault_deployment_SetsSupportedProtocols() external view {
+        assertTrue(parent.vault.getSupportedProtocol(AAVE_V3_PROTOCOL_ID));
+        assertTrue(parent.vault.getSupportedProtocol(AAVE_V4_PROTOCOL_ID));
+        assertTrue(parent.vault.getSupportedProtocol(COMPOUND_V3_PROTOCOL_ID));
+    }
+
     function test_ParentVault_deployment_ConfiguresAdapters() external view {
         _assertOptionalAaveV3Adapter(
             parent.adapterRegistry,
@@ -110,6 +116,10 @@ contract ParentVault_DeploymentIntegrationTest is BaseIntegrationTest {
 
     function test_ParentVault_deployment_SetsDefaultCcipGasLimit() external view {
         assertEq(parent.vault.getDefaultCcipGasLimit(), networkConfig.ccip.initialDefaultCcipGasLimit);
+    }
+
+    function test_ParentVault_deployment_SetsParentCrosschainVault() external view {
+        assertEq(parent.vault.getCrosschainVault(networkConfig.ccip.parentChainSelector), address(parent.vault));
     }
 
     function test_ParentVault_deployment_SetsInitialActiveAdapter() external view {

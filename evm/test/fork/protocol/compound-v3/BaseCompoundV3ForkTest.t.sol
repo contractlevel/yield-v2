@@ -102,7 +102,9 @@ abstract contract BaseCompoundV3ForkTest is BaseForkTest {
         adapter.claimRewards(operator);
 
         assertEq(
-            address(uint160(uint256(_assertEmittedBy(keccak256("RewardsClaimed(address)"), address(adapter)).topics[1]))),
+            address(
+                uint160(uint256(_assertEmittedBy(keccak256("RewardsClaimed(address)"), address(adapter)).topics[1]))
+            ),
             operator
         );
     }

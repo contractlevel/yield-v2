@@ -60,6 +60,12 @@ abstract contract BaseUnitTest is BaseTest {
         s_parentVault = new ParentVault(
             params, i_treasury, address(s_yieldcoin), i_policyEngineManager, address(s_mockPolicyEngine)
         );
+        _changePrank(i_configOperator);
+        s_parentVault.setSupportedProtocol(AAVE_V3_PROTOCOL_ID, true);
+        s_parentVault.setSupportedProtocol(AAVE_V4_PROTOCOL_ID, true);
+        s_parentVault.setSupportedProtocol(COMPOUND_V3_PROTOCOL_ID, true);
+        _setParentCrosschainVault(PARENT_CHAIN_SELECTOR, address(s_parentVault));
+        _changePrank(i_owner);
         s_parentVault.setInitialActiveProtocolAdapter(AAVE_V3_PROTOCOL_ID);
 
         params.thisChainSelector = CHILD_CHAIN_SELECTOR;
@@ -93,6 +99,11 @@ abstract contract BaseUnitTest is BaseTest {
     function _registerAdapter(bytes32 protocolId, address adapter) internal {
         _changePrank(i_configOperator);
         s_adapterRegistry.setAdapter(protocolId, adapter);
+    }
+
+    function _setParentSupportedProtocol(bytes32 protocolId, bool isSupported) internal {
+        _changePrank(i_configOperator);
+        s_parentVault.setSupportedProtocol(protocolId, isSupported);
     }
 
     function _baseVaultParams(uint64 chainSelector) internal view returns (BaseVault.ConstructorParams memory params) {

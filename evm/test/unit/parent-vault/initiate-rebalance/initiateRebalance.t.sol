@@ -55,6 +55,20 @@ contract ParentVault_InitiateRebalanceUnitTest is BaseUnitTest {
         s_parentVault.initiateRebalance(_localStrategy(AAVE_V3_PROTOCOL_ID));
     }
 
+    function test_ParentVault_initiateRebalance_RevertWhen_InvalidChainSelector() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(IParentVault.ParentVault__InvalidChainSelector.selector, REMOTE_CHILD_CHAIN_SELECTOR)
+        );
+        s_parentVault.initiateRebalance(_remoteChildStrategy(AAVE_V4_PROTOCOL_ID));
+    }
+
+    function test_ParentVault_initiateRebalance_RevertWhen_InvalidProtocolId() public {
+        bytes32 unknownProtocolId = keccak256("unknown-protocol");
+
+        vm.expectRevert(abi.encodeWithSelector(IParentVault.ParentVault__InvalidProtocolId.selector, unknownProtocolId));
+        s_parentVault.initiateRebalance(_localStrategy(unknownProtocolId));
+    }
+
     function test_ParentVault_initiateRebalance_RevertWhen_NoCompletedEpoch() public {
         _setParentEpochNonce(1);
 
@@ -228,5 +242,9 @@ contract ParentVault_InitiateRebalanceUnitTest is BaseUnitTest {
 
     function _childStrategy(bytes32 protocolId) internal pure returns (Types.Strategy memory) {
         return _strategy(protocolId, CHILD_CHAIN_SELECTOR);
+    }
+
+    function _remoteChildStrategy(bytes32 protocolId) internal pure returns (Types.Strategy memory) {
+        return _strategy(protocolId, REMOTE_CHILD_CHAIN_SELECTOR);
     }
 }

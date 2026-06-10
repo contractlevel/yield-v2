@@ -436,6 +436,7 @@ contract ChildVault is BaseVault, IChildVault {
     function _getTVL() internal view override returns (uint256 tvl) {
         address activeAdapter = s_activeProtocolAdapter;
         if (activeAdapter == address(0)) return 0;
-        tvl = IProtocolAdapter(activeAdapter).getTVL() + s_epochDepositRecovery.amount + s_rebalanceDepositRecovery.amount;
+        tvl = IProtocolAdapter(activeAdapter).getTVL() + s_epochDepositRecovery.amount
+            + s_rebalanceDepositRecovery.amount;
     }
 }

@@ -6,8 +6,11 @@ ParentVault_deployment
 ├── adapters
 │   ├── it should register Aave V3, Aave V4, and Compound V3 adapters
 │   └── it should configure deployed adapters
+├── protocol support
+│   └── it should support Aave V3, Aave V4, and Compound V3 protocol IDs
 ├── CCIP config
-│   └── it should set the default CCIP gas limit
+│   ├── it should set the default CCIP gas limit
+│   └── it should trust the parent vault by parent chain selector
 ├── initial active adapter
 │   └── it should set Aave V3 as the initial active adapter
 ├── workflow router

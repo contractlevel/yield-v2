@@ -3,4 +3,6 @@ Arbitrum Deployment Fork
 GIVEN the five-chain fork topology is deployed
   WHEN the active fork is Arbitrum
     THEN the parent deployment is configured with Arbitrum mainnet addresses
+    AND the parent vault supports the known Yieldcoin protocol IDs
+    AND the parent vault trusts itself by parent chain selector
     AND the parent vault trusts each child vault by chain selector

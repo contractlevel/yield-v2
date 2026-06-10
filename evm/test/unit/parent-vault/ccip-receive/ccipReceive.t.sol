@@ -97,9 +97,7 @@ contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
                              WITHDRAW PATH
     //////////////////////////////////////////////////////////////*/
     function test_ParentVault_ccipReceive_Withdraw_RevertWhen_EpochNonceDoesNotMatchPrevious() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(IParentVault.ParentVault__InvalidEpochNonce.selector, EPOCH_NONCE + 1)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IParentVault.ParentVault__InvalidEpochNonce.selector, EPOCH_NONCE + 1));
         s_parentVault.ccipReceive(_withdrawMessage(EPOCH_NONCE + 1, EXPECTED_WITHDRAW_USDC));
     }
 
@@ -227,9 +225,7 @@ contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
     function test_ParentVault_ccipReceive_Rebalance_RevertWhen_RebalanceNonceDoesNotMatch() public {
         _setParentPendingRebalance(AAVE_V3_PROTOCOL_ID, PARENT_CHAIN_SELECTOR);
         uint256 wrongNonce = REBALANCE_NONCE + 1;
-        vm.expectRevert(
-            abi.encodeWithSelector(IParentVault.ParentVault__InvalidRebalanceNonce.selector, wrongNonce)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IParentVault.ParentVault__InvalidRebalanceNonce.selector, wrongNonce));
         s_parentVault.ccipReceive(_rebalanceMessage(wrongNonce, AAVE_V3_PROTOCOL_ID, BRIDGED_AMOUNT));
     }
 

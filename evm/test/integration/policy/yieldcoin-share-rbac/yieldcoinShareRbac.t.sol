@@ -34,15 +34,20 @@ contract YieldcoinShare_RbacPolicyIntegrationTest is BaseIntegrationTest {
         assertEq(parent.share.balanceOf(i_withdrawer), 1e18);
     }
 
-    /// @dev batchMint has no policy chain configured. With defaultPolicyAllow = false this
-    ///      makes batchMint uncallable by anyone — including the vault — effectively disabling it.
-    ///      This is intentional: only the singular mint path is supported.
-    function test_YieldcoinShare_batchMint_AlwaysReverts_NoPolicyConfigured() external {
-        _assertSharePolicyNotConfigured(ComplianceTokenERC3643.batchMint.selector);
+    function test_YieldcoinShare_batchMint_RevertWhen_CallerIsNotParentVault() external {
+        _assertShareRbacPolicy(ComplianceTokenERC3643.mint.selector, Roles.MINTER_ROLE, address(parent.vault));
 
-        _changePrank(address(parent.vault));
+        _changePrank(i_nonOwner);
         _expectPolicyRevert();
         parent.share.batchMint(_twoAddresses(i_recipient1, i_recipient2), _twoAmounts(1e18, 2e18));
+    }
+
+    function test_YieldcoinShare_batchMint_SucceedsWhen_CallerIsParentVault() external {
+        _changePrank(address(parent.vault));
+        parent.share.batchMint(_twoAddresses(i_recipient1, i_recipient2), _twoAmounts(1e18, 2e18));
+
+        assertEq(parent.share.balanceOf(i_recipient1), 1e18);
+        assertEq(parent.share.balanceOf(i_recipient2), 2e18);
     }
 
     function test_YieldcoinShare_burn_RevertWhen_CallerIsNotParentVault() external {
@@ -60,15 +65,19 @@ contract YieldcoinShare_RbacPolicyIntegrationTest is BaseIntegrationTest {
         assertEq(parent.share.balanceOf(i_depositor), SHARE_AMOUNT - 1e18);
     }
 
-    /// @dev batchBurn has no policy chain configured. With defaultPolicyAllow = false this
-    ///      makes batchBurn uncallable by anyone — including the vault — effectively disabling it.
-    ///      This is intentional: only the singular burn path is supported.
-    function test_YieldcoinShare_batchBurn_AlwaysReverts_NoPolicyConfigured() external {
-        _assertSharePolicyNotConfigured(ComplianceTokenERC3643.batchBurn.selector);
+    function test_YieldcoinShare_batchBurn_RevertWhen_CallerIsNotParentVault() external {
+        _assertShareRbacPolicy(ComplianceTokenERC3643.burn.selector, Roles.BURNER_ROLE, address(parent.vault));
 
-        _changePrank(address(parent.vault));
+        _changePrank(i_nonOwner);
         _expectPolicyRevert();
         parent.share.batchBurn(_twoAddresses(i_depositor, i_depositor), _twoAmounts(1e18, 2e18));
+    }
+
+    function test_YieldcoinShare_batchBurn_SucceedsWhen_CallerIsParentVault() external {
+        _changePrank(address(parent.vault));
+        parent.share.batchBurn(_twoAddresses(i_depositor, i_depositor), _twoAmounts(1e18, 2e18));
+
+        assertEq(parent.share.balanceOf(i_depositor), SHARE_AMOUNT - 3e18);
     }
 
     function test_YieldcoinShare_setCCIPAdmin_RevertWhen_CallerIsNotConfigOperator() external {
@@ -289,10 +298,5 @@ contract YieldcoinShare_RbacPolicyIntegrationTest is BaseIntegrationTest {
         values = new bool[](2);
         values[0] = first;
         values[1] = second;
-    }
-
-    function _assertSharePolicyNotConfigured(bytes4 selector) private view {
-        address[] memory policies = parent.policyEngine.getPolicies(address(parent.share), selector);
-        assertEq(policies.length, 0);
     }
 }

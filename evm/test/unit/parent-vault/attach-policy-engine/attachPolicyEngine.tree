@@ -1,4 +1,6 @@
 attachPolicyEngine
+  ├── when the policy engine is the zero address
+  │   └── it should revert
   ├── when the caller does not have the POLICY_ENGINE_MANAGER_ROLE
   │   └── it should revert
   └── when the caller has the POLICY_ENGINE_MANAGER_ROLE

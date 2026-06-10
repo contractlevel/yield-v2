@@ -14,8 +14,6 @@ contract Base_CompoundV3ClaimRewardsForkTest is BaseCompoundV3ForkTest {
     }
 
     function test_Base_compoundV3_claimRewards_Success() external {
-        _assertCompoundV3ClaimRewardsSucceeds(
-            baseChild.compoundV3Adapter, address(baseChild.vault), baseForkDeployer
-        );
+        _assertCompoundV3ClaimRewardsSucceeds(baseChild.compoundV3Adapter, address(baseChild.vault), baseForkDeployer);
     }
 }

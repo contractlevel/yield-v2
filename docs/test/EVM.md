@@ -79,3 +79,9 @@ recon fuzz . \
     --workers 10 \
     --stop-on-fail
 ```
+
+```
+FOUNDRY_PROFILE=halmos forge build
+halmos --contract ClaimSolvency --forge-build-out out-halmos --function check_ \
+         --solver-timeout-branching 10000 --solver-timeout-assertion 30000
+```

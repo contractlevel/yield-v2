@@ -64,6 +64,12 @@ interface IParentVault is IBaseVault {
     error ParentVault__EpochExecuting(uint256 epochNonce);
     /// @dev Thrown when the initial active protocol adapter has already been set
     error ParentVault__InitialActiveProtocolAdapterAlreadySet();
+    /// @dev Thrown when initiateRebalance is called with an unsupported chain selector
+    /// @param chainSelector The unsupported chain selector
+    error ParentVault__InvalidChainSelector(uint64 chainSelector);
+    /// @dev Thrown when initiateRebalance is called with an unsupported protocol ID
+    /// @param protocolId The unsupported protocol ID
+    error ParentVault__InvalidProtocolId(bytes32 protocolId);
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
@@ -142,6 +148,10 @@ interface IParentVault is IBaseVault {
     /// @notice Emitted when the treasury address is set
     /// @param treasury The address of the treasury
     event TreasurySet(address indexed treasury);
+    /// @notice Emitted when a protocol's supported (on any chain) status is set
+    /// @param protocolId The protocol ID of the protocol whose support status has been set
+    /// @param isSupported True if supported on any chain, false if not
+    event SupportedProtocolSet(bytes32 indexed protocolId, bool indexed isSupported);
 
     /*//////////////////////////////////////////////////////////////
                               SETTERS
@@ -158,6 +168,12 @@ interface IParentVault is IBaseVault {
     /// @param treasury The address of the treasury
     /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
     function setTreasury(address treasury) external;
+
+    /// @notice Sets whether a protocol is supported on any chain across the Yieldcoin v2 system
+    /// @param protocolId The protocol ID to configure
+    /// @param isSupported Whether the protocol is supported
+    /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
+    function setSupportedProtocol(bytes32 protocolId, bool isSupported) external;
 
     /*//////////////////////////////////////////////////////////////
                                RECOVERY
@@ -184,6 +200,11 @@ interface IParentVault is IBaseVault {
     /// @notice Returns the minimum deposit amount (100 * i_assetPrecision)
     /// @return minDepositAmount The minimum deposit amount
     function getMinDepositAmount() external view returns (uint256 minDepositAmount);
+
+    /// @notice Returns whether a protocol ID is supported on any chain across the Yieldcoin v2 system
+    /// @param protocolId The protocol ID to query
+    /// @return isSupported Whether the protocol ID is supported
+    function getSupportedProtocol(bytes32 protocolId) external view returns (bool isSupported);
 
     /// @notice Claims the underlying asset for a completed epoch withdrawal
     /// @param epochNonce The nonce of the epoch to claim from

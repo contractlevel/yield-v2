@@ -369,6 +369,7 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         uint256 tvl = SEEDED_SHARES * grossPricePerShare / SHARE_PRECISION;
         uint256 expectedFeeShares =
             _expectedPerformanceFeeShares(SEEDED_SHARES, tvl, grossPricePerShare, SHARE_PRECISION);
+        uint256 settlementPricePerShare = _pricePerShare(tvl, SEEDED_SHARES + expectedFeeShares);
 
         _setParentTotalShares(SEEDED_SHARES);
         _submitDeposit();
@@ -380,7 +381,7 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
             _assertEmittedBy(keccak256("PerformanceFeeCollected(uint256,uint256,uint256)"), address(s_parentVault));
         assertEq(uint256(log.topics[1]), 1);
         assertEq(uint256(log.topics[2]), expectedFeeShares);
-        assertEq(uint256(log.topics[3]), SHARE_PRECISION);
+        assertEq(uint256(log.topics[3]), settlementPricePerShare);
     }
 
     function test_ParentVault_closeEpoch_PerformanceFee_DoesNotUpdateHighWaterMarkBelowPriorHigh() public {
