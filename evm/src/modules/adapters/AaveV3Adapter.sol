@@ -97,6 +97,7 @@ contract AaveV3Adapter is ProtocolAdapter {
     /// @notice Gets the TVL in the Aave V3 pool
     /// @param pool The Aave V3 pool address. Fetched from _getAavePool()
     /// @return tvl The TVL of the Aave V3 pool
+    /// @notice Reading aToken balance can slightly overstate available value. Bounded by Aave treasury fee rate (approximately 2-4 bps of TVL).
     function _getTVL(address pool) internal view returns (uint256 tvl) {
         DataTypes.ReserveDataLegacy memory reserveData = IPool(pool).getReserveData(i_asset);
         address aTokenAddress = reserveData.aTokenAddress;
