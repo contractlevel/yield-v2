@@ -421,7 +421,7 @@ contract ChildVault is BaseVault, IChildVault {
     /// @inheritdoc BaseVault
     function _recoveryExists() internal view override returns (bool recoveryExists) {
         recoveryExists = s_rebalanceDepositRecovery.amount != 0 || s_epochDepositRecovery.amount != 0
-            || s_epochWithdrawRecovery.amount != 0 || s_rebalanceWithdrawRecovery.rebalanceNonce != 0
+            || s_epochWithdrawRecovery.amount != 0 || s_rebalanceWithdrawRecovery.strategy.chainSelector != 0
             || s_ccipSendRecovery.amount != 0;
     }
 
