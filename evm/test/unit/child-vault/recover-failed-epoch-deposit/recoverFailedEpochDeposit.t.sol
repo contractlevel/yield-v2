@@ -77,6 +77,7 @@ contract ChildVault_RecoverFailedEpochDepositUnitTest is BaseUnitTest {
         assertEq(uint256(log.topics[1]), EPOCH_NONCE);
     }
 
+    // @review test name here is misleading
     function test_ChildVault_recoverFailedEpochDeposit_Success_StoresEpochNonce() public view {
         Types.EpochRecovery memory recovery = s_childVault.getEpochDepositRecovery();
 

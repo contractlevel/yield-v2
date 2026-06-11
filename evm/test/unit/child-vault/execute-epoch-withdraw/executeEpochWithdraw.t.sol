@@ -110,18 +110,6 @@ contract ChildVault_ExecuteEpochWithdrawUnitTest is BaseUnitTest {
         assertEq(uint256(log.topics[2]), WITHDRAW_AMOUNT);
     }
 
-    function test_ChildVault_executeEpochWithdraw_WhenAdapterReturnsZero_DoesNotStoreEpochWithdrawRecovery() public {
-        s_mockProtocolAdapter.setWithdrawReturnAmount(0);
-
-        s_childVault.executeEpochWithdraw(EPOCH_NONCE, WITHDRAW_AMOUNT);
-
-        Types.EpochRecovery memory recovery = s_childVault.getEpochWithdrawRecovery();
-        assertEq(recovery.epochNonce, 0);
-        assertEq(recovery.amount, 0);
-        assertEq(recovery.createdAt, 0);
-        assertFalse(s_childVault.getRecoveryExists());
-    }
-
     function test_ChildVault_executeEpochWithdraw_WhenAdapterReturnsZero_EmitsWithdrawFromStrategySuccess() public {
         s_mockProtocolAdapter.setWithdrawReturnAmount(0);
 

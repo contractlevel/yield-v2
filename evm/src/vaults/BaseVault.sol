@@ -71,6 +71,8 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     uint96 internal s_pausedAt;
     /// @dev Address that receives the underlying asset during emergency drain.
     address internal s_emergencyReceiver;
+    /// @dev True if any recovery state is currently active. Enforces the singleton invariant at the store layer.
+    bool internal s_recoveryExists;
     /// @dev Recovery state for failed rebalance deposit operations. This can exist on Parent or Child.
     Types.RebalanceDepositRecovery internal s_rebalanceDepositRecovery;
 
@@ -374,16 +376,17 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @param amount The amount that should have been rebalanced into the new strategy
     /// @dev Stores the rebalance nonce, amount, and block timestamp in one pending slot
     /// @dev Emits RebalanceDepositRecoveryStored event
-    /// @dev Precondition: Stored recovery should not already exist
+    /// @dev Precondition: no recovery state must currently exist
     /// @dev Precondition: amount should not be zero
     function _storeRebalanceDepositRecovery(uint256 rebalanceNonce, uint256 amount) internal {
         //slither-disable-next-line incorrect-equality
         if (amount == 0) revert BaseVault__ZeroRecoveryAmount();
-        if (s_rebalanceDepositRecovery.amount != 0) revert BaseVault__RecoveryAlreadyPending();
+        if (s_recoveryExists) revert BaseVault__RecoveryAlreadyPending();
 
         s_rebalanceDepositRecovery = Types.RebalanceDepositRecovery({
             rebalanceNonce: rebalanceNonce, amount: amount, createdAt: block.timestamp
         });
+        s_recoveryExists = true;
         emit RebalanceDepositRecoveryStored(rebalanceNonce, amount);
     }
 
@@ -398,6 +401,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         uint256 rebalanceNonce = s_rebalanceDepositRecovery.rebalanceNonce;
 
         delete s_rebalanceDepositRecovery;
+        s_recoveryExists = false;
         emit RebalanceDepositRecoveryCleared(rebalanceNonce);
     }
 
@@ -411,15 +415,8 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     }
 
     /// @notice Reverts if any recovery state is pending
-    /// @dev ChildVault overrides _recoveryExists to include child-specific recovery modes
     function _requireNoRecovery() internal view {
-        if (_recoveryExists()) revert BaseVault__RecoveryAlreadyPending();
-    }
-
-    /// @notice Checks whether any recovery state is pending
-    /// @dev ParentVault only has rebalance deposit recovery in BaseVault
-    function _recoveryExists() internal view virtual returns (bool recoveryExists) {
-        recoveryExists = s_rebalanceDepositRecovery.amount != 0;
+        if (s_recoveryExists) revert BaseVault__RecoveryAlreadyPending();
     }
 
     /// @notice Inherited and implemented by ParentVault and ChildVault
@@ -430,7 +427,6 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @notice The ParentVault overrides this, implements the internal _recoverFailedRebalanceDeposit, and then finalizes the rebalance
     function recoverFailedRebalanceDeposit() external virtual;
 
-    /// @notice Inherited and implemented by ParentVault and ChildVault
     /// @dev Precondition: rebalance deposit recovery state must exist
     /// @dev Precondition: active strategy adapter must be set
     /// @dev Precondition: the deposit into the strategy must be successful
@@ -685,11 +681,10 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     }
 
     /// @notice Check for if a recovery exists
-    /// @notice Overridden on Child, which contains multiple recovery modes
     /// @return recoveryExists true if recovery exists, false if not
     /// @dev This is used for Workflow-level checks
     function getRecoveryExists() external view virtual returns (bool recoveryExists) {
-        recoveryExists = _recoveryExists();
+        recoveryExists = s_recoveryExists;
     }
 
     /*//////////////////////////////////////////////////////////////

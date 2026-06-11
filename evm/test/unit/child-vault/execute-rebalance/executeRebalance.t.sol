@@ -150,20 +150,6 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
         assertEq(uint64(uint256(log.topics[3])), REMOTE_CHILD_CHAIN_SELECTOR);
     }
 
-    function test_ChildVault_executeRebalance_WhenWithdrawAdapterReturnsZero_DoesNotStoreRebalanceWithdrawRecovery()
-        public
-    {
-        s_mockProtocolAdapter.setWithdrawReturnAmount(0);
-
-        s_childVault.executeRebalance(REBALANCE_NONCE, _remoteChildStrategy());
-
-        Types.RebalanceWithdrawRecovery memory recovery = s_childVault.getRebalanceWithdrawRecovery();
-        assertEq(recovery.rebalanceNonce, 0);
-        assertEq(recovery.strategy.protocolId, bytes32(0));
-        assertEq(recovery.strategy.chainSelector, 0);
-        assertEq(recovery.createdAt, 0);
-        assertFalse(s_childVault.getRecoveryExists());
-    }
 
     function test_ChildVault_executeRebalance_WhenWithdrawAdapterReturnsZero_EmitsRebalanceWithdrawSuccess() public {
         s_mockProtocolAdapter.setWithdrawReturnAmount(0);

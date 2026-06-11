@@ -103,14 +103,14 @@ contract ChildVault is BaseVault, IChildVault {
     /// @param destinationChainSelector The CCIP selector of the destination chain
     /// @param ccipTxType The type of CCIP transaction
     /// @param txData abi.encode(epochNonce) for epoch net deposit/withdraw, or abi.encode(rebalanceNonce, newStrategy.protocolId) for rebalance
-    /// @dev Precondition: There must not be a ccip send recovery already in state
+    /// @dev Precondition: no recovery state must currently exist
     function _ccipSend(
         uint256 bridgeAmount,
         uint64 destinationChainSelector,
         Types.CcipTx ccipTxType,
         bytes memory txData
     ) internal override {
-        if (s_ccipSendRecovery.amount != 0) revert BaseVault__RecoveryAlreadyPending();
+        if (s_recoveryExists) revert BaseVault__RecoveryAlreadyPending();
 
         try this.tryCcipSend(bridgeAmount, destinationChainSelector, ccipTxType, txData) {}
         catch {
@@ -121,6 +121,7 @@ contract ChildVault is BaseVault, IChildVault {
                 txData: txData,
                 createdAt: block.timestamp
             });
+            s_recoveryExists = true;
             emit CcipSendRecoveryStored(ccipTxType, destinationChainSelector, bridgeAmount);
         }
     }
@@ -194,15 +195,14 @@ contract ChildVault is BaseVault, IChildVault {
     /// @param epochNonce The epoch nonce of the failed deposit
     /// @param amount The amount of asset to retry depositing
     /// @dev Precondition: amount must not be zero
-    /// @dev Precondition: epoch deposit recovery state must not already exist for the epoch
-    /// @dev Precondition: epoch withdraw recovery state must not already exist for the epoch
+    /// @dev Precondition: no recovery state must currently exist
     function _storeEpochDepositRecovery(uint256 epochNonce, uint256 amount) internal {
         if (amount == 0) revert BaseVault__ZeroRecoveryAmount();
-        if (s_epochDepositRecovery.amount != 0) revert BaseVault__RecoveryAlreadyPending();
-        if (s_epochWithdrawRecovery.amount != 0) revert BaseVault__RecoveryAlreadyPending();
+        if (s_recoveryExists) revert BaseVault__RecoveryAlreadyPending();
 
         s_epochDepositRecovery =
             Types.EpochRecovery({epochNonce: epochNonce, amount: amount, createdAt: block.timestamp});
+        s_recoveryExists = true;
         emit EpochDepositRecoveryStored(epochNonce, amount);
     }
 
@@ -214,6 +214,7 @@ contract ChildVault is BaseVault, IChildVault {
         uint256 epochNonce = s_epochDepositRecovery.epochNonce;
 
         delete s_epochDepositRecovery;
+        s_recoveryExists = false;
         emit EpochDepositRecoveryCleared(epochNonce);
     }
 
@@ -230,16 +231,15 @@ contract ChildVault is BaseVault, IChildVault {
     /// @param epochNonce The epoch nonce of the failed withdraw
     /// @param amount The amount of asset to retry withdrawing
     /// @dev Precondition: amount must not be zero
-    /// @dev Precondition: epoch withdraw recovery state must not already exist for the epoch
-    /// @dev Precondition: epoch deposit recovery state must not already exist for the epoch
+    /// @dev Precondition: no recovery state must currently exist
     function _storeEpochWithdrawRecovery(uint256 epochNonce, uint256 amount) internal {
         //slither-disable-next-line incorrect-equality
         if (amount == 0) revert BaseVault__ZeroRecoveryAmount();
-        if (s_epochWithdrawRecovery.amount != 0) revert BaseVault__RecoveryAlreadyPending();
-        if (s_epochDepositRecovery.amount != 0) revert BaseVault__RecoveryAlreadyPending();
+        if (s_recoveryExists) revert BaseVault__RecoveryAlreadyPending();
 
         s_epochWithdrawRecovery =
             Types.EpochRecovery({epochNonce: epochNonce, amount: amount, createdAt: block.timestamp});
+        s_recoveryExists = true;
         emit EpochWithdrawRecoveryStored(epochNonce, amount);
     }
 
@@ -251,6 +251,7 @@ contract ChildVault is BaseVault, IChildVault {
         uint256 epochNonce = s_epochWithdrawRecovery.epochNonce;
 
         delete s_epochWithdrawRecovery;
+        s_recoveryExists = false;
         emit EpochWithdrawRecoveryCleared(epochNonce);
     }
 
@@ -267,17 +268,16 @@ contract ChildVault is BaseVault, IChildVault {
     /// @param rebalanceNonce The rebalance nonce of the failed withdraw
     /// @param strategy The target strategy to continue the rebalance into after withdraw succeeds
     /// @dev Precondition: strategy chain selector must not be zero
-    /// @dev Precondition: rebalance withdraw recovery state must not already exist
+    /// @dev Precondition: no recovery state must currently exist
     function _storeRebalanceWithdrawRecovery(uint256 rebalanceNonce, Types.Strategy memory strategy) internal {
         //slither-disable-next-line incorrect-equality
         if (strategy.chainSelector == 0) revert ChildVault__InvalidRecoveryStrategy();
-        if (s_rebalanceWithdrawRecovery.strategy.chainSelector != 0) {
-            revert BaseVault__RecoveryAlreadyPending();
-        }
+        if (s_recoveryExists) revert BaseVault__RecoveryAlreadyPending();
 
         s_rebalanceWithdrawRecovery = Types.RebalanceWithdrawRecovery({
             rebalanceNonce: rebalanceNonce, strategy: strategy, createdAt: block.timestamp
         });
+        s_recoveryExists = true;
         emit RebalanceWithdrawRecoveryStored(rebalanceNonce, strategy.protocolId, strategy.chainSelector);
     }
 
@@ -291,6 +291,7 @@ contract ChildVault is BaseVault, IChildVault {
         uint256 rebalanceNonce = s_rebalanceWithdrawRecovery.rebalanceNonce;
 
         delete s_rebalanceWithdrawRecovery;
+        s_recoveryExists = false;
         emit RebalanceWithdrawRecoveryCleared(rebalanceNonce);
     }
 
@@ -372,6 +373,7 @@ contract ChildVault is BaseVault, IChildVault {
 
         // Clear before retry; if _executeCcipSend reverts, EVM atomicity restores this recovery state.
         delete s_ccipSendRecovery;
+        s_recoveryExists = false;
         emit CcipSendRecoveryCleared(recovery.ccipTxType, recovery.destinationChainSelector, recovery.amount);
 
         _executeCcipSend(recovery.amount, recovery.destinationChainSelector, recovery.ccipTxType, recovery.txData);
@@ -408,21 +410,6 @@ contract ChildVault is BaseVault, IChildVault {
     /// @return recovery The stored CCIP send recovery state
     function getCcipSendRecovery() external view returns (Types.CcipSendRecovery memory recovery) {
         recovery = s_ccipSendRecovery;
-    }
-
-    /// @notice Check for if a recovery exists
-    /// @notice Overridden on Child, which contains multiple recovery modes
-    /// @return recoveryExists true if recovery exists, false if not
-    /// @dev This is used for Workflow-level checks
-    function getRecoveryExists() external view override returns (bool recoveryExists) {
-        recoveryExists = _recoveryExists();
-    }
-
-    /// @inheritdoc BaseVault
-    function _recoveryExists() internal view override returns (bool recoveryExists) {
-        recoveryExists = s_rebalanceDepositRecovery.amount != 0 || s_epochDepositRecovery.amount != 0
-            || s_epochWithdrawRecovery.amount != 0 || s_rebalanceWithdrawRecovery.strategy.chainSelector != 0
-            || s_ccipSendRecovery.amount != 0;
     }
 
     /*//////////////////////////////////////////////////////////////

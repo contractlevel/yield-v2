@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
-
 import {BaseUnitTest, Vm} from "../../BaseUnitTest.t.sol";
 
 import {IBaseVault} from "../../../../src/interfaces/IBaseVault.sol";
@@ -12,8 +10,6 @@ import {MockProtocolAdapter} from "../../../mocks/MockProtocolAdapter.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
 
 contract ParentVault_InitiateRebalanceUnitTest is BaseUnitTest {
-    using stdStorage for StdStorage;
-
     uint256 internal constant REBALANCE_AMOUNT = 500 * 1e6;
 
     MockProtocolAdapter internal s_newMockProtocolAdapter;
@@ -43,8 +39,7 @@ contract ParentVault_InitiateRebalanceUnitTest is BaseUnitTest {
     }
 
     function test_ParentVault_initiateRebalance_RevertWhen_RecoveryExists() public {
-        stdstore.target(address(s_parentVault)).sig("getRebalanceDepositRecovery()").depth(1)
-            .checked_write(REBALANCE_AMOUNT);
+        _setParentRecoveryExists(true);
 
         vm.expectRevert(IBaseVault.BaseVault__RecoveryAlreadyPending.selector);
         s_parentVault.initiateRebalance(_localStrategy(AAVE_V4_PROTOCOL_ID));

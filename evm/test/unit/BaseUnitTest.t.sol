@@ -194,6 +194,16 @@ abstract contract BaseUnitTest is BaseTest {
         stdstore.target(address(s_parentVault)).sig("getRebalance()").depth(1).checked_write(uint256(state));
     }
 
+    function _setParentRecoveryExists(bool exists) internal {
+        bytes32 slot = bytes32(uint256(9));
+        uint256 word = uint256(vm.load(address(s_parentVault), slot));
+        uint256 mask = uint256(0xff) << 160;
+
+        uint256 updated = exists ? (word & ~mask) | (uint256(1) << 160) : word & ~mask;
+
+        vm.store(address(s_parentVault), slot, bytes32(updated));
+    }
+
     function _submitParentWithdraw(uint256 shareAmount) internal {
         s_yieldcoin.mint(i_withdrawer, shareAmount);
         _changePrank(i_withdrawer);

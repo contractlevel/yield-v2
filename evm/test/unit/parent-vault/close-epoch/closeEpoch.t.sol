@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
-
 import {BaseUnitTest, Vm} from "../../BaseUnitTest.t.sol";
 
 import {IParentVault} from "../../../../src/interfaces/IParentVault.sol";
@@ -11,8 +9,6 @@ import {Types} from "../../../../src/libraries/Types.sol";
 import {MockCCIPRouter} from "../../../mocks/MockCCIPRouter.sol";
 
 contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
-    using stdStorage for StdStorage;
-
     uint256 internal constant WITHDRAW_SHARES = MIN_DEPOSIT_AMOUNT;
     uint256 internal constant TVL = 1_000 * 1e6;
     uint256 internal constant SEEDED_SHARES = 1_000_000 * 1e6;
@@ -44,7 +40,7 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
     }
 
     function test_ParentVault_closeEpoch_RevertWhen_RecoveryExists() public {
-        stdstore.target(address(s_parentVault)).sig("getRebalanceDepositRecovery()").depth(1).checked_write(TVL);
+        _setParentRecoveryExists(true);
 
         _warpPastMinEpoch();
         vm.expectRevert(IBaseVault.BaseVault__RecoveryAlreadyPending.selector);
