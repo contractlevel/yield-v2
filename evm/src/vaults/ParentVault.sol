@@ -230,10 +230,11 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         uint256 depositAmount = s_deposits[msg.sender][epochNonce];
         if (depositAmount == 0) revert ParentVault__NoDeposit(msg.sender, epochNonce);
 
-        if (depositAmount == epoch.remainingDepositClaimAmount) {
-            shareMintAmount = epoch.remainingShareMintAmount;
+        if (depositAmount != epoch.remainingDepositClaimAmount) {
+            shareMintAmount =
+                _proportionalAmount(depositAmount, epoch.remainingShareMintAmount, epoch.remainingDepositClaimAmount);
         } else {
-            shareMintAmount = depositAmount * epoch.remainingShareMintAmount / epoch.remainingDepositClaimAmount;
+            shareMintAmount = epoch.remainingShareMintAmount;
         }
 
         epoch.remainingDepositClaimAmount -= depositAmount;
@@ -268,7 +269,8 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         if (shareBurnAmount == 0) revert ParentVault__NoWithdraw(msg.sender, epochNonce);
 
         if (shareBurnAmount != epoch.remainingShareBurnAmount) {
-            withdrawAmount = shareBurnAmount * epoch.remainingWithdrawClaimAmount / epoch.remainingShareBurnAmount;
+            withdrawAmount =
+                _proportionalAmount(shareBurnAmount, epoch.remainingWithdrawClaimAmount, epoch.remainingShareBurnAmount);
         } else {
             withdrawAmount = epoch.remainingWithdrawClaimAmount;
         }
@@ -793,6 +795,19 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     // @review-deploy replacing this with OZ mulDiv or solady
     function _ceilDiv(uint256 numerator, uint256 denominator) internal pure returns (uint256 result) {
         result = numerator == 0 ? 0 : (numerator - 1) / denominator + 1;
+    }
+
+    /// @notice Calculates a user's proportional amount using floor division
+    /// @param userAmount The user's amount to apply proportionally
+    /// @param remainingNumerator The remaining amount being allocated proportionally
+    /// @param remainingDenominator The remaining total amount used as the proportional denominator
+    /// @return proportionalAmount The user's proportional amount
+    function _proportionalAmount(uint256 userAmount, uint256 remainingNumerator, uint256 remainingDenominator)
+        internal
+        pure
+        returns (uint256 proportionalAmount)
+    {
+        proportionalAmount = userAmount * remainingNumerator / remainingDenominator;
     }
 
     /*//////////////////////////////////////////////////////////////
