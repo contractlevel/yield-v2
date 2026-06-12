@@ -641,7 +641,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             t(false, "REC-002: invalid CCIP recovery tx type");
         }
 
-        t(!vault.getRecoveryExists(), "REC-003: child still has recovery");
+        t(vault.getRecoveryMode() == Types.RecoveryMode.NONE, "REC-003: child still has recovery");
         eq(_recoveryModeCount(), 0, "REC-003: recovery mode not cleared");
     }
 
@@ -662,7 +662,10 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _setActiveChildDepositReverts(activeChild, false);
 
         _assertPendingEpochDepositRecovery(activeChild, epochNonce, amount);
-        t(activeChild.getRecoveryExists(), "REC-002: child epoch deposit recovery sentinel not set");
+        t(
+            activeChild.getRecoveryMode() == Types.RecoveryMode.EPOCH_DEPOSIT,
+            "REC-002: child epoch deposit recovery mode not set"
+        );
         t(
             parent.vault.getEpoch(epochNonce).status == Types.EpochStatus.CLAIMABLE,
             "EPOCH-002: remote deposit epoch not claimable"
@@ -673,7 +676,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         vault.recoverFailedEpochDeposit();
 
         _assertEpochDepositRecoveryCleared(vault);
-        t(!vault.getRecoveryExists(), "REC-003: child still has recovery");
+        t(vault.getRecoveryMode() == Types.RecoveryMode.NONE, "REC-003: child still has recovery");
         eq(_recoveryModeCount(), 0, "REC-003: recovery mode not cleared");
     }
 
@@ -744,7 +747,10 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _recordFeeBurden(treasuryShareBalanceBefore, totalSharesBefore);
         _recordEpochShareAccounting(epochNonce);
         _assertPendingEpochWithdrawRecovery(activeChild, epochNonce, netWithdrawAmount);
-        t(activeChild.getRecoveryExists(), "REC-002: child epoch withdraw recovery sentinel not set");
+        t(
+            activeChild.getRecoveryMode() == Types.RecoveryMode.EPOCH_WITHDRAW,
+            "REC-002: child epoch withdraw recovery mode not set"
+        );
 
         _setActiveStrategyWithdrawReturn(netWithdrawAmount);
     }
@@ -763,7 +769,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             parent.vault.getEpoch(recovery.epochNonce).status == Types.EpochStatus.CLAIMABLE,
             "EPOCH-014: parent epoch not claimable after recovery"
         );
-        t(!vault.getRecoveryExists(), "REC-003: child still has recovery");
+        t(vault.getRecoveryMode() == Types.RecoveryMode.NONE, "REC-003: child still has recovery");
         _recordEpochClosed(recovery.epochNonce);
         eq(_recoveryModeCount(), 0, "REC-003: recovery mode not cleared");
     }
@@ -826,7 +832,10 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _setParentDepositReverts(target, false);
 
         _assertPendingRebalanceDepositRecovery(parent.vault, pendingRebalance.nonce, amount);
-        t(parent.vault.getRecoveryExists(), "REC-002: parent recovery sentinel not set");
+        t(
+            parent.vault.getRecoveryMode() == Types.RecoveryMode.REBALANCE_DEPOSIT,
+            "REC-002: parent recovery mode not set"
+        );
         eq(
             uint256(parent.vault.getRebalance().state),
             uint256(Types.RebalanceState.REBALANCING),
@@ -852,7 +861,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         _assertRebalanceDepositRecoveryCleared(vault);
         _assertRebalanceFinalized(beforeRebalance, target, "REBAL-004: state is not none");
-        t(!vault.getRecoveryExists(), "REC-003: vault still has recovery");
+        t(vault.getRecoveryMode() == Types.RecoveryMode.NONE, "REC-003: vault still has recovery");
         _recordFeeBurden(_before.treasuryShareBalance, _before.totalShares);
         _assertManagementFeeMintedToTreasury();
         _assertPerformanceFeeHighWaterMarkNotDecreased();
@@ -907,7 +916,10 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _setChildDepositReverts(destinationChild, target, false);
 
         _assertPendingRebalanceDepositRecovery(destinationChild, pendingRebalance.nonce, amount);
-        t(destinationChild.getRecoveryExists(), "REC-002: child rebalance deposit recovery sentinel not set");
+        t(
+            destinationChild.getRecoveryMode() == Types.RecoveryMode.REBALANCE_DEPOSIT,
+            "REC-002: child rebalance deposit recovery mode not set"
+        );
         eq(
             uint256(parent.vault.getRebalance().state),
             uint256(Types.RebalanceState.REBALANCING),
@@ -961,7 +973,10 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _setActiveChildWithdrawReverts(sourceChild, false);
 
         _assertPendingRebalanceWithdrawRecovery(sourceChild, pendingRebalance.nonce, target);
-        t(sourceChild.getRecoveryExists(), "REC-002: child rebalance withdraw recovery sentinel not set");
+        t(
+            sourceChild.getRecoveryMode() == Types.RecoveryMode.REBALANCE_WITHDRAW,
+            "REC-002: child rebalance withdraw recovery mode not set"
+        );
         eq(
             uint256(parent.vault.getRebalance().state),
             uint256(Types.RebalanceState.REBALANCING),
@@ -981,7 +996,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _setActiveStrategyWithdrawReturn(amount);
         vault.recoverFailedRebalanceWithdraw();
         _assertRebalanceWithdrawRecoveryCleared(vault);
-        t(!vault.getRecoveryExists(), "REC-003: child still has recovery");
+        t(vault.getRecoveryMode() == Types.RecoveryMode.NONE, "REC-003: child still has recovery");
 
         if (target.chainSelector != PARENT_CHAIN_SELECTOR) {
             _completeRebalanceThroughWorkflow(

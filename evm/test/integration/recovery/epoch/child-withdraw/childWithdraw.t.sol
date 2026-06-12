@@ -45,7 +45,7 @@ contract ChildWithdraw_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         assertEq(uint256(storedLog.topics[1]), 2);
         assertEq(uint256(storedLog.topics[2]), shareAmount);
         _assertEpochRecovery(child.vault.getEpochWithdrawRecovery(), 2, shareAmount);
-        assertTrue(child.vault.getRecoveryExists());
+        assertTrue(child.vault.getRecoveryMode() == Types.RecoveryMode.EPOCH_WITHDRAW);
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.EXECUTING));
 
         MockAToken(MockAaveV3Pool(childPool).getReserveData(parent.asset).aTokenAddress)
@@ -60,7 +60,7 @@ contract ChildWithdraw_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         _assertEmittedBy(recoveryLogs, keccak256("EpochWithdrawRecoveryCleared(uint256)"), address(child.vault));
         _assertEmittedBy(recoveryLogs, keccak256("WithdrawFromStrategySuccess(uint256,uint256)"), address(child.vault));
         _assertEpochRecoveryCleared(child.vault.getEpochWithdrawRecovery());
-        assertFalse(child.vault.getRecoveryExists());
+        assertTrue(child.vault.getRecoveryMode() == Types.RecoveryMode.NONE);
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.CLAIMABLE));
 
         uint256 depositorUsdcBeforeClaim = IERC20(parent.asset).balanceOf(i_depositor);

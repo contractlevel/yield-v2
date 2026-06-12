@@ -62,7 +62,7 @@ contract CcipSend_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
             shareAmount,
             abi.encode(uint256(2))
         );
-        assertTrue(child.vault.getRecoveryExists());
+        assertTrue(child.vault.getRecoveryMode() == Types.RecoveryMode.CCIP_SEND);
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.EXECUTING));
 
         _setCrosschainVault(child.vault, PARENT_CHAIN_SELECTOR, address(parent.vault));
@@ -74,7 +74,7 @@ contract CcipSend_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         _assertEmittedBy(recoveryLogs, keccak256("CcipSendRecoveryCleared(uint8,uint64,uint256)"), address(child.vault));
         _assertEmittedBy(recoveryLogs, keccak256("CCIPBridged(bytes32,uint256,uint8)"), address(child.vault));
         _assertCcipSendRecoveryCleared(child.vault.getCcipSendRecovery());
-        assertFalse(child.vault.getRecoveryExists());
+        assertTrue(child.vault.getRecoveryMode() == Types.RecoveryMode.NONE);
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.CLAIMABLE));
 
         uint256 depositorUsdcBeforeClaim = IERC20(parent.asset).balanceOf(i_depositor);
@@ -130,7 +130,7 @@ contract CcipSend_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
             tvl,
             abi.encode(uint256(1), AAVE_V4_PROTOCOL_ID)
         );
-        assertTrue(child.vault.getRecoveryExists());
+        assertTrue(child.vault.getRecoveryMode() == Types.RecoveryMode.CCIP_SEND);
         assertEq(uint256(parent.vault.getRebalance().state), uint256(Types.RebalanceState.REBALANCING));
 
         _setCrosschainVault(child.vault, PARENT_CHAIN_SELECTOR, address(parent.vault));
@@ -142,7 +142,7 @@ contract CcipSend_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         _assertEmittedBy(recoveryLogs, keccak256("CcipSendRecoveryCleared(uint8,uint64,uint256)"), address(child.vault));
         _assertEmittedBy(recoveryLogs, keccak256("CCIPBridged(bytes32,uint256,uint8)"), address(child.vault));
         _assertCcipSendRecoveryCleared(child.vault.getCcipSendRecovery());
-        assertFalse(child.vault.getRecoveryExists());
+        assertTrue(child.vault.getRecoveryMode() == Types.RecoveryMode.NONE);
         assertEq(
             MockAaveV4Spoke(parentSpoke).getUserSuppliedAssets(parentReserveId, address(parent.aaveV4Adapter)),
             parentSuppliedBefore + tvl

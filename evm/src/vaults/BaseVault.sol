@@ -71,8 +71,8 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     uint96 internal s_pausedAt;
     /// @dev Address that receives the underlying asset during emergency drain.
     address internal s_emergencyReceiver;
-    /// @dev True if any recovery state is currently active. Enforces the singleton invariant at the store layer.
-    bool internal s_recoveryExists;
+    /// @dev Active recovery discriminator. Enforces the singleton invariant at the store layer.
+    Types.RecoveryMode internal s_recoveryMode;
     /// @dev Recovery state for failed rebalance deposit operations. This can exist on Parent or Child.
     Types.RebalanceDepositRecovery internal s_rebalanceDepositRecovery;
 
@@ -381,12 +381,12 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     function _storeRebalanceDepositRecovery(uint256 rebalanceNonce, uint256 amount) internal {
         //slither-disable-next-line incorrect-equality
         if (amount == 0) revert BaseVault__ZeroRecoveryAmount();
-        if (s_recoveryExists) revert BaseVault__RecoveryAlreadyPending();
+        _requireNoRecovery();
 
         s_rebalanceDepositRecovery = Types.RebalanceDepositRecovery({
             rebalanceNonce: rebalanceNonce, amount: amount, createdAt: block.timestamp
         });
-        s_recoveryExists = true;
+        s_recoveryMode = Types.RecoveryMode.REBALANCE_DEPOSIT;
         emit RebalanceDepositRecoveryStored(rebalanceNonce, amount);
     }
 
@@ -396,12 +396,11 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @dev Deletes the recovery state
     /// @dev Emites RebalanceDepositRecoveryCleared event
     function _clearRebalanceDepositRecovery() internal {
-        //slither-disable-next-line incorrect-equality
-        if (s_rebalanceDepositRecovery.amount == 0) revert BaseVault__NoPendingRecovery();
+        _requireRecoveryMode(Types.RecoveryMode.REBALANCE_DEPOSIT);
         uint256 rebalanceNonce = s_rebalanceDepositRecovery.rebalanceNonce;
 
         delete s_rebalanceDepositRecovery;
-        s_recoveryExists = false;
+        s_recoveryMode = Types.RecoveryMode.NONE;
         emit RebalanceDepositRecoveryCleared(rebalanceNonce);
     }
 
@@ -409,14 +408,19 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @dev Precondition: A rebalance deposit recovery must exist
     /// @param recovery Types.RebalanceDepositRecovery
     function _requireRebalanceDepositRecovery() internal view returns (Types.RebalanceDepositRecovery memory recovery) {
+        _requireRecoveryMode(Types.RecoveryMode.REBALANCE_DEPOSIT);
         recovery = s_rebalanceDepositRecovery;
-        //slither-disable-next-line incorrect-equality
-        if (recovery.amount == 0) revert BaseVault__NoPendingRecovery();
     }
 
     /// @notice Reverts if any recovery state is pending
     function _requireNoRecovery() internal view {
-        if (s_recoveryExists) revert BaseVault__RecoveryAlreadyPending();
+        if (s_recoveryMode != Types.RecoveryMode.NONE) revert BaseVault__RecoveryAlreadyPending();
+    }
+
+    /// @notice Reverts if the active recovery mode does not match the expected mode
+    /// @param expected The recovery mode required by the caller
+    function _requireRecoveryMode(Types.RecoveryMode expected) internal view {
+        if (s_recoveryMode != expected) revert BaseVault__NoPendingRecovery();
     }
 
     /// @notice Inherited and implemented by ParentVault and ChildVault
@@ -680,11 +684,10 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         recovery = s_rebalanceDepositRecovery;
     }
 
-    /// @notice Check for if a recovery exists
-    /// @return recoveryExists true if recovery exists, false if not
-    /// @dev This is used for Workflow-level checks
-    function getRecoveryExists() external view virtual returns (bool recoveryExists) {
-        recoveryExists = s_recoveryExists;
+    /// @notice Gets the active recovery mode
+    /// @return recoveryMode The active recovery mode, or NONE when no recovery is active
+    function getRecoveryMode() external view returns (Types.RecoveryMode recoveryMode) {
+        recoveryMode = s_recoveryMode;
     }
 
     /*//////////////////////////////////////////////////////////////

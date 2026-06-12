@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 import {BaseRecoveryIntegrationTest} from "../../BaseRecoveryIntegrationTest.t.sol";
 
+import {Types} from "../../../../../src/libraries/Types.sol";
 import {MockAaveV3Pool} from "../../../../mocks/MockAaveV3Pool.sol";
 
 import {Vm} from "forge-std/Test.sol";
@@ -36,7 +37,7 @@ contract ChildDeposit_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         assertEq(uint256(storedLog.topics[1]), 1);
         assertEq(uint256(storedLog.topics[2]), DEPOSIT_AMOUNT);
         _assertEpochRecovery(child.vault.getEpochDepositRecovery(), 1, DEPOSIT_AMOUNT);
-        assertTrue(child.vault.getRecoveryExists());
+        assertTrue(child.vault.getRecoveryMode() == Types.RecoveryMode.EPOCH_DEPOSIT);
         assertEq(IERC20(parent.asset).balanceOf(childPool), childPoolBalanceBefore);
 
         MockAaveV3Pool(childPool).setSupplyReverts(false);
@@ -51,7 +52,7 @@ contract ChildDeposit_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         assertEq(uint256(successLog.topics[1]), 1);
         assertEq(uint256(successLog.topics[2]), DEPOSIT_AMOUNT);
         _assertEpochRecoveryCleared(child.vault.getEpochDepositRecovery());
-        assertFalse(child.vault.getRecoveryExists());
+        assertTrue(child.vault.getRecoveryMode() == Types.RecoveryMode.NONE);
         assertEq(IERC20(parent.asset).balanceOf(childPool), childPoolBalanceBefore + DEPOSIT_AMOUNT);
 
         _changePrank(i_depositor);

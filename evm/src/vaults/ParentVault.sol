@@ -269,8 +269,9 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         if (shareBurnAmount == 0) revert ParentVault__NoWithdraw(msg.sender, epochNonce);
 
         if (shareBurnAmount != epoch.remainingShareBurnAmount) {
-            withdrawAmount =
-                _proportionalAmount(shareBurnAmount, epoch.remainingWithdrawClaimAmount, epoch.remainingShareBurnAmount);
+            withdrawAmount = _proportionalAmount(
+                shareBurnAmount, epoch.remainingWithdrawClaimAmount, epoch.remainingShareBurnAmount
+            );
         } else {
             withdrawAmount = epoch.remainingWithdrawClaimAmount;
         }

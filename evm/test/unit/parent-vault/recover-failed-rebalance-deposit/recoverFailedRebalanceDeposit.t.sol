@@ -27,7 +27,7 @@ contract ParentVault_RecoverFailedRebalanceDepositUnitTest is BaseUnitTest {
 
         vm.expectRevert(IBaseVault.BaseVault__NoPendingRecovery.selector);
         s_parentVault.recoverFailedRebalanceDeposit();
-        assertFalse(s_parentVault.getRecoveryExists());
+        assertTrue(s_parentVault.getRecoveryMode() == Types.RecoveryMode.NONE);
     }
 
     function test_ParentVault_recoverFailedRebalanceDeposit_RevertWhen_NoActiveAdapter() public {
@@ -35,7 +35,7 @@ contract ParentVault_RecoverFailedRebalanceDepositUnitTest is BaseUnitTest {
 
         vm.expectRevert(IBaseVault.BaseVault__NoActiveAdapter.selector);
         s_parentVault.recoverFailedRebalanceDeposit();
-        assertTrue(s_parentVault.getRecoveryExists());
+        assertTrue(s_parentVault.getRecoveryMode() == Types.RecoveryMode.REBALANCE_DEPOSIT);
     }
 
     function test_ParentVault_recoverFailedRebalanceDeposit_RevertWhen_AdapterDepositReverts() public {
@@ -43,7 +43,7 @@ contract ParentVault_RecoverFailedRebalanceDepositUnitTest is BaseUnitTest {
 
         vm.expectRevert(abi.encodeWithSelector(IBaseVault.BaseVault__DepositFailed.selector, DEPOSIT_AMOUNT));
         s_parentVault.recoverFailedRebalanceDeposit();
-        assertTrue(s_parentVault.getRecoveryExists());
+        assertTrue(s_parentVault.getRecoveryMode() == Types.RecoveryMode.REBALANCE_DEPOSIT);
     }
 
     function test_ParentVault_recoverFailedRebalanceDeposit_RevertWhen_NoRebalanceInProgress() public {
@@ -51,7 +51,7 @@ contract ParentVault_RecoverFailedRebalanceDepositUnitTest is BaseUnitTest {
 
         vm.expectRevert(IParentVault.ParentVault__NoRebalanceInProgress.selector);
         s_parentVault.recoverFailedRebalanceDeposit();
-        assertTrue(s_parentVault.getRecoveryExists());
+        assertTrue(s_parentVault.getRecoveryMode() == Types.RecoveryMode.REBALANCE_DEPOSIT);
     }
 
     function test_ParentVault_recoverFailedRebalanceDeposit_Success_DepositsIntoActiveAdapter() public {
@@ -68,7 +68,7 @@ contract ParentVault_RecoverFailedRebalanceDepositUnitTest is BaseUnitTest {
         assertEq(recovery.rebalanceNonce, 0);
         assertEq(recovery.amount, 0);
         assertEq(recovery.createdAt, 0);
-        assertFalse(s_parentVault.getRecoveryExists());
+        assertTrue(s_parentVault.getRecoveryMode() == Types.RecoveryMode.NONE);
     }
 
     function test_ParentVault_recoverFailedRebalanceDeposit_Success_FinalizesRebalance() public {

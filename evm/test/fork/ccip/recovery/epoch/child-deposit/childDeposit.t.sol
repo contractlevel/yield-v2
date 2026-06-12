@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 import {BaseCcipRecoveryForkTest} from "../../BaseCcipRecoveryForkTest.t.sol";
 
+import {Types} from "../../../../../../src/libraries/Types.sol";
 import {Vm} from "forge-std/Test.sol";
 
 contract ChildDeposit_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
@@ -35,7 +36,7 @@ contract ChildDeposit_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
 
         _selectBaseFork();
         _assertEpochRecovery(baseChild.vault.getEpochDepositRecovery(), 1, DEPOSIT_AMOUNT);
-        assertTrue(baseChild.vault.getRecoveryExists());
+        assertTrue(baseChild.vault.getRecoveryMode() == Types.RecoveryMode.EPOCH_DEPOSIT);
 
         _restoreBaseAaveV3Adapter();
         vm.recordLogs();
@@ -44,7 +45,7 @@ contract ChildDeposit_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
 
         _assertEmittedBy(recoveryLogs, keccak256("EpochDepositRecoveryCleared(uint256)"), address(baseChild.vault));
         _assertEpochRecoveryCleared(baseChild.vault.getEpochDepositRecovery());
-        assertFalse(baseChild.vault.getRecoveryExists());
+        assertTrue(baseChild.vault.getRecoveryMode() == Types.RecoveryMode.NONE);
         assertApproxEqAbs(baseChild.aaveV3Adapter.getTVL(), DEPOSIT_AMOUNT, PROTOCOL_FORK_TOLERANCE);
 
         _selectArbitrumFork();

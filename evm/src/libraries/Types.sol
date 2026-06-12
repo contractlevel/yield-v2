@@ -38,6 +38,22 @@ library Types {
     /*//////////////////////////////////////////////////////////////
                                RECOVERY
     //////////////////////////////////////////////////////////////*/
+    /// @notice Active recovery mode discriminator
+    /// @param NONE No recovery state is active
+    /// @param REBALANCE_DEPOSIT Failed rebalance deposit recovery is active
+    /// @param REBALANCE_WITHDRAW Failed rebalance withdraw recovery is active
+    /// @param EPOCH_DEPOSIT Failed epoch deposit recovery is active
+    /// @param EPOCH_WITHDRAW Failed epoch withdraw recovery is active
+    /// @param CCIP_SEND Failed ChildVault CCIP send recovery is active
+    enum RecoveryMode {
+        NONE,
+        REBALANCE_DEPOSIT,
+        REBALANCE_WITHDRAW,
+        EPOCH_DEPOSIT,
+        EPOCH_WITHDRAW,
+        CCIP_SEND
+    }
+
     /// @notice Recovery state for failed epoch operations
     /// @param epochNonce The nonce of the epoch
     /// @param amount The amount needed to retry the failed operation

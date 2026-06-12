@@ -23,7 +23,7 @@ contract ChildVault_RecoverFailedEpochWithdrawUnitTest is BaseUnitTest {
 
         vm.expectRevert(IBaseVault.BaseVault__NoPendingRecovery.selector);
         s_childVault.recoverFailedEpochWithdraw();
-        assertFalse(s_childVault.getRecoveryExists());
+        assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.NONE);
     }
 
     function test_ChildVault_recoverFailedEpochWithdraw_RevertWhen_NoActiveAdapter() public {
@@ -31,7 +31,7 @@ contract ChildVault_RecoverFailedEpochWithdrawUnitTest is BaseUnitTest {
 
         vm.expectRevert(IBaseVault.BaseVault__NoActiveAdapter.selector);
         s_childVault.recoverFailedEpochWithdraw();
-        assertTrue(s_childVault.getRecoveryExists());
+        assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.EPOCH_WITHDRAW);
     }
 
     function test_ChildVault_recoverFailedEpochWithdraw_RevertWhen_AdapterWithdrawReverts() public {
@@ -39,7 +39,7 @@ contract ChildVault_RecoverFailedEpochWithdrawUnitTest is BaseUnitTest {
 
         vm.expectRevert(abi.encodeWithSelector(IBaseVault.BaseVault__WithdrawFailed.selector, WITHDRAW_AMOUNT));
         s_childVault.recoverFailedEpochWithdraw();
-        assertTrue(s_childVault.getRecoveryExists());
+        assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.EPOCH_WITHDRAW);
     }
 
     function test_ChildVault_recoverFailedEpochWithdraw_RevertWhen_AdapterReturnsZero() public {
@@ -47,7 +47,7 @@ contract ChildVault_RecoverFailedEpochWithdrawUnitTest is BaseUnitTest {
 
         vm.expectRevert(IBaseVault.BaseVault__ZeroRecoveryAmount.selector);
         s_childVault.recoverFailedEpochWithdraw();
-        assertTrue(s_childVault.getRecoveryExists());
+        assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.EPOCH_WITHDRAW);
     }
 
     function test_ChildVault_recoverFailedEpochWithdraw_Success_WithdrawsFromActiveAdapter() public {
@@ -72,7 +72,7 @@ contract ChildVault_RecoverFailedEpochWithdrawUnitTest is BaseUnitTest {
         assertEq(recovery.epochNonce, 0);
         assertEq(recovery.amount, 0);
         assertEq(recovery.createdAt, 0);
-        assertFalse(s_childVault.getRecoveryExists());
+        assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.NONE);
     }
 
     function test_ChildVault_recoverFailedEpochWithdraw_Success_EmitsWithdrawFromStrategySuccess() public {
@@ -100,7 +100,7 @@ contract ChildVault_RecoverFailedEpochWithdrawUnitTest is BaseUnitTest {
         assertEq(recovery.epochNonce, EPOCH_NONCE);
         assertEq(recovery.amount, WITHDRAW_AMOUNT);
         assertEq(recovery.createdAt, block.timestamp);
-        assertTrue(s_childVault.getRecoveryExists());
+        assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.EPOCH_WITHDRAW);
     }
 
     /*//////////////////////////////////////////////////////////////

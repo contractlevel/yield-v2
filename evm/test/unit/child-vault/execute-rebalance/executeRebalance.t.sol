@@ -116,7 +116,7 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
         assertEq(rebalanceNonce, REBALANCE_NONCE);
         assertEq(protocolId, AAVE_V4_PROTOCOL_ID);
         assertEq(recovery.createdAt, block.timestamp);
-        assertTrue(s_childVault.getRecoveryExists());
+        assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.CCIP_SEND);
     }
 
     function test_ChildVault_executeRebalance_RemoteChild_ClearsActiveProtocolAdapter() public {
@@ -150,7 +150,6 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
         assertEq(uint64(uint256(log.topics[3])), REMOTE_CHILD_CHAIN_SELECTOR);
     }
 
-
     function test_ChildVault_executeRebalance_WhenWithdrawAdapterReturnsZero_EmitsRebalanceWithdrawSuccess() public {
         s_mockProtocolAdapter.setWithdrawReturnAmount(0);
 
@@ -173,7 +172,7 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
         assertEq(recovery.strategy.protocolId, AAVE_V4_PROTOCOL_ID);
         assertEq(recovery.strategy.chainSelector, REMOTE_CHILD_CHAIN_SELECTOR);
         assertEq(recovery.createdAt, block.timestamp);
-        assertTrue(s_childVault.getRecoveryExists());
+        assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.REBALANCE_WITHDRAW);
     }
 
     function test_ChildVault_executeRebalance_WhenRebalanceWithdrawRecoveryAlreadyExists_Reverts() public {
@@ -183,7 +182,7 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
 
         vm.expectRevert(IBaseVault.BaseVault__RecoveryAlreadyPending.selector);
         s_childVault.executeRebalance(REBALANCE_NONCE, _remoteChildStrategy());
-        assertTrue(s_childVault.getRecoveryExists());
+        assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.REBALANCE_WITHDRAW);
     }
 
     function test_ChildVault_executeRebalance_WhenRebalanceWithdrawRecoveryStateAlreadyExists_Reverts() public {
@@ -193,7 +192,7 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
 
         vm.expectRevert(IBaseVault.BaseVault__RecoveryAlreadyPending.selector);
         s_childVault.executeRebalance(REBALANCE_NONCE + 1, _remoteChildStrategy());
-        assertTrue(s_childVault.getRecoveryExists());
+        assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.REBALANCE_WITHDRAW);
     }
 
     function test_ChildVault_executeRebalance_WhenSameChildDepositAdapterReverts_EmitsDepositFailure() public {
@@ -216,7 +215,7 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
         assertEq(recovery.rebalanceNonce, REBALANCE_NONCE);
         assertEq(recovery.amount, REBALANCE_AMOUNT);
         assertEq(recovery.createdAt, block.timestamp);
-        assertTrue(s_childVault.getRecoveryExists());
+        assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.REBALANCE_DEPOSIT);
     }
 
     function test_ChildVault_executeRebalance_WhenSameChildDepositAdapterReverts_EmitsRebalanceDepositRecoveryStored()
@@ -240,7 +239,7 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
 
         vm.expectRevert(IBaseVault.BaseVault__RecoveryAlreadyPending.selector);
         s_childVault.executeRebalance(REBALANCE_NONCE, _sameChildStrategy());
-        assertTrue(s_childVault.getRecoveryExists());
+        assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.REBALANCE_DEPOSIT);
     }
 
     function test_ChildVault_executeRebalance_WhenRebalanceDepositRecoveryStateAlreadyExists_Reverts() public {
@@ -250,7 +249,7 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
 
         vm.expectRevert(IBaseVault.BaseVault__RecoveryAlreadyPending.selector);
         s_childVault.executeRebalance(REBALANCE_NONCE + 1, _sameChildStrategy());
-        assertTrue(s_childVault.getRecoveryExists());
+        assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.REBALANCE_DEPOSIT);
     }
 
     /*//////////////////////////////////////////////////////////////

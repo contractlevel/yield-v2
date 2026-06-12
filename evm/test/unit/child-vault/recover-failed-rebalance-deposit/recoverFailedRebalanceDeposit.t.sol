@@ -22,7 +22,7 @@ contract ChildVault_RecoverFailedRebalanceDepositUnitTest is BaseUnitTest {
 
         vm.expectRevert(IBaseVault.BaseVault__NoPendingRecovery.selector);
         s_childVault.recoverFailedRebalanceDeposit();
-        assertFalse(s_childVault.getRecoveryExists());
+        assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.NONE);
     }
 
     function test_ChildVault_recoverFailedRebalanceDeposit_RevertWhen_NoActiveAdapter() public {
@@ -30,7 +30,7 @@ contract ChildVault_RecoverFailedRebalanceDepositUnitTest is BaseUnitTest {
 
         vm.expectRevert(IBaseVault.BaseVault__NoActiveAdapter.selector);
         s_childVault.recoverFailedRebalanceDeposit();
-        assertTrue(s_childVault.getRecoveryExists());
+        assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.REBALANCE_DEPOSIT);
     }
 
     function test_ChildVault_recoverFailedRebalanceDeposit_RevertWhen_AdapterDepositReverts() public {
@@ -38,7 +38,7 @@ contract ChildVault_RecoverFailedRebalanceDepositUnitTest is BaseUnitTest {
 
         vm.expectRevert(abi.encodeWithSelector(IBaseVault.BaseVault__DepositFailed.selector, DEPOSIT_AMOUNT));
         s_childVault.recoverFailedRebalanceDeposit();
-        assertTrue(s_childVault.getRecoveryExists());
+        assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.REBALANCE_DEPOSIT);
     }
 
     function test_ChildVault_recoverFailedRebalanceDeposit_Success_DepositsIntoActiveAdapter() public {
@@ -55,7 +55,7 @@ contract ChildVault_RecoverFailedRebalanceDepositUnitTest is BaseUnitTest {
         assertEq(recovery.rebalanceNonce, 0);
         assertEq(recovery.amount, 0);
         assertEq(recovery.createdAt, 0);
-        assertFalse(s_childVault.getRecoveryExists());
+        assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.NONE);
     }
 
     function test_ChildVault_recoverFailedRebalanceDeposit_Success_EmitsRebalanceDepositSuccess() public {

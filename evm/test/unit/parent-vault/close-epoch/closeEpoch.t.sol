@@ -40,7 +40,7 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
     }
 
     function test_ParentVault_closeEpoch_RevertWhen_RecoveryExists() public {
-        _setParentRecoveryExists(true);
+        _setParentRecoveryMode(Types.RecoveryMode.REBALANCE_DEPOSIT);
 
         _warpPastMinEpoch();
         vm.expectRevert(IBaseVault.BaseVault__RecoveryAlreadyPending.selector);

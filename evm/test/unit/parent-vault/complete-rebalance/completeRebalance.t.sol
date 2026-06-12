@@ -30,7 +30,7 @@ contract ParentVault_CompleteRebalanceUnitTest is BaseUnitTest {
     }
 
     function test_ParentVault_completeRebalance_RevertWhen_RecoveryExists() public {
-        _setParentRecoveryExists(true);
+        _setParentRecoveryMode(Types.RecoveryMode.REBALANCE_DEPOSIT);
 
         vm.expectRevert(IBaseVault.BaseVault__RecoveryAlreadyPending.selector);
         s_parentVault.completeRebalance();

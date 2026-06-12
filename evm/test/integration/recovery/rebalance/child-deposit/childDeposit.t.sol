@@ -34,7 +34,7 @@ contract ChildDeposit_RebalanceRecoveryIntegrationTest is BaseRecoveryIntegratio
         assertEq(uint256(storedLog.topics[1]), 1);
         assertEq(uint256(storedLog.topics[2]), tvl);
         _assertRebalanceDepositRecovery(child.vault.getRebalanceDepositRecovery(), 1, tvl);
-        assertTrue(child.vault.getRecoveryExists());
+        assertTrue(child.vault.getRecoveryMode() == Types.RecoveryMode.REBALANCE_DEPOSIT);
         assertEq(IERC20(parent.asset).balanceOf(childPool), childPoolBalanceBefore);
         assertEq(uint256(parent.vault.getRebalance().state), uint256(Types.RebalanceState.REBALANCING));
 
@@ -46,7 +46,7 @@ contract ChildDeposit_RebalanceRecoveryIntegrationTest is BaseRecoveryIntegratio
         _assertEmittedBy(recoveryLogs, keccak256("RebalanceDepositRecoveryCleared(uint256)"), address(child.vault));
         _assertEmittedBy(recoveryLogs, keccak256("RebalanceDepositSuccess(uint256,uint256)"), address(child.vault));
         _assertRebalanceDepositRecoveryCleared(child.vault.getRebalanceDepositRecovery());
-        assertFalse(child.vault.getRecoveryExists());
+        assertTrue(child.vault.getRecoveryMode() == Types.RecoveryMode.NONE);
         assertEq(IERC20(parent.asset).balanceOf(childPool), childPoolBalanceBefore + tvl);
 
         _completeRebalanceThroughWorkflow(
