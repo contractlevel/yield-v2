@@ -45,7 +45,11 @@ contract ChildVault is BaseVault, IChildVault {
     //////////////////////////////////////////////////////////////*/
     /// @param params Base Vault Constructor parameters
     /// @param parentChainSelector CCIP selector for the parent chain
+    /// @dev Precondition: parentChainSelector must not be zero
+    /// @dev Precondition: parentChainSelector must not equal params.thisChainSelector
     constructor(BaseVault.ConstructorParams memory params, uint64 parentChainSelector) BaseVault(params) {
+        _revertIfZeroChainSelector(parentChainSelector);
+        if (parentChainSelector == params.thisChainSelector) revert ChildVault__InvalidParentChainSelector();
         i_parentChainSelector = parentChainSelector;
     }
 

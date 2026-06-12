@@ -1,6 +1,11 @@
 setAdapter
   ├── when the caller does not have the CONFIG_OPERATOR_ROLE
   │   └── it should revert
+  ├── when protocolId is zero
+  │   └── it should revert with AdapterRegistry__NoZeroProtocolId
   └── when the caller has the CONFIG_OPERATOR_ROLE
       ├── it should set the adapter
-      └── it should emit an AdapterSet event
+      ├── it should emit an AdapterSet event
+      └── when adapter is the zero address
+          ├── it should remove the adapter
+          └── it should emit an AdapterSet event

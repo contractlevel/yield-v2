@@ -1,6 +1,15 @@
 setWorkflowMetadata
   ├── when the caller does not have the CONFIG_OPERATOR_ROLE
   │   └── it should revert
+  ├── when workflowId is zero
+  │   └── it should revert with WorkflowRouter__NoZeroWorkflowId
+  ├── when workflow name is zero and owner is nonzero
+  │   └── it should revert with WorkflowRouter__MetadataZero
+  ├── when workflow owner is zero and name is nonzero
+  │   └── it should revert with WorkflowRouter__MetadataZero
   └── when all conditions are met
       ├── it should set the workflow metadata
-      └── it should emit a WorkflowMetadataSet event
+      ├── it should emit a WorkflowMetadataSet event
+      └── when metadata values are zero
+          ├── it should remove the workflow metadata
+          └── it should emit a WorkflowMetadataSet event

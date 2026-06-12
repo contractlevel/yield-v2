@@ -2,5 +2,7 @@ setTreasury
   ├── when the caller does not have the CONFIG_OPERATOR_ROLE
   │   └── it should revert
   └── when the caller has the CONFIG_OPERATOR_ROLE
+      ├── when treasury is the zero address
+      │   └── it should revert with BaseVault__NoZeroAddress
       ├── it should update s_treasury
       └── it should emit a TreasurySet event

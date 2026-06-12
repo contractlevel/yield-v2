@@ -59,15 +59,27 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
     }
 
     /// @param params Constructor parameters
-    //slither-disable-next-line missing-zero-check
+    /// @dev Precondition: required address params must not be the zero address
     constructor(ConstructorParams memory params)
         AccessControlDefaultAdminRules(params.initialDelay, params.defaultAdmin)
     {
+        _revertIfZeroAddress(params.pauser);
+        _revertIfZeroAddress(params.unpauser);
+        _revertIfZeroAddress(params.configOperator);
+        _revertIfZeroAddress(params.keystoneForwarder);
+        _revertIfZeroAddress(params.vault);
+
         i_vault = params.vault;
         _grantRole(Roles.PAUSER_ROLE, params.pauser);
         _grantRole(Roles.UNPAUSER_ROLE, params.unpauser);
         _grantRole(Roles.CONFIG_OPERATOR_ROLE, params.configOperator);
         _grantRole(Roles.KEYSTONE_FORWARDER_ROLE, params.keystoneForwarder);
+    }
+
+    /// @notice Reverts when a required address input is zero
+    /// @param value The address to validate
+    function _revertIfZeroAddress(address value) internal pure {
+        if (value == address(0)) revert WorkflowRouter__NoZeroAddress();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -140,11 +152,21 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
     /// @param name The hash-encoded workflow name (bytes10)
     /// @param owner The address that deployed the workflow
     /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
+    /// @dev Precondition: workflowId must not be zero
+    /// @dev Precondition: name and owner must both be nonzero when setting metadata, or both zero when removing metadata
+    /// @notice Set `name` and `owner` to zero to remove metadata for `workflowId`
     //slither-disable-next-line missing-zero-address-check
     function setWorkflowMetadata(bytes32 workflowId, bytes10 name, address owner)
         external
         onlyRole(Roles.CONFIG_OPERATOR_ROLE)
     {
+        if (workflowId == bytes32(0)) revert WorkflowRouter__NoZeroWorkflowId();
+
+        bool isRemoval = name == bytes10(0) && owner == address(0);
+        if (!isRemoval && (name == bytes10(0) || owner == address(0))) {
+            revert WorkflowRouter__MetadataZero(workflowId, name, owner);
+        }
+
         s_workflowMetadata[workflowId] = WorkflowMetadata(owner, name);
         emit WorkflowMetadataSet(workflowId, name, owner);
     }
@@ -154,11 +176,15 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
     /// @param selectors The selectors to set
     /// @param isAllowlisted Whether the selectors are allowlisted
     /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
+    /// @dev Precondition: workflowId must not be zero
+    /// @notice Set `isAllowlisted` to false to remove selectors from the workflow allowlist
     function setWorkflowSelectors(bytes32 workflowId, bytes4[] calldata selectors, bool isAllowlisted)
         external
         onlyRole(Roles.CONFIG_OPERATOR_ROLE)
     {
-        for (uint256 i = 0; i < selectors.length; ++i) {
+        if (workflowId == bytes32(0)) revert WorkflowRouter__NoZeroWorkflowId();
+
+        for (uint256 i; i < selectors.length; ++i) {
             s_workflowSelectors[workflowId][selectors[i]] = isAllowlisted;
             emit WorkflowSelectorSet(workflowId, selectors[i], isAllowlisted);
         }

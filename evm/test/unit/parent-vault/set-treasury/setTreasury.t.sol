@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 import {BaseUnitTest, Vm} from "../../BaseUnitTest.t.sol";
 
+import {IBaseVault} from "../../../../src/interfaces/IBaseVault.sol";
 import {Roles} from "../../../../src/libraries/Roles.sol";
 
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
@@ -24,6 +25,11 @@ contract ParentVault_SetTreasuryUnitTest is BaseUnitTest {
             )
         );
         s_parentVault.setTreasury(i_newTreasury);
+    }
+
+    function test_ParentVault_setTreasury_RevertWhen_TreasuryIsZeroAddress() external {
+        vm.expectRevert(IBaseVault.BaseVault__NoZeroAddress.selector);
+        s_parentVault.setTreasury(address(0));
     }
 
     function test_ParentVault_setTreasury_Success() external {

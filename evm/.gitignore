@@ -30,3 +30,4 @@ crytic-export/
 recon-corpus
 .audit-prep
 out-halmos/
+AUDIT_REPORT.MD

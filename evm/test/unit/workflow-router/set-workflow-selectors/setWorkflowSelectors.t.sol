@@ -29,6 +29,14 @@ contract WorkflowRouter_SetWorkflowSelectorsUnitTest is BaseWorkflowRouterUnitTe
         s_workflowRouter.setWorkflowSelectors(WORKFLOW_ID, selectors, true);
     }
 
+    function test_WorkflowRouter_setWorkflowSelectors_RevertWhen_WorkflowIdIsZero() external {
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = SELECTOR_1;
+
+        vm.expectRevert(IWorkflowRouter.WorkflowRouter__NoZeroWorkflowId.selector);
+        s_workflowRouter.setWorkflowSelectors(bytes32(0), selectors, true);
+    }
+
     function test_WorkflowRouter_setWorkflowSelectors_Success_AllowlistsSelector() external {
         bytes4[] memory selectors = new bytes4[](1);
         selectors[0] = SELECTOR_1;

@@ -2,6 +2,8 @@
 pragma solidity 0.8.28;
 
 import {BaseCompoundV3AdapterUnitTest} from "../BaseCompoundV3AdapterUnitTest.t.sol";
+import {CompoundV3Adapter} from "../../../../src/modules/adapters/CompoundV3Adapter.sol";
+import {IProtocolAdapter} from "../../../../src/interfaces/IProtocolAdapter.sol";
 
 contract CompoundV3Adapter_ConstructorUnitTest is BaseCompoundV3AdapterUnitTest {
     function test_CompoundV3Adapter_constructor_SetsComet() public view {
@@ -10,5 +12,25 @@ contract CompoundV3Adapter_ConstructorUnitTest is BaseCompoundV3AdapterUnitTest 
         assertEq(s_compoundV3Adapter.getProtocolPool(), address(s_mockComet));
         assertEq(s_compoundV3Adapter.getCometRewards(), address(s_mockCometRewards));
         assertEq(s_compoundV3Adapter.getTVL(), 0);
+    }
+
+    function test_CompoundV3Adapter_constructor_RevertWhen_VaultIsZeroAddress() public {
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__NoZeroAddress.selector);
+        new CompoundV3Adapter(address(0), address(s_mockUsdc), address(s_mockComet), address(s_mockCometRewards));
+    }
+
+    function test_CompoundV3Adapter_constructor_RevertWhen_AssetIsZeroAddress() public {
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__NoZeroAddress.selector);
+        new CompoundV3Adapter(address(s_parentVault), address(0), address(s_mockComet), address(s_mockCometRewards));
+    }
+
+    function test_CompoundV3Adapter_constructor_RevertWhen_CometIsZeroAddress() public {
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__NoZeroAddress.selector);
+        new CompoundV3Adapter(address(s_parentVault), address(s_mockUsdc), address(0), address(s_mockCometRewards));
+    }
+
+    function test_CompoundV3Adapter_constructor_RevertWhen_CometRewardsIsZeroAddress() public {
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__NoZeroAddress.selector);
+        new CompoundV3Adapter(address(s_parentVault), address(s_mockUsdc), address(s_mockComet), address(0));
     }
 }

@@ -5,6 +5,15 @@ pragma solidity 0.8.28;
 /// @author @contractlevel
 /// @notice Interface for the AdapterRegistry
 interface IAdapterRegistry {
+    /*//////////////////////////////////////////////////////////////
+                                 ERRORS
+    //////////////////////////////////////////////////////////////*/
+    /// @dev Thrown when the zero protocol ID is provided
+    error AdapterRegistry__NoZeroProtocolId();
+
+    /*//////////////////////////////////////////////////////////////
+                                 EVENTS
+    //////////////////////////////////////////////////////////////*/
     /// @notice Emitted when an adapter is set
     /// @param protocolId The ID of the protocol - keccak256("aave-v3") for Aave v3, keccak256("compound-v3") for Compound v3, etc.
     /// @param adapter The address of the adapter

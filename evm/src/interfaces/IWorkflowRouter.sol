@@ -13,6 +13,10 @@ interface IWorkflowRouter is IReceiver, IPauseable {
     //////////////////////////////////////////////////////////////*/
     /// @dev Thrown when any of the metadata fields are zero
     error WorkflowRouter__MetadataZero(bytes32 workflowId, bytes10 workflowName, address workflowOwner);
+    /// @dev Thrown when the zero address is provided for required configuration
+    error WorkflowRouter__NoZeroAddress();
+    /// @dev Thrown when the zero workflow ID is provided
+    error WorkflowRouter__NoZeroWorkflowId();
     /// @dev Thrown when the metadata fields do not match the registered metadata
     error WorkflowRouter__MetadataMismatch(bytes32 workflowId, bytes10 workflowName, address workflowOwner);
     /// @dev Thrown when the report is too short

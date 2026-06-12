@@ -9,6 +9,12 @@ import {YieldcoinShareStore} from "./YieldcoinShareStore.sol";
 /// @notice YieldcoinShare is the compliance-ready share token of the Yieldcoin v2 system.
 contract YieldcoinShare is ComplianceTokenERC3643, YieldcoinShareStore {
     /*//////////////////////////////////////////////////////////////
+                                 ERRORS
+    //////////////////////////////////////////////////////////////*/
+    /// @dev Thrown when the zero address is provided for required configuration
+    error YieldcoinShare__NoZeroAddress();
+
+    /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
     /// @notice Emitted when the CCIP token admin identity changes
@@ -21,6 +27,7 @@ contract YieldcoinShare is ComplianceTokenERC3643, YieldcoinShareStore {
     //////////////////////////////////////////////////////////////*/
     /// @param policyEngine Chainlink ACE PolicyEngine component
     /// @param initialCcipAdmin Initial address for CCIP admin
+    /// @dev Precondition: initialCcipAdmin must not be the zero address
     function initialize(address policyEngine, address initialCcipAdmin) external initializer {
         _validatePolicyEngine(policyEngine);
         __ComplianceTokenERC3643_init("Yieldcoin", "YIELD", 18, policyEngine);
@@ -34,12 +41,14 @@ contract YieldcoinShare is ComplianceTokenERC3643, YieldcoinShareStore {
     /// @param newAdmin The new CCIP admin
     /// @dev This function is protected by Chainlink ACE RoleBasedAccessControlPolicy authorization
     ///      The deploy script should gate access to this function to the CONFIG_OPERATOR_ROLE.
-    //slither-disable-next-line missing-zero-check
+    /// @dev Precondition: newAdmin must not be the zero address
     function setCCIPAdmin(address newAdmin) external runPolicy {
         _setCCIPAdmin(newAdmin);
     }
 
     function _setCCIPAdmin(address newAdmin) internal {
+        if (newAdmin == address(0)) revert YieldcoinShare__NoZeroAddress();
+
         YieldcoinShareStorage storage $ = getYieldcoinShareStorage();
         address previousAdmin = $.ccipAdmin;
         $.ccipAdmin = newAdmin;

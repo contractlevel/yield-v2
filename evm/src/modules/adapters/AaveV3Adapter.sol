@@ -35,8 +35,9 @@ contract AaveV3Adapter is ProtocolAdapter {
     /// @param vault The address of the Yieldcoin v2 Vault
     /// @param asset The address of the underlying asset token
     /// @param poolAddressesProvider The address of the Aave V3 pool addresses provider
-    //slither-disable-next-line missing-zero-check
+    /// @dev Precondition: poolAddressesProvider must not be the zero address
     constructor(address vault, address asset, address poolAddressesProvider) ProtocolAdapter(vault, asset) {
+        _revertIfZeroAddress(poolAddressesProvider);
         i_poolAddressesProvider = poolAddressesProvider;
     }
 

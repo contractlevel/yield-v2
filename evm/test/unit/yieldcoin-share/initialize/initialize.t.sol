@@ -36,4 +36,14 @@ contract YieldcoinShare_InitializeUnitTest is BaseUnitTest {
         assertEq(address(uint160(uint256(log.topics[1]))), address(0));
         assertEq(address(uint160(uint256(log.topics[2]))), i_configOperator);
     }
+
+    function test_YieldcoinShare_initialize_RevertWhen_InitialCcipAdminIsZeroAddress() external {
+        YieldcoinShare yieldcoinImpl = new YieldcoinShare();
+
+        vm.expectRevert(YieldcoinShare.YieldcoinShare__NoZeroAddress.selector);
+        new ERC1967Proxy(
+            address(yieldcoinImpl),
+            abi.encodeWithSelector(YieldcoinShare.initialize.selector, address(s_mockPolicyEngine), address(0))
+        );
+    }
 }

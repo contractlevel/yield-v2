@@ -3,6 +3,9 @@ pragma solidity 0.8.28;
 
 import {BaseUnitTest} from "../../BaseUnitTest.t.sol";
 
+import {ChildVault} from "../../../../src/vaults/ChildVault.sol";
+import {IBaseVault} from "../../../../src/interfaces/IBaseVault.sol";
+import {IChildVault} from "../../../../src/interfaces/IChildVault.sol";
 import {Roles} from "../../../../src/libraries/Roles.sol";
 
 contract ChildVault_ConstructorUnitTest is BaseUnitTest {
@@ -20,5 +23,15 @@ contract ChildVault_ConstructorUnitTest is BaseUnitTest {
         assertEq(s_childVault.hasRole(Roles.UNPAUSER_ROLE, i_unpauser), true);
         assertEq(s_childVault.hasRole(Roles.CONFIG_OPERATOR_ROLE, address(i_configOperator)), true);
         assertEq(s_childVault.getDefaultCcipGasLimit(), DEFAULT_CCIP_GAS_LIMIT);
+    }
+
+    function test_ChildVault_constructor_RevertWhen_ParentChainSelectorIsZero() public {
+        vm.expectRevert(IBaseVault.BaseVault__NoZeroChainSelector.selector);
+        new ChildVault(_baseVaultParams(CHILD_CHAIN_SELECTOR), 0);
+    }
+
+    function test_ChildVault_constructor_RevertWhen_ParentChainSelectorEqualsThisChainSelector() public {
+        vm.expectRevert(IChildVault.ChildVault__InvalidParentChainSelector.selector);
+        new ChildVault(_baseVaultParams(CHILD_CHAIN_SELECTOR), CHILD_CHAIN_SELECTOR);
     }
 }

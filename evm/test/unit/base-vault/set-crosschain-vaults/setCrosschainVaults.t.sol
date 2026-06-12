@@ -38,6 +38,33 @@ abstract contract BaseVault_SetCrosschainVaultsUnitTest is BaseUnitTest {
         s_vault.setCrosschainVaults(chainSelectors, vaults);
     }
 
+    function test_BaseVault_setCrosschainVaults_RevertWhen_ChainSelectorIsZero() external {
+        uint64[] memory chainSelectors = new uint64[](1);
+        address[] memory vaults = new address[](1);
+        vaults[0] = i_crosschainVault;
+
+        vm.expectRevert(IBaseVault.BaseVault__NoZeroChainSelector.selector);
+        s_vault.setCrosschainVaults(chainSelectors, vaults);
+    }
+
+    function test_BaseVault_setCrosschainVaults_Success_WhenVaultIsZeroAddress_RemovesCrosschainVault() external {
+        uint64[] memory chainSelectors = new uint64[](1);
+        address[] memory vaults = new address[](1);
+        chainSelectors[0] = CHAIN_SELECTOR;
+
+        address[] memory initialVaults = new address[](1);
+        initialVaults[0] = i_crosschainVault;
+        s_vault.setCrosschainVaults(chainSelectors, initialVaults);
+
+        vm.recordLogs();
+        s_vault.setCrosschainVaults(chainSelectors, vaults);
+
+        Vm.Log memory log = _assertEmittedBy(keccak256("CrosschainVaultSet(uint64,address)"), address(s_vault));
+        assertEq(uint64(uint256(log.topics[1])), CHAIN_SELECTOR);
+        assertEq(address(uint160(uint256(log.topics[2]))), address(0));
+        assertEq(s_vault.getCrosschainVault(CHAIN_SELECTOR), address(0));
+    }
+
     function test_BaseVault_setCrosschainVaults_Success() external {
         uint64[] memory chainSelectors = new uint64[](1);
         chainSelectors[0] = CHAIN_SELECTOR;

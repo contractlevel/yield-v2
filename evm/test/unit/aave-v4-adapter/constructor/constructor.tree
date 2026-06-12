@@ -1,5 +1,11 @@
 constructor
   ├── it should set the spoke and discovered reserve id
+  ├── when vault is the zero address
+  │   └── it should revert with ProtocolAdapter__NoZeroAddress
+  ├── when asset is the zero address
+  │   └── it should revert with ProtocolAdapter__NoZeroAddress
+  ├── when spoke is the zero address
+  │   └── it should revert with ProtocolAdapter__NoZeroAddress
   ├── when the reserve is not found
   │   └── it should revert
   └── when a duplicate reserve is found

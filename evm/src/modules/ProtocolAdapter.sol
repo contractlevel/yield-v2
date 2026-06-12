@@ -21,10 +21,20 @@ abstract contract ProtocolAdapter is IProtocolAdapter, ReentrancyGuard {
     //////////////////////////////////////////////////////////////*/
     /// @param vault The address of the Yieldcoin v2 Vault
     /// @param asset The address of the underlying asset token
-    //slither-disable-next-line missing-zero-check
+    /// @dev Precondition: vault must not be the zero address
+    /// @dev Precondition: asset must not be the zero address
     constructor(address vault, address asset) {
+        _revertIfZeroAddress(vault);
+        _revertIfZeroAddress(asset);
+
         i_vault = vault;
         i_asset = asset;
+    }
+
+    /// @notice Reverts when a required address input is zero
+    /// @param value The address to validate
+    function _revertIfZeroAddress(address value) internal pure {
+        if (value == address(0)) revert ProtocolAdapter__NoZeroAddress();
     }
 
     /*//////////////////////////////////////////////////////////////

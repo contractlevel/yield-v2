@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 import {BaseUnitTest} from "../../BaseUnitTest.t.sol";
 
 import {ParentVault} from "../../../../src/vaults/ParentVault.sol";
+import {IBaseVault} from "../../../../src/interfaces/IBaseVault.sol";
 import {Roles} from "../../../../src/libraries/Roles.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
 
@@ -44,5 +45,38 @@ contract ParentVault_ConstructorUnitTest is BaseUnitTest {
         assertEq(parentVault.getRebalance().activeStrategy.chainSelector, 0);
         assertEq(parentVault.getActiveProtocolAdapter(), address(0));
         assertEq(parentVault.getDefaultCcipGasLimit(), DEFAULT_CCIP_GAS_LIMIT);
+    }
+
+    function test_ParentVault_constructor_RevertWhen_TreasuryIsZeroAddress() public {
+        vm.expectRevert(IBaseVault.BaseVault__NoZeroAddress.selector);
+        new ParentVault(
+            _baseVaultParams(PARENT_CHAIN_SELECTOR),
+            address(0),
+            address(s_yieldcoin),
+            i_policyEngineManager,
+            address(s_mockPolicyEngine)
+        );
+    }
+
+    function test_ParentVault_constructor_RevertWhen_ShareIsZeroAddress() public {
+        vm.expectRevert(IBaseVault.BaseVault__NoZeroAddress.selector);
+        new ParentVault(
+            _baseVaultParams(PARENT_CHAIN_SELECTOR),
+            i_treasury,
+            address(0),
+            i_policyEngineManager,
+            address(s_mockPolicyEngine)
+        );
+    }
+
+    function test_ParentVault_constructor_RevertWhen_PolicyEngineManagerIsZeroAddress() public {
+        vm.expectRevert(IBaseVault.BaseVault__NoZeroAddress.selector);
+        new ParentVault(
+            _baseVaultParams(PARENT_CHAIN_SELECTOR),
+            i_treasury,
+            address(s_yieldcoin),
+            address(0),
+            address(s_mockPolicyEngine)
+        );
     }
 }

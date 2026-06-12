@@ -25,4 +25,10 @@ ParentVault_constructor
   ├── it should leave initial active protocol adapter set false
   ├── it should leave the active strategy protocol ID unset
   ├── it should leave the active strategy chain selector unset
-  └── it should leave the active strategy protocol adapter unset
+  ├── it should leave the active strategy protocol adapter unset
+  ├── when treasury is the zero address
+  │   └── it should revert with BaseVault__NoZeroAddress
+  ├── when share is the zero address
+  │   └── it should revert with BaseVault__NoZeroAddress
+  └── when policy engine manager is the zero address
+      └── it should revert with BaseVault__NoZeroAddress

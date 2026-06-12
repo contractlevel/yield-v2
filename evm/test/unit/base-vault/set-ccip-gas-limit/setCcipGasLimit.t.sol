@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 import {BaseUnitTest, Vm} from "../../BaseUnitTest.t.sol";
 
-import {BaseVault} from "../../../../src/vaults/BaseVault.sol";
+import {BaseVault, IBaseVault} from "../../../../src/vaults/BaseVault.sol";
 import {Roles} from "../../../../src/libraries/Roles.sol";
 
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
@@ -22,6 +22,23 @@ abstract contract BaseVault_SetCcipGasLimitUnitTest is BaseUnitTest {
             )
         );
         s_vault.setCcipGasLimit(GAS_LIMIT_CHAIN_SELECTOR, CCIP_GAS_LIMIT);
+    }
+
+    function test_BaseVault_setCcipGasLimit_RevertWhen_ChainSelectorIsZero() external {
+        vm.expectRevert(IBaseVault.BaseVault__NoZeroChainSelector.selector);
+        s_vault.setCcipGasLimit(0, CCIP_GAS_LIMIT);
+    }
+
+    function test_BaseVault_setCcipGasLimit_Success_WhenGasLimitIsZero_ClearsOverride() external {
+        s_vault.setCcipGasLimit(GAS_LIMIT_CHAIN_SELECTOR, CCIP_GAS_LIMIT);
+
+        vm.recordLogs();
+        s_vault.setCcipGasLimit(GAS_LIMIT_CHAIN_SELECTOR, 0);
+
+        Vm.Log memory log = _assertEmittedBy(keccak256("CcipGasLimitSet(uint64,uint256)"), address(s_vault));
+        assertEq(uint64(uint256(log.topics[1])), GAS_LIMIT_CHAIN_SELECTOR);
+        assertEq(uint256(log.topics[2]), 0);
+        assertEq(s_vault.getCcipGasLimit(GAS_LIMIT_CHAIN_SELECTOR), 0);
     }
 
     function test_BaseVault_setCcipGasLimit_Success() external {

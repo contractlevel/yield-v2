@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 import {BaseUnitTest, Vm} from "../../BaseUnitTest.t.sol";
 
+import {IParentVault} from "../../../../src/interfaces/IParentVault.sol";
 import {Roles} from "../../../../src/libraries/Roles.sol";
 
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
@@ -24,6 +25,11 @@ contract ParentVault_SetSupportedProtocolUnitTest is BaseUnitTest {
             )
         );
         s_parentVault.setSupportedProtocol(NEW_PROTOCOL_ID, true);
+    }
+
+    function test_ParentVault_setSupportedProtocol_RevertWhen_ProtocolIdIsZero() external {
+        vm.expectRevert(IParentVault.ParentVault__NoZeroProtocolId.selector);
+        s_parentVault.setSupportedProtocol(bytes32(0), true);
     }
 
     function test_ParentVault_setSupportedProtocol_Success_SetsSupportedTrue() external {

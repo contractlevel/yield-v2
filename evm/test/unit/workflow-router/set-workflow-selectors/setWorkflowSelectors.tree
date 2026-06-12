@@ -1,6 +1,8 @@
 setWorkflowSelectors
   ├── when the caller does not have the CONFIG_OPERATOR_ROLE
   │   └── it should revert
+  ├── when workflowId is zero
+  │   └── it should revert with WorkflowRouter__NoZeroWorkflowId
   ├── when called with a single selector
   │   ├── when isAllowlisted is true
   │   │   ├── it should set the selector as allowlisted

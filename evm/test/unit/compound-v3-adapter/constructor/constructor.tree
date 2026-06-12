@@ -1,3 +1,11 @@
 constructor
   ├── it should set the Comet
-  └── it should set the CometRewards
+  ├── it should set the CometRewards
+  ├── when vault is the zero address
+  │   └── it should revert with ProtocolAdapter__NoZeroAddress
+  ├── when asset is the zero address
+  │   └── it should revert with ProtocolAdapter__NoZeroAddress
+  ├── when Comet is the zero address
+  │   └── it should revert with ProtocolAdapter__NoZeroAddress
+  └── when CometRewards is the zero address
+      └── it should revert with ProtocolAdapter__NoZeroAddress

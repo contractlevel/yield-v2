@@ -51,8 +51,12 @@ contract CompoundV3Adapter is ProtocolAdapter {
     /// @param asset The address of the underlying asset token
     /// @param comet The address of the Compound V3 pool
     /// @param cometRewards The address of the Compound V3 rewards contract
-    //slither-disable-next-line missing-zero-check
+    /// @dev Precondition: comet must not be the zero address
+    /// @dev Precondition: cometRewards must not be the zero address
     constructor(address vault, address asset, address comet, address cometRewards) ProtocolAdapter(vault, asset) {
+        _revertIfZeroAddress(comet);
+        _revertIfZeroAddress(cometRewards);
+
         i_comet = comet;
         i_cometRewards = cometRewards;
     }

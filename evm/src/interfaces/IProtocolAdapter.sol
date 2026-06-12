@@ -10,6 +10,8 @@ interface IProtocolAdapter {
     //////////////////////////////////////////////////////////////*/
     /// @dev Thrown when the caller is not the Yieldcoin v2 Vault
     error ProtocolAdapter__OnlyVault();
+    /// @dev Thrown when the zero address is provided
+    error ProtocolAdapter__NoZeroAddress();
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS

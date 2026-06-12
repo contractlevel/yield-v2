@@ -351,7 +351,7 @@ contract HelperConfig is Script {
     function _getMockCcipConfig(address usdc) private returns (CCIPConfig memory) {
         return CCIPConfig({
             router: address(new MockCCIPRouter(usdc)),
-            thisChainSelector: 12345,
+            thisChainSelector: 12346,
             parentChainSelector: 12345,
             initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
         });

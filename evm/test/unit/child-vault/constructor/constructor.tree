@@ -12,4 +12,8 @@ ChildVault_constructor
   ├── it should grant UNPAUSER_ROLE to unpauser
   ├── it should grant CONFIG_OPERATOR_ROLE to configOperator
   ├── it should grant COMPLIANCE_OPERATOR_ROLE to complianceOperator
-  └── it should set s_defaultCcipGasLimit
+  ├── it should set s_defaultCcipGasLimit
+  ├── when parent chain selector is zero
+  │   └── it should revert with BaseVault__NoZeroChainSelector
+  └── when parent chain selector equals this chain selector
+      └── it should revert with ChildVault__InvalidParentChainSelector

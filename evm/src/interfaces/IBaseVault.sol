@@ -15,6 +15,8 @@ interface IBaseVault is IPauseable {
     error BaseVault__NoZeroAmount();
     /// @dev Thrown when the zero address is provided
     error BaseVault__NoZeroAddress();
+    /// @dev Thrown when the zero chain selector is provided
+    error BaseVault__NoZeroChainSelector();
     /// @dev Thrown when the emergency drain delay has not been met
     error BaseVault__EmergencyDrainDelayNotMet();
 

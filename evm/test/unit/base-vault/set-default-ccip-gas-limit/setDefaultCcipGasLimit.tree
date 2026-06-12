@@ -1,5 +1,7 @@
 BaseVault_setDefaultCcipGasLimit
 ├── when the caller does not have the CONFIG_OPERATOR_ROLE
 │   └── it should revert
+├── when the gas limit is zero
+│   └── it should revert with BaseVault__NoZeroAmount
 └── when the caller has the CONFIG_OPERATOR_ROLE
     └── it should set the default CCIP gas limit and emit DefaultCcipGasLimitSet

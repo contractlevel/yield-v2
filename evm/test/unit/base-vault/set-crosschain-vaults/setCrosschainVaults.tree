@@ -4,6 +4,11 @@ BaseVault_setCrosschainVaults
 └── when the caller has the CONFIG_OPERATOR_ROLE
     ├── when the array lengths do not match
     │   └── it should revert
+    ├── when a chain selector is zero
+    │   └── it should revert with BaseVault__NoZeroChainSelector
+    ├── when a vault is the zero address
+    │   ├── it should remove the crosschain vault
+    │   └── it should emit a CrosschainVaultSet event
     └── when the array lengths match
         ├── it should update s_crosschainVaults for each entry
         └── it should emit a CrosschainVaultSet event for each entry

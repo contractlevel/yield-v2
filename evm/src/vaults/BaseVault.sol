@@ -97,6 +97,24 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         }
     }
 
+    /// @notice Reverts when a required address input is zero
+    /// @param value The address to validate
+    function _revertIfZeroAddress(address value) internal pure {
+        if (value == address(0)) revert BaseVault__NoZeroAddress();
+    }
+
+    /// @notice Reverts when a required amount input is zero
+    /// @param value The amount to validate
+    function _revertIfZeroAmount(uint256 value) internal pure {
+        if (value == 0) revert BaseVault__NoZeroAmount();
+    }
+
+    /// @notice Reverts when a required chain selector input is zero
+    /// @param value The chain selector to validate
+    function _revertIfZeroChainSelector(uint64 value) internal pure {
+        if (value == 0) revert BaseVault__NoZeroChainSelector();
+    }
+
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
@@ -129,10 +147,24 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @notice Grants PAUSER_ROLE to params.pauser
     /// @notice Grants UNPAUSER_ROLE to params.unpauser
     /// @notice Grants CONFIG_OPERATOR_ROLE to params.configOperator
+    /// @dev Precondition: required address params must not be the zero address
+    /// @dev Precondition: params.thisChainSelector must not be zero
+    /// @dev Precondition: params.initialDefaultCcipGasLimit must not be zero
     constructor(ConstructorParams memory params)
         CCIPReceiver(params.ccipRouter)
         AccessControlDefaultAdminRules(INITIAL_DEFAULT_ADMIN_ROLE_TRANSFER_DELAY, params.defaultAdmin)
     {
+        _revertIfZeroAddress(params.link);
+        _revertIfZeroAddress(params.asset);
+        _revertIfZeroAddress(params.ccipRouter);
+        _revertIfZeroAddress(params.pauser);
+        _revertIfZeroAddress(params.unpauser);
+        _revertIfZeroAddress(params.configOperator);
+        _revertIfZeroAddress(params.adapterRegistry);
+        _revertIfZeroAddress(params.emergencyReceiver);
+        _revertIfZeroChainSelector(params.thisChainSelector);
+        _revertIfZeroAmount(params.initialDefaultCcipGasLimit);
+
         i_thisChainSelector = params.thisChainSelector;
         i_link = params.link;
         i_asset = params.asset;
@@ -534,8 +566,10 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @param vaults The addresses of the crosschain vaults
     /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
     /// @dev Precondition: chainSelectors and vaults must have the same length
+    /// @dev Precondition: each chain selector must not be zero
     /// @dev Sets the crosschain vaults
     /// @dev Emits the CrosschainVaultSet event
+    /// @notice Set a vault to address(0) to remove the crosschain vault for that chain selector
     /// @notice This can orphan in-flight CCIP messages. Operator should ensure there are no active crosschain rebalance or epoch operations in progress.
     function setCrosschainVaults(uint64[] calldata chainSelectors, address[] calldata vaults)
         external
@@ -543,6 +577,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     {
         if (chainSelectors.length != vaults.length) revert BaseVault__InvalidInputLengths();
         for (uint256 i; i < chainSelectors.length; ++i) {
+            _revertIfZeroChainSelector(chainSelectors[i]);
             s_crosschainVaults[chainSelectors[i]] = vaults[i];
             emit CrosschainVaultSet(chainSelectors[i], vaults[i]);
         }
@@ -550,11 +585,13 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
 
     /// @notice Sets the CCIP gas limit for a given chain selector
     /// @param chainSelector The CCIP selector of the chain
-    /// @param gasLimit The CCIP gas limit
+    /// @param gasLimit The CCIP gas limit. Set to 0 to clear the per-chain override and use the default gas limit.
     /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
+    /// @dev Precondition: chainSelector must not be zero
     /// @dev Sets the CCIP gas limit
     /// @dev Emits the CcipGasLimitSet event
     function setCcipGasLimit(uint64 chainSelector, uint256 gasLimit) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
+        _revertIfZeroChainSelector(chainSelector);
         s_ccipGasLimits[chainSelector] = gasLimit;
         emit CcipGasLimitSet(chainSelector, gasLimit);
     }
@@ -563,9 +600,11 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @notice If a chain doesn't have a specific CCIP gas limit set, the default CCIP gas limit will be used.
     /// @param gasLimit The CCIP gas limit
     /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
+    /// @dev Precondition: gasLimit must not be zero
     /// @dev Sets the default CCIP gas limit
     /// @dev Emits the DefaultCcipGasLimitSet event
     function setDefaultCcipGasLimit(uint256 gasLimit) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
+        _revertIfZeroAmount(gasLimit);
         s_defaultCcipGasLimit = gasLimit;
         emit DefaultCcipGasLimitSet(gasLimit);
     }
@@ -576,7 +615,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @dev Precondition: emergencyReceiver must not be the zero address
     /// @dev Emits the EmergencyReceiverSet event
     function setEmergencyReceiver(address emergencyReceiver) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
-        if (emergencyReceiver == address(0)) revert BaseVault__NoZeroAddress();
+        _revertIfZeroAddress(emergencyReceiver);
         s_emergencyReceiver = emergencyReceiver;
         emit EmergencyReceiverSet(emergencyReceiver);
     }

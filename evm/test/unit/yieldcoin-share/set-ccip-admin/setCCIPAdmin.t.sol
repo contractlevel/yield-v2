@@ -3,8 +3,15 @@ pragma solidity 0.8.28;
 
 import {BaseUnitTest, Vm} from "../../BaseUnitTest.t.sol";
 
+import {YieldcoinShare} from "../../../../src/token/YieldcoinShare.sol";
+
 contract YieldcoinShare_SetCCIPAdminUnitTest is BaseUnitTest {
     address internal immutable i_newCcipAdmin = makeAddr("newCcipAdmin");
+
+    function test_YieldcoinShare_setCCIPAdmin_RevertWhen_NewAdminIsZeroAddress() external {
+        vm.expectRevert(YieldcoinShare.YieldcoinShare__NoZeroAddress.selector);
+        s_yieldcoin.setCCIPAdmin(address(0));
+    }
 
     function test_YieldcoinShare_setCCIPAdmin_Success_SetsCCIPAdmin() external {
         s_yieldcoin.setCCIPAdmin(i_newCcipAdmin);

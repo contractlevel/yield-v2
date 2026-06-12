@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 import {BaseUnitTest, Vm} from "../../BaseUnitTest.t.sol";
 
-import {BaseVault} from "../../../../src/vaults/BaseVault.sol";
+import {BaseVault, IBaseVault} from "../../../../src/vaults/BaseVault.sol";
 import {Roles} from "../../../../src/libraries/Roles.sol";
 
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
@@ -19,6 +19,11 @@ abstract contract BaseVault_SetDefaultCcipGasLimitUnitTest is BaseUnitTest {
             )
         );
         s_vault.setDefaultCcipGasLimit(DEFAULT_CCIP_GAS_LIMIT);
+    }
+
+    function test_BaseVault_setDefaultCcipGasLimit_RevertWhen_GasLimitIsZero() external {
+        vm.expectRevert(IBaseVault.BaseVault__NoZeroAmount.selector);
+        s_vault.setDefaultCcipGasLimit(0);
     }
 
     function test_BaseVault_setDefaultCcipGasLimit_Success() external {

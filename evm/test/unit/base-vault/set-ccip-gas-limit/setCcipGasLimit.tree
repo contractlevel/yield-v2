@@ -1,5 +1,9 @@
 BaseVault_setCcipGasLimit
 ├── when the caller does not have the CONFIG_OPERATOR_ROLE
 │   └── it should revert
+├── when the chain selector is zero
+│   └── it should revert with BaseVault__NoZeroChainSelector
+├── when the gas limit is zero
+│   └── it should clear the per-chain override and emit CcipGasLimitSet
 └── when the caller has the CONFIG_OPERATOR_ROLE
     └── it should set the CCIP gas limit and emit CcipGasLimitSet

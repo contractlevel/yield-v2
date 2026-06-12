@@ -92,6 +92,9 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @param share The address of the Yieldcoin (YIELD) share token
     /// @param policyEngineManager The address authorized to replace this vault's attached policy engine
     /// @param policyEngine The address of the Yieldcoin v2 PolicyEngine
+    /// @dev Precondition: treasury must not be the zero address
+    /// @dev Precondition: share must not be the zero address
+    /// @dev Precondition: policyEngineManager must not be the zero address
     /// @dev PolicyProtected ownership is initialized to the vault default admin only to satisfy inherited Ownable state.
     ///      Runtime policy engine replacement is controlled by POLICY_ENGINE_MANAGER_ROLE.
     /// @dev The initial active protocol adapter is set after deployment with setInitialActiveProtocolAdapter.
@@ -104,6 +107,10 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         address policyEngineManager,
         address policyEngine
     ) BaseVault(params) PolicyProtected(params.defaultAdmin, policyEngine) {
+        _revertIfZeroAddress(treasury);
+        _revertIfZeroAddress(share);
+        _revertIfZeroAddress(policyEngineManager);
+
         i_share = share;
         i_sharePrecision = WAD_PRECISION / i_assetPrecision;
         i_minDepositAmount = 100 * i_assetPrecision;
@@ -150,8 +157,9 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @notice Sets the treasury address
     /// @param treasury The address of the treasury
     /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
-    //slither-disable-next-line missing-zero-check
+    /// @dev Precondition: treasury must not be the zero address
     function setTreasury(address treasury) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
+        _revertIfZeroAddress(treasury);
         s_treasury = treasury;
         emit TreasurySet(treasury);
     }
@@ -780,8 +788,10 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @param protocolId The protocol identifier of the protocol to support, ie keccak256("aave-v3")
     /// @param isSupported Whether a protocol is supported on any chain. True for supported, false for not
     /// @dev Precondition: caller must have CONFIG_OPERATOR_ROLE
+    /// @dev Precondition: protocolId must not be zero
     /// @dev Emits SupportedProtocolSet event
     function setSupportedProtocol(bytes32 protocolId, bool isSupported) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
+        if (protocolId == bytes32(0)) revert ParentVault__NoZeroProtocolId();
         s_supportedProtocol[protocolId] = isSupported;
         emit SupportedProtocolSet(protocolId, isSupported);
     }

@@ -12,6 +12,8 @@ interface IParentVault is IBaseVault {
     //////////////////////////////////////////////////////////////*/
     /// @dev Thrown when the amount is zero
     error ParentVault__NoZeroAmount();
+    /// @dev Thrown when the zero protocol ID is provided
+    error ParentVault__NoZeroProtocolId();
     /// @dev Thrown when the deposit amount is less than the minimum deposit amount
     /// @param amount The amount of the deposit
     error ParentVault__AmountTooSmall(uint256 amount);

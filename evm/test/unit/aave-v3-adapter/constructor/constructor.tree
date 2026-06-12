@@ -1,2 +1,8 @@
 constructor
-  └── it should set the pool addresses provider
+  ├── it should set the pool addresses provider
+  ├── when vault is the zero address
+  │   └── it should revert with ProtocolAdapter__NoZeroAddress
+  ├── when asset is the zero address
+  │   └── it should revert with ProtocolAdapter__NoZeroAddress
+  └── when pool addresses provider is the zero address
+      └── it should revert with ProtocolAdapter__NoZeroAddress

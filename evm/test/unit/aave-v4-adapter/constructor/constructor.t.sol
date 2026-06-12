@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 import {BaseAaveV4AdapterUnitTest} from "../BaseAaveV4AdapterUnitTest.t.sol";
 import {AaveV4Adapter} from "../../../../src/modules/adapters/AaveV4Adapter.sol";
+import {IProtocolAdapter} from "../../../../src/interfaces/IProtocolAdapter.sol";
 import {MockAaveV4Spoke} from "../../../mocks/MockAaveV4Spoke.sol";
 
 contract AaveV4Adapter_ConstructorUnitTest is BaseAaveV4AdapterUnitTest {
@@ -10,6 +11,21 @@ contract AaveV4Adapter_ConstructorUnitTest is BaseAaveV4AdapterUnitTest {
         assertEq(s_aaveV4Adapter.getProtocolPool(), address(s_mockAaveV4Spoke));
         assertEq(s_aaveV4Adapter.getReserveId(), 0);
         assertEq(s_aaveV4Adapter.getTVL(), 0);
+    }
+
+    function test_AaveV4Adapter_constructor_RevertWhen_VaultIsZeroAddress() public {
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__NoZeroAddress.selector);
+        new AaveV4Adapter(address(0), address(s_mockUsdc), address(s_mockAaveV4Spoke));
+    }
+
+    function test_AaveV4Adapter_constructor_RevertWhen_AssetIsZeroAddress() public {
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__NoZeroAddress.selector);
+        new AaveV4Adapter(address(s_parentVault), address(0), address(s_mockAaveV4Spoke));
+    }
+
+    function test_AaveV4Adapter_constructor_RevertWhen_SpokeIsZeroAddress() public {
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__NoZeroAddress.selector);
+        new AaveV4Adapter(address(s_parentVault), address(s_mockUsdc), address(0));
     }
 
     function test_AaveV4Adapter_constructor_RevertWhen_ReserveNotFound() external {
