@@ -100,10 +100,24 @@ contract ParentVault_CompleteRebalanceUnitTest is BaseUnitTest {
         assertEq(uint256(log.topics[2]), expectedFeeShares);
     }
 
+    function test_ParentVault_completeRebalance_Success_CapsManagementFeeElapsedAtOneYear() public {
+        _setParentTotalShares(TOTAL_SHARES);
+        uint256 elapsed = 730 days;
+        vm.warp(s_parentVault.getRebalance().lastRebalanceCompletedTimestamp + elapsed);
+
+        uint256 expectedFeeShares = _expectedFeeShares(TOTAL_SHARES, 365 days);
+
+        s_parentVault.completeRebalance();
+
+        assertEq(s_yieldcoin.balanceOf(i_treasury), expectedFeeShares);
+        assertEq(s_parentVault.getTotalShares(), TOTAL_SHARES + expectedFeeShares);
+    }
+
     /*//////////////////////////////////////////////////////////////
                              HELPER UTILITY
     //////////////////////////////////////////////////////////////*/
     function _expectedFeeShares(uint256 totalShares, uint256 elapsed) internal pure returns (uint256) {
+        if (elapsed > 365 days) elapsed = 365 days;
         uint256 denominator = BPS_DENOMINATOR * 365 days;
         return (totalShares * MANAGEMENT_FEE_BPS * elapsed + denominator - 1) / denominator;
     }

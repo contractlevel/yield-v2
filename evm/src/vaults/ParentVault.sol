@@ -723,12 +723,13 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
                                   FEES
     //////////////////////////////////////////////////////////////*/
     /// @notice Calculates and collects the management fee based on time elapsed since the last rebalance completed
-    /// @notice Roughly 1% of the TVL is taken annually. The actual amount is proportional to time elapsed and current total shares
+    /// @notice Roughly 1% of the TVL is taken annually. The amount is proportional to elapsed time and capped at one year per collection.
     /// @notice The management fee is taken in Yieldcoin share tokens and minted to s_treasury
     /// @param rebalanceNonce The nonce of the rebalance collecting the fee
     /// @param lastRebalanceCompletedTimestamp The timestamp when the rebalance last completed
     function _collectManagementFee(uint256 rebalanceNonce, uint256 lastRebalanceCompletedTimestamp) internal {
         uint256 elapsed = block.timestamp - lastRebalanceCompletedTimestamp;
+        if (elapsed > 365 days) elapsed = 365 days;
         uint256 totalShares = s_totalShares;
         uint256 denominator = BPS_DENOMINATOR * 365 days;
         uint256 feeShares = (totalShares * MANAGEMENT_FEE_BPS * elapsed + denominator - 1) / denominator;

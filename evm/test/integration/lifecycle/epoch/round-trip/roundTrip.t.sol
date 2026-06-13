@@ -92,6 +92,7 @@ contract RoundTrip_EpochIntegrationTest is BaseIntegrationTest {
     }
 
     function _expectedManagementFeeShares(uint256 totalShares, uint256 elapsed) internal pure returns (uint256) {
+        if (elapsed > 365 days) elapsed = 365 days;
         uint256 denominator = BPS_DENOMINATOR * 365 days;
         return (totalShares * MANAGEMENT_FEE_BPS * elapsed + denominator - 1) / denominator;
     }

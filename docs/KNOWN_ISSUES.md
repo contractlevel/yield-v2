@@ -249,3 +249,39 @@ Under the current adapter set (Aave V3 / V4, Compound V3 specific-amount withdra
 - A new adapter is registered whose withdraw output can deviate materially (more than protocol-rounding) from the requested amount — at which point the overwrite would shift non-trivial value between withdrawers and non-withdrawers and the cap-and-redeposit alternative should be reconsidered.
 - A new strategy topology is introduced where surplus asset token can be redeposited cheaply into an adapter on the parent chain at epoch close (e.g., a permanently-active fallback adapter), making the local-path "redeposit surplus" alternative effectively free.
 - CCIP semantics change such that the bridged amount can diverge from the `ChildVault`-sent amount, introducing a new source of remote-path delta independent of the underlying adapter's behavior.
+
+---
+
+## KI-006 — Management fee accumulator includes vault pause duration
+
+**Status:** Accepted — mitigated by a one-year cap per management fee collection.
+
+**Last reviewed:** 2026-06-13
+
+**Component:** `ParentVault._collectManagementFee`, vault pause controls, and rebalance finalization.
+
+### Summary
+
+Management fees accrue on calendar time between completed rebalances. `ParentVault._collectManagementFee` uses the elapsed time between `s_rebalance.lastRebalanceCompletedTimestamp` and the current rebalance finalization, capped at `365 days` per collection. It does not subtract time where the vault was paused.
+
+This means a pause interval can contribute to the next management fee collection. The fee remains bounded by the annual management fee formula for a single collection: at the current `MANAGEMENT_FEE_BPS = 100`, no rebalance finalization can collect more than the one-year management fee amount (`ceil(totalShares * 1%)`) regardless of how long the vault was paused or how long rebalance finalization was delayed.
+
+### Why this is accepted, not fully excluded
+
+The management fee is treated as an AUM-style calendar-time fee, not purely as a fee for uninterrupted user-facing availability. During a pause, capital may still remain deployed in a strategy and continue earning yield.
+
+The `ParentVault` can only observe its own pause state. It cannot reliably determine whether the full system was operational across ChildVaults, WorkflowRouters, underlying token transferability, strategy protocols, adapters, and cross-chain settlement. Subtracting only `ParentVault.s_pausedAt` intervals would create incomplete liveness accounting and could undercharge management fees while funds remain deployed and yield-bearing.
+
+### Mitigation
+
+The fee collection is capped at one year of elapsed time per rebalance finalization. Long pauses, delayed rebalances, or other operational stalls cannot cause a single management fee collection to accrue across multiple years.
+
+### Residual risk
+
+Shareholders can still pay management fees for time when the user-facing vault was paused. The impact is bounded by the one-year cap per collection and by trusted pause/unpause operations. This is an accepted economic design choice rather than an accounting invariant violation.
+
+### Conditions that would warrant revisiting
+
+- Product policy changes to require no management fees during downtime.
+- A reliable system-wide pause/liveness oracle is introduced across ParentVault, ChildVaults, WorkflowRouters, underlying token state, strategy protocols, and cross-chain settlement.
+- Rebalance cadence changes in a way that makes repeated one-year capped collections during long-term operational downtime plausible.
