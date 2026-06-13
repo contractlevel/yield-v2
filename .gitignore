@@ -23,3 +23,5 @@ cre/research/
 # Local fork orchestration outputs
 script/bash/logs/
 cre/workflow/config.local-fork.generated.json
+
+.certora_internal/

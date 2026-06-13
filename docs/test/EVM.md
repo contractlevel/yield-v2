@@ -32,7 +32,7 @@ slither . --filter-path lib
 aderyn .
 ```
 
-### Invariants
+## Invariants
 
 ```
 forge test --match-contract CryticToFoundry -vv
@@ -84,4 +84,10 @@ recon fuzz . \
 FOUNDRY_PROFILE=halmos forge build
 halmos --contract ClaimSolvency --forge-build-out out-halmos --function check_ \
          --solver-timeout-branching 10000 --solver-timeout-assertion 30000
+```
+
+## Certora
+
+```
+certoraRun ./certora/conf/modules/AdapterRegistry.conf
 ```
