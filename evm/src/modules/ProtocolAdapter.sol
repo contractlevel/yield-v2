@@ -2,6 +2,7 @@
 pragma solidity 0.8.28;
 
 import {IProtocolAdapter} from "../interfaces/IProtocolAdapter.sol";
+import {IBaseVault} from "../interfaces/IBaseVault.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /// @title Yieldcoin v2 Protocol Adapter
@@ -20,15 +21,12 @@ abstract contract ProtocolAdapter is IProtocolAdapter, ReentrancyGuard {
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
     /// @param vault The address of the Yieldcoin v2 Vault
-    /// @param asset The address of the underlying asset token
     /// @dev Precondition: vault must not be the zero address
-    /// @dev Precondition: asset must not be the zero address
-    constructor(address vault, address asset) {
+    constructor(address vault) {
         _revertIfZeroAddress(vault);
-        _revertIfZeroAddress(asset);
 
         i_vault = vault;
-        i_asset = asset;
+        i_asset = IBaseVault(vault).getAsset();
     }
 
     /// @notice Reverts when a required address input is zero

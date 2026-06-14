@@ -39,13 +39,12 @@ contract AaveV4Adapter is ProtocolAdapter {
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
     /// @param vault The address of the Yieldcoin v2 Vault
-    /// @param asset The address of the underlying asset token
     /// @param spoke The address of the Aave v4 Spoke
     /// @dev Precondition: spoke must not be the zero address
-    constructor(address vault, address asset, address spoke) ProtocolAdapter(vault, asset) {
+    constructor(address vault, address spoke) ProtocolAdapter(vault) {
         _revertIfZeroAddress(spoke);
         i_spoke = spoke;
-        i_reserveId = _getReserveId(spoke, asset);
+        i_reserveId = _getReserveId(spoke, i_asset);
     }
 
     /*//////////////////////////////////////////////////////////////

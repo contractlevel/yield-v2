@@ -16,21 +16,16 @@ contract CompoundV3Adapter_ConstructorUnitTest is BaseCompoundV3AdapterUnitTest 
 
     function test_CompoundV3Adapter_constructor_RevertWhen_VaultIsZeroAddress() public {
         vm.expectRevert(IProtocolAdapter.ProtocolAdapter__NoZeroAddress.selector);
-        new CompoundV3Adapter(address(0), address(s_mockUsdc), address(s_mockComet), address(s_mockCometRewards));
-    }
-
-    function test_CompoundV3Adapter_constructor_RevertWhen_AssetIsZeroAddress() public {
-        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__NoZeroAddress.selector);
-        new CompoundV3Adapter(address(s_parentVault), address(0), address(s_mockComet), address(s_mockCometRewards));
+        new CompoundV3Adapter(address(0), address(s_mockComet), address(s_mockCometRewards));
     }
 
     function test_CompoundV3Adapter_constructor_RevertWhen_CometIsZeroAddress() public {
         vm.expectRevert(IProtocolAdapter.ProtocolAdapter__NoZeroAddress.selector);
-        new CompoundV3Adapter(address(s_parentVault), address(s_mockUsdc), address(0), address(s_mockCometRewards));
+        new CompoundV3Adapter(address(s_parentVault), address(0), address(s_mockCometRewards));
     }
 
     function test_CompoundV3Adapter_constructor_RevertWhen_CometRewardsIsZeroAddress() public {
         vm.expectRevert(IProtocolAdapter.ProtocolAdapter__NoZeroAddress.selector);
-        new CompoundV3Adapter(address(s_parentVault), address(s_mockUsdc), address(s_mockComet), address(0));
+        new CompoundV3Adapter(address(s_parentVault), address(s_mockComet), address(0));
     }
 }

@@ -14,16 +14,11 @@ contract AaveV3Adapter_ConstructorUnitTest is BaseAaveV3AdapterUnitTest {
 
     function test_AaveV3Adapter_constructor_RevertWhen_VaultIsZeroAddress() public {
         vm.expectRevert(IProtocolAdapter.ProtocolAdapter__NoZeroAddress.selector);
-        new AaveV3Adapter(address(0), address(s_mockUsdc), address(s_mockPoolAddressesProvider));
-    }
-
-    function test_AaveV3Adapter_constructor_RevertWhen_AssetIsZeroAddress() public {
-        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__NoZeroAddress.selector);
-        new AaveV3Adapter(address(s_parentVault), address(0), address(s_mockPoolAddressesProvider));
+        new AaveV3Adapter(address(0), address(s_mockPoolAddressesProvider));
     }
 
     function test_AaveV3Adapter_constructor_RevertWhen_PoolAddressesProviderIsZeroAddress() public {
         vm.expectRevert(IProtocolAdapter.ProtocolAdapter__NoZeroAddress.selector);
-        new AaveV3Adapter(address(s_parentVault), address(s_mockUsdc), address(0));
+        new AaveV3Adapter(address(s_parentVault), address(0));
     }
 }

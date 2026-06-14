@@ -15,30 +15,25 @@ contract AaveV4Adapter_ConstructorUnitTest is BaseAaveV4AdapterUnitTest {
 
     function test_AaveV4Adapter_constructor_RevertWhen_VaultIsZeroAddress() public {
         vm.expectRevert(IProtocolAdapter.ProtocolAdapter__NoZeroAddress.selector);
-        new AaveV4Adapter(address(0), address(s_mockUsdc), address(s_mockAaveV4Spoke));
-    }
-
-    function test_AaveV4Adapter_constructor_RevertWhen_AssetIsZeroAddress() public {
-        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__NoZeroAddress.selector);
-        new AaveV4Adapter(address(s_parentVault), address(0), address(s_mockAaveV4Spoke));
+        new AaveV4Adapter(address(0), address(s_mockAaveV4Spoke));
     }
 
     function test_AaveV4Adapter_constructor_RevertWhen_SpokeIsZeroAddress() public {
         vm.expectRevert(IProtocolAdapter.ProtocolAdapter__NoZeroAddress.selector);
-        new AaveV4Adapter(address(s_parentVault), address(s_mockUsdc), address(0));
+        new AaveV4Adapter(address(s_parentVault), address(0));
     }
 
     function test_AaveV4Adapter_constructor_RevertWhen_ReserveNotFound() external {
         MockAaveV4Spoke mockAaveV4Spoke = new MockAaveV4Spoke(address(1));
 
         vm.expectRevert(AaveV4Adapter.AaveV4Adapter__ReserveNotFound.selector);
-        new AaveV4Adapter(address(s_parentVault), address(s_mockUsdc), address(mockAaveV4Spoke));
+        new AaveV4Adapter(address(s_parentVault), address(mockAaveV4Spoke));
     }
 
     function test_AaveV4Adapter_constructor_RevertWhen_DuplicateReserveFound() external {
         s_mockAaveV4Spoke.addReserve(address(s_mockUsdc));
 
         vm.expectRevert(AaveV4Adapter.AaveV4Adapter__DuplicateReserveFound.selector);
-        new AaveV4Adapter(address(s_parentVault), address(s_mockUsdc), address(s_mockAaveV4Spoke));
+        new AaveV4Adapter(address(s_parentVault), address(s_mockAaveV4Spoke));
     }
 }

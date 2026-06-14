@@ -19,8 +19,7 @@ abstract contract BaseAaveV3AdapterUnitTest is BaseUnitTest {
         s_mockAaveV3Pool = new MockAaveV3Pool();
         s_mockAaveV3Pool.setATokenAddress(address(s_mockAToken));
         s_mockPoolAddressesProvider = new MockAaveV3PoolAddressesProvider(address(s_mockAaveV3Pool));
-        s_aaveV3Adapter =
-            new AaveV3Adapter(address(s_parentVault), address(s_mockUsdc), address(s_mockPoolAddressesProvider));
+        s_aaveV3Adapter = new AaveV3Adapter(address(s_parentVault), address(s_mockPoolAddressesProvider));
 
         vm.label(address(s_mockAToken), "MockAToken");
         vm.label(address(s_mockAaveV3Pool), "MockAaveV3Pool");

@@ -15,9 +15,8 @@ abstract contract BaseCompoundV3AdapterUnitTest is BaseUnitTest {
     constructor() {
         s_mockComet = new MockComet();
         s_mockCometRewards = new MockCometRewards();
-        s_compoundV3Adapter = new CompoundV3Adapter(
-            address(s_parentVault), address(s_mockUsdc), address(s_mockComet), address(s_mockCometRewards)
-        );
+        s_compoundV3Adapter =
+            new CompoundV3Adapter(address(s_parentVault), address(s_mockComet), address(s_mockCometRewards));
 
         vm.label(address(s_mockComet), "MockComet");
         vm.label(address(s_mockCometRewards), "MockCometRewards");

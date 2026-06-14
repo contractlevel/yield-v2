@@ -12,7 +12,7 @@ abstract contract BaseAaveV4AdapterUnitTest is BaseUnitTest {
 
     constructor() {
         s_mockAaveV4Spoke = new MockAaveV4Spoke(address(s_mockUsdc));
-        s_aaveV4Adapter = new AaveV4Adapter(address(s_parentVault), address(s_mockUsdc), address(s_mockAaveV4Spoke));
+        s_aaveV4Adapter = new AaveV4Adapter(address(s_parentVault), address(s_mockAaveV4Spoke));
 
         vm.label(address(s_mockAaveV4Spoke), "MockAaveV4Spoke");
         vm.label(address(s_aaveV4Adapter), "AaveV4Adapter");

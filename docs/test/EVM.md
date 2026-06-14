@@ -90,4 +90,8 @@ halmos --contract ClaimSolvency --forge-build-out out-halmos --function check_ \
 
 ```
 certoraRun ./certora/conf/modules/AdapterRegistry.conf
+
+certoraRun ./certora/conf/modules/adapters/AaveV3Adapter.ProtocolAdapter.conf
+certoraRun ./certora/conf/modules/adapters/AaveV4Adapter.ProtocolAdapter.conf
+certoraRun ./certora/conf/modules/adapters/CompoundV3Adapter.ProtocolAdapter.conf
 ```

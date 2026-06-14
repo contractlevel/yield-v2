@@ -26,7 +26,7 @@ contract AaveV4Adapter_DepositUnitTest is BaseAaveV4AdapterUnitTest {
     function test_AaveV4Adapter_deposit_RevertWhen_DepositAmountIsLessThanRequested() external {
         PartialSupplyAaveV4Spoke partialSpoke =
             new PartialSupplyAaveV4Spoke(address(s_mockUsdc), PARTIAL_DEPOSIT_AMOUNT);
-        AaveV4Adapter adapter = new AaveV4Adapter(address(s_parentVault), address(s_mockUsdc), address(partialSpoke));
+        AaveV4Adapter adapter = new AaveV4Adapter(address(s_parentVault), address(partialSpoke));
         deal(address(s_mockUsdc), address(adapter), DEPOSIT_AMOUNT);
 
         vm.expectRevert(AaveV4Adapter.AaveV4Adapter__IncompleteDeposit.selector);

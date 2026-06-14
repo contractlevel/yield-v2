@@ -48,12 +48,11 @@ contract CompoundV3Adapter is ProtocolAdapter {
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
     /// @param vault The address of the Yieldcoin v2 Vault
-    /// @param asset The address of the underlying asset token
     /// @param comet The address of the Compound V3 pool
     /// @param cometRewards The address of the Compound V3 rewards contract
     /// @dev Precondition: comet must not be the zero address
     /// @dev Precondition: cometRewards must not be the zero address
-    constructor(address vault, address asset, address comet, address cometRewards) ProtocolAdapter(vault, asset) {
+    constructor(address vault, address comet, address cometRewards) ProtocolAdapter(vault) {
         _revertIfZeroAddress(comet);
         _revertIfZeroAddress(cometRewards);
 
