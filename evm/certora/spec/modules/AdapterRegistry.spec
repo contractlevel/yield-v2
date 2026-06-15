@@ -13,6 +13,9 @@ methods {
 
     // Harness helper methods
     function bytes32ToAddress(bytes32) external returns (address) envfree;
+
+    // Roles
+    function CONFIG_OPERATOR_ROLE() external returns (bytes32) envfree;
 }
 
 /*//////////////////////////////////////////////////////////////
@@ -22,9 +25,6 @@ definition AdapterSetEvent() returns bytes32 =
 // keccak256("AdapterSet(bytes32,address)")
     to_bytes32(0x3b47bb87ba19aff1d2e33a9a2a80833153f71de08be9168be2e127c4f2b52586);
 
-definition CONFIG_OPERATOR_ROLE() returns bytes32 =
-// keccak256("CONFIG_OPERATOR_ROLE")
-    to_bytes32(0xdeed664348786a0e2cfd55d97b9b318764138f1f675f4b10304ff0c6ed42d123);
 
 /*//////////////////////////////////////////////////////////////
                              GHOSTS
@@ -65,14 +65,18 @@ rule setAdapter_RevertWhen_CallerDoesNotHaveCONFIG_OPERATOR_ROLE() {
     address adapter;
 
     /// @dev revert conditions NOT being verified
-    require e.msg.value == 0;
-    require protocolId != to_bytes32(0), "";
+    require e.msg.value == 0, "setAdapter is nonpayable";
+    require protocolId != to_bytes32(0), "exclude zero protocolId revert";
 
     /// @dev revert condition being verified
-    require !currentContract.hasRole(CONFIG_OPERATOR_ROLE(), e.msg.sender);
+    require !currentContract.hasRole(CONFIG_OPERATOR_ROLE(), e.msg.sender), "caller lacks CONFIG_OPERATOR_ROLE";
+
+    /// @dev ghost starting values
+    require ghost_AdapterSet_EventCount == 0, "AdapterSet event count starts at zero";
 
     setAdapter@withrevert(e, protocolId, adapter);
     assert lastReverted;
+    assert ghost_AdapterSet_EventCount == 0;
 }
 
 rule setAdapter_RevertWhen_ProtocolIdIsZero() {
@@ -81,14 +85,18 @@ rule setAdapter_RevertWhen_ProtocolIdIsZero() {
     address adapter;
 
     /// @dev revert conditions NOT being verified
-    require e.msg.value == 0;
-    require currentContract.hasRole(CONFIG_OPERATOR_ROLE(), e.msg.sender);
+    require e.msg.value == 0, "setAdapter is nonpayable";
+    require currentContract.hasRole(CONFIG_OPERATOR_ROLE(), e.msg.sender), "caller has CONFIG_OPERATOR_ROLE";
 
     /// @dev revert condition being verified
-    require protocolId == to_bytes32(0);
+    require protocolId == to_bytes32(0), "protocolId is zero";
+
+    /// @dev ghost starting values
+    require ghost_AdapterSet_EventCount == 0, "AdapterSet event count starts at zero";
 
     setAdapter@withrevert(e, protocolId, adapter);
     assert lastReverted;
+    assert ghost_AdapterSet_EventCount == 0;
 }
 
 rule setAdapter_Success() {
@@ -97,14 +105,14 @@ rule setAdapter_Success() {
     address adapter;
 
     /// @dev revert conditions NOT being verified
-    require e.msg.value == 0;
-    require currentContract.hasRole(CONFIG_OPERATOR_ROLE(), e.msg.sender);
-    require protocolId != to_bytes32(0);
+    require e.msg.value == 0, "setAdapter is nonpayable";
+    require currentContract.hasRole(CONFIG_OPERATOR_ROLE(), e.msg.sender), "caller has CONFIG_OPERATOR_ROLE";
+    require protocolId != to_bytes32(0), "protocolId is nonzero";
 
     /// @dev ghost starting values
-    require ghost_AdapterSet_EventCount == 0;
-    require ghost_AdapterSet_EventParam_protocolId == to_bytes32(0);
-    require ghost_AdapterSet_EventParam_adapter == 0;
+    require ghost_AdapterSet_EventCount == 0, "AdapterSet event count starts at zero";
+    require ghost_AdapterSet_EventParam_protocolId == to_bytes32(0), "AdapterSet protocolId ghost starts at zero";
+    require ghost_AdapterSet_EventParam_adapter == 0, "AdapterSet adapter ghost starts at zero";
 
     setAdapter@withrevert(e, protocolId, adapter);
 
@@ -113,4 +121,72 @@ rule setAdapter_Success() {
     assert ghost_AdapterSet_EventParam_protocolId == protocolId;
     assert ghost_AdapterSet_EventParam_adapter == adapter;
     assert getAdapter(protocolId) == adapter;
+}
+
+rule setAdapter_Success_WhenAdapterIsZeroAddress_RemovesAdapter() {
+    env e;
+    bytes32 protocolId;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "setAdapter is nonpayable";
+    require currentContract.hasRole(CONFIG_OPERATOR_ROLE(), e.msg.sender), "caller has CONFIG_OPERATOR_ROLE";
+    require protocolId != to_bytes32(0), "protocolId is nonzero";
+
+    /// @dev condition being verified
+    require getAdapter(protocolId) != 0, "initial adapter is nonzero";
+
+    /// @dev ghost starting values
+    require ghost_AdapterSet_EventCount == 0, "AdapterSet event count starts at zero";
+    require ghost_AdapterSet_EventParam_protocolId == to_bytes32(0), "AdapterSet protocolId ghost starts at zero";
+    require ghost_AdapterSet_EventParam_adapter == 0, "AdapterSet adapter ghost starts at zero";
+
+    setAdapter@withrevert(e, protocolId, 0);
+    assert !lastReverted;
+    assert ghost_AdapterSet_EventCount == 1;
+    assert ghost_AdapterSet_EventParam_protocolId == protocolId;
+    assert ghost_AdapterSet_EventParam_adapter == 0;
+    assert getAdapter(protocolId) == 0;
+}
+
+rule setAdapter_Success_OverwritesPreviousAdapter() {
+    env e;
+    bytes32 protocolId;
+    address adapter;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "setAdapter is nonpayable";
+    require currentContract.hasRole(CONFIG_OPERATOR_ROLE(), e.msg.sender), "caller has CONFIG_OPERATOR_ROLE";
+    require protocolId != to_bytes32(0), "protocolId is nonzero";
+
+    /// @dev condition being verified
+    require getAdapter(protocolId) != adapter, "new adapter differs from current adapter";
+
+    setAdapter@withrevert(e, protocolId, adapter);
+    assert !lastReverted;
+    assert getAdapter(protocolId) == adapter;
+}
+
+rule setAdapter_Success_DoesNotAffectOtherProtocolId() {
+    env e;
+    bytes32 protocolId;
+    bytes32 otherProtocolId;
+    address adapter;
+    address previousOtherAdapter;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "setAdapter is nonpayable";
+    require currentContract.hasRole(CONFIG_OPERATOR_ROLE(), e.msg.sender), "caller has CONFIG_OPERATOR_ROLE";
+    require protocolId != to_bytes32(0), "protocolId is nonzero";
+    require otherProtocolId != to_bytes32(0), "other protocolId is nonzero";
+
+    /// @dev condition being verified
+    require protocolId != otherProtocolId, "protocolIds are distinct";
+
+    previousOtherAdapter = getAdapter(otherProtocolId);
+
+    setAdapter@withrevert(e, protocolId, adapter);
+
+    assert !lastReverted;
+    assert getAdapter(protocolId) == adapter;
+    assert getAdapter(otherProtocolId) == previousOtherAdapter;
 }

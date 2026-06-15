@@ -420,6 +420,6 @@ contract ChildVault is BaseVault, IChildVault {
         address activeAdapter = s_activeProtocolAdapter;
         if (activeAdapter == address(0)) return 0;
         tvl = IProtocolAdapter(activeAdapter).getTVL() + s_epochDepositRecovery.amount
-            + s_rebalanceDepositRecovery.amount;
+            + s_rebalanceDepositRecovery.amount + s_ccipSendRecovery.amount;
     }
 }

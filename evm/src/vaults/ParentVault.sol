@@ -134,6 +134,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @dev Precondition: Caller must have the DEFAULT_ADMIN_ROLE
     /// @dev Precondition: the initial active protocol adapter must not already be set
     /// @dev Precondition: the protocol ID must have a registered adapter
+    /// @dev Precondition: the registered adapter must be bound to this vault
     function setInitialActiveProtocolAdapter(bytes32 protocolId)
         external
         nonReentrant
@@ -143,13 +144,11 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
             revert ParentVault__InitialActiveProtocolAdapterAlreadySet();
         }
 
-        address adapter = IAdapterRegistry(i_adapterRegistry).getAdapter(protocolId);
-        if (adapter == address(0)) revert BaseVault__NoAdapterRegistered(protocolId);
+        address adapter = _setActiveAdapter(protocolId);
 
         s_initialActiveProtocolAdapterSet = true;
         s_rebalance.activeStrategy.protocolId = protocolId;
         s_rebalance.activeStrategy.chainSelector = i_thisChainSelector;
-        s_activeProtocolAdapter = adapter;
 
         emit InitialActiveProtocolAdapterSet(protocolId, adapter);
     }
@@ -422,6 +421,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @dev Precondition: the epoch period must have exceeded the MIN_EPOCH_PERIOD
     /// @dev Precondition: there must have been a deposit or withdraw intent submitted during the epoch
     /// @dev Precondition: local strategy interactions must be successful
+    /// @dev Precondition: the contract must not be paused
     /// @dev The previous-epoch guard prevents closing a later epoch while a prior
     ///      remote-withdraw epoch is still EXECUTING. This protects withdraw claimants:
     ///      if a child strategy withdraw fails, the owed USDC is not back on the Parent,
@@ -444,7 +444,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @dev Precondition: If deposits exist, aggregate minted shares must cover at least one share per minimum deposit amount.
     /// @notice If TVL goes to zero with shares outstanding, closeEpoch will revert.
     ///         A DONATE_OPERATOR_ROLE holder can call donate() to restore TVL; the next close will price shares against the donated amount.
-    function closeEpoch(uint256 tvl) external nonReentrant onlyRole(Roles.EPOCH_OPERATOR_ROLE) {
+    function closeEpoch(uint256 tvl) external nonReentrant whenNotPaused onlyRole(Roles.EPOCH_OPERATOR_ROLE) {
         if (s_rebalance.state != Types.RebalanceState.NONE) revert ParentVault__RebalanceInProgress();
 
         _requireNoRecovery();
@@ -604,6 +604,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @param newStrategy The new strategy to rebalance to
     /// @notice This is called by the WorkflowRouter
     /// @dev Precondition: the caller must have the REBALANCE_OPERATOR_ROLE
+    /// @dev Precondition: the contract must not be paused
     /// @dev Precondition: A rebalance must not already be in progress
     /// @dev Precondiiton: newStrategy must not be the same as the current active strategy
     /// @dev Precondition: An epoch must not be EXECUTING
@@ -613,6 +614,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     function initiateRebalance(Types.Strategy memory newStrategy)
         external
         nonReentrant
+        whenNotPaused
         onlyRole(Roles.REBALANCE_OPERATOR_ROLE)
     {
         // revert if rebalance is already in progress
@@ -665,7 +667,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
                 _finalizeRebalance();
             } else {
                 // ccip send to new strategy chain
-                s_activeProtocolAdapter = address(0);
+                _clearActiveAdapter();
                 _ccipSend(
                     amountOut,
                     newStrategy.chainSelector,
@@ -790,9 +792,18 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @param isSupported Whether a protocol is supported on any chain. True for supported, false for not
     /// @dev Precondition: caller must have CONFIG_OPERATOR_ROLE
     /// @dev Precondition: protocolId must not be zero
+    /// @dev Precondition: an unsupported protocol must not be the active or pending strategy protocol
     /// @dev Emits SupportedProtocolSet event
     function setSupportedProtocol(bytes32 protocolId, bool isSupported) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
         if (protocolId == bytes32(0)) revert ParentVault__NoZeroProtocolId();
+        if (!isSupported) {
+            if (protocolId == s_rebalance.activeStrategy.protocolId) {
+                revert ParentVault__CannotRemoveActiveProtocol(protocolId);
+            }
+            if (protocolId == s_rebalance.pendingStrategy.protocolId) {
+                revert ParentVault__CannotRemovePendingProtocol(protocolId);
+            }
+        }
         s_supportedProtocol[protocolId] = isSupported;
         emit SupportedProtocolSet(protocolId, isSupported);
     }

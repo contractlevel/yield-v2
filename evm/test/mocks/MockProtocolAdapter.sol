@@ -13,6 +13,7 @@ contract MockProtocolAdapter is IProtocolAdapter {
     bool internal s_useWithdrawReturnAmount;
     bool internal s_depositReverts;
     bool internal s_withdrawReverts;
+    address internal s_vault;
 
     function deposit(uint256 amount) external override {
         if (s_depositReverts) revert("MockProtocolAdapter: deposit reverted");
@@ -35,8 +36,8 @@ contract MockProtocolAdapter is IProtocolAdapter {
         return address(0);
     }
 
-    function getVault() external pure override returns (address) {
-        return address(0);
+    function getVault() external view override returns (address) {
+        return s_vault;
     }
 
     function getAsset() external pure override returns (address) {
@@ -63,6 +64,10 @@ contract MockProtocolAdapter is IProtocolAdapter {
 
     function setTVL(uint256 tvl) external {
         s_tvl = tvl;
+    }
+
+    function setVault(address vault) external {
+        s_vault = vault;
     }
 
     function getLastDepositAmount() external view returns (uint256) {

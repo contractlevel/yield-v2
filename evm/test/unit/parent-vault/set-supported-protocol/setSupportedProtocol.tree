@@ -3,6 +3,10 @@ setSupportedProtocol
   │   └── it should revert
   ├── when protocolId is zero
   │   └── it should revert with ParentVault__NoZeroProtocolId
+  ├── when removing support for the active strategy protocol
+  │   └── it should revert with ParentVault__CannotRemoveActiveProtocol
+  ├── when removing support for the pending strategy protocol
+  │   └── it should revert with ParentVault__CannotRemovePendingProtocol
   └── when the caller has the CONFIG_OPERATOR_ROLE
       ├── it should set a protocol as supported
       ├── it should set a protocol as unsupported

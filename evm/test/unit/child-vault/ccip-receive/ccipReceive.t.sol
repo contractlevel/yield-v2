@@ -16,6 +16,7 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
     uint256 internal constant BRIDGED_AMOUNT = 500 * 1e6;
 
     function setUp() public {
+        s_mockProtocolAdapter.setVault(address(s_childVault));
         _setChildCrosschainVault(PARENT_CHAIN_SELECTOR, address(s_parentVault));
         deal(address(s_mockUsdc), address(s_childVault), BRIDGED_AMOUNT);
         _changePrank(address(s_mockCcipRouter));

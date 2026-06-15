@@ -81,6 +81,7 @@ contract ChildVault_RecoverFailedRebalanceDepositUnitTest is BaseUnitTest {
                              HELPER UTILITY
     //////////////////////////////////////////////////////////////*/
     function _storeRebalanceDepositRecovery() internal {
+        s_mockProtocolAdapter.setVault(address(s_childVault));
         s_mockProtocolAdapter.setDepositReverts(true);
 
         _changePrank(address(s_mockCcipRouter));

@@ -19,6 +19,7 @@ contract ParentVault_SetInitialActiveProtocolAdapterUnitTest is BaseUnitTest {
             i_policyEngineManager,
             address(s_mockPolicyEngine)
         );
+        s_mockProtocolAdapter.setVault(address(s_uninitializedParentVault));
     }
 
     function test_ParentVault_setInitialActiveProtocolAdapter_RevertWhen_CallerDoesNotHaveDEFAULT_ADMIN_ROLE()
@@ -34,6 +35,20 @@ contract ParentVault_SetInitialActiveProtocolAdapterUnitTest is BaseUnitTest {
 
         vm.expectRevert(abi.encodeWithSelector(IBaseVault.BaseVault__NoAdapterRegistered.selector, unknownProtocolId));
         s_uninitializedParentVault.setInitialActiveProtocolAdapter(unknownProtocolId);
+    }
+
+    function test_ParentVault_setInitialActiveProtocolAdapter_RevertWhen_AdapterBoundToDifferentVault() external {
+        s_mockProtocolAdapter.setVault(address(s_parentVault));
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IBaseVault.BaseVault__InvalidAdapterVault.selector,
+                address(s_mockProtocolAdapter),
+                address(s_parentVault),
+                address(s_uninitializedParentVault)
+            )
+        );
+        s_uninitializedParentVault.setInitialActiveProtocolAdapter(AAVE_V3_PROTOCOL_ID);
     }
 
     function test_ParentVault_setInitialActiveProtocolAdapter_RevertWhen_AlreadySet() external {
@@ -60,6 +75,18 @@ contract ParentVault_SetInitialActiveProtocolAdapterUnitTest is BaseUnitTest {
 
         Vm.Log memory log = _assertEmittedBy(
             keccak256("InitialActiveProtocolAdapterSet(bytes32,address)"), address(s_uninitializedParentVault)
+        );
+        assertEq(log.topics[1], AAVE_V3_PROTOCOL_ID);
+        assertEq(address(uint160(uint256(log.topics[2]))), address(s_mockProtocolAdapter));
+    }
+
+    function test_ParentVault_setInitialActiveProtocolAdapter_Success_EmitsActiveProtocolAdapterSetEvent() external {
+        vm.recordLogs();
+
+        s_uninitializedParentVault.setInitialActiveProtocolAdapter(AAVE_V3_PROTOCOL_ID);
+
+        Vm.Log memory log = _assertEmittedBy(
+            keccak256("ActiveProtocolAdapterSet(bytes32,address)"), address(s_uninitializedParentVault)
         );
         assertEq(log.topics[1], AAVE_V3_PROTOCOL_ID);
         assertEq(address(uint160(uint256(log.topics[2]))), address(s_mockProtocolAdapter));

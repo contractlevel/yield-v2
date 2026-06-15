@@ -15,6 +15,7 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
 
     function setUp() public {
         s_newMockProtocolAdapter = new MockProtocolAdapter();
+        s_newMockProtocolAdapter.setVault(address(s_childVault));
 
         _registerAdapter(AAVE_V4_PROTOCOL_ID, address(s_newMockProtocolAdapter));
         _setChildActiveAdapter(address(s_mockProtocolAdapter));
@@ -79,6 +80,16 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
         assertEq(uint256(log.topics[2]), REBALANCE_AMOUNT);
     }
 
+    function test_ChildVault_executeRebalance_SameChild_EmitsActiveProtocolAdapterSet() public {
+        vm.recordLogs();
+        _executeSameChildRebalance();
+
+        Vm.Log memory log =
+            _assertEmittedBy(keccak256("ActiveProtocolAdapterSet(bytes32,address)"), address(s_childVault));
+        assertEq(bytes32(log.topics[1]), AAVE_V4_PROTOCOL_ID);
+        assertEq(address(uint160(uint256(log.topics[2]))), address(s_newMockProtocolAdapter));
+    }
+
     function test_ChildVault_executeRebalance_RemoteChild_WithdrawsFromAdapter() public {
         _executeRemoteChildRebalance();
 
@@ -123,6 +134,14 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
         _executeRemoteChildRebalance();
 
         assertEq(s_childVault.getActiveProtocolAdapter(), address(0));
+    }
+
+    function test_ChildVault_executeRebalance_RemoteChild_EmitsActiveProtocolAdapterCleared() public {
+        vm.recordLogs();
+        _executeRemoteChildRebalance();
+
+        Vm.Log memory log = _assertEmittedBy(keccak256("ActiveProtocolAdapterCleared(address)"), address(s_childVault));
+        assertEq(address(uint160(uint256(log.topics[1]))), address(s_mockProtocolAdapter));
     }
 
     function test_ChildVault_executeRebalance_WhenWithdrawAdapterReverts_EmitsFailureWithoutBridging() public {

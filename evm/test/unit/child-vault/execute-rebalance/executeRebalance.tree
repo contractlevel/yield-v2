@@ -18,6 +18,7 @@ ChildVault_executeRebalance
   ├── when rebalance is to the same child
   │   ├── when the target protocol adapter is not registered
   │   │   └── it should revert with BaseVault__NoAdapterRegistered
+  │   ├── it should emit ActiveProtocolAdapterSet
   │   ├── when target deposit adapter reverts
   │   │   ├── it should emit RebalanceDepositFailure
   │   │   ├── it should store rebalance deposit recovery
@@ -26,5 +27,6 @@ ChildVault_executeRebalance
   └── when rebalance is to a remote child
       ├── it should withdraw from the active adapter
       ├── it should bridge to the target child
+      ├── it should emit ActiveProtocolAdapterCleared
       └── when ccipSend reverts
           └── it should store CCIP send recovery

@@ -43,6 +43,11 @@ interface IBaseVault is IPauseable {
     /// @dev Thrown when the adapter is not registered
     /// @param protocolId The ID of the protocol
     error BaseVault__NoAdapterRegistered(bytes32 protocolId);
+    /// @dev Thrown when a registered adapter is bound to a different vault
+    /// @param adapter The registered adapter address
+    /// @param actualVault The vault address reported by the adapter
+    /// @param expectedVault The vault address expected by this vault
+    error BaseVault__InvalidAdapterVault(address adapter, address actualVault, address expectedVault);
 
     /// @dev Thrown when the sender is not the crosschain vault
     /// @param sender The address of the sender
@@ -100,6 +105,13 @@ interface IBaseVault is IPauseable {
     /// @notice Emitted when a rebalance withdraw from the old strategy fails
     /// @param rebalanceNonce The nonce of the rebalance
     event RebalanceWithdrawFailure(uint256 indexed rebalanceNonce);
+    /// @notice Emitted when the active protocol adapter is set
+    /// @param protocolId The protocol ID of the active strategy
+    /// @param adapter The active protocol adapter
+    event ActiveProtocolAdapterSet(bytes32 indexed protocolId, address indexed adapter);
+    /// @notice Emitted when the active protocol adapter is cleared
+    /// @param adapter The previously active protocol adapter
+    event ActiveProtocolAdapterCleared(address indexed adapter);
 
     /// @notice Emitted when a CCIP transfer is sent to a destination chain
     /// @param ccipMessageId The ID of the CCIP message

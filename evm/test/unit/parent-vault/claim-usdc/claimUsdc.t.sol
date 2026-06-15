@@ -202,6 +202,7 @@ contract ParentVault_ClaimAssetUnitTest is BaseUnitTest {
         s_parentVault = new ParentVault(
             params, i_treasury, address(s_yieldcoin), i_policyEngineManager, address(s_mockPolicyEngine)
         );
+        s_mockProtocolAdapter.setVault(address(s_parentVault));
         s_parentVault.setInitialActiveProtocolAdapter(AAVE_V3_PROTOCOL_ID);
         s_parentVault.grantRole(Roles.EPOCH_OPERATOR_ROLE, i_epochOperator);
     }

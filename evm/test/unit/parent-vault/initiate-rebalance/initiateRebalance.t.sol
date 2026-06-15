@@ -16,6 +16,7 @@ contract ParentVault_InitiateRebalanceUnitTest is BaseUnitTest {
 
     function setUp() public {
         s_newMockProtocolAdapter = new MockProtocolAdapter();
+        s_newMockProtocolAdapter.setVault(address(s_parentVault));
 
         _registerAdapter(AAVE_V4_PROTOCOL_ID, address(s_newMockProtocolAdapter));
         deal(address(s_mockUsdc), address(s_parentVault), REBALANCE_AMOUNT);
@@ -28,6 +29,15 @@ contract ParentVault_InitiateRebalanceUnitTest is BaseUnitTest {
     function test_ParentVault_initiateRebalance_RevertWhen_CallerDoesNotHaveREBALANCE_OPERATOR_ROLE() public {
         _changePrank(i_nonOwner);
         vm.expectRevert();
+        s_parentVault.initiateRebalance(_localStrategy(AAVE_V4_PROTOCOL_ID));
+    }
+
+    function test_ParentVault_initiateRebalance_RevertWhen_Paused() public {
+        _changePrank(i_pauser);
+        s_parentVault.pause();
+
+        _changePrank(i_rebalanceOperator);
+        vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
         s_parentVault.initiateRebalance(_localStrategy(AAVE_V4_PROTOCOL_ID));
     }
 
@@ -156,6 +166,16 @@ contract ParentVault_InitiateRebalanceUnitTest is BaseUnitTest {
         assertEq(uint256(log.topics[2]), REBALANCE_AMOUNT);
     }
 
+    function test_ParentVault_initiateRebalance_LocalToLocal_EmitsActiveProtocolAdapterSet() public {
+        vm.recordLogs();
+        _initiateLocalToLocal();
+
+        Vm.Log memory log =
+            _assertEmittedBy(keccak256("ActiveProtocolAdapterSet(bytes32,address)"), address(s_parentVault));
+        assertEq(bytes32(log.topics[1]), AAVE_V4_PROTOCOL_ID);
+        assertEq(address(uint160(uint256(log.topics[2]))), address(s_newMockProtocolAdapter));
+    }
+
     function test_ParentVault_initiateRebalance_LocalToLocal_FinalizesRebalance() public {
         _initiateLocalToLocal();
 
@@ -205,6 +225,16 @@ contract ParentVault_InitiateRebalanceUnitTest is BaseUnitTest {
         _initiateLocalToChild();
 
         assertEq(s_parentVault.getActiveProtocolAdapter(), address(0));
+    }
+
+    function test_ParentVault_initiateRebalance_LocalToChild_EmitsActiveProtocolAdapterCleared() public {
+        _setParentCrosschainVault(CHILD_CHAIN_SELECTOR, address(s_childVault));
+
+        vm.recordLogs();
+        _initiateLocalToChild();
+
+        Vm.Log memory log = _assertEmittedBy(keccak256("ActiveProtocolAdapterCleared(address)"), address(s_parentVault));
+        assertEq(address(uint160(uint256(log.topics[1]))), address(s_mockProtocolAdapter));
     }
 
     function test_ParentVault_initiateRebalance_LocalToChild_LeavesRebalancePending() public {

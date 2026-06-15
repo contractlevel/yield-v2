@@ -31,6 +31,16 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         s_parentVault.closeEpoch(0);
     }
 
+    function test_ParentVault_closeEpoch_RevertWhen_Paused() public {
+        _changePrank(i_pauser);
+        s_parentVault.pause();
+
+        _changePrank(i_epochOperator);
+        _warpPastMinEpoch();
+        vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
+        s_parentVault.closeEpoch(0);
+    }
+
     function test_ParentVault_closeEpoch_RevertWhen_RebalanceInProgress() public {
         _setParentRebalanceState(Types.RebalanceState.REBALANCING);
 

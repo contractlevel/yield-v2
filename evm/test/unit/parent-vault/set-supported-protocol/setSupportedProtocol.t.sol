@@ -39,9 +39,25 @@ contract ParentVault_SetSupportedProtocolUnitTest is BaseUnitTest {
     }
 
     function test_ParentVault_setSupportedProtocol_Success_SetsSupportedFalse() external {
-        s_parentVault.setSupportedProtocol(AAVE_V3_PROTOCOL_ID, false);
+        s_parentVault.setSupportedProtocol(COMPOUND_V3_PROTOCOL_ID, false);
 
-        assertFalse(s_parentVault.getSupportedProtocol(AAVE_V3_PROTOCOL_ID));
+        assertFalse(s_parentVault.getSupportedProtocol(COMPOUND_V3_PROTOCOL_ID));
+    }
+
+    function test_ParentVault_setSupportedProtocol_RevertWhen_RemovingActiveProtocol() external {
+        vm.expectRevert(
+            abi.encodeWithSelector(IParentVault.ParentVault__CannotRemoveActiveProtocol.selector, AAVE_V3_PROTOCOL_ID)
+        );
+        s_parentVault.setSupportedProtocol(AAVE_V3_PROTOCOL_ID, false);
+    }
+
+    function test_ParentVault_setSupportedProtocol_RevertWhen_RemovingPendingProtocol() external {
+        _setParentPendingRebalance(AAVE_V4_PROTOCOL_ID, CHILD_CHAIN_SELECTOR);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IParentVault.ParentVault__CannotRemovePendingProtocol.selector, AAVE_V4_PROTOCOL_ID)
+        );
+        s_parentVault.setSupportedProtocol(AAVE_V4_PROTOCOL_ID, false);
     }
 
     function test_ParentVault_setSupportedProtocol_Success_EmitsSupportedProtocolSet() external {

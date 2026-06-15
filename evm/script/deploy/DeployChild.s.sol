@@ -80,16 +80,14 @@ contract DeployChild is Script {
 
         bytes32 aaveV3ProtocolId = keccak256("aave-v3");
         if (networkConfig.protocols.aaveV3PoolAddressesProvider != address(0)) {
-            deploy.aaveV3Adapter = new AaveV3Adapter(
-                address(deploy.childVault), networkConfig.protocols.aaveV3PoolAddressesProvider
-            );
+            deploy.aaveV3Adapter =
+                new AaveV3Adapter(address(deploy.childVault), networkConfig.protocols.aaveV3PoolAddressesProvider);
             deploy.adapterRegistry.setAdapter(aaveV3ProtocolId, address(deploy.aaveV3Adapter));
         }
 
         bytes32 aaveV4ProtocolId = keccak256("aave-v4");
         if (networkConfig.protocols.aaveV4Spoke != address(0)) {
-            deploy.aaveV4Adapter =
-                new AaveV4Adapter(address(deploy.childVault), networkConfig.protocols.aaveV4Spoke);
+            deploy.aaveV4Adapter = new AaveV4Adapter(address(deploy.childVault), networkConfig.protocols.aaveV4Spoke);
             deploy.adapterRegistry.setAdapter(aaveV4ProtocolId, address(deploy.aaveV4Adapter));
         }
 

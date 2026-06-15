@@ -380,7 +380,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
                 emit RebalanceDepositFailure(rebalanceNonce, tvlToRebalance);
             }
         } else {
-            s_activeProtocolAdapter = address(0);
+            _clearActiveAdapter();
             _ccipSend(
                 tvlToRebalance,
                 newStrategy.chainSelector,
@@ -393,14 +393,29 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @notice Sets the active strategy protocol adapter
     /// @param protocolId The protocol ID of the strategy
     /// @return adapter The address of the active strategy protocol adapter
+    /// @dev Precondition: the protocol ID must have a registered adapter
+    /// @dev Precondition: the registered adapter must be bound to this vault
     function _setActiveAdapter(bytes32 protocolId) internal returns (address adapter) {
         adapter = IAdapterRegistry(i_adapterRegistry).getAdapter(protocolId);
         if (adapter == address(0)) revert BaseVault__NoAdapterRegistered(protocolId);
+        address adapterVault = IProtocolAdapter(adapter).getVault();
+        if (adapterVault != address(this)) {
+            revert BaseVault__InvalidAdapterVault(adapter, adapterVault, address(this));
+        }
         s_activeProtocolAdapter = adapter;
+        emit ActiveProtocolAdapterSet(protocolId, adapter);
+    }
+
+    /// @notice Clears the active strategy protocol adapter for this chain
+    /// @dev Precondition: this chain is no longer the active strategy chain
+    function _clearActiveAdapter() internal {
+        address adapter = s_activeProtocolAdapter;
+        s_activeProtocolAdapter = address(0);
+        emit ActiveProtocolAdapterCleared(adapter);
     }
 
     /*//////////////////////////////////////////////////////////////
-                                RECOVERY
+                               RECOVERY
     //////////////////////////////////////////////////////////////*/
     /// @notice Recovery function for storing a failed rebalance deposit
     /// @notice This is called when a rebalance attempts to deposit into a new strategy and fails

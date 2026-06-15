@@ -72,6 +72,12 @@ interface IParentVault is IBaseVault {
     /// @dev Thrown when initiateRebalance is called with an unsupported protocol ID
     /// @param protocolId The unsupported protocol ID
     error ParentVault__InvalidProtocolId(bytes32 protocolId);
+    /// @dev Thrown when attempting to remove support for the active strategy protocol
+    /// @param protocolId The active protocol ID
+    error ParentVault__CannotRemoveActiveProtocol(bytes32 protocolId);
+    /// @dev Thrown when attempting to remove support for the pending strategy protocol
+    /// @param protocolId The pending protocol ID
+    error ParentVault__CannotRemovePendingProtocol(bytes32 protocolId);
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS

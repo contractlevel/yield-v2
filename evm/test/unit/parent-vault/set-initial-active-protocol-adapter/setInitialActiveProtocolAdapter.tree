@@ -3,6 +3,8 @@ setInitialActiveProtocolAdapter
   │   └── it should revert
   ├── when no adapter is registered for the protocol ID
   │   └── it should revert with BaseVault__NoAdapterRegistered
+  ├── when the registered adapter is bound to a different vault
+  │   └── it should revert with BaseVault__InvalidAdapterVault
   ├── when the initial active protocol adapter has already been set
   │   └── it should revert with ParentVault__InitialActiveProtocolAdapterAlreadySet
   └── when the caller has DEFAULT_ADMIN_ROLE and the adapter is registered
@@ -10,4 +12,5 @@ setInitialActiveProtocolAdapter
       ├── it should set the active protocol adapter
       ├── it should set the active strategy protocol ID
       ├── it should set the active strategy chain selector
-      └── it should emit an InitialActiveProtocolAdapterSet event
+      ├── it should emit an InitialActiveProtocolAdapterSet event
+      └── it should emit an ActiveProtocolAdapterSet event

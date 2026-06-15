@@ -15,6 +15,7 @@ contract ChildVault_RecoverFailedRebalanceWithdrawUnitTest is BaseUnitTest {
 
     function setUp() public {
         s_newMockProtocolAdapter = new MockProtocolAdapter();
+        s_newMockProtocolAdapter.setVault(address(s_childVault));
 
         _registerAdapter(AAVE_V4_PROTOCOL_ID, address(s_newMockProtocolAdapter));
         _setChildActiveAdapter(address(s_mockProtocolAdapter));

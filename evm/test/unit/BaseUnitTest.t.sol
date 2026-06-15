@@ -60,6 +60,7 @@ abstract contract BaseUnitTest is BaseTest {
         s_parentVault = new ParentVault(
             params, i_treasury, address(s_yieldcoin), i_policyEngineManager, address(s_mockPolicyEngine)
         );
+        s_mockProtocolAdapter.setVault(address(s_parentVault));
         _changePrank(i_configOperator);
         s_parentVault.setSupportedProtocol(AAVE_V3_PROTOCOL_ID, true);
         s_parentVault.setSupportedProtocol(AAVE_V4_PROTOCOL_ID, true);
