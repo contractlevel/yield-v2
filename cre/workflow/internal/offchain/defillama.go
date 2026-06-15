@@ -181,7 +181,10 @@ func parsePools(r io.Reader, cfg Config, activeProtocolId [32]byte, activeChainN
 		if err != nil {
 			return fetchResult{}, fmt.Errorf("read top-level key: %w", err)
 		}
-		key := t.(string)
+		key, ok := t.(string)
+		if !ok {
+			return fetchResult{}, fmt.Errorf("expected top-level object key")
+		}
 
 		if !strings.EqualFold(key, "data") {
 			if err := skipJSONValue(decoder); err != nil {
