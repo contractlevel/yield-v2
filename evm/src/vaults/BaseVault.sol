@@ -503,8 +503,8 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @notice If the vault has the TVL, it will be withdrawn from the strategy and transferred to the emergency receiver
     function emergencyDrain(bool revertOnFailure)
         external
-        onlyRole(Roles.EMERGENCY_DRAINER_ROLE)
         nonReentrant
+        onlyRole(Roles.EMERGENCY_DRAINER_ROLE)
         whenPaused
     {
         //slither-disable-next-line timestamp

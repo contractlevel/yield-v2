@@ -35,6 +35,15 @@ contract AaveV4Adapter_WithdrawUnitTest is BaseAaveV4AdapterUnitTest {
         adapter.withdraw(type(uint256).max);
     }
 
+    function test_AaveV4Adapter_withdraw_RevertWhen_EpochWithdrawAmountExceedsTVL() external {
+        s_mockAaveV4Spoke.setUserSuppliedAssets(
+            s_aaveV4Adapter.getReserveId(), address(s_aaveV4Adapter), WITHDRAW_AMOUNT
+        );
+
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__WithdrawAmountExceedsTotalValue.selector);
+        s_aaveV4Adapter.withdraw(TVL);
+    }
+
     function test_AaveV4Adapter_withdraw_Success_RebalanceWithdraw() external {
         s_mockAaveV4Spoke.setUserSuppliedAssets(s_aaveV4Adapter.getReserveId(), address(s_aaveV4Adapter), TVL);
         deal(address(s_mockUsdc), address(s_mockAaveV4Spoke), TVL);
@@ -50,6 +59,7 @@ contract AaveV4Adapter_WithdrawUnitTest is BaseAaveV4AdapterUnitTest {
     }
 
     function test_AaveV4Adapter_withdraw_RevertWhen_EpochWithdrawAmountIsLessThanRequested() external {
+        s_mockAaveV4Spoke.setUserSuppliedAssets(s_aaveV4Adapter.getReserveId(), address(s_aaveV4Adapter), TVL);
         deal(address(s_mockUsdc), address(s_mockAaveV4Spoke), INSUFFICIENT_AMOUNT);
         s_mockAaveV4Spoke.setWithdrawReturn(INSUFFICIENT_AMOUNT);
 
@@ -58,6 +68,9 @@ contract AaveV4Adapter_WithdrawUnitTest is BaseAaveV4AdapterUnitTest {
     }
 
     function test_AaveV4Adapter_withdraw_Success_EpochWithdraw() external {
+        s_mockAaveV4Spoke.setUserSuppliedAssets(
+            s_aaveV4Adapter.getReserveId(), address(s_aaveV4Adapter), WITHDRAW_AMOUNT
+        );
         deal(address(s_mockUsdc), address(s_mockAaveV4Spoke), WITHDRAW_AMOUNT);
         s_mockAaveV4Spoke.setWithdrawReturn(WITHDRAW_AMOUNT);
 
@@ -71,6 +84,7 @@ contract AaveV4Adapter_WithdrawUnitTest is BaseAaveV4AdapterUnitTest {
     }
 
     function test_AaveV4Adapter_withdraw_Success_EpochWithdraw_WhenAmountIsGreaterThanRequested() external {
+        s_mockAaveV4Spoke.setUserSuppliedAssets(s_aaveV4Adapter.getReserveId(), address(s_aaveV4Adapter), TVL);
         deal(address(s_mockUsdc), address(s_mockAaveV4Spoke), EXCESS_AMOUNT);
         s_mockAaveV4Spoke.setWithdrawReturn(EXCESS_AMOUNT);
 

@@ -23,8 +23,6 @@ contract CompoundV3Adapter is ProtocolAdapter {
     //////////////////////////////////////////////////////////////*/
     /// @dev Thrown when the actual withdrawn amount is less than the amount requested
     error CompoundV3Adapter__IncorrectWithdrawAmount();
-    /// @dev Thrown when the `amount` for an epoch withdraw exceeds the TVL
-    error CompoundV3Adapter__WithdrawAmountExceedsTotalValue();
     /// @dev Thrown when zero address passed as param
     error CompoundV3Adapter__NoZeroAddress();
     /// @dev Thrown when the caller does not have REWARDS_OPERATOR_ROLE on the vault
@@ -91,7 +89,7 @@ contract CompoundV3Adapter is ProtocolAdapter {
         /// @dev Scenario 1: Epoch Withdraw - when the amount is a specific amount
         if (amount != type(uint256).max) {
             /// @dev accidental borrow prevention
-            if (amount > tvl) revert CompoundV3Adapter__WithdrawAmountExceedsTotalValue();
+            _revertIfEpochWithdrawAmountExceedsTVL(amount, tvl);
 
             IComet(i_comet).withdraw(i_asset, amount);
 

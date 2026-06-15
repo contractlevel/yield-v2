@@ -3,7 +3,6 @@ pragma solidity 0.8.28;
 
 import {BaseVault} from "./BaseVault.sol";
 import {IParentVault} from "../interfaces/IParentVault.sol";
-import {IAdapterRegistry} from "../interfaces/IAdapterRegistry.sol";
 import {IShare} from "../interfaces/IShare.sol";
 import {Types} from "../libraries/Types.sol";
 import {Roles} from "../libraries/Roles.sol";

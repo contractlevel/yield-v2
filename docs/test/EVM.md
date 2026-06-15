@@ -94,4 +94,8 @@ certoraRun ./certora/conf/modules/AdapterRegistry.conf
 certoraRun ./certora/conf/modules/adapters/AaveV3Adapter.ProtocolAdapter.conf
 certoraRun ./certora/conf/modules/adapters/AaveV4Adapter.ProtocolAdapter.conf
 certoraRun ./certora/conf/modules/adapters/CompoundV3Adapter.ProtocolAdapter.conf
+
+certoraRun ./certora/conf/modules/adapters/AaveV3Adapter.conf
+certoraRun ./certora/conf/modules/adapters/AaveV4Adapter.conf
+certoraRun ./certora/conf/modules/adapters/CompoundV3Adapter.conf
 ```

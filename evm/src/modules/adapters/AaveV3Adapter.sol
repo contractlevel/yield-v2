@@ -68,6 +68,8 @@ contract AaveV3Adapter is ProtocolAdapter {
 
         /// @dev Scenario 1: Epoch Withdraw - when the amount is a specific amount
         if (amount != type(uint256).max) {
+            _revertIfEpochWithdrawAmountExceedsTVL(amount, _getTVL(pool));
+
             actualWithdrawnAmount = IPool(pool).withdraw(i_asset, amount, address(this));
             /// @dev Precondition: the actual withdrawn amount must not be less than the requested amount
             if (actualWithdrawnAmount < amount) revert AaveV3Adapter__IncorrectWithdrawAmount();

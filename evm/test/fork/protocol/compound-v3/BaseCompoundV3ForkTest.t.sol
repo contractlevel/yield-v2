@@ -37,7 +37,7 @@ abstract contract BaseCompoundV3ForkTest is BaseForkTest {
     {
         _changePrank(vault);
 
-        vm.expectRevert(CompoundV3Adapter.CompoundV3Adapter__WithdrawAmountExceedsTotalValue.selector);
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__WithdrawAmountExceedsTotalValue.selector);
         adapter.withdraw(WITHDRAW_AMOUNT);
     }
 

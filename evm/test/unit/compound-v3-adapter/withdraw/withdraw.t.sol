@@ -27,7 +27,7 @@ contract CompoundV3Adapter_WithdrawUnitTest is BaseCompoundV3AdapterUnitTest {
     function test_CompoundV3Adapter_withdraw_RevertWhen_EpochWithdrawAmountExceedsTVL() external {
         s_mockComet.setBalance(address(s_compoundV3Adapter), WITHDRAW_AMOUNT);
 
-        vm.expectRevert(CompoundV3Adapter.CompoundV3Adapter__WithdrawAmountExceedsTotalValue.selector);
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__WithdrawAmountExceedsTotalValue.selector);
         s_compoundV3Adapter.withdraw(TVL);
     }
 

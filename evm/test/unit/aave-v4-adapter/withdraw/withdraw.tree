@@ -8,6 +8,8 @@ AaveV4Adapter_withdraw
   │       ├── it should emit a Withdraw event
   │       └── it should transfer USDC to the vault
   └── when performing an epoch withdraw
+      ├── when the amount exceeds the TVL
+      │   └── it should revert
       ├── when the actual withdrawn amount is less than the requested amount
       │   └── it should revert
       └── when the actual withdrawn amount is gte the requested amount

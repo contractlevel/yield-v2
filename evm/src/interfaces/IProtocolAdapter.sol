@@ -12,6 +12,8 @@ interface IProtocolAdapter {
     error ProtocolAdapter__OnlyVault();
     /// @dev Thrown when the zero address is provided
     error ProtocolAdapter__NoZeroAddress();
+    /// @dev Thrown when an epoch withdraw amount exceeds the adapter TVL
+    error ProtocolAdapter__WithdrawAmountExceedsTotalValue();
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS

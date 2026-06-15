@@ -35,6 +35,13 @@ abstract contract ProtocolAdapter is IProtocolAdapter, ReentrancyGuard {
         if (value == address(0)) revert ProtocolAdapter__NoZeroAddress();
     }
 
+    /// @notice Reverts when an epoch withdraw amount exceeds adapter TVL
+    /// @param amount The epoch withdraw amount
+    /// @param tvl The adapter TVL before withdrawing
+    function _revertIfEpochWithdrawAmountExceedsTVL(uint256 amount, uint256 tvl) internal pure {
+        if (amount > tvl) revert ProtocolAdapter__WithdrawAmountExceedsTotalValue();
+    }
+
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
     //////////////////////////////////////////////////////////////*/

@@ -37,6 +37,13 @@ contract AaveV3Adapter_WithdrawUnitTest is BaseAaveV3AdapterUnitTest {
         adapter.withdraw(type(uint256).max);
     }
 
+    function test_AaveV3Adapter_withdraw_RevertWhen_EpochWithdrawAmountExceedsTVL() external {
+        s_mockAToken.mint(address(s_aaveV3Adapter), WITHDRAW_AMOUNT);
+
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__WithdrawAmountExceedsTotalValue.selector);
+        s_aaveV3Adapter.withdraw(TVL);
+    }
+
     function test_AaveV3Adapter_withdraw_Success_RebalanceWithdraw() external {
         deal(address(s_mockAToken), address(s_aaveV3Adapter), TVL);
         deal(address(s_mockUsdc), address(s_mockAaveV3Pool), TVL);
@@ -52,7 +59,7 @@ contract AaveV3Adapter_WithdrawUnitTest is BaseAaveV3AdapterUnitTest {
     }
 
     function test_AaveV3Adapter_withdraw_RevertWhen_EpochWithdrawAmountIsLessThanRequested() external {
-        s_mockAToken.mint(address(s_aaveV3Adapter), INSUFFICIENT_AMOUNT);
+        s_mockAToken.mint(address(s_aaveV3Adapter), TVL);
         deal(address(s_mockUsdc), address(s_mockAaveV3Pool), INSUFFICIENT_AMOUNT);
         s_mockAaveV3Pool.setWithdrawReturn(INSUFFICIENT_AMOUNT);
 
