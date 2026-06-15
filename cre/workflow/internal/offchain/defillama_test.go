@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const testRelayURL = "https://yield-v2-defillama-relay.contractlevel.workers.dev/v1/defillama/pools"
 const (
 	ethereumAaveV3PoolID     = "aa70268e-4b52-42bf-a116-608b370f9501"
 	ethereumCompoundV3PoolID = "7da72d09-56ca-4ec5-a45f-59114353e487"
@@ -33,7 +32,6 @@ func (f fakeDefiLlamaRequester) SendRequest(req *crehttp.Request) cre.Promise[*c
 
 func testConfig() Config {
 	return Config{
-		RelayURL: testRelayURL,
 		Chains: []ChainConfig{
 			{ChainSelector: 1, DefiLlamaChainName: "Ethereum"},
 			{ChainSelector: 2, DefiLlamaChainName: "Arbitrum"},
@@ -169,7 +167,7 @@ func Test_ParsePools_errors(t *testing.T) {
 
 func Test_FetchAndParse_sendsRelayAuthHeader(t *testing.T) {
 	requester := fakeDefiLlamaRequester{send: func(req *crehttp.Request) (*crehttp.Response, error) {
-		require.Equal(t, testRelayURL, req.Url, "unexpected URL")
+		require.Equal(t, defiLlamaRelayURL, req.Url, "unexpected URL")
 		require.Equal(t, "GET", req.Method, "unexpected method")
 		require.Equal(t, "application/json", req.Headers["Accept"], "unexpected accept header")
 		require.Equal(t, "Bearer test-token", req.Headers["Authorization"], "unexpected auth header")

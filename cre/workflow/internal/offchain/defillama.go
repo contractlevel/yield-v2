@@ -23,6 +23,7 @@ var (
 )
 
 const (
+	defiLlamaRelayURL               = "https://yield-v2-defillama-relay.contractlevel.workers.dev/v1/defillama/pools"
 	defiLlamaRelayBearerTokenSecret = "DEFILLAMA_RELAY_BEARER_TOKEN"
 	defiLlamaRequestTimeout         = 10 * time.Second
 	defiLlamaMaxResponseBytes       = 100 << 10
@@ -31,9 +32,8 @@ const (
 	maxPoolAPY                      = 1000.0
 )
 
-// Config contains the workflow's DefiLlama relay endpoint and selection policy.
+// Config contains the workflow's DefiLlama selection policy.
 type Config struct {
-	RelayURL string
 	PoolIDs  []string
 	Chains   []ChainConfig
 	Projects []string
@@ -122,7 +122,7 @@ func fetchAndParse(params fetchParams, _ *slog.Logger, sendRequester *crehttp.Se
 
 func fetchAndParseWithRequester(params fetchParams, requester defiLlamaRequester) (fetchResult, error) {
 	req := &crehttp.Request{
-		Url:    params.Config.RelayURL,
+		Url:    defiLlamaRelayURL,
 		Method: "GET",
 		Headers: map[string]string{
 			"Accept":        "application/json",

@@ -30,7 +30,6 @@ func validEvmConfig(overrides ...func(*EvmConfig)) EvmConfig {
 
 func validDefiLlamaConfig() DefiLlama {
 	return DefiLlama{
-		RelayURL: "https://yield-v2-defillama-relay.contractlevel.workers.dev/v1/defillama/pools",
 		PoolIDs:  []string{"aa70268e-4b52-42bf-a116-608b370f9501", "d9c395b9-00d0-4426-a6b3-572a6dd68e54"},
 		Projects: []string{"aave-v3", "compound-v3"},
 		Symbols:  []string{"USDC"},
@@ -258,7 +257,7 @@ func Test_ValidateConfig_multipleParents(t *testing.T) {
 
 func Test_ValidateConfig_emptyDefiLlamaPoolIDs(t *testing.T) {
 	cfg := &Config{
-		DefiLlama: DefiLlama{RelayURL: "https://relay.example/v1/defillama/pools", Projects: []string{"aave-v3"}, Symbols: []string{"USDC"}},
+		DefiLlama: DefiLlama{Projects: []string{"aave-v3"}, Symbols: []string{"USDC"}},
 		Evms:      []EvmConfig{validEvmConfig()},
 	}
 
@@ -269,7 +268,7 @@ func Test_ValidateConfig_emptyDefiLlamaPoolIDs(t *testing.T) {
 
 func Test_ValidateConfig_emptyDefiLlamaPoolIDValue(t *testing.T) {
 	cfg := &Config{
-		DefiLlama: DefiLlama{RelayURL: "https://relay.example/v1/defillama/pools", PoolIDs: []string{""}, Projects: []string{"aave-v3"}, Symbols: []string{"USDC"}},
+		DefiLlama: DefiLlama{PoolIDs: []string{""}, Projects: []string{"aave-v3"}, Symbols: []string{"USDC"}},
 		Evms:      []EvmConfig{validEvmConfig()},
 	}
 
@@ -280,7 +279,7 @@ func Test_ValidateConfig_emptyDefiLlamaPoolIDValue(t *testing.T) {
 
 func Test_ValidateConfig_duplicateDefiLlamaPoolIDDifferentCase(t *testing.T) {
 	cfg := &Config{
-		DefiLlama: DefiLlama{RelayURL: "https://relay.example/v1/defillama/pools", PoolIDs: []string{"pool-a", "POOL-A"}, Projects: []string{"aave-v3"}, Symbols: []string{"USDC"}},
+		DefiLlama: DefiLlama{PoolIDs: []string{"pool-a", "POOL-A"}, Projects: []string{"aave-v3"}, Symbols: []string{"USDC"}},
 		Evms:      []EvmConfig{validEvmConfig()},
 	}
 
@@ -291,7 +290,7 @@ func Test_ValidateConfig_duplicateDefiLlamaPoolIDDifferentCase(t *testing.T) {
 
 func Test_ValidateConfig_emptyDefiLlamaProjects(t *testing.T) {
 	cfg := &Config{
-		DefiLlama: DefiLlama{RelayURL: "https://relay.example/v1/defillama/pools", PoolIDs: []string{"pool-a"}, Symbols: []string{"USDC"}},
+		DefiLlama: DefiLlama{PoolIDs: []string{"pool-a"}, Symbols: []string{"USDC"}},
 		Evms:      []EvmConfig{validEvmConfig()},
 	}
 
@@ -302,7 +301,7 @@ func Test_ValidateConfig_emptyDefiLlamaProjects(t *testing.T) {
 
 func Test_ValidateConfig_emptyDefiLlamaProjectValue(t *testing.T) {
 	cfg := &Config{
-		DefiLlama: DefiLlama{RelayURL: "https://relay.example/v1/defillama/pools", PoolIDs: []string{"pool-a"}, Projects: []string{""}, Symbols: []string{"USDC"}},
+		DefiLlama: DefiLlama{PoolIDs: []string{"pool-a"}, Projects: []string{""}, Symbols: []string{"USDC"}},
 		Evms:      []EvmConfig{validEvmConfig()},
 	}
 
@@ -313,7 +312,7 @@ func Test_ValidateConfig_emptyDefiLlamaProjectValue(t *testing.T) {
 
 func Test_ValidateConfig_whitespaceDefiLlamaProjectValue(t *testing.T) {
 	cfg := &Config{
-		DefiLlama: DefiLlama{RelayURL: "https://relay.example/v1/defillama/pools", PoolIDs: []string{"pool-a"}, Projects: []string{" "}, Symbols: []string{"USDC"}},
+		DefiLlama: DefiLlama{PoolIDs: []string{"pool-a"}, Projects: []string{" "}, Symbols: []string{"USDC"}},
 		Evms:      []EvmConfig{validEvmConfig()},
 	}
 
@@ -324,7 +323,7 @@ func Test_ValidateConfig_whitespaceDefiLlamaProjectValue(t *testing.T) {
 
 func Test_ValidateConfig_duplicateDefiLlamaProject(t *testing.T) {
 	cfg := &Config{
-		DefiLlama: DefiLlama{RelayURL: "https://relay.example/v1/defillama/pools", PoolIDs: []string{"pool-a"}, Projects: []string{"aave-v3", "aave-v3"}, Symbols: []string{"USDC"}},
+		DefiLlama: DefiLlama{PoolIDs: []string{"pool-a"}, Projects: []string{"aave-v3", "aave-v3"}, Symbols: []string{"USDC"}},
 		Evms:      []EvmConfig{validEvmConfig()},
 	}
 
@@ -335,7 +334,7 @@ func Test_ValidateConfig_duplicateDefiLlamaProject(t *testing.T) {
 
 func Test_ValidateConfig_duplicateDefiLlamaProjectDifferentCase(t *testing.T) {
 	cfg := &Config{
-		DefiLlama: DefiLlama{RelayURL: "https://relay.example/v1/defillama/pools", PoolIDs: []string{"pool-a"}, Projects: []string{"aave-v3", "AAVE-V3"}, Symbols: []string{"USDC"}},
+		DefiLlama: DefiLlama{PoolIDs: []string{"pool-a"}, Projects: []string{"aave-v3", "AAVE-V3"}, Symbols: []string{"USDC"}},
 		Evms:      []EvmConfig{validEvmConfig()},
 	}
 
@@ -346,7 +345,7 @@ func Test_ValidateConfig_duplicateDefiLlamaProjectDifferentCase(t *testing.T) {
 
 func Test_ValidateConfig_emptyDefiLlamaSymbols(t *testing.T) {
 	cfg := &Config{
-		DefiLlama: DefiLlama{RelayURL: "https://relay.example/v1/defillama/pools", PoolIDs: []string{"pool-a"}, Projects: []string{"aave-v3"}},
+		DefiLlama: DefiLlama{PoolIDs: []string{"pool-a"}, Projects: []string{"aave-v3"}},
 		Evms:      []EvmConfig{validEvmConfig()},
 	}
 
@@ -357,7 +356,7 @@ func Test_ValidateConfig_emptyDefiLlamaSymbols(t *testing.T) {
 
 func Test_ValidateConfig_emptyDefiLlamaSymbolValue(t *testing.T) {
 	cfg := &Config{
-		DefiLlama: DefiLlama{RelayURL: "https://relay.example/v1/defillama/pools", PoolIDs: []string{"pool-a"}, Projects: []string{"aave-v3"}, Symbols: []string{""}},
+		DefiLlama: DefiLlama{PoolIDs: []string{"pool-a"}, Projects: []string{"aave-v3"}, Symbols: []string{""}},
 		Evms:      []EvmConfig{validEvmConfig()},
 	}
 
@@ -368,7 +367,7 @@ func Test_ValidateConfig_emptyDefiLlamaSymbolValue(t *testing.T) {
 
 func Test_ValidateConfig_whitespaceDefiLlamaSymbolValue(t *testing.T) {
 	cfg := &Config{
-		DefiLlama: DefiLlama{RelayURL: "https://relay.example/v1/defillama/pools", PoolIDs: []string{"pool-a"}, Projects: []string{"aave-v3"}, Symbols: []string{" "}},
+		DefiLlama: DefiLlama{PoolIDs: []string{"pool-a"}, Projects: []string{"aave-v3"}, Symbols: []string{" "}},
 		Evms:      []EvmConfig{validEvmConfig()},
 	}
 
@@ -379,7 +378,7 @@ func Test_ValidateConfig_whitespaceDefiLlamaSymbolValue(t *testing.T) {
 
 func Test_ValidateConfig_duplicateDefiLlamaSymbol(t *testing.T) {
 	cfg := &Config{
-		DefiLlama: DefiLlama{RelayURL: "https://relay.example/v1/defillama/pools", PoolIDs: []string{"pool-a"}, Projects: []string{"aave-v3"}, Symbols: []string{"USDC", "USDC"}},
+		DefiLlama: DefiLlama{PoolIDs: []string{"pool-a"}, Projects: []string{"aave-v3"}, Symbols: []string{"USDC", "USDC"}},
 		Evms:      []EvmConfig{validEvmConfig()},
 	}
 
@@ -390,7 +389,7 @@ func Test_ValidateConfig_duplicateDefiLlamaSymbol(t *testing.T) {
 
 func Test_ValidateConfig_duplicateDefiLlamaSymbolDifferentCase(t *testing.T) {
 	cfg := &Config{
-		DefiLlama: DefiLlama{RelayURL: "https://relay.example/v1/defillama/pools", PoolIDs: []string{"pool-a"}, Projects: []string{"aave-v3"}, Symbols: []string{"USDC", "usdc"}},
+		DefiLlama: DefiLlama{PoolIDs: []string{"pool-a"}, Projects: []string{"aave-v3"}, Symbols: []string{"USDC", "usdc"}},
 		Evms:      []EvmConfig{validEvmConfig()},
 	}
 

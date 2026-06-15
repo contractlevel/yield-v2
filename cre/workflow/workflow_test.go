@@ -37,7 +37,6 @@ func workflowTestConfig(evms ...helper.EvmConfig) *Config {
 		EpochSchedule:     "0 30 * * * *",
 		BlockNumber:       -2,
 		DefiLlama: helper.DefiLlama{
-			RelayURL: "https://relay.example/v1/defillama/pools",
 			PoolIDs:  []string{"aa70268e-4b52-42bf-a116-608b370f9501", "d9c395b9-00d0-4426-a6b3-572a6dd68e54"},
 			Projects: []string{"aave-v3", "compound-v3"},
 			Symbols:  []string{"USDC"},

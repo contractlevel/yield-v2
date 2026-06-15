@@ -1,7 +1,6 @@
 {
   "blockNumber": -3,
   "defiLlama": {
-    "relayUrl": "https://yield-v2-defillama-relay.contractlevel.workers.dev/v1/defillama/pools",
     "poolIds": [
       "aa70268e-4b52-42bf-a116-608b370f9501",
       "7da72d09-56ca-4ec5-a45f-59114353e487",
