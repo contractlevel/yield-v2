@@ -13,6 +13,14 @@ contract HelperHarness {
         return uint256(b);
     }
 
+    function bytes32ToBytes4(bytes32 b) external pure returns (bytes4) {
+        return bytes4(b);
+    }
+
+    function bytes32ToBool(bytes32 b) external pure returns (bool) {
+        return uint256(b) != 0;
+    }
+
     /*//////////////////////////////////////////////////////////////
                                  ROLES
     //////////////////////////////////////////////////////////////*/

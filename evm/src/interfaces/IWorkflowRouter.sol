@@ -32,5 +32,5 @@ interface IWorkflowRouter is IReceiver, IPauseable {
     /// @dev Emitted when the workflow metadata is set
     event WorkflowMetadataSet(bytes32 indexed workflowId, bytes10 indexed name, address indexed owner);
     /// @dev Emitted when the workflow selector is set
-    event WorkflowSelectorSet(bytes32 indexed workflowId, bytes4 indexed selector, bool isAllowlisted);
+    event WorkflowSelectorSet(bytes32 indexed workflowId, bytes4 indexed selector, bool indexed isAllowlisted);
 }
