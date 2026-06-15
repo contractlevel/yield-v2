@@ -1,3 +1,5 @@
+using MockUSDC as asset;
+
 /// Verification of ProtocolAdapter
 /// @author @contractlevel
 /// @notice ProtocolAdapter is the base contract for all protocol adapters - 
@@ -14,6 +16,9 @@ methods {
     function getProtocolPool() external returns (address) envfree;
     function getVault() external returns (address) envfree;
     function getAsset() external returns (address) envfree;
+
+    // External methods
+    function asset.balanceOf(address) external returns (uint256) envfree;
 
     // Wildcard dispatcher summaries
     function _.getAsset() external => DISPATCHER(true);
@@ -77,19 +82,16 @@ hook LOG2(uint offset, uint length, bytes32 t0, bytes32 t1) {
 }
 
 /*//////////////////////////////////////////////////////////////
-                           INVARIANTS
-//////////////////////////////////////////////////////////////*/
-invariant noZeroAsset()
-    currentContract.i_asset != 0;
-    /// @dev verifying currentContract.i_vault is trivial
-    // currentContract.i_asset != 0 && currentContract.i_vault != 0;
-
-invariant assetConsistency(env e)
-    currentContract.i_asset == currentContract.i_vault.getAsset(e);
-
-/*//////////////////////////////////////////////////////////////
                              RULES
 //////////////////////////////////////////////////////////////*/
+rule noZero() {
+    assert currentContract.i_asset != 0 && currentContract.i_vault != 0;
+}
+
+rule assetConsistency(env e) {
+    assert currentContract.i_asset == currentContract.i_vault.getAsset(e);
+}
+
 rule deposit_RevertWhen_CallerIsNotVault() {
     env e;
     uint256 amount;
@@ -193,6 +195,7 @@ rule withdraw_Epoch_RevertWhen_AmountExceedsTVL() {
     assert ghost_Withdraw_EventCount == 0;
 }
 
+
 rule withdraw_Epoch_Success_ReturnsAtLeastAmountAndEmitsWithdrawEvent() {
     env e;
     uint256 amount;
@@ -265,4 +268,25 @@ rule withdraw_Rebalance_Success_ReturnsAtLeastPreWithdrawTVLAndEmitsWithdrawEven
     assert amountOut >= preTVL;
     assert ghost_Withdraw_EventCount == 1;
     assert ghost_Withdraw_EventParam_amount == amountOut;
+}
+
+rule withdraw_Success_IncreasesVaultBalances() {
+    env e;
+    uint256 preTVL = getTVL();
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "withdraw is nonpayable";
+    require e.msg.sender == getVault(), "caller is vault";
+    require currentContract._status == 1, "withdraw is nonReentrant";
+    require preTVL > 0, "should not be 0";
+    require asset.balanceOf(e, currentContract) <= max_uint256 - preTVL, "adapter asset balance can receive withdraw";
+
+    uint256 vaultBalanceBefore = asset.balanceOf(getVault());
+    require vaultBalanceBefore + preTVL <= max_uint256, "no overflow";
+
+    uint256 amountOut = withdraw@withrevert(e, max_uint256);
+
+    assert !lastReverted;
+
+    assert asset.balanceOf(getVault()) == vaultBalanceBefore + amountOut;
 }

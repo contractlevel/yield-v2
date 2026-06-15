@@ -2,5 +2,13 @@
 pragma solidity 0.8.28;
 
 contract MockCometRewards {
-    function claimTo(address, address, address, bool) external {}
+    address internal s_lastTo;
+
+    function claimTo(address, address, address to, bool) external {
+        s_lastTo = to;
+    }
+
+    function lastTo() external view returns (address) {
+        return s_lastTo;
+    }
 }

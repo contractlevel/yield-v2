@@ -113,7 +113,7 @@ contract AaveV4Adapter is ProtocolAdapter {
         uint256 reserveCount = aaveV4Spoke.getReserveCount();
         bool found;
 
-        for (uint256 i = 0; i < reserveCount; ++i) {
+        for (uint256 i; i < reserveCount; ++i) {
             if (aaveV4Spoke.getReserve(i).underlying != underlying) continue;
             if (found) revert AaveV4Adapter__DuplicateReserveFound();
 
