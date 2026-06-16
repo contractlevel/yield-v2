@@ -12,6 +12,10 @@ methods {
     function getWorkflowMetadata(bytes32) external returns (WorkflowRouter.WorkflowMetadata) envfree;
 
     // Harness helper methods
+    function buildMetadata(bytes32, bytes10, address) external returns (bytes) envfree;
+    function buildReport(bytes4) external returns (bytes) envfree;
+    function buildShortReport(bytes3) external returns (bytes) envfree;
+    function certoraVaultCallSucceedsSelector() external returns (bytes4) envfree;
     function bytes32ToAddress(bytes32) external returns (address) envfree;
     function bytes32ToBytes4(bytes32) external returns (bytes4) envfree;
     function bytes32ToBytes10(bytes32) external returns (bytes10) envfree;
@@ -19,6 +23,7 @@ methods {
 
     // Roles
     function CONFIG_OPERATOR_ROLE() external returns (bytes32) envfree;
+    function KEYSTONE_FORWARDER_ROLE() external returns (bytes32) envfree;
     function PAUSER_ROLE() external returns (bytes32) envfree;
     function UNPAUSER_ROLE() external returns (bytes32) envfree;
 }
@@ -77,10 +82,55 @@ ghost bool ghost_WorkflowSelectorSet_EventParam_isAllowlisted {
     init_state axiom ghost_WorkflowSelectorSet_EventParam_isAllowlisted == false;
 }
 
+/// @notice StoreCount: track stores to s_workflowMetadata owner field
+ghost mathint ghost_WorkflowMetadata_Owner_StoreCount {
+    init_state axiom ghost_WorkflowMetadata_Owner_StoreCount == 0;
+}
+
+/// @notice StoreCount: track stores to s_workflowMetadata name field
+ghost mathint ghost_WorkflowMetadata_Name_StoreCount {
+    init_state axiom ghost_WorkflowMetadata_Name_StoreCount == 0;
+}
+
+/// @notice StoredValue: track last workflowId stored in s_workflowMetadata
+ghost bytes32 ghost_WorkflowMetadata_Stored_WorkflowId {
+    init_state axiom ghost_WorkflowMetadata_Stored_WorkflowId == to_bytes32(0);
+}
+
+/// @notice StoredValue: track last owner stored in s_workflowMetadata
+ghost address ghost_WorkflowMetadata_Stored_Owner {
+    init_state axiom ghost_WorkflowMetadata_Stored_Owner == 0;
+}
+
+/// @notice StoredValue: track last name stored in s_workflowMetadata
+ghost bytes10 ghost_WorkflowMetadata_Stored_Name {
+    init_state axiom ghost_WorkflowMetadata_Stored_Name == to_bytes10(0);
+}
+
+/// @notice StoreCount: track stores to s_workflowSelectors
+ghost mathint ghost_WorkflowSelector_Store_Count {
+    init_state axiom ghost_WorkflowSelector_Store_Count == 0;
+}
+
+/// @notice StoredValue: track last workflowId stored in s_workflowSelectors
+ghost bytes32 ghost_WorkflowSelector_Stored_WorkflowId {
+    init_state axiom ghost_WorkflowSelector_Stored_WorkflowId == to_bytes32(0);
+}
+
+/// @notice StoredValue: track last selector stored in s_workflowSelectors
+ghost bytes4 ghost_WorkflowSelector_Stored_Selector {
+    init_state axiom ghost_WorkflowSelector_Stored_Selector == to_bytes4(0);
+}
+
+/// @notice StoredValue: track last isAllowlisted stored in s_workflowSelectors
+ghost bool ghost_WorkflowSelector_Stored_IsAllowlisted {
+    init_state axiom ghost_WorkflowSelector_Stored_IsAllowlisted == false;
+}
+
 /*//////////////////////////////////////////////////////////////
                              HOOKS
 //////////////////////////////////////////////////////////////*/
-/// @notice hook onto emitted events and increment relevant ghosts
+// hook onto emitted events and increment relevant ghosts
 hook LOG4(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2, bytes32 t3) {
     if (t0 == WorkflowMetadataSetEvent()) {
         ghost_WorkflowMetadataSet_EventCount = ghost_WorkflowMetadataSet_EventCount + 1;
@@ -96,6 +146,34 @@ hook LOG4(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2, bytes32 
         ghost_WorkflowSelectorSet_EventParam_isAllowlisted = bytes32ToBool(t3);
     }
 }
+
+/// @notice hook onto s_workflowMetadata owner storage writes
+hook Sstore s_workflowMetadata[KEY bytes32 workflowId].owner address newValue (address oldValue) {
+    ghost_WorkflowMetadata_Owner_StoreCount = ghost_WorkflowMetadata_Owner_StoreCount + 1;
+    ghost_WorkflowMetadata_Stored_WorkflowId = workflowId;
+    ghost_WorkflowMetadata_Stored_Owner = newValue;
+}
+
+/// @notice hook onto s_workflowMetadata name storage writes
+hook Sstore s_workflowMetadata[KEY bytes32 workflowId].name bytes10 newValue (bytes10 oldValue) {
+    ghost_WorkflowMetadata_Name_StoreCount = ghost_WorkflowMetadata_Name_StoreCount + 1;
+    ghost_WorkflowMetadata_Stored_WorkflowId = workflowId;
+    ghost_WorkflowMetadata_Stored_Name = newValue;
+}
+
+/// @notice hook onto s_workflowSelectors storage writes
+hook Sstore s_workflowSelectors[KEY bytes32 workflowId][KEY bytes4 selector] bool newValue (bool oldValue) {
+    ghost_WorkflowSelector_Store_Count = ghost_WorkflowSelector_Store_Count + 1;
+    ghost_WorkflowSelector_Stored_WorkflowId = workflowId;
+    ghost_WorkflowSelector_Stored_Selector = selector;
+    ghost_WorkflowSelector_Stored_IsAllowlisted = newValue;
+}
+
+/*//////////////////////////////////////////////////////////////
+                           INVARIANTS
+//////////////////////////////////////////////////////////////*/
+invariant noZeroVault()
+    currentContract.i_vault != 0;
 
 /*//////////////////////////////////////////////////////////////
                              RULES
@@ -160,6 +238,10 @@ rule setWorkflowSelectors_Success() {
     require ghost_WorkflowSelectorSet_EventParam_workflowId == to_bytes32(0), "ghost param starts at 0";
     require ghost_WorkflowSelectorSet_EventParam_selector == to_bytes4(0), "ghost param starts at 0";
     require ghost_WorkflowSelectorSet_EventParam_isAllowlisted == false, "ghost param starts at false";
+    require ghost_WorkflowSelector_Store_Count == 0, "selector store count starts at 0";
+    require ghost_WorkflowSelector_Stored_WorkflowId == to_bytes32(0), "selector stored workflowId starts at 0";
+    require ghost_WorkflowSelector_Stored_Selector == to_bytes4(0), "selector stored selector starts at 0";
+    require ghost_WorkflowSelector_Stored_IsAllowlisted == false, "selector stored isAllowlisted starts at false";
 
     setWorkflowSelectors@withrevert(e, workflowId, selectors, isAllowlisted);
     assert !lastReverted;
@@ -167,6 +249,10 @@ rule setWorkflowSelectors_Success() {
     assert ghost_WorkflowSelectorSet_EventParam_workflowId == workflowId;
     assert ghost_WorkflowSelectorSet_EventParam_selector == s1;
     assert ghost_WorkflowSelectorSet_EventParam_isAllowlisted == isAllowlisted;
+    assert ghost_WorkflowSelector_Store_Count == 1;
+    assert ghost_WorkflowSelector_Stored_WorkflowId == workflowId;
+    assert ghost_WorkflowSelector_Stored_Selector == s1;
+    assert ghost_WorkflowSelector_Stored_IsAllowlisted == isAllowlisted;
     assert getAllowlistedWorkflowSelector(workflowId, s1) == isAllowlisted;
 }
 
@@ -272,7 +358,7 @@ rule setWorkflowMetadata_RevertWhen_MismatchedZeroMetadata() {
     require workflowId != to_bytes32(0), "no zero value";
 
     /// @dev revert condition being verified
-    require name != to_bytes10(0) && owner == 0 || name != to_bytes10(0) && owner == 0, "mismatched zero metadata";
+    require name != to_bytes10(0) && owner == 0 || name == to_bytes10(0) && owner != 0, "mismatched zero metadata";
 
     setWorkflowMetadata@withrevert(e, workflowId, name, owner);
     assert lastReverted;
@@ -295,6 +381,11 @@ rule setWorkflowMetadata_Success() {
     require ghost_WorkflowMetadataSet_EventParam_workflowId == to_bytes32(0), "WorkflowMetadataSet workflowId ghost starts at zero";
     require ghost_WorkflowMetadataSet_EventParam_name == to_bytes10(0), "WorkflowMetadataSet name ghost starts at zero";
     require ghost_WorkflowMetadataSet_EventParam_owner == 0, "WorkflowMetadataSet owner ghost starts at zero";
+    require ghost_WorkflowMetadata_Owner_StoreCount == 0, "metadata owner store count starts at zero";
+    require ghost_WorkflowMetadata_Name_StoreCount == 0, "metadata name store count starts at zero";
+    require ghost_WorkflowMetadata_Stored_WorkflowId == to_bytes32(0), "metadata stored workflowId starts at zero";
+    require ghost_WorkflowMetadata_Stored_Name == to_bytes10(0), "metadata stored name starts at zero";
+    require ghost_WorkflowMetadata_Stored_Owner == 0, "metadata stored owner starts at zero";
 
     setWorkflowMetadata@withrevert(e, workflowId, name, owner);
     assert !lastReverted;
@@ -302,7 +393,255 @@ rule setWorkflowMetadata_Success() {
     assert ghost_WorkflowMetadataSet_EventParam_workflowId == workflowId;
     assert ghost_WorkflowMetadataSet_EventParam_name == name;
     assert ghost_WorkflowMetadataSet_EventParam_owner == owner;
+    assert ghost_WorkflowMetadata_Owner_StoreCount == 1;
+    assert ghost_WorkflowMetadata_Name_StoreCount == 1;
+    assert ghost_WorkflowMetadata_Stored_WorkflowId == workflowId;
+    assert ghost_WorkflowMetadata_Stored_Name == name;
+    assert ghost_WorkflowMetadata_Stored_Owner == owner;
     WorkflowRouter.WorkflowMetadata metadata = getWorkflowMetadata(workflowId);
     assert metadata.owner == owner;
     assert metadata.name == name;
 }
+
+rule onReport_RevertWhen_Paused() {
+    env e;
+    bytes32 workflowId;
+    bytes10 workflowName;
+    address workflowOwner;
+    bytes4 selector = certoraVaultCallSucceedsSelector();
+    bytes metadata = buildMetadata(workflowId, workflowName, workflowOwner);
+    bytes report = buildReport(selector);
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require hasRole(KEYSTONE_FORWARDER_ROLE(), e.msg.sender), "only KEYSTONE_FORWARDER_ROLE can call";
+
+    /// @dev revert condition being verified
+    require currentContract._paused, "should be paused";
+
+    onReport@withrevert(e, metadata, report);
+    assert lastReverted;
+}
+
+rule onReport_RevertWhen_CallerDoesNotHaveKEYSTONE_FORWARDER_ROLE() {
+    env e;
+    bytes32 workflowId;
+    bytes10 workflowName;
+    address workflowOwner;
+    bytes4 selector = certoraVaultCallSucceedsSelector();
+    bytes metadata = buildMetadata(workflowId, workflowName, workflowOwner);
+    bytes report = buildReport(selector);
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !currentContract._paused, "should not be paused";
+
+    /// @dev revert condition being verified
+    require !hasRole(KEYSTONE_FORWARDER_ROLE(), e.msg.sender), "only KEYSTONE_FORWARDER_ROLE can call";
+
+    onReport@withrevert(e, metadata, report);
+    assert lastReverted;
+}
+
+rule onReport_RevertWhen_WorkflowIdIsZero() {
+    env e;
+    bytes32 workflowId;
+    bytes10 workflowName;
+    address workflowOwner;
+    bytes4 selector = certoraVaultCallSucceedsSelector();
+    bytes metadata = buildMetadata(workflowId, workflowName, workflowOwner);
+    bytes report = buildReport(selector);
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !currentContract._paused, "should not be paused";
+    require hasRole(KEYSTONE_FORWARDER_ROLE(), e.msg.sender), "only KEYSTONE_FORWARDER_ROLE can call";
+    require workflowName != to_bytes10(0), "workflowName should not be zero";
+    require workflowOwner != 0, "workflowOwner should not be zero";
+
+    /// @dev revert condition being verified
+    require workflowId == to_bytes32(0), "workflowId should be zero";
+
+    onReport@withrevert(e, metadata, report);
+    assert lastReverted;
+}
+
+rule onReport_RevertWhen_WorkflowNameIsZero() {
+    env e;
+    bytes32 workflowId;
+    bytes10 workflowName;
+    address workflowOwner;
+    bytes4 selector = certoraVaultCallSucceedsSelector();
+    bytes metadata = buildMetadata(workflowId, workflowName, workflowOwner);
+    bytes report = buildReport(selector);
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !currentContract._paused, "should not be paused";
+    require hasRole(KEYSTONE_FORWARDER_ROLE(), e.msg.sender), "only KEYSTONE_FORWARDER_ROLE can call";
+    require workflowId != to_bytes32(0), "workflowId should not be zero";
+    require workflowOwner != 0, "workflowOwner should not be zero";
+
+    /// @dev revert condition being verified
+    require workflowName == to_bytes10(0), "workflowName should be zero";
+
+    onReport@withrevert(e, metadata, report);
+    assert lastReverted;
+}
+
+rule onReport_RevertWhen_WorkflowOwnerIsZero() {
+    env e;
+    bytes32 workflowId;
+    bytes10 workflowName;
+    address workflowOwner;
+    bytes4 selector = certoraVaultCallSucceedsSelector();
+    bytes metadata = buildMetadata(workflowId, workflowName, workflowOwner);
+    bytes report = buildReport(selector);
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !currentContract._paused, "should not be paused";
+    require hasRole(KEYSTONE_FORWARDER_ROLE(), e.msg.sender), "only KEYSTONE_FORWARDER_ROLE can call";
+    require workflowId != to_bytes32(0), "workflowId should not be zero";
+    require workflowName != to_bytes10(0), "workflowName should not be zero";
+
+    /// @dev revert condition being verified
+    require workflowOwner == 0, "workflowOwner should be zero";
+
+    onReport@withrevert(e, metadata, report);
+    assert lastReverted;
+}
+
+rule onReport_RevertWhen_WorkflowMetadataDoesNotMatch() {
+    env e;
+    bytes32 workflowId;
+    bytes10 workflowName;
+    address workflowOwner;
+    bytes4 selector = certoraVaultCallSucceedsSelector();
+    bytes metadata = buildMetadata(workflowId, workflowName, workflowOwner);
+    bytes report = buildReport(selector);
+    WorkflowRouter.WorkflowMetadata registered = getWorkflowMetadata(workflowId);
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !currentContract._paused, "should not be paused";
+    require hasRole(KEYSTONE_FORWARDER_ROLE(), e.msg.sender), "only KEYSTONE_FORWARDER_ROLE can call";
+    require workflowId != to_bytes32(0), "workflowId should not be zero";
+    require workflowName != to_bytes10(0), "workflowName should not be zero";
+    require workflowOwner != 0, "workflowOwner should not be zero";
+
+    /// @dev revert condition being verified
+    require registered.name != workflowName || registered.owner != workflowOwner, "metadata should not match";
+
+    onReport@withrevert(e, metadata, report);
+    assert lastReverted;
+}
+
+rule onReport_RevertWhen_ReportIsTooShort() {
+    env e;
+    bytes32 workflowId;
+    bytes10 workflowName;
+    address workflowOwner;
+    bytes3 shortReport;
+    bytes metadata = buildMetadata(workflowId, workflowName, workflowOwner);
+    bytes report = buildShortReport(shortReport);
+    WorkflowRouter.WorkflowMetadata registered = getWorkflowMetadata(workflowId);
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !currentContract._paused, "should not be paused";
+    require hasRole(KEYSTONE_FORWARDER_ROLE(), e.msg.sender), "only KEYSTONE_FORWARDER_ROLE can call";
+    require workflowId != to_bytes32(0), "workflowId should not be zero";
+    require workflowName != to_bytes10(0), "workflowName should not be zero";
+    require workflowOwner != 0, "workflowOwner should not be zero";
+    require registered.name == workflowName, "metadata name should match";
+    require registered.owner == workflowOwner, "metadata owner should match";
+
+    /// @dev revert condition being verified
+    require report.length < 4, "report should be too short";
+
+    onReport@withrevert(e, metadata, report);
+    assert lastReverted;
+}
+
+rule onReport_RevertWhen_SelectorIsNotAllowlisted() {
+    env e;
+    bytes32 workflowId;
+    bytes10 workflowName;
+    address workflowOwner;
+    bytes4 selector = certoraVaultCallSucceedsSelector();
+    bytes metadata = buildMetadata(workflowId, workflowName, workflowOwner);
+    bytes report = buildReport(selector);
+    WorkflowRouter.WorkflowMetadata registered = getWorkflowMetadata(workflowId);
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !currentContract._paused, "should not be paused";
+    require hasRole(KEYSTONE_FORWARDER_ROLE(), e.msg.sender), "only KEYSTONE_FORWARDER_ROLE can call";
+    require workflowId != to_bytes32(0), "workflowId should not be zero";
+    require workflowName != to_bytes10(0), "workflowName should not be zero";
+    require workflowOwner != 0, "workflowOwner should not be zero";
+    require registered.name == workflowName, "metadata name should match";
+    require registered.owner == workflowOwner, "metadata owner should match";
+    require report.length >= 4, "report should not be too short";
+
+    /// @dev revert condition being verified
+    require !getAllowlistedWorkflowSelector(workflowId, selector), "selector should not be allowlisted";
+
+    onReport@withrevert(e, metadata, report);
+    assert lastReverted;
+}
+
+/// @notice low level i_vault.call auto havocs causing these two rules to fail. there is no path to resolving this without changing production code.
+// rule onReport_RevertWhen_CallFails() {
+//     env e;
+//     bytes32 workflowId;
+//     bytes10 workflowName;
+//     address workflowOwner;
+//     bytes4 selector = certoraVaultCallRevertsSelector();
+//     bytes metadata = buildMetadata(workflowId, workflowName, workflowOwner);
+//     bytes report = buildRevertingVaultReport();
+//     WorkflowRouter.WorkflowMetadata registered = getWorkflowMetadata(workflowId);
+
+//     /// @dev revert conditions NOT being verified
+//     require e.msg.value == 0, "non-payable";
+//     require !currentContract._paused, "should not be paused";
+//     require hasRole(KEYSTONE_FORWARDER_ROLE(), e.msg.sender), "only KEYSTONE_FORWARDER_ROLE can call";
+//     require workflowId != to_bytes32(0), "workflowId should not be zero";
+//     require workflowName != to_bytes10(0), "workflowName should not be zero";
+//     require workflowOwner != 0, "workflowOwner should not be zero";
+//     require registered.name == workflowName, "metadata name should match";
+//     require registered.owner == workflowOwner, "metadata owner should match";
+//     require report.length >= 4, "report should not be too short";
+//     require getAllowlistedWorkflowSelector(workflowId, selector), "selector should be allowlisted";
+
+//     /// @dev revert condition being verified
+//     onReport@withrevert(e, metadata, report);
+//     assert lastReverted;
+// }
+
+// rule onReport_Success() {
+//     env e;
+//     bytes32 workflowId;
+//     bytes10 workflowName;
+//     address workflowOwner;
+//     bytes4 selector = certoraVaultCallSucceedsSelector();
+//     bytes metadata = buildMetadata(workflowId, workflowName, workflowOwner);
+//     bytes report = buildSuccessfulVaultReport();
+//     WorkflowRouter.WorkflowMetadata registered = getWorkflowMetadata(workflowId);
+
+//     /// @dev revert conditions NOT being verified
+//     require e.msg.value == 0, "non-payable";
+//     require !currentContract._paused, "should not be paused";
+//     require hasRole(KEYSTONE_FORWARDER_ROLE(), e.msg.sender), "only KEYSTONE_FORWARDER_ROLE can call";
+//     require workflowId != to_bytes32(0), "workflowId should not be zero";
+//     require workflowName != to_bytes10(0), "workflowName should not be zero";
+//     require workflowOwner != 0, "workflowOwner should not be zero";
+//     require registered.name == workflowName, "metadata name should match";
+//     require registered.owner == workflowOwner, "metadata owner should match";
+//     require report.length >= 4, "report should not be too short";
+//     require getAllowlistedWorkflowSelector(workflowId, selector), "selector should be allowlisted";
+
+//     onReport@withrevert(e, metadata, report);
+//     assert !lastReverted;
+// }
