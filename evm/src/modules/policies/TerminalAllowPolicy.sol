@@ -22,14 +22,14 @@ contract TerminalAllowPolicy is Policy {
     ///      validation itself; validation belongs in earlier policies. Returning `Allowed` here
     ///      prevents successful `Continue`-only policy chains from falling through to the
     ///      PolicyEngine default rule.
-    /// @return The `Allowed` policy result.
+    /// @return allowed The `Allowed` policy result.
     function run(address, address, bytes4, bytes[] calldata parameters, bytes calldata)
         public
         pure
         override
-        returns (IPolicyEngine.PolicyResult)
+        returns (IPolicyEngine.PolicyResult allowed)
     {
         if (parameters.length != 0) revert InvalidParameters("expected 0 parameters");
-        return IPolicyEngine.PolicyResult.Allowed;
+        allowed = IPolicyEngine.PolicyResult.Allowed;
     }
 }
