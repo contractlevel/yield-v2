@@ -105,5 +105,6 @@ certoraRun ./certora/conf/modules/extractors/SenderExtractor.conf
 certoraRun ./certora/conf/modules/extractors/YieldcoinShareKycExtractor.conf
 
 certoraRun ./certora/conf/modules/policies/TerminalAllowPolicy.conf
+certoraRun ./certora/conf/modules/policies/CredentialRegistryAccountListValidatorPolicy.conf
 
 ```

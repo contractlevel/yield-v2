@@ -2,10 +2,11 @@
 pragma solidity 0.8.28;
 
 import {ComplianceTokenERC3643} from "@chainlink/tokens/erc-3643/src/ComplianceTokenERC3643.sol";
+import {HelperHarness} from "../../HelperHarness.sol";
 import {IPolicyEngine} from "@chainlink/policy-management/interfaces/IPolicyEngine.sol";
 import {YieldcoinShareKycExtractor} from "../../../../src/modules/extractors/YieldcoinShareKycExtractor.sol";
 
-contract YieldcoinShareKycExtractorHarness is YieldcoinShareKycExtractor {
+contract YieldcoinShareKycExtractorHarness is YieldcoinShareKycExtractor, HelperHarness {
     function decreaseAllowancePayload(address sender, address spender, uint256 amount)
         external
         pure
@@ -34,9 +35,5 @@ contract YieldcoinShareKycExtractorHarness is YieldcoinShareKycExtractor {
             || selector == ComplianceTokenERC3643.approve.selector
             || selector == ComplianceTokenERC3643.increaseAllowance.selector
             || selector == ComplianceTokenERC3643.decreaseAllowance.selector;
-    }
-
-    function bytesToAddressArray(bytes memory value) external pure returns (address[] memory accounts) {
-        accounts = abi.decode(value, (address[]));
     }
 }

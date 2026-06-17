@@ -25,6 +25,18 @@ contract HelperHarness {
         return uint256(b) != 0;
     }
 
+    function bytesToAddress(bytes memory value) external pure returns (address decoded) {
+        decoded = abi.decode(value, (address));
+    }
+
+    function bytesToAddressArray(bytes memory value) external pure returns (address[] memory decoded) {
+        decoded = abi.decode(value, (address[]));
+    }
+
+    function emptyParameters() external pure returns (bytes[] memory parameters) {
+        parameters = new bytes[](0);
+    }
+
     /*//////////////////////////////////////////////////////////////
                                  ROLES
     //////////////////////////////////////////////////////////////*/
