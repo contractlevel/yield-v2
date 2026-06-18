@@ -3,4 +3,5 @@ Avalanche Deployment Fork
 GIVEN the five-chain fork topology is deployed
   WHEN the active fork is Avalanche
     THEN the child deployment is configured with Avalanche mainnet addresses
+    AND the child vault is deployed as a UUPS proxy with the upgrader role granted
     AND the child vault trusts the Arbitrum parent vault

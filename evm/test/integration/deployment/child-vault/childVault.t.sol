@@ -25,6 +25,13 @@ contract ChildVault_DeploymentIntegrationTest is BaseIntegrationTest {
         assertEq(child.vault.getEmergencyReceiver(), networkConfig.emergencyReceiver);
         assertTrue(child.vault.hasRole(Roles.PAUSER_ROLE, networkConfig.roles.pauser));
         assertTrue(child.vault.hasRole(Roles.UNPAUSER_ROLE, networkConfig.roles.unpauser));
+        assertTrue(child.vault.hasRole(Roles.UPGRADER_ROLE, networkConfig.roles.upgrader));
+    }
+
+    function test_ChildVault_deployment_DeploysVaultAsProxy() external view {
+        assertGt(address(child.vaultImpl).code.length, 0);
+        assertGt(address(child.vault).code.length, 0);
+        assertNotEq(address(child.vaultImpl), address(child.vault));
     }
 
     function test_ChildVault_deployment_HandsOffVaultDefaultAdmin() external view {

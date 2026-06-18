@@ -23,6 +23,11 @@ abstract contract BaseForkDeploymentTest is BaseForkTest {
         assertTrue(parent.vault.hasRole(Roles.PAUSER_ROLE, arbitrumConfig.roles.pauser));
         assertTrue(parent.vault.hasRole(Roles.UNPAUSER_ROLE, arbitrumConfig.roles.unpauser));
         assertTrue(parent.vault.hasRole(Roles.POLICY_ENGINE_MANAGER_ROLE, arbitrumConfig.roles.policy.engineManager));
+        assertTrue(parent.vault.hasRole(Roles.UPGRADER_ROLE, arbitrumConfig.roles.upgrader));
+
+        assertGt(address(parent.vaultImpl).code.length, 0);
+        assertNotEq(address(parent.vaultImpl), address(parent.vault));
+        assertEq(parent.share.owner(), arbitrumConfig.roles.upgrader);
 
         assertEq(parent.vault.getAdapterRegistry(), address(parent.adapterRegistry));
         assertEq(parent.vault.getShare(), address(parent.share));
@@ -94,6 +99,10 @@ abstract contract BaseForkDeploymentTest is BaseForkTest {
         assertEq(forkChild.vault.getEmergencyReceiver(), config.emergencyReceiver);
         assertTrue(forkChild.vault.hasRole(Roles.PAUSER_ROLE, config.roles.pauser));
         assertTrue(forkChild.vault.hasRole(Roles.UNPAUSER_ROLE, config.roles.unpauser));
+        assertTrue(forkChild.vault.hasRole(Roles.UPGRADER_ROLE, config.roles.upgrader));
+
+        assertGt(address(forkChild.vaultImpl).code.length, 0);
+        assertNotEq(address(forkChild.vaultImpl), address(forkChild.vault));
 
         assertEq(forkChild.vault.getAdapterRegistry(), address(forkChild.adapterRegistry));
         assertEq(forkChild.vault.getAsset(), forkChild.asset);

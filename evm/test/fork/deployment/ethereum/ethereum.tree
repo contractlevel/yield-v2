@@ -3,4 +3,5 @@ Ethereum Deployment Fork
 GIVEN the five-chain fork topology is deployed
   WHEN the active fork is Ethereum
     THEN the child deployment is configured with Ethereum mainnet addresses
+    AND the child vault is deployed as a UUPS proxy with the upgrader role granted
     AND the child vault trusts the Arbitrum parent vault

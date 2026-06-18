@@ -1,6 +1,8 @@
 ChildVault_deployment
 ├── roles
 │   └── it should grant expected vault roles
+├── proxy
+│   └── it should deploy vault as separate implementation and proxy contracts
 ├── core addresses
 │   └── it should configure vault addresses from deployment config
 ├── CCIP config

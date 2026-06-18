@@ -1,6 +1,9 @@
 ParentVault_deployment
 ├── roles
 │   └── it should grant expected vault roles
+├── proxy
+│   ├── it should deploy vault as separate implementation and proxy contracts
+│   └── it should initialize share owner to the upgrader address
 ├── core addresses
 │   └── it should configure vault addresses from deployment config
 ├── adapters

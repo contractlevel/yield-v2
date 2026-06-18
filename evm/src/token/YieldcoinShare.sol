@@ -13,6 +13,8 @@ contract YieldcoinShare is ComplianceTokenERC3643, YieldcoinShareStore {
     //////////////////////////////////////////////////////////////*/
     /// @dev Thrown when the zero address is provided for required configuration
     error YieldcoinShare__NoZeroAddress();
+    /// @dev Thrown to permanently prevent renouncing ownership, which would irrecoverably disable UUPS upgrades
+    error YieldcoinShare__CannotRenounceOwnership();
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
@@ -75,5 +77,18 @@ contract YieldcoinShare is ComplianceTokenERC3643, YieldcoinShareStore {
     /// @return ccipAdmin The stored CCIP admin
     function getCCIPAdmin() public view override returns (address ccipAdmin) {
         ccipAdmin = getYieldcoinShareStorage().ccipAdmin;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                                OVERRIDE
+    //////////////////////////////////////////////////////////////*/
+    /// @dev Disabled: renouncing ownership would irrecoverably remove upgrade authority.
+    ///      Use transferOwnership to rotate the upgrader key instead.
+    ///
+    /// @dev WARNING: transferOwnership (inherited from OwnableUpgradeable) is a single-step transfer
+    ///      with no confirmation from the new owner. Sending to an incorrect or uncontrolled address
+    ///      permanently removes upgrade capability with no recovery path. Rotate keys with extreme care.
+    function renounceOwnership() public pure override {
+        revert YieldcoinShare__CannotRenounceOwnership();
     }
 }

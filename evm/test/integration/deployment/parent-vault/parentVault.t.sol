@@ -26,6 +26,13 @@ contract ParentVault_DeploymentIntegrationTest is BaseIntegrationTest {
         assertTrue(parent.vault.hasRole(Roles.PAUSER_ROLE, networkConfig.roles.pauser));
         assertTrue(parent.vault.hasRole(Roles.UNPAUSER_ROLE, networkConfig.roles.unpauser));
         assertTrue(parent.vault.hasRole(Roles.POLICY_ENGINE_MANAGER_ROLE, networkConfig.roles.policy.engineManager));
+        assertTrue(parent.vault.hasRole(Roles.UPGRADER_ROLE, networkConfig.roles.upgrader));
+    }
+
+    function test_ParentVault_deployment_DeploysVaultAsProxy() external view {
+        assertGt(address(parent.vaultImpl).code.length, 0);
+        assertGt(address(parent.vault).code.length, 0);
+        assertNotEq(address(parent.vaultImpl), address(parent.vault));
     }
 
     function test_ParentVault_deployment_HandsOffVaultDefaultAdmin() external view {
@@ -54,6 +61,7 @@ contract ParentVault_DeploymentIntegrationTest is BaseIntegrationTest {
         assertNotEq(address(parent.shareImpl), address(parent.share));
         assertEq(parent.share.getPolicyEngine(), address(parent.policyEngine));
         assertEq(parent.share.getCCIPAdmin(), networkConfig.roles.configOperator);
+        assertEq(parent.share.owner(), networkConfig.roles.upgrader);
     }
 
     function test_ParentVault_deployment_RegistersAdapters() external view {

@@ -9,6 +9,7 @@ import {ChildVault} from "../../../../src/vaults/ChildVault.sol";
 import {Roles} from "../../../../src/libraries/Roles.sol";
 
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 abstract contract BaseVault_UpgradeToAndCallUnitTest is BaseUnitTest {
@@ -16,11 +17,32 @@ abstract contract BaseVault_UpgradeToAndCallUnitTest is BaseUnitTest {
 
     function _getProxy() internal virtual returns (BaseVault);
 
+    function _callInitializeOnProxy(BaseVault proxy) internal virtual;
+
     function test_BaseVault_upgradeToAndCall_Success() external {
         address newImpl = _deployImplementation();
 
         _changePrank(i_upgrader);
         _getProxy().upgradeToAndCall(newImpl, "");
+    }
+
+    function test_BaseVault_upgradeToAndCall_Success_PreservesState() external {
+        BaseVault proxy = _getProxy();
+        address emergencyReceiverBefore = proxy.getEmergencyReceiver();
+        uint256 defaultCcipGasLimitBefore = proxy.getDefaultCcipGasLimit();
+        bool hasPauserRole = proxy.hasRole(Roles.PAUSER_ROLE, i_pauser);
+        bool hasUpgraderRole = proxy.hasRole(Roles.UPGRADER_ROLE, i_upgrader);
+        bool hasDefaultAdminRole = proxy.hasRole(Roles.DEFAULT_ADMIN_ROLE, i_owner);
+
+        address newImpl = _deployImplementation();
+        _changePrank(i_upgrader);
+        proxy.upgradeToAndCall(newImpl, "");
+
+        assertEq(proxy.getEmergencyReceiver(), emergencyReceiverBefore);
+        assertEq(proxy.getDefaultCcipGasLimit(), defaultCcipGasLimitBefore);
+        assertEq(proxy.hasRole(Roles.PAUSER_ROLE, i_pauser), hasPauserRole);
+        assertEq(proxy.hasRole(Roles.UPGRADER_ROLE, i_upgrader), hasUpgraderRole);
+        assertEq(proxy.hasRole(Roles.DEFAULT_ADMIN_ROLE, i_owner), hasDefaultAdminRole);
     }
 
     function test_BaseVault_upgradeToAndCall_RevertWhen_CallerDoesNotHaveUPGRADER_ROLE() external {
@@ -42,6 +64,15 @@ abstract contract BaseVault_UpgradeToAndCallUnitTest is BaseUnitTest {
         vm.expectRevert(UUPSUpgradeable.UUPSUnauthorizedCallContext.selector);
         BaseVault(payable(implementation)).upgradeToAndCall(newImpl, "");
     }
+
+    function test_BaseVault_upgradeToAndCall_RevertWhen_ReinitializeAfterUpgrade() external {
+        address newImpl = _deployImplementation();
+        _changePrank(i_upgrader);
+        _getProxy().upgradeToAndCall(newImpl, "");
+
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        _callInitializeOnProxy(_getProxy());
+    }
 }
 
 contract ParentVault_BaseVaultUpgradeToAndCallUnitTest is BaseVault_UpgradeToAndCallUnitTest {
@@ -49,8 +80,14 @@ contract ParentVault_BaseVaultUpgradeToAndCallUnitTest is BaseVault_UpgradeToAnd
         return address(new ParentVault(_baseVaultParams(PARENT_CHAIN_SELECTOR), address(s_yieldcoin)));
     }
 
-    function _getProxy() internal override returns (BaseVault) {
+    function _getProxy() internal view override returns (BaseVault) {
         return s_parentVault;
+    }
+
+    function _callInitializeOnProxy(BaseVault proxy) internal override {
+        ParentVault(address(proxy)).initialize(
+            _baseVaultInitParams(), i_treasury, i_policyEngineManager, address(s_mockPolicyEngine)
+        );
     }
 }
 
@@ -59,7 +96,11 @@ contract ChildVault_BaseVaultUpgradeToAndCallUnitTest is BaseVault_UpgradeToAndC
         return address(new ChildVault(_baseVaultParams(CHILD_CHAIN_SELECTOR), PARENT_CHAIN_SELECTOR));
     }
 
-    function _getProxy() internal override returns (BaseVault) {
+    function _getProxy() internal view override returns (BaseVault) {
         return s_childVault;
+    }
+
+    function _callInitializeOnProxy(BaseVault proxy) internal override {
+        ChildVault(address(proxy)).initialize(_baseVaultInitParams());
     }
 }

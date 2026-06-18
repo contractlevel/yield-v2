@@ -1,0 +1,5 @@
+YieldcoinShare_renounceOwnership
+  ├── when called by the owner
+  │   └── it should revert with YieldcoinShare__CannotRenounceOwnership
+  └── when called by a non-owner
+      └── it should revert with YieldcoinShare__CannotRenounceOwnership

@@ -1,7 +1,10 @@
 YieldcoinShare_upgradeToAndCall
   ├── when caller is the owner (upgrader)
-  │   └── it should succeed
+  │   ├── it should succeed
+  │   └── it should preserve state across the upgrade
   ├── when caller is not the owner
   │   └── it should revert with OwnableUnauthorizedAccount
-  └── when called on the implementation directly
-      └── it should revert with UUPSUnauthorizedCallContext
+  ├── when called on the implementation directly
+  │   └── it should revert with UUPSUnauthorizedCallContext
+  └── when re-initializing the proxy after upgrade
+      └── it should revert with InvalidInitialization
