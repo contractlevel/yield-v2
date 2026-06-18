@@ -1,0 +1,200 @@
+/// Verification of YieldcoinShare
+/// @author @contractlevel
+/// @notice YieldcoinShare is the compliance-ready ERC-3643 share token of Yieldcoin v2.
+
+/*//////////////////////////////////////////////////////////////
+                            METHODS
+//////////////////////////////////////////////////////////////*/
+methods {
+    // YieldcoinShare methods
+    function initialize(address, address, address) external;
+    function setCCIPAdmin(address) external;
+    function getCCIPAdmin() external returns (address) envfree;
+    function attachPolicyEngine(address) external;
+    function renounceOwnership() external;
+    function getPolicyEngine() external returns (address) envfree;
+
+    // Harness helper methods
+    function isInitialized() external returns (bool) envfree;
+    function isInitializing() external returns (bool) envfree;
+    function bytes32ToAddress(bytes32) external returns (address) envfree;
+
+    // ACE PolicyEngine calls in _attachPolicyEngine — not virtual, can't override in harness
+    function _.attach() external => DISPATCHER(true);
+    function _.detach() external => DISPATCHER(true);
+    function _.run(IPolicyEngine.Payload) external => DISPATCHER(true);
+}
+
+/*//////////////////////////////////////////////////////////////
+                          DEFINITIONS
+//////////////////////////////////////////////////////////////*/
+definition CCIPAdminTransferredEvent() returns bytes32 =
+// keccak256("CCIPAdminTransferred(address,address)")
+    to_bytes32(0x9524c9e4b0b61eb018dd58a1cd856e3e74009528328ab4a613b434fa631d7242);
+
+/*//////////////////////////////////////////////////////////////
+                             GHOSTS
+//////////////////////////////////////////////////////////////*/
+/// @notice EventCount: track amount CCIPAdminTransferred event is emitted
+ghost mathint ghost_CCIPAdminTransferred_EventCount {
+    init_state axiom ghost_CCIPAdminTransferred_EventCount == 0;
+}
+
+/// @notice EmittedValue: track previousAdmin param emitted in CCIPAdminTransferred event
+ghost address ghost_CCIPAdminTransferred_EventParam_previousAdmin {
+    init_state axiom ghost_CCIPAdminTransferred_EventParam_previousAdmin == 0;
+}
+
+/// @notice EmittedValue: track newAdmin param emitted in CCIPAdminTransferred event
+ghost address ghost_CCIPAdminTransferred_EventParam_newAdmin {
+    init_state axiom ghost_CCIPAdminTransferred_EventParam_newAdmin == 0;
+}
+
+/*//////////////////////////////////////////////////////////////
+                             HOOKS
+//////////////////////////////////////////////////////////////*/
+/// @notice CCIPAdminTransferred(address indexed previousAdmin, address indexed newAdmin) — LOG3
+hook LOG3(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2) {
+    if (t0 == CCIPAdminTransferredEvent()) {
+        ghost_CCIPAdminTransferred_EventCount = ghost_CCIPAdminTransferred_EventCount + 1;
+        ghost_CCIPAdminTransferred_EventParam_previousAdmin = bytes32ToAddress(t1);
+        ghost_CCIPAdminTransferred_EventParam_newAdmin = bytes32ToAddress(t2);
+    }
+}
+
+/*//////////////////////////////////////////////////////////////
+                             RULES
+//////////////////////////////////////////////////////////////*/
+rule renounceOwnership_AlwaysReverts() {
+    env e;
+
+    renounceOwnership@withrevert(e);
+    assert lastReverted;
+}
+
+rule initialize_RevertWhen_AlreadyInitialized() {
+    env e;
+    address policyEngine;
+    address ccipAdmin;
+    address upgrader;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require policyEngine != 0, "exclude policyEngine zero revert";
+    require upgrader != 0, "exclude upgrader zero revert";
+    require ccipAdmin != 0, "exclude ccipAdmin zero revert";
+
+    /// @dev revert condition being verified: OZ initializer modifier reverts when already initialized.
+    require isInitialized(), "contract is already initialized";
+
+    initialize@withrevert(e, policyEngine, ccipAdmin, upgrader);
+    assert lastReverted;
+}
+
+rule initialize_RevertWhen_UpgraderIsZero() {
+    env e;
+    address policyEngine;
+    address initialCcipAdmin;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require policyEngine != 0, "exclude policyEngine zero revert";
+    require initialCcipAdmin != 0, "exclude ccipAdmin zero revert";
+    require !isInitialized(), "contract is not yet initialized";
+    require !isInitializing(), "OZ _initializing is false so isTopLevelCall=true and the initializer modifier passes";
+
+    /// @dev revert condition being verified
+    initialize@withrevert(e, policyEngine, initialCcipAdmin, 0);
+    assert lastReverted;
+}
+
+rule initialize_RevertWhen_PolicyEngineIsZero() {
+    env e;
+    address initialCcipAdmin;
+    address upgrader;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require upgrader != 0, "exclude upgrader zero revert";
+    require initialCcipAdmin != 0, "exclude ccipAdmin zero revert";
+    require !isInitialized(), "contract is not yet initialized";
+    require !isInitializing(), "OZ _initializing is false so isTopLevelCall=true and the initializer modifier passes";
+
+    /// @dev revert condition being verified
+    initialize@withrevert(e, 0, initialCcipAdmin, upgrader);
+    assert lastReverted;
+}
+
+// @review vacuous
+rule setCCIPAdmin_RevertWhen_PolicyEngineUndefined() {
+    env e;
+    address newAdmin;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require newAdmin != 0, "exclude zero newAdmin revert";
+
+    /// @dev revert condition being verified
+    require getPolicyEngine() == 0, "policy engine is undefined";
+
+    /// @dev ghost starting values
+    require ghost_CCIPAdminTransferred_EventCount == 0, "CCIPAdminTransferred event count starts at zero";
+
+    setCCIPAdmin@withrevert(e, newAdmin);
+    assert lastReverted;
+    assert ghost_CCIPAdminTransferred_EventCount == 0;
+}
+
+rule setCCIPAdmin_RevertWhen_NewAdminIsZero() {
+    env e;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require getPolicyEngine() != 0, "policy engine is defined";
+
+    /// @dev ghost starting values
+    require ghost_CCIPAdminTransferred_EventCount == 0, "CCIPAdminTransferred event count starts at zero";
+
+    /// @dev revert condition being verified
+    setCCIPAdmin@withrevert(e, 0);
+    assert lastReverted;
+    assert ghost_CCIPAdminTransferred_EventCount == 0;
+}
+
+rule setCCIPAdmin_Success() {
+    env e;
+    address newAdmin;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require getPolicyEngine() != 0, "policy engine is defined";
+    require newAdmin != 0, "newAdmin is nonzero";
+
+    /// @dev capture previous state for event param verification
+    address previousAdmin = getCCIPAdmin();
+
+    /// @dev ghost starting values
+    require ghost_CCIPAdminTransferred_EventCount == 0, "CCIPAdminTransferred event count starts at zero";
+    require ghost_CCIPAdminTransferred_EventParam_previousAdmin == 0, "previousAdmin ghost starts at zero";
+    require ghost_CCIPAdminTransferred_EventParam_newAdmin == 0, "newAdmin ghost starts at zero";
+
+    setCCIPAdmin@withrevert(e, newAdmin);
+
+    assert !lastReverted;
+    assert ghost_CCIPAdminTransferred_EventCount == 1;
+    assert ghost_CCIPAdminTransferred_EventParam_previousAdmin == previousAdmin;
+    assert ghost_CCIPAdminTransferred_EventParam_newAdmin == newAdmin;
+    assert getCCIPAdmin() == newAdmin;
+}
+
+rule attachPolicyEngine_RevertWhen_NewPolicyEngineIsZero() {
+    env e;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require getPolicyEngine() != 0, "current policy engine is defined so runPolicy passes";
+
+    /// @dev revert condition being verified
+    attachPolicyEngine@withrevert(e, 0);
+    assert lastReverted;
+}

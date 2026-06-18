@@ -107,4 +107,6 @@ certoraRun ./certora/conf/modules/extractors/YieldcoinShareKycExtractor.conf
 certoraRun ./certora/conf/modules/policies/TerminalAllowPolicy.conf
 certoraRun ./certora/conf/modules/policies/CredentialRegistryAccountListValidatorPolicy.conf
 
+certoraRun ./certora/conf/token/YieldcoinShare.conf
+
 ```
