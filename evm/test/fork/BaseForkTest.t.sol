@@ -112,6 +112,7 @@ abstract contract BaseForkTest is BaseDeploymentTest {
         vm.makePersistent(address(forkParent.adapterRegistry));
         vm.makePersistent(address(forkParent.shareImpl));
         vm.makePersistent(address(forkParent.share));
+        vm.makePersistent(address(forkParent.vaultImpl));
         vm.makePersistent(address(forkParent.vault));
         vm.makePersistent(address(forkParent.workflowRouter));
         vm.makePersistent(address(forkParent.policyEngine));
@@ -131,6 +132,7 @@ abstract contract BaseForkTest is BaseDeploymentTest {
 
     function _makeChildPersistent(Child memory forkChild) internal {
         vm.makePersistent(address(forkChild.adapterRegistry));
+        vm.makePersistent(address(forkChild.vaultImpl));
         vm.makePersistent(address(forkChild.vault));
         vm.makePersistent(address(forkChild.workflowRouter));
         if (address(forkChild.aaveV3Adapter) != address(0)) vm.makePersistent(address(forkChild.aaveV3Adapter));

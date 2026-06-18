@@ -199,9 +199,7 @@ contract ParentVault_ClaimAssetUnitTest is BaseUnitTest {
     function _deployFreshParentVault() internal {
         _changePrank(i_owner);
         BaseVault.ConstructorParams memory params = _baseVaultParams(PARENT_CHAIN_SELECTOR);
-        s_parentVault = new ParentVault(
-            params, i_treasury, address(s_yieldcoin), i_policyEngineManager, address(s_mockPolicyEngine)
-        );
+        s_parentVault = _deployParentVaultProxy(params);
         s_mockProtocolAdapter.setVault(address(s_parentVault));
         s_parentVault.setInitialActiveProtocolAdapter(AAVE_V3_PROTOCOL_ID);
         s_parentVault.grantRole(Roles.EPOCH_OPERATOR_ROLE, i_epochOperator);

@@ -27,11 +27,15 @@ contract YieldcoinShare is ComplianceTokenERC3643, YieldcoinShareStore {
     //////////////////////////////////////////////////////////////*/
     /// @param policyEngine Chainlink ACE PolicyEngine component
     /// @param initialCcipAdmin Initial address for CCIP admin
+    /// @param upgrader Address authorized to upgrade this contract via UUPS (set as OZ owner)
     /// @dev Precondition: initialCcipAdmin must not be the zero address
-    function initialize(address policyEngine, address initialCcipAdmin) external initializer {
+    /// @dev Precondition: upgrader must not be the zero address
+    function initialize(address policyEngine, address initialCcipAdmin, address upgrader) external initializer {
+        if (upgrader == address(0)) revert YieldcoinShare__NoZeroAddress();
         _validatePolicyEngine(policyEngine);
         __ComplianceTokenERC3643_init("Yieldcoin", "YIELD", 18, policyEngine);
         _setCCIPAdmin(initialCcipAdmin);
+        _transferOwnership(upgrader);
     }
 
     /*//////////////////////////////////////////////////////////////

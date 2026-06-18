@@ -12,6 +12,8 @@ import {CompoundV3Adapter} from "../../src/modules/adapters/CompoundV3Adapter.so
 import {WorkflowRouter} from "../../src/modules/WorkflowRouter.sol";
 import {Roles} from "../../src/libraries/Roles.sol";
 
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+
 /// @title DeployChild Script
 /// @author @contractlevel
 /// @notice Script to deploy the ChildVault and its modules
@@ -24,7 +26,8 @@ contract DeployChild is Script {
         address compoundV3Comet;
         address compoundV3CometRewards;
         AdapterRegistry adapterRegistry;
-        ChildVault childVault;
+        ChildVault childVaultImpl;
+        ChildVault childVaultProxy;
         AaveV3Adapter aaveV3Adapter;
         AaveV4Adapter aaveV4Adapter;
         CompoundV3Adapter compoundV3Adapter;
@@ -62,39 +65,47 @@ contract DeployChild is Script {
         );
         deploy.adapterRegistry.grantRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
 
-        /// @dev Deploy the ChildVault
-        BaseVault.ConstructorParams memory baseVaultParams = BaseVault.ConstructorParams({
+        /// @dev Deploy the ChildVault implementation with immutable params, then initialize proxy state atomically.
+        BaseVault.ConstructorParams memory baseVaultConstructorParams = BaseVault.ConstructorParams({
             link: networkConfig.tokens.link,
             asset: networkConfig.tokens.usdc,
             ccipRouter: networkConfig.ccip.router,
+            adapterRegistry: address(deploy.adapterRegistry),
+            thisChainSelector: networkConfig.ccip.thisChainSelector
+        });
+        BaseVault.InitParams memory baseVaultInitParams = BaseVault.InitParams({
             defaultAdmin: deployer,
             pauser: networkConfig.roles.pauser,
             unpauser: networkConfig.roles.unpauser,
             configOperator: deployer,
-            adapterRegistry: address(deploy.adapterRegistry),
-            thisChainSelector: networkConfig.ccip.thisChainSelector,
             emergencyReceiver: networkConfig.emergencyReceiver,
-            initialDefaultCcipGasLimit: networkConfig.ccip.initialDefaultCcipGasLimit
+            initialDefaultCcipGasLimit: networkConfig.ccip.initialDefaultCcipGasLimit,
+            upgrader: networkConfig.roles.upgrader
         });
-        deploy.childVault = new ChildVault(baseVaultParams, networkConfig.ccip.parentChainSelector);
+        deploy.childVaultImpl = new ChildVault(baseVaultConstructorParams, networkConfig.ccip.parentChainSelector);
+        ERC1967Proxy childVaultProxy = new ERC1967Proxy(
+            address(deploy.childVaultImpl), abi.encodeWithSelector(ChildVault.initialize.selector, baseVaultInitParams)
+        );
+        deploy.childVaultProxy = ChildVault(address(childVaultProxy));
 
         bytes32 aaveV3ProtocolId = keccak256("aave-v3");
         if (networkConfig.protocols.aaveV3PoolAddressesProvider != address(0)) {
             deploy.aaveV3Adapter =
-                new AaveV3Adapter(address(deploy.childVault), networkConfig.protocols.aaveV3PoolAddressesProvider);
+                new AaveV3Adapter(address(deploy.childVaultProxy), networkConfig.protocols.aaveV3PoolAddressesProvider);
             deploy.adapterRegistry.setAdapter(aaveV3ProtocolId, address(deploy.aaveV3Adapter));
         }
 
         bytes32 aaveV4ProtocolId = keccak256("aave-v4");
         if (networkConfig.protocols.aaveV4Spoke != address(0)) {
-            deploy.aaveV4Adapter = new AaveV4Adapter(address(deploy.childVault), networkConfig.protocols.aaveV4Spoke);
+            deploy.aaveV4Adapter =
+                new AaveV4Adapter(address(deploy.childVaultProxy), networkConfig.protocols.aaveV4Spoke);
             deploy.adapterRegistry.setAdapter(aaveV4ProtocolId, address(deploy.aaveV4Adapter));
         }
 
         bytes32 compoundV3ProtocolId = keccak256("compound-v3");
         if (networkConfig.protocols.compoundV3Comet != address(0)) {
             deploy.compoundV3Adapter = new CompoundV3Adapter(
-                address(deploy.childVault),
+                address(deploy.childVaultProxy),
                 networkConfig.protocols.compoundV3Comet,
                 networkConfig.protocols.compoundV3CometRewards
             );
@@ -110,26 +121,26 @@ contract DeployChild is Script {
             unpauser: networkConfig.roles.unpauser,
             configOperator: networkConfig.roles.configOperator,
             keystoneForwarder: networkConfig.cre.keystoneForwarder,
-            vault: address(deploy.childVault)
+            vault: address(deploy.childVaultProxy)
         });
         deploy.workflowRouter = new WorkflowRouter(workflowRouterParams);
 
-        deploy.childVault.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
+        deploy.childVaultProxy.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
         deploy.adapterRegistry.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
-        deploy.childVault.grantRole(Roles.EPOCH_OPERATOR_ROLE, address(deploy.workflowRouter));
-        deploy.childVault.grantRole(Roles.REBALANCE_OPERATOR_ROLE, address(deploy.workflowRouter));
-        deploy.childVault.grantRole(Roles.EMERGENCY_DRAINER_ROLE, networkConfig.roles.emergencyDrainer);
-        deploy.childVault.grantRole(Roles.LINK_OPERATOR_ROLE, networkConfig.roles.linkOperator);
-        deploy.childVault.grantRole(Roles.DONATE_OPERATOR_ROLE, networkConfig.roles.donateOperator);
-        deploy.childVault.grantRole(Roles.REWARDS_OPERATOR_ROLE, networkConfig.roles.rewardsOperator);
+        deploy.childVaultProxy.grantRole(Roles.EPOCH_OPERATOR_ROLE, address(deploy.workflowRouter));
+        deploy.childVaultProxy.grantRole(Roles.REBALANCE_OPERATOR_ROLE, address(deploy.workflowRouter));
+        deploy.childVaultProxy.grantRole(Roles.EMERGENCY_DRAINER_ROLE, networkConfig.roles.emergencyDrainer);
+        deploy.childVaultProxy.grantRole(Roles.LINK_OPERATOR_ROLE, networkConfig.roles.linkOperator);
+        deploy.childVaultProxy.grantRole(Roles.DONATE_OPERATOR_ROLE, networkConfig.roles.donateOperator);
+        deploy.childVaultProxy.grantRole(Roles.REWARDS_OPERATOR_ROLE, networkConfig.roles.rewardsOperator);
 
-        deploy.childVault.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
+        deploy.childVaultProxy.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
         deploy.adapterRegistry.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
 
         /// @dev The deployer remains default admin until the configured default admin accepts this transfer.
         ///      networkConfig.roles.defaultAdmin should call acceptDefaultAdminTransfer() ASAP.
         if (deployer != networkConfig.roles.defaultAdmin) {
-            deploy.childVault.beginDefaultAdminTransfer(networkConfig.roles.defaultAdmin);
+            deploy.childVaultProxy.beginDefaultAdminTransfer(networkConfig.roles.defaultAdmin);
         }
 
         /// @dev The deployer remains default admin until the configured default admin accepts this transfer.

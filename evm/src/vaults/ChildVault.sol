@@ -2,6 +2,7 @@
 pragma solidity 0.8.28;
 
 import {BaseVault} from "./BaseVault.sol";
+import {ChildVaultStore} from "./ChildVaultStore.sol";
 
 import {IChildVault} from "../interfaces/IChildVault.sol";
 import {Types} from "../libraries/Types.sol";
@@ -16,7 +17,7 @@ import {Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClie
 /// @title Yieldcoin v2 ChildVault
 /// @author @contractlevel
 /// @notice ChildVault is a contract that inherits from BaseVault. It's used to interact with Strategy protocols and communicate with the Parent and other ChildVaults across chains.
-contract ChildVault is BaseVault, IChildVault {
+contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /*//////////////////////////////////////////////////////////////
                            TYPE DECLARATIONS
     //////////////////////////////////////////////////////////////*/
@@ -29,21 +30,10 @@ contract ChildVault is BaseVault, IChildVault {
     uint64 internal immutable i_parentChainSelector;
 
     /*//////////////////////////////////////////////////////////////
-                                 STATE
-    //////////////////////////////////////////////////////////////*/
-    /// @dev Recovery state for failed rebalance withdraw operations
-    Types.RebalanceWithdrawRecovery internal s_rebalanceWithdrawRecovery;
-    /// @dev Recovery state for failed epoch deposit operations
-    Types.EpochRecovery internal s_epochDepositRecovery;
-    /// @dev Recovery state for failed epoch withdraw operations
-    Types.EpochRecovery internal s_epochWithdrawRecovery;
-    /// @dev Recovery state for failed CCIP send operations
-    Types.CcipSendRecovery internal s_ccipSendRecovery;
-
-    /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
-    /// @param params Base Vault Constructor parameters
+    /// @notice Initializes implementation-level immutable configuration for the ChildVault.
+    /// @param params BaseVault constructor parameters for values baked into the implementation bytecode
     /// @param parentChainSelector CCIP selector for the parent chain
     /// @dev Precondition: parentChainSelector must not be zero
     /// @dev Precondition: parentChainSelector must not equal params.thisChainSelector
@@ -51,6 +41,12 @@ contract ChildVault is BaseVault, IChildVault {
         _revertIfZeroChainSelector(parentChainSelector);
         if (parentChainSelector == params.thisChainSelector) revert ChildVault__InvalidParentChainSelector();
         i_parentChainSelector = parentChainSelector;
+    }
+
+    /// @notice Initializes ChildVault mutable proxy state.
+    /// @param params BaseVault initializer parameters for roles and mutable vault configuration
+    function initialize(BaseVault.InitParams memory params) external initializer {
+        __BaseVault_init(params);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -118,14 +114,14 @@ contract ChildVault is BaseVault, IChildVault {
 
         try this.tryCcipSend(bridgeAmount, destinationChainSelector, ccipTxType, txData) {}
         catch {
-            s_ccipSendRecovery = Types.CcipSendRecovery({
+            _childVaultStorage().s_ccipSendRecovery = Types.CcipSendRecovery({
                 ccipTxType: ccipTxType,
                 amount: bridgeAmount,
                 destinationChainSelector: destinationChainSelector,
                 txData: txData,
                 createdAt: block.timestamp
             });
-            s_recoveryMode = Types.RecoveryMode.CCIP_SEND;
+            _baseVaultStorage().s_recoveryMode = Types.RecoveryMode.CCIP_SEND;
             emit CcipSendRecoveryStored(ccipTxType, destinationChainSelector, bridgeAmount);
         }
     }
@@ -204,9 +200,9 @@ contract ChildVault is BaseVault, IChildVault {
         if (amount == 0) revert BaseVault__ZeroRecoveryAmount();
         _requireNoRecovery();
 
-        s_epochDepositRecovery =
+        _childVaultStorage().s_epochDepositRecovery =
             Types.EpochRecovery({epochNonce: epochNonce, amount: amount, createdAt: block.timestamp});
-        s_recoveryMode = Types.RecoveryMode.EPOCH_DEPOSIT;
+        _baseVaultStorage().s_recoveryMode = Types.RecoveryMode.EPOCH_DEPOSIT;
         emit EpochDepositRecoveryStored(epochNonce, amount);
     }
 
@@ -214,10 +210,10 @@ contract ChildVault is BaseVault, IChildVault {
     /// @dev Precondition: epoch deposit recovery state must exist
     function _clearEpochDepositRecovery() internal {
         _requireRecoveryMode(Types.RecoveryMode.EPOCH_DEPOSIT);
-        uint256 epochNonce = s_epochDepositRecovery.epochNonce;
+        uint256 epochNonce = _childVaultStorage().s_epochDepositRecovery.epochNonce;
 
-        delete s_epochDepositRecovery;
-        s_recoveryMode = Types.RecoveryMode.NONE;
+        delete _childVaultStorage().s_epochDepositRecovery;
+        _baseVaultStorage().s_recoveryMode = Types.RecoveryMode.NONE;
         emit EpochDepositRecoveryCleared(epochNonce);
     }
 
@@ -226,7 +222,7 @@ contract ChildVault is BaseVault, IChildVault {
     /// @dev Precondition: epoch deposit recovery state must exist
     function _requireEpochDepositRecovery() internal view returns (Types.EpochRecovery memory recovery) {
         _requireRecoveryMode(Types.RecoveryMode.EPOCH_DEPOSIT);
-        recovery = s_epochDepositRecovery;
+        recovery = _childVaultStorage().s_epochDepositRecovery;
     }
 
     /// @notice Stores recovery state for a failed epoch withdraw
@@ -239,9 +235,9 @@ contract ChildVault is BaseVault, IChildVault {
         if (amount == 0) revert BaseVault__ZeroRecoveryAmount();
         _requireNoRecovery();
 
-        s_epochWithdrawRecovery =
+        _childVaultStorage().s_epochWithdrawRecovery =
             Types.EpochRecovery({epochNonce: epochNonce, amount: amount, createdAt: block.timestamp});
-        s_recoveryMode = Types.RecoveryMode.EPOCH_WITHDRAW;
+        _baseVaultStorage().s_recoveryMode = Types.RecoveryMode.EPOCH_WITHDRAW;
         emit EpochWithdrawRecoveryStored(epochNonce, amount);
     }
 
@@ -249,10 +245,10 @@ contract ChildVault is BaseVault, IChildVault {
     /// @dev Precondition: epoch withdraw recovery state must exist
     function _clearEpochWithdrawRecovery() internal {
         _requireRecoveryMode(Types.RecoveryMode.EPOCH_WITHDRAW);
-        uint256 epochNonce = s_epochWithdrawRecovery.epochNonce;
+        uint256 epochNonce = _childVaultStorage().s_epochWithdrawRecovery.epochNonce;
 
-        delete s_epochWithdrawRecovery;
-        s_recoveryMode = Types.RecoveryMode.NONE;
+        delete _childVaultStorage().s_epochWithdrawRecovery;
+        _baseVaultStorage().s_recoveryMode = Types.RecoveryMode.NONE;
         emit EpochWithdrawRecoveryCleared(epochNonce);
     }
 
@@ -261,7 +257,7 @@ contract ChildVault is BaseVault, IChildVault {
     /// @dev Precondition: epoch withdraw recovery state must exist
     function _requireEpochWithdrawRecovery() internal view returns (Types.EpochRecovery memory recovery) {
         _requireRecoveryMode(Types.RecoveryMode.EPOCH_WITHDRAW);
-        recovery = s_epochWithdrawRecovery;
+        recovery = _childVaultStorage().s_epochWithdrawRecovery;
     }
 
     /// @notice Stores recovery state for a failed rebalance withdraw
@@ -274,10 +270,10 @@ contract ChildVault is BaseVault, IChildVault {
         if (strategy.chainSelector == 0) revert ChildVault__InvalidRecoveryStrategy();
         _requireNoRecovery();
 
-        s_rebalanceWithdrawRecovery = Types.RebalanceWithdrawRecovery({
+        _childVaultStorage().s_rebalanceWithdrawRecovery = Types.RebalanceWithdrawRecovery({
             rebalanceNonce: rebalanceNonce, strategy: strategy, createdAt: block.timestamp
         });
-        s_recoveryMode = Types.RecoveryMode.REBALANCE_WITHDRAW;
+        _baseVaultStorage().s_recoveryMode = Types.RecoveryMode.REBALANCE_WITHDRAW;
         emit RebalanceWithdrawRecoveryStored(rebalanceNonce, strategy.protocolId, strategy.chainSelector);
     }
 
@@ -285,10 +281,10 @@ contract ChildVault is BaseVault, IChildVault {
     /// @dev Precondition: rebalance withdraw recovery state must exist
     function _clearRebalanceWithdrawRecovery() internal {
         _requireRecoveryMode(Types.RecoveryMode.REBALANCE_WITHDRAW);
-        uint256 rebalanceNonce = s_rebalanceWithdrawRecovery.rebalanceNonce;
+        uint256 rebalanceNonce = _childVaultStorage().s_rebalanceWithdrawRecovery.rebalanceNonce;
 
-        delete s_rebalanceWithdrawRecovery;
-        s_recoveryMode = Types.RecoveryMode.NONE;
+        delete _childVaultStorage().s_rebalanceWithdrawRecovery;
+        _baseVaultStorage().s_recoveryMode = Types.RecoveryMode.NONE;
         emit RebalanceWithdrawRecoveryCleared(rebalanceNonce);
     }
 
@@ -301,7 +297,7 @@ contract ChildVault is BaseVault, IChildVault {
         returns (Types.RebalanceWithdrawRecovery memory recovery)
     {
         _requireRecoveryMode(Types.RecoveryMode.REBALANCE_WITHDRAW);
-        recovery = s_rebalanceWithdrawRecovery;
+        recovery = _childVaultStorage().s_rebalanceWithdrawRecovery;
     }
 
     /// @notice Recovers a failed epoch deposit into the active Child strategy
@@ -365,11 +361,11 @@ contract ChildVault is BaseVault, IChildVault {
     /// @dev Precondition: function must not be reentered
     function recoverFailedCcipSend() external nonReentrant {
         _requireRecoveryMode(Types.RecoveryMode.CCIP_SEND);
-        Types.CcipSendRecovery memory recovery = s_ccipSendRecovery;
+        Types.CcipSendRecovery memory recovery = _childVaultStorage().s_ccipSendRecovery;
 
         // Clear before retry; if _executeCcipSend reverts, EVM atomicity restores this recovery state.
-        delete s_ccipSendRecovery;
-        s_recoveryMode = Types.RecoveryMode.NONE;
+        delete _childVaultStorage().s_ccipSendRecovery;
+        _baseVaultStorage().s_recoveryMode = Types.RecoveryMode.NONE;
         emit CcipSendRecoveryCleared(recovery.ccipTxType, recovery.destinationChainSelector, recovery.amount);
 
         _executeCcipSend(recovery.amount, recovery.destinationChainSelector, recovery.ccipTxType, recovery.txData);
@@ -387,25 +383,25 @@ contract ChildVault is BaseVault, IChildVault {
     /// @notice Gets failed epoch deposit recovery state
     /// @return recovery The stored epoch deposit recovery state
     function getEpochDepositRecovery() external view returns (Types.EpochRecovery memory recovery) {
-        recovery = s_epochDepositRecovery;
+        recovery = _childVaultStorage().s_epochDepositRecovery;
     }
 
     /// @notice Gets failed epoch withdraw recovery state
     /// @return recovery The stored epoch withdraw recovery state
     function getEpochWithdrawRecovery() external view returns (Types.EpochRecovery memory recovery) {
-        recovery = s_epochWithdrawRecovery;
+        recovery = _childVaultStorage().s_epochWithdrawRecovery;
     }
 
     /// @notice Gets failed rebalance withdraw recovery state
     /// @return recovery The stored rebalance withdraw recovery state
     function getRebalanceWithdrawRecovery() external view returns (Types.RebalanceWithdrawRecovery memory recovery) {
-        recovery = s_rebalanceWithdrawRecovery;
+        recovery = _childVaultStorage().s_rebalanceWithdrawRecovery;
     }
 
     /// @notice Gets failed CCIP send recovery state
     /// @return recovery The stored CCIP send recovery state
     function getCcipSendRecovery() external view returns (Types.CcipSendRecovery memory recovery) {
-        recovery = s_ccipSendRecovery;
+        recovery = _childVaultStorage().s_ccipSendRecovery;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -417,9 +413,9 @@ contract ChildVault is BaseVault, IChildVault {
     /// @notice The Child Vault implementation includes s_epochDepositRecovery.amount
     /// @notice Returns 0 if the TVL is in transit over CCIP. This should not be read onchain when Parent state is REBALANCING
     function _getTVL() internal view override returns (uint256 tvl) {
-        address activeAdapter = s_activeProtocolAdapter;
+        address activeAdapter = _baseVaultStorage().s_activeProtocolAdapter;
         if (activeAdapter == address(0)) return 0;
-        tvl = IProtocolAdapter(activeAdapter).getTVL() + s_epochDepositRecovery.amount
-            + s_rebalanceDepositRecovery.amount + s_ccipSendRecovery.amount;
+        tvl = IProtocolAdapter(activeAdapter).getTVL() + _childVaultStorage().s_epochDepositRecovery.amount
+            + _baseVaultStorage().s_rebalanceDepositRecovery.amount + _childVaultStorage().s_ccipSendRecovery.amount;
     }
 }

@@ -19,3 +19,12 @@ closeEpoch(uint256)                                0xd16d9057
 executeRebalance(uint256,(bytes32,uint64))         0x1aa137ec
 executeEpochWithdraw(uint256,uint256)              0x1c12f962
 ```
+
+## Proxies
+
+```
+cast index-erc7201 yieldcoin.storage.BaseVault && cast index-erc7201 yieldcoin.storage.ParentVault && cast index-erc7201 yieldcoin.storage.ChildVault
+0x99afdd01627a14a05f9b616b4e511b7ffe10b226156d7b6f476c4380e58f9d00
+0x4d89b729d7d5f9a6740a79abcbedc524fd1c9bd2e1f192f6caeffd6a1cf4ea00
+0x78e4dbdeeaf798c2dd37013d97b7b9a2111b1f613652054109dec720ccf6f400
+```

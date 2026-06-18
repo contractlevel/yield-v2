@@ -297,7 +297,8 @@ abstract contract BaseCcipForkTest is BaseForkTest {
 
     function _setParentRemoteStrategyToBase() internal {
         _selectArbitrumFork();
-        stdstore.target(address(parent.vault)).sig("getActiveProtocolAdapter()").checked_write(address(0));
+        stdstore.enable_packed_slots().target(address(parent.vault)).sig("getActiveProtocolAdapter()")
+            .checked_write(address(0));
         stdstore.target(address(parent.vault)).sig("getRebalance()").depth(2).checked_write(AAVE_V3_PROTOCOL_ID);
         stdstore.target(address(parent.vault)).sig("getRebalance()").depth(3)
             .checked_write(baseConfig.ccip.thisChainSelector);
@@ -305,14 +306,14 @@ abstract contract BaseCcipForkTest is BaseForkTest {
 
     function _setBaseChildActiveAdapterToAaveV3() internal {
         _selectBaseFork();
-        stdstore.target(address(baseChild.vault)).sig("getActiveProtocolAdapter()")
+        stdstore.enable_packed_slots().target(address(baseChild.vault)).sig("getActiveProtocolAdapter()")
             .checked_write(address(baseChild.aaveV3Adapter));
         assertEq(baseChild.vault.getActiveProtocolAdapter(), address(baseChild.aaveV3Adapter));
     }
 
     function _setEthereumChildActiveAdapterToAaveV3() internal {
         _selectEthereumFork();
-        stdstore.target(address(ethereumChild.vault)).sig("getActiveProtocolAdapter()")
+        stdstore.enable_packed_slots().target(address(ethereumChild.vault)).sig("getActiveProtocolAdapter()")
             .checked_write(address(ethereumChild.aaveV3Adapter));
         assertEq(ethereumChild.vault.getActiveProtocolAdapter(), address(ethereumChild.aaveV3Adapter));
     }

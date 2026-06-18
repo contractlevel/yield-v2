@@ -50,7 +50,7 @@ contract WorkflowRouter_SetWorkflowSelectorsUnitTest is BaseWorkflowRouterUnitTe
             _assertEmittedBy(keccak256("WorkflowSelectorSet(bytes32,bytes4,bool)"), address(s_workflowRouter));
         assertEq(log.topics[1], WORKFLOW_ID);
         assertEq(log.topics[2], bytes32(SELECTOR_1));
-        assertEq(abi.decode(log.data, (bool)), true);
+        assertEq(log.topics[3], bytes32(uint256(1)));
     }
 
     function test_WorkflowRouter_setWorkflowSelectors_Success_RemovesSelectorFromAllowlist() external {
@@ -67,7 +67,7 @@ contract WorkflowRouter_SetWorkflowSelectorsUnitTest is BaseWorkflowRouterUnitTe
             _assertEmittedBy(keccak256("WorkflowSelectorSet(bytes32,bytes4,bool)"), address(s_workflowRouter));
         assertEq(log.topics[1], WORKFLOW_ID);
         assertEq(log.topics[2], bytes32(SELECTOR_1));
-        assertEq(abi.decode(log.data, (bool)), false);
+        assertEq(log.topics[3], bytes32(0));
     }
 
     function test_WorkflowRouter_setWorkflowSelectors_Success_MultipleSelectors() external {

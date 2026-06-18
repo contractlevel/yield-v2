@@ -1,0 +1,7 @@
+YieldcoinShare_upgradeToAndCall
+  ├── when caller is the owner (upgrader)
+  │   └── it should succeed
+  ├── when caller is not the owner
+  │   └── it should revert with OwnableUnauthorizedAccount
+  └── when called on the implementation directly
+      └── it should revert with UUPSUnauthorizedCallContext

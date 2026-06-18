@@ -1,0 +1,45 @@
+BaseVault_initialize
+  ├── ParentVault
+  │   ├── when initialization succeeds
+  │   │   ├── it should set mutable base vault state
+  │   │   └── it should grant base vault roles
+  │   ├── when default admin is the zero address
+  │   │   └── it should revert with BaseVault__NoZeroAddress
+  │   ├── when pauser is the zero address
+  │   │   └── it should revert with BaseVault__NoZeroAddress
+  │   ├── when unpauser is the zero address
+  │   │   └── it should revert with BaseVault__NoZeroAddress
+  │   ├── when config operator is the zero address
+  │   │   └── it should revert with BaseVault__NoZeroAddress
+  │   ├── when emergency receiver is the zero address
+  │   │   └── it should revert with BaseVault__NoZeroAddress
+  │   ├── when upgrader is the zero address
+  │   │   └── it should revert with BaseVault__NoZeroAddress
+  │   ├── when initial default CCIP gas limit is zero
+  │   │   └── it should revert with BaseVault__NoZeroAmount
+  │   ├── when the proxy is already initialized
+  │   │   └── it should revert with InvalidInitialization
+  │   └── when called on the implementation
+  │       └── it should revert with InvalidInitialization
+  └── ChildVault
+      ├── when initialization succeeds
+      │   ├── it should set mutable base vault state
+      │   └── it should grant base vault roles
+      ├── when default admin is the zero address
+      │   └── it should revert with BaseVault__NoZeroAddress
+      ├── when pauser is the zero address
+      │   └── it should revert with BaseVault__NoZeroAddress
+      ├── when unpauser is the zero address
+      │   └── it should revert with BaseVault__NoZeroAddress
+      ├── when config operator is the zero address
+      │   └── it should revert with BaseVault__NoZeroAddress
+      ├── when emergency receiver is the zero address
+      │   └── it should revert with BaseVault__NoZeroAddress
+      ├── when upgrader is the zero address
+      │   └── it should revert with BaseVault__NoZeroAddress
+      ├── when initial default CCIP gas limit is zero
+      │   └── it should revert with BaseVault__NoZeroAmount
+      ├── when the proxy is already initialized
+      │   └── it should revert with InvalidInitialization
+      └── when called on the implementation
+          └── it should revert with InvalidInitialization

@@ -12,13 +12,7 @@ contract ParentVault_SetInitialActiveProtocolAdapterUnitTest is BaseUnitTest {
 
     function setUp() public {
         _changePrank(i_owner);
-        s_uninitializedParentVault = new ParentVault(
-            _baseVaultParams(PARENT_CHAIN_SELECTOR),
-            i_treasury,
-            address(s_yieldcoin),
-            i_policyEngineManager,
-            address(s_mockPolicyEngine)
-        );
+        s_uninitializedParentVault = _deployParentVaultProxy(_baseVaultParams(PARENT_CHAIN_SELECTOR));
         s_mockProtocolAdapter.setVault(address(s_uninitializedParentVault));
     }
 

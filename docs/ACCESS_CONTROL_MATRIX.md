@@ -109,7 +109,7 @@ It is the source of truth for how authority should be named, assigned, implement
 | `attachPolicyEngine`                       | Local `POLICY_ENGINE_MANAGER_ROLE`; do not rely on token `owner()`                            |
 | `setCCIPAdmin()`                           | ACE RBAC: `CONFIG_OPERATOR_ROLE`                                                              |
 | `getCCIPAdmin()`                           | Return stored CCIP admin, e.g. `s_ccipAdmin` or namespaced storage equivalent                 |
-| `owner()`                                  | Keep only if required by inherited mechanics; do not treat as token admin                     |
+| `owner()`                                  | Set to `UPGRADER_ROLE` holder at initialization via `_transferOwnership(upgrader)`; controls only `_authorizeUpgrade` because `getCCIPAdmin()` is overridden. Required by inherited mechanics — do not treat as general token admin. |
 
 ## Chainlink ACE Model
 

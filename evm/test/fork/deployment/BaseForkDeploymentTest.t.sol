@@ -22,7 +22,7 @@ abstract contract BaseForkDeploymentTest is BaseForkTest {
         assertEq(parent.vault.getEmergencyReceiver(), arbitrumConfig.emergencyReceiver);
         assertTrue(parent.vault.hasRole(Roles.PAUSER_ROLE, arbitrumConfig.roles.pauser));
         assertTrue(parent.vault.hasRole(Roles.UNPAUSER_ROLE, arbitrumConfig.roles.unpauser));
-        assertTrue(parent.vault.hasRole(Roles.POLICY_ENGINE_MANAGER_ROLE, arbitrumConfig.roles.policyEngineManager));
+        assertTrue(parent.vault.hasRole(Roles.POLICY_ENGINE_MANAGER_ROLE, arbitrumConfig.roles.policy.engineManager));
 
         assertEq(parent.vault.getAdapterRegistry(), address(parent.adapterRegistry));
         assertEq(parent.vault.getShare(), address(parent.share));

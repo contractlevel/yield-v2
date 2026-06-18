@@ -1,0 +1,7 @@
+BaseVault_upgradeToAndCall
+  ├── when caller has UPGRADER_ROLE
+  │   └── it should succeed
+  ├── when caller does not have UPGRADER_ROLE
+  │   └── it should revert with AccessControlUnauthorizedAccount
+  └── when called on the implementation directly
+      └── it should revert with UUPSUnauthorizedCallContext

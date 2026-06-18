@@ -47,10 +47,12 @@ abstract contract ProtocolAdapter is IProtocolAdapter, ReentrancyGuard {
     //////////////////////////////////////////////////////////////*/
     /// @dev Precondition: Caller must be the Yieldcoin v2 Vault
     modifier onlyVault() {
-        if (msg.sender != i_vault) {
-            revert ProtocolAdapter__OnlyVault();
-        }
+        _onlyVault();
         _;
+    }
+
+    function _onlyVault() internal {
+        if (msg.sender != i_vault) revert ProtocolAdapter__OnlyVault();
     }
 
     /*//////////////////////////////////////////////////////////////

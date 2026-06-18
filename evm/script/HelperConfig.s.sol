@@ -41,13 +41,18 @@ contract HelperConfig is Script {
         address unpauser;
         address configOperator;
         address complianceOperator;
-        address policyAdmin;
-        address policyConfigAdmin;
-        address policyEngineManager;
+        PolicyRolesConfig policy;
         address emergencyDrainer;
         address linkOperator;
         address donateOperator;
         address rewardsOperator;
+        address upgrader;
+    }
+
+    struct PolicyRolesConfig {
+        address admin;
+        address configAdmin;
+        address engineManager;
     }
 
     struct TokensConfig {
@@ -109,13 +114,12 @@ contract HelperConfig is Script {
                 unpauser: BURNER_EOA,
                 configOperator: BURNER_EOA,
                 complianceOperator: BURNER_EOA,
-                policyAdmin: BURNER_EOA,
-                policyConfigAdmin: BURNER_EOA,
-                policyEngineManager: BURNER_EOA,
+                policy: PolicyRolesConfig({admin: BURNER_EOA, configAdmin: BURNER_EOA, engineManager: BURNER_EOA}),
                 emergencyDrainer: BURNER_EOA,
                 linkOperator: BURNER_EOA,
                 donateOperator: BURNER_EOA,
-                rewardsOperator: BURNER_EOA
+                rewardsOperator: BURNER_EOA,
+                upgrader: BURNER_EOA
             }),
             tokens: TokensConfig({
                 link: 0xf97f4df75117a78c1A5a0DBb814Af92458539FB4, usdc: 0xaf88d065e77c8cC2239327C5EDb3A432268e5831
@@ -149,13 +153,12 @@ contract HelperConfig is Script {
                 unpauser: BURNER_EOA,
                 configOperator: BURNER_EOA,
                 complianceOperator: BURNER_EOA,
-                policyAdmin: BURNER_EOA,
-                policyConfigAdmin: BURNER_EOA,
-                policyEngineManager: BURNER_EOA,
+                policy: PolicyRolesConfig({admin: BURNER_EOA, configAdmin: BURNER_EOA, engineManager: BURNER_EOA}),
                 emergencyDrainer: BURNER_EOA,
                 linkOperator: BURNER_EOA,
                 donateOperator: BURNER_EOA,
-                rewardsOperator: BURNER_EOA
+                rewardsOperator: BURNER_EOA,
+                upgrader: BURNER_EOA
             }),
             tokens: TokensConfig({
                 link: 0x88Fb150BDc53A65fe94Dea0c9BA0a6dAf8C6e196, usdc: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
@@ -189,13 +192,12 @@ contract HelperConfig is Script {
                 unpauser: BURNER_EOA,
                 configOperator: BURNER_EOA,
                 complianceOperator: BURNER_EOA,
-                policyAdmin: BURNER_EOA,
-                policyConfigAdmin: BURNER_EOA,
-                policyEngineManager: BURNER_EOA,
+                policy: PolicyRolesConfig({admin: BURNER_EOA, configAdmin: BURNER_EOA, engineManager: BURNER_EOA}),
                 emergencyDrainer: BURNER_EOA,
                 linkOperator: BURNER_EOA,
                 donateOperator: BURNER_EOA,
-                rewardsOperator: BURNER_EOA
+                rewardsOperator: BURNER_EOA,
+                upgrader: BURNER_EOA
             }),
             tokens: TokensConfig({
                 link: 0x514910771AF9Ca656af840dff83E8264EcF986CA, usdc: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
@@ -228,13 +230,12 @@ contract HelperConfig is Script {
                 unpauser: BURNER_EOA,
                 configOperator: BURNER_EOA,
                 complianceOperator: BURNER_EOA,
-                policyAdmin: BURNER_EOA,
-                policyConfigAdmin: BURNER_EOA,
-                policyEngineManager: BURNER_EOA,
+                policy: PolicyRolesConfig({admin: BURNER_EOA, configAdmin: BURNER_EOA, engineManager: BURNER_EOA}),
                 emergencyDrainer: BURNER_EOA,
                 linkOperator: BURNER_EOA,
                 donateOperator: BURNER_EOA,
-                rewardsOperator: BURNER_EOA
+                rewardsOperator: BURNER_EOA,
+                upgrader: BURNER_EOA
             }),
             tokens: TokensConfig({
                 link: 0x5947BB275c521040051D82396192181b413227A3, usdc: 0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E
@@ -267,13 +268,12 @@ contract HelperConfig is Script {
                 unpauser: BURNER_EOA,
                 configOperator: BURNER_EOA,
                 complianceOperator: BURNER_EOA,
-                policyAdmin: BURNER_EOA,
-                policyConfigAdmin: BURNER_EOA,
-                policyEngineManager: BURNER_EOA,
+                policy: PolicyRolesConfig({admin: BURNER_EOA, configAdmin: BURNER_EOA, engineManager: BURNER_EOA}),
                 emergencyDrainer: BURNER_EOA,
                 linkOperator: BURNER_EOA,
                 donateOperator: BURNER_EOA,
-                rewardsOperator: BURNER_EOA
+                rewardsOperator: BURNER_EOA,
+                upgrader: BURNER_EOA
             }),
             tokens: TokensConfig({
                 link: 0x350a791Bfc2C21F9Ed5d10980Dad2e2638ffa7f6, usdc: 0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85
@@ -323,13 +323,16 @@ contract HelperConfig is Script {
             unpauser: makeAddr("unpauser"),
             configOperator: makeAddr("configOperator"),
             complianceOperator: makeAddr("complianceOperator"),
-            policyAdmin: makeAddr("policyAdmin"),
-            policyConfigAdmin: makeAddr("policyConfigAdmin"),
-            policyEngineManager: makeAddr("policyEngineManager"),
+            policy: PolicyRolesConfig({
+                admin: makeAddr("policyAdmin"),
+                configAdmin: makeAddr("policyConfigAdmin"),
+                engineManager: makeAddr("policyEngineManager")
+            }),
             emergencyDrainer: makeAddr("emergencyDrainer"),
             linkOperator: makeAddr("linkOperator"),
             donateOperator: makeAddr("donateOperator"),
-            rewardsOperator: makeAddr("rewardsOperator")
+            rewardsOperator: makeAddr("rewardsOperator"),
+            upgrader: makeAddr("upgrader")
         });
     }
 

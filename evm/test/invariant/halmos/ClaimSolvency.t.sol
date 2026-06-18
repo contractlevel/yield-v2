@@ -34,14 +34,8 @@ contract ClaimSolvency is Test {
                 link: STUB,
                 asset: address(s_mockUsdc),
                 ccipRouter: STUB,
-                defaultAdmin: address(this),
-                pauser: STUB,
-                unpauser: STUB,
-                configOperator: STUB,
                 adapterRegistry: STUB,
-                thisChainSelector: uint64(1),
-                emergencyReceiver: STUB,
-                initialDefaultCcipGasLimit: 500_000
+                thisChainSelector: uint64(1)
             }),
             STUB, // treasury
             address(s_mockShare),

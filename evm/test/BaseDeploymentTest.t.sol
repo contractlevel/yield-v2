@@ -47,6 +47,7 @@ abstract contract BaseDeploymentTest is BaseTest {
         AdapterRegistry adapterRegistry;
         YieldcoinShare shareImpl;
         YieldcoinShare share;
+        ParentVault vaultImpl;
         ParentVault vault;
         AaveV3Adapter aaveV3Adapter;
         AaveV4Adapter aaveV4Adapter;
@@ -70,6 +71,7 @@ abstract contract BaseDeploymentTest is BaseTest {
         address compoundV3Comet;
         address compoundV3CometRewards;
         AdapterRegistry adapterRegistry;
+        ChildVault vaultImpl;
         ChildVault vault;
         AaveV3Adapter aaveV3Adapter;
         AaveV4Adapter aaveV4Adapter;
@@ -123,7 +125,8 @@ abstract contract BaseDeploymentTest is BaseTest {
             adapterRegistry: parentDeployment.adapterRegistry,
             shareImpl: parentDeployment.yieldcoinImpl,
             share: parentDeployment.yieldcoinProxy,
-            vault: parentDeployment.parentVault,
+            vaultImpl: parentDeployment.parentVaultImpl,
+            vault: parentDeployment.parentVaultProxy,
             aaveV3Adapter: parentDeployment.aaveV3Adapter,
             aaveV4Adapter: parentDeployment.aaveV4Adapter,
             compoundV3Adapter: parentDeployment.compoundV3Adapter,
@@ -152,7 +155,8 @@ abstract contract BaseDeploymentTest is BaseTest {
             compoundV3Comet: childDeployment.compoundV3Comet,
             compoundV3CometRewards: childDeployment.compoundV3CometRewards,
             adapterRegistry: childDeployment.adapterRegistry,
-            vault: childDeployment.childVault,
+            vaultImpl: childDeployment.childVaultImpl,
+            vault: childDeployment.childVaultProxy,
             aaveV3Adapter: childDeployment.aaveV3Adapter,
             aaveV4Adapter: childDeployment.aaveV4Adapter,
             compoundV3Adapter: childDeployment.compoundV3Adapter,

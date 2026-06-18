@@ -17,34 +17,34 @@ contract ParentVaultHarness is ParentVault {
         address share,
         address policyEngineManager,
         address policyEngine
-    ) ParentVault(params, treasury, share, policyEngineManager, policyEngine) {}
+    ) ParentVault(params, share) {}
 
     function setEpochStatus(uint256 nonce, Types.EpochStatus status) external {
-        s_epochs[nonce].status = status;
+        _parentVaultStorage().s_epochs[nonce].status = status;
     }
 
     function setRemainingDepositClaimAmount(uint256 nonce, uint256 amount) external {
-        s_epochs[nonce].remainingDepositClaimAmount = amount;
+        _parentVaultStorage().s_epochs[nonce].remainingDepositClaimAmount = amount;
     }
 
     function setRemainingShareMintAmount(uint256 nonce, uint256 amount) external {
-        s_epochs[nonce].remainingShareMintAmount = amount;
+        _parentVaultStorage().s_epochs[nonce].remainingShareMintAmount = amount;
     }
 
     function setRemainingShareBurnAmount(uint256 nonce, uint256 amount) external {
-        s_epochs[nonce].remainingShareBurnAmount = amount;
+        _parentVaultStorage().s_epochs[nonce].remainingShareBurnAmount = amount;
     }
 
     function setRemainingWithdrawClaimAmount(uint256 nonce, uint256 amount) external {
-        s_epochs[nonce].remainingWithdrawClaimAmount = amount;
+        _parentVaultStorage().s_epochs[nonce].remainingWithdrawClaimAmount = amount;
     }
 
     function setDeposit(address user, uint256 nonce, uint256 amount) external {
-        s_deposits[user][nonce] = amount;
+        _parentVaultStorage().s_deposits[user][nonce] = amount;
     }
 
     function setWithdraw(address user, uint256 nonce, uint256 amount) external {
-        s_withdraws[user][nonce] = amount;
+        _parentVaultStorage().s_withdraws[user][nonce] = amount;
     }
 
     function proportionalAmount(uint256 userAmount, uint256 remainingNumerator, uint256 remainingDenominator)

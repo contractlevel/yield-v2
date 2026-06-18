@@ -1,0 +1,10 @@
+ParentVault_initialize
+  ├── when initialization succeeds
+  │   ├── it should set parent vault state
+  │   └── it should grant POLICY_ENGINE_MANAGER_ROLE
+  ├── when treasury is the zero address
+  │   └── it should revert with BaseVault__NoZeroAddress
+  ├── when policy engine manager is the zero address
+  │   └── it should revert with BaseVault__NoZeroAddress
+  └── when policy engine is the zero address
+      └── it should revert with "Policy engine is zero address"

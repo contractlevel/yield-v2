@@ -4,31 +4,14 @@ constructor
   ├── it should set i_asset
   ├── it should set i_assetPrecision
   ├── it should set the CCIP router
-  ├── it should set the emergency receiver
-  ├── it should grant DEFAULT_ADMIN_ROLE to defaultAdmin
-  ├── it should grant PAUSER_ROLE to pauser  
-  ├── it should grant UNPAUSER_ROLE to unpauser  
-  ├── it should grant CONFIG_OPERATOR_ROLE to configOperator
-  ├── it should set s_defaultCcipGasLimit
-  ├── it should set the deposit nonce to 1
-  ├── it should set the withdraw nonce to 1
+  ├── it should set the adapter registry
   ├── when LINK is the zero address
   │   └── it should revert with BaseVault__NoZeroAddress
   ├── when asset is the zero address
   │   └── it should revert with BaseVault__NoZeroAddress
   ├── when CCIP router is the zero address
   │   └── it should revert with InvalidRouter
-  ├── when pauser is the zero address
-  │   └── it should revert with BaseVault__NoZeroAddress
-  ├── when unpauser is the zero address
-  │   └── it should revert with BaseVault__NoZeroAddress
-  ├── when config operator is the zero address
-  │   └── it should revert with BaseVault__NoZeroAddress
   ├── when adapter registry is the zero address
   │   └── it should revert with BaseVault__NoZeroAddress
-  ├── when this chain selector is zero
-  │   └── it should revert with BaseVault__NoZeroChainSelector
-  ├── when emergency receiver is the zero address
-  │   └── it should revert with BaseVault__NoZeroAddress
-  └── when initial default CCIP gas limit is zero
-      └── it should revert with BaseVault__NoZeroAmount
+  └── when this chain selector is zero
+      └── it should revert with BaseVault__NoZeroChainSelector

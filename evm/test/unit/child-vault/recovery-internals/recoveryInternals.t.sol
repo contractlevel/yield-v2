@@ -179,14 +179,8 @@ contract ChildVault_RecoveryInternalsUnitTest is BaseUnitTest {
             link: address(s_mockLink),
             asset: address(s_mockUsdc),
             ccipRouter: address(s_mockCcipRouter),
-            defaultAdmin: address(i_owner),
-            pauser: address(i_pauser),
-            unpauser: address(i_unpauser),
-            configOperator: address(i_configOperator),
             adapterRegistry: address(s_adapterRegistry),
-            thisChainSelector: CHILD_CHAIN_SELECTOR,
-            emergencyReceiver: address(i_emergencyReceiver),
-            initialDefaultCcipGasLimit: DEFAULT_CCIP_GAS_LIMIT
+            thisChainSelector: CHILD_CHAIN_SELECTOR
         });
     }
 }

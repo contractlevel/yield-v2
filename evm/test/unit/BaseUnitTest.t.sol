@@ -47,19 +47,31 @@ abstract contract BaseUnitTest is BaseTest {
         YieldcoinShare yieldcoinImpl = new YieldcoinShare();
         ERC1967Proxy yieldcoinProxy = new ERC1967Proxy(
             address(yieldcoinImpl),
-            abi.encodeWithSelector(YieldcoinShare.initialize.selector, address(s_mockPolicyEngine), i_configOperator)
+            abi.encodeWithSelector(
+                YieldcoinShare.initialize.selector, address(s_mockPolicyEngine), i_configOperator, i_upgrader
+            )
         );
         s_yieldcoin = YieldcoinShare(address(yieldcoinProxy));
         s_adapterRegistry = new AdapterRegistry(0, address(i_owner));
         BaseVault.ConstructorParams memory params = _baseVaultParams(PARENT_CHAIN_SELECTOR);
+        BaseVault.InitParams memory initParams = _baseVaultInitParams();
 
         s_adapterRegistry.grantRole(Roles.CONFIG_OPERATOR_ROLE, i_configOperator);
         _changePrank(i_configOperator);
         s_adapterRegistry.setAdapter(AAVE_V3_PROTOCOL_ID, address(s_mockProtocolAdapter));
         _changePrank(i_owner);
-        s_parentVault = new ParentVault(
-            params, i_treasury, address(s_yieldcoin), i_policyEngineManager, address(s_mockPolicyEngine)
+        ParentVault parentVaultImpl = new ParentVault(params, address(s_yieldcoin));
+        ERC1967Proxy parentVaultProxy = new ERC1967Proxy(
+            address(parentVaultImpl),
+            abi.encodeWithSelector(
+                ParentVault.initialize.selector,
+                initParams,
+                i_treasury,
+                i_policyEngineManager,
+                address(s_mockPolicyEngine)
+            )
         );
+        s_parentVault = ParentVault(address(parentVaultProxy));
         s_mockProtocolAdapter.setVault(address(s_parentVault));
         _changePrank(i_configOperator);
         s_parentVault.setSupportedProtocol(AAVE_V3_PROTOCOL_ID, true);
@@ -70,7 +82,11 @@ abstract contract BaseUnitTest is BaseTest {
         s_parentVault.setInitialActiveProtocolAdapter(AAVE_V3_PROTOCOL_ID);
 
         params.thisChainSelector = CHILD_CHAIN_SELECTOR;
-        s_childVault = new ChildVault(params, PARENT_CHAIN_SELECTOR);
+        ChildVault childVaultImpl = new ChildVault(params, PARENT_CHAIN_SELECTOR);
+        ERC1967Proxy childVaultProxy = new ERC1967Proxy(
+            address(childVaultImpl), abi.encodeWithSelector(ChildVault.initialize.selector, initParams)
+        );
+        s_childVault = ChildVault(address(childVaultProxy));
 
         s_parentVault.grantRole(Roles.EPOCH_OPERATOR_ROLE, i_epochOperator);
         s_childVault.grantRole(Roles.EPOCH_OPERATOR_ROLE, i_epochOperator);
@@ -112,15 +128,39 @@ abstract contract BaseUnitTest is BaseTest {
             link: address(s_mockLink),
             asset: address(s_mockUsdc),
             ccipRouter: address(s_mockCcipRouter),
+            adapterRegistry: address(s_adapterRegistry),
+            thisChainSelector: chainSelector
+        });
+    }
+
+    function _baseVaultInitParams() internal view returns (BaseVault.InitParams memory params) {
+        params = BaseVault.InitParams({
             defaultAdmin: address(i_owner),
             pauser: address(i_pauser),
             unpauser: address(i_unpauser),
             configOperator: address(i_configOperator),
-            adapterRegistry: address(s_adapterRegistry),
-            thisChainSelector: chainSelector,
             emergencyReceiver: address(i_emergencyReceiver),
-            initialDefaultCcipGasLimit: DEFAULT_CCIP_GAS_LIMIT
+            initialDefaultCcipGasLimit: DEFAULT_CCIP_GAS_LIMIT,
+            upgrader: address(i_upgrader)
         });
+    }
+
+    function _deployParentVaultProxy(BaseVault.ConstructorParams memory constructorParams)
+        internal
+        returns (ParentVault parentVault)
+    {
+        ParentVault parentVaultImpl = new ParentVault(constructorParams, address(s_yieldcoin));
+        ERC1967Proxy parentVaultProxy = new ERC1967Proxy(
+            address(parentVaultImpl),
+            abi.encodeWithSelector(
+                ParentVault.initialize.selector,
+                _baseVaultInitParams(),
+                i_treasury,
+                i_policyEngineManager,
+                address(s_mockPolicyEngine)
+            )
+        );
+        parentVault = ParentVault(address(parentVaultProxy));
     }
 
     function _setParentCrosschainVault(uint64 chainSelector, address vault) internal {
@@ -154,13 +194,8 @@ abstract contract BaseUnitTest is BaseTest {
     }
 
     function _setActiveAdapter(BaseVault vault, address adapter) internal {
-        bytes32 slot = bytes32(uint256(8));
-        bytes32 value = vm.load(address(vault), slot);
-
-        uint256 pausedAtBits = uint256(value) & ~uint256(type(uint160).max);
-        uint256 activeAdapterBits = uint160(adapter);
-
-        vm.store(address(vault), slot, bytes32(pausedAtBits | activeAdapterBits));
+        stdstore.enable_packed_slots().target(address(vault)).sig("getActiveProtocolAdapter()").checked_write(adapter);
+        assertEq(vault.getActiveProtocolAdapter(), adapter);
     }
 
     function _setParentTotalShares(uint256 totalShares) internal {
@@ -196,13 +231,9 @@ abstract contract BaseUnitTest is BaseTest {
     }
 
     function _setParentRecoveryMode(Types.RecoveryMode mode) internal {
-        bytes32 slot = bytes32(uint256(9));
-        uint256 word = uint256(vm.load(address(s_parentVault), slot));
-        uint256 mask = uint256(0xff) << 160;
-
-        uint256 updated = (word & ~mask) | (uint256(mode) << 160);
-
-        vm.store(address(s_parentVault), slot, bytes32(updated));
+        stdstore.enable_packed_slots().target(address(s_parentVault)).sig("getRecoveryMode()")
+            .checked_write(uint256(mode));
+        assertEq(uint256(s_parentVault.getRecoveryMode()), uint256(mode));
     }
 
     function _submitParentWithdraw(uint256 shareAmount) internal {

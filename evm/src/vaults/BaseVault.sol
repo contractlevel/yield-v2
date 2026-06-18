@@ -4,17 +4,21 @@ pragma solidity 0.8.28;
 import {CCIPReceiver, IAny2EVMMessageReceiver} from "@chainlink/contracts-ccip/contracts/applications/CCIPReceiver.sol";
 import {IRouterClient, Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
 
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {
-    AccessControlDefaultAdminRules,
+    AccessControlDefaultAdminRulesUpgradeable,
     IAccessControlDefaultAdminRules
-} from "@openzeppelin/contracts/access/extensions/AccessControlDefaultAdminRules.sol";
+} from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {
+    ReentrancyGuardTransientUpgradeable
+} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardTransientUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import {BaseVaultStore} from "./BaseVaultStore.sol";
 import {Roles} from "../libraries/Roles.sol";
 import {Types} from "../libraries/Types.sol";
 import {IBaseVault} from "../interfaces/IBaseVault.sol";
@@ -24,7 +28,15 @@ import {IProtocolAdapter} from "../interfaces/IProtocolAdapter.sol";
 /// @title Yieldcoin v2 BaseVault
 /// @author @contractlevel
 /// @notice Base contract for Parent and Child Vaults in Yieldcoin v2
-abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, ReentrancyGuard, CCIPReceiver, IBaseVault {
+abstract contract BaseVault is
+    BaseVaultStore,
+    PausableUpgradeable,
+    AccessControlDefaultAdminRulesUpgradeable,
+    ReentrancyGuardTransientUpgradeable,
+    UUPSUpgradeable,
+    CCIPReceiver,
+    IBaseVault
+{
     /*//////////////////////////////////////////////////////////////
                            TYPE DECLARATIONS
     //////////////////////////////////////////////////////////////*/
@@ -54,29 +66,6 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     address internal immutable i_adapterRegistry;
 
     /*//////////////////////////////////////////////////////////////
-                                 STATE
-    //////////////////////////////////////////////////////////////*/
-    /// @dev Default CCIP gas limit
-    uint256 internal s_defaultCcipGasLimit;
-    /// @dev Mapping of chain selectors to CCIP gas limits
-    mapping(uint64 chainSelector => uint256 gasLimit) internal s_ccipGasLimits;
-    /// @dev Mapping of chain selectors to crosschain vault addresses - also trusted CCIP senders allow list
-    /// @notice The Parent chain should include itself as a trusted CCIP sender and set its own vault address because it is checked in initiateRebalance
-    mapping(uint64 chainSelector => address vault) internal s_crosschainVaults;
-    /// @dev Active strategy protocol adapter for this chain. If this is address(0), this chain is NOT the active strategy chain
-    //slither-disable-next-line uninitialized-state
-    address internal s_activeProtocolAdapter;
-    /// @dev Timestamp when the vault was paused. Deleted when the vault is unpaused.
-    /// @notice This is used for emergency recovery modes.
-    uint96 internal s_pausedAt;
-    /// @dev Address that receives the underlying asset during emergency drain.
-    address internal s_emergencyReceiver;
-    /// @dev Active recovery discriminator. Enforces the singleton invariant at the store layer.
-    Types.RecoveryMode internal s_recoveryMode;
-    /// @dev Recovery state for failed rebalance deposit operations. This can exist on Parent or Child.
-    Types.RebalanceDepositRecovery internal s_rebalanceDepositRecovery;
-
-    /*//////////////////////////////////////////////////////////////
                                MODIFIERS
     //////////////////////////////////////////////////////////////*/
     /// @notice Modifier to only allow messages from allowed crosschain vaults
@@ -92,7 +81,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @param srcChainSelector The CCIP selector of the chain
     /// @dev Precondition: Sender must be the crosschain vault for the source chain selector
     function _onlyAllowedSender(address sender, uint64 srcChainSelector) internal view {
-        if (sender != s_crosschainVaults[srcChainSelector]) {
+        if (sender != _baseVaultStorage().s_crosschainVaults[srcChainSelector]) {
             revert BaseVault__InvalidSender(sender, srcChainSelector);
         }
     }
@@ -118,63 +107,86 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
-    /// @notice Parameters to initialize the contract in the constructor.
+    /// @notice Parameters to initialize immutable contract values in the constructor.
     /// @param link The address of the Chainlink LINK token
     /// @param asset The address of the underlying asset token
     /// @param ccipRouter The address of the CCIP router
-    /// @param defaultAdmin The address of the default admin for setting roles - trusted actor in the system
-    /// @param pauser The address of the pauser for pausing the vault - trusted actor in the system
-    /// @param unpauser The address of the unpauser for unpausing the vault - trusted actor in the system
-    /// @param configOperator The address of the config operator for setters - trusted actor in the system
     /// @param adapterRegistry The address of the Yieldcoin v2 AdapterRegistry
     /// @param thisChainSelector The CCIP selector for this chain
-    /// @param initialDefaultCcipGasLimit The initial s_defaultCcipGasLimit
     struct ConstructorParams {
         address link;
         address asset;
         address ccipRouter;
+        address adapterRegistry;
+        uint64 thisChainSelector;
+    }
+
+    /// @notice Parameters to initialize mutable proxy state.
+    /// @param defaultAdmin The address of the default admin for setting roles - trusted actor in the system
+    /// @param pauser The address of the pauser for pausing the vault - trusted actor in the system
+    /// @param unpauser The address of the unpauser for unpausing the vault - trusted actor in the system
+    /// @param configOperator The address of the config operator for setters - trusted actor in the system
+    /// @param emergencyReceiver The address that receives the underlying asset during emergency drain
+    /// @param initialDefaultCcipGasLimit The initial s_defaultCcipGasLimit
+    /// @param upgrader The address authorized to upgrade the vault implementation through UUPS
+    struct InitParams {
         address defaultAdmin;
         address pauser;
         address unpauser;
         address configOperator;
-        address adapterRegistry;
-        uint64 thisChainSelector;
         address emergencyReceiver;
         uint256 initialDefaultCcipGasLimit;
+        address upgrader;
     }
 
-    /// @param params Constructor parameters
-    /// @notice Grants PAUSER_ROLE to params.pauser
-    /// @notice Grants UNPAUSER_ROLE to params.unpauser
-    /// @notice Grants CONFIG_OPERATOR_ROLE to params.configOperator
-    /// @dev Precondition: required address params must not be the zero address
+    /// @notice Initializes implementation-level immutable configuration and disables implementation initializers.
+    /// @param params Constructor parameters for values that are baked into the implementation bytecode
+    /// @dev Precondition: required immutable address params must not be the zero address
     /// @dev Precondition: params.thisChainSelector must not be zero
-    /// @dev Precondition: params.initialDefaultCcipGasLimit must not be zero
-    constructor(ConstructorParams memory params)
-        CCIPReceiver(params.ccipRouter)
-        AccessControlDefaultAdminRules(INITIAL_DEFAULT_ADMIN_ROLE_TRANSFER_DELAY, params.defaultAdmin)
-    {
+    constructor(ConstructorParams memory params) CCIPReceiver(params.ccipRouter) {
         _revertIfZeroAddress(params.link);
         _revertIfZeroAddress(params.asset);
         _revertIfZeroAddress(params.ccipRouter);
-        _revertIfZeroAddress(params.pauser);
-        _revertIfZeroAddress(params.unpauser);
-        _revertIfZeroAddress(params.configOperator);
         _revertIfZeroAddress(params.adapterRegistry);
-        _revertIfZeroAddress(params.emergencyReceiver);
         _revertIfZeroChainSelector(params.thisChainSelector);
-        _revertIfZeroAmount(params.initialDefaultCcipGasLimit);
 
         i_thisChainSelector = params.thisChainSelector;
         i_link = params.link;
         i_asset = params.asset;
         i_assetPrecision = 10 ** IERC20Metadata(params.asset).decimals();
         i_adapterRegistry = params.adapterRegistry;
-        s_emergencyReceiver = params.emergencyReceiver;
-        s_defaultCcipGasLimit = params.initialDefaultCcipGasLimit;
+        _disableInitializers();
+    }
+
+    /// @notice Initializes BaseVault mutable proxy state.
+    /// @param params Initializer parameters for roles and mutable vault configuration
+    /// @notice Grants PAUSER_ROLE to params.pauser.
+    /// @notice Grants UNPAUSER_ROLE to params.unpauser.
+    /// @notice Grants CONFIG_OPERATOR_ROLE to params.configOperator.
+    /// @notice Grants UPGRADER_ROLE to params.upgrader.
+    /// @dev Precondition: required address params must not be the zero address
+    /// @dev Precondition: params.initialDefaultCcipGasLimit must not be zero
+    function __BaseVault_init(InitParams memory params) internal onlyInitializing {
+        _revertIfZeroAddress(params.defaultAdmin);
+        _revertIfZeroAddress(params.pauser);
+        _revertIfZeroAddress(params.unpauser);
+        _revertIfZeroAddress(params.configOperator);
+        _revertIfZeroAddress(params.emergencyReceiver);
+        _revertIfZeroAddress(params.upgrader);
+        _revertIfZeroAmount(params.initialDefaultCcipGasLimit);
+
+        __Pausable_init();
+        __AccessControlDefaultAdminRules_init(INITIAL_DEFAULT_ADMIN_ROLE_TRANSFER_DELAY, params.defaultAdmin);
+        __ReentrancyGuardTransient_init();
+        __UUPSUpgradeable_init();
+
+        BaseVaultStorage storage $ = _baseVaultStorage();
+        $.s_emergencyReceiver = params.emergencyReceiver;
+        $.s_defaultCcipGasLimit = params.initialDefaultCcipGasLimit;
         _grantRole(Roles.PAUSER_ROLE, params.pauser);
         _grantRole(Roles.UNPAUSER_ROLE, params.unpauser);
         _grantRole(Roles.CONFIG_OPERATOR_ROLE, params.configOperator);
+        _grantRole(Roles.UPGRADER_ROLE, params.upgrader);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -218,7 +230,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
             revert BaseVault__InvalidDestinationChainSelector(destinationChainSelector);
         }
         /// @dev Get the vault address for receiving the message
-        address vault = s_crosschainVaults[destinationChainSelector];
+        address vault = _baseVaultStorage().s_crosschainVaults[destinationChainSelector];
         if (vault == address(0)) revert BaseVault__DestinationVaultNotSet(destinationChainSelector);
         /// @dev Get the CCIP gas limit for the strategy chain
         uint256 gasLimit = _getCcipGasLimit(destinationChainSelector);
@@ -301,7 +313,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @return success Whether the deposit succeeded or not
     /// @notice This function uses a trycatch to handle cases where the deposit to strategy fails
     function _executeDeposit(uint256 amount, bool revertOnFailure) internal returns (bool success) {
-        address activeAdapter = s_activeProtocolAdapter;
+        address activeAdapter = _baseVaultStorage().s_activeProtocolAdapter;
         if (activeAdapter == address(0)) revert BaseVault__NoActiveAdapter();
         try this.tryDepositToAdapter(activeAdapter, amount) {
             success = true;
@@ -329,7 +341,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @return amountOut The amount withdrawn. This will be 0 if revertOnFailure is false and the withdraw failed
     /// @notice This function uses a trycatch to handle cases where the withdraw from strategy fails
     function _executeWithdraw(uint256 amount, bool revertOnFailure) internal returns (bool success, uint256 amountOut) {
-        address activeAdapter = s_activeProtocolAdapter;
+        address activeAdapter = _baseVaultStorage().s_activeProtocolAdapter;
         if (activeAdapter == address(0)) revert BaseVault__NoActiveAdapter();
         try IProtocolAdapter(activeAdapter).withdraw(amount) returns (uint256 actual) {
             success = true;
@@ -402,15 +414,15 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         if (adapterVault != address(this)) {
             revert BaseVault__InvalidAdapterVault(adapter, adapterVault, address(this));
         }
-        s_activeProtocolAdapter = adapter;
+        _baseVaultStorage().s_activeProtocolAdapter = adapter;
         emit ActiveProtocolAdapterSet(protocolId, adapter);
     }
 
     /// @notice Clears the active strategy protocol adapter for this chain
     /// @dev Precondition: this chain is no longer the active strategy chain
     function _clearActiveAdapter() internal {
-        address adapter = s_activeProtocolAdapter;
-        s_activeProtocolAdapter = address(0);
+        address adapter = _baseVaultStorage().s_activeProtocolAdapter;
+        _baseVaultStorage().s_activeProtocolAdapter = address(0);
         emit ActiveProtocolAdapterCleared(adapter);
     }
 
@@ -430,10 +442,10 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         if (amount == 0) revert BaseVault__ZeroRecoveryAmount();
         _requireNoRecovery();
 
-        s_rebalanceDepositRecovery = Types.RebalanceDepositRecovery({
+        _baseVaultStorage().s_rebalanceDepositRecovery = Types.RebalanceDepositRecovery({
             rebalanceNonce: rebalanceNonce, amount: amount, createdAt: block.timestamp
         });
-        s_recoveryMode = Types.RecoveryMode.REBALANCE_DEPOSIT;
+        _baseVaultStorage().s_recoveryMode = Types.RecoveryMode.REBALANCE_DEPOSIT;
         emit RebalanceDepositRecoveryStored(rebalanceNonce, amount);
     }
 
@@ -444,10 +456,10 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @dev Emites RebalanceDepositRecoveryCleared event
     function _clearRebalanceDepositRecovery() internal {
         _requireRecoveryMode(Types.RecoveryMode.REBALANCE_DEPOSIT);
-        uint256 rebalanceNonce = s_rebalanceDepositRecovery.rebalanceNonce;
+        uint256 rebalanceNonce = _baseVaultStorage().s_rebalanceDepositRecovery.rebalanceNonce;
 
-        delete s_rebalanceDepositRecovery;
-        s_recoveryMode = Types.RecoveryMode.NONE;
+        delete _baseVaultStorage().s_rebalanceDepositRecovery;
+        _baseVaultStorage().s_recoveryMode = Types.RecoveryMode.NONE;
         emit RebalanceDepositRecoveryCleared(rebalanceNonce);
     }
 
@@ -456,18 +468,18 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @param recovery Types.RebalanceDepositRecovery
     function _requireRebalanceDepositRecovery() internal view returns (Types.RebalanceDepositRecovery memory recovery) {
         _requireRecoveryMode(Types.RecoveryMode.REBALANCE_DEPOSIT);
-        recovery = s_rebalanceDepositRecovery;
+        recovery = _baseVaultStorage().s_rebalanceDepositRecovery;
     }
 
     /// @notice Reverts if any recovery state is pending
     function _requireNoRecovery() internal view {
-        if (s_recoveryMode != Types.RecoveryMode.NONE) revert BaseVault__RecoveryAlreadyPending();
+        if (_baseVaultStorage().s_recoveryMode != Types.RecoveryMode.NONE) revert BaseVault__RecoveryAlreadyPending();
     }
 
     /// @notice Reverts if the active recovery mode does not match the expected mode
     /// @param expected The recovery mode required by the caller
     function _requireRecoveryMode(Types.RecoveryMode expected) internal view {
-        if (s_recoveryMode != expected) revert BaseVault__NoPendingRecovery();
+        if (_baseVaultStorage().s_recoveryMode != expected) revert BaseVault__NoPendingRecovery();
     }
 
     /// @notice Inherited and implemented by ParentVault and ChildVault
@@ -508,12 +520,14 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         whenPaused
     {
         //slither-disable-next-line timestamp
-        if (block.timestamp - s_pausedAt < EMERGENCY_DRAIN_DELAY) revert BaseVault__EmergencyDrainDelayNotMet();
+        if (block.timestamp - _baseVaultStorage().s_pausedAt < EMERGENCY_DRAIN_DELAY) {
+            revert BaseVault__EmergencyDrainDelayNotMet();
+        }
 
         if (_getTVL() > 0) _executeWithdraw(type(uint256).max, revertOnFailure);
 
         uint256 balance = IERC20(i_asset).balanceOf(address(this));
-        address emergencyReceiver = s_emergencyReceiver;
+        address emergencyReceiver = _baseVaultStorage().s_emergencyReceiver;
         IERC20(i_asset).safeTransfer(emergencyReceiver, balance);
         emit EmergencyDrainExecuted(emergencyReceiver, balance);
     }
@@ -544,8 +558,9 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @param chainSelector The CCIP selector of the chain
     /// @return gasLimit The CCIP gas limit
     function _getCcipGasLimit(uint64 chainSelector) internal view returns (uint256 gasLimit) {
-        gasLimit = s_ccipGasLimits[chainSelector];
-        if (gasLimit == 0) gasLimit = s_defaultCcipGasLimit;
+        BaseVaultStorage storage $ = _baseVaultStorage();
+        gasLimit = $.s_ccipGasLimits[chainSelector];
+        if (gasLimit == 0) gasLimit = $.s_defaultCcipGasLimit;
     }
 
     /// @notice Gets the Yieldcoin TVL if this chain is the active strategy chain
@@ -564,7 +579,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @dev Sets the timestamp when the vault was paused
     function pause() external onlyRole(Roles.PAUSER_ROLE) {
         _pause();
-        s_pausedAt = uint96(block.timestamp);
+        _baseVaultStorage().s_pausedAt = uint96(block.timestamp);
     }
 
     /// @notice Unpauses the vault
@@ -573,7 +588,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @dev Deletes the timestamp when the vault was paused
     function unpause() external onlyRole(Roles.UNPAUSER_ROLE) {
         _unpause();
-        delete s_pausedAt;
+        delete _baseVaultStorage().s_pausedAt;
     }
 
     /// @notice Sets the crosschain vaults
@@ -593,7 +608,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
         if (chainSelectors.length != vaults.length) revert BaseVault__InvalidInputLengths();
         for (uint256 i; i < chainSelectors.length; ++i) {
             _revertIfZeroChainSelector(chainSelectors[i]);
-            s_crosschainVaults[chainSelectors[i]] = vaults[i];
+            _baseVaultStorage().s_crosschainVaults[chainSelectors[i]] = vaults[i];
             emit CrosschainVaultSet(chainSelectors[i], vaults[i]);
         }
     }
@@ -607,7 +622,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @dev Emits the CcipGasLimitSet event
     function setCcipGasLimit(uint64 chainSelector, uint256 gasLimit) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
         _revertIfZeroChainSelector(chainSelector);
-        s_ccipGasLimits[chainSelector] = gasLimit;
+        _baseVaultStorage().s_ccipGasLimits[chainSelector] = gasLimit;
         emit CcipGasLimitSet(chainSelector, gasLimit);
     }
 
@@ -620,7 +635,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @dev Emits the DefaultCcipGasLimitSet event
     function setDefaultCcipGasLimit(uint256 gasLimit) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
         _revertIfZeroAmount(gasLimit);
-        s_defaultCcipGasLimit = gasLimit;
+        _baseVaultStorage().s_defaultCcipGasLimit = gasLimit;
         emit DefaultCcipGasLimitSet(gasLimit);
     }
 
@@ -631,7 +646,7 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @dev Emits the EmergencyReceiverSet event
     function setEmergencyReceiver(address emergencyReceiver) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
         _revertIfZeroAddress(emergencyReceiver);
-        s_emergencyReceiver = emergencyReceiver;
+        _baseVaultStorage().s_emergencyReceiver = emergencyReceiver;
         emit EmergencyReceiverSet(emergencyReceiver);
     }
 
@@ -686,39 +701,39 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     /// @param chainSelector The CCIP selector of the chain
     /// @return vault The address of the crosschain vault
     function getCrosschainVault(uint64 chainSelector) external view returns (address vault) {
-        vault = s_crosschainVaults[chainSelector];
+        vault = _baseVaultStorage().s_crosschainVaults[chainSelector];
     }
 
     /// @notice Gets the CCIP gas limit for a given chain selector
     /// @param chainSelector The CCIP selector of the chain
     /// @return gasLimit The CCIP gas limit for the chain selector
     function getCcipGasLimit(uint64 chainSelector) external view returns (uint256 gasLimit) {
-        gasLimit = s_ccipGasLimits[chainSelector];
+        gasLimit = _baseVaultStorage().s_ccipGasLimits[chainSelector];
     }
 
     /// @notice Gets the default CCIP gas limit
     /// @return defaultCcipGasLimit The default CCIP gas limit
     function getDefaultCcipGasLimit() external view returns (uint256 defaultCcipGasLimit) {
-        defaultCcipGasLimit = s_defaultCcipGasLimit;
+        defaultCcipGasLimit = _baseVaultStorage().s_defaultCcipGasLimit;
     }
 
     /// @notice Gets the emergency receiver
     /// @return emergencyReceiver The address that receives the underlying asset during emergency drain
     function getEmergencyReceiver() external view returns (address emergencyReceiver) {
-        emergencyReceiver = s_emergencyReceiver;
+        emergencyReceiver = _baseVaultStorage().s_emergencyReceiver;
     }
 
     /// @notice Gets the timestamp when the vault was paused
     /// @return pausedAt The timestamp when the vault was paused
     /// @dev Returns 0 if the vault is not paused
     function getPausedAt() external view returns (uint256 pausedAt) {
-        pausedAt = s_pausedAt;
+        pausedAt = _baseVaultStorage().s_pausedAt;
     }
 
     /// @notice Returns the active strategy protocol adapter
     /// @return activeProtocolAdapter The address of the active strategy protocol adapter
     function getActiveProtocolAdapter() external view returns (address activeProtocolAdapter) {
-        activeProtocolAdapter = s_activeProtocolAdapter;
+        activeProtocolAdapter = _baseVaultStorage().s_activeProtocolAdapter;
     }
 
     /// @notice Gets the TVL of the vault
@@ -735,13 +750,13 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
     ///         uint256 amount - the amount that needs to be rebalanced/deposited into the new strategy
     ///         uint256 createdAt - block.timestamp the recovery state was stored
     function getRebalanceDepositRecovery() external view returns (Types.RebalanceDepositRecovery memory recovery) {
-        recovery = s_rebalanceDepositRecovery;
+        recovery = _baseVaultStorage().s_rebalanceDepositRecovery;
     }
 
     /// @notice Gets the active recovery mode
     /// @return recoveryMode The active recovery mode, or NONE when no recovery is active
     function getRecoveryMode() external view returns (Types.RecoveryMode recoveryMode) {
-        recoveryMode = s_recoveryMode;
+        recoveryMode = _baseVaultStorage().s_recoveryMode;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -756,12 +771,15 @@ abstract contract BaseVault is Pausable, AccessControlDefaultAdminRules, Reentra
      *
      * This function call must use less than 30 000 gas.
      */
-    /// @dev Overrides CCIPReceiver and AccessControlDefaultAdminRules
+    /// @dev Authorizes UUPS implementation upgrades.
+    function _authorizeUpgrade(address) internal override onlyRole(Roles.UPGRADER_ROLE) {}
+
+    /// @dev Overrides CCIPReceiver and AccessControlDefaultAdminRulesUpgradeable
     function supportsInterface(bytes4 interfaceId)
         public
         pure
         virtual
-        override(CCIPReceiver, AccessControlDefaultAdminRules)
+        override(CCIPReceiver, AccessControlDefaultAdminRulesUpgradeable)
         returns (bool)
     {
         return interfaceId == type(IERC165).interfaceId

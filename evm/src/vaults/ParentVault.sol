@@ -2,6 +2,7 @@
 pragma solidity 0.8.28;
 
 import {BaseVault} from "./BaseVault.sol";
+import {ParentVaultStore} from "./ParentVaultStore.sol";
 import {IParentVault} from "../interfaces/IParentVault.sol";
 import {IShare} from "../interfaces/IShare.sol";
 import {Types} from "../libraries/Types.sol";
@@ -10,22 +11,23 @@ import {IProtocolAdapter} from "../interfaces/IProtocolAdapter.sol";
 
 import {Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
 import {CCIPReceiver, IAny2EVMMessageReceiver} from "@chainlink/contracts-ccip/contracts/applications/CCIPReceiver.sol";
-import {PolicyProtected, Ownable} from "@chainlink/policy-management/core/PolicyProtected.sol";
-import {PolicyProtectedBase} from "@chainlink/policy-management/core/PolicyProtectedBase.sol";
+import {PolicyProtectedUpgradeable} from "@chainlink/policy-management/core/PolicyProtectedUpgradeable.sol";
+import {PolicyProtectedBaseUpgradeable} from "@chainlink/policy-management/core/PolicyProtectedBaseUpgradeable.sol";
 import {IPolicyProtected} from "@chainlink/policy-management/interfaces/IPolicyProtected.sol";
 
 import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {
-    AccessControlDefaultAdminRules,
+    AccessControlDefaultAdminRulesUpgradeable,
     IAccessControlDefaultAdminRules
-} from "@openzeppelin/contracts/access/extensions/AccessControlDefaultAdminRules.sol";
+} from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 /// @title Yieldcoin v2 ParentVault
 /// @author @contractlevel
 /// @notice Only one ParentVault is deployed on a single chain in the entire Yieldcoin v2 system.
 /// @notice This contract acts as the entry/exit point for users to deposit and withdraw in the Yieldcoin v2 system.
-contract ParentVault is BaseVault, IParentVault, PolicyProtected {
+contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtectedUpgradeable {
     /*//////////////////////////////////////////////////////////////
                            TYPE DECLARATIONS
     //////////////////////////////////////////////////////////////*/
@@ -57,69 +59,54 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     uint256 internal immutable i_minDepositAmount;
 
     /*//////////////////////////////////////////////////////////////
-                                 STATE
-    //////////////////////////////////////////////////////////////*/
-    Types.Rebalance internal s_rebalance;
-
-    /// @dev Total number of Yieldcoin shares minted and available to claim
-    /// @notice One subtlety: between closeEpoch and the last claimAsset call for an epoch, s_totalShares could be decremented but the actual Yieldcoin share tokens haven't been burned yet.
-    /// The i_share.totalSupply() will be higher than s_totalShares during this window. Therefore we never use i_share.totalSupply() as an authoritative share count — always use s_totalShares.
-    uint256 internal s_totalShares;
-    /// @dev Highest price per share ever recorded for performance fee purposes
-    uint256 internal s_performanceFeeHighWaterMark;
-    /// @dev Current epoch nonce
-    uint256 internal s_epochNonce;
-    /// @dev Epochs
-    mapping(uint256 epochNonce => Types.Epoch) internal s_epochs;
-    /// @dev Mapping of depositors to their deposits for each epoch
-    mapping(address depositor => mapping(uint256 epochId => uint256 assetAmount)) internal s_deposits;
-    /// @dev Mapping of withdrawers to their withdraw intents for each epoch
-    mapping(address withdrawer => mapping(uint256 epochId => uint256 shareBurnAmount)) internal s_withdraws;
-    /// @dev Mapping of protocolIds supported by Yieldcoin v2 across chains
-    /// @notice This CAN include protocols that are NOT supported on this chain. Ie if Parent is on Arb, and AaveV4 is only on Ethereum, but we support it, we don't want a check in initiateRebalance to be based on the local AdapterRegistry
-    mapping(bytes32 protocolId => bool isSupported) internal s_supportedProtocol;
-    /// @dev Treasury address for collecting fees. This should be the protocol operator's multisig.
-    address internal s_treasury;
-    /// @dev Whether the initial active protocol adapter has been set
-    bool internal s_initialActiveProtocolAdapterSet;
-
-    /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
-    /// @param params BaseVault Constructor parameters
-    /// @param treasury The address of the operator multisig for protocol fees
+    /// @notice Initializes implementation-level immutable configuration for the ParentVault.
+    /// @param params BaseVault constructor parameters for values baked into the implementation bytecode
     /// @param share The address of the Yieldcoin (YIELD) share token
-    /// @param policyEngineManager The address authorized to replace this vault's attached policy engine
-    /// @param policyEngine The address of the Yieldcoin v2 PolicyEngine
-    /// @dev Precondition: treasury must not be the zero address
     /// @dev Precondition: share must not be the zero address
-    /// @dev Precondition: policyEngineManager must not be the zero address
-    /// @dev PolicyProtected ownership is initialized to the vault default admin only to satisfy inherited Ownable state.
-    ///      Runtime policy engine replacement is controlled by POLICY_ENGINE_MANAGER_ROLE.
-    /// @dev The initial active protocol adapter is set after deployment with setInitialActiveProtocolAdapter.
-    ///      Deployment order: deploy vault, deploy adapter with vault address, register adapter, then call setter.
-    //slither-disable-next-line missing-zero-check
-    constructor(
-        BaseVault.ConstructorParams memory params,
-        address treasury,
-        address share,
-        address policyEngineManager,
-        address policyEngine
-    ) BaseVault(params) PolicyProtected(params.defaultAdmin, policyEngine) {
-        _revertIfZeroAddress(treasury);
+    constructor(BaseVault.ConstructorParams memory params, address share) BaseVault(params) {
         _revertIfZeroAddress(share);
-        _revertIfZeroAddress(policyEngineManager);
 
         i_share = share;
         i_sharePrecision = WAD_PRECISION / i_assetPrecision;
         i_minDepositAmount = 100 * i_assetPrecision;
-        s_performanceFeeHighWaterMark = i_sharePrecision;
-        s_epochNonce = 1;
-        s_epochs[1].status = Types.EpochStatus.OPEN;
-        s_epochs[1].openedAtTimestamp = block.timestamp;
-        s_rebalance.nonce = 1;
-        s_rebalance.lastRebalanceCompletedTimestamp = block.timestamp;
-        s_treasury = treasury;
+    }
+
+    /// @notice Initializes ParentVault mutable proxy state.
+    /// @param params BaseVault initializer parameters for roles and mutable vault configuration
+    /// @param treasury The address of the operator multisig for protocol fees
+    /// @param policyEngineManager The address authorized to replace this vault's attached policy engine
+    /// @param policyEngine The address of the Yieldcoin v2 PolicyEngine
+    /// @dev Precondition: treasury must not be the zero address
+    /// @dev Precondition: policyEngineManager must not be the zero address
+    /// @dev Precondition: policyEngine must not be the zero address
+    /// @dev PolicyProtected ownership is initialized to the vault default admin only to satisfy inherited Ownable state.
+    ///      Runtime policy engine replacement is controlled by POLICY_ENGINE_MANAGER_ROLE.
+    /// @dev The initial active protocol adapter is set after deployment with setInitialActiveProtocolAdapter.
+    ///      Deployment order: deploy vault implementation, deploy vault proxy, deploy adapter with proxy address,
+    ///      register adapter, then call setter on the proxy.
+    function initialize(
+        BaseVault.InitParams memory params,
+        address treasury,
+        address policyEngineManager,
+        address policyEngine
+    ) external initializer {
+        _revertIfZeroAddress(treasury);
+        _revertIfZeroAddress(policyEngineManager);
+        _validatePolicyEngine(policyEngine);
+
+        __BaseVault_init(params);
+        __PolicyProtected_init(params.defaultAdmin, policyEngine);
+
+        ParentVaultStorage storage $ = _parentVaultStorage();
+        $.s_performanceFeeHighWaterMark = i_sharePrecision;
+        $.s_epochNonce = 1;
+        $.s_epochs[1].status = Types.EpochStatus.OPEN;
+        $.s_epochs[1].openedAtTimestamp = block.timestamp;
+        $.s_rebalance.nonce = 1;
+        $.s_rebalance.lastRebalanceCompletedTimestamp = block.timestamp;
+        $.s_treasury = treasury;
         _grantRole(Roles.POLICY_ENGINE_MANAGER_ROLE, policyEngineManager);
     }
 
@@ -139,15 +126,16 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         nonReentrant
         onlyRole(Roles.DEFAULT_ADMIN_ROLE)
     {
-        if (s_initialActiveProtocolAdapterSet) {
+        ParentVaultStorage storage $ = _parentVaultStorage();
+        if ($.s_initialActiveProtocolAdapterSet) {
             revert ParentVault__InitialActiveProtocolAdapterAlreadySet();
         }
 
         address adapter = _setActiveAdapter(protocolId);
 
-        s_initialActiveProtocolAdapterSet = true;
-        s_rebalance.activeStrategy.protocolId = protocolId;
-        s_rebalance.activeStrategy.chainSelector = i_thisChainSelector;
+        $.s_initialActiveProtocolAdapterSet = true;
+        $.s_rebalance.activeStrategy.protocolId = protocolId;
+        $.s_rebalance.activeStrategy.chainSelector = i_thisChainSelector;
 
         emit InitialActiveProtocolAdapterSet(protocolId, adapter);
     }
@@ -158,7 +146,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @dev Precondition: treasury must not be the zero address
     function setTreasury(address treasury) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
         _revertIfZeroAddress(treasury);
-        s_treasury = treasury;
+        _parentVaultStorage().s_treasury = treasury;
         emit TreasurySet(treasury);
     }
 
@@ -175,12 +163,13 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @dev Precondition: the current epoch must be open
     function deposit(uint256 amount) external nonReentrant whenNotPaused runPolicy returns (uint256 epochNonce) {
         if (amount < i_minDepositAmount) revert ParentVault__AmountTooSmall(amount);
-        epochNonce = s_epochNonce;
+        ParentVaultStorage storage $ = _parentVaultStorage();
+        epochNonce = $.s_epochNonce;
         /// @dev This condition should never be hit under normal operations as the epoch nonce is incremented on openNextEpoch
-        if (s_epochs[epochNonce].status != Types.EpochStatus.OPEN) revert ParentVault__EpochNotOpen(epochNonce);
+        if ($.s_epochs[epochNonce].status != Types.EpochStatus.OPEN) revert ParentVault__EpochNotOpen(epochNonce);
 
-        s_deposits[msg.sender][epochNonce] += amount;
-        s_epochs[epochNonce].totalDepositAmount += amount;
+        $.s_deposits[msg.sender][epochNonce] += amount;
+        $.s_epochs[epochNonce].totalDepositAmount += amount;
 
         IERC20(i_asset).safeTransferFrom(msg.sender, address(this), amount);
         emit DepositSubmitted(epochNonce, msg.sender, amount);
@@ -202,12 +191,13 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         returns (uint256 epochNonce)
     {
         if (shareBurnAmount == 0) revert ParentVault__NoZeroAmount();
-        epochNonce = s_epochNonce;
+        ParentVaultStorage storage $ = _parentVaultStorage();
+        epochNonce = $.s_epochNonce;
         /// @dev This condition should never be hit under normal operations as the epoch nonce is incremented on openNextEpoch
-        if (s_epochs[epochNonce].status != Types.EpochStatus.OPEN) revert ParentVault__EpochNotOpen(epochNonce);
+        if ($.s_epochs[epochNonce].status != Types.EpochStatus.OPEN) revert ParentVault__EpochNotOpen(epochNonce);
 
-        s_withdraws[msg.sender][epochNonce] += shareBurnAmount;
-        s_epochs[epochNonce].totalShareBurnAmount += shareBurnAmount;
+        $.s_withdraws[msg.sender][epochNonce] += shareBurnAmount;
+        $.s_epochs[epochNonce].totalShareBurnAmount += shareBurnAmount;
 
         IERC20(i_share).safeTransferFrom(msg.sender, address(this), shareBurnAmount);
 
@@ -230,10 +220,11 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         runPolicy
         returns (uint256 shareMintAmount)
     {
-        Types.Epoch storage epoch = s_epochs[epochNonce];
+        ParentVaultStorage storage $ = _parentVaultStorage();
+        Types.Epoch storage epoch = $.s_epochs[epochNonce];
         if (epoch.status != Types.EpochStatus.CLAIMABLE) revert ParentVault__EpochNotClaimable(epochNonce);
 
-        uint256 depositAmount = s_deposits[msg.sender][epochNonce];
+        uint256 depositAmount = $.s_deposits[msg.sender][epochNonce];
         if (depositAmount == 0) revert ParentVault__NoDeposit(msg.sender, epochNonce);
 
         if (depositAmount != epoch.remainingDepositClaimAmount) {
@@ -246,7 +237,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         epoch.remainingDepositClaimAmount -= depositAmount;
         epoch.remainingShareMintAmount -= shareMintAmount;
 
-        delete s_deposits[msg.sender][epochNonce];
+        delete $.s_deposits[msg.sender][epochNonce];
         IShare(i_share).mint(msg.sender, shareMintAmount);
 
         emit DepositClaimed(epochNonce, msg.sender, shareMintAmount);
@@ -268,10 +259,11 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         runPolicy
         returns (uint256 withdrawAmount)
     {
-        Types.Epoch storage epoch = s_epochs[epochNonce];
+        ParentVaultStorage storage $ = _parentVaultStorage();
+        Types.Epoch storage epoch = $.s_epochs[epochNonce];
         if (epoch.status != Types.EpochStatus.CLAIMABLE) revert ParentVault__EpochNotClaimable(epochNonce);
 
-        uint256 shareBurnAmount = s_withdraws[msg.sender][epochNonce];
+        uint256 shareBurnAmount = $.s_withdraws[msg.sender][epochNonce];
         if (shareBurnAmount == 0) revert ParentVault__NoWithdraw(msg.sender, epochNonce);
 
         if (shareBurnAmount != epoch.remainingShareBurnAmount) {
@@ -285,7 +277,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         epoch.remainingShareBurnAmount -= shareBurnAmount;
         epoch.remainingWithdrawClaimAmount -= withdrawAmount;
 
-        delete s_withdraws[msg.sender][epochNonce];
+        delete $.s_withdraws[msg.sender][epochNonce];
 
         IShare(i_share).burn(address(this), shareBurnAmount);
 
@@ -301,13 +293,14 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @dev Precondition: the current epoch must be open
     /// @dev Precondition: the user must have a deposit for the epoch nonce
     function cancelDeposit() external nonReentrant whenNotPaused runPolicy {
-        uint256 epochNonce = s_epochNonce;
-        if (s_epochs[epochNonce].status != Types.EpochStatus.OPEN) revert ParentVault__EpochNotOpen(epochNonce);
+        ParentVaultStorage storage $ = _parentVaultStorage();
+        uint256 epochNonce = $.s_epochNonce;
+        if ($.s_epochs[epochNonce].status != Types.EpochStatus.OPEN) revert ParentVault__EpochNotOpen(epochNonce);
 
-        uint256 depositAmount = s_deposits[msg.sender][epochNonce];
+        uint256 depositAmount = $.s_deposits[msg.sender][epochNonce];
         if (depositAmount == 0) revert ParentVault__NoDeposit(msg.sender, epochNonce);
-        delete s_deposits[msg.sender][epochNonce];
-        s_epochs[epochNonce].totalDepositAmount -= depositAmount;
+        delete $.s_deposits[msg.sender][epochNonce];
+        $.s_epochs[epochNonce].totalDepositAmount -= depositAmount;
 
         IERC20(i_asset).safeTransfer(msg.sender, depositAmount);
 
@@ -322,14 +315,15 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @dev Precondition: the current epoch must be open
     /// @dev Precondition: the user must have a withdraw intent for the epoch nonce
     function cancelWithdraw() external nonReentrant whenNotPaused runPolicy {
-        uint256 epochNonce = s_epochNonce;
-        if (s_epochs[epochNonce].status != Types.EpochStatus.OPEN) revert ParentVault__EpochNotOpen(epochNonce);
+        ParentVaultStorage storage $ = _parentVaultStorage();
+        uint256 epochNonce = $.s_epochNonce;
+        if ($.s_epochs[epochNonce].status != Types.EpochStatus.OPEN) revert ParentVault__EpochNotOpen(epochNonce);
 
-        uint256 shareBurnAmount = s_withdraws[msg.sender][epochNonce];
+        uint256 shareBurnAmount = $.s_withdraws[msg.sender][epochNonce];
         if (shareBurnAmount == 0) revert ParentVault__NoWithdraw(msg.sender, epochNonce);
-        delete s_withdraws[msg.sender][epochNonce];
+        delete $.s_withdraws[msg.sender][epochNonce];
 
-        s_epochs[epochNonce].totalShareBurnAmount -= shareBurnAmount;
+        $.s_epochs[epochNonce].totalShareBurnAmount -= shareBurnAmount;
 
         IERC20(i_share).safeTransfer(msg.sender, shareBurnAmount);
 
@@ -359,10 +353,11 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
 
         /// @dev data decodes to a uint256 epochNonce for epoch net withdraws and a (uint256 rebalanceNonce, bytes32 protocolId) for rebalances
         (Types.CcipTx ccipTxType, bytes memory data) = abi.decode(message.data, (Types.CcipTx, bytes));
+        ParentVaultStorage storage $ = _parentVaultStorage();
         if (ccipTxType == Types.CcipTx.EPOCH_NET_WITHDRAW) {
             uint256 epochNonce = abi.decode(data, (uint256));
-            if (epochNonce != s_epochNonce - 1) revert ParentVault__InvalidEpochNonce(epochNonce);
-            Types.Epoch storage epoch = s_epochs[epochNonce];
+            if (epochNonce != $.s_epochNonce - 1) revert ParentVault__InvalidEpochNonce(epochNonce);
+            Types.Epoch storage epoch = $.s_epochs[epochNonce];
 
             /// @dev calculate the expected withdraw amount bridged back to the parent for the epoch
             uint256 expectedWithdraw = epoch.totalWithdrawClaimAmount - epoch.totalDepositAmount;
@@ -385,7 +380,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         }
         /// @dev see BaseVault::_handleCCIPRebalance
         else if (ccipTxType == Types.CcipTx.REBALANCE) {
-            Types.Rebalance memory rebalance = s_rebalance;
+            Types.Rebalance memory rebalance = $.s_rebalance;
             if (rebalance.state != Types.RebalanceState.REBALANCING) revert ParentVault__NoRebalanceInProgress();
             (uint256 rebalanceNonce, bytes32 protocolId) = abi.decode(data, (uint256, bytes32));
             if (rebalance.nonce != rebalanceNonce) revert ParentVault__InvalidRebalanceNonce(rebalanceNonce);
@@ -444,17 +439,18 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @notice If TVL goes to zero with shares outstanding, closeEpoch will revert.
     ///         A DONATE_OPERATOR_ROLE holder can call donate() to restore TVL; the next close will price shares against the donated amount.
     function closeEpoch(uint256 tvl) external nonReentrant whenNotPaused onlyRole(Roles.EPOCH_OPERATOR_ROLE) {
-        if (s_rebalance.state != Types.RebalanceState.NONE) revert ParentVault__RebalanceInProgress();
+        ParentVaultStorage storage $ = _parentVaultStorage();
+        if ($.s_rebalance.state != Types.RebalanceState.NONE) revert ParentVault__RebalanceInProgress();
 
         _requireNoRecovery();
 
-        uint256 epochNonce = s_epochNonce;
+        uint256 epochNonce = $.s_epochNonce;
         uint256 previousEpochNonce = epochNonce - 1;
-        if (previousEpochNonce != 0 && s_epochs[previousEpochNonce].status != Types.EpochStatus.CLAIMABLE) {
+        if (previousEpochNonce != 0 && $.s_epochs[previousEpochNonce].status != Types.EpochStatus.CLAIMABLE) {
             revert ParentVault__EpochNotClaimable(previousEpochNonce);
         }
 
-        Types.Epoch storage epoch = s_epochs[epochNonce];
+        Types.Epoch storage epoch = $.s_epochs[epochNonce];
         if (epoch.status != Types.EpochStatus.OPEN) revert ParentVault__EpochNotOpen(epochNonce);
         if (block.timestamp < epoch.openedAtTimestamp + MIN_EPOCH_PERIOD) {
             revert ParentVault__EpochTooShort(epochNonce);
@@ -483,7 +479,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
             revert ParentVault__DepositWouldMintZeroShares();
         }
         // @review-gas
-        s_totalShares = s_totalShares + newShares - epoch.totalShareBurnAmount;
+        $.s_totalShares = $.s_totalShares + newShares - epoch.totalShareBurnAmount;
 
         // 6. Store epoch settlement data
         epoch.totalWithdrawClaimAmount = totalWithdraw;
@@ -501,7 +497,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
             emit EpochClaimable(epochNonce);
 
             if (netFlow > 0) {
-                address activeAdapter = s_activeProtocolAdapter;
+                address activeAdapter = _baseVaultStorage().s_activeProtocolAdapter;
                 bool isLocalStrategy = activeAdapter != address(0);
                 /// @dev active strategy is local
                 if (isLocalStrategy) {
@@ -513,7 +509,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
                 else {
                     _ccipSend(
                         uint256(netFlow),
-                        s_rebalance.activeStrategy.chainSelector,
+                        $.s_rebalance.activeStrategy.chainSelector,
                         Types.CcipTx.EPOCH_NET_DEPOSIT,
                         abi.encode(epochNonce)
                     );
@@ -524,7 +520,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         else {
             uint256 netWithdrawAmount = uint256(-netFlow);
 
-            address activeAdapter = s_activeProtocolAdapter;
+            address activeAdapter = _baseVaultStorage().s_activeProtocolAdapter;
             bool isLocalStrategy = activeAdapter != address(0);
             /// @dev active strategy is local
             if (isLocalStrategy) {
@@ -565,7 +561,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @param tvl The Total Value Locked in the active strategy of the Yieldcoin v2 system
     /// @return pricePerShare Asset value of a Yieldcoin share token
     function _calculatePricePerShare(uint256 tvl) internal view returns (uint256 pricePerShare) {
-        uint256 totalShares = s_totalShares;
+        uint256 totalShares = _parentVaultStorage().s_totalShares;
         if (totalShares != 0 && tvl != 0) {
             pricePerShare = tvl * i_sharePrecision / totalShares;
         } else if (totalShares == 0) {
@@ -580,16 +576,17 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @notice Opens the next epoch
     /// @notice Increments the epoch nonce and sets the status for the new epoch to OPEN
     function _openNextEpoch() internal {
-        uint256 nextNonce = ++s_epochNonce;
-        s_epochs[nextNonce].status = Types.EpochStatus.OPEN;
-        s_epochs[nextNonce].openedAtTimestamp = block.timestamp;
+        ParentVaultStorage storage $ = _parentVaultStorage();
+        uint256 nextNonce = ++$.s_epochNonce;
+        $.s_epochs[nextNonce].status = Types.EpochStatus.OPEN;
+        $.s_epochs[nextNonce].openedAtTimestamp = block.timestamp;
         emit EpochOpen(nextNonce);
     }
 
     /// @notice Called by _ccipReceive when strategy sends net withdrawal proceeds back to Parent
     /// @param epochNonce The epoch being finalised
     function _finalizeEpoch(uint256 epochNonce) internal {
-        Types.Epoch storage epoch = s_epochs[epochNonce];
+        Types.Epoch storage epoch = _parentVaultStorage().s_epochs[epochNonce];
         if (epoch.status != Types.EpochStatus.EXECUTING) revert ParentVault__EpochNotExecuting(epochNonce);
 
         epoch.status = Types.EpochStatus.CLAIMABLE;
@@ -617,52 +614,53 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         onlyRole(Roles.REBALANCE_OPERATOR_ROLE)
     {
         // revert if rebalance is already in progress
-        if (s_rebalance.state != Types.RebalanceState.NONE) revert ParentVault__RebalanceInProgress();
+        ParentVaultStorage storage $ = _parentVaultStorage();
+        if ($.s_rebalance.state != Types.RebalanceState.NONE) revert ParentVault__RebalanceInProgress();
 
         _requireNoRecovery();
 
         // revert if the new strategy is the same as the active strategy
         if (
-            s_rebalance.activeStrategy.protocolId == newStrategy.protocolId
-                && s_rebalance.activeStrategy.chainSelector == newStrategy.chainSelector
+            $.s_rebalance.activeStrategy.protocolId == newStrategy.protocolId
+                && $.s_rebalance.activeStrategy.chainSelector == newStrategy.chainSelector
         ) {
             revert ParentVault__SameStrategy();
         }
 
         // revert if chain / protocol not supported
-        if (s_crosschainVaults[newStrategy.chainSelector] == address(0)) {
+        if (_baseVaultStorage().s_crosschainVaults[newStrategy.chainSelector] == address(0)) {
             revert ParentVault__InvalidChainSelector(newStrategy.chainSelector);
         }
-        if (!s_supportedProtocol[newStrategy.protocolId]) {
+        if (!$.s_supportedProtocol[newStrategy.protocolId]) {
             revert ParentVault__InvalidProtocolId(newStrategy.protocolId);
         }
 
         // revert if an epoch is in flight
-        uint256 currentEpochNonce = s_epochNonce;
+        uint256 currentEpochNonce = $.s_epochNonce;
         if (currentEpochNonce == 1) revert ParentVault__NoCompletedEpoch();
 
         // Cannot rebalance if any epoch is still EXECUTING
         // The previous epoch may still be awaiting CCIP confirmation
-        if (currentEpochNonce > 1 && s_epochs[currentEpochNonce - 1].status == Types.EpochStatus.EXECUTING) {
+        if (currentEpochNonce > 1 && $.s_epochs[currentEpochNonce - 1].status == Types.EpochStatus.EXECUTING) {
             revert ParentVault__EpochExecuting(currentEpochNonce - 1);
         }
 
-        s_rebalance.state = Types.RebalanceState.REBALANCING;
-        s_rebalance.pendingStrategy = newStrategy;
-        s_rebalance.lastRebalanceInitiatedTimestamp = block.timestamp;
-        emit RebalanceInitiated(s_rebalance.nonce, newStrategy.chainSelector, newStrategy.protocolId);
+        $.s_rebalance.state = Types.RebalanceState.REBALANCING;
+        $.s_rebalance.pendingStrategy = newStrategy;
+        $.s_rebalance.lastRebalanceInitiatedTimestamp = block.timestamp;
+        emit RebalanceInitiated($.s_rebalance.nonce, newStrategy.chainSelector, newStrategy.protocolId);
 
         /// @dev check if old/previously-active strategy chain selector is this one
         //slither-disable-next-line incorrect-equality
-        if (s_rebalance.activeStrategy.chainSelector == i_thisChainSelector) {
+        if ($.s_rebalance.activeStrategy.chainSelector == i_thisChainSelector) {
             // withdraw from local strategy
             (, uint256 amountOut) = _executeWithdraw(type(uint256).max, true);
-            emit RebalanceWithdrawSuccess(s_rebalance.nonce, amountOut);
+            emit RebalanceWithdrawSuccess($.s_rebalance.nonce, amountOut);
             if (newStrategy.chainSelector == i_thisChainSelector) {
                 // deposit into local strategy
                 _setActiveAdapter(newStrategy.protocolId);
                 _executeDeposit(amountOut, true);
-                emit RebalanceDepositSuccess(s_rebalance.nonce, amountOut);
+                emit RebalanceDepositSuccess($.s_rebalance.nonce, amountOut);
                 _finalizeRebalance();
             } else {
                 // ccip send to new strategy chain
@@ -671,7 +669,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
                     amountOut,
                     newStrategy.chainSelector,
                     Types.CcipTx.REBALANCE,
-                    abi.encode(s_rebalance.nonce, newStrategy.protocolId)
+                    abi.encode($.s_rebalance.nonce, newStrategy.protocolId)
                 );
             }
         } // else, CRE is trigged by the event to write to old strategy chain and rebalance/bridge from there
@@ -690,19 +688,20 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @dev Precondition: a rebalance must be in progress
     /// @notice Collects a management fee based on time elapsed since the last rebalance completed
     function _finalizeRebalance() internal {
-        if (s_rebalance.state != Types.RebalanceState.REBALANCING) revert ParentVault__NoRebalanceInProgress();
+        ParentVaultStorage storage $ = _parentVaultStorage();
+        if ($.s_rebalance.state != Types.RebalanceState.REBALANCING) revert ParentVault__NoRebalanceInProgress();
 
-        uint256 rebalanceNonce = s_rebalance.nonce;
-        uint256 lastRebalanceCompletedTimestamp = s_rebalance.lastRebalanceCompletedTimestamp;
+        uint256 rebalanceNonce = $.s_rebalance.nonce;
+        uint256 lastRebalanceCompletedTimestamp = $.s_rebalance.lastRebalanceCompletedTimestamp;
 
-        Types.Strategy memory newStrategy = s_rebalance.pendingStrategy;
-        s_rebalance.activeStrategy = newStrategy;
-        s_rebalance.state = Types.RebalanceState.NONE;
-        s_rebalance.lastRebalanceCompletedTimestamp = block.timestamp;
-        delete s_rebalance.pendingStrategy;
+        Types.Strategy memory newStrategy = $.s_rebalance.pendingStrategy;
+        $.s_rebalance.activeStrategy = newStrategy;
+        $.s_rebalance.state = Types.RebalanceState.NONE;
+        $.s_rebalance.lastRebalanceCompletedTimestamp = block.timestamp;
+        delete $.s_rebalance.pendingStrategy;
 
         emit RebalanceCompleted(rebalanceNonce, newStrategy.protocolId, newStrategy.chainSelector);
-        ++s_rebalance.nonce;
+        ++$.s_rebalance.nonce;
         _collectManagementFee(rebalanceNonce, lastRebalanceCompletedTimestamp);
     }
 
@@ -731,12 +730,13 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     function _collectManagementFee(uint256 rebalanceNonce, uint256 lastRebalanceCompletedTimestamp) internal {
         uint256 elapsed = block.timestamp - lastRebalanceCompletedTimestamp;
         if (elapsed > 365 days) elapsed = 365 days;
-        uint256 totalShares = s_totalShares;
+        ParentVaultStorage storage $ = _parentVaultStorage();
+        uint256 totalShares = $.s_totalShares;
         uint256 denominator = BPS_DENOMINATOR * 365 days;
         uint256 feeShares = (totalShares * MANAGEMENT_FEE_BPS * elapsed + denominator - 1) / denominator;
         if (feeShares != 0) {
-            s_totalShares = totalShares + feeShares;
-            IShare(i_share).mint(s_treasury, feeShares);
+            $.s_totalShares = totalShares + feeShares;
+            IShare(i_share).mint($.s_treasury, feeShares);
             emit ManagementFeeCollected(rebalanceNonce, feeShares);
         }
     }
@@ -750,10 +750,11 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         internal
         returns (uint256 settlementPricePerShare)
     {
-        uint256 highWaterMark = s_performanceFeeHighWaterMark;
+        ParentVaultStorage storage $ = _parentVaultStorage();
+        uint256 highWaterMark = $.s_performanceFeeHighWaterMark;
         if (grossPricePerShare <= highWaterMark) return grossPricePerShare;
 
-        uint256 totalShares = s_totalShares;
+        uint256 totalShares = $.s_totalShares;
         uint256 yieldPerShare = grossPricePerShare - highWaterMark;
         /// @dev totalYield is the asset value created above the prior after-fee high water mark.
         uint256 totalYield = _ceilDiv(yieldPerShare * totalShares, i_sharePrecision);
@@ -772,13 +773,13 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         uint256 feeShares = _ceilDiv(fee * totalShares, tvl - fee);
 
         if (feeShares != 0) {
-            s_totalShares = totalShares + feeShares;
-            IShare(i_share).mint(s_treasury, feeShares);
+            $.s_totalShares = totalShares + feeShares;
+            IShare(i_share).mint($.s_treasury, feeShares);
         }
 
         // @review-gas
         settlementPricePerShare = _calculatePricePerShare(tvl);
-        s_performanceFeeHighWaterMark = settlementPricePerShare;
+        $.s_performanceFeeHighWaterMark = settlementPricePerShare;
 
         if (feeShares != 0) emit PerformanceFeeCollected(epochNonce, feeShares, settlementPricePerShare);
     }
@@ -795,15 +796,16 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @dev Emits SupportedProtocolSet event
     function setSupportedProtocol(bytes32 protocolId, bool isSupported) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
         if (protocolId == bytes32(0)) revert ParentVault__NoZeroProtocolId();
+        ParentVaultStorage storage $ = _parentVaultStorage();
         if (!isSupported) {
-            if (protocolId == s_rebalance.activeStrategy.protocolId) {
+            if (protocolId == $.s_rebalance.activeStrategy.protocolId) {
                 revert ParentVault__CannotRemoveActiveProtocol(protocolId);
             }
-            if (protocolId == s_rebalance.pendingStrategy.protocolId) {
+            if (protocolId == $.s_rebalance.pendingStrategy.protocolId) {
                 revert ParentVault__CannotRemovePendingProtocol(protocolId);
             }
         }
-        s_supportedProtocol[protocolId] = isSupported;
+        $.s_supportedProtocol[protocolId] = isSupported;
         emit SupportedProtocolSet(protocolId, isSupported);
     }
 
@@ -838,27 +840,27 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @notice Returns the rebalance state
     /// @return rebalance The current rebalance state
     function getRebalance() external view returns (Types.Rebalance memory rebalance) {
-        rebalance = s_rebalance;
+        rebalance = _parentVaultStorage().s_rebalance;
     }
 
     /// @notice Returns the epoch data for a given epoch nonce
     /// @param epochNonce The epoch nonce to query
     /// @return epoch The epoch data including status, deposit/withdraw totals, price per share, and timestamps
     function getEpoch(uint256 epochNonce) external view returns (Types.Epoch memory epoch) {
-        epoch = s_epochs[epochNonce];
+        epoch = _parentVaultStorage().s_epochs[epochNonce];
     }
 
     /// @notice Returns the current epoch nonce
     /// @return epochNonce The nonce of the currently active epoch
     function getEpochNonce() external view returns (uint256 epochNonce) {
-        epochNonce = s_epochNonce;
+        epochNonce = _parentVaultStorage().s_epochNonce;
     }
 
     /// @notice Returns the total number of Yieldcoin shares tracked by the vault
     /// @dev This leads the on-chain share supply: updated at epoch close, minted/burned lazily at claim time
     /// @return totalShares The total share count tracked by the vault
     function getTotalShares() external view returns (uint256 totalShares) {
-        totalShares = s_totalShares;
+        totalShares = _parentVaultStorage().s_totalShares;
     }
 
     /// @notice Returns the asset deposit amount submitted by a user for a given epoch
@@ -866,7 +868,7 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @param epochNonce The epoch nonce of the deposit
     /// @return amount The asset amount the user deposited into the given epoch
     function getDepositAmount(address user, uint256 epochNonce) external view returns (uint256 amount) {
-        amount = s_deposits[user][epochNonce];
+        amount = _parentVaultStorage().s_deposits[user][epochNonce];
     }
 
     /// @notice Returns the share burn amount submitted by a user for a given epoch withdraw intent
@@ -878,23 +880,23 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         view
         returns (uint256 shareBurnAmount)
     {
-        shareBurnAmount = s_withdraws[user][epochNonce];
+        shareBurnAmount = _parentVaultStorage().s_withdraws[user][epochNonce];
     }
 
     /// @inheritdoc IParentVault
     function getInitialActiveProtocolAdapterSet() external view returns (bool initialActiveProtocolAdapterSet) {
-        initialActiveProtocolAdapterSet = s_initialActiveProtocolAdapterSet;
+        initialActiveProtocolAdapterSet = _parentVaultStorage().s_initialActiveProtocolAdapterSet;
     }
 
     /// @inheritdoc IParentVault
     function getPerformanceFeeHighWaterMark() external view returns (uint256 highWaterMark) {
-        highWaterMark = s_performanceFeeHighWaterMark;
+        highWaterMark = _parentVaultStorage().s_performanceFeeHighWaterMark;
     }
 
     /// @notice Gets the operator multisig for protocol fees
     /// @return treasury The address of the operator multisig for protocol fees
     function getTreasury() external view returns (address treasury) {
-        treasury = s_treasury;
+        treasury = _parentVaultStorage().s_treasury;
     }
 
     /// @notice Gets the Yieldcoin share token
@@ -918,16 +920,21 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @notice Gets whether a protocolId is supported on any chain across the Yieldcoin v2 system.
     /// @return isSupported true if supported on any chain, false if not supported on any chain
     function getSupportedProtocol(bytes32 protocolId) external view returns (bool isSupported) {
-        isSupported = s_supportedProtocol[protocolId];
+        isSupported = _parentVaultStorage().s_supportedProtocol[protocolId];
     }
 
     /*//////////////////////////////////////////////////////////////
                                 OVERRIDE
     //////////////////////////////////////////////////////////////*/
-    /// @notice Resolves the owner() conflict between Ownable (via PolicyProtected) and
+    /// @notice Resolves the owner() conflict between OwnableUpgradeable (via PolicyProtectedUpgradeable) and
     ///         AccessControlDefaultAdminRules. Returns the default admin address.
-    function owner() public view override(Ownable, AccessControlDefaultAdminRules) returns (address) {
-        return AccessControlDefaultAdminRules.owner();
+    function owner()
+        public
+        view
+        override(OwnableUpgradeable, AccessControlDefaultAdminRulesUpgradeable)
+        returns (address)
+    {
+        return AccessControlDefaultAdminRulesUpgradeable.owner();
     }
 
     /// @notice Attaches a policy engine.
@@ -938,7 +945,12 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
         _attachPolicyEngine(policyEngine);
     }
 
-    function supportsInterface(bytes4 interfaceId) public pure override(BaseVault, PolicyProtectedBase) returns (bool) {
+    function supportsInterface(bytes4 interfaceId)
+        public
+        pure
+        override(BaseVault, PolicyProtectedUpgradeable)
+        returns (bool)
+    {
         return interfaceId == type(IERC165).interfaceId
             || interfaceId == type(IAccessControlDefaultAdminRules).interfaceId
             || interfaceId == type(IAny2EVMMessageReceiver).interfaceId
@@ -951,8 +963,8 @@ contract ParentVault is BaseVault, IParentVault, PolicyProtected {
     /// @notice The Child Vault implementation includes s_epochDepositRecovery.amount
     /// @notice Returns 0 if the TVL is in transit over CCIP. This should not be read onchain when Parent state is REBALANCING
     function _getTVL() internal view override returns (uint256 tvl) {
-        address activeAdapter = s_activeProtocolAdapter;
+        address activeAdapter = _baseVaultStorage().s_activeProtocolAdapter;
         if (activeAdapter == address(0)) return 0;
-        tvl = IProtocolAdapter(activeAdapter).getTVL() + s_rebalanceDepositRecovery.amount;
+        tvl = IProtocolAdapter(activeAdapter).getTVL() + _baseVaultStorage().s_rebalanceDepositRecovery.amount;
     }
 }

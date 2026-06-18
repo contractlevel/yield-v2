@@ -57,7 +57,7 @@ import {TerminalAllowPolicy} from "../../src/modules/policies/TerminalAllowPolic
 ///      ParentVault.LINK_OPERATOR_ROLE: networkConfig.roles.linkOperator
 ///      ParentVault.DONATE_OPERATOR_ROLE: networkConfig.roles.donateOperator
 ///      ParentVault.REWARDS_OPERATOR_ROLE: networkConfig.roles.rewardsOperator
-///      ParentVault.POLICY_ENGINE_MANAGER_ROLE: networkConfig.roles.policyEngineManager
+///      ParentVault.POLICY_ENGINE_MANAGER_ROLE: networkConfig.roles.policy.engineManager
 ///      ParentVault.PAUSER_ROLE: networkConfig.roles.pauser
 ///      ParentVault.UNPAUSER_ROLE: networkConfig.roles.unpauser
 ///      WorkflowRouter.DEFAULT_ADMIN_ROLE: networkConfig.roles.defaultAdmin
@@ -67,15 +67,16 @@ import {TerminalAllowPolicy} from "../../src/modules/policies/TerminalAllowPolic
 ///      WorkflowRouter.KEYSTONE_FORWARDER_ROLE: networkConfig.cre.keystoneForwarder
 ///      AdapterRegistry.DEFAULT_ADMIN_ROLE: deployer/msg.sender, pending transfer to networkConfig.roles.defaultAdmin
 ///      AdapterRegistry.CONFIG_OPERATOR_ROLE: networkConfig.roles.configOperator
+///      YieldcoinShare owner() (UUPS upgrade authority): networkConfig.roles.upgrader
 ///      YieldcoinShare CCIP admin: networkConfig.roles.configOperator
 ///      YieldcoinShare CONFIG_OPERATOR_ROLE: networkConfig.roles.configOperator through ACE RBAC (setCCIPAdmin, setName, setSymbol)
-///      YieldcoinShare POLICY_ENGINE_MANAGER_ROLE: networkConfig.roles.policyEngineManager through ACE RBAC (attachPolicyEngine)
+///      YieldcoinShare POLICY_ENGINE_MANAGER_ROLE: networkConfig.roles.policy.engineManager through ACE RBAC (attachPolicyEngine)
 ///      YieldcoinShare PAUSER_ROLE: networkConfig.roles.pauser through ACE RBAC (pause)
 ///      YieldcoinShare UNPAUSER_ROLE: networkConfig.roles.unpauser through ACE RBAC (unpause)
 ///      YieldcoinShare COMPLIANCE_OPERATOR_ROLE: networkConfig.roles.complianceOperator through ACE RBAC (forcedTransfer, freeze/unfreeze, setAddressFrozen)
 ///      PolicyEngine.DEFAULT_ADMIN_ROLE: networkConfig.roles.defaultAdmin
-///      PolicyEngine.ADMIN_ROLE: networkConfig.roles.policyAdmin
-///      PolicyEngine.POLICY_CONFIG_ADMIN_ROLE: networkConfig.roles.policyConfigAdmin
+///      PolicyEngine.ADMIN_ROLE: networkConfig.roles.policy.admin
+///      PolicyEngine.POLICY_CONFIG_ADMIN_ROLE: networkConfig.roles.policy.configAdmin
 /// @notice After running this script, networkConfig.roles.defaultAdmin must call acceptDefaultAdminTransfer() on ParentVault and AdapterRegistry ASAP.
 /// @notice WorkflowRouter is deployed directly with networkConfig.roles.defaultAdmin and an initial 3-day default admin delay.
 contract DeployParent is Script {
@@ -104,7 +105,8 @@ contract DeployParent is Script {
         AdapterRegistry adapterRegistry;
         YieldcoinShare yieldcoinImpl;
         YieldcoinShare yieldcoinProxy;
-        ParentVault parentVault;
+        ParentVault parentVaultImpl;
+        ParentVault parentVaultProxy;
         AaveV3Adapter aaveV3Adapter;
         AaveV4Adapter aaveV4Adapter;
         CompoundV3Adapter compoundV3Adapter;
@@ -161,46 +163,59 @@ contract DeployParent is Script {
         ERC1967Proxy yieldcoinProxy = new ERC1967Proxy(
             address(yieldcoinImpl),
             abi.encodeWithSelector(
-                YieldcoinShare.initialize.selector, address(deploy.policyEngine), networkConfig.roles.configOperator
+                YieldcoinShare.initialize.selector,
+                address(deploy.policyEngine),
+                networkConfig.roles.configOperator,
+                networkConfig.roles.upgrader
             )
         );
         deploy.yieldcoinProxy = YieldcoinShare(address(yieldcoinProxy));
 
-        /// @dev Deploy the ParentVault
-        BaseVault.ConstructorParams memory baseVaultParams = BaseVault.ConstructorParams({
+        /// @dev Deploy the ParentVault implementation with immutable params, then initialize proxy state atomically.
+        BaseVault.ConstructorParams memory baseVaultConstructorParams = BaseVault.ConstructorParams({
             link: networkConfig.tokens.link,
             asset: networkConfig.tokens.usdc,
             ccipRouter: networkConfig.ccip.router,
+            adapterRegistry: address(deploy.adapterRegistry),
+            thisChainSelector: networkConfig.ccip.parentChainSelector
+        });
+        BaseVault.InitParams memory baseVaultInitParams = BaseVault.InitParams({
             defaultAdmin: deployer,
             pauser: networkConfig.roles.pauser,
             unpauser: networkConfig.roles.unpauser,
             configOperator: deployer,
-            adapterRegistry: address(deploy.adapterRegistry),
-            thisChainSelector: networkConfig.ccip.parentChainSelector,
             emergencyReceiver: networkConfig.emergencyReceiver,
-            initialDefaultCcipGasLimit: networkConfig.ccip.initialDefaultCcipGasLimit
+            initialDefaultCcipGasLimit: networkConfig.ccip.initialDefaultCcipGasLimit,
+            upgrader: networkConfig.roles.upgrader
         });
-        deploy.parentVault = new ParentVault(
-            baseVaultParams,
-            networkConfig.treasury,
-            address(deploy.yieldcoinProxy),
-            networkConfig.roles.policyEngineManager,
-            address(deploy.policyEngine)
+        deploy.parentVaultImpl = new ParentVault(baseVaultConstructorParams, address(deploy.yieldcoinProxy));
+        ERC1967Proxy parentVaultProxy = new ERC1967Proxy(
+            address(deploy.parentVaultImpl),
+            abi.encodeWithSelector(
+                ParentVault.initialize.selector,
+                baseVaultInitParams,
+                networkConfig.treasury,
+                networkConfig.roles.policy.engineManager,
+                address(deploy.policyEngine)
+            )
         );
+        deploy.parentVaultProxy = ParentVault(address(parentVaultProxy));
         bytes32 initialActiveProtocolId;
 
         /// @dev Deploy optional protocol adapters only when the configured protocol address exists on this chain.
         bytes32 aaveV3ProtocolId = keccak256("aave-v3");
         if (networkConfig.protocols.aaveV3PoolAddressesProvider != address(0)) {
-            deploy.aaveV3Adapter =
-                new AaveV3Adapter(address(deploy.parentVault), networkConfig.protocols.aaveV3PoolAddressesProvider);
+            deploy.aaveV3Adapter = new AaveV3Adapter(
+                address(deploy.parentVaultProxy), networkConfig.protocols.aaveV3PoolAddressesProvider
+            );
             deploy.adapterRegistry.setAdapter(aaveV3ProtocolId, address(deploy.aaveV3Adapter));
             initialActiveProtocolId = aaveV3ProtocolId;
         }
 
         bytes32 aaveV4ProtocolId = keccak256("aave-v4");
         if (networkConfig.protocols.aaveV4Spoke != address(0)) {
-            deploy.aaveV4Adapter = new AaveV4Adapter(address(deploy.parentVault), networkConfig.protocols.aaveV4Spoke);
+            deploy.aaveV4Adapter =
+                new AaveV4Adapter(address(deploy.parentVaultProxy), networkConfig.protocols.aaveV4Spoke);
             deploy.adapterRegistry.setAdapter(aaveV4ProtocolId, address(deploy.aaveV4Adapter));
             if (initialActiveProtocolId == bytes32(0)) initialActiveProtocolId = aaveV4ProtocolId;
         }
@@ -208,7 +223,7 @@ contract DeployParent is Script {
         bytes32 compoundV3ProtocolId = keccak256("compound-v3");
         if (networkConfig.protocols.compoundV3Comet != address(0)) {
             deploy.compoundV3Adapter = new CompoundV3Adapter(
-                address(deploy.parentVault),
+                address(deploy.parentVaultProxy),
                 networkConfig.protocols.compoundV3Comet,
                 networkConfig.protocols.compoundV3CometRewards
             );
@@ -217,18 +232,18 @@ contract DeployParent is Script {
         }
 
         if (initialActiveProtocolId != bytes32(0)) {
-            deploy.parentVault.setInitialActiveProtocolAdapter(initialActiveProtocolId);
+            deploy.parentVaultProxy.setInitialActiveProtocolAdapter(initialActiveProtocolId);
         }
 
-        deploy.parentVault.setSupportedProtocol(aaveV3ProtocolId, true);
-        deploy.parentVault.setSupportedProtocol(aaveV4ProtocolId, true);
-        deploy.parentVault.setSupportedProtocol(compoundV3ProtocolId, true);
+        deploy.parentVaultProxy.setSupportedProtocol(aaveV3ProtocolId, true);
+        deploy.parentVaultProxy.setSupportedProtocol(aaveV4ProtocolId, true);
+        deploy.parentVaultProxy.setSupportedProtocol(compoundV3ProtocolId, true);
 
         uint64[] memory parentChainSelectors = new uint64[](1);
         address[] memory parentCrosschainVaults = new address[](1);
         parentChainSelectors[0] = networkConfig.ccip.parentChainSelector;
-        parentCrosschainVaults[0] = address(deploy.parentVault);
-        deploy.parentVault.setCrosschainVaults(parentChainSelectors, parentCrosschainVaults);
+        parentCrosschainVaults[0] = address(deploy.parentVaultProxy);
+        deploy.parentVaultProxy.setCrosschainVaults(parentChainSelectors, parentCrosschainVaults);
 
         /// @dev Deploy the WorkflowRouter
         uint48 initialDelay = 259200; // 3 days
@@ -239,7 +254,7 @@ contract DeployParent is Script {
             unpauser: networkConfig.roles.unpauser,
             configOperator: networkConfig.roles.configOperator,
             keystoneForwarder: networkConfig.cre.keystoneForwarder,
-            vault: address(deploy.parentVault)
+            vault: address(deploy.parentVaultProxy)
         });
         deploy.workflowRouter = new WorkflowRouter(workflowRouterParams);
 
@@ -249,7 +264,7 @@ contract DeployParent is Script {
             deploy.policyEngine,
             deploy.identityRegistry,
             deploy.credentialRegistry,
-            deploy.parentVault,
+            deploy.parentVaultProxy,
             deploy.terminalAllow
         );
         deploy.providerPolicy = _configureRegistryProviderPolicies(
@@ -261,7 +276,7 @@ contract DeployParent is Script {
             deployer
         );
         _registerSystemKyc(
-            deploy.identityRegistry, deploy.credentialRegistry, PARENT_VAULT_CCID, address(deploy.parentVault)
+            deploy.identityRegistry, deploy.credentialRegistry, PARENT_VAULT_CCID, address(deploy.parentVaultProxy)
         );
         _registerSystemKyc(deploy.identityRegistry, deploy.credentialRegistry, TREASURY_CCID, networkConfig.treasury);
         _removeTemporaryRegistryProvider(
@@ -279,31 +294,31 @@ contract DeployParent is Script {
         deploy.shareSupplyPolicy = _configureSharePolicies(
             deploy.policyEngine,
             deploy.yieldcoinProxy,
-            deploy.parentVault,
+            deploy.parentVaultProxy,
             deploy.terminalAllow,
             networkConfig.roles.configOperator,
-            networkConfig.roles.policyEngineManager,
+            networkConfig.roles.policy.engineManager,
             networkConfig.roles.complianceOperator,
             networkConfig.roles.pauser,
             networkConfig.roles.unpauser
         );
 
-        deploy.parentVault.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
+        deploy.parentVaultProxy.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
         deploy.adapterRegistry.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
-        deploy.parentVault.grantRole(Roles.EPOCH_OPERATOR_ROLE, address(deploy.workflowRouter));
-        deploy.parentVault.grantRole(Roles.REBALANCE_OPERATOR_ROLE, address(deploy.workflowRouter));
-        deploy.parentVault.grantRole(Roles.EMERGENCY_DRAINER_ROLE, networkConfig.roles.emergencyDrainer);
-        deploy.parentVault.grantRole(Roles.LINK_OPERATOR_ROLE, networkConfig.roles.linkOperator);
-        deploy.parentVault.grantRole(Roles.DONATE_OPERATOR_ROLE, networkConfig.roles.donateOperator);
-        deploy.parentVault.grantRole(Roles.REWARDS_OPERATOR_ROLE, networkConfig.roles.rewardsOperator);
+        deploy.parentVaultProxy.grantRole(Roles.EPOCH_OPERATOR_ROLE, address(deploy.workflowRouter));
+        deploy.parentVaultProxy.grantRole(Roles.REBALANCE_OPERATOR_ROLE, address(deploy.workflowRouter));
+        deploy.parentVaultProxy.grantRole(Roles.EMERGENCY_DRAINER_ROLE, networkConfig.roles.emergencyDrainer);
+        deploy.parentVaultProxy.grantRole(Roles.LINK_OPERATOR_ROLE, networkConfig.roles.linkOperator);
+        deploy.parentVaultProxy.grantRole(Roles.DONATE_OPERATOR_ROLE, networkConfig.roles.donateOperator);
+        deploy.parentVaultProxy.grantRole(Roles.REWARDS_OPERATOR_ROLE, networkConfig.roles.rewardsOperator);
 
-        deploy.parentVault.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
+        deploy.parentVaultProxy.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
         deploy.adapterRegistry.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
 
         /// @dev The deployer remains default admin until the configured default admin accepts this transfer.
         ///      networkConfig.roles.defaultAdmin should call acceptDefaultAdminTransfer() ASAP.
         if (deployer != networkConfig.roles.defaultAdmin) {
-            deploy.parentVault.beginDefaultAdminTransfer(networkConfig.roles.defaultAdmin);
+            deploy.parentVaultProxy.beginDefaultAdminTransfer(networkConfig.roles.defaultAdmin);
         }
 
         /// @dev The deployer remains default admin until the configured default admin accepts this transfer.
@@ -317,8 +332,8 @@ contract DeployParent is Script {
             deploy.credentialRegistry,
             deployer,
             networkConfig.roles.defaultAdmin,
-            networkConfig.roles.policyAdmin,
-            networkConfig.roles.policyConfigAdmin
+            networkConfig.roles.policy.admin,
+            networkConfig.roles.policy.configAdmin
         );
     }
 

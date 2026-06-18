@@ -3,6 +3,13 @@ YieldcoinShare_initialize
   │   ├── it should set the token metadata
   │   ├── it should set the policy engine
   │   ├── it should set the CCIP admin
+  │   ├── it should set the owner to the upgrader
   │   └── it should emit a CCIPAdminTransferred event
-  └── when initial CCIP admin is the zero address
-      └── it should revert with YieldcoinShare__NoZeroAddress
+  ├── when upgrader is the zero address
+  │   └── it should revert with YieldcoinShare__NoZeroAddress
+  ├── when initial CCIP admin is the zero address
+  │   └── it should revert with YieldcoinShare__NoZeroAddress
+  ├── when already initialized
+  │   └── it should revert with InvalidInitialization
+  └── when called on the implementation directly
+      └── it should revert with InvalidInitialization

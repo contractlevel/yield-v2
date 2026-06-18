@@ -146,7 +146,7 @@ contract YieldcoinShare_RbacPolicyIntegrationTest is BaseIntegrationTest {
         _assertShareRbacPolicy(
             YieldcoinShare.attachPolicyEngine.selector,
             Roles.POLICY_ENGINE_MANAGER_ROLE,
-            networkConfig.roles.policyEngineManager
+            networkConfig.roles.policy.engineManager
         );
 
         _changePrank(i_nonOwner);

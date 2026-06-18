@@ -25,7 +25,7 @@ contract ParentVault_DeploymentIntegrationTest is BaseIntegrationTest {
         assertEq(parent.vault.getEmergencyReceiver(), networkConfig.emergencyReceiver);
         assertTrue(parent.vault.hasRole(Roles.PAUSER_ROLE, networkConfig.roles.pauser));
         assertTrue(parent.vault.hasRole(Roles.UNPAUSER_ROLE, networkConfig.roles.unpauser));
-        assertTrue(parent.vault.hasRole(Roles.POLICY_ENGINE_MANAGER_ROLE, networkConfig.roles.policyEngineManager));
+        assertTrue(parent.vault.hasRole(Roles.POLICY_ENGINE_MANAGER_ROLE, networkConfig.roles.policy.engineManager));
     }
 
     function test_ParentVault_deployment_HandsOffVaultDefaultAdmin() external view {
@@ -150,10 +150,10 @@ contract ParentVault_DeploymentIntegrationTest is BaseIntegrationTest {
         assertTrue(
             parent.policyEngine.hasRole(parent.policyEngine.DEFAULT_ADMIN_ROLE(), networkConfig.roles.defaultAdmin)
         );
-        assertTrue(parent.policyEngine.hasRole(parent.policyEngine.ADMIN_ROLE(), networkConfig.roles.policyAdmin));
+        assertTrue(parent.policyEngine.hasRole(parent.policyEngine.ADMIN_ROLE(), networkConfig.roles.policy.admin));
         assertTrue(
             parent.policyEngine
-                .hasRole(parent.policyEngine.POLICY_CONFIG_ADMIN_ROLE(), networkConfig.roles.policyConfigAdmin)
+                .hasRole(parent.policyEngine.POLICY_CONFIG_ADMIN_ROLE(), networkConfig.roles.policy.configAdmin)
         );
     }
 
@@ -180,10 +180,10 @@ contract ParentVault_DeploymentIntegrationTest is BaseIntegrationTest {
         assertTrue(
             parent.policyEngine.hasRole(parent.policyEngine.DEFAULT_ADMIN_ROLE(), networkConfig.roles.defaultAdmin)
         );
-        assertTrue(parent.policyEngine.hasRole(parent.policyEngine.ADMIN_ROLE(), networkConfig.roles.policyAdmin));
+        assertTrue(parent.policyEngine.hasRole(parent.policyEngine.ADMIN_ROLE(), networkConfig.roles.policy.admin));
         assertTrue(
             parent.policyEngine
-                .hasRole(parent.policyEngine.POLICY_CONFIG_ADMIN_ROLE(), networkConfig.roles.policyConfigAdmin)
+                .hasRole(parent.policyEngine.POLICY_CONFIG_ADMIN_ROLE(), networkConfig.roles.policy.configAdmin)
         );
 
         assertFalse(parent.policyEngine.hasRole(parent.policyEngine.DEFAULT_ADMIN_ROLE(), address(this)));
