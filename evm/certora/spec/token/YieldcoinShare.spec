@@ -35,6 +35,16 @@ definition CCIPAdminTransferredEvent() returns bytes32 =
 /*//////////////////////////////////////////////////////////////
                              GHOSTS
 //////////////////////////////////////////////////////////////*/
+/// @notice StoreCount: track stores to ccipAdmin
+ghost mathint ghost_ccipAdmin_StoreCount {
+    init_state axiom ghost_ccipAdmin_StoreCount == 0;
+}
+
+/// @notice StoredValue: track last value stored to ccipAdmin
+ghost address ghost_ccipAdmin_StoredValue {
+    init_state axiom ghost_ccipAdmin_StoredValue == 0;
+}
+
 /// @notice EventCount: track amount CCIPAdminTransferred event is emitted
 ghost mathint ghost_CCIPAdminTransferred_EventCount {
     init_state axiom ghost_CCIPAdminTransferred_EventCount == 0;
@@ -53,6 +63,12 @@ ghost address ghost_CCIPAdminTransferred_EventParam_newAdmin {
 /*//////////////////////////////////////////////////////////////
                              HOOKS
 //////////////////////////////////////////////////////////////*/
+/// @notice hook onto ccipAdmin storage writes (ERC-7201 namespace: yieldcoin.storage.YieldcoinShare)
+hook Sstore currentContract.ext_yieldcoin_storage_YieldcoinShare.ccipAdmin address newValue (address oldValue) {
+    ghost_ccipAdmin_StoreCount = ghost_ccipAdmin_StoreCount + 1;
+    ghost_ccipAdmin_StoredValue = newValue;
+}
+
 /// @notice CCIPAdminTransferred(address indexed previousAdmin, address indexed newAdmin) — LOG3
 hook LOG3(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2) {
     if (t0 == CCIPAdminTransferredEvent()) {
@@ -139,10 +155,12 @@ rule setCCIPAdmin_RevertWhen_PolicyEngineUndefined() {
 
     /// @dev ghost starting values
     require ghost_CCIPAdminTransferred_EventCount == 0, "CCIPAdminTransferred event count starts at zero";
+    require ghost_ccipAdmin_StoreCount == 0, "ccipAdmin store count starts at zero";
 
     setCCIPAdmin@withrevert(e, newAdmin);
     assert lastReverted;
     assert ghost_CCIPAdminTransferred_EventCount == 0;
+    assert ghost_ccipAdmin_StoreCount == 0;
 }
 
 rule setCCIPAdmin_RevertWhen_NewAdminIsZero() {
@@ -154,11 +172,13 @@ rule setCCIPAdmin_RevertWhen_NewAdminIsZero() {
 
     /// @dev ghost starting values
     require ghost_CCIPAdminTransferred_EventCount == 0, "CCIPAdminTransferred event count starts at zero";
+    require ghost_ccipAdmin_StoreCount == 0, "ccipAdmin store count starts at zero";
 
     /// @dev revert condition being verified
     setCCIPAdmin@withrevert(e, 0);
     assert lastReverted;
     assert ghost_CCIPAdminTransferred_EventCount == 0;
+    assert ghost_ccipAdmin_StoreCount == 0;
 }
 
 rule setCCIPAdmin_Success() {
@@ -177,6 +197,8 @@ rule setCCIPAdmin_Success() {
     require ghost_CCIPAdminTransferred_EventCount == 0, "CCIPAdminTransferred event count starts at zero";
     require ghost_CCIPAdminTransferred_EventParam_previousAdmin == 0, "previousAdmin ghost starts at zero";
     require ghost_CCIPAdminTransferred_EventParam_newAdmin == 0, "newAdmin ghost starts at zero";
+    require ghost_ccipAdmin_StoreCount == 0, "ccipAdmin store count starts at zero";
+    require ghost_ccipAdmin_StoredValue == 0, "ccipAdmin stored value starts at zero";
 
     setCCIPAdmin@withrevert(e, newAdmin);
 
@@ -184,6 +206,8 @@ rule setCCIPAdmin_Success() {
     assert ghost_CCIPAdminTransferred_EventCount == 1;
     assert ghost_CCIPAdminTransferred_EventParam_previousAdmin == previousAdmin;
     assert ghost_CCIPAdminTransferred_EventParam_newAdmin == newAdmin;
+    assert ghost_ccipAdmin_StoreCount == 1;
+    assert ghost_ccipAdmin_StoredValue == newAdmin;
     assert getCCIPAdmin() == newAdmin;
 }
 
