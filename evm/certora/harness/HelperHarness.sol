@@ -1,16 +1,40 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
+import {Types} from "../../src/libraries/Types.sol";
+
 /// @title HelperHarness
 /// @author @contractlevel
 /// @notice HelperHarness to use in CVL specs
 contract HelperHarness {
+    bytes32 private constant REENTRANCY_GUARD_TRANSIENT_STORAGE =
+        0x9b779b17422d0df92223018b32b4d1fa46e071723d6817e2486d003becc55f00;
+
+    function reentrancyGuardEntered() external view returns (bool entered) {
+        bytes32 slot = REENTRANCY_GUARD_TRANSIENT_STORAGE;
+        assembly {
+            entered := tload(slot)
+        }
+    }
+
     function bytes32ToAddress(bytes32 b) external returns (address) {
         return address(uint160(uint256(b)));
     }
 
     function bytes32ToUint256(bytes32 b) public pure returns (uint256) {
         return uint256(b);
+    }
+
+    function bytes32ToUint8(bytes32 b) public pure returns (uint8) {
+        return uint8(uint256(b));
+    }
+
+    function uint8ToCcipTxType(uint8 u) public pure returns (Types.CcipTx) {
+        return Types.CcipTx(u);
+    }
+
+    function bytes32ToUint64(bytes32 b) public pure returns (uint64) {
+        return uint64(uint256(b));
     }
 
     function bytes32ToBytes4(bytes32 b) external pure returns (bytes4) {
