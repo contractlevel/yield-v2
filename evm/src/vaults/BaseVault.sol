@@ -595,6 +595,7 @@ abstract contract BaseVault is
     /// @param chainSelectors The CCIP selectors of the chains
     /// @param vaults The addresses of the crosschain vaults
     /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
+    /// @dev Precondition: chainSelectors must not be empty
     /// @dev Precondition: chainSelectors and vaults must have the same length
     /// @dev Precondition: each chain selector must not be zero
     /// @dev Sets the crosschain vaults
@@ -605,6 +606,7 @@ abstract contract BaseVault is
         external
         onlyRole(Roles.CONFIG_OPERATOR_ROLE)
     {
+        if (chainSelectors.length == 0) revert BaseVault__EmptyInput();
         if (chainSelectors.length != vaults.length) revert BaseVault__InvalidInputLengths();
         for (uint256 i; i < chainSelectors.length; ++i) {
             _revertIfZeroChainSelector(chainSelectors[i]);

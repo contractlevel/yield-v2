@@ -25,6 +25,8 @@ methods {
     function setActiveAdapter(bytes32) external returns (address) envfree;
     function clearActiveAdapter() external envfree;
     function clearRebalanceDepositRecovery() external envfree;
+    function requireRebalanceDepositRecovery() external returns (Types.RebalanceDepositRecovery) envfree;
+    function recoverFailedRebalanceDepositInternal() external returns (uint256, uint256);
     function executeCcipSend(uint256, uint64, Types.CcipTx, bytes) external;
     function storeRebalanceDepositRecovery(uint256, uint256) external;
     function executeDeposit(uint256, bool) external returns (bool);
@@ -38,6 +40,7 @@ methods {
     function requireNoRecovery() external;
     function requireRecoveryMode(Types.RecoveryMode) external;
     function authorizeUpgrade(address) external;
+    function initializeBaseVault(BaseVault.InitParams) external;
 
     /*//////////////////////////////////////////////////////////////
                         RECOVERY FIELD GETTERS (harness)
@@ -46,6 +49,8 @@ methods {
     function getRecoveryAmount() external returns (uint256) envfree;
     function getRecoveryCreatedAt() external returns (uint256) envfree;
     function reentrancyGuardEntered() external returns (bool) envfree;
+    function isInitialized() external returns (bool) envfree;
+    function isInitializing() external returns (bool) envfree;
 
     /*//////////////////////////////////////////////////////////////
                             ENVFREE GETTERS
@@ -59,10 +64,13 @@ methods {
     function adapter.withdrawReverts() external returns (bool) envfree;
     function adapter.setTVL(uint256) external;
     function ccipRouter.getFee() external returns (uint256) envfree;
+    function ccipRouter.getFeeReverts() external returns (bool) envfree;
+    function ccipRouter.ccipSendReverts() external returns (bool) envfree;
 
     function hasRole(bytes32, address) external returns (bool) envfree;
     function paused() external returns (bool) envfree;
     function owner() external returns (address) envfree;
+    function defaultAdmin() external returns (address) envfree;
     function getTVL() external returns (uint256) envfree;
     function supportsInterface(bytes4) external returns (bool) envfree;
 
@@ -568,6 +576,291 @@ rule constructor_getRouter() {
     assert getRouter() != 0;
 }
 
+/// ─────────────────── INITIALIZE BASE VAULT ───────────────────
+
+/// @notice BaseVault initialization reverts when the default admin is the zero address
+/// @dev Verifies that initialization is rolled back and mutable BaseVault configuration remains unchanged
+rule initializeBaseVault_RevertWhen_DefaultAdminIsZeroAddress() {
+    env e;
+    BaseVault.InitParams params;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !isInitialized(), "contract should not be initialized";
+    require !isInitializing(), "contract should not be initializing";
+    require params.pauser != 0, "pauser should not be zero";
+    require params.unpauser != 0, "unpauser should not be zero";
+    require params.configOperator != 0, "config operator should not be zero";
+    require params.emergencyReceiver != 0, "emergency receiver should not be zero";
+    require params.upgrader != 0, "upgrader should not be zero";
+    require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
+    require defaultAdmin() == 0, "default admin should not be initialized";
+
+    /// @dev revert condition being verified
+    require params.defaultAdmin == 0, "default admin should be zero";
+
+    storage before = lastStorage;
+
+    initializeBaseVault@withrevert(e, params);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+}
+
+/// @notice BaseVault initialization reverts when the pauser is the zero address
+/// @dev Verifies that initialization is rolled back and mutable BaseVault configuration remains unchanged
+rule initializeBaseVault_RevertWhen_PauserIsZeroAddress() {
+    env e;
+    BaseVault.InitParams params;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !isInitialized(), "contract should not be initialized";
+    require !isInitializing(), "contract should not be initializing";
+    require params.defaultAdmin != 0, "default admin should not be zero";
+    require params.unpauser != 0, "unpauser should not be zero";
+    require params.configOperator != 0, "config operator should not be zero";
+    require params.emergencyReceiver != 0, "emergency receiver should not be zero";
+    require params.upgrader != 0, "upgrader should not be zero";
+    require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
+    require defaultAdmin() == 0, "default admin should not be initialized";
+
+    /// @dev revert condition being verified
+    require params.pauser == 0, "pauser should be zero";
+
+    storage before = lastStorage;
+
+    initializeBaseVault@withrevert(e, params);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+}
+
+/// @notice BaseVault initialization reverts when the unpauser is the zero address
+/// @dev Verifies that initialization is rolled back and mutable BaseVault configuration remains unchanged
+rule initializeBaseVault_RevertWhen_UnpauserIsZeroAddress() {
+    env e;
+    BaseVault.InitParams params;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !isInitialized(), "contract should not be initialized";
+    require !isInitializing(), "contract should not be initializing";
+    require params.defaultAdmin != 0, "default admin should not be zero";
+    require params.pauser != 0, "pauser should not be zero";
+    require params.configOperator != 0, "config operator should not be zero";
+    require params.emergencyReceiver != 0, "emergency receiver should not be zero";
+    require params.upgrader != 0, "upgrader should not be zero";
+    require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
+    require defaultAdmin() == 0, "default admin should not be initialized";
+
+    /// @dev revert condition being verified
+    require params.unpauser == 0, "unpauser should be zero";
+
+    storage before = lastStorage;
+
+    initializeBaseVault@withrevert(e, params);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+}
+
+/// @notice BaseVault initialization reverts when the config operator is the zero address
+/// @dev Verifies that initialization is rolled back and mutable BaseVault configuration remains unchanged
+rule initializeBaseVault_RevertWhen_ConfigOperatorIsZeroAddress() {
+    env e;
+    BaseVault.InitParams params;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !isInitialized(), "contract should not be initialized";
+    require !isInitializing(), "contract should not be initializing";
+    require params.defaultAdmin != 0, "default admin should not be zero";
+    require params.pauser != 0, "pauser should not be zero";
+    require params.unpauser != 0, "unpauser should not be zero";
+    require params.emergencyReceiver != 0, "emergency receiver should not be zero";
+    require params.upgrader != 0, "upgrader should not be zero";
+    require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
+    require defaultAdmin() == 0, "default admin should not be initialized";
+
+    /// @dev revert condition being verified
+    require params.configOperator == 0, "config operator should be zero";
+
+    storage before = lastStorage;
+
+    initializeBaseVault@withrevert(e, params);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+}
+
+/// @notice BaseVault initialization reverts when the emergency receiver is the zero address
+/// @dev Verifies that initialization is rolled back and mutable BaseVault configuration remains unchanged
+rule initializeBaseVault_RevertWhen_EmergencyReceiverIsZeroAddress() {
+    env e;
+    BaseVault.InitParams params;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !isInitialized(), "contract should not be initialized";
+    require !isInitializing(), "contract should not be initializing";
+    require params.defaultAdmin != 0, "default admin should not be zero";
+    require params.pauser != 0, "pauser should not be zero";
+    require params.unpauser != 0, "unpauser should not be zero";
+    require params.configOperator != 0, "config operator should not be zero";
+    require params.upgrader != 0, "upgrader should not be zero";
+    require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
+    require defaultAdmin() == 0, "default admin should not be initialized";
+
+    /// @dev revert condition being verified
+    require params.emergencyReceiver == 0, "emergency receiver should be zero";
+
+    storage before = lastStorage;
+
+    initializeBaseVault@withrevert(e, params);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+}
+
+/// @notice BaseVault initialization reverts when the upgrader is the zero address
+/// @dev Verifies that initialization is rolled back and mutable BaseVault configuration remains unchanged
+rule initializeBaseVault_RevertWhen_UpgraderIsZeroAddress() {
+    env e;
+    BaseVault.InitParams params;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !isInitialized(), "contract should not be initialized";
+    require !isInitializing(), "contract should not be initializing";
+    require params.defaultAdmin != 0, "default admin should not be zero";
+    require params.pauser != 0, "pauser should not be zero";
+    require params.unpauser != 0, "unpauser should not be zero";
+    require params.configOperator != 0, "config operator should not be zero";
+    require params.emergencyReceiver != 0, "emergency receiver should not be zero";
+    require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
+    require defaultAdmin() == 0, "default admin should not be initialized";
+
+    /// @dev revert condition being verified
+    require params.upgrader == 0, "upgrader should be zero";
+
+    storage before = lastStorage;
+
+    initializeBaseVault@withrevert(e, params);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+}
+
+/// @notice BaseVault initialization reverts when the initial default CCIP gas limit is zero
+/// @dev Verifies that initialization is rolled back and mutable BaseVault configuration remains unchanged
+rule initializeBaseVault_RevertWhen_InitialDefaultCcipGasLimitIsZero() {
+    env e;
+    BaseVault.InitParams params;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !isInitialized(), "contract should not be initialized";
+    require !isInitializing(), "contract should not be initializing";
+    require params.defaultAdmin != 0, "default admin should not be zero";
+    require params.pauser != 0, "pauser should not be zero";
+    require params.unpauser != 0, "unpauser should not be zero";
+    require params.configOperator != 0, "config operator should not be zero";
+    require params.emergencyReceiver != 0, "emergency receiver should not be zero";
+    require params.upgrader != 0, "upgrader should not be zero";
+    require defaultAdmin() == 0, "default admin should not be initialized";
+
+    /// @dev revert condition being verified
+    require params.initialDefaultCcipGasLimit == 0, "default CCIP gas limit should be zero";
+
+    storage before = lastStorage;
+
+    initializeBaseVault@withrevert(e, params);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+}
+
+/// @notice BaseVault initialization reverts when the contract has already been initialized
+/// @dev Verifies that repeated initialization leaves all vault state unchanged
+rule initializeBaseVault_RevertWhen_AlreadyInitialized() {
+    env e;
+    BaseVault.InitParams params;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require params.defaultAdmin != 0, "default admin should not be zero";
+    require params.pauser != 0, "pauser should not be zero";
+    require params.unpauser != 0, "unpauser should not be zero";
+    require params.configOperator != 0, "config operator should not be zero";
+    require params.emergencyReceiver != 0, "emergency receiver should not be zero";
+    require params.upgrader != 0, "upgrader should not be zero";
+    require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
+
+    /// @dev revert condition being verified
+    require isInitialized(), "contract should already be initialized";
+
+    storage before = lastStorage;
+
+    initializeBaseVault@withrevert(e, params);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+}
+
+/// @notice BaseVault initialization sets mutable configuration and grants all initial roles
+/// @dev Verifies initialization state, role assignments, storage writes, and unpaused recovery-free defaults
+rule initializeBaseVault_Success() {
+    env e;
+    BaseVault.InitParams params;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !isInitialized(), "contract should not be initialized";
+    require !isInitializing(), "contract should not be initializing";
+    require params.defaultAdmin != 0, "default admin should not be zero";
+    require params.pauser != 0, "pauser should not be zero";
+    require params.unpauser != 0, "unpauser should not be zero";
+    require params.configOperator != 0, "config operator should not be zero";
+    require params.emergencyReceiver != 0, "emergency receiver should not be zero";
+    require params.upgrader != 0, "upgrader should not be zero";
+    require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
+    require defaultAdmin() == 0, "default admin should not be initialized";
+    require getEmergencyReceiver() == 0, "emergency receiver should not be initialized";
+    require getDefaultCcipGasLimit() == 0, "default CCIP gas limit should not be initialized";
+    require !paused(), "vault should not be paused";
+    require getRecoveryMode() == RECOVERY_NONE(), "recovery should not be pending";
+    require !hasRole(to_bytes32(0), params.defaultAdmin), "default admin role should not be granted";
+    require !hasRole(PAUSER_ROLE(), params.pauser), "pauser role should not be granted";
+    require !hasRole(UNPAUSER_ROLE(), params.unpauser), "unpauser role should not be granted";
+    require !hasRole(CONFIG_OPERATOR_ROLE(), params.configOperator), "config operator role should not be granted";
+    require !hasRole(UPGRADER_ROLE(), params.upgrader), "upgrader role should not be granted";
+
+    /// @dev set ghost starting values
+    require ghost_emergencyReceiver_StoreCount == 0;
+    require ghost_defaultCcipGasLimit_StoreCount == 0;
+
+    initializeBaseVault@withrevert(e, params);
+
+    assert !lastReverted;
+    assert isInitialized();
+    assert !isInitializing();
+    assert !paused();
+    assert getRecoveryMode() == RECOVERY_NONE();
+    assert getEmergencyReceiver() == params.emergencyReceiver;
+    assert getDefaultCcipGasLimit() == params.initialDefaultCcipGasLimit;
+    assert defaultAdmin() == params.defaultAdmin;
+    assert hasRole(to_bytes32(0), params.defaultAdmin);
+    assert hasRole(PAUSER_ROLE(), params.pauser);
+    assert hasRole(UNPAUSER_ROLE(), params.unpauser);
+    assert hasRole(CONFIG_OPERATOR_ROLE(), params.configOperator);
+    assert hasRole(UPGRADER_ROLE(), params.upgrader);
+    assert ghost_emergencyReceiver_StoreCount == 1;
+    assert ghost_emergencyReceiver_StoredValue == params.emergencyReceiver;
+    assert ghost_defaultCcipGasLimit_StoreCount == 1;
+    assert ghost_defaultCcipGasLimit_StoredValue == params.initialDefaultCcipGasLimit;
+}
+
 /// ─────────────────── PAUSE ───────────────────────────────────
 
 rule pause_RevertWhen_CallerDoesNotHavePAUSER_ROLE() {
@@ -905,10 +1198,36 @@ rule setCrosschainVaults_RevertWhen_ArrayLengthsDoNotMatch() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require hasRole(CONFIG_OPERATOR_ROLE(), e.msg.sender);
-    require vaults[0] <= max_uint160, "vault should be a canonical address";
+    require chainSelectors.length != 0, "chain selectors should not be empty";
 
     /// @dev revert condition being verified
     require chainSelectors.length != vaults.length, "array lengths should not match";
+
+    /// @dev set ghost starting values
+    require ghost_CrosschainVaultSet_EventCount == 0;
+    require ghost_crosschainVaults_StoreCount == 0;
+
+    setCrosschainVaults@withrevert(e, chainSelectors, vaults);
+
+    assert lastReverted;
+    assert ghost_CrosschainVaultSet_EventCount == 0;
+    assert ghost_crosschainVaults_StoreCount == 0;
+}
+
+/// @notice Setting crosschain vaults reverts when the input arrays are empty
+/// @dev Verifies that no crosschain vault is stored and no event is emitted
+rule setCrosschainVaults_RevertWhen_InputIsEmpty() {
+    env e;
+    uint64[] chainSelectors;
+    address[] vaults;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require hasRole(CONFIG_OPERATOR_ROLE(), e.msg.sender);
+    require chainSelectors.length == vaults.length, "array lengths should match";
+
+    /// @dev revert condition being verified
+    require chainSelectors.length == 0, "chain selectors should be empty";
 
     /// @dev set ghost starting values
     require ghost_CrosschainVaultSet_EventCount == 0;
@@ -1814,6 +2133,211 @@ rule clearRebalanceDepositRecovery_Success() {
     assert ghost_recoveryMode_StoredValue == Types.RecoveryMode.NONE;
 }
 
+/// ─────────────────── REQUIRE REBALANCE DEPOSIT RECOVERY ─────
+
+/// @notice Requiring rebalance deposit recovery reverts unless that recovery mode is active
+/// @dev Verifies that recovery validation does not modify vault storage
+rule requireRebalanceDepositRecovery_RevertWhen_NoPendingRecovery() {
+    env e;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+
+    /// @dev revert condition being verified
+    require getRecoveryMode() != RECOVERY_REBALANCE_DEPOSIT(), "rebalance deposit recovery should not be pending";
+
+    storage before = lastStorage;
+
+    requireRebalanceDepositRecovery@withrevert(e);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+}
+
+/// @notice Requiring active rebalance deposit recovery returns the stored recovery record
+/// @dev Verifies all returned fields and that recovery validation does not modify vault storage
+rule requireRebalanceDepositRecovery_Success() {
+    env e;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require getRecoveryMode() == RECOVERY_REBALANCE_DEPOSIT(), "rebalance deposit recovery should be pending";
+
+    uint256 expectedNonce = getRecoveryRebalanceNonce();
+    uint256 expectedAmount = getRecoveryAmount();
+    uint256 expectedCreatedAt = getRecoveryCreatedAt();
+    storage before = lastStorage;
+
+    Types.RebalanceDepositRecovery recovery = requireRebalanceDepositRecovery@withrevert(e);
+
+    assert !lastReverted;
+    assert recovery.rebalanceNonce == expectedNonce;
+    assert recovery.amount == expectedAmount;
+    assert recovery.createdAt == expectedCreatedAt;
+    assert before[currentContract] == lastStorage[currentContract];
+}
+
+/// ─────────────────── RECOVER FAILED REBALANCE DEPOSIT ───────
+
+/// @notice Recovering a failed rebalance deposit reverts unless that recovery mode is active
+/// @dev Verifies that recovery state, balances, TVL, and events remain unchanged
+rule recoverFailedRebalanceDepositInternal_RevertWhen_NoPendingRecovery() {
+    env e;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
+    require !adapter.depositReverts(), "adapter deposit should not revert";
+
+    /// @dev revert condition being verified
+    require getRecoveryMode() != RECOVERY_REBALANCE_DEPOSIT(), "rebalance deposit recovery should not be pending";
+
+    storage before = lastStorage;
+    uint256 vaultBalanceBefore = asset.balanceOf(currentContract);
+    uint256 adapterBalanceBefore = asset.balanceOf(adapter);
+    uint256 adapterTVLBefore = adapter.getTVL();
+
+    /// @dev set ghost starting values
+    require ghost_RebalanceDepositRecoveryCleared_EventCount == 0;
+    require ghost_RebalanceDepositSuccess_EventCount == 0;
+
+    recoverFailedRebalanceDepositInternal@withrevert(e);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+    assert asset.balanceOf(currentContract) == vaultBalanceBefore;
+    assert asset.balanceOf(adapter) == adapterBalanceBefore;
+    assert adapter.getTVL() == adapterTVLBefore;
+    assert ghost_RebalanceDepositRecoveryCleared_EventCount == 0;
+    assert ghost_RebalanceDepositSuccess_EventCount == 0;
+}
+
+/// @notice Recovering a failed rebalance deposit reverts when no active adapter is set
+/// @dev Verifies that recovery state, balances, TVL, and events remain unchanged
+rule recoverFailedRebalanceDepositInternal_RevertWhen_NoActiveAdapter() {
+    env e;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require getRecoveryMode() == RECOVERY_REBALANCE_DEPOSIT(), "rebalance deposit recovery should be pending";
+    require !adapter.depositReverts(), "adapter deposit should not revert";
+
+    /// @dev revert condition being verified
+    require getActiveProtocolAdapter() == 0, "active adapter should not be set";
+
+    storage before = lastStorage;
+    uint256 vaultBalanceBefore = asset.balanceOf(currentContract);
+    uint256 adapterBalanceBefore = asset.balanceOf(adapter);
+    uint256 adapterTVLBefore = adapter.getTVL();
+
+    /// @dev set ghost starting values
+    require ghost_RebalanceDepositRecoveryCleared_EventCount == 0;
+    require ghost_RebalanceDepositSuccess_EventCount == 0;
+
+    recoverFailedRebalanceDepositInternal@withrevert(e);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+    assert asset.balanceOf(currentContract) == vaultBalanceBefore;
+    assert asset.balanceOf(adapter) == adapterBalanceBefore;
+    assert adapter.getTVL() == adapterTVLBefore;
+    assert ghost_RebalanceDepositRecoveryCleared_EventCount == 0;
+    assert ghost_RebalanceDepositSuccess_EventCount == 0;
+}
+
+/// @notice Recovering a failed rebalance deposit reverts when the adapter deposit fails
+/// @dev Verifies atomic rollback of recovery state, balances, TVL, and events
+rule recoverFailedRebalanceDepositInternal_RevertWhen_DepositFails() {
+    env e;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require getRecoveryMode() == RECOVERY_REBALANCE_DEPOSIT(), "rebalance deposit recovery should be pending";
+    require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
+
+    /// @dev revert condition being verified
+    require adapter.depositReverts(), "adapter deposit should revert";
+
+    storage before = lastStorage;
+    uint256 vaultBalanceBefore = asset.balanceOf(currentContract);
+    uint256 adapterBalanceBefore = asset.balanceOf(adapter);
+    uint256 adapterTVLBefore = adapter.getTVL();
+
+    /// @dev set ghost starting values
+    require ghost_RebalanceDepositRecoveryCleared_EventCount == 0;
+    require ghost_RebalanceDepositSuccess_EventCount == 0;
+
+    recoverFailedRebalanceDepositInternal@withrevert(e);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+    assert asset.balanceOf(currentContract) == vaultBalanceBefore;
+    assert asset.balanceOf(adapter) == adapterBalanceBefore;
+    assert adapter.getTVL() == adapterTVLBefore;
+    assert ghost_RebalanceDepositRecoveryCleared_EventCount == 0;
+    assert ghost_RebalanceDepositSuccess_EventCount == 0;
+}
+
+/// @notice Recovering a failed rebalance deposit deposits the stored amount and clears recovery
+/// @dev Verifies return values, balances, TVL, recovery deletion, storage writes, and events
+rule recoverFailedRebalanceDepositInternal_Success() {
+    env e;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require getRecoveryMode() == RECOVERY_REBALANCE_DEPOSIT(), "rebalance deposit recovery should be pending";
+    require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
+    require !adapter.depositReverts(), "adapter deposit should not revert";
+    require adapter != currentContract, "adapter should not be the vault";
+
+    uint256 recoveryNonceBefore = getRecoveryRebalanceNonce();
+    uint256 recoveryAmountBefore = getRecoveryAmount();
+    uint256 vaultBalanceBefore = asset.balanceOf(currentContract);
+    uint256 adapterBalanceBefore = asset.balanceOf(adapter);
+    uint256 adapterTVLBefore = adapter.getTVL();
+
+    /// @dev mock token and adapter arithmetic conditions
+    require recoveryAmountBefore <= vaultBalanceBefore, "vault asset balance should cover the recovery amount";
+    require adapterBalanceBefore <= max_uint256 - recoveryAmountBefore, "adapter asset balance should not overflow";
+    require adapterTVLBefore <= max_uint256 - recoveryAmountBefore, "adapter TVL should not overflow";
+
+    /// @dev set ghost starting values
+    require ghost_RebalanceDepositRecoveryCleared_EventCount == 0;
+    require ghost_RebalanceDepositSuccess_EventCount == 0;
+    require ghost_rebalanceDepositRecovery_nonce_StoreCount == 0;
+    require ghost_rebalanceDepositRecovery_amount_StoreCount == 0;
+    require ghost_rebalanceDepositRecovery_createdAt_StoreCount == 0;
+    require ghost_recoveryMode_StoreCount == 0;
+
+    uint256 returnedNonce;
+    uint256 returnedAmount;
+    (returnedNonce, returnedAmount) = recoverFailedRebalanceDepositInternal@withrevert(e);
+
+    assert !lastReverted;
+    assert returnedNonce == recoveryNonceBefore;
+    assert returnedAmount == recoveryAmountBefore;
+    assert asset.balanceOf(currentContract) == vaultBalanceBefore - recoveryAmountBefore;
+    assert asset.balanceOf(adapter) == adapterBalanceBefore + recoveryAmountBefore;
+    assert adapter.getTVL() == adapterTVLBefore + recoveryAmountBefore;
+    assert getRecoveryMode() == RECOVERY_NONE();
+    assert getRecoveryRebalanceNonce() == 0;
+    assert getRecoveryAmount() == 0;
+    assert getRecoveryCreatedAt() == 0;
+    assert ghost_RebalanceDepositRecoveryCleared_EventCount == 1;
+    assert ghost_RebalanceDepositRecoveryCleared_Param_nonce == recoveryNonceBefore;
+    assert ghost_RebalanceDepositSuccess_EventCount == 1;
+    assert ghost_RebalanceDepositSuccess_Param_nonce == recoveryNonceBefore;
+    assert ghost_RebalanceDepositSuccess_Param_amount == recoveryAmountBefore;
+    assert ghost_rebalanceDepositRecovery_nonce_StoreCount == 1;
+    assert ghost_rebalanceDepositRecovery_nonce_StoredValue == 0;
+    assert ghost_rebalanceDepositRecovery_amount_StoreCount == 1;
+    assert ghost_rebalanceDepositRecovery_amount_StoredValue == 0;
+    assert ghost_rebalanceDepositRecovery_createdAt_StoreCount == 1;
+    assert ghost_rebalanceDepositRecovery_createdAt_StoredValue == 0;
+    assert ghost_recoveryMode_StoreCount == 1;
+    assert ghost_recoveryMode_StoredValue == Types.RecoveryMode.NONE;
+}
+
 /// ─────────────────── EXECUTE CCIP SEND ──────────────────────
 
 /// @notice Executing a CCIP send reverts when the bridge amount is zero
@@ -1829,6 +2353,8 @@ rule executeCcipSend_RevertWhen_BridgeAmountIsZero() {
     require destSelector != 0, "destination chain selector should not be zero";
     require destSelector != getThisChainSelector(), "destination should not be this chain";
     require getCrosschainVault(destSelector) != 0, "destination vault should be registered";
+    require !ccipRouter.getFeeReverts(), "router fee lookup should not revert";
+    require !ccipRouter.ccipSendReverts(), "router send should not revert";
 
     /// @dev revert condition being verified
     uint256 bridgeAmount = 0;
@@ -1853,6 +2379,8 @@ rule executeCcipSend_RevertWhen_DestinationChainIsZero() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require bridgeAmount != 0, "bridge amount should not be zero";
+    require !ccipRouter.getFeeReverts(), "router fee lookup should not revert";
+    require !ccipRouter.ccipSendReverts(), "router send should not revert";
 
     /// @dev revert condition being verified
     uint64 destSelector = 0;
@@ -1877,6 +2405,8 @@ rule executeCcipSend_RevertWhen_DestinationIsSelfChain() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require bridgeAmount != 0, "bridge amount should not be zero";
+    require !ccipRouter.getFeeReverts(), "router fee lookup should not revert";
+    require !ccipRouter.ccipSendReverts(), "router send should not revert";
 
     /// @dev revert condition being verified
     uint64 destSelector = getThisChainSelector();
@@ -1904,6 +2434,8 @@ rule executeCcipSend_RevertWhen_DestinationVaultNotRegistered() {
     require bridgeAmount != 0, "bridge amount should not be zero";
     require destSelector != 0, "destination chain selector should not be zero";
     require destSelector != getThisChainSelector(), "destination should not be this chain";
+    require !ccipRouter.getFeeReverts(), "router fee lookup should not revert";
+    require !ccipRouter.ccipSendReverts(), "router send should not revert";
 
     /// @dev revert condition being verified
     require getCrosschainVault(destSelector) == 0, "destination vault should not be registered";
@@ -1932,6 +2464,8 @@ rule executeCcipSend_Success_EmitsCCIPBridged() {
     require destSelector != 0, "destination chain selector should not be zero";
     require destSelector != getThisChainSelector(), "destination should not be this chain";
     require getCrosschainVault(destSelector) != 0, "destination vault should be registered";
+    require !ccipRouter.getFeeReverts(), "router fee lookup should not revert";
+    require !ccipRouter.ccipSendReverts(), "router send should not revert";
 
     /// @dev set ghost starting values
     require ghost_CCIPBridged_EventCount == 0;
@@ -1960,6 +2494,8 @@ rule executeCcipSend_Success_BalanceChanges() {
     require destSelector != 0, "destination chain selector should not be zero";
     require destSelector != getThisChainSelector(), "destination should not be this chain";
     require getCrosschainVault(destSelector) != 0, "destination vault should be registered";
+    require !ccipRouter.getFeeReverts(), "router fee lookup should not revert";
+    require !ccipRouter.ccipSendReverts(), "router send should not revert";
 
     uint256 fee = ccipRouter.getFee();
     address router = getRouter();
@@ -1981,6 +2517,88 @@ rule executeCcipSend_Success_BalanceChanges() {
     assert link.balanceOf(router) == routerLinkBalanceBefore + fee;
     assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore - bridgeAmount;
     assert asset.balanceOf(router) == routerAssetBalanceBefore + bridgeAmount;
+}
+
+/// @notice Executing a CCIP send reverts when the router fee lookup fails
+/// @dev Verifies that vault storage and token balances are unchanged and no event is emitted
+rule executeCcipSend_RevertWhen_RouterGetFeeReverts() {
+    env e;
+    uint256 bridgeAmount;
+    uint64 destSelector;
+    Types.CcipTx ccipTxType;
+    bytes txData;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require bridgeAmount != 0, "bridge amount should not be zero";
+    require destSelector != 0, "destination chain selector should not be zero";
+    require destSelector != getThisChainSelector(), "destination should not be this chain";
+    require getCrosschainVault(destSelector) != 0, "destination vault should be registered";
+    require !ccipRouter.ccipSendReverts(), "router send should not revert";
+
+    /// @dev revert condition being verified
+    require ccipRouter.getFeeReverts(), "router fee lookup should revert";
+
+    storage before = lastStorage;
+    address router = getRouter();
+    uint256 vaultLinkBalanceBefore = link.balanceOf(currentContract);
+    uint256 routerLinkBalanceBefore = link.balanceOf(router);
+    uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
+    uint256 routerAssetBalanceBefore = asset.balanceOf(router);
+
+    /// @dev set ghost starting values
+    require ghost_CCIPBridged_EventCount == 0;
+
+    executeCcipSend@withrevert(e, bridgeAmount, destSelector, ccipTxType, txData);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+    assert link.balanceOf(currentContract) == vaultLinkBalanceBefore;
+    assert link.balanceOf(router) == routerLinkBalanceBefore;
+    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
+    assert asset.balanceOf(router) == routerAssetBalanceBefore;
+    assert ghost_CCIPBridged_EventCount == 0;
+}
+
+/// @notice Executing a CCIP send reverts when the router send fails
+/// @dev Verifies atomic rollback of approvals and token balances and that no event is emitted
+rule executeCcipSend_RevertWhen_RouterCcipSendReverts() {
+    env e;
+    uint256 bridgeAmount;
+    uint64 destSelector;
+    Types.CcipTx ccipTxType;
+    bytes txData;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require bridgeAmount != 0, "bridge amount should not be zero";
+    require destSelector != 0, "destination chain selector should not be zero";
+    require destSelector != getThisChainSelector(), "destination should not be this chain";
+    require getCrosschainVault(destSelector) != 0, "destination vault should be registered";
+    require !ccipRouter.getFeeReverts(), "router fee lookup should not revert";
+
+    /// @dev revert condition being verified
+    require ccipRouter.ccipSendReverts(), "router send should revert";
+
+    storage before = lastStorage;
+    address router = getRouter();
+    uint256 vaultLinkBalanceBefore = link.balanceOf(currentContract);
+    uint256 routerLinkBalanceBefore = link.balanceOf(router);
+    uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
+    uint256 routerAssetBalanceBefore = asset.balanceOf(router);
+
+    /// @dev set ghost starting values
+    require ghost_CCIPBridged_EventCount == 0;
+
+    executeCcipSend@withrevert(e, bridgeAmount, destSelector, ccipTxType, txData);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+    assert link.balanceOf(currentContract) == vaultLinkBalanceBefore;
+    assert link.balanceOf(router) == routerLinkBalanceBefore;
+    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
+    assert asset.balanceOf(router) == routerAssetBalanceBefore;
+    assert ghost_CCIPBridged_EventCount == 0;
 }
 
 /// ─────────────────── AUTHORIZE UPGRADE ─────────────────────
@@ -2073,6 +2691,33 @@ rule executeDeposit_RevertWhen_DepositFailsWithRevertOnFailure() {
     assert adapter.getTVL() == adapterTVLBefore;
 }
 
+/// @notice A failed deposit returns false when failure is not configured to revert
+/// @dev Verifies that the failed external self-call rolls back all balance and TVL changes
+rule executeDeposit_FailureReturnsFalseWhen_RevertOnFailureIsFalse() {
+    env e;
+    uint256 amount;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
+
+    /// @dev failure conditions being verified
+    bool revertOnFailure = false;
+    require adapter.depositReverts(), "adapter deposit should revert";
+
+    uint256 vaultBalanceBefore = asset.balanceOf(currentContract);
+    uint256 adapterBalanceBefore = asset.balanceOf(adapter);
+    uint256 adapterTVLBefore = adapter.getTVL();
+
+    bool success = executeDeposit@withrevert(e, amount, revertOnFailure);
+
+    assert !lastReverted;
+    assert !success;
+    assert asset.balanceOf(currentContract) == vaultBalanceBefore;
+    assert asset.balanceOf(adapter) == adapterBalanceBefore;
+    assert adapter.getTVL() == adapterTVLBefore;
+}
+
 /// @notice Executing a successful deposit returns true and transfers assets into the active adapter
 /// @dev Verifies exact vault balance, adapter balance, and adapter TVL changes
 rule executeDeposit_Success() {
@@ -2153,6 +2798,36 @@ rule executeWithdraw_RevertWhen_WithdrawFailsWithRevertOnFailure() {
     executeWithdraw@withrevert(e, amount, revertOnFailure);
 
     assert lastReverted;
+    assert asset.balanceOf(currentContract) == vaultBalanceBefore;
+    assert asset.balanceOf(adapter) == adapterBalanceBefore;
+    assert adapter.getTVL() == adapterTVLBefore;
+}
+
+/// @notice A failed withdrawal returns false and zero when failure is not configured to revert
+/// @dev Verifies that the failed adapter call leaves all balances and TVL unchanged
+rule executeWithdraw_FailureReturnsFalseWhen_RevertOnFailureIsFalse() {
+    env e;
+    uint256 amount;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
+
+    /// @dev failure conditions being verified
+    bool revertOnFailure = false;
+    require adapter.withdrawReverts(), "adapter withdraw should revert";
+
+    uint256 vaultBalanceBefore = asset.balanceOf(currentContract);
+    uint256 adapterBalanceBefore = asset.balanceOf(adapter);
+    uint256 adapterTVLBefore = adapter.getTVL();
+
+    bool success;
+    uint256 amountOut;
+    (success, amountOut) = executeWithdraw@withrevert(e, amount, revertOnFailure);
+
+    assert !lastReverted;
+    assert !success;
+    assert amountOut == 0;
     assert asset.balanceOf(currentContract) == vaultBalanceBefore;
     assert asset.balanceOf(adapter) == adapterBalanceBefore;
     assert adapter.getTVL() == adapterTVLBefore;
@@ -2597,6 +3272,27 @@ rule onlyAllowedSender_RevertWhen_SenderIsNotRegisteredVault() {
     assert lastReverted;
 }
 
+/// @notice Sender validation succeeds for the registered vault of the source chain
+/// @dev Verifies that successful sender validation does not modify vault storage
+rule onlyAllowedSender_SuccessWhen_SenderIsRegisteredVault() {
+    env e;
+    address sender;
+    uint64 srcChainSelector;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+
+    /// @dev success condition being verified
+    require sender == getCrosschainVault(srcChainSelector), "sender should be the registered vault";
+
+    storage before = lastStorage;
+
+    exposedOnlyAllowedSender@withrevert(e, sender, srcChainSelector);
+
+    assert !lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+}
+
 /// ─────────────────── REVERT IF ZERO ADDRESS ──────────────────
 
 /// @notice Address validation reverts when the supplied address is zero
@@ -2653,6 +3349,25 @@ rule requireNoRecovery_RevertWhen_RecoveryIsPending() {
     assert lastReverted;
 }
 
+/// @notice No-recovery validation succeeds when no recovery mode is active
+/// @dev Verifies that successful recovery validation does not modify vault storage
+rule requireNoRecovery_SuccessWhen_NoRecoveryIsPending() {
+    env e;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+
+    /// @dev success condition being verified
+    require getRecoveryMode() == RECOVERY_NONE(), "recovery should not be pending";
+
+    storage before = lastStorage;
+
+    requireNoRecovery@withrevert(e);
+
+    assert !lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+}
+
 /// ─────────────────── REQUIRE RECOVERY MODE ──────────────────
 
 /// @notice Recovery-mode validation reverts when the active mode does not match the expected mode
@@ -2669,6 +3384,26 @@ rule requireRecoveryMode_RevertWhen_RecoveryModeDoesNotMatch() {
     requireRecoveryMode@withrevert(e, expected);
 
     assert lastReverted;
+}
+
+/// @notice Recovery-mode validation succeeds when the active mode matches the expected mode
+/// @dev Verifies that successful recovery validation does not modify vault storage
+rule requireRecoveryMode_SuccessWhen_RecoveryModeMatches() {
+    env e;
+    Types.RecoveryMode expected;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+
+    /// @dev success condition being verified
+    require getRecoveryMode() == expected, "active recovery mode should match the expected mode";
+
+    storage before = lastStorage;
+
+    requireRecoveryMode@withrevert(e, expected);
+
+    assert !lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
 }
 
 

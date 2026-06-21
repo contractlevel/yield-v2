@@ -8,9 +8,34 @@ import {Types} from "../../../src/libraries/Types.sol";
 import {Client} from "@chainlink/contracts-ccip/contracts/libraries/Client.sol";
 
 contract ChildVaultHarness is ChildVault, HelperHarness {
+    bytes32 private constant INITIALIZABLE_STORAGE =
+        0xf0c57e16840df040f15088dc2f81fe391c3923bec73e23a9662efc9c229c6a00;
+
     constructor(BaseVault.ConstructorParams memory params, uint64 parentChainSelector)
         ChildVault(params, parentChainSelector)
     {}
+
+    function initializeBaseVault(BaseVault.InitParams memory params) external initializer {
+        __BaseVault_init(params);
+    }
+
+    function isInitialized() external view returns (bool) {
+        uint64 version;
+        bytes32 slot = INITIALIZABLE_STORAGE;
+        assembly {
+            version := and(sload(slot), 0xFFFFFFFFFFFFFFFF)
+        }
+        return version > 0;
+    }
+
+    function isInitializing() external view returns (bool) {
+        uint256 slotValue;
+        bytes32 slot = INITIALIZABLE_STORAGE;
+        assembly {
+            slotValue := sload(slot)
+        }
+        return (slotValue >> 64) & 0xFF != 0;
+    }
 
     function revertIfZeroAddress(address value) external pure {
         _revertIfZeroAddress(value);
@@ -38,6 +63,18 @@ contract ChildVaultHarness is ChildVault, HelperHarness {
 
     function clearRebalanceDepositRecovery() external {
         _clearRebalanceDepositRecovery();
+    }
+
+    function requireRebalanceDepositRecovery()
+        external
+        view
+        returns (Types.RebalanceDepositRecovery memory recovery)
+    {
+        recovery = _requireRebalanceDepositRecovery();
+    }
+
+    function recoverFailedRebalanceDepositInternal() external returns (uint256 rebalanceNonce, uint256 amount) {
+        (rebalanceNonce, amount) = _recoverFailedRebalanceDeposit();
     }
 
     function executeCcipSend(

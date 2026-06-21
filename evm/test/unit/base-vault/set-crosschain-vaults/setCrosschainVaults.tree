@@ -2,6 +2,8 @@ BaseVault_setCrosschainVaults
 ├── when the caller does not have the CONFIG_OPERATOR_ROLE
 │   └── it should revert
 └── when the caller has the CONFIG_OPERATOR_ROLE
+    ├── when the array is empty
+    │   └── it should revert with BaseVault__EmptyInput
     ├── when the array lengths do not match
     │   └── it should revert
     ├── when a chain selector is zero

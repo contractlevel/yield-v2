@@ -30,6 +30,14 @@ abstract contract BaseVault_SetCrosschainVaultsUnitTest is BaseUnitTest {
         s_vault.setCrosschainVaults(chainSelectors, vaults);
     }
 
+    function test_BaseVault_setCrosschainVaults_RevertWhen_ChainSelectorsIsEmpty() external {
+        uint64[] memory chainSelectors = new uint64[](0);
+        address[] memory vaults = new address[](0);
+
+        vm.expectRevert(IBaseVault.BaseVault__EmptyInput.selector);
+        s_vault.setCrosschainVaults(chainSelectors, vaults);
+    }
+
     function test_BaseVault_setCrosschainVaults_RevertWhen_ArrayLengthsDoNotMatch() external {
         uint64[] memory chainSelectors = new uint64[](2);
         address[] memory vaults = new address[](1);

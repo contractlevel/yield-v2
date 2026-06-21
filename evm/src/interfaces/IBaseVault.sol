@@ -20,6 +20,8 @@ interface IBaseVault is IPauseable {
     /// @dev Thrown when the emergency drain delay has not been met
     error BaseVault__EmergencyDrainDelayNotMet();
 
+    /// @dev Thrown when an input array is empty
+    error BaseVault__EmptyInput();
     /// @dev Thrown when the input array lengths do not match
     error BaseVault__InvalidInputLengths();
     /// @dev Thrown when a CCIP message delivers an unexpected number of token amounts
@@ -181,6 +183,7 @@ interface IBaseVault is IPauseable {
     /// @param chainSelectors The CCIP selectors of the chains
     /// @param vaults The addresses of the crosschain vaults
     /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
+    /// @dev Precondition: chainSelectors must not be empty
     /// @dev Precondition: chainSelectors and vaults must have the same length
     /// @dev Sets the crosschain vaults
     /// @dev Emits the CrosschainVaultSet event
