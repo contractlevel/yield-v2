@@ -57,6 +57,30 @@ contract HelperHarness {
         decoded = abi.decode(value, (address[]));
     }
 
+    function encodeAddress(address value) external pure returns (bytes memory encoded) {
+        encoded = abi.encode(value);
+    }
+
+    function encodeEpochNonce(uint256 epochNonce) external pure returns (bytes memory encoded) {
+        encoded = abi.encode(epochNonce);
+    }
+
+    function encodeRebalanceData(uint256 rebalanceNonce, bytes32 protocolId)
+        external
+        pure
+        returns (bytes memory encoded)
+    {
+        encoded = abi.encode(rebalanceNonce, protocolId);
+    }
+
+    function encodeCcipTxData(Types.CcipTx ccipTxType, bytes memory data)
+        external
+        pure
+        returns (bytes memory encoded)
+    {
+        encoded = abi.encode(ccipTxType, data);
+    }
+
     function emptyParameters() external pure returns (bytes[] memory parameters) {
         parameters = new bytes[](0);
     }

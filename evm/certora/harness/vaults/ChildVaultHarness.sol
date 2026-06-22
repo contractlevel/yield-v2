@@ -86,6 +86,46 @@ contract ChildVaultHarness is ChildVault, HelperHarness {
         _executeCcipSend(bridgeAmount, destSelector, ccipTxType, txData);
     }
 
+    function validateCcipSend(uint256 bridgeAmount, uint64 destSelector) external view returns (address vault) {
+        vault = _validateCcipSend(bridgeAmount, destSelector);
+    }
+
+    function ccipSend(
+        uint256 bridgeAmount,
+        uint64 destSelector,
+        Types.CcipTx ccipTxType,
+        bytes calldata txData
+    ) external {
+        _ccipSend(bridgeAmount, destSelector, ccipTxType, txData);
+    }
+
+    function getCcipSendRecoveryTxType() external view returns (Types.CcipTx ccipTxType) {
+        ccipTxType = _childVaultStorage().s_ccipSendRecovery.ccipTxType;
+    }
+
+    function getCcipSendRecoveryAmount() external view returns (uint256 amount) {
+        amount = _childVaultStorage().s_ccipSendRecovery.amount;
+    }
+
+    function getCcipSendRecoveryDestinationChainSelector() external view returns (uint64 destinationChainSelector) {
+        destinationChainSelector = _childVaultStorage().s_ccipSendRecovery.destinationChainSelector;
+    }
+
+    function getCcipSendRecoveryCreatedAt() external view returns (uint256 createdAt) {
+        createdAt = _childVaultStorage().s_ccipSendRecovery.createdAt;
+    }
+
+    function getCcipSendRecoveryTxData() external view returns (bytes memory txData) {
+        txData = _childVaultStorage().s_ccipSendRecovery.txData;
+    }
+
+    function getCcipSendRecoveryTxDataStorageSlot() external view returns (bytes32 value) {
+        bytes storage txData = _childVaultStorage().s_ccipSendRecovery.txData;
+        assembly {
+            value := sload(txData.slot)
+        }
+    }
+
     function executeDeposit(uint256 amount, bool revertOnFailure) external returns (bool success) {
         success = _executeDeposit(amount, revertOnFailure);
     }

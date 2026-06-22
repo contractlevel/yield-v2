@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 import {BaseUnitTest, Vm} from "../../BaseUnitTest.t.sol";
 
 import {IBaseVault} from "../../../../src/interfaces/IBaseVault.sol";
+import {IChildVault} from "../../../../src/interfaces/IChildVault.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
 
 contract ChildVault_ExecuteEpochWithdrawUnitTest is BaseUnitTest {
@@ -36,6 +37,11 @@ contract ChildVault_ExecuteEpochWithdrawUnitTest is BaseUnitTest {
 
         vm.expectRevert(IBaseVault.BaseVault__RecoveryAlreadyPending.selector);
         s_childVault.executeEpochWithdraw(EPOCH_NONCE + 1, WITHDRAW_AMOUNT);
+    }
+
+    function test_ChildVault_executeEpochWithdraw_RevertWhen_AmountIsZero() public {
+        vm.expectRevert(IBaseVault.BaseVault__NoZeroAmount.selector);
+        s_childVault.executeEpochWithdraw(EPOCH_NONCE, 0);
     }
 
     function test_ChildVault_executeEpochWithdraw_Success_WithdrawsFromAdapter() public {
@@ -110,16 +116,11 @@ contract ChildVault_ExecuteEpochWithdrawUnitTest is BaseUnitTest {
         assertEq(uint256(log.topics[2]), WITHDRAW_AMOUNT);
     }
 
-    function test_ChildVault_executeEpochWithdraw_WhenAdapterReturnsZero_EmitsWithdrawFromStrategySuccess() public {
+    function test_ChildVault_executeEpochWithdraw_RevertWhen_AdapterReturnsZero() public {
         s_mockProtocolAdapter.setWithdrawReturnAmount(0);
 
-        vm.recordLogs();
+        vm.expectRevert(IChildVault.ChildVault__ZeroAmountOut.selector);
         s_childVault.executeEpochWithdraw(EPOCH_NONCE, WITHDRAW_AMOUNT);
-
-        Vm.Log memory log =
-            _assertEmittedBy(keccak256("WithdrawFromStrategySuccess(uint256,uint256)"), address(s_childVault));
-        assertEq(uint256(log.topics[1]), EPOCH_NONCE);
-        assertEq(uint256(log.topics[2]), 0);
     }
 
     function test_ChildVault_executeEpochWithdraw_WhenWithdrawReturnsFalse_StoresEpochWithdrawRecovery() public {

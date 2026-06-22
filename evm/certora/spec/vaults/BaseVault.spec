@@ -9,12 +9,6 @@ using MockCCIPRouter as ccipRouter;
 /// @author @contractlevel
 /// @notice Run against both ParentVaultHarness and ChildVaultHarness via two confs.
 
-/// GetTVL deferred to Parent and Child specs
-/// Deferred to ChildVault.spec (ChildVault-only entry points):
-///   - _executeRebalance    → RebalanceWithdrawSuccess / RebalanceWithdrawFailure
-///   - _rebalanceToNewStrategy
-//   @review Ghosts and LOG hooks for those events are present as infrastructure but have no rules here.
-
 /*//////////////////////////////////////////////////////////////
                             METHODS
 //////////////////////////////////////////////////////////////*/
@@ -27,6 +21,7 @@ methods {
     function clearRebalanceDepositRecovery() external envfree;
     function requireRebalanceDepositRecovery() external returns (Types.RebalanceDepositRecovery) envfree;
     function recoverFailedRebalanceDepositInternal() external returns (uint256, uint256);
+    function validateCcipSend(uint256, uint64) external returns (address);
     function executeCcipSend(uint256, uint64, Types.CcipTx, bytes) external;
     function storeRebalanceDepositRecovery(uint256, uint256) external;
     function executeDeposit(uint256, bool) external returns (bool);
@@ -194,17 +189,9 @@ definition DepositToStrategySuccessEvent() returns bytes32 =
 // keccak256("DepositToStrategySuccess(uint256,uint256)")
     to_bytes32(0x822db7c313fcf6d7b9ea5da5e0e6f3d27317446731e4016faa07a1127bb0a1c4);
 
-definition DepositToStrategyFailureEvent() returns bytes32 =
-// keccak256("DepositToStrategyFailure(uint256,uint256)")
-    to_bytes32(0xe793c4fcefcfc6be38155702c97e12901a8434f945b26921d530968edb0ef0e9);
-
 definition WithdrawFromStrategySuccessEvent() returns bytes32 =
 // keccak256("WithdrawFromStrategySuccess(uint256,uint256)")
     to_bytes32(0xb38981e8f1428114c35ad63ef9ab14a90a34bc12cac0782d420baab4522a659f);
-
-definition WithdrawFromStrategyFailureEvent() returns bytes32 =
-// keccak256("WithdrawFromStrategyFailure(uint256,uint256)")
-    to_bytes32(0x37f4f811d10c7b3a19d28781f245b42c5320a1736a27b2b43b34f9360c760e38);
 
 /// Deferred to ChildVault.spec — infrastructure only, no active rules here
 definition RebalanceDepositSuccessEvent() returns bytes32 =
@@ -218,10 +205,6 @@ definition RebalanceDepositFailureEvent() returns bytes32 =
 definition RebalanceWithdrawSuccessEvent() returns bytes32 =
 // keccak256("RebalanceWithdrawSuccess(uint256,uint256)")
     to_bytes32(0xbda9c2bb85185244245a5c12fdd1e1107c46dc54a6d54d015bccf78aec5a8668);
-
-definition RebalanceWithdrawFailureEvent() returns bytes32 =
-// keccak256("RebalanceWithdrawFailure(uint256)")
-    to_bytes32(0x419b356601ce305e332b89009cbc4ec088b901dadd6b8a6e19ee038183ff64e6);
 
 /// RecoveryMode enum values — match Solidity enum type for getRecoveryMode() comparisons
 definition RECOVERY_NONE()              returns Types.RecoveryMode = Types.RecoveryMode.NONE;
@@ -340,19 +323,9 @@ ghost mathint ghost_DepositToStrategySuccess_EventCount { init_state axiom ghost
 ghost uint256 ghost_DepositToStrategySuccess_Param_epochNonce { init_state axiom ghost_DepositToStrategySuccess_Param_epochNonce == 0; }
 ghost uint256 ghost_DepositToStrategySuccess_Param_amount { init_state axiom ghost_DepositToStrategySuccess_Param_amount == 0; }
 
-/// ─── Event: DepositToStrategyFailure ─────────────────────────
-ghost mathint ghost_DepositToStrategyFailure_EventCount { init_state axiom ghost_DepositToStrategyFailure_EventCount == 0; }
-ghost uint256 ghost_DepositToStrategyFailure_Param_epochNonce { init_state axiom ghost_DepositToStrategyFailure_Param_epochNonce == 0; }
-ghost uint256 ghost_DepositToStrategyFailure_Param_amount { init_state axiom ghost_DepositToStrategyFailure_Param_amount == 0; }
-
 /// ─── Event: WithdrawFromStrategySuccess ──────────────────────
 ghost mathint ghost_WithdrawFromStrategySuccess_EventCount { init_state axiom ghost_WithdrawFromStrategySuccess_EventCount == 0; }
 ghost uint256 ghost_WithdrawFromStrategySuccess_Param_epochNonce { init_state axiom ghost_WithdrawFromStrategySuccess_Param_epochNonce == 0; }
-
-/// ─── Event: WithdrawFromStrategyFailure ──────────────────────
-ghost mathint ghost_WithdrawFromStrategyFailure_EventCount { init_state axiom ghost_WithdrawFromStrategyFailure_EventCount == 0; }
-ghost uint256 ghost_WithdrawFromStrategyFailure_Param_epochNonce { init_state axiom ghost_WithdrawFromStrategyFailure_Param_epochNonce == 0; }
-ghost uint256 ghost_WithdrawFromStrategyFailure_Param_amount { init_state axiom ghost_WithdrawFromStrategyFailure_Param_amount == 0; }
 
 /// ─── Event: RebalanceDepositSuccess events ────────────────────────────────
 ghost mathint ghost_RebalanceDepositSuccess_EventCount { init_state axiom ghost_RebalanceDepositSuccess_EventCount == 0; }
@@ -364,9 +337,8 @@ ghost mathint ghost_RebalanceDepositFailure_EventCount { init_state axiom ghost_
 ghost uint256 ghost_RebalanceDepositFailure_Param_nonce { init_state axiom ghost_RebalanceDepositFailure_Param_nonce == 0; }
 ghost uint256 ghost_RebalanceDepositFailure_Param_amount { init_state axiom ghost_RebalanceDepositFailure_Param_amount == 0; }
 
-/// ─── Deferred rebalance withdraw events — ChildVault.spec ────
+/// ─── Event: RebalanceWithdrawSuccess ─────────────────────────
 ghost mathint ghost_RebalanceWithdrawSuccess_EventCount { init_state axiom ghost_RebalanceWithdrawSuccess_EventCount == 0; }
-ghost mathint ghost_RebalanceWithdrawFailure_EventCount { init_state axiom ghost_RebalanceWithdrawFailure_EventCount == 0; }
 
 /*//////////////////////////////////////////////////////////////
                              HOOKS
@@ -454,10 +426,6 @@ hook LOG2(uint offset, uint length, bytes32 t0, bytes32 t1) {
         ghost_RebalanceDepositRecoveryCleared_EventCount = ghost_RebalanceDepositRecoveryCleared_EventCount + 1;
         ghost_RebalanceDepositRecoveryCleared_Param_nonce = bytes32ToUint256(t1);
     }
-    // @review Deferred — count only
-    if (t0 == RebalanceWithdrawFailureEvent()) {
-        ghost_RebalanceWithdrawFailure_EventCount = ghost_RebalanceWithdrawFailure_EventCount + 1;
-    }
 }
 
 /// LOG3 — topic0 + 2 indexed params
@@ -502,19 +470,9 @@ hook LOG3(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2) {
         ghost_DepositToStrategySuccess_Param_epochNonce = bytes32ToUint256(t1);
         ghost_DepositToStrategySuccess_Param_amount = bytes32ToUint256(t2);
     }
-    if (t0 == DepositToStrategyFailureEvent()) {
-        ghost_DepositToStrategyFailure_EventCount = ghost_DepositToStrategyFailure_EventCount + 1;
-        ghost_DepositToStrategyFailure_Param_epochNonce = bytes32ToUint256(t1);
-        ghost_DepositToStrategyFailure_Param_amount = bytes32ToUint256(t2);
-    }
     if (t0 == WithdrawFromStrategySuccessEvent()) {
         ghost_WithdrawFromStrategySuccess_EventCount = ghost_WithdrawFromStrategySuccess_EventCount + 1;
         ghost_WithdrawFromStrategySuccess_Param_epochNonce = bytes32ToUint256(t1);
-    }
-    if (t0 == WithdrawFromStrategyFailureEvent()) {
-        ghost_WithdrawFromStrategyFailure_EventCount = ghost_WithdrawFromStrategyFailure_EventCount + 1;
-        ghost_WithdrawFromStrategyFailure_Param_epochNonce = bytes32ToUint256(t1);
-        ghost_WithdrawFromStrategyFailure_Param_amount = bytes32ToUint256(t2);
     }
     if (t0 == RebalanceDepositSuccessEvent()) {
         ghost_RebalanceDepositSuccess_EventCount = ghost_RebalanceDepositSuccess_EventCount + 1;
@@ -2338,6 +2296,121 @@ rule recoverFailedRebalanceDepositInternal_Success() {
     assert ghost_recoveryMode_StoredValue == Types.RecoveryMode.NONE;
 }
 
+/// ─────────────────── VALIDATE CCIP SEND ─────────────────────
+
+/// @notice CCIP send validation reverts when the bridge amount is zero
+/// @dev Verifies that validation does not modify vault storage
+rule validateCcipSend_RevertWhen_BridgeAmountIsZero() {
+    env e;
+    uint64 destinationChainSelector;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require destinationChainSelector != 0, "destination chain selector should not be zero";
+    require destinationChainSelector != getThisChainSelector(), "destination should not be this chain";
+    require getCrosschainVault(destinationChainSelector) != 0, "destination vault should be registered";
+
+    /// @dev revert condition being verified
+    uint256 bridgeAmount = 0;
+
+    storage before = lastStorage;
+
+    validateCcipSend@withrevert(e, bridgeAmount, destinationChainSelector);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+}
+
+/// @notice CCIP send validation reverts when the destination chain selector is zero
+/// @dev Verifies that validation does not modify vault storage
+rule validateCcipSend_RevertWhen_DestinationChainIsZero() {
+    env e;
+    uint256 bridgeAmount;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require bridgeAmount != 0, "bridge amount should not be zero";
+
+    /// @dev revert condition being verified
+    uint64 destinationChainSelector = 0;
+
+    storage before = lastStorage;
+
+    validateCcipSend@withrevert(e, bridgeAmount, destinationChainSelector);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+}
+
+/// @notice CCIP send validation reverts when the destination is the current chain
+/// @dev Verifies that validation does not modify vault storage
+rule validateCcipSend_RevertWhen_DestinationIsSelfChain() {
+    env e;
+    uint256 bridgeAmount;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require bridgeAmount != 0, "bridge amount should not be zero";
+
+    /// @dev revert condition being verified
+    uint64 destinationChainSelector = getThisChainSelector();
+
+    storage before = lastStorage;
+
+    validateCcipSend@withrevert(e, bridgeAmount, destinationChainSelector);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+}
+
+/// @notice CCIP send validation reverts when no destination vault is registered
+/// @dev Verifies that validation does not modify vault storage
+rule validateCcipSend_RevertWhen_DestinationVaultNotRegistered() {
+    env e;
+    uint256 bridgeAmount;
+    uint64 destinationChainSelector;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require bridgeAmount != 0, "bridge amount should not be zero";
+    require destinationChainSelector != 0, "destination chain selector should not be zero";
+    require destinationChainSelector != getThisChainSelector(), "destination should not be this chain";
+
+    /// @dev revert condition being verified
+    require getCrosschainVault(destinationChainSelector) == 0, "destination vault should not be registered";
+
+    storage before = lastStorage;
+
+    validateCcipSend@withrevert(e, bridgeAmount, destinationChainSelector);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+}
+
+/// @notice CCIP send validation returns the registered destination vault
+/// @dev Verifies the returned vault and that validation does not modify vault storage
+rule validateCcipSend_Success() {
+    env e;
+    uint256 bridgeAmount;
+    uint64 destinationChainSelector;
+
+    /// @dev success conditions being verified
+    require e.msg.value == 0, "non-payable";
+    require bridgeAmount != 0, "bridge amount should not be zero";
+    require destinationChainSelector != 0, "destination chain selector should not be zero";
+    require destinationChainSelector != getThisChainSelector(), "destination should not be this chain";
+    require getCrosschainVault(destinationChainSelector) != 0, "destination vault should be registered";
+
+    address expectedVault = getCrosschainVault(destinationChainSelector);
+    storage before = lastStorage;
+
+    address vault = validateCcipSend@withrevert(e, bridgeAmount, destinationChainSelector);
+
+    assert !lastReverted;
+    assert vault == expectedVault;
+    assert before[currentContract] == lastStorage[currentContract];
+}
+
 /// ─────────────────── EXECUTE CCIP SEND ──────────────────────
 
 /// @notice Executing a CCIP send reverts when the bridge amount is zero
@@ -3255,6 +3328,28 @@ rule validateReceivedTokenAndGetAmount_Success() {
 
 /// ─────────────────── ONLY ALLOWED SENDER ──────────────────
 
+/// @notice Sender validation reverts when no vault is registered for the source chain
+/// @dev Verifies that an unset cross-chain vault cannot authorize the zero address or modify vault storage
+rule onlyAllowedSender_RevertWhen_RegisteredVaultIsZero() {
+    env e;
+    address sender;
+    uint64 srcChainSelector;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require sender == 0, "sender should be zero";
+
+    /// @dev revert condition being verified
+    require getCrosschainVault(srcChainSelector) == 0, "registered vault should be zero";
+
+    storage before = lastStorage;
+
+    exposedOnlyAllowedSender@withrevert(e, sender, srcChainSelector);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+}
+
 /// @notice Sender validation reverts when the sender is not the registered vault for the source chain
 /// @dev Verifies that sender validation does not modify vault storage
 rule onlyAllowedSender_RevertWhen_SenderIsNotRegisteredVault() {
@@ -3264,12 +3359,17 @@ rule onlyAllowedSender_RevertWhen_SenderIsNotRegisteredVault() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require getCrosschainVault(srcChainSelector) != 0, "registered vault should not be zero";
 
     /// @dev revert condition being verified
     require sender != getCrosschainVault(srcChainSelector), "sender should not be the registered vault";
 
+    storage before = lastStorage;
+
     exposedOnlyAllowedSender@withrevert(e, sender, srcChainSelector);
+
     assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
 }
 
 /// @notice Sender validation succeeds for the registered vault of the source chain
@@ -3283,6 +3383,7 @@ rule onlyAllowedSender_SuccessWhen_SenderIsRegisteredVault() {
     require e.msg.value == 0, "non-payable";
 
     /// @dev success condition being verified
+    require getCrosschainVault(srcChainSelector) != 0, "registered vault should not be zero";
     require sender == getCrosschainVault(srcChainSelector), "sender should be the registered vault";
 
     storage before = lastStorage;

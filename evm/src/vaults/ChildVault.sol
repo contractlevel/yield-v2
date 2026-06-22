@@ -54,9 +54,13 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     //////////////////////////////////////////////////////////////*/
     /// @notice Receives CCIP messages
     /// @param message Any2EVMMessage.
+    /// @dev Precondition: the call must not be reentered
     /// @dev Precondition: the message must be sent by an allowed sender (a crosschain vault mapped to an allowed source chain selector)
-    /// @dev Precondition: the received token must be i_asset
     /// @dev Precondition: there must not be an existent recovery mode
+    /// @dev Precondition: the received token must be i_asset
+    /// @dev Precondition: there should only be 1 token sent
+    /// @dev Precondition: the amount of token receive must be more than 0
+    /// @dev Precondition: the received tx type must be supported: EPOCH_NET_DEPOSIT or REBALANCE
     function _ccipReceive(Client.Any2EVMMessage memory message)
         internal
         override
@@ -111,6 +115,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         bytes memory txData
     ) internal override {
         _requireNoRecovery();
+        _validateCcipSend(bridgeAmount, destinationChainSelector);
 
         try this.tryCcipSend(bridgeAmount, destinationChainSelector, ccipTxType, txData) {}
         catch {
@@ -156,9 +161,11 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         onlyRole(Roles.EPOCH_OPERATOR_ROLE)
     {
         _requireNoRecovery();
+        _revertIfZeroAmount(amount);
 
         (bool success, uint256 amountOut) = _executeWithdraw(amount, false);
         if (success) {
+            if (amountOut == 0) revert ChildVault__ZeroAmountOut();
             emit WithdrawFromStrategySuccess(epochNonce, amountOut);
             _ccipSend(amountOut, i_parentChainSelector, Types.CcipTx.EPOCH_NET_WITHDRAW, abi.encode(epochNonce));
         } else {
@@ -175,6 +182,8 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @param rebalanceNonce The nonce of the rebalance
     /// @param newStrategy The new strategy to rebalance to
     /// @dev Precondition: caller must have the REBALANCE_OPERATOR_ROLE
+    /// @dev Precondition: call must not be reentered
+    /// @dev Precondition: there must be no existent recovery mode
     function executeRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy)
         external
         nonReentrant
@@ -185,6 +194,56 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         (bool success,) = _executeRebalance(rebalanceNonce, newStrategy);
         if (!success) {
             _storeRebalanceWithdrawRecovery(rebalanceNonce, newStrategy);
+        }
+    }
+
+    /// @notice Executes a rebalance by attempting to withdraw from the old strategy with _executeWithdraw. If that was successful, then attempts to rebalance with _rebalanceToNewStrategy
+    /// @param rebalanceNonce The nonce of the rebalance
+    /// @param newStrategy The new strategy to rebalance to
+    /// @return success Whether the withdraw from the old strategy succeeded or not
+    /// @return amountRebalanced The amount rebalanced
+    /// @notice This function uses a trycatch to handle cases where the withdraw from the old strategy failed
+    function _executeRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy)
+        internal
+        returns (bool success, uint256 amountRebalanced)
+    {
+        (success, amountRebalanced) = _executeWithdraw(type(uint256).max, false);
+        if (success) {
+            if (amountRebalanced == 0) revert ChildVault__ZeroAmountOut();
+            emit RebalanceWithdrawSuccess(rebalanceNonce, amountRebalanced);
+            _rebalanceToNewStrategy(rebalanceNonce, amountRebalanced, newStrategy);
+        } else {
+            emit RebalanceWithdrawFailure(rebalanceNonce);
+        }
+    }
+
+    /// @notice Rebalances the TVL to the new strategy
+    /// @param rebalanceNonce The nonce of the rebalance
+    /// @param tvlToRebalance The TVL amount to rebalance
+    /// @param newStrategy The new strategy to rebalance to
+    /// @notice Handles a local rebalance on this chain or a crosschain rebalance to the new strategy chain
+    function _rebalanceToNewStrategy(uint256 rebalanceNonce, uint256 tvlToRebalance, Types.Strategy memory newStrategy)
+        internal
+    {
+        //slither-disable-next-line incorrect-equality
+        if (newStrategy.chainSelector == i_thisChainSelector) {
+            _setActiveAdapter(newStrategy.protocolId);
+
+            bool success = _executeDeposit(tvlToRebalance, false);
+            if (success) {
+                emit RebalanceDepositSuccess(rebalanceNonce, tvlToRebalance);
+            } else {
+                _storeRebalanceDepositRecovery(rebalanceNonce, tvlToRebalance);
+                emit RebalanceDepositFailure(rebalanceNonce, tvlToRebalance);
+            }
+        } else {
+            _clearActiveAdapter();
+            _ccipSend(
+                tvlToRebalance,
+                newStrategy.chainSelector,
+                Types.CcipTx.REBALANCE,
+                abi.encode(rebalanceNonce, newStrategy.protocolId)
+            );
         }
     }
 

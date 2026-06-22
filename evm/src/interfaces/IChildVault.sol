@@ -17,10 +17,26 @@ interface IChildVault is IBaseVault {
     error ChildVault__InvalidParentChainSelector();
     /// @dev Thrown when an external self-call helper is called by any address other than this contract
     error ChildVault__OnlySelf();
+    /// @dev Thrown when a successful strategy withdraw returns zero asset
+    error ChildVault__ZeroAmountOut();
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
+    /// @notice Emitted when a deposit to the strategy fails
+    /// @param epochNonce The nonce of the epoch
+    /// @param amount The amount of asset that failed to deposit
+    event DepositToStrategyFailure(uint256 indexed epochNonce, uint256 indexed amount);
+
+    /// @notice Emitted when a withdraw from the strategy fails
+    /// @param epochNonce The nonce of the epoch
+    /// @param amount The amount of asset that failed to withdraw
+    event WithdrawFromStrategyFailure(uint256 indexed epochNonce, uint256 indexed amount);
+
+    /// @notice Emitted when a rebalance withdraw from the old strategy fails
+    /// @param rebalanceNonce The nonce of the rebalance
+    event RebalanceWithdrawFailure(uint256 indexed rebalanceNonce);
+
     /// @notice Emitted when failed epoch deposit recovery state is stored
     /// @param epochNonce The epoch nonce of the failed deposit
     /// @param amount The amount of USDC to retry depositing

@@ -89,6 +89,10 @@ contract ParentVaultHarness is ParentVault, HelperHarness {
         _executeCcipSend(bridgeAmount, destSelector, ccipTxType, txData);
     }
 
+    function validateCcipSend(uint256 bridgeAmount, uint64 destSelector) external view returns (address vault) {
+        vault = _validateCcipSend(bridgeAmount, destSelector);
+    }
+
     function executeDeposit(uint256 amount, bool revertOnFailure) external returns (bool success) {
         success = _executeDeposit(amount, revertOnFailure);
     }

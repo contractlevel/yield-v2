@@ -285,3 +285,7 @@ Shareholders can still pay management fees for time when the user-facing vault w
 - Product policy changes to require no management fees during downtime.
 - A reliable system-wide pause/liveness oracle is introduced across ParentVault, ChildVaults, WorkflowRouters, underlying token state, strategy protocols, and cross-chain settlement.
 - Rebalance cadence changes in a way that makes repeated one-year capped collections during long-term operational downtime plausible.
+
+---
+
+<!-- @review known issue: epoch doesnt close if CRE workflow doesnt fire -->

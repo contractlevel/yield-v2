@@ -5,6 +5,8 @@ ChildVault_executeEpochWithdraw
 │   └── it should revert with BaseVault__NoActiveAdapter
 ├── when recovery exists
 │   └── it should revert with BaseVault__RecoveryAlreadyPending
+├── when amount is zero
+│   └── it should revert with BaseVault__NoZeroAmount
 ├── when withdraw succeeds
 │   ├── it should withdraw from the active adapter
 │   ├── it should bridge withdrawn USDC to Parent
@@ -17,5 +19,4 @@ ChildVault_executeEpochWithdraw
 │   └── when epoch withdraw recovery already exists
 │       └── it should revert with BaseVault__RecoveryAlreadyPending
 └── when withdraw adapter returns zero
-    ├── it should not store epoch withdraw recovery
-    └── it should emit WithdrawFromStrategySuccess
+    └── it should revert with ChildVault__ZeroAmountOut

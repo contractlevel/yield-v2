@@ -79,18 +79,10 @@ interface IBaseVault is IPauseable {
     /// @param epochNonce The nonce of the epoch
     /// @param amount The amount of asset deposited
     event DepositToStrategySuccess(uint256 indexed epochNonce, uint256 indexed amount);
-    /// @notice Emitted when a deposit to the strategy fails
-    /// @param epochNonce The nonce of the epoch
-    /// @param amount The amount of asset deposited
-    event DepositToStrategyFailure(uint256 indexed epochNonce, uint256 indexed amount);
     /// @notice Emitted when a withdraw from the strategy is successful
     /// @param epochNonce The nonce of the epoch
     /// @param amount The amount of asset withdrawn
     event WithdrawFromStrategySuccess(uint256 indexed epochNonce, uint256 indexed amount);
-    /// @notice Emitted when a withdraw from the strategy fails
-    /// @param epochNonce The nonce of the epoch
-    /// @param amount The amount of asset withdrawn
-    event WithdrawFromStrategyFailure(uint256 indexed epochNonce, uint256 indexed amount);
 
     /// @notice Emitted when a rebalance deposit to the new strategy is successful
     /// @param rebalanceNonce The nonce of the rebalance
@@ -104,9 +96,6 @@ interface IBaseVault is IPauseable {
     /// @param rebalanceNonce The nonce of the rebalance
     /// @param amount The amount of asset withdrawn from the old strategy
     event RebalanceWithdrawSuccess(uint256 indexed rebalanceNonce, uint256 indexed amount);
-    /// @notice Emitted when a rebalance withdraw from the old strategy fails
-    /// @param rebalanceNonce The nonce of the rebalance
-    event RebalanceWithdrawFailure(uint256 indexed rebalanceNonce);
     /// @notice Emitted when the active protocol adapter is set
     /// @param protocolId The protocol ID of the active strategy
     /// @param adapter The active protocol adapter

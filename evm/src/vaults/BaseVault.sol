@@ -81,7 +81,8 @@ abstract contract BaseVault is
     /// @param srcChainSelector The CCIP selector of the chain
     /// @dev Precondition: Sender must be the crosschain vault for the source chain selector
     function _onlyAllowedSender(address sender, uint64 srcChainSelector) internal view {
-        if (sender != _baseVaultStorage().s_crosschainVaults[srcChainSelector]) {
+        address registeredVault = _baseVaultStorage().s_crosschainVaults[srcChainSelector];
+        if (registeredVault == address(0) || sender != registeredVault) {
             revert BaseVault__InvalidSender(sender, srcChainSelector);
         }
     }
@@ -210,6 +211,28 @@ abstract contract BaseVault is
         _executeCcipSend(bridgeAmount, destinationChainSelector, ccipTxType, txData);
     }
 
+    /// @notice Validates CCIP send parameters and returns the registered destination vault
+    /// @param bridgeAmount The amount of asset to bridge
+    /// @param destinationChainSelector The CCIP selector of the destination chain
+    /// @return vault The registered vault for the destination chain
+    /// @dev Precondition: bridgeAmount must be more than 0
+    /// @dev Precondition: destinationChainSelector must be non-zero
+    /// @dev Precondition: destinationChainSelector must not equal the current chain selector
+    /// @dev Precondition: destinationChainSelector must have a registered crosschain vault
+    function _validateCcipSend(uint256 bridgeAmount, uint64 destinationChainSelector)
+        internal
+        view
+        returns (address vault)
+    {
+        if (bridgeAmount == 0) revert BaseVault__NoZeroAmount();
+        if (destinationChainSelector == 0 || destinationChainSelector == i_thisChainSelector) {
+            revert BaseVault__InvalidDestinationChainSelector(destinationChainSelector);
+        }
+
+        vault = _baseVaultStorage().s_crosschainVaults[destinationChainSelector];
+        if (vault == address(0)) revert BaseVault__DestinationVaultNotSet(destinationChainSelector);
+    }
+
     /// @notice Builds and sends a CCIP message
     /// @param bridgeAmount The amount of asset to bridge
     /// @param destinationChainSelector The CCIP selector of the destination chain
@@ -225,13 +248,7 @@ abstract contract BaseVault is
         Types.CcipTx ccipTxType,
         bytes memory txData
     ) internal {
-        if (bridgeAmount == 0) revert BaseVault__NoZeroAmount();
-        if (destinationChainSelector == 0 || destinationChainSelector == i_thisChainSelector) {
-            revert BaseVault__InvalidDestinationChainSelector(destinationChainSelector);
-        }
-        /// @dev Get the vault address for receiving the message
-        address vault = _baseVaultStorage().s_crosschainVaults[destinationChainSelector];
-        if (vault == address(0)) revert BaseVault__DestinationVaultNotSet(destinationChainSelector);
+        address vault = _validateCcipSend(bridgeAmount, destinationChainSelector);
         /// @dev Get the CCIP gas limit for the strategy chain
         uint256 gasLimit = _getCcipGasLimit(destinationChainSelector);
 
@@ -290,6 +307,8 @@ abstract contract BaseVault is
     /// @param message The CCIP message received from the router
     /// @return amount The amount of asset delivered by CCIP
     /// @dev Precondition: the received token must be i_asset
+    /// @dev Precondition: there should only be 1 token sent
+    /// @dev Precondition: the amount of token receive must be more than 0
     function _validateReceivedTokenAndGetAmount(Client.Any2EVMMessage memory message)
         internal
         view
@@ -350,55 +369,6 @@ abstract contract BaseVault is
             if (revertOnFailure) revert BaseVault__WithdrawFailed(amount);
             success = false;
             amountOut = 0;
-        }
-    }
-
-    /// @notice Executes a rebalance by attempting to withdraw from the old strategy with _executeWithdraw. If that was successful, then attempts to rebalance with _rebalanceToNewStrategy
-    /// @param rebalanceNonce The nonce of the rebalance
-    /// @param newStrategy The new strategy to rebalance to
-    /// @return success Whether the withdraw from the old strategy succeeded or not
-    /// @return amountRebalanced The amount rebalanced
-    /// @notice This function uses a trycatch to handle cases where the withdraw from the old strategy failed
-    function _executeRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy)
-        internal
-        returns (bool success, uint256 amountRebalanced)
-    {
-        (success, amountRebalanced) = _executeWithdraw(type(uint256).max, false);
-        if (success) {
-            emit RebalanceWithdrawSuccess(rebalanceNonce, amountRebalanced);
-            _rebalanceToNewStrategy(rebalanceNonce, amountRebalanced, newStrategy);
-        } else {
-            emit RebalanceWithdrawFailure(rebalanceNonce);
-        }
-    }
-
-    /// @notice Rebalances the TVL to the new strategy
-    /// @param rebalanceNonce The nonce of the rebalance
-    /// @param tvlToRebalance The TVL amount to rebalance
-    /// @param newStrategy The new strategy to rebalance to
-    /// @notice Handles a local rebalance on this chain or a crosschain rebalance to the new strategy chain
-    function _rebalanceToNewStrategy(uint256 rebalanceNonce, uint256 tvlToRebalance, Types.Strategy memory newStrategy)
-        internal
-    {
-        //slither-disable-next-line incorrect-equality
-        if (newStrategy.chainSelector == i_thisChainSelector) {
-            _setActiveAdapter(newStrategy.protocolId);
-
-            bool success = _executeDeposit(tvlToRebalance, false);
-            if (success) {
-                emit RebalanceDepositSuccess(rebalanceNonce, tvlToRebalance);
-            } else {
-                _storeRebalanceDepositRecovery(rebalanceNonce, tvlToRebalance);
-                emit RebalanceDepositFailure(rebalanceNonce, tvlToRebalance);
-            }
-        } else {
-            _clearActiveAdapter();
-            _ccipSend(
-                tvlToRebalance,
-                newStrategy.chainSelector,
-                Types.CcipTx.REBALANCE,
-                abi.encode(rebalanceNonce, newStrategy.protocolId)
-            );
         }
     }
 

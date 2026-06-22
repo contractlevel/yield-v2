@@ -3,6 +3,8 @@ ChildVault_ccipReceive
 │   └── it should revert with InvalidRouter
 ├── when sender is not the allowed sender for the source chain
 │   └── it should revert with BaseVault__InvalidSender
+├── when no vault is registered for the source chain selector
+│   └── it should revert with BaseVault__InvalidSender
 ├── when received token is not USDC
 │   └── it should revert with BaseVault__InvalidReceivedToken
 ├── when token amounts length is zero

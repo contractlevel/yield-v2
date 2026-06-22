@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 import {BaseUnitTest, Vm} from "../../BaseUnitTest.t.sol";
 
 import {IBaseVault} from "../../../../src/interfaces/IBaseVault.sol";
+import {IChildVault} from "../../../../src/interfaces/IChildVault.sol";
 import {MockProtocolAdapter} from "../../../mocks/MockProtocolAdapter.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
 
@@ -169,16 +170,11 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
         assertEq(uint64(uint256(log.topics[3])), REMOTE_CHILD_CHAIN_SELECTOR);
     }
 
-    function test_ChildVault_executeRebalance_WhenWithdrawAdapterReturnsZero_EmitsRebalanceWithdrawSuccess() public {
+    function test_ChildVault_executeRebalance_RevertWhen_WithdrawAdapterReturnsZero() public {
         s_mockProtocolAdapter.setWithdrawReturnAmount(0);
 
-        vm.recordLogs();
+        vm.expectRevert(IChildVault.ChildVault__ZeroAmountOut.selector);
         s_childVault.executeRebalance(REBALANCE_NONCE, _remoteChildStrategy());
-
-        Vm.Log memory log =
-            _assertEmittedBy(keccak256("RebalanceWithdrawSuccess(uint256,uint256)"), address(s_childVault));
-        assertEq(uint256(log.topics[1]), REBALANCE_NONCE);
-        assertEq(uint256(log.topics[2]), 0);
     }
 
     function test_ChildVault_executeRebalance_WhenWithdrawReturnsFalse_StoresRebalanceWithdrawRecovery() public {
