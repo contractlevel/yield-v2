@@ -81,6 +81,14 @@ contract HelperHarness {
         encoded = abi.encode(ccipTxType, data);
     }
 
+    function encodeRawCcipTxData(uint256 ccipTxType, bytes memory data)
+        external
+        pure
+        returns (bytes memory encoded)
+    {
+        encoded = abi.encode(ccipTxType, data);
+    }
+
     function emptyParameters() external pure returns (bytes[] memory parameters) {
         parameters = new bytes[](0);
     }
