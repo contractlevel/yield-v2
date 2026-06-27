@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.28;
+pragma solidity 0.8.34;
 
 import {ProtocolAdapter} from "../ProtocolAdapter.sol";
 import {IAaveV4Spoke} from "../../interfaces/IAaveV4Spoke.sol";

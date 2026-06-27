@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.28;
+pragma solidity 0.8.34;
 
 import {BeforeAfter} from "./BeforeAfter.t.sol";
 import {Asserts} from "@chimera/Asserts.sol";

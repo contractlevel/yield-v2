@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.28;
+pragma solidity 0.8.34;
 
 /// @title Aave v4 Spoke Interface
 /// @notice Minimal interface for the Aave v4 Spoke methods used by the Yieldcoin v2 adapter

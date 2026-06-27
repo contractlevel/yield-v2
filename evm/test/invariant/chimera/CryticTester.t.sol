@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.28;
+pragma solidity 0.8.34;
 
 import {CryticAsserts} from "@chimera/CryticAsserts.sol";
 import {TargetFunctions} from "./TargetFunctions.t.sol";

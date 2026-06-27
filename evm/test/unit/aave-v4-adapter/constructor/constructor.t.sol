@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.28;
+pragma solidity 0.8.34;
 
 import {BaseAaveV4AdapterUnitTest} from "../BaseAaveV4AdapterUnitTest.t.sol";
 import {AaveV4Adapter} from "../../../../src/modules/adapters/AaveV4Adapter.sol";

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.28;
+pragma solidity 0.8.34;
 
 import {ActorGhosts} from "./ActorGhosts.t.sol";
 import {Types} from "../../../../src/libraries/Types.sol";

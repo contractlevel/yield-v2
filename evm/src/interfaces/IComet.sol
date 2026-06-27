@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.28;
+pragma solidity 0.8.34;
 
 /// @title Compound v3 Comet Interface
 /// @notice Minimal Compound v3 Comet interface used by the CompoundV3Adapter
