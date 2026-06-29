@@ -5,6 +5,7 @@ import {BaseUnitTest} from "../../BaseUnitTest.t.sol";
 
 import {BaseVault, IBaseVault} from "../../../../src/vaults/BaseVault.sol";
 import {ChildVault} from "../../../../src/vaults/ChildVault.sol";
+import {BaseVaultCcipLib} from "../../../../src/libraries/BaseVaultCcipLib.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
 
 contract BaseVaultCcipHarness is ChildVault {
@@ -18,7 +19,17 @@ contract BaseVaultCcipHarness is ChildVault {
         Types.CcipTx ccipTxType,
         bytes memory txData
     ) external {
-        _executeCcipSend(bridgeAmount, destinationChainSelector, ccipTxType, txData);
+        BaseVaultCcipLib.send(
+            _baseVaultStorage(),
+            bridgeAmount,
+            destinationChainSelector,
+            ccipTxType,
+            txData,
+            i_asset,
+            i_link,
+            i_ccipRouter,
+            i_thisChainSelector
+        );
     }
 }
 

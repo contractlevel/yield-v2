@@ -82,6 +82,7 @@ interface IParentVault is IBaseVault {
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
+    /// @dev IParentVault remains the canonical vault ABI; linked libraries redeclare matching events only to emit them.
     /// @notice Emitted when a deposit is made
     /// @param epochNonce The epoch nonce of the deposit
     /// @param depositor The address of the depositor

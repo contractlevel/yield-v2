@@ -188,6 +188,7 @@ contract DeployParent is Script {
             initialDefaultCcipGasLimit: networkConfig.ccip.initialDefaultCcipGasLimit,
             upgrader: networkConfig.roles.upgrader
         });
+        /// @dev ParentVault linked libraries are handled by Solidity/Foundry and are not constructor state.
         deploy.parentVaultImpl = new ParentVault(baseVaultConstructorParams, address(deploy.yieldcoinProxy));
         ERC1967Proxy parentVaultProxy = new ERC1967Proxy(
             address(deploy.parentVaultImpl),

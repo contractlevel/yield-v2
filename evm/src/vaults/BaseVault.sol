@@ -2,7 +2,6 @@
 pragma solidity 0.8.34;
 
 import {CCIPReceiver, IAny2EVMMessageReceiver} from "@chainlink/contracts-ccip/contracts/applications/CCIPReceiver.sol";
-import {IRouterClient, Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
 
 import {
     AccessControlDefaultAdminRulesUpgradeable,
@@ -19,10 +18,11 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {BaseVaultStore} from "./BaseVaultStore.sol";
+import {BaseVaultCcipLib} from "../libraries/BaseVaultCcipLib.sol";
+import {BaseVaultStrategyLib} from "../libraries/BaseVaultStrategyLib.sol";
 import {Roles} from "../libraries/Roles.sol";
 import {Types} from "../libraries/Types.sol";
 import {IBaseVault} from "../interfaces/IBaseVault.sol";
-import {IAdapterRegistry} from "../interfaces/IAdapterRegistry.sol";
 import {IProtocolAdapter} from "../interfaces/IProtocolAdapter.sol";
 
 /// @title Yieldcoin v2 BaseVault
@@ -81,10 +81,7 @@ abstract contract BaseVault is
     /// @param srcChainSelector The CCIP selector of the chain
     /// @dev Precondition: Sender must be the crosschain vault for the source chain selector
     function _onlyAllowedSender(address sender, uint64 srcChainSelector) internal view {
-        address registeredVault = _baseVaultStorage().s_crosschainVaults[srcChainSelector];
-        if (registeredVault == address(0) || sender != registeredVault) {
-            revert BaseVault__InvalidSender(sender, srcChainSelector);
-        }
+        BaseVaultCcipLib.onlyAllowedSender(_baseVaultStorage(), sender, srcChainSelector);
     }
 
     /// @notice Reverts when a required address input is zero
@@ -208,79 +205,17 @@ abstract contract BaseVault is
         Types.CcipTx ccipTxType,
         bytes memory txData
     ) internal virtual {
-        _executeCcipSend(bridgeAmount, destinationChainSelector, ccipTxType, txData);
-    }
-
-    /// @notice Validates CCIP send parameters and returns the registered destination vault
-    /// @param bridgeAmount The amount of asset to bridge
-    /// @param destinationChainSelector The CCIP selector of the destination chain
-    /// @return vault The registered vault for the destination chain
-    /// @dev Precondition: bridgeAmount must be more than 0
-    /// @dev Precondition: destinationChainSelector must be non-zero
-    /// @dev Precondition: destinationChainSelector must not equal the current chain selector
-    /// @dev Precondition: destinationChainSelector must have a registered crosschain vault
-    function _validateCcipSend(uint256 bridgeAmount, uint64 destinationChainSelector)
-        internal
-        view
-        returns (address vault)
-    {
-        if (bridgeAmount == 0) revert BaseVault__NoZeroAmount();
-        if (destinationChainSelector == 0 || destinationChainSelector == i_thisChainSelector) {
-            revert BaseVault__InvalidDestinationChainSelector(destinationChainSelector);
-        }
-
-        vault = _baseVaultStorage().s_crosschainVaults[destinationChainSelector];
-        if (vault == address(0)) revert BaseVault__DestinationVaultNotSet(destinationChainSelector);
-    }
-
-    /// @notice Builds and sends a CCIP message
-    /// @param bridgeAmount The amount of asset to bridge
-    /// @param destinationChainSelector The CCIP selector of the destination chain
-    /// @param ccipTxType The type of CCIP transaction
-    /// @param txData abi.encode(epochNonce) for epoch net deposit/withdraw, or abi.encode(rebalanceNonce, newStrategy.protocolId) for rebalance
-    /// @dev Precondition: bridgeAmount must be more than 0
-    /// @dev Precondition: destinationChainSelector must be non-zero
-    /// @dev Precondition: destinationChainSelector must not equal the current chain selector
-    /// @dev Precondition: destinationChainSelector must be a valid, registered crosschain vault
-    function _executeCcipSend(
-        uint256 bridgeAmount,
-        uint64 destinationChainSelector,
-        Types.CcipTx ccipTxType,
-        bytes memory txData
-    ) internal {
-        address vault = _validateCcipSend(bridgeAmount, destinationChainSelector);
-        /// @dev Get the CCIP gas limit for the strategy chain
-        uint256 gasLimit = _getCcipGasLimit(destinationChainSelector);
-
-        /// @dev Build the CCIP message data
-        bytes memory data = abi.encode(ccipTxType, txData);
-
-        /// @dev Build the token amounts
-        Client.EVMTokenAmount[] memory tokenAmounts = new Client.EVMTokenAmount[](1);
-        tokenAmounts[0] = Client.EVMTokenAmount({token: i_asset, amount: bridgeAmount});
-
-        /// @dev Build the CCIP message
-        Client.EVM2AnyMessage memory message = Client.EVM2AnyMessage({
-            receiver: abi.encode(vault),
-            data: data,
-            tokenAmounts: tokenAmounts,
-            extraArgs: Client._argsToBytes(
-                Client.GenericExtraArgsV2({gasLimit: gasLimit, allowOutOfOrderExecution: false})
-            ),
-            feeToken: i_link
-        });
-
-        uint256 fee = IRouterClient(i_ccipRouter).getFee(destinationChainSelector, message);
-        IERC20(i_link).forceApprove(i_ccipRouter, fee);
-        IERC20(i_asset).forceApprove(i_ccipRouter, bridgeAmount);
-        bytes32 ccipMessageId = IRouterClient(i_ccipRouter).ccipSend(destinationChainSelector, message);
-        /**
-         * event CCIPMessageSent(
-         * uint64 indexed destChainSelector,
-         * address indexed sender,
-         * bytes32 indexed messageId,
-         */
-        emit CCIPBridged(ccipMessageId, bridgeAmount, ccipTxType);
+        BaseVaultCcipLib.send(
+            _baseVaultStorage(),
+            bridgeAmount,
+            destinationChainSelector,
+            ccipTxType,
+            txData,
+            i_asset,
+            i_link,
+            i_ccipRouter,
+            i_thisChainSelector
+        );
     }
 
     /// @notice Handles the CCIP rebalance message
@@ -301,26 +236,6 @@ abstract contract BaseVault is
             _storeRebalanceDepositRecovery(rebalanceNonce, amount);
             emit RebalanceDepositFailure(rebalanceNonce, amount);
         }
-    }
-
-    /// @notice Validates that a CCIP message delivered the vault's configured asset token and returns the delivered amount
-    /// @param message The CCIP message received from the router
-    /// @return amount The amount of asset delivered by CCIP
-    /// @dev Precondition: the received token must be i_asset
-    /// @dev Precondition: there should only be 1 token sent
-    /// @dev Precondition: the amount of token receive must be more than 0
-    function _validateReceivedTokenAndGetAmount(Client.Any2EVMMessage memory message)
-        internal
-        view
-        returns (uint256 amount)
-    {
-        uint256 tokenAmountsLength = message.destTokenAmounts.length;
-        if (tokenAmountsLength != 1) revert BaseVault__InvalidTokenAmountsLength(tokenAmountsLength, 1);
-
-        Client.EVMTokenAmount memory tokenAmount = message.destTokenAmounts[0];
-        if (tokenAmount.token != i_asset) revert BaseVault__InvalidReceivedToken(tokenAmount.token, i_asset);
-        amount = tokenAmount.amount;
-        if (amount == 0) revert BaseVault__NoZeroAmount();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -378,22 +293,14 @@ abstract contract BaseVault is
     /// @dev Precondition: the protocol ID must have a registered adapter
     /// @dev Precondition: the registered adapter must be bound to this vault
     function _setActiveAdapter(bytes32 protocolId) internal returns (address adapter) {
-        adapter = IAdapterRegistry(i_adapterRegistry).getAdapter(protocolId);
-        if (adapter == address(0)) revert BaseVault__NoAdapterRegistered(protocolId);
-        address adapterVault = IProtocolAdapter(adapter).getVault();
-        if (adapterVault != address(this)) {
-            revert BaseVault__InvalidAdapterVault(adapter, adapterVault, address(this));
-        }
-        _baseVaultStorage().s_activeProtocolAdapter = adapter;
-        emit ActiveProtocolAdapterSet(protocolId, adapter);
+        adapter =
+            BaseVaultStrategyLib.setActiveAdapter(_baseVaultStorage(), protocolId, i_adapterRegistry, address(this));
     }
 
     /// @notice Clears the active strategy protocol adapter for this chain
     /// @dev Precondition: this chain is no longer the active strategy chain
     function _clearActiveAdapter() internal {
-        address adapter = _baseVaultStorage().s_activeProtocolAdapter;
-        _baseVaultStorage().s_activeProtocolAdapter = address(0);
-        emit ActiveProtocolAdapterCleared(adapter);
+        BaseVaultStrategyLib.clearActiveAdapter(_baseVaultStorage());
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -524,15 +431,6 @@ abstract contract BaseVault is
     /*//////////////////////////////////////////////////////////////
                             INTERNAL GETTER
     //////////////////////////////////////////////////////////////*/
-    /// @notice Gets the CCIP gas limit for a given chain selector
-    /// @param chainSelector The CCIP selector of the chain
-    /// @return gasLimit The CCIP gas limit
-    function _getCcipGasLimit(uint64 chainSelector) internal view returns (uint256 gasLimit) {
-        BaseVaultStorage storage $ = _baseVaultStorage();
-        gasLimit = $.s_ccipGasLimits[chainSelector];
-        if (gasLimit == 0) gasLimit = $.s_defaultCcipGasLimit;
-    }
-
     /// @notice Gets the Yieldcoin TVL if this chain is the active strategy chain
     ///         Returns 0 if this chain is not the active strategy chain
     /// @return tvl The Yieldcoin TVL

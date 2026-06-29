@@ -85,9 +85,8 @@ contract ParentVault_BaseVaultUpgradeToAndCallUnitTest is BaseVault_UpgradeToAnd
     }
 
     function _callInitializeOnProxy(BaseVault proxy) internal override {
-        ParentVault(address(proxy)).initialize(
-            _baseVaultInitParams(), i_treasury, i_policyEngineManager, address(s_mockPolicyEngine)
-        );
+        ParentVault(address(proxy))
+            .initialize(_baseVaultInitParams(), i_treasury, i_policyEngineManager, address(s_mockPolicyEngine));
     }
 }
 

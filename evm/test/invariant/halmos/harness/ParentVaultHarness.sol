@@ -4,6 +4,7 @@ pragma solidity 0.8.34;
 import {ParentVault} from "../../../../src/vaults/ParentVault.sol";
 import {BaseVault} from "../../../../src/vaults/BaseVault.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
+import {ParentVaultUserEpochLib} from "../../../../src/libraries/ParentVaultUserEpochLib.sol";
 
 /// @dev Halmos test harness for ParentVault.
 ///      Exposes direct SSTORE setters for the epoch counters and per-user records
@@ -52,6 +53,6 @@ contract ParentVaultHarness is ParentVault {
         pure
         returns (uint256)
     {
-        return _proportionalAmount(userAmount, remainingNumerator, remainingDenominator);
+        return ParentVaultUserEpochLib.proportionalAmount(userAmount, remainingNumerator, remainingDenominator);
     }
 }

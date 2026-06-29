@@ -5,6 +5,7 @@ import {BaseVault} from "./BaseVault.sol";
 import {ChildVaultStore} from "./ChildVaultStore.sol";
 
 import {IChildVault} from "../interfaces/IChildVault.sol";
+import {BaseVaultCcipLib} from "../libraries/BaseVaultCcipLib.sol";
 import {Types} from "../libraries/Types.sol";
 import {Roles} from "../libraries/Roles.sol";
 import {IProtocolAdapter} from "../interfaces/IProtocolAdapter.sol";
@@ -68,7 +69,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         onlyAllowedSender(abi.decode(message.sender, (address)), message.sourceChainSelector)
     {
         _requireNoRecovery();
-        uint256 receivedAmount = _validateReceivedTokenAndGetAmount(message);
+        uint256 receivedAmount = BaseVaultCcipLib.validateReceivedTokenAndGetAmount(message, i_asset);
 
         /// @dev data decodes to a uint256 epochNonce for epoch net deposits/withdraws and a (uint256 rebalanceNonce, bytes32 protocolId) for rebalances
         (Types.CcipTx ccipTxType, bytes memory data) = abi.decode(message.data, (Types.CcipTx, bytes));
@@ -115,7 +116,9 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         bytes memory txData
     ) internal override {
         _requireNoRecovery();
-        _validateCcipSend(bridgeAmount, destinationChainSelector);
+        BaseVaultCcipLib.validateCcipSend(
+            _baseVaultStorage(), bridgeAmount, destinationChainSelector, i_thisChainSelector
+        );
 
         try this.tryCcipSend(bridgeAmount, destinationChainSelector, ccipTxType, txData) {}
         catch {
@@ -144,7 +147,17 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         bytes calldata txData
     ) external {
         if (msg.sender != address(this)) revert ChildVault__OnlySelf();
-        _executeCcipSend(bridgeAmount, destinationChainSelector, ccipTxType, txData);
+        BaseVaultCcipLib.send(
+            _baseVaultStorage(),
+            bridgeAmount,
+            destinationChainSelector,
+            ccipTxType,
+            txData,
+            i_asset,
+            i_link,
+            i_ccipRouter,
+            i_thisChainSelector
+        );
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -422,12 +435,22 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         _requireRecoveryMode(Types.RecoveryMode.CCIP_SEND);
         Types.CcipSendRecovery memory recovery = _childVaultStorage().s_ccipSendRecovery;
 
-        // Clear before retry; if _executeCcipSend reverts, EVM atomicity restores this recovery state.
+        // Clear before retry; if CCIP send reverts, EVM atomicity restores this recovery state.
         delete _childVaultStorage().s_ccipSendRecovery;
         _baseVaultStorage().s_recoveryMode = Types.RecoveryMode.NONE;
         emit CcipSendRecoveryCleared(recovery.ccipTxType, recovery.destinationChainSelector, recovery.amount);
 
-        _executeCcipSend(recovery.amount, recovery.destinationChainSelector, recovery.ccipTxType, recovery.txData);
+        BaseVaultCcipLib.send(
+            _baseVaultStorage(),
+            recovery.amount,
+            recovery.destinationChainSelector,
+            recovery.ccipTxType,
+            recovery.txData,
+            i_asset,
+            i_link,
+            i_ccipRouter,
+            i_thisChainSelector
+        );
     }
 
     /*//////////////////////////////////////////////////////////////

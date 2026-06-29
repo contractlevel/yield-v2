@@ -6,6 +6,10 @@
 forge build --build-info
 ```
 
+```
+forge build src/vaults/ParentVault.sol --sizes
+```
+
 ## Coverage with via_ir
 
 Run for coverage:
@@ -48,7 +52,7 @@ Do not delete medusa/ between runs if you want it to build on prior corpus. Dele
 rm -rf medusa
 medusa fuzz \
     --config medusa.json \
-    --compilation-target test/invariant/suite/CryticTester.t.sol \
+    --compilation-target test/invariant/chimera/CryticTester.t.sol \
     --target-contracts CryticTester \
     --test-limit 1000 \
     --timeout 60
@@ -57,7 +61,7 @@ medusa fuzz \
 ```
 medusa fuzz \
     --config medusa.json \
-    --compilation-target test/invariant/suite/CryticTester.t.sol \
+    --compilation-target test/invariant/chimera/CryticTester.t.sol \
     --target-contracts CryticTester \
     --test-limit 5000 \
     --timeout 600
