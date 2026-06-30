@@ -11,3 +11,7 @@
 6. closeEpoch does not sanity check operator supplied tvl against actual tvl. closeEpoch is called by CRE workflow(router) and this is consistent with the tvl provided from other chains
 
 7. closeEpoch DoS when local aave or compound reverts. CRE workflow can retry.
+
+8. "Event-driven report submission can be used for griefing (costly repeated cross-chain submissions)" - events are only emitted as part of the standard system flow
+
+9. cron acts as retry for failed initiateRebalance and closeEpoch reports

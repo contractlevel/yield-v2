@@ -144,7 +144,6 @@ func Test_ParsePools_errors(t *testing.T) {
 		{name: "invalid json token", body: `{"x": tru`, wantErr: `skip top-level key "x"`},
 		{name: "missing data", body: `{"pools":[]}`, wantErr: "'data' key not found in response"},
 		{name: "data is not array", body: `{"data":{}}`, wantErr: "expected '[' after 'data' key"},
-		{name: "invalid pool", body: `{"data":[{"apyBase":"not-a-number"}]}`, wantErr: "decode pool"},
 		{name: "missing array start", body: `{"data":`, wantErr: "read array start"},
 		{name: "top-level value is not object", body: `[]`, wantErr: "expected top-level object"},
 		{name: "empty response", body: ``, wantErr: "read object start"},
@@ -153,6 +152,7 @@ func Test_ParsePools_errors(t *testing.T) {
 		{name: "malformed skipped object key", body: `{"meta":{"nested": true,},"data":[]}`, wantErr: `skip top-level key "meta"`},
 		{name: "malformed skipped object value", body: `{"meta":{"nested":},"data":[]}`, wantErr: `skip top-level key "meta"`},
 		{name: "malformed skipped array value", body: `{"meta":[true,],"data":[]}`, wantErr: `skip top-level key "meta"`},
+		{name: "truncated pool element", body: `{"data":[{`, wantErr: "read pool element"},
 	}
 
 	for _, tt := range tests {
@@ -163,6 +163,38 @@ func Test_ParsePools_errors(t *testing.T) {
 			require.ErrorContains(t, err, tt.wantErr)
 		})
 	}
+}
+
+func Test_ParsePools_skipsMalformedElement(t *testing.T) {
+	body := `{"data":[
+		{"pool":"aa70268e-4b52-42bf-a116-608b370f9501","chain":"Ethereum","project":"aave-v3","symbol":"USDC","apyBase":"not-a-number"},
+		{"pool":"d9c395b9-00d0-4426-a6b3-572a6dd68e54","chain":"Arbitrum","project":"compound-v3","symbol":"USDC","apyBase":6.25}
+	]}`
+
+	result, err := parsePools(strings.NewReader(body), testConfig(), PoolToProtocolId("aave-v3"), "Ethereum")
+	require.NoError(t, err, "expected malformed element to be skipped, not fatal")
+	require.True(t, result.HasBest, "expected valid element after malformed one to be returned")
+	require.Equal(t, Pool{Pool: arbitrumCompoundV3PoolID, Chain: "Arbitrum", Project: "compound-v3", Symbol: "USDC", Apy: 6.25}, result.BestPool)
+}
+
+func Test_ParsePools_skipsAbsentApyBase(t *testing.T) {
+	body := `{"data":[
+		{"pool":"aa70268e-4b52-42bf-a116-608b370f9501","chain":"Ethereum","project":"aave-v3","symbol":"USDC"}
+	]}`
+
+	result, err := parsePools(strings.NewReader(body), testConfig(), PoolToProtocolId("aave-v3"), "Ethereum")
+	require.NoError(t, err, "expected pool with absent apyBase to be skipped, not fatal")
+	require.False(t, result.HasBest, "expected no best pool when apyBase is absent")
+}
+
+func Test_ParsePools_skipsNullApyBase(t *testing.T) {
+	body := `{"data":[
+		{"pool":"aa70268e-4b52-42bf-a116-608b370f9501","chain":"Ethereum","project":"aave-v3","symbol":"USDC","apyBase":null}
+	]}`
+
+	result, err := parsePools(strings.NewReader(body), testConfig(), PoolToProtocolId("aave-v3"), "Ethereum")
+	require.NoError(t, err, "expected pool with null apyBase to be skipped, not fatal")
+	require.False(t, result.HasBest, "expected no best pool when apyBase is null")
 }
 
 func Test_FetchAndParse_sendsRelayAuthHeader(t *testing.T) {
@@ -285,6 +317,42 @@ func Test_FetchAndSelectPools_secretErrors(t *testing.T) {
 			require.ErrorContains(t, err, tt.wantErr)
 		})
 	}
+}
+
+func Test_FetchResultToPools(t *testing.T) {
+	pool1 := Pool{Pool: ethereumAaveV3PoolID, Chain: "Ethereum", Project: "aave-v3", Symbol: "USDC", Apy: 4.5}
+	pool2 := Pool{Pool: arbitrumCompoundV3PoolID, Chain: "Arbitrum", Project: "compound-v3", Symbol: "USDC", Apy: 6.25}
+
+	best, current := fetchResultToPools(fetchResult{})
+	require.Nil(t, best, "expected nil best when HasBest is false")
+	require.Nil(t, current, "expected nil current when HasCurrent is false")
+
+	best, current = fetchResultToPools(fetchResult{HasBest: true, BestPool: pool1})
+	require.Equal(t, &pool1, best, "expected best pool")
+	require.Nil(t, current, "expected nil current")
+
+	best, current = fetchResultToPools(fetchResult{HasCurrent: true, CurrentPool: pool2})
+	require.Nil(t, best, "expected nil best")
+	require.Equal(t, &pool2, current, "expected current pool")
+
+	best, current = fetchResultToPools(fetchResult{HasBest: true, BestPool: pool1, HasCurrent: true, CurrentPool: pool2})
+	require.Equal(t, &pool1, best, "expected best pool")
+	require.Equal(t, &pool2, current, "expected current pool")
+}
+
+func Test_SortPools_tiebreakers(t *testing.T) {
+	pools := []Pool{
+		{Pool: "pool-z", Chain: "Arbitrum", Project: "compound-v3", Symbol: "USDC", Apy: 5.0},
+		{Pool: "pool-y", Chain: "Arbitrum", Project: "aave-v3", Symbol: "USDC", Apy: 5.0},
+		{Pool: "pool-w", Chain: "Arbitrum", Project: "compound-v3", Symbol: "DAI", Apy: 5.0},
+		{Pool: "pool-x", Chain: "Arbitrum", Project: "compound-v3", Symbol: "USDC", Apy: 5.0},
+	}
+	sortPools(pools)
+
+	require.Equal(t, "pool-y", pools[0].Pool, "expected aave-v3 first (Project tiebreaker)")
+	require.Equal(t, "pool-w", pools[1].Pool, "expected DAI before USDC (Symbol tiebreaker)")
+	require.Equal(t, "pool-x", pools[2].Pool, "expected pool-x before pool-z (Pool tiebreaker)")
+	require.Equal(t, "pool-z", pools[3].Pool)
 }
 
 func Test_SkipJSONValue_closingDelimiter(t *testing.T) {

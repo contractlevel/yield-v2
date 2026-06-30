@@ -140,6 +140,16 @@ func Test_SubmitReport_generateReportError(t *testing.T) {
 	require.Nil(t, runtime.capabilityRequest, "expected no write when report generation fails")
 }
 
+func Test_SubmitReport_nilReport(t *testing.T) {
+	runtime := newMockRuntime(t)
+	runtime.report = nil
+
+	err := SubmitReport(runtime, &evm.Client{}, common.Address{}, nil, 1)
+	require.Error(t, err, "expected error when report is nil")
+	require.ErrorContains(t, err, "generate report: nil report")
+	require.Nil(t, runtime.capabilityRequest, "expected no write when report is nil")
+}
+
 func Test_SubmitReport_writeReportError(t *testing.T) {
 	runtime := newMockRuntime(t)
 	runtime.capabilityErr = errors.New("write failed")

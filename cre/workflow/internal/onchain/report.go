@@ -25,6 +25,9 @@ func SubmitReport(
 	if err != nil {
 		return fmt.Errorf("generate report: %w", err)
 	}
+	if report == nil {
+		return fmt.Errorf("generate report: nil report")
+	}
 
 	resp, err := evmClient.WriteReport(runtime, &evm.WriteCreReportRequest{
 		Receiver:  workflowRouter.Bytes(),

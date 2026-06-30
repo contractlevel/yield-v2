@@ -54,6 +54,16 @@ type Pool struct {
 	Apy     float64 `json:"apyBase"`
 }
 
+// poolJSON is used only inside parsePools to detect absent or null apyBase.
+// Apy is a pointer so nil (missing/null) is distinguishable from explicit 0.
+type poolJSON struct {
+	Pool    string   `json:"pool"`
+	Chain   string   `json:"chain"`
+	Project string   `json:"project"`
+	Symbol  string   `json:"symbol"`
+	Apy     *float64 `json:"apyBase"`
+}
+
 // fetchParams holds the inputs for the node-mode fetch function.
 type fetchParams struct {
 	Config           Config
@@ -103,6 +113,11 @@ func FetchAndSelectPools(runtime cre.Runtime, cfg Config, activeProtocolId [32]b
 		return nil, nil, fmt.Errorf("fetch pools: %w", err)
 	}
 
+	best, current := fetchResultToPools(raw)
+	return best, current, nil
+}
+
+func fetchResultToPools(raw fetchResult) (*Pool, *Pool) {
 	var best, current *Pool
 	if raw.HasBest {
 		pool := raw.BestPool
@@ -112,7 +127,7 @@ func FetchAndSelectPools(runtime cre.Runtime, cfg Config, activeProtocolId [32]b
 		pool := raw.CurrentPool
 		current = &pool
 	}
-	return best, current, nil
+	return best, current
 }
 
 // fetchAndParse is the HTTP capability callback executed on each DON node.
@@ -216,29 +231,38 @@ func parsePools(r io.Reader, cfg Config, activeProtocolId [32]byte, activeChainN
 	allowedSymbol := allowedValues(cfg.Symbols)
 
 	for decoder.More() {
-		var p Pool
-		if err := decoder.Decode(&p); err != nil {
-			return fetchResult{}, fmt.Errorf("decode pool: %w", err)
+		// Decode to RawMessage: structural stream errors stay fatal;
+		// a single bad element is skipped without aborting the whole parse.
+		var raw json.RawMessage
+		if err := decoder.Decode(&raw); err != nil {
+			return fetchResult{}, fmt.Errorf("read pool element: %w", err)
+		}
+		var pj poolJSON
+		if err := json.Unmarshal(raw, &pj); err != nil {
+			continue // skip malformed element
+		}
+		if pj.Apy == nil {
+			continue // apyBase absent or null — not a valid pool
 		}
 
-		poolID, poolOK := allowedPool[canonicalDefiLlamaValue(p.Pool)]
-		chainName, chainOK := allowedChain[canonicalDefiLlamaValue(p.Chain)]
-		projectName, projectOK := allowedProject[canonicalDefiLlamaValue(p.Project)]
-		symbolName, symbolOK := allowedSymbol[canonicalDefiLlamaValue(p.Symbol)]
+		poolID, poolOK := allowedPool[canonicalDefiLlamaValue(pj.Pool)]
+		chainName, chainOK := allowedChain[canonicalDefiLlamaValue(pj.Chain)]
+		projectName, projectOK := allowedProject[canonicalDefiLlamaValue(pj.Project)]
+		symbolName, symbolOK := allowedSymbol[canonicalDefiLlamaValue(pj.Symbol)]
 		if !poolOK || !symbolOK || !projectOK || !chainOK {
 			continue
 		}
-		if !ValidPoolAPY(p.Apy) {
+		if !ValidPoolAPY(*pj.Apy) {
 			continue
 		}
 
-		pool := p
-		pool.Pool = poolID
-		pool.Chain = chainName
-		pool.Project = projectName
-		pool.Symbol = symbolName
-
-		candidates = append(candidates, pool)
+		candidates = append(candidates, Pool{
+			Pool:    poolID,
+			Chain:   chainName,
+			Project: projectName,
+			Symbol:  symbolName,
+			Apy:     *pj.Apy,
+		})
 	}
 
 	sortPools(candidates)
