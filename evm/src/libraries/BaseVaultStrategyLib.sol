@@ -33,6 +33,21 @@ library BaseVaultStrategyLib {
         address adapterRegistry,
         address vault
     ) public returns (address adapter) {
+        adapter = _setActiveAdapter($, protocolId, adapterRegistry, vault);
+    }
+
+    /// @notice Clears the active strategy protocol adapter for this chain.
+    /// @param $ BaseVault namespaced storage
+    function clearActiveAdapter(BaseVaultStore.BaseVaultStorage storage $) public {
+        _clearActiveAdapter($);
+    }
+
+    function _setActiveAdapter(
+        BaseVaultStore.BaseVaultStorage storage $,
+        bytes32 protocolId,
+        address adapterRegistry,
+        address vault
+    ) internal returns (address adapter) {
         adapter = IAdapterRegistry(adapterRegistry).getAdapter(protocolId);
         if (adapter == address(0)) revert IBaseVault.BaseVault__NoAdapterRegistered(protocolId);
 
@@ -43,9 +58,7 @@ library BaseVaultStrategyLib {
         emit ActiveProtocolAdapterSet(protocolId, adapter);
     }
 
-    /// @notice Clears the active strategy protocol adapter for this chain.
-    /// @param $ BaseVault namespaced storage
-    function clearActiveAdapter(BaseVaultStore.BaseVaultStorage storage $) public {
+    function _clearActiveAdapter(BaseVaultStore.BaseVaultStorage storage $) internal {
         address adapter = $.s_activeProtocolAdapter;
         $.s_activeProtocolAdapter = address(0);
         emit ActiveProtocolAdapterCleared(adapter);

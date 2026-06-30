@@ -5,7 +5,6 @@ import {HelperHarness} from "../HelperHarness.sol";
 import {ChildVault} from "../../../src/vaults/ChildVault.sol";
 import {BaseVault} from "../../../src/vaults/BaseVault.sol";
 import {Types} from "../../../src/libraries/Types.sol";
-import {Client} from "@chainlink/contracts-ccip/contracts/libraries/Client.sol";
 
 contract ChildVaultHarness is ChildVault, HelperHarness {
     bytes32 private constant INITIALIZABLE_STORAGE =
@@ -49,14 +48,6 @@ contract ChildVaultHarness is ChildVault, HelperHarness {
         _revertIfZeroChainSelector(value);
     }
 
-    function setActiveAdapter(bytes32 protocolId) external returns (address) {
-        return _setActiveAdapter(protocolId);
-    }
-
-    function clearActiveAdapter() external {
-        _clearActiveAdapter();
-    }
-
     function storeRebalanceDepositRecovery(uint256 rebalanceNonce, uint256 amount) external {
         _storeRebalanceDepositRecovery(rebalanceNonce, amount);
     }
@@ -75,19 +66,6 @@ contract ChildVaultHarness is ChildVault, HelperHarness {
 
     function recoverFailedRebalanceDepositInternal() external returns (uint256 rebalanceNonce, uint256 amount) {
         (rebalanceNonce, amount) = _recoverFailedRebalanceDeposit();
-    }
-
-    function executeCcipSend(
-        uint256 bridgeAmount,
-        uint64 destSelector,
-        Types.CcipTx ccipTxType,
-        bytes calldata txData
-    ) external {
-        _executeCcipSend(bridgeAmount, destSelector, ccipTxType, txData);
-    }
-
-    function validateCcipSend(uint256 bridgeAmount, uint64 destSelector) external view returns (address vault) {
-        vault = _validateCcipSend(bridgeAmount, destSelector);
     }
 
     function ccipSend(
@@ -139,18 +117,6 @@ contract ChildVaultHarness is ChildVault, HelperHarness {
         returns (bool success)
     {
         success = _handleCCIPRebalance(rebalanceNonce, protocolId, amount);
-    }
-
-    function validateReceivedTokenAndGetAmount(Client.Any2EVMMessage calldata message)
-        external
-        view
-        returns (uint256 amount)
-    {
-        amount = _validateReceivedTokenAndGetAmount(message);
-    }
-
-    function exposedOnlyAllowedSender(address sender, uint64 srcChainSelector) external view {
-        _onlyAllowedSender(sender, srcChainSelector);
     }
 
     function requireNoRecovery() external view {

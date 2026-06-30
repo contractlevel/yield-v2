@@ -33,10 +33,7 @@ library BaseVaultCcipLib {
         public
         view
     {
-        address registeredVault = $.s_crosschainVaults[srcChainSelector];
-        if (registeredVault == address(0) || sender != registeredVault) {
-            revert IBaseVault.BaseVault__InvalidSender(sender, srcChainSelector);
-        }
+        _onlyAllowedSender($, sender, srcChainSelector);
     }
 
     /// @notice Validates CCIP send parameters and returns the registered destination vault.
@@ -75,6 +72,52 @@ library BaseVaultCcipLib {
         address ccipRouter,
         uint64 thisChainSelector
     ) public {
+        _send(
+            $,
+            bridgeAmount,
+            destinationChainSelector,
+            ccipTxType,
+            txData,
+            asset,
+            link,
+            ccipRouter,
+            thisChainSelector
+        );
+    }
+
+    /// @notice Validates that a CCIP message delivered the vault's configured asset token and returns the delivered amount.
+    /// @param message The CCIP message received from the router
+    /// @param asset The vault's configured asset token
+    /// @return amount The amount of asset delivered by CCIP
+    function validateReceivedTokenAndGetAmount(Client.Any2EVMMessage memory message, address asset)
+        public
+        pure
+        returns (uint256 amount)
+    {
+        amount = _validateReceivedTokenAndGetAmount(message, asset);
+    }
+
+    function _onlyAllowedSender(BaseVaultStore.BaseVaultStorage storage $, address sender, uint64 srcChainSelector)
+        internal
+        view
+    {
+        address registeredVault = $.s_crosschainVaults[srcChainSelector];
+        if (registeredVault == address(0) || sender != registeredVault) {
+            revert IBaseVault.BaseVault__InvalidSender(sender, srcChainSelector);
+        }
+    }
+
+    function _send(
+        BaseVaultStore.BaseVaultStorage storage $,
+        uint256 bridgeAmount,
+        uint64 destinationChainSelector,
+        Types.CcipTx ccipTxType,
+        bytes memory txData,
+        address asset,
+        address link,
+        address ccipRouter,
+        uint64 thisChainSelector
+    ) internal {
         address vault = _validateCcipSend($, bridgeAmount, destinationChainSelector, thisChainSelector);
         uint256 gasLimit = _getCcipGasLimit($, destinationChainSelector);
         bytes memory data = abi.encode(ccipTxType, txData);
@@ -99,12 +142,8 @@ library BaseVaultCcipLib {
         emit CCIPBridged(ccipMessageId, bridgeAmount, ccipTxType);
     }
 
-    /// @notice Validates that a CCIP message delivered the vault's configured asset token and returns the delivered amount.
-    /// @param message The CCIP message received from the router
-    /// @param asset The vault's configured asset token
-    /// @return amount The amount of asset delivered by CCIP
-    function validateReceivedTokenAndGetAmount(Client.Any2EVMMessage memory message, address asset)
-        public
+    function _validateReceivedTokenAndGetAmount(Client.Any2EVMMessage memory message, address asset)
+        internal
         pure
         returns (uint256 amount)
     {
@@ -124,7 +163,7 @@ library BaseVaultCcipLib {
         uint256 bridgeAmount,
         uint64 destinationChainSelector,
         uint64 thisChainSelector
-    ) private view returns (address vault) {
+    ) internal view returns (address vault) {
         if (bridgeAmount == 0) revert IBaseVault.BaseVault__NoZeroAmount();
         if (destinationChainSelector == 0 || destinationChainSelector == thisChainSelector) {
             revert IBaseVault.BaseVault__InvalidDestinationChainSelector(destinationChainSelector);
@@ -135,7 +174,7 @@ library BaseVaultCcipLib {
     }
 
     function _getCcipGasLimit(BaseVaultStore.BaseVaultStorage storage $, uint64 chainSelector)
-        private
+        internal
         view
         returns (uint256 gasLimit)
     {

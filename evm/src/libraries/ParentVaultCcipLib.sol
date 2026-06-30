@@ -16,7 +16,7 @@ library ParentVaultCcipLib {
     //////////////////////////////////////////////////////////////*/
     /// @dev Solidity requires locally declared events for emits; these must match IParentVault and emit from the vault via DELEGATECALL.
     event EpochClaimable(uint256 indexed epochNonce);
-    event EpochWithdrawAmountShort(uint256 indexed epochNonce, uint256 expectedAmount, uint256 actualAmount);
+    event EpochWithdrawAmountShort(uint256 indexed epochNonce, uint256 indexed expectedAmount, uint256 indexed actualAmount);
 
     /*//////////////////////////////////////////////////////////////
                                   CCIP
@@ -34,6 +34,15 @@ library ParentVaultCcipLib {
         bytes memory data,
         uint256 receivedAmount
     ) public returns (uint256 rebalanceNonce, bytes32 protocolId) {
+        (rebalanceNonce, protocolId) = _receiveCcip($, ccipTxType, data, receivedAmount);
+    }
+
+    function _receiveCcip(
+        ParentVaultStore.ParentVaultStorage storage $,
+        Types.CcipTx ccipTxType,
+        bytes memory data,
+        uint256 receivedAmount
+    ) internal returns (uint256 rebalanceNonce, bytes32 protocolId) {
         if (ccipTxType == Types.CcipTx.EPOCH_NET_WITHDRAW) {
             _handleEpochNetWithdraw($, data, receivedAmount);
         } else if (ccipTxType == Types.CcipTx.REBALANCE) {
@@ -47,7 +56,7 @@ library ParentVaultCcipLib {
         ParentVaultStore.ParentVaultStorage storage $,
         bytes memory data,
         uint256 receivedAmount
-    ) private {
+    ) internal {
         uint256 epochNonce = abi.decode(data, (uint256));
         if (epochNonce != $.s_epochNonce - 1) revert IParentVault.ParentVault__InvalidEpochNonce(epochNonce);
         Types.Epoch storage epoch = $.s_epochs[epochNonce];
@@ -63,7 +72,7 @@ library ParentVaultCcipLib {
     }
 
     function _validateRebalance(ParentVaultStore.ParentVaultStorage storage $, bytes memory data)
-        private
+        internal
         view
         returns (uint256 rebalanceNonce, bytes32 protocolId)
     {
@@ -79,7 +88,7 @@ library ParentVaultCcipLib {
         }
     }
 
-    function _finalizeEpoch(ParentVaultStore.ParentVaultStorage storage $, uint256 epochNonce) private {
+    function _finalizeEpoch(ParentVaultStore.ParentVaultStorage storage $, uint256 epochNonce) internal {
         Types.Epoch storage epoch = $.s_epochs[epochNonce];
         if (epoch.status != Types.EpochStatus.EXECUTING) {
             revert IParentVault.ParentVault__EpochNotExecuting(epochNonce);

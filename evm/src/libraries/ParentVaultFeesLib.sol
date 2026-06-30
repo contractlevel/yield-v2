@@ -54,6 +54,15 @@ library ParentVaultFeesLib {
         uint256 lastRebalanceCompletedTimestamp,
         address share
     ) public {
+        _collectManagementFee($, rebalanceNonce, lastRebalanceCompletedTimestamp, share);
+    }
+
+    function _collectManagementFee(
+        ParentVaultStore.ParentVaultStorage storage $,
+        uint256 rebalanceNonce,
+        uint256 lastRebalanceCompletedTimestamp,
+        address share
+    ) internal {
         uint256 elapsed = block.timestamp - lastRebalanceCompletedTimestamp;
         if (elapsed > 365 days) elapsed = 365 days;
 
@@ -83,6 +92,17 @@ library ParentVaultFeesLib {
         address share,
         uint256 sharePrecision
     ) public returns (uint256 settlementPricePerShare) {
+        settlementPricePerShare = _collectPerformanceFee($, epochNonce, tvl, grossPricePerShare, share, sharePrecision);
+    }
+
+    function _collectPerformanceFee(
+        ParentVaultStore.ParentVaultStorage storage $,
+        uint256 epochNonce,
+        uint256 tvl,
+        uint256 grossPricePerShare,
+        address share,
+        uint256 sharePrecision
+    ) internal returns (uint256 settlementPricePerShare) {
         uint256 highWaterMark = $.s_performanceFeeHighWaterMark;
         if (grossPricePerShare <= highWaterMark) return grossPricePerShare;
 
@@ -109,7 +129,7 @@ library ParentVaultFeesLib {
     }
 
     function _calculatePricePerShare(ParentVaultStore.ParentVaultStorage storage $, uint256 tvl, uint256 sharePrecision)
-        private
+        internal
         view
         returns (uint256 pricePerShare)
     {
@@ -123,6 +143,7 @@ library ParentVaultFeesLib {
         }
     }
 
+    // @review replace with OZ or solady
     function _ceilDiv(uint256 numerator, uint256 denominator) private pure returns (uint256 result) {
         result = numerator == 0 ? 0 : (numerator - 1) / denominator + 1;
     }

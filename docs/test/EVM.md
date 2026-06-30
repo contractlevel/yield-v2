@@ -113,6 +113,13 @@ certoraRun ./certora/conf/modules/policies/CredentialRegistryAccountListValidato
 
 certoraRun ./certora/conf/token/YieldcoinShare.conf
 
+certoraRun certora/conf/libraries/BaseVaultCcipLib.conf
+certoraRun certora/conf/libraries/BaseVaultStrategyLib.conf
+
+certoraRun certora/conf/libraries/ParentVaultCcipLib.conf
+certoraRun certora/conf/libraries/ParentVaultEpochLib.conf
+certoraRun certora/conf/libraries/ParentVaultFeesLib.conf
+
 certoraRun certora/conf/vaults/ParentVault.BaseVault.conf
 certoraRun certora/conf/vaults/ChildVault.BaseVault.conf
 

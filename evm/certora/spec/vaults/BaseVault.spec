@@ -3,7 +3,6 @@ using MockProtocolAdapter as adapter;
 using MockInvalidProtocolAdapter as invalidAdapter;
 using MockUSDC as asset;
 using MockLINK as link;
-using MockCCIPRouter as ccipRouter;
 
 /// Verification of BaseVault shared behavior
 /// @author @contractlevel
@@ -16,19 +15,13 @@ methods {
     /*//////////////////////////////////////////////////////////////
                         HARNESS INTERNAL WRAPPERS
     //////////////////////////////////////////////////////////////*/
-    function setActiveAdapter(bytes32) external returns (address) envfree;
-    function clearActiveAdapter() external envfree;
     function clearRebalanceDepositRecovery() external envfree;
     function requireRebalanceDepositRecovery() external returns (Types.RebalanceDepositRecovery) envfree;
     function recoverFailedRebalanceDepositInternal() external returns (uint256, uint256);
-    function validateCcipSend(uint256, uint64) external returns (address);
-    function executeCcipSend(uint256, uint64, Types.CcipTx, bytes) external;
     function storeRebalanceDepositRecovery(uint256, uint256) external;
     function executeDeposit(uint256, bool) external returns (bool);
     function executeWithdraw(uint256, bool) external returns (bool, uint256);
     function handleCCIPRebalance(uint256, bytes32, uint256) external returns (bool);
-    function validateReceivedTokenAndGetAmount(Client.Any2EVMMessage) external returns (uint256);
-    function exposedOnlyAllowedSender(address, uint64) external;
     function revertIfZeroAddress(address) external;
     function revertIfZeroAmount(uint256) external;
     function revertIfZeroChainSelector(uint64) external;
@@ -58,10 +51,6 @@ methods {
     function adapter.depositReverts() external returns (bool) envfree;
     function adapter.withdrawReverts() external returns (bool) envfree;
     function adapter.setTVL(uint256) external;
-    function ccipRouter.getFee() external returns (uint256) envfree;
-    function ccipRouter.getFeeReverts() external returns (bool) envfree;
-    function ccipRouter.ccipSendReverts() external returns (bool) envfree;
-
     function hasRole(bytes32, address) external returns (bool) envfree;
     function paused() external returns (bool) envfree;
     function owner() external returns (address) envfree;
@@ -99,8 +88,6 @@ methods {
     function bytes32ToAddress(bytes32) external returns (address) envfree;
     function bytes32ToUint256(bytes32) external returns (uint256) envfree;
     function bytes32ToUint64(bytes32) external returns (uint64) envfree;
-    function bytes32ToUint8(bytes32) external returns (uint8) envfree;
-    function uint8ToCcipTxType(uint8) external returns (Types.CcipTx) envfree;
 
     /*//////////////////////////////////////////////////////////////
                          DISPATCHER SUMMARIES
@@ -117,9 +104,6 @@ methods {
     function _.getAsset() external => DISPATCHER(true);
 
     function _.getAdapter(bytes32) external => DISPATCHER(true);
-
-    function _.getFee(uint64, Client.EVM2AnyMessage) external => DISPATCHER(true);
-    function _.ccipSend(uint64, Client.EVM2AnyMessage) external => DISPATCHER(true);
 
     function _.proxiableUUID() external => DISPATCHER(true);
 
@@ -180,10 +164,6 @@ definition RebalanceDepositRecoveryStoredEvent() returns bytes32 =
 definition RebalanceDepositRecoveryClearedEvent() returns bytes32 =
 // keccak256("RebalanceDepositRecoveryCleared(uint256)")
     to_bytes32(0xfd0affe04f47c983df51f211349e202dc404654e6851f1ad16dc04aa5c683e6f);
-
-definition CCIPBridgedEvent() returns bytes32 =
-// keccak256("CCIPBridged(bytes32,uint256,uint8)")
-    to_bytes32(0x39e716d942b34d57d78c584f648ec8e13b9621c6e5b1a57d18ef47a98b11b39d);
 
 definition DepositToStrategySuccessEvent() returns bytes32 =
 // keccak256("DepositToStrategySuccess(uint256,uint256)")
@@ -311,12 +291,6 @@ ghost uint256 ghost_RebalanceDepositRecoveryStored_Param_amount { init_state axi
 /// ─── Event: RebalanceDepositRecoveryCleared ──────────────────
 ghost mathint ghost_RebalanceDepositRecoveryCleared_EventCount { init_state axiom ghost_RebalanceDepositRecoveryCleared_EventCount == 0; }
 ghost uint256 ghost_RebalanceDepositRecoveryCleared_Param_nonce { init_state axiom ghost_RebalanceDepositRecoveryCleared_Param_nonce == 0; }
-
-/// ─── Event: CCIPBridged ──────────────────────────────────────
-ghost mathint ghost_CCIPBridged_EventCount { init_state axiom ghost_CCIPBridged_EventCount == 0; }
-ghost bytes32 ghost_CCIPBridged_Param_ccipMessageId { init_state axiom ghost_CCIPBridged_Param_ccipMessageId == to_bytes32(0); }
-ghost uint256 ghost_CCIPBridged_Param_amount { init_state axiom ghost_CCIPBridged_Param_amount == 0; }
-ghost Types.CcipTx ghost_CCIPBridged_Param_ccipTxType { init_state axiom ghost_CCIPBridged_Param_ccipTxType == Types.CcipTx.EPOCH_NET_DEPOSIT; }
 
 /// ─── Event: DepositToStrategySuccess ─────────────────────────
 ghost mathint ghost_DepositToStrategySuccess_EventCount { init_state axiom ghost_DepositToStrategySuccess_EventCount == 0; }
@@ -486,16 +460,6 @@ hook LOG3(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2) {
     }
     if (t0 == RebalanceWithdrawSuccessEvent()) {
         ghost_RebalanceWithdrawSuccess_EventCount = ghost_RebalanceWithdrawSuccess_EventCount + 1;
-    }
-}
-
-/// LOG4 — topic0 + 3 indexed params
-hook LOG4(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2, bytes32 t3) {
-    if (t0 == CCIPBridgedEvent()) {
-        ghost_CCIPBridged_EventCount = ghost_CCIPBridged_EventCount + 1;
-        ghost_CCIPBridged_Param_ccipMessageId = t1;
-        ghost_CCIPBridged_Param_amount = bytes32ToUint256(t2);
-        ghost_CCIPBridged_Param_ccipTxType = uint8ToCcipTxType(bytes32ToUint8(t3));
     }
 }
 
@@ -1795,107 +1759,6 @@ rule tryDepositToAdapter_Success() {
     assert adapter.getTVL() == adapterTVLBefore + amount;
 }
 
-/// ─────────────────── SET ACTIVE ADAPTER ─────────────────────
-
-rule setActiveAdapter_RevertWhen_AdapterNotRegistered() {
-    env e;
-    bytes32 protocolId;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-
-    /// @dev revert condition being verified
-    require adapterRegistry.getAdapter(e, protocolId) == 0;
-
-    address activeAdapterBefore = getActiveProtocolAdapter();
-
-    /// @dev set ghost starting values
-    require ghost_ActiveProtocolAdapterSet_EventCount == 0;
-    require ghost_activeProtocolAdapter_StoreCount == 0;
-
-    setActiveAdapter@withrevert(e, protocolId);
-
-    assert lastReverted;
-    assert getActiveProtocolAdapter() == activeAdapterBefore;
-    assert ghost_ActiveProtocolAdapterSet_EventCount == 0;
-    assert ghost_activeProtocolAdapter_StoreCount == 0;
-}
-
-rule setActiveAdapter_RevertWhen_AdapterVaultIsInvalid() {
-    env e;
-    bytes32 protocolId;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require adapterRegistry.getAdapter(e, protocolId) == invalidAdapter;
-
-    /// @dev revert condition being verified
-    require invalidAdapter.getVault() != currentContract, "adapter vault should be invalid";
-
-    address activeAdapterBefore = getActiveProtocolAdapter();
-
-    /// @dev set ghost starting values
-    require ghost_ActiveProtocolAdapterSet_EventCount == 0;
-    require ghost_activeProtocolAdapter_StoreCount == 0;
-
-    setActiveAdapter@withrevert(e, protocolId);
-
-    assert lastReverted;
-    assert getActiveProtocolAdapter() == activeAdapterBefore;
-    assert ghost_ActiveProtocolAdapterSet_EventCount == 0;
-    assert ghost_activeProtocolAdapter_StoreCount == 0;
-}
-
-rule setActiveAdapter_Success() {
-    env e;
-    bytes32 protocolId;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require adapterRegistry.getAdapter(e, protocolId) == adapter;
-    require adapter.getVault() == currentContract, "adapter should be bound to the vault";
-
-    /// @dev set ghost starting values
-    require ghost_ActiveProtocolAdapterSet_EventCount == 0;
-    require ghost_activeProtocolAdapter_StoreCount == 0;
-
-    address returned = setActiveAdapter@withrevert(e, protocolId);
-
-    assert !lastReverted;
-    assert returned == adapter;
-    assert getActiveProtocolAdapter() == adapter;
-    assert ghost_ActiveProtocolAdapterSet_EventCount == 1;
-    assert ghost_ActiveProtocolAdapterSet_Param_protocolId == protocolId;
-    assert ghost_ActiveProtocolAdapterSet_Param_adapter == adapter;
-    assert ghost_activeProtocolAdapter_StoreCount == 1;
-    assert ghost_activeProtocolAdapter_StoredValue == adapter;
-}
-
-/// ─────────────────── CLEAR ACTIVE ADAPTER ────────────────────
-
-rule clearActiveAdapter_Success() {
-    env e;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-
-    /// Clearing an already-zero active adapter is valid
-    address previousAdapter = getActiveProtocolAdapter();
-
-    /// @dev set ghost starting values
-    require ghost_ActiveProtocolAdapterCleared_EventCount == 0;
-    require ghost_activeProtocolAdapter_StoreCount == 0;
-
-    clearActiveAdapter@withrevert(e);
-
-    assert !lastReverted;
-    assert getActiveProtocolAdapter() == 0;
-    assert ghost_ActiveProtocolAdapterCleared_EventCount == 1;
-    assert ghost_ActiveProtocolAdapterCleared_Param_adapter == previousAdapter;
-    assert ghost_activeProtocolAdapter_StoreCount == 1;
-    assert ghost_activeProtocolAdapter_StoredValue == 0;
-}
-
 /// ─────────────────── STORE REBALANCE DEPOSIT RECOVERY ────────
 
 /// @notice Storing recovery state reverts when another recovery is already pending
@@ -2294,384 +2157,6 @@ rule recoverFailedRebalanceDepositInternal_Success() {
     assert ghost_rebalanceDepositRecovery_createdAt_StoredValue == 0;
     assert ghost_recoveryMode_StoreCount == 1;
     assert ghost_recoveryMode_StoredValue == Types.RecoveryMode.NONE;
-}
-
-/// ─────────────────── VALIDATE CCIP SEND ─────────────────────
-
-/// @notice CCIP send validation reverts when the bridge amount is zero
-/// @dev Verifies that validation does not modify vault storage
-rule validateCcipSend_RevertWhen_BridgeAmountIsZero() {
-    env e;
-    uint64 destinationChainSelector;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require destinationChainSelector != 0, "destination chain selector should not be zero";
-    require destinationChainSelector != getThisChainSelector(), "destination should not be this chain";
-    require getCrosschainVault(destinationChainSelector) != 0, "destination vault should be registered";
-
-    /// @dev revert condition being verified
-    uint256 bridgeAmount = 0;
-
-    storage before = lastStorage;
-
-    validateCcipSend@withrevert(e, bridgeAmount, destinationChainSelector);
-
-    assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-}
-
-/// @notice CCIP send validation reverts when the destination chain selector is zero
-/// @dev Verifies that validation does not modify vault storage
-rule validateCcipSend_RevertWhen_DestinationChainIsZero() {
-    env e;
-    uint256 bridgeAmount;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require bridgeAmount != 0, "bridge amount should not be zero";
-
-    /// @dev revert condition being verified
-    uint64 destinationChainSelector = 0;
-
-    storage before = lastStorage;
-
-    validateCcipSend@withrevert(e, bridgeAmount, destinationChainSelector);
-
-    assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-}
-
-/// @notice CCIP send validation reverts when the destination is the current chain
-/// @dev Verifies that validation does not modify vault storage
-rule validateCcipSend_RevertWhen_DestinationIsSelfChain() {
-    env e;
-    uint256 bridgeAmount;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require bridgeAmount != 0, "bridge amount should not be zero";
-
-    /// @dev revert condition being verified
-    uint64 destinationChainSelector = getThisChainSelector();
-
-    storage before = lastStorage;
-
-    validateCcipSend@withrevert(e, bridgeAmount, destinationChainSelector);
-
-    assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-}
-
-/// @notice CCIP send validation reverts when no destination vault is registered
-/// @dev Verifies that validation does not modify vault storage
-rule validateCcipSend_RevertWhen_DestinationVaultNotRegistered() {
-    env e;
-    uint256 bridgeAmount;
-    uint64 destinationChainSelector;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require bridgeAmount != 0, "bridge amount should not be zero";
-    require destinationChainSelector != 0, "destination chain selector should not be zero";
-    require destinationChainSelector != getThisChainSelector(), "destination should not be this chain";
-
-    /// @dev revert condition being verified
-    require getCrosschainVault(destinationChainSelector) == 0, "destination vault should not be registered";
-
-    storage before = lastStorage;
-
-    validateCcipSend@withrevert(e, bridgeAmount, destinationChainSelector);
-
-    assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-}
-
-/// @notice CCIP send validation returns the registered destination vault
-/// @dev Verifies the returned vault and that validation does not modify vault storage
-rule validateCcipSend_Success() {
-    env e;
-    uint256 bridgeAmount;
-    uint64 destinationChainSelector;
-
-    /// @dev success conditions being verified
-    require e.msg.value == 0, "non-payable";
-    require bridgeAmount != 0, "bridge amount should not be zero";
-    require destinationChainSelector != 0, "destination chain selector should not be zero";
-    require destinationChainSelector != getThisChainSelector(), "destination should not be this chain";
-    require getCrosschainVault(destinationChainSelector) != 0, "destination vault should be registered";
-
-    address expectedVault = getCrosschainVault(destinationChainSelector);
-    storage before = lastStorage;
-
-    address vault = validateCcipSend@withrevert(e, bridgeAmount, destinationChainSelector);
-
-    assert !lastReverted;
-    assert vault == expectedVault;
-    assert before[currentContract] == lastStorage[currentContract];
-}
-
-/// ─────────────────── EXECUTE CCIP SEND ──────────────────────
-
-/// @notice Executing a CCIP send reverts when the bridge amount is zero
-/// @dev Verifies that no CCIPBridged event is emitted
-rule executeCcipSend_RevertWhen_BridgeAmountIsZero() {
-    env e;
-    uint64 destSelector;
-    Types.CcipTx ccipTxType;
-    bytes txData;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require destSelector != 0, "destination chain selector should not be zero";
-    require destSelector != getThisChainSelector(), "destination should not be this chain";
-    require getCrosschainVault(destSelector) != 0, "destination vault should be registered";
-    require !ccipRouter.getFeeReverts(), "router fee lookup should not revert";
-    require !ccipRouter.ccipSendReverts(), "router send should not revert";
-
-    /// @dev revert condition being verified
-    uint256 bridgeAmount = 0;
-
-    /// @dev set ghost starting values
-    require ghost_CCIPBridged_EventCount == 0;
-
-    executeCcipSend@withrevert(e, bridgeAmount, destSelector, ccipTxType, txData);
-
-    assert lastReverted;
-    assert ghost_CCIPBridged_EventCount == 0;
-}
-
-/// @notice Executing a CCIP send reverts when the destination chain selector is zero
-/// @dev Verifies that no CCIPBridged event is emitted
-rule executeCcipSend_RevertWhen_DestinationChainIsZero() {
-    env e;
-    uint256 bridgeAmount;
-    Types.CcipTx ccipTxType;
-    bytes txData;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require bridgeAmount != 0, "bridge amount should not be zero";
-    require !ccipRouter.getFeeReverts(), "router fee lookup should not revert";
-    require !ccipRouter.ccipSendReverts(), "router send should not revert";
-
-    /// @dev revert condition being verified
-    uint64 destSelector = 0;
-
-    /// @dev set ghost starting values
-    require ghost_CCIPBridged_EventCount == 0;
-
-    executeCcipSend@withrevert(e, bridgeAmount, destSelector, ccipTxType, txData);
-
-    assert lastReverted;
-    assert ghost_CCIPBridged_EventCount == 0;
-}
-
-/// @notice Executing a CCIP send reverts when the destination is the current chain
-/// @dev Verifies that no CCIPBridged event is emitted
-rule executeCcipSend_RevertWhen_DestinationIsSelfChain() {
-    env e;
-    uint256 bridgeAmount;
-    Types.CcipTx ccipTxType;
-    bytes txData;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require bridgeAmount != 0, "bridge amount should not be zero";
-    require !ccipRouter.getFeeReverts(), "router fee lookup should not revert";
-    require !ccipRouter.ccipSendReverts(), "router send should not revert";
-
-    /// @dev revert condition being verified
-    uint64 destSelector = getThisChainSelector();
-
-    /// @dev set ghost starting values
-    require ghost_CCIPBridged_EventCount == 0;
-
-    executeCcipSend@withrevert(e, bridgeAmount, destSelector, ccipTxType, txData);
-
-    assert lastReverted;
-    assert ghost_CCIPBridged_EventCount == 0;
-}
-
-/// @notice Executing a CCIP send reverts when no vault is registered for the destination chain
-/// @dev Verifies that no CCIPBridged event is emitted
-rule executeCcipSend_RevertWhen_DestinationVaultNotRegistered() {
-    env e;
-    uint256 bridgeAmount;
-    uint64 destSelector;
-    Types.CcipTx ccipTxType;
-    bytes txData;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require bridgeAmount != 0, "bridge amount should not be zero";
-    require destSelector != 0, "destination chain selector should not be zero";
-    require destSelector != getThisChainSelector(), "destination should not be this chain";
-    require !ccipRouter.getFeeReverts(), "router fee lookup should not revert";
-    require !ccipRouter.ccipSendReverts(), "router send should not revert";
-
-    /// @dev revert condition being verified
-    require getCrosschainVault(destSelector) == 0, "destination vault should not be registered";
-
-    /// @dev set ghost starting values
-    require ghost_CCIPBridged_EventCount == 0;
-
-    executeCcipSend@withrevert(e, bridgeAmount, destSelector, ccipTxType, txData);
-
-    assert lastReverted;
-    assert ghost_CCIPBridged_EventCount == 0;
-}
-
-/// @notice A valid CCIP send emits CCIPBridged with the bridged amount
-/// @dev The linked token and router mocks approve and send without reverting
-rule executeCcipSend_Success_EmitsCCIPBridged() {
-    env e;
-    uint256 bridgeAmount;
-    uint64 destSelector;
-    Types.CcipTx ccipTxType;
-    bytes txData;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require bridgeAmount != 0, "bridge amount should not be zero";
-    require destSelector != 0, "destination chain selector should not be zero";
-    require destSelector != getThisChainSelector(), "destination should not be this chain";
-    require getCrosschainVault(destSelector) != 0, "destination vault should be registered";
-    require !ccipRouter.getFeeReverts(), "router fee lookup should not revert";
-    require !ccipRouter.ccipSendReverts(), "router send should not revert";
-
-    /// @dev set ghost starting values
-    require ghost_CCIPBridged_EventCount == 0;
-
-    executeCcipSend@withrevert(e, bridgeAmount, destSelector, ccipTxType, txData);
-
-    assert !lastReverted;
-    assert ghost_CCIPBridged_EventCount == 1;
-    assert ghost_CCIPBridged_Param_ccipMessageId != to_bytes32(0);
-    assert ghost_CCIPBridged_Param_amount == bridgeAmount;
-    assert ghost_CCIPBridged_Param_ccipTxType == ccipTxType;
-}
-
-/// @notice A valid CCIP send transfers the fee and bridged asset from the vault to the router
-/// @dev Verifies exact vault and router balance changes using the fee reported by the router
-rule executeCcipSend_Success_BalanceChanges() {
-    env e;
-    uint256 bridgeAmount;
-    uint64 destSelector;
-    Types.CcipTx ccipTxType;
-    bytes txData;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require bridgeAmount != 0, "bridge amount should not be zero";
-    require destSelector != 0, "destination chain selector should not be zero";
-    require destSelector != getThisChainSelector(), "destination should not be this chain";
-    require getCrosschainVault(destSelector) != 0, "destination vault should be registered";
-    require !ccipRouter.getFeeReverts(), "router fee lookup should not revert";
-    require !ccipRouter.ccipSendReverts(), "router send should not revert";
-
-    uint256 fee = ccipRouter.getFee();
-    address router = getRouter();
-    uint256 vaultLinkBalanceBefore = link.balanceOf(currentContract);
-    uint256 routerLinkBalanceBefore = link.balanceOf(router);
-    uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
-    uint256 routerAssetBalanceBefore = asset.balanceOf(router);
-
-    /// @dev mock token arithmetic conditions
-    require fee <= vaultLinkBalanceBefore, "vault LINK balance should cover the CCIP fee";
-    require routerLinkBalanceBefore <= max_uint256 - fee, "router LINK balance should not overflow";
-    require bridgeAmount <= vaultAssetBalanceBefore, "vault asset balance should cover the bridge amount";
-    require routerAssetBalanceBefore <= max_uint256 - bridgeAmount, "router asset balance should not overflow";
-
-    executeCcipSend@withrevert(e, bridgeAmount, destSelector, ccipTxType, txData);
-
-    assert !lastReverted;
-    assert link.balanceOf(currentContract) == vaultLinkBalanceBefore - fee;
-    assert link.balanceOf(router) == routerLinkBalanceBefore + fee;
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore - bridgeAmount;
-    assert asset.balanceOf(router) == routerAssetBalanceBefore + bridgeAmount;
-}
-
-/// @notice Executing a CCIP send reverts when the router fee lookup fails
-/// @dev Verifies that vault storage and token balances are unchanged and no event is emitted
-rule executeCcipSend_RevertWhen_RouterGetFeeReverts() {
-    env e;
-    uint256 bridgeAmount;
-    uint64 destSelector;
-    Types.CcipTx ccipTxType;
-    bytes txData;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require bridgeAmount != 0, "bridge amount should not be zero";
-    require destSelector != 0, "destination chain selector should not be zero";
-    require destSelector != getThisChainSelector(), "destination should not be this chain";
-    require getCrosschainVault(destSelector) != 0, "destination vault should be registered";
-    require !ccipRouter.ccipSendReverts(), "router send should not revert";
-
-    /// @dev revert condition being verified
-    require ccipRouter.getFeeReverts(), "router fee lookup should revert";
-
-    storage before = lastStorage;
-    address router = getRouter();
-    uint256 vaultLinkBalanceBefore = link.balanceOf(currentContract);
-    uint256 routerLinkBalanceBefore = link.balanceOf(router);
-    uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
-    uint256 routerAssetBalanceBefore = asset.balanceOf(router);
-
-    /// @dev set ghost starting values
-    require ghost_CCIPBridged_EventCount == 0;
-
-    executeCcipSend@withrevert(e, bridgeAmount, destSelector, ccipTxType, txData);
-
-    assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert link.balanceOf(currentContract) == vaultLinkBalanceBefore;
-    assert link.balanceOf(router) == routerLinkBalanceBefore;
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(router) == routerAssetBalanceBefore;
-    assert ghost_CCIPBridged_EventCount == 0;
-}
-
-/// @notice Executing a CCIP send reverts when the router send fails
-/// @dev Verifies atomic rollback of approvals and token balances and that no event is emitted
-rule executeCcipSend_RevertWhen_RouterCcipSendReverts() {
-    env e;
-    uint256 bridgeAmount;
-    uint64 destSelector;
-    Types.CcipTx ccipTxType;
-    bytes txData;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require bridgeAmount != 0, "bridge amount should not be zero";
-    require destSelector != 0, "destination chain selector should not be zero";
-    require destSelector != getThisChainSelector(), "destination should not be this chain";
-    require getCrosschainVault(destSelector) != 0, "destination vault should be registered";
-    require !ccipRouter.getFeeReverts(), "router fee lookup should not revert";
-
-    /// @dev revert condition being verified
-    require ccipRouter.ccipSendReverts(), "router send should revert";
-
-    storage before = lastStorage;
-    address router = getRouter();
-    uint256 vaultLinkBalanceBefore = link.balanceOf(currentContract);
-    uint256 routerLinkBalanceBefore = link.balanceOf(router);
-    uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
-    uint256 routerAssetBalanceBefore = asset.balanceOf(router);
-
-    /// @dev set ghost starting values
-    require ghost_CCIPBridged_EventCount == 0;
-
-    executeCcipSend@withrevert(e, bridgeAmount, destSelector, ccipTxType, txData);
-
-    assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert link.balanceOf(currentContract) == vaultLinkBalanceBefore;
-    assert link.balanceOf(router) == routerLinkBalanceBefore;
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(router) == routerAssetBalanceBefore;
-    assert ghost_CCIPBridged_EventCount == 0;
 }
 
 /// ─────────────────── AUTHORIZE UPGRADE ─────────────────────
@@ -3236,162 +2721,6 @@ rule handleCCIPRebalance_FailedDepositStoresRecovery() {
     assert ghost_rebalanceDepositRecovery_amount_StoredValue == amount;
     assert ghost_rebalanceDepositRecovery_createdAt_StoreCount == 1;
     assert ghost_rebalanceDepositRecovery_createdAt_StoredValue == e.block.timestamp;
-}
-
-/// ─────────────────── VALIDATE RECEIVED TOKEN AND GET AMOUNT ──────────────────
-
-/// @notice Received-token validation reverts unless exactly one token amount is delivered
-/// @dev Verifies that validation does not modify vault storage
-rule validateReceivedTokenAndGetAmount_RevertWhen_TokenAmountsLengthIsInvalid() {
-    env e;
-    Client.Any2EVMMessage message;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-
-    /// @dev revert condition being verified
-    require message.destTokenAmounts.length != 1, "token amounts length should be invalid";
-
-    storage before = lastStorage;
-
-    validateReceivedTokenAndGetAmount@withrevert(e, message);
-
-    assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-}
-
-/// @notice Received-token validation reverts when the delivered token is not the vault asset
-/// @dev Verifies that validation does not modify vault storage
-rule validateReceivedTokenAndGetAmount_RevertWhen_TokenIsInvalid() {
-    env e;
-    Client.Any2EVMMessage message;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require message.destTokenAmounts.length == 1, "token amounts should contain one element";
-    require message.destTokenAmounts[0].amount != 0, "delivered amount should not be zero";
-
-    /// @dev revert condition being verified
-    require message.destTokenAmounts[0].token != getAsset(), "delivered token should not be the vault asset";
-
-    storage before = lastStorage;
-
-    validateReceivedTokenAndGetAmount@withrevert(e, message);
-
-    assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-}
-
-/// @notice Received-token validation reverts when the delivered asset amount is zero
-/// @dev Verifies that validation does not modify vault storage
-rule validateReceivedTokenAndGetAmount_RevertWhen_AmountIsZero() {
-    env e;
-    Client.Any2EVMMessage message;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require message.destTokenAmounts.length == 1, "token amounts should contain one element";
-    require message.destTokenAmounts[0].token == getAsset(), "delivered token should be the vault asset";
-
-    /// @dev revert condition being verified
-    require message.destTokenAmounts[0].amount == 0, "delivered amount should be zero";
-
-    storage before = lastStorage;
-
-    validateReceivedTokenAndGetAmount@withrevert(e, message);
-
-    assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-}
-
-/// @notice Received-token validation returns the nonzero vault asset amount
-/// @dev Verifies the returned amount and that validation does not modify vault storage
-rule validateReceivedTokenAndGetAmount_Success() {
-    env e;
-    Client.Any2EVMMessage message;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require message.destTokenAmounts.length == 1, "token amounts should contain one element";
-    require message.destTokenAmounts[0].token == getAsset(), "delivered token should be the vault asset";
-    require message.destTokenAmounts[0].amount != 0, "delivered amount should not be zero";
-
-    uint256 expectedAmount = message.destTokenAmounts[0].amount;
-    storage before = lastStorage;
-
-    uint256 amount = validateReceivedTokenAndGetAmount@withrevert(e, message);
-
-    assert !lastReverted;
-    assert amount == expectedAmount;
-    assert before[currentContract] == lastStorage[currentContract];
-}
-
-/// ─────────────────── ONLY ALLOWED SENDER ──────────────────
-
-/// @notice Sender validation reverts when no vault is registered for the source chain
-/// @dev Verifies that an unset cross-chain vault cannot authorize the zero address or modify vault storage
-rule onlyAllowedSender_RevertWhen_RegisteredVaultIsZero() {
-    env e;
-    address sender;
-    uint64 srcChainSelector;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require sender == 0, "sender should be zero";
-
-    /// @dev revert condition being verified
-    require getCrosschainVault(srcChainSelector) == 0, "registered vault should be zero";
-
-    storage before = lastStorage;
-
-    exposedOnlyAllowedSender@withrevert(e, sender, srcChainSelector);
-
-    assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-}
-
-/// @notice Sender validation reverts when the sender is not the registered vault for the source chain
-/// @dev Verifies that sender validation does not modify vault storage
-rule onlyAllowedSender_RevertWhen_SenderIsNotRegisteredVault() {
-    env e;
-    address sender;
-    uint64 srcChainSelector;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require getCrosschainVault(srcChainSelector) != 0, "registered vault should not be zero";
-
-    /// @dev revert condition being verified
-    require sender != getCrosschainVault(srcChainSelector), "sender should not be the registered vault";
-
-    storage before = lastStorage;
-
-    exposedOnlyAllowedSender@withrevert(e, sender, srcChainSelector);
-
-    assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-}
-
-/// @notice Sender validation succeeds for the registered vault of the source chain
-/// @dev Verifies that successful sender validation does not modify vault storage
-rule onlyAllowedSender_SuccessWhen_SenderIsRegisteredVault() {
-    env e;
-    address sender;
-    uint64 srcChainSelector;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-
-    /// @dev success condition being verified
-    require getCrosschainVault(srcChainSelector) != 0, "registered vault should not be zero";
-    require sender == getCrosschainVault(srcChainSelector), "sender should be the registered vault";
-
-    storage before = lastStorage;
-
-    exposedOnlyAllowedSender@withrevert(e, sender, srcChainSelector);
-
-    assert !lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
 }
 
 /// ─────────────────── REVERT IF ZERO ADDRESS ──────────────────

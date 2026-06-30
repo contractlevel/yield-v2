@@ -51,7 +51,7 @@ abstract contract ProtocolAdapter is IProtocolAdapter, ReentrancyGuard {
         _;
     }
 
-    function _onlyVault() internal {
+    function _onlyVault() internal view {
         if (msg.sender != i_vault) revert ProtocolAdapter__OnlyVault();
     }
 
