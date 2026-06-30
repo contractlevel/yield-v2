@@ -697,7 +697,6 @@ rule collectPerformanceFee_RevertWhen_SettlementPriceMultiplicationOverflows() {
     assert before[currentContract] == lastStorage[currentContract];
 }
 
-// @review timeout
 /// @notice Performance fee collection succeeds when fee shares are minted.
 /// @dev Verifies returned settlement price, storage writes, minting, and PerformanceFeeCollected event.
 rule collectPerformanceFee_Success_WhenFeeSharesAreNonzero() {
@@ -706,13 +705,13 @@ rule collectPerformanceFee_Success_WhenFeeSharesAreNonzero() {
     uint256 tvl;
     uint256 grossPricePerShare;
     uint256 sharePrecision = SHARE_PRECISION();
+    address treasury = getTreasury();
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "collectPerformanceFee is nonpayable";
 
     uint256 highWaterMark = getPerformanceFeeHighWaterMark();
     uint256 totalShares = getTotalShares();
-    address treasury = getTreasury();
 
     /// @dev success conditions being verified
     require grossPricePerShare > highWaterMark, "gross price exceeds high-water mark";
@@ -729,9 +728,9 @@ rule collectPerformanceFee_Success_WhenFeeSharesAreNonzero() {
     require feeShares != 0, "fee shares are nonzero";
     require totalShares <= max_uint256 - feeShares, "total shares addition does not overflow";
     mathint newTotalShares = totalShares + feeShares;
-    require share.balanceOf(treasury) <= max_uint256 - feeShares, "treasury share balance does not overflow";
+    uint256 treasuryBalanceBefore = share.balanceOf(treasury);
+    require treasuryBalanceBefore <= max_uint256 - feeShares, "treasury share balance does not overflow";
     require tvl <= max_uint256 / sharePrecision, "settlement price multiplication does not overflow";
-    mathint settlementPricePerShare = tvl * sharePrecision / newTotalShares;
 
     /// @dev ghost starting values
     require ghost_PerformanceFeeCollected_EventCount == 0, "PerformanceFeeCollected event count starts at zero";
@@ -743,16 +742,15 @@ rule collectPerformanceFee_Success_WhenFeeSharesAreNonzero() {
         collectPerformanceFee@withrevert(e, epochNonce, tvl, grossPricePerShare, sharePrecision);
 
     assert !lastReverted;
-    assert returnedSettlementPricePerShare == settlementPricePerShare;
     assert getTotalShares() == newTotalShares;
-    assert getPerformanceFeeHighWaterMark() == settlementPricePerShare;
-    assert share.balanceOf(treasury) >= feeShares;
+    assert getPerformanceFeeHighWaterMark() == returnedSettlementPricePerShare;
+    assert share.balanceOf(treasury) == treasuryBalanceBefore + feeShares;
     assert ghost_totalShares_StoreCount == 1;
     assert ghost_totalShares_StoredValue == newTotalShares;
     assert ghost_performanceFeeHighWaterMark_StoreCount == 1;
-    assert ghost_performanceFeeHighWaterMark_StoredValue == settlementPricePerShare;
+    assert ghost_performanceFeeHighWaterMark_StoredValue == returnedSettlementPricePerShare;
     assert ghost_PerformanceFeeCollected_EventCount == 1;
     assert ghost_PerformanceFeeCollected_Param_epochNonce == epochNonce;
     assert ghost_PerformanceFeeCollected_Param_feeShares == feeShares;
-    assert ghost_PerformanceFeeCollected_Param_highWaterMark == settlementPricePerShare;
+    assert ghost_PerformanceFeeCollected_Param_highWaterMark == returnedSettlementPricePerShare;
 }
