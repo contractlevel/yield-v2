@@ -49,6 +49,15 @@ library ParentVaultRebalanceLib {
         uint64 thisChainSelector,
         bool isSupportedChain
     ) public returns (InitiateRebalanceResult memory result) {
+        result = _initiateRebalance($, newStrategy, thisChainSelector, isSupportedChain);
+    }
+
+    function _initiateRebalance(
+        ParentVaultStore.ParentVaultStorage storage $,
+        Types.Strategy memory newStrategy,
+        uint64 thisChainSelector,
+        bool isSupportedChain
+    ) internal returns (InitiateRebalanceResult memory result) {
         if ($.s_rebalance.state != Types.RebalanceState.NONE) {
             revert IParentVault.ParentVault__RebalanceInProgress();
         }
@@ -91,6 +100,10 @@ library ParentVaultRebalanceLib {
     /// @param $ ParentVault namespaced storage
     /// @param share The Yieldcoin share token
     function finalizeRebalance(ParentVaultStore.ParentVaultStorage storage $, address share) public {
+        _finalizeRebalance($, share);
+    }
+
+    function _finalizeRebalance(ParentVaultStore.ParentVaultStorage storage $, address share) internal {
         if ($.s_rebalance.state != Types.RebalanceState.REBALANCING) {
             revert IParentVault.ParentVault__NoRebalanceInProgress();
         }
@@ -106,6 +119,6 @@ library ParentVaultRebalanceLib {
 
         emit RebalanceCompleted(rebalanceNonce, newStrategy.protocolId, newStrategy.chainSelector);
         ++$.s_rebalance.nonce;
-        ParentVaultFeesLib.collectManagementFee($, rebalanceNonce, lastRebalanceCompletedTimestamp, share);
+        ParentVaultFeesLib._collectManagementFee($, rebalanceNonce, lastRebalanceCompletedTimestamp, share);
     }
 }

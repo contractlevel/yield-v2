@@ -48,6 +48,16 @@ library ParentVaultUserEpochLib {
         uint256 amount,
         uint256 minDepositAmount
     ) public returns (uint256 epochNonce) {
+        epochNonce = _deposit($, asset, user, amount, minDepositAmount);
+    }
+
+    function _deposit(
+        ParentVaultStore.ParentVaultStorage storage $,
+        address asset,
+        address user,
+        uint256 amount,
+        uint256 minDepositAmount
+    ) internal returns (uint256 epochNonce) {
         if (amount < minDepositAmount) revert IParentVault.ParentVault__AmountTooSmall(amount);
         epochNonce = $.s_epochNonce;
         Types.Epoch storage epoch = $.s_epochs[epochNonce];
@@ -76,6 +86,15 @@ library ParentVaultUserEpochLib {
         address user,
         uint256 shareBurnAmount
     ) public returns (uint256 epochNonce) {
+        epochNonce = _withdraw($, share, user, shareBurnAmount);
+    }
+
+    function _withdraw(
+        ParentVaultStore.ParentVaultStorage storage $,
+        address share,
+        address user,
+        uint256 shareBurnAmount
+    ) internal returns (uint256 epochNonce) {
         if (shareBurnAmount == 0) revert IParentVault.ParentVault__NoZeroAmount();
         epochNonce = $.s_epochNonce;
         Types.Epoch storage epoch = $.s_epochs[epochNonce];
@@ -101,6 +120,13 @@ library ParentVaultUserEpochLib {
     /// @dev Precondition: the user must have a deposit for the epoch nonce
     function claimShares(ParentVaultStore.ParentVaultStorage storage $, address share, address user, uint256 epochNonce)
         public
+        returns (uint256 shareMintAmount)
+    {
+        shareMintAmount = _claimShares($, share, user, epochNonce);
+    }
+
+    function _claimShares(ParentVaultStore.ParentVaultStorage storage $, address share, address user, uint256 epochNonce)
+        internal
         returns (uint256 shareMintAmount)
     {
         Types.Epoch storage epoch = $.s_epochs[epochNonce];
@@ -144,6 +170,16 @@ library ParentVaultUserEpochLib {
         address user,
         uint256 epochNonce
     ) public returns (uint256 withdrawAmount) {
+        withdrawAmount = _claimAsset($, share, asset, user, epochNonce);
+    }
+
+    function _claimAsset(
+        ParentVaultStore.ParentVaultStorage storage $,
+        address share,
+        address asset,
+        address user,
+        uint256 epochNonce
+    ) internal returns (uint256 withdrawAmount) {
         Types.Epoch storage epoch = $.s_epochs[epochNonce];
         if (epoch.status != Types.EpochStatus.CLAIMABLE) {
             revert IParentVault.ParentVault__EpochNotClaimable(epochNonce);
@@ -178,6 +214,10 @@ library ParentVaultUserEpochLib {
     /// @dev Precondition: the current epoch must be open
     /// @dev Precondition: the user must have a deposit for the epoch nonce
     function cancelDeposit(ParentVaultStore.ParentVaultStorage storage $, address asset, address user) public {
+        _cancelDeposit($, asset, user);
+    }
+
+    function _cancelDeposit(ParentVaultStore.ParentVaultStorage storage $, address asset, address user) internal {
         uint256 epochNonce = $.s_epochNonce;
         Types.Epoch storage epoch = $.s_epochs[epochNonce];
         if (epoch.status != Types.EpochStatus.OPEN) revert IParentVault.ParentVault__EpochNotOpen(epochNonce);
@@ -200,6 +240,10 @@ library ParentVaultUserEpochLib {
     /// @dev Precondition: the current epoch must be open
     /// @dev Precondition: the user must have a withdraw intent for the epoch nonce
     function cancelWithdraw(ParentVaultStore.ParentVaultStorage storage $, address share, address user) public {
+        _cancelWithdraw($, share, user);
+    }
+
+    function _cancelWithdraw(ParentVaultStore.ParentVaultStorage storage $, address share, address user) internal {
         uint256 epochNonce = $.s_epochNonce;
         Types.Epoch storage epoch = $.s_epochs[epochNonce];
         if (epoch.status != Types.EpochStatus.OPEN) revert IParentVault.ParentVault__EpochNotOpen(epochNonce);
@@ -225,6 +269,14 @@ library ParentVaultUserEpochLib {
     /// @return proportionalAmount_ The user's proportional amount
     function proportionalAmount(uint256 userAmount, uint256 remainingNumerator, uint256 remainingDenominator)
         public
+        pure
+        returns (uint256 proportionalAmount_)
+    {
+        proportionalAmount_ = _proportionalAmount(userAmount, remainingNumerator, remainingDenominator);
+    }
+
+    function _proportionalAmount(uint256 userAmount, uint256 remainingNumerator, uint256 remainingDenominator)
+        internal
         pure
         returns (uint256 proportionalAmount_)
     {
