@@ -144,9 +144,8 @@ contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
         Vm.Log memory log =
             _assertEmittedBy(keccak256("EpochWithdrawAmountShort(uint256,uint256,uint256)"), address(s_parentVault));
         assertEq(uint256(log.topics[1]), EPOCH_NONCE);
-        (uint256 expectedAmount, uint256 actualAmount) = abi.decode(log.data, (uint256, uint256));
-        assertEq(expectedAmount, EXPECTED_WITHDRAW_USDC);
-        assertEq(actualAmount, receivedWithdrawUsdc);
+        assertEq(uint256(log.topics[2]), EXPECTED_WITHDRAW_USDC);
+        assertEq(uint256(log.topics[3]), receivedWithdrawUsdc);
     }
 
     function test_ParentVault_ccipReceive_Withdraw_WhenReceivedAmountIsLessThanExpected_UpdatesWithdrawClaimAmount()
