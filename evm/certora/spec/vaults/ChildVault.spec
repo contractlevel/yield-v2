@@ -598,6 +598,32 @@ invariant validParentChainSelector()
     && currentContract.i_parentChainSelector != currentContract.i_thisChainSelector
     filtered { f -> f.selector != sig:upgradeToAndCall(address,bytes).selector }
 
+/// @dev filtered: upgradeToAndCall to stop delegatecall havocing immutable state.
+/// @dev Certora storage analysis can fail on the other filtered storage-extension paths for these methods.
+invariant noZeroChainSelector()
+    currentContract.i_thisChainSelector != 0
+    filtered {
+        f -> f.selector != sig:upgradeToAndCall(address,bytes).selector
+            && f.selector != sig:ccipSend(uint256,uint64,Types.CcipTx,bytes).selector
+            && f.selector != sig:executeRebalance(uint256,Types.Strategy).selector
+            && f.selector != sig:recoverFailedRebalanceWithdraw().selector
+            && f.selector != sig:recoverFailedEpochWithdraw().selector
+            && f.selector != sig:executeEpochWithdraw(uint256,uint256).selector
+    }
+
+/// @dev filtered: upgradeToAndCall to stop delegatecall havocing immutable state.
+/// @dev Certora storage analysis can fail on the other filtered storage-extension paths for these methods.
+invariant noZeroAssetPrecision(env e)
+    asset.decimals(e) > 0 => currentContract.i_assetPrecision != 0
+    filtered {
+        f -> f.selector != sig:upgradeToAndCall(address,bytes).selector
+            && f.selector != sig:ccipSend(uint256,uint64,Types.CcipTx,bytes).selector
+            && f.selector != sig:executeRebalance(uint256,Types.Strategy).selector
+            && f.selector != sig:recoverFailedRebalanceWithdraw().selector
+            && f.selector != sig:recoverFailedEpochWithdraw().selector
+            && f.selector != sig:executeEpochWithdraw(uint256,uint256).selector
+    }
+
 /*//////////////////////////////////////////////////////////////
                              RULES
 //////////////////////////////////////////////////////////////*/

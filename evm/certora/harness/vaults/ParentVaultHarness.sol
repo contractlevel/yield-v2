@@ -4,6 +4,7 @@ pragma solidity 0.8.34;
 import {HelperHarness} from "../HelperHarness.sol";
 import {ParentVault} from "../../../src/vaults/ParentVault.sol";
 import {BaseVault} from "../../../src/vaults/BaseVault.sol";
+import {BaseVaultStrategyLib} from "../../../src/libraries/BaseVaultStrategyLib.sol";
 import {Types} from "../../../src/libraries/Types.sol";
 
 contract ParentVaultHarness is ParentVault, HelperHarness {
@@ -83,7 +84,9 @@ contract ParentVaultHarness is ParentVault, HelperHarness {
         external
         returns (bool success)
     {
-        success = _handleCCIPRebalance(rebalanceNonce, protocolId, amount);
+        /// @dev Certora cannot link external libraries, so model only the active-adapter boundary here.
+        BaseVaultStrategyLib._setActiveAdapter(_baseVaultStorage(), protocolId, i_adapterRegistry, address(this));
+        success = _handleCCIPRebalanceDeposit(rebalanceNonce, amount);
     }
 
     function requireNoRecovery() external view {
