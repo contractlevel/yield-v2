@@ -30,11 +30,15 @@ methods {
     function ccipRouter.getFee() external returns (uint256) envfree;
     function ccipRouter.getFeeReverts() external returns (bool) envfree;
     function ccipRouter.ccipSendReverts() external returns (bool) envfree;
+    function ccipRouter.getLastMessageDataHash() external returns (bytes32) envfree;
 
     // Harness helper methods
     function bytes32ToUint256(bytes32) external returns (uint256) envfree;
     function bytes32ToUint8(bytes32) external returns (uint8) envfree;
     function uint8ToCcipTxType(uint8) external returns (Types.CcipTx) envfree;
+    function encodeEpochNonce(uint256) external returns (bytes) envfree;
+    function encodeCcipTxData(Types.CcipTx, bytes) external returns (bytes) envfree;
+    function hashBytes(bytes) external returns (bytes32) envfree;
 
     // Dispatcher summaries
     function _.transfer(address, uint256) external => DISPATCHER(true);
@@ -455,6 +459,42 @@ rule executeCcipSend_Success_EmitsCCIPBridged() {
     assert ghost_CCIPBridged_Param_ccipMessageId != to_bytes32(0);
     assert ghost_CCIPBridged_Param_amount == bridgeAmount;
     assert ghost_CCIPBridged_Param_ccipTxType == ccipTxType;
+}
+
+/// @notice Epoch-withdraw CCIP sends pass the epoch nonce in the router message payload.
+/// @dev Verifies the exact message data hash observed by the router without reading dynamic bytes from storage.
+rule executeCcipSend_EpochWithdraw_SendsEncodedEpochNoncePayload() {
+    env e;
+    uint256 bridgeAmount;
+    uint64 destSelector;
+    uint64 thisChainSelector;
+    uint256 epochNonce;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "executeCcipSend is nonpayable";
+
+    /// @dev success conditions being verified
+    require bridgeAmount != 0, "bridge amount is nonzero";
+    require destSelector != 0, "destination chain selector is nonzero";
+    require destSelector != thisChainSelector, "destination is not this chain";
+    require getCrosschainVault(destSelector) != 0, "destination vault is registered";
+    require !ccipRouter.getFeeReverts(), "router fee lookup does not revert";
+    require !ccipRouter.ccipSendReverts(), "router send does not revert";
+
+    bytes txData = encodeEpochNonce(epochNonce);
+    bytes expectedMessageData = encodeCcipTxData(Types.CcipTx.EPOCH_NET_WITHDRAW, txData);
+
+    executeCcipSend@withrevert(
+        e,
+        bridgeAmount,
+        destSelector,
+        Types.CcipTx.EPOCH_NET_WITHDRAW,
+        txData,
+        thisChainSelector
+    );
+
+    assert !lastReverted;
+    assert ccipRouter.getLastMessageDataHash() == hashBytes(expectedMessageData);
 }
 
 /// @notice A valid CCIP send transfers the fee and bridged asset from the harness to the router.

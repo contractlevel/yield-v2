@@ -6,6 +6,7 @@ import {ChildVaultStore} from "./ChildVaultStore.sol";
 
 import {IChildVault} from "../interfaces/IChildVault.sol";
 import {BaseVaultCcipLib} from "../libraries/BaseVaultCcipLib.sol";
+import {BaseVaultStrategyLib} from "../libraries/BaseVaultStrategyLib.sol";
 import {Types} from "../libraries/Types.sol";
 import {Roles} from "../libraries/Roles.sol";
 import {IProtocolAdapter} from "../interfaces/IProtocolAdapter.sol";
@@ -69,7 +70,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         onlyAllowedSender(abi.decode(message.sender, (address)), message.sourceChainSelector)
     {
         _requireNoRecovery();
-        uint256 receivedAmount = BaseVaultCcipLib.validateReceivedTokenAndGetAmount(message, i_asset);
+        uint256 receivedAmount = BaseVaultCcipLib._validateReceivedTokenAndGetAmount(message, i_asset);
 
         /// @dev data decodes to a uint256 epochNonce for epoch net deposits/withdraws and a (uint256 rebalanceNonce, bytes32 protocolId) for rebalances
         (Types.CcipTx ccipTxType, bytes memory data) = abi.decode(message.data, (Types.CcipTx, bytes));
@@ -87,7 +88,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         }
     }
 
-    /// @notice Handles the CCIP deposit message
+    /// @notice Handles the CCIP EPOCH_NET_DEPOSIT deposit message
     /// @notice This will only be implemented in the ChildVault.
     ///         The ParentVault sends a CCIP deposit to the active strategy chain when an epoch's net flow is positive. (more deposits than withdraws)
     /// @param epochNonce The nonce of the epoch
@@ -116,7 +117,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         bytes memory txData
     ) internal override {
         _requireNoRecovery();
-        BaseVaultCcipLib.validateCcipSend(
+        BaseVaultCcipLib._validateCcipSend(
             _baseVaultStorage(), bridgeAmount, destinationChainSelector, i_thisChainSelector
         );
 
@@ -147,7 +148,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         bytes calldata txData
     ) external {
         if (msg.sender != address(this)) revert ChildVault__OnlySelf();
-        BaseVaultCcipLib.send(
+        BaseVaultCcipLib._send(
             _baseVaultStorage(),
             bridgeAmount,
             destinationChainSelector,
@@ -258,6 +259,19 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
                 abi.encode(rebalanceNonce, newStrategy.protocolId)
             );
         }
+    }
+
+    /// @notice Sets the active strategy protocol adapter
+    /// @param protocolId The protocol ID of the strategy
+    /// @return adapter The address of the active strategy protocol adapter
+    /// @dev Precondition: the protocol ID must have a registered adapter
+    /// @dev Precondition: the registered adapter must be bound to this vault
+    /// @dev ChildVault has enough bytecode headroom to inline the library implementation,
+    ///      which also avoids unresolved external library calls in ChildVault verification.
+    function _setActiveAdapter(bytes32 protocolId) internal override returns (address adapter) {
+        adapter = BaseVaultStrategyLib._setActiveAdapter(
+            _baseVaultStorage(), protocolId, i_adapterRegistry, address(this)
+        );
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -372,6 +386,18 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         recovery = _childVaultStorage().s_rebalanceWithdrawRecovery;
     }
 
+    /// @notice Clears recovery state for a failed CCIP send
+    /// @return recovery The cleared CCIP send recovery state
+    /// @dev Precondition: CCIP send recovery state must exist
+    function _clearCcipSendRecovery() internal returns (Types.CcipSendRecovery memory recovery) {
+        _requireRecoveryMode(Types.RecoveryMode.CCIP_SEND);
+        recovery = _childVaultStorage().s_ccipSendRecovery;
+
+        delete _childVaultStorage().s_ccipSendRecovery;
+        _baseVaultStorage().s_recoveryMode = Types.RecoveryMode.NONE;
+        emit CcipSendRecoveryCleared(recovery.ccipTxType, recovery.destinationChainSelector, recovery.amount);
+    }
+
     /// @notice Recovers a failed epoch deposit into the active Child strategy
     /// @dev Precondition: epoch deposit recovery state must exist
     /// @dev Precondition: active strategy adapter must be set
@@ -424,6 +450,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @dev Precondition: rebalance deposit recovery state must exist
     /// @dev Precondition: active strategy adapter must be set
     /// @dev Precondition: function must not be reentered
+    /// @dev Precondition: deposit into strategy protocol must succeed
     function recoverFailedRebalanceDeposit() external override(BaseVault, IChildVault) nonReentrant {
         _recoverFailedRebalanceDeposit();
     }
@@ -432,15 +459,10 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @dev Precondition: CCIP send recovery state must exist
     /// @dev Precondition: function must not be reentered
     function recoverFailedCcipSend() external nonReentrant {
-        _requireRecoveryMode(Types.RecoveryMode.CCIP_SEND);
-        Types.CcipSendRecovery memory recovery = _childVaultStorage().s_ccipSendRecovery;
-
         // Clear before retry; if CCIP send reverts, EVM atomicity restores this recovery state.
-        delete _childVaultStorage().s_ccipSendRecovery;
-        _baseVaultStorage().s_recoveryMode = Types.RecoveryMode.NONE;
-        emit CcipSendRecoveryCleared(recovery.ccipTxType, recovery.destinationChainSelector, recovery.amount);
+        Types.CcipSendRecovery memory recovery = _clearCcipSendRecovery();
 
-        BaseVaultCcipLib.send(
+        BaseVaultCcipLib._send(
             _baseVaultStorage(),
             recovery.amount,
             recovery.destinationChainSelector,

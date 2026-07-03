@@ -10,6 +10,7 @@ contract MockCCIPRouter is IRouterClient {
 
     bool internal s_getFeeReverts;
     bool internal s_ccipSendReverts;
+    bytes32 internal s_lastMessageDataHash;
 
     /// @notice Returns the fee used by the mock without requiring a constructed CCIP message
     function getFee() external view returns (uint256) {
@@ -24,6 +25,7 @@ contract MockCCIPRouter is IRouterClient {
 
     function ccipSend(uint64, Client.EVM2AnyMessage memory message) external payable returns (bytes32) {
         if (s_ccipSendReverts) revert();
+        s_lastMessageDataHash = keccak256(message.data);
         IERC20(message.feeToken).transferFrom(msg.sender, address(this), FEE);
         IERC20(message.tokenAmounts[0].token).transferFrom(
             msg.sender, address(this), message.tokenAmounts[0].amount
@@ -41,5 +43,9 @@ contract MockCCIPRouter is IRouterClient {
 
     function ccipSendReverts() external view returns (bool) {
         return s_ccipSendReverts;
+    }
+
+    function getLastMessageDataHash() external view returns (bytes32) {
+        return s_lastMessageDataHash;
     }
 }

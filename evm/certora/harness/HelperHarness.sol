@@ -81,12 +81,24 @@ contract HelperHarness {
         encoded = abi.encode(ccipTxType, data);
     }
 
+    function hashBytes(bytes memory value) external pure returns (bytes32 hash) {
+        hash = keccak256(value);
+    }
+
     function encodeRawCcipTxData(uint256 ccipTxType, bytes memory data)
         external
         pure
         returns (bytes memory encoded)
     {
         encoded = abi.encode(ccipTxType, data);
+    }
+
+    function decodeCcipTxType(bytes memory encoded) external pure returns (Types.CcipTx ccipTxType) {
+        (ccipTxType,) = abi.decode(encoded, (Types.CcipTx, bytes));
+    }
+
+    function decodeCcipTxPayload(bytes memory encoded) external pure returns (bytes memory payload) {
+        (, payload) = abi.decode(encoded, (Types.CcipTx, bytes));
     }
 
     function emptyParameters() external pure returns (bytes[] memory parameters) {

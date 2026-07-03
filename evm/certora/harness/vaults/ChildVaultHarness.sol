@@ -69,6 +69,10 @@ contract ChildVaultHarness is ChildVault, HelperHarness {
         (rebalanceNonce, amount) = _recoverFailedRebalanceDeposit();
     }
 
+    function clearCcipSendRecovery() external returns (Types.CcipSendRecovery memory recovery) {
+        recovery = _clearCcipSendRecovery();
+    }
+
     function ccipSend(
         uint256 bridgeAmount,
         uint64 destSelector,
@@ -96,6 +100,19 @@ contract ChildVaultHarness is ChildVault, HelperHarness {
 
     function getCcipSendRecoveryTxData() external view returns (bytes memory txData) {
         txData = _childVaultStorage().s_ccipSendRecovery.txData;
+    }
+
+    function getCcipSendRecoveryEpochNonce() external view returns (uint256 epochNonce) {
+        epochNonce = abi.decode(_childVaultStorage().s_ccipSendRecovery.txData, (uint256));
+    }
+
+    function getCcipSendRecoveryRebalanceData()
+        external
+        view
+        returns (uint256 rebalanceNonce, bytes32 protocolId)
+    {
+        (rebalanceNonce, protocolId) =
+            abi.decode(_childVaultStorage().s_ccipSendRecovery.txData, (uint256, bytes32));
     }
 
     function getCcipSendRecoveryTxDataStorageSlot() external view returns (bytes32 value) {

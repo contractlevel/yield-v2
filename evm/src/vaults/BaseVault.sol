@@ -302,7 +302,7 @@ abstract contract BaseVault is
     /// @return adapter The address of the active strategy protocol adapter
     /// @dev Precondition: the protocol ID must have a registered adapter
     /// @dev Precondition: the registered adapter must be bound to this vault
-    function _setActiveAdapter(bytes32 protocolId) internal returns (address adapter) {
+    function _setActiveAdapter(bytes32 protocolId) internal virtual returns (address adapter) {
         adapter =
             BaseVaultStrategyLib.setActiveAdapter(_baseVaultStorage(), protocolId, i_adapterRegistry, address(this));
     }

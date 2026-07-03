@@ -11,17 +11,17 @@ In remote Child paths, strategy interaction and Child-originated CCIP send failu
 
 # **Summary**
 
-| **Path**                          | **CCIP sends** | **CRE executions** | **Settlement**                      |
-| --------------------------------- | -------------- | ------------------ | ----------------------------------- |
-| 1a Epoch, parent, net deposit     | 0              | 1                  | Fully synchronous                   |
-| 1b Epoch, parent, net withdrawal  | 0              | 1                  | Fully synchronous                   |
-| 2a Epoch, child, net deposit      | 1              | 1                  | Epoch claimable before CCIP settles |
-| 2b Epoch, child, net withdrawal   | 1              | 2                  | Epoch claimable after CCIP settles  |
-| 3a Rebalance, parent to parent    | 0              | 1                  | Fully synchronous                   |
-| 3b Rebalance, parent to child     | 1              | 2                  | Completes asynchronously            |
+| **Path**                          | **CCIP sends** | **CRE executions** | **Settlement**                             |
+| --------------------------------- | -------------- | ------------------ | ------------------------------------------ |
+| 1a Epoch, parent, net deposit     | 0              | 1                  | Fully synchronous                          |
+| 1b Epoch, parent, net withdrawal  | 0              | 1                  | Fully synchronous                          |
+| 2a Epoch, child, net deposit      | 1              | 1                  | Epoch claimable before CCIP settles        |
+| 2b Epoch, child, net withdrawal   | 1              | 2                  | Epoch claimable after CCIP settles         |
+| 3a Rebalance, parent to parent    | 0              | 1                  | Fully synchronous                          |
+| 3b Rebalance, parent to child     | 1              | 2                  | Completes asynchronously                   |
 | 4a Rebalance, Child to Parent     | 1              | 2                  | Finalises in Parent ccipReceive on success |
-| 4b Rebalance, child to same Child | 0              | 3                  | Completes asynchronously            |
-| 4c Rebalance, child A to child B  | 1              | 3                  | Completes asynchronously            |
+| 4b Rebalance, child to same Child | 0              | 3                  | Completes asynchronously                   |
+| 4c Rebalance, child A to child B  | 1              | 3                  | Completes asynchronously                   |
 
 # **Epoch Flows**
 
@@ -45,7 +45,7 @@ More deposits than withdrawals. Active strategy is on Parent chain.
 
 - Depositors call claimShares() on Parent. Yieldcoin minted.
 
-- Withdrawers call claimAsset() on Parent. Escrowed Yieldcoin burned, USDC transferred.
+- Withdrawers call claimAsset() on Parent. Escrowed Yieldcoin burned, asset transferred.
 
 **CCIP sends: 0**
 
@@ -71,7 +71,7 @@ More withdrawals than deposits. Active strategy is on Parent chain.
 
 - Depositors call claimShares() on Parent. Yieldcoin minted.
 
-- Withdrawers call claimAsset() on Parent. Escrowed Yieldcoin burned, USDC transferred.
+- Withdrawers call claimAsset() on Parent. Escrowed Yieldcoin burned, asset transferred.
 
 **CCIP sends: 0**
 
@@ -99,7 +99,7 @@ More deposits than withdrawals. Active strategy is on a Child chain.
 
 - Depositors call claimShares() on Parent. Yieldcoin minted.
 
-- Withdrawers call claimAsset() on Parent. Escrowed Yieldcoin burned, USDC transferred.
+- Withdrawers call claimAsset() on Parent. Escrowed Yieldcoin burned, asset transferred.
 
 **CCIP sends: 1**
 
@@ -133,7 +133,7 @@ More withdrawals than deposits. Active strategy is on a Child chain.
 
 - Depositors call claimShares() on Parent. Yieldcoin minted.
 
-- Withdrawers call claimAsset() on Parent. Escrowed Yieldcoin burned, USDC transferred.
+- Withdrawers call claimAsset() on Parent. Escrowed Yieldcoin burned, asset transferred.
 
 **CCIP sends: 1**
 
