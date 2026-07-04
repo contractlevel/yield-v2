@@ -3701,14 +3701,20 @@ rule clearCcipSendRecovery_Success() {
     Types.CcipTx ccipTxType = getCcipSendRecoveryTxType();
     uint64 destinationChainSelector = getCcipSendRecoveryDestinationChainSelector();
     uint256 bridgeAmount = getCcipSendRecoveryAmount();
+    uint256 createdAt = getCcipSendRecoveryCreatedAt();
 
     /// @dev set ghost starting values
     require ghost_CcipSendRecoveryCleared_EventCount == 0;
     require ghost_CCIPBridged_EventCount == 0;
 
-    clearCcipSendRecovery@withrevert(e);
+    Types.CcipSendRecovery recovery = clearCcipSendRecovery@withrevert(e);
 
     assert !lastReverted;
+    assert recovery.ccipTxType == ccipTxType;
+    assert recovery.amount == bridgeAmount;
+    assert recovery.destinationChainSelector == destinationChainSelector;
+    assert recovery.createdAt == createdAt;
+    assert recovery.txData.length == 0;
     assert getRecoveryMode() == Types.RecoveryMode.NONE;
     assert getCcipSendRecoveryTxType() == Types.CcipTx.EPOCH_NET_DEPOSIT;
     assert getCcipSendRecoveryAmount() == 0;

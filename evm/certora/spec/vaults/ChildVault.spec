@@ -655,6 +655,44 @@ invariant noZeroAssetPrecision(env e)
                              RULES
 //////////////////////////////////////////////////////////////*/
 
+/// ─────────────────── GET TVL ────────────────────────────────
+
+/// @notice ChildVault TVL is zero when this chain is not the active strategy chain
+/// @dev Verifies the ChildVault _getTVL override through the public BaseVault.getTVL entry point.
+rule getTVL_ReturnsZero_WhenNoActiveAdapter() {
+    /// @dev condition being verified
+    require getActiveProtocolAdapter() == 0, "active adapter should not be set";
+
+    assert getTVL() == 0;
+}
+
+/// @notice ChildVault TVL includes active adapter TVL and pending recovery amounts
+/// @dev Verifies the ChildVault _getTVL override through the public BaseVault.getTVL entry point.
+rule getTVL_IncludesAdapterTVLAndRecoveries() {
+    /// @dev condition being verified
+    require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
+
+    uint256 adapterTVL = adapter.getTVL();
+    uint256 epochDepositRecoveryAmount = getEpochDepositRecovery().amount;
+    uint256 rebalanceDepositRecoveryAmount = getRebalanceDepositRecovery().amount;
+    uint256 ccipSendRecoveryAmount = getCcipSendRecoveryAmount();
+
+    /// @dev ChildVault._getTVL uses checked Solidity 0.8 arithmetic.
+    require adapterTVL <= max_uint256 - epochDepositRecoveryAmount,
+        "adapter TVL plus epoch deposit recovery should not overflow";
+    mathint tvlWithEpochDepositRecovery = adapterTVL + epochDepositRecoveryAmount;
+
+    require tvlWithEpochDepositRecovery <= max_uint256 - rebalanceDepositRecoveryAmount,
+        "TVL plus rebalance deposit recovery should not overflow";
+    mathint tvlWithRebalanceDepositRecovery = tvlWithEpochDepositRecovery + rebalanceDepositRecoveryAmount;
+
+    require tvlWithRebalanceDepositRecovery <= max_uint256 - ccipSendRecoveryAmount,
+        "TVL plus CCIP send recovery should not overflow";
+    mathint expectedTVL = tvlWithRebalanceDepositRecovery + ccipSendRecoveryAmount;
+
+    assert getTVL() == expectedTVL;
+}
+
 /// ─────────────────── INITIALIZE CHILD VAULT ──────────────────
 
 /// @notice ChildVault initialization reverts when the contract has already been initialized
