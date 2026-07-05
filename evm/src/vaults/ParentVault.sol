@@ -3,6 +3,7 @@ pragma solidity 0.8.34;
 
 import {BaseVault} from "./BaseVault.sol";
 import {ParentVaultStore} from "./ParentVaultStore.sol";
+import {IBaseVault} from "../interfaces/IBaseVault.sol";
 import {IParentVault} from "../interfaces/IParentVault.sol";
 import {Types} from "../libraries/Types.sol";
 import {Roles} from "../libraries/Roles.sol";
@@ -298,7 +299,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @dev The previous-epoch guard prevents closing a later epoch while a prior
     ///      remote-withdraw epoch is still EXECUTING. This protects withdraw claimants:
     ///      if a child strategy withdraw fails, the owed USDC is not back on the Parent,
-    ///      so affected users cannot claim until recoverFailedEpochWithdraw succeeds.
+    ///      so affected users cannot claim until executeRecovery() succeeds on the child vault.
     ///
     ///      The guard intentionally does not make the Parent aware of pending child-side
     ///      remote-deposit recovery. Remote net-deposit epochs are marked CLAIMABLE on
@@ -340,6 +341,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
             emit WithdrawFromStrategySuccess(externalAction.epochNonce, amountOut);
             ParentVaultEpochLib.finalizeLocalNetWithdraw($, externalAction.epochNonce, amountOut);
         }
+        // else CRE is trigged via EpochExecuting event emission in ParentVaultEpochLib.closeEpoch, which writes to strategy chain to withdraw and ccipSend here
 
         ParentVaultEpochLib.openNextEpoch($);
     }
@@ -408,13 +410,12 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /*//////////////////////////////////////////////////////////////
                                 RECOVERY
     //////////////////////////////////////////////////////////////*/
-    /// @notice Recovers a failed rebalance deposit into the active Parent strategy and finalizes the rebalance
-    /// @dev Precondition: rebalance deposit recovery state must exist
-    /// @dev Precondition: active strategy adapter must be set
-    /// @dev Precondition: rebalance state must be REBALANCING
-    /// @dev Precondition: pending recovery nonce must be the current nonce
-    /// @notice This Parent implemention overrides the BaseVault because we can finalize the rebalance in same atomic tx
-    function recoverFailedRebalanceDeposit() external override(BaseVault, IParentVault) nonReentrant {
+    /// @notice Executes the active recovery mode, reverting if no recovery is pending
+    /// @dev Precondition: a recovery mode must be active (not NONE)
+    /// @dev Precondition: function must not be reentered
+    /// @dev For REBALANCE_DEPOSIT: also finalizes the rebalance in the same atomic tx
+    function executeRecovery() external override(BaseVault, IBaseVault) nonReentrant {
+        if (_baseVaultStorage().s_recoveryMode == Types.RecoveryMode.NONE) revert BaseVault__NoPendingRecovery();
         _recoverFailedRebalanceDeposit();
         ParentVaultRebalanceLib.finalizeRebalance(_parentVaultStorage(), i_share);
     }

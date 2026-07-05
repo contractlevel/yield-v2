@@ -40,7 +40,7 @@ contract ChildDeposit_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
 
         _restoreBaseAaveV3Adapter();
         vm.recordLogs();
-        baseChild.vault.recoverFailedEpochDeposit();
+        baseChild.vault.executeRecovery();
         Vm.Log[] memory recoveryLogs = vm.getRecordedLogs();
 
         _assertEmittedBy(recoveryLogs, keccak256("EpochDepositRecoveryCleared(uint256)"), address(baseChild.vault));

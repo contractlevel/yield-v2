@@ -68,7 +68,7 @@ contract CcipSend_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
 
         _setCrosschainVault(baseChild.vault, arbitrumConfig.ccip.thisChainSelector, address(parent.vault));
         vm.warp(block.timestamp + 5 minutes);
-        baseChild.vault.recoverFailedCcipSend();
+        baseChild.vault.executeRecovery();
 
         _selectBaseFork();
         _routeUsdcMessageTo(arbitrumFork);
@@ -116,7 +116,7 @@ contract CcipSend_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
 
         _setCrosschainVault(baseChild.vault, arbitrumConfig.ccip.thisChainSelector, address(parent.vault));
         vm.warp(block.timestamp + 5 minutes);
-        baseChild.vault.recoverFailedCcipSend();
+        baseChild.vault.executeRecovery();
 
         _selectBaseFork();
         _routeUsdcMessageTo(arbitrumFork);

@@ -18,7 +18,7 @@ contract CryticToFoundry is TargetFunctions, FoundryAsserts {
         selectors[6] = TargetFunctions.handler_claimAsset.selector;
         selectors[7] = TargetFunctions.handler_initiateRebalance.selector;
         selectors[8] = TargetFunctions.handler_emergencyDrainAndDonate.selector;
-        selectors[9] = TargetFunctions.handler_recoveryModes.selector;
+        selectors[9] = TargetFunctions.handler_executeRecovery.selector;
 
         targetSelector(FuzzSelector({addr: address(this), selectors: selectors}));
         targetContract(address(this));
@@ -34,6 +34,6 @@ contract CryticToFoundry is TargetFunctions, FoundryAsserts {
         handler_claimAsset(0, 0, MIN_DEPOSIT_AMOUNT, MIN_DEPOSIT_AMOUNT);
         handler_initiateRebalance(0, 0, 0, MIN_DEPOSIT_AMOUNT);
         handler_emergencyDrainAndDonate();
-        handler_recoveryModes(0, 0, 0, MIN_DEPOSIT_AMOUNT);
+        handler_executeRecovery(0, 0, 0, MIN_DEPOSIT_AMOUNT);
     }
 }

@@ -42,7 +42,7 @@ contract ChildDeposit_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
 
         MockAaveV3Pool(childPool).setSupplyReverts(false);
         vm.recordLogs();
-        child.vault.recoverFailedEpochDeposit();
+        child.vault.executeRecovery();
         Vm.Log[] memory recoveryLogs = vm.getRecordedLogs();
 
         _assertEmittedBy(recoveryLogs, keccak256("EpochDepositRecoveryCleared(uint256)"), address(child.vault));

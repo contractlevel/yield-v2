@@ -369,13 +369,11 @@ abstract contract BaseVault is
         if (_baseVaultStorage().s_recoveryMode != expected) revert BaseVault__NoPendingRecovery();
     }
 
-    /// @notice Inherited and implemented by ParentVault and ChildVault
-    /// @dev Precondition: rebalance deposit recovery state must exist
-    /// @dev Precondition: active strategy adapter must be set
-    /// @dev Precondition: the deposit into the strategy must be successful
-    /// @notice The ChildVault overrides this and implements the internal _recoverFailedRebalanceDeposit
-    /// @notice The ParentVault overrides this, implements the internal _recoverFailedRebalanceDeposit, and then finalizes the rebalance
-    function recoverFailedRebalanceDeposit() external virtual;
+    /// @notice Executes the active recovery mode, reverting if no recovery is pending
+    /// @dev Inherited and implemented by ParentVault and ChildVault
+    /// @dev Precondition: a recovery mode must be active (not NONE)
+    /// @notice Deliberately permissionless to allow anyone to advance recovery state when conditions allow
+    function executeRecovery() external virtual;
 
     /// @dev Precondition: rebalance deposit recovery state must exist
     /// @dev Precondition: active strategy adapter must be set

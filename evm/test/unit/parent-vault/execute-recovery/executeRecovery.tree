@@ -1,0 +1,13 @@
+ParentVault_executeRecovery
+├── NONE
+│   └── RevertWhen_NoRecoveryPending
+└── REBALANCE_DEPOSIT
+    ├── RevertWhen_NoActiveAdapter
+    ├── RevertWhen_AdapterDepositReverts
+    ├── RevertWhen_NoRebalanceInProgress
+    ├── DepositsIntoActiveAdapter ✓
+    ├── ClearsRecoveryState ✓
+    ├── FinalizesRebalance ✓
+    ├── EmitsRebalanceDepositSuccess ✓
+    ├── EmitsRebalanceDepositRecoveryCleared ✓
+    └── EmitsRebalanceCompleted ✓

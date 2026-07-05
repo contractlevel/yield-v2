@@ -10,7 +10,24 @@ import {Types} from "../../../../src/libraries/Types.sol";
 
 import {Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
 
-contract ParentVault_RecoverFailedRebalanceDepositUnitTest is BaseUnitTest {
+/*//////////////////////////////////////////////////////////////
+                             NONE
+//////////////////////////////////////////////////////////////*/
+
+contract ParentVault_ExecuteRecovery_None_UnitTest is BaseUnitTest {
+    function test_ParentVault_executeRecovery_NONE_RevertWhen_NoRecoveryPending() public {
+        _changePrank(i_nonOwner);
+        vm.expectRevert(IBaseVault.BaseVault__NoPendingRecovery.selector);
+        s_parentVault.executeRecovery();
+        assertTrue(s_parentVault.getRecoveryMode() == Types.RecoveryMode.NONE);
+    }
+}
+
+/*//////////////////////////////////////////////////////////////
+                       REBALANCE_DEPOSIT
+//////////////////////////////////////////////////////////////*/
+
+contract ParentVault_ExecuteRecovery_RebalanceDeposit_UnitTest is BaseUnitTest {
     using stdStorage for StdStorage;
 
     uint256 internal constant REBALANCE_NONCE = 1;
@@ -22,47 +39,39 @@ contract ParentVault_RecoverFailedRebalanceDepositUnitTest is BaseUnitTest {
         _changePrank(i_nonOwner);
     }
 
-    function test_ParentVault_recoverFailedRebalanceDeposit_RevertWhen_NoPendingRecovery() public {
-        s_parentVault.recoverFailedRebalanceDeposit();
-
-        vm.expectRevert(IBaseVault.BaseVault__NoPendingRecovery.selector);
-        s_parentVault.recoverFailedRebalanceDeposit();
-        assertTrue(s_parentVault.getRecoveryMode() == Types.RecoveryMode.NONE);
-    }
-
-    function test_ParentVault_recoverFailedRebalanceDeposit_RevertWhen_NoActiveAdapter() public {
+    function test_ParentVault_executeRecovery_REBALANCE_DEPOSIT_RevertWhen_NoActiveAdapter() public {
         _clearParentActiveAdapter();
 
         vm.expectRevert(IBaseVault.BaseVault__NoActiveAdapter.selector);
-        s_parentVault.recoverFailedRebalanceDeposit();
+        s_parentVault.executeRecovery();
         assertTrue(s_parentVault.getRecoveryMode() == Types.RecoveryMode.REBALANCE_DEPOSIT);
     }
 
-    function test_ParentVault_recoverFailedRebalanceDeposit_RevertWhen_AdapterDepositReverts() public {
+    function test_ParentVault_executeRecovery_REBALANCE_DEPOSIT_RevertWhen_AdapterDepositReverts() public {
         s_mockProtocolAdapter.setDepositReverts(true);
 
         vm.expectRevert(abi.encodeWithSelector(IBaseVault.BaseVault__DepositFailed.selector, DEPOSIT_AMOUNT));
-        s_parentVault.recoverFailedRebalanceDeposit();
+        s_parentVault.executeRecovery();
         assertTrue(s_parentVault.getRecoveryMode() == Types.RecoveryMode.REBALANCE_DEPOSIT);
     }
 
-    function test_ParentVault_recoverFailedRebalanceDeposit_RevertWhen_NoRebalanceInProgress() public {
+    function test_ParentVault_executeRecovery_REBALANCE_DEPOSIT_RevertWhen_NoRebalanceInProgress() public {
         _setParentRebalanceState(Types.RebalanceState.NONE);
 
         vm.expectRevert(IParentVault.ParentVault__NoRebalanceInProgress.selector);
-        s_parentVault.recoverFailedRebalanceDeposit();
+        s_parentVault.executeRecovery();
         assertTrue(s_parentVault.getRecoveryMode() == Types.RecoveryMode.REBALANCE_DEPOSIT);
     }
 
-    function test_ParentVault_recoverFailedRebalanceDeposit_Success_DepositsIntoActiveAdapter() public {
-        s_parentVault.recoverFailedRebalanceDeposit();
+    function test_ParentVault_executeRecovery_REBALANCE_DEPOSIT_DepositsIntoActiveAdapter() public {
+        s_parentVault.executeRecovery();
 
         assertEq(s_mockProtocolAdapter.getDepositCalls(), 1);
         assertEq(s_mockProtocolAdapter.getLastDepositAmount(), DEPOSIT_AMOUNT);
     }
 
-    function test_ParentVault_recoverFailedRebalanceDeposit_Success_ClearsRecoveryState() public {
-        s_parentVault.recoverFailedRebalanceDeposit();
+    function test_ParentVault_executeRecovery_REBALANCE_DEPOSIT_ClearsRecoveryState() public {
+        s_parentVault.executeRecovery();
 
         Types.RebalanceDepositRecovery memory recovery = s_parentVault.getRebalanceDepositRecovery();
         assertEq(recovery.rebalanceNonce, 0);
@@ -71,8 +80,8 @@ contract ParentVault_RecoverFailedRebalanceDepositUnitTest is BaseUnitTest {
         assertTrue(s_parentVault.getRecoveryMode() == Types.RecoveryMode.NONE);
     }
 
-    function test_ParentVault_recoverFailedRebalanceDeposit_Success_FinalizesRebalance() public {
-        s_parentVault.recoverFailedRebalanceDeposit();
+    function test_ParentVault_executeRecovery_REBALANCE_DEPOSIT_FinalizesRebalance() public {
+        s_parentVault.executeRecovery();
 
         Types.Rebalance memory rebalance = s_parentVault.getRebalance();
         assertEq(uint256(rebalance.state), uint256(Types.RebalanceState.NONE));
@@ -81,9 +90,9 @@ contract ParentVault_RecoverFailedRebalanceDepositUnitTest is BaseUnitTest {
         assertEq(rebalance.activeStrategy.chainSelector, PARENT_CHAIN_SELECTOR);
     }
 
-    function test_ParentVault_recoverFailedRebalanceDeposit_Success_EmitsRebalanceDepositSuccess() public {
+    function test_ParentVault_executeRecovery_REBALANCE_DEPOSIT_EmitsRebalanceDepositSuccess() public {
         vm.recordLogs();
-        s_parentVault.recoverFailedRebalanceDeposit();
+        s_parentVault.executeRecovery();
 
         Vm.Log memory log =
             _assertEmittedBy(keccak256("RebalanceDepositSuccess(uint256,uint256)"), address(s_parentVault));
@@ -91,18 +100,18 @@ contract ParentVault_RecoverFailedRebalanceDepositUnitTest is BaseUnitTest {
         assertEq(uint256(log.topics[2]), DEPOSIT_AMOUNT);
     }
 
-    function test_ParentVault_recoverFailedRebalanceDeposit_Success_EmitsRebalanceDepositRecoveryCleared() public {
+    function test_ParentVault_executeRecovery_REBALANCE_DEPOSIT_EmitsRebalanceDepositRecoveryCleared() public {
         vm.recordLogs();
-        s_parentVault.recoverFailedRebalanceDeposit();
+        s_parentVault.executeRecovery();
 
         Vm.Log memory log =
             _assertEmittedBy(keccak256("RebalanceDepositRecoveryCleared(uint256)"), address(s_parentVault));
         assertEq(uint256(log.topics[1]), REBALANCE_NONCE);
     }
 
-    function test_ParentVault_recoverFailedRebalanceDeposit_Success_EmitsRebalanceCompleted() public {
+    function test_ParentVault_executeRecovery_REBALANCE_DEPOSIT_EmitsRebalanceCompleted() public {
         vm.recordLogs();
-        s_parentVault.recoverFailedRebalanceDeposit();
+        s_parentVault.executeRecovery();
 
         Vm.Log memory log =
             _assertEmittedBy(keccak256("RebalanceCompleted(uint256,bytes32,uint64)"), address(s_parentVault));
@@ -111,9 +120,6 @@ contract ParentVault_RecoverFailedRebalanceDepositUnitTest is BaseUnitTest {
         assertEq(uint256(log.topics[3]), PARENT_CHAIN_SELECTOR);
     }
 
-    /*//////////////////////////////////////////////////////////////
-                             HELPER UTILITY
-    //////////////////////////////////////////////////////////////*/
     function _storeRebalanceDepositRecovery() internal {
         s_mockProtocolAdapter.setDepositReverts(true);
 

@@ -46,7 +46,7 @@ contract ParentDeposit_RebalanceRecoveryCcipForkTest is BaseCcipRecoveryForkTest
 
         _restoreParentAaveV3Adapter();
         vm.recordLogs();
-        parent.vault.recoverFailedRebalanceDeposit();
+        parent.vault.executeRecovery();
         Vm.Log[] memory recoveryLogs = vm.getRecordedLogs();
 
         _assertEmittedBy(recoveryLogs, keccak256("RebalanceDepositRecoveryCleared(uint256)"), address(parent.vault));

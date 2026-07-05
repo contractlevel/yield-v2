@@ -54,7 +54,7 @@ contract ChildWithdraw_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
         _restoreBaseAaveV3Adapter();
         _prepareBaseToParentRouting();
         vm.warp(block.timestamp + 5 minutes);
-        baseChild.vault.recoverFailedEpochWithdraw();
+        baseChild.vault.executeRecovery();
 
         _selectBaseFork();
         _routeUsdcMessageTo(arbitrumFork);

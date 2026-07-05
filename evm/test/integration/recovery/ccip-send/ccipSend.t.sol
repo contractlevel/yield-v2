@@ -68,7 +68,7 @@ contract CcipSend_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         _setCrosschainVault(child.vault, PARENT_CHAIN_SELECTOR, address(parent.vault));
 
         vm.recordLogs();
-        child.vault.recoverFailedCcipSend();
+        child.vault.executeRecovery();
         Vm.Log[] memory recoveryLogs = vm.getRecordedLogs();
 
         _assertEmittedBy(recoveryLogs, keccak256("CcipSendRecoveryCleared(uint8,uint64,uint256)"), address(child.vault));
@@ -136,7 +136,7 @@ contract CcipSend_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         _setCrosschainVault(child.vault, PARENT_CHAIN_SELECTOR, address(parent.vault));
 
         vm.recordLogs();
-        child.vault.recoverFailedCcipSend();
+        child.vault.executeRecovery();
         Vm.Log[] memory recoveryLogs = vm.getRecordedLogs();
 
         _assertEmittedBy(recoveryLogs, keccak256("CcipSendRecoveryCleared(uint8,uint64,uint256)"), address(child.vault));

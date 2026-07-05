@@ -1,0 +1,45 @@
+ChildVault_executeRecovery
+├── NONE
+│   └── RevertWhen_NoRecoveryPending
+├── EPOCH_DEPOSIT
+│   ├── RevertWhen_NoActiveAdapter
+│   ├── RevertWhen_AdapterDepositReverts
+│   ├── DepositsIntoActiveAdapter ✓
+│   ├── ClearsRecoveryState ✓
+│   ├── EmitsDepositToStrategySuccess ✓
+│   └── EmitsEpochDepositRecoveryCleared ✓
+├── EPOCH_WITHDRAW
+│   ├── RevertWhen_NoActiveAdapter
+│   ├── RevertWhen_AdapterWithdrawReverts
+│   ├── RevertWhen_AdapterReturnsZero
+│   ├── WithdrawsFromActiveAdapter ✓
+│   ├── BridgesToParent ✓
+│   ├── ClearsRecoveryState ✓
+│   ├── EmitsWithdrawFromStrategySuccess ✓
+│   └── EmitsEpochWithdrawRecoveryCleared ✓
+├── REBALANCE_DEPOSIT
+│   ├── RevertWhen_NoActiveAdapter
+│   ├── RevertWhen_AdapterDepositReverts
+│   ├── DepositsIntoActiveAdapter ✓
+│   ├── ClearsRecoveryState ✓
+│   ├── EmitsRebalanceDepositSuccess ✓
+│   └── EmitsRebalanceDepositRecoveryCleared ✓
+├── REBALANCE_WITHDRAW
+│   ├── RevertWhen_NoActiveAdapter
+│   ├── RevertWhen_AdapterWithdrawReverts
+│   ├── RevertWhen_AdapterReturnsZero
+│   ├── WithdrawsFromActiveAdapter ✓
+│   ├── BridgesToTargetChild ✓
+│   ├── ClearsRecoveryState ✓
+│   ├── EmitsRebalanceWithdrawSuccess ✓
+│   └── EmitsRebalanceWithdrawRecoveryCleared ✓
+└── CCIP_SEND
+    ├── [storage] executeEpochWithdraw_WhenGetFeeReverts_StoresCcipSendRecovery ✓
+    ├── [storage] executeEpochWithdraw_WhenCcipSendReverts_StoresCcipSendRecovery ✓
+    ├── [storage] executeRebalance_WhenGetFeeReverts_StoresCcipSendRecovery ✓
+    ├── [storage] executeEpochWithdraw_WhenGetFeeReverts_EmitsCcipSendRecoveryStored ✓
+    ├── CCIP_SEND_ClearsRecoveryAndBridges ✓
+    ├── CCIP_SEND_EmitsCcipSendRecoveryCleared ✓
+    ├── CCIP_SEND_RevertWhen_RetryFails
+    ├── [guard] executeRebalance_WhenCcipSendRecoveryPending_RevertsWithoutOverwrite
+    └── CCIP_SEND_AllowsLaterDifferentSendType ✓

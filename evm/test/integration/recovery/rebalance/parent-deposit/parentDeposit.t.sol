@@ -55,7 +55,7 @@ contract ParentDeposit_RebalanceRecoveryIntegrationTest is BaseRecoveryIntegrati
 
         MockAaveV4Spoke(parentSpoke).setSupplyReverts(false);
         vm.recordLogs();
-        parent.vault.recoverFailedRebalanceDeposit();
+        parent.vault.executeRecovery();
         Vm.Log[] memory recoveryLogs = vm.getRecordedLogs();
 
         _assertEmittedBy(recoveryLogs, keccak256("RebalanceDepositRecoveryCleared(uint256)"), address(parent.vault));

@@ -84,29 +84,6 @@ interface IChildVault is IBaseVault {
     );
 
     /*//////////////////////////////////////////////////////////////
-                               RECOVERY
-    //////////////////////////////////////////////////////////////*/
-    /// @notice Recovers a failed epoch deposit into the active Child strategy
-    /// @dev Precondition: epoch deposit recovery state must exist
-    function recoverFailedEpochDeposit() external;
-
-    /// @notice Recovers a failed epoch withdraw from the active Child strategy
-    /// @dev Precondition: epoch withdraw recovery state must exist
-    function recoverFailedEpochWithdraw() external;
-
-    /// @notice Recovers a failed rebalance withdraw from the active Child strategy
-    /// @dev Precondition: rebalance withdraw recovery state must exist
-    function recoverFailedRebalanceWithdraw() external;
-
-    /// @notice Recovers a failed rebalance deposit into the active Child strategy
-    /// @dev Precondition: rebalance deposit recovery state must exist
-    function recoverFailedRebalanceDeposit() external;
-
-    /// @notice Retries a failed ChildVault CCIP send
-    /// @dev Precondition: CCIP send recovery state must exist
-    function recoverFailedCcipSend() external;
-
-    /*//////////////////////////////////////////////////////////////
                                 GETTERS
     //////////////////////////////////////////////////////////////*/
     /// @notice Gets failed epoch deposit recovery state

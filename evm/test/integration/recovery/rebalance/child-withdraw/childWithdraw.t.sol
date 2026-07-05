@@ -57,7 +57,7 @@ contract ChildWithdraw_RebalanceRecoveryIntegrationTest is BaseRecoveryIntegrati
         MockAaveV3Pool(childPool).setWithdrawReverts(false);
 
         vm.recordLogs();
-        child.vault.recoverFailedRebalanceWithdraw();
+        child.vault.executeRecovery();
         Vm.Log[] memory recoveryLogs = vm.getRecordedLogs();
 
         _assertEmittedBy(recoveryLogs, keccak256("RebalanceWithdrawRecoveryCleared(uint256)"), address(child.vault));

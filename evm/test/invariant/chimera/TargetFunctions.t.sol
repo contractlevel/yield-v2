@@ -391,7 +391,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
     /*//////////////////////////////////////////////////////////////
                              RECOVERY MODES
     //////////////////////////////////////////////////////////////*/
-    function handler_recoveryModes(uint256 scenarioSeed, uint256 protocolSeed, uint256 actorSeed, uint256 amountSeed)
+    function handler_executeRecovery(uint256 scenarioSeed, uint256 protocolSeed, uint256 actorSeed, uint256 amountSeed)
         public
     {
         if (_recoveryModeExists()) {
@@ -607,7 +607,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         if (recovery.ccipTxType == Types.CcipTx.EPOCH_NET_WITHDRAW) {
             uint256 epochNonce = abi.decode(recovery.txData, (uint256));
 
-            vault.recoverFailedCcipSend();
+            vault.executeRecovery();
             _assertCcipSendRecoveryCleared(vault);
 
             _assertEpochTransition(epochNonce, Types.EpochStatus.EXECUTING, parent.vault.getEpoch(epochNonce).status);
@@ -622,7 +622,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
             __before();
 
-            vault.recoverFailedCcipSend();
+            vault.executeRecovery();
             _assertCcipSendRecoveryCleared(vault);
 
             if (recovery.destinationChainSelector != PARENT_CHAIN_SELECTOR) {
@@ -673,7 +673,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
     }
 
     function _recoverFailedEpochDeposit(ChildVault vault) internal {
-        vault.recoverFailedEpochDeposit();
+        vault.executeRecovery();
 
         _assertEpochDepositRecoveryCleared(vault);
         t(vault.getRecoveryMode() == Types.RecoveryMode.NONE, "REC-003: child still has recovery");
@@ -759,7 +759,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         Types.EpochRecovery memory recovery = vault.getEpochWithdrawRecovery();
         _setActiveStrategyWithdrawReturn(recovery.amount);
 
-        vault.recoverFailedEpochWithdraw();
+        vault.executeRecovery();
 
         _assertEpochWithdrawRecoveryCleared(vault);
         _assertEpochTransition(
@@ -849,7 +849,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         __before();
 
-        vault.recoverFailedRebalanceDeposit();
+        vault.executeRecovery();
 
         if (address(vault) != address(parent.vault)) {
             _completeRebalanceThroughWorkflow(
@@ -994,7 +994,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         __before();
 
         _setActiveStrategyWithdrawReturn(amount);
-        vault.recoverFailedRebalanceWithdraw();
+        vault.executeRecovery();
         _assertRebalanceWithdrawRecoveryCleared(vault);
         t(vault.getRecoveryMode() == Types.RecoveryMode.NONE, "REC-003: child still has recovery");
 

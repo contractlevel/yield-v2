@@ -185,13 +185,6 @@ interface IParentVault is IBaseVault {
     function setSupportedProtocol(bytes32 protocolId, bool isSupported) external;
 
     /*//////////////////////////////////////////////////////////////
-                               RECOVERY
-    //////////////////////////////////////////////////////////////*/
-    /// @notice Recovers a failed rebalance deposit into the active Parent strategy
-    /// @dev Precondition: rebalance deposit recovery state must exist
-    function recoverFailedRebalanceDeposit() external;
-
-    /*//////////////////////////////////////////////////////////////
                                GETTERS
     //////////////////////////////////////////////////////////////*/
     /// @notice Returns whether the initial active protocol adapter has been set

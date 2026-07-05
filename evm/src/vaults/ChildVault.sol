@@ -4,6 +4,7 @@ pragma solidity 0.8.34;
 import {BaseVault} from "./BaseVault.sol";
 import {ChildVaultStore} from "./ChildVaultStore.sol";
 
+import {IBaseVault} from "../interfaces/IBaseVault.sol";
 import {IChildVault} from "../interfaces/IChildVault.sol";
 import {BaseVaultCcipLib} from "../libraries/BaseVaultCcipLib.sol";
 import {BaseVaultStrategyLib} from "../libraries/BaseVaultStrategyLib.sol";
@@ -398,11 +399,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         emit CcipSendRecoveryCleared(recovery.ccipTxType, recovery.destinationChainSelector, recovery.amount);
     }
 
-    /// @notice Recovers a failed epoch deposit into the active Child strategy
-    /// @dev Precondition: epoch deposit recovery state must exist
-    /// @dev Precondition: active strategy adapter must be set
-    /// @dev Precondition: function must not be reentered
-    function recoverFailedEpochDeposit() external nonReentrant {
+    function _recoverFailedEpochDeposit() internal {
         Types.EpochRecovery memory recovery = _requireEpochDepositRecovery();
         uint256 epochNonce = recovery.epochNonce;
 
@@ -412,11 +409,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         emit DepositToStrategySuccess(epochNonce, recovery.amount);
     }
 
-    /// @notice Recovers a failed epoch withdraw from the active Child strategy
-    /// @dev Precondition: epoch withdraw recovery state must exist
-    /// @dev Precondition: active strategy adapter must be set
-    /// @dev Precondition: function must not be reentered
-    function recoverFailedEpochWithdraw() external nonReentrant {
+    function _recoverFailedEpochWithdraw() internal {
         Types.EpochRecovery memory recovery = _requireEpochWithdrawRecovery();
         uint256 epochNonce = recovery.epochNonce;
 
@@ -429,11 +422,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         _ccipSend(amountOut, i_parentChainSelector, Types.CcipTx.EPOCH_NET_WITHDRAW, abi.encode(epochNonce));
     }
 
-    /// @notice Recovers a failed rebalance withdraw from the active Child strategy
-    /// @dev Precondition: rebalance withdraw recovery state must exist
-    /// @dev Precondition: active strategy adapter must be set
-    /// @dev Precondition: function must not be reentered
-    function recoverFailedRebalanceWithdraw() external nonReentrant {
+    function _recoverFailedRebalanceWithdraw() internal {
         Types.RebalanceWithdrawRecovery memory recovery = _requireRebalanceWithdrawRecovery();
         uint256 rebalanceNonce = recovery.rebalanceNonce;
 
@@ -446,19 +435,21 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         _rebalanceToNewStrategy(rebalanceNonce, amountRebalanced, recovery.strategy);
     }
 
-    /// @notice Recovers a failed rebalance deposit into the active Child strategy
-    /// @dev Precondition: rebalance deposit recovery state must exist
-    /// @dev Precondition: active strategy adapter must be set
+    /// @notice Executes the active recovery mode, reverting if no recovery is pending
+    /// @dev Precondition: a recovery mode must be active (not NONE)
     /// @dev Precondition: function must not be reentered
-    /// @dev Precondition: deposit into strategy protocol must succeed
-    function recoverFailedRebalanceDeposit() external override(BaseVault, IChildVault) nonReentrant {
-        _recoverFailedRebalanceDeposit();
+    function executeRecovery() external override(BaseVault, IBaseVault) nonReentrant {
+        Types.RecoveryMode mode = _baseVaultStorage().s_recoveryMode;
+        if (mode == Types.RecoveryMode.NONE) revert BaseVault__NoPendingRecovery();
+
+        if (mode == Types.RecoveryMode.REBALANCE_DEPOSIT) _recoverFailedRebalanceDeposit();
+        else if (mode == Types.RecoveryMode.EPOCH_DEPOSIT) _recoverFailedEpochDeposit();
+        else if (mode == Types.RecoveryMode.EPOCH_WITHDRAW) _recoverFailedEpochWithdraw();
+        else if (mode == Types.RecoveryMode.REBALANCE_WITHDRAW) _recoverFailedRebalanceWithdraw();
+        else if (mode == Types.RecoveryMode.CCIP_SEND) _recoverFailedCcipSend();
     }
 
-    /// @notice Retries a failed ChildVault CCIP send
-    /// @dev Precondition: CCIP send recovery state must exist
-    /// @dev Precondition: function must not be reentered
-    function recoverFailedCcipSend() external nonReentrant {
+    function _recoverFailedCcipSend() internal {
         // Clear before retry; if CCIP send reverts, EVM atomicity restores this recovery state.
         Types.CcipSendRecovery memory recovery = _clearCcipSendRecovery();
 

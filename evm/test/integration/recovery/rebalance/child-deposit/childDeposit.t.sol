@@ -40,7 +40,7 @@ contract ChildDeposit_RebalanceRecoveryIntegrationTest is BaseRecoveryIntegratio
 
         MockAaveV3Pool(childPool).setSupplyReverts(false);
         vm.recordLogs();
-        child.vault.recoverFailedRebalanceDeposit();
+        child.vault.executeRecovery();
         Vm.Log[] memory recoveryLogs = vm.getRecordedLogs();
 
         _assertEmittedBy(recoveryLogs, keccak256("RebalanceDepositRecoveryCleared(uint256)"), address(child.vault));

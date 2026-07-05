@@ -165,6 +165,10 @@ interface IBaseVault is IPauseable {
     /// @notice If the vault has the TVL, it will be withdrawn from the strategy and transferred to the emergency receiver
     function emergencyDrain(bool revertOnFailure) external;
 
+    /// @notice Executes the active recovery mode, reverting if no recovery is pending
+    /// @dev Precondition: a recovery mode must be active (not NONE)
+    function executeRecovery() external;
+
     /*//////////////////////////////////////////////////////////////
                            CONFIG SETTERS
     //////////////////////////////////////////////////////////////*/

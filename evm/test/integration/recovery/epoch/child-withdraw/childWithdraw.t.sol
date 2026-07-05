@@ -54,7 +54,7 @@ contract ChildWithdraw_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         MockAaveV3Pool(childPool).setWithdrawReturn(shareAmount);
 
         vm.recordLogs();
-        child.vault.recoverFailedEpochWithdraw();
+        child.vault.executeRecovery();
         Vm.Log[] memory recoveryLogs = vm.getRecordedLogs();
 
         _assertEmittedBy(recoveryLogs, keccak256("EpochWithdrawRecoveryCleared(uint256)"), address(child.vault));
