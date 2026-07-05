@@ -410,12 +410,16 @@ abstract contract Properties is BeforeAfter, Asserts {
         if (_ccipSendRecoveryPending(recovery)) {
             t(recovery.ccipTxType != Types.CcipTx.EPOCH_NET_DEPOSIT, "REC-002: invalid child CCIP recovery tx type");
             t(recovery.destinationChainSelector != 0, "REC-002: CCIP recovery destination missing");
-            t(recovery.txData.length != 0, "REC-002: CCIP recovery tx data missing");
+            t(recovery.nonce != 0, "REC-002: CCIP recovery nonce missing");
             t(recovery.createdAt != 0, "REC-002: CCIP recovery timestamp missing");
+            if (recovery.ccipTxType == Types.CcipTx.REBALANCE) {
+                t(recovery.protocolId != bytes32(0), "REC-002: CCIP rebalance recovery protocol id missing");
+            }
         } else {
             eq(uint256(recovery.ccipTxType), 0, "REC-002: cleared CCIP recovery tx type set");
             eq(uint256(recovery.destinationChainSelector), 0, "REC-002: cleared CCIP recovery destination set");
-            eq(recovery.txData.length, 0, "REC-002: cleared CCIP recovery tx data set");
+            eq(recovery.nonce, 0, "REC-002: cleared CCIP recovery nonce set");
+            t(recovery.protocolId == bytes32(0), "REC-002: cleared CCIP recovery protocol id set");
             eq(recovery.createdAt, 0, "REC-002: cleared CCIP recovery timestamp set");
         }
     }

@@ -124,11 +124,20 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
 
         try this.tryCcipSend(bridgeAmount, destinationChainSelector, ccipTxType, txData) {}
         catch {
+            uint256 nonce;
+            bytes32 protocolId;
+            // @review gas optimization: we'd have to pass nonce and protocolId to _ccipSend, refactoring Base/Parent too
+            if (ccipTxType == Types.CcipTx.REBALANCE) {
+                (nonce, protocolId) = abi.decode(txData, (uint256, bytes32));
+            } else {
+                nonce = abi.decode(txData, (uint256));
+            }
             _childVaultStorage().s_ccipSendRecovery = Types.CcipSendRecovery({
                 ccipTxType: ccipTxType,
                 amount: bridgeAmount,
                 destinationChainSelector: destinationChainSelector,
-                txData: txData,
+                nonce: nonce,
+                protocolId: protocolId,
                 createdAt: block.timestamp
             });
             _baseVaultStorage().s_recoveryMode = Types.RecoveryMode.CCIP_SEND;
@@ -458,12 +467,21 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
             recovery.amount,
             recovery.destinationChainSelector,
             recovery.ccipTxType,
-            recovery.txData,
+            _encodeCcipTxPayload(recovery),
             i_asset,
             i_link,
             i_ccipRouter,
             i_thisChainSelector
         );
+    }
+
+    /// @notice Rebuilds the CCIP send payload from stored recovery fields for retry
+    /// @param recovery The cleared CCIP send recovery state
+    /// @return data abi.encode(recovery.nonce) for epoch net deposit/withdraw, or abi.encode(recovery.nonce, recovery.protocolId) for rebalance
+    function _encodeCcipTxPayload(Types.CcipSendRecovery memory recovery) internal pure returns (bytes memory data) {
+        data = recovery.ccipTxType == Types.CcipTx.REBALANCE
+            ? abi.encode(recovery.nonce, recovery.protocolId)
+            : abi.encode(recovery.nonce);
     }
 
     /*//////////////////////////////////////////////////////////////

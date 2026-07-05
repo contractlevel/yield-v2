@@ -424,7 +424,8 @@ contract ChildVault_ExecuteRecovery_CcipSend_UnitTest is BaseUnitTest {
         assertEq(uint256(recovery.ccipTxType), uint256(Types.CcipTx.EPOCH_NET_WITHDRAW));
         assertEq(recovery.amount, WITHDRAW_AMOUNT);
         assertEq(recovery.destinationChainSelector, PARENT_CHAIN_SELECTOR);
-        assertEq(abi.decode(recovery.txData, (uint256)), EPOCH_NONCE);
+        assertEq(recovery.nonce, EPOCH_NONCE);
+        assertEq(recovery.protocolId, bytes32(0));
         assertEq(recovery.createdAt, block.timestamp);
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.CCIP_SEND);
     }
@@ -439,7 +440,8 @@ contract ChildVault_ExecuteRecovery_CcipSend_UnitTest is BaseUnitTest {
         assertEq(uint256(recovery.ccipTxType), uint256(Types.CcipTx.EPOCH_NET_WITHDRAW));
         assertEq(recovery.amount, WITHDRAW_AMOUNT);
         assertEq(recovery.destinationChainSelector, PARENT_CHAIN_SELECTOR);
-        assertEq(abi.decode(recovery.txData, (uint256)), EPOCH_NONCE);
+        assertEq(recovery.nonce, EPOCH_NONCE);
+        assertEq(recovery.protocolId, bytes32(0));
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.CCIP_SEND);
     }
 
@@ -447,12 +449,11 @@ contract ChildVault_ExecuteRecovery_CcipSend_UnitTest is BaseUnitTest {
         _storeRebalanceCcipSendRecoveryFromGetFee();
 
         Types.CcipSendRecovery memory recovery = s_childVault.getCcipSendRecovery();
-        (uint256 rebalanceNonce, bytes32 protocolId) = abi.decode(recovery.txData, (uint256, bytes32));
         assertEq(uint256(recovery.ccipTxType), uint256(Types.CcipTx.REBALANCE));
         assertEq(recovery.amount, REBALANCE_AMOUNT);
         assertEq(recovery.destinationChainSelector, REMOTE_CHILD_CHAIN_SELECTOR);
-        assertEq(rebalanceNonce, REBALANCE_NONCE);
-        assertEq(protocolId, AAVE_V4_PROTOCOL_ID);
+        assertEq(recovery.nonce, REBALANCE_NONCE);
+        assertEq(recovery.protocolId, AAVE_V4_PROTOCOL_ID);
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.CCIP_SEND);
     }
 
@@ -484,7 +485,26 @@ contract ChildVault_ExecuteRecovery_CcipSend_UnitTest is BaseUnitTest {
         assertEq(uint256(recovery.ccipTxType), 0);
         assertEq(recovery.amount, 0);
         assertEq(recovery.destinationChainSelector, 0);
-        assertEq(recovery.txData.length, 0);
+        assertEq(recovery.nonce, 0);
+        assertEq(recovery.protocolId, bytes32(0));
+        assertEq(recovery.createdAt, 0);
+        assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.NONE);
+    }
+
+    function test_ChildVault_executeRecovery_CCIP_SEND_Rebalance_ClearsRecoveryAndBridges() public {
+        _storeRebalanceCcipSendRecoveryFromGetFee();
+        s_mockCcipRouter.setGetFeeReverts(false);
+        uint256 routerBefore = s_mockUsdc.balanceOf(address(s_mockCcipRouter));
+
+        s_childVault.executeRecovery();
+
+        assertEq(s_mockUsdc.balanceOf(address(s_mockCcipRouter)), routerBefore + REBALANCE_AMOUNT);
+        Types.CcipSendRecovery memory recovery = s_childVault.getCcipSendRecovery();
+        assertEq(uint256(recovery.ccipTxType), 0);
+        assertEq(recovery.amount, 0);
+        assertEq(recovery.destinationChainSelector, 0);
+        assertEq(recovery.nonce, 0);
+        assertEq(recovery.protocolId, bytes32(0));
         assertEq(recovery.createdAt, 0);
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.NONE);
     }
@@ -513,7 +533,23 @@ contract ChildVault_ExecuteRecovery_CcipSend_UnitTest is BaseUnitTest {
         assertEq(uint256(recovery.ccipTxType), uint256(Types.CcipTx.EPOCH_NET_WITHDRAW));
         assertEq(recovery.amount, WITHDRAW_AMOUNT);
         assertEq(recovery.destinationChainSelector, PARENT_CHAIN_SELECTOR);
-        assertEq(abi.decode(recovery.txData, (uint256)), EPOCH_NONCE);
+        assertEq(recovery.nonce, EPOCH_NONCE);
+        assertEq(recovery.protocolId, bytes32(0));
+        assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.CCIP_SEND);
+    }
+
+    function test_ChildVault_executeRecovery_CCIP_SEND_Rebalance_RevertWhen_RetryFails() public {
+        _storeRebalanceCcipSendRecoveryFromGetFee();
+
+        vm.expectRevert(MockCCIPRouter.MockCCIPRouter__GetFeeReverts.selector);
+        s_childVault.executeRecovery();
+
+        Types.CcipSendRecovery memory recovery = s_childVault.getCcipSendRecovery();
+        assertEq(uint256(recovery.ccipTxType), uint256(Types.CcipTx.REBALANCE));
+        assertEq(recovery.amount, REBALANCE_AMOUNT);
+        assertEq(recovery.destinationChainSelector, REMOTE_CHILD_CHAIN_SELECTOR);
+        assertEq(recovery.nonce, REBALANCE_NONCE);
+        assertEq(recovery.protocolId, AAVE_V4_PROTOCOL_ID);
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.CCIP_SEND);
     }
 

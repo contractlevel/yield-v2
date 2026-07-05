@@ -62,7 +62,8 @@ contract CcipSend_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
             Types.CcipTx.EPOCH_NET_WITHDRAW,
             arbitrumConfig.ccip.thisChainSelector,
             shareAmount,
-            abi.encode(uint256(2))
+            2,
+            bytes32(0)
         );
         assertTrue(baseChild.vault.getRecoveryMode() == Types.RecoveryMode.CCIP_SEND);
 
@@ -110,7 +111,8 @@ contract CcipSend_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
             Types.CcipTx.REBALANCE,
             arbitrumConfig.ccip.thisChainSelector,
             recovery.amount,
-            abi.encode(uint256(1), AAVE_V3_PROTOCOL_ID)
+            1,
+            AAVE_V3_PROTOCOL_ID
         );
         assertTrue(baseChild.vault.getRecoveryMode() == Types.RecoveryMode.CCIP_SEND);
 

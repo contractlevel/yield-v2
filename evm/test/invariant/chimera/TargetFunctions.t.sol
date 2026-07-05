@@ -527,7 +527,8 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             Types.CcipTx.EPOCH_NET_WITHDRAW,
             PARENT_CHAIN_SELECTOR,
             netWithdrawAmount,
-            abi.encode(epochNonce)
+            epochNonce,
+            bytes32(0)
         );
         lte(
             netWithdrawAmount,
@@ -592,7 +593,8 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             Types.CcipTx.REBALANCE,
             destinationChainSelector,
             amount,
-            abi.encode(pendingRebalance.nonce, target.protocolId)
+            pendingRebalance.nonce,
+            target.protocolId
         );
         lte(
             amount,
@@ -605,7 +607,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         Types.CcipSendRecovery memory recovery = vault.getCcipSendRecovery();
 
         if (recovery.ccipTxType == Types.CcipTx.EPOCH_NET_WITHDRAW) {
-            uint256 epochNonce = abi.decode(recovery.txData, (uint256));
+            uint256 epochNonce = recovery.nonce;
 
             vault.executeRecovery();
             _assertCcipSendRecoveryCleared(vault);
@@ -1606,7 +1608,8 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         Types.CcipTx ccipTxType,
         uint64 destinationChainSelector,
         uint256 amount,
-        bytes memory txData
+        uint256 nonce,
+        bytes32 protocolId
     ) internal {
         Types.CcipSendRecovery memory recovery = vault.getCcipSendRecovery();
 
@@ -1617,7 +1620,8 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             "CCIP-005a: wrong recovery destination"
         );
         eq(recovery.amount, amount, "CCIP-005a: wrong recovery amount");
-        t(keccak256(recovery.txData) == keccak256(txData), "CCIP-005a: wrong recovery tx data");
+        eq(recovery.nonce, nonce, "CCIP-005a: wrong recovery nonce");
+        t(recovery.protocolId == protocolId, "CCIP-005a: wrong recovery protocol id");
         t(recovery.createdAt != 0, "CCIP-005a: recovery timestamp not set");
     }
 
@@ -1627,7 +1631,8 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         eq(uint256(recovery.ccipTxType), 0, "REC-003: recovery tx type not cleared");
         eq(recovery.amount, 0, "REC-003: recovery amount not cleared");
         eq(uint256(recovery.destinationChainSelector), 0, "REC-003: recovery destination not cleared");
-        eq(recovery.txData.length, 0, "REC-003: recovery tx data not cleared");
+        eq(recovery.nonce, 0, "REC-003: recovery nonce not cleared");
+        t(recovery.protocolId == bytes32(0), "REC-003: recovery protocol id not cleared");
         eq(recovery.createdAt, 0, "REC-003: recovery timestamp not cleared");
     }
 

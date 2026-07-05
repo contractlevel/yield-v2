@@ -87,7 +87,8 @@ contract ChildVault_ExecuteEpochWithdrawUnitTest is BaseUnitTest {
         assertEq(uint256(recovery.ccipTxType), uint256(Types.CcipTx.EPOCH_NET_WITHDRAW));
         assertEq(recovery.amount, WITHDRAW_AMOUNT);
         assertEq(recovery.destinationChainSelector, PARENT_CHAIN_SELECTOR);
-        assertEq(abi.decode(recovery.txData, (uint256)), EPOCH_NONCE);
+        assertEq(recovery.nonce, EPOCH_NONCE);
+        assertEq(recovery.protocolId, bytes32(0));
         assertEq(recovery.createdAt, block.timestamp);
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.CCIP_SEND);
     }

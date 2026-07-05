@@ -109,12 +109,14 @@ abstract contract BaseRecoveryIntegrationTest is BaseIntegrationTest {
         Types.CcipTx ccipTxType,
         uint64 destinationChainSelector,
         uint256 amount,
-        bytes memory txData
+        uint256 nonce,
+        bytes32 protocolId
     ) internal view {
         assertEq(uint256(recovery.ccipTxType), uint256(ccipTxType));
         assertEq(recovery.destinationChainSelector, destinationChainSelector);
         assertEq(recovery.amount, amount);
-        assertEq(recovery.txData, txData);
+        assertEq(recovery.nonce, nonce);
+        assertEq(recovery.protocolId, protocolId);
         assertEq(recovery.createdAt, block.timestamp);
     }
 
@@ -122,7 +124,8 @@ abstract contract BaseRecoveryIntegrationTest is BaseIntegrationTest {
         assertEq(uint256(recovery.ccipTxType), 0);
         assertEq(recovery.destinationChainSelector, 0);
         assertEq(recovery.amount, 0);
-        assertEq(recovery.txData.length, 0);
+        assertEq(recovery.nonce, 0);
+        assertEq(recovery.protocolId, bytes32(0));
         assertEq(recovery.createdAt, 0);
     }
 

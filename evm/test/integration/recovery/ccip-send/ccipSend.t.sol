@@ -60,7 +60,8 @@ contract CcipSend_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
             Types.CcipTx.EPOCH_NET_WITHDRAW,
             PARENT_CHAIN_SELECTOR,
             shareAmount,
-            abi.encode(uint256(2))
+            2,
+            bytes32(0)
         );
         assertTrue(child.vault.getRecoveryMode() == Types.RecoveryMode.CCIP_SEND);
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.EXECUTING));
@@ -128,7 +129,8 @@ contract CcipSend_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
             Types.CcipTx.REBALANCE,
             PARENT_CHAIN_SELECTOR,
             tvl,
-            abi.encode(uint256(1), AAVE_V4_PROTOCOL_ID)
+            1,
+            AAVE_V4_PROTOCOL_ID
         );
         assertTrue(child.vault.getRecoveryMode() == Types.RecoveryMode.CCIP_SEND);
         assertEq(uint256(parent.vault.getRebalance().state), uint256(Types.RebalanceState.REBALANCING));
