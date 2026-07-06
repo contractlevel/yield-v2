@@ -3,6 +3,12 @@ pragma solidity 0.8.34;
 
 import {Types} from "../../src/libraries/Types.sol";
 
+import {IAny2EVMMessageReceiver} from "@chainlink/contracts-ccip/contracts/applications/CCIPReceiver.sol";
+import {
+    IAccessControlDefaultAdminRules
+} from "@openzeppelin/contracts/access/extensions/IAccessControlDefaultAdminRules.sol";
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+
 /// @title HelperHarness
 /// @author @contractlevel
 /// @notice HelperHarness to use in CVL specs
@@ -103,6 +109,18 @@ contract HelperHarness {
 
     function emptyParameters() external pure returns (bytes[] memory parameters) {
         parameters = new bytes[](0);
+    }
+
+    function erc165InterfaceId() external pure returns (bytes4) {
+        return type(IERC165).interfaceId;
+    }
+
+    function accessControlDefaultAdminRulesInterfaceId() external pure returns (bytes4) {
+        return type(IAccessControlDefaultAdminRules).interfaceId;
+    }
+
+    function any2EVMMessageReceiverInterfaceId() external pure returns (bytes4) {
+        return type(IAny2EVMMessageReceiver).interfaceId;
     }
 
     /*//////////////////////////////////////////////////////////////

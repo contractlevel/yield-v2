@@ -6,6 +6,7 @@ import {ParentVault} from "../../../src/vaults/ParentVault.sol";
 import {BaseVault} from "../../../src/vaults/BaseVault.sol";
 import {BaseVaultStrategyLib} from "../../../src/libraries/BaseVaultStrategyLib.sol";
 import {Types} from "../../../src/libraries/Types.sol";
+import {IPolicyProtected} from "@chainlink/policy-management/interfaces/IPolicyProtected.sol";
 
 contract ParentVaultHarness is ParentVault, HelperHarness {
     bytes32 private constant INITIALIZABLE_STORAGE =
@@ -89,6 +90,13 @@ contract ParentVaultHarness is ParentVault, HelperHarness {
         success = _handleCCIPRebalanceDeposit(rebalanceNonce, amount);
     }
 
+    /// @dev Certora cannot link external libraries, so model only the active-adapter boundary here.
+    ///      Production ParentVault.sol must go through the public library call (delegatecall) because
+    ///      Parent is near the contract size limit and can't inline this like ChildVault does.
+    function _setActiveAdapter(bytes32 protocolId) internal override returns (address adapter) {
+        adapter = BaseVaultStrategyLib._setActiveAdapter(_baseVaultStorage(), protocolId, i_adapterRegistry, address(this));
+    }
+
     function requireNoRecovery() external view {
         _requireNoRecovery();
     }
@@ -111,5 +119,9 @@ contract ParentVaultHarness is ParentVault, HelperHarness {
 
     function getRecoveryCreatedAt() external view returns (uint256) {
         return _baseVaultStorage().s_rebalanceDepositRecovery.createdAt;
+    }
+
+    function policyProtectedInterfaceId() external pure returns (bytes4) {
+        return type(IPolicyProtected).interfaceId;
     }
 }

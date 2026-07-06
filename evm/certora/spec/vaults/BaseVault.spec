@@ -464,6 +464,23 @@ hook LOG3(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2) {
 }
 
 /*//////////////////////////////////////////////////////////////
+                           INVARIANTS
+//////////////////////////////////////////////////////////////*/
+/// @dev filtered: upgradeToAndCall to stop delegatecall havocing immutable state.
+invariant noZeroChainSelector()
+    currentContract.i_thisChainSelector != 0
+    filtered {
+        f -> f.selector != sig:upgradeToAndCall(address,bytes).selector
+    }
+
+/// @dev filtered: upgradeToAndCall to stop delegatecall havocing immutable state.
+invariant noZeroAssetPrecision(env e)
+    asset.decimals(e) > 0 => currentContract.i_assetPrecision != 0
+    filtered {
+        f -> f.selector != sig:upgradeToAndCall(address,bytes).selector
+    }
+
+/*//////////////////////////////////////////////////////////////
                              RULES
 //////////////////////////////////////////////////////////////*/
 

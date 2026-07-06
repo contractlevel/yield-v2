@@ -126,5 +126,6 @@ certoraRun certora/conf/vaults/ParentVault.BaseVault.conf
 certoraRun certora/conf/vaults/ChildVault.BaseVault.conf
 
 certoraRun certora/conf/vaults/ChildVault.conf
+certoraRun certora/conf/vaults/ParentVault.conf
 
 ```
