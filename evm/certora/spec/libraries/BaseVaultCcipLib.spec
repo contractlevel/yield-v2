@@ -447,6 +447,19 @@ rule executeCcipSend_Success_EmitsCCIPBridged() {
     require !ccipRouter.getFeeReverts(), "router fee lookup does not revert";
     require !ccipRouter.ccipSendReverts(), "router send does not revert";
 
+    uint256 fee = ccipRouter.getFee();
+    address router = getRouter();
+    uint256 vaultLinkBalanceBefore = link.balanceOf(currentContract);
+    uint256 routerLinkBalanceBefore = link.balanceOf(router);
+    uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
+    uint256 routerAssetBalanceBefore = asset.balanceOf(router);
+
+    /// @dev mock token arithmetic conditions
+    require fee <= vaultLinkBalanceBefore, "vault LINK balance covers the CCIP fee";
+    require routerLinkBalanceBefore <= max_uint256 - fee, "router LINK balance does not overflow";
+    require bridgeAmount <= vaultAssetBalanceBefore, "vault asset balance covers the bridge amount";
+    require routerAssetBalanceBefore <= max_uint256 - bridgeAmount, "router asset balance does not overflow";
+
     /// @dev ghost starting values
     require ghost_CCIPBridged_EventCount == 0, "CCIPBridged event count starts at zero";
     require ghost_CCIPBridged_Param_ccipMessageId == to_bytes32(0), "CCIPBridged messageId ghost starts at zero";
@@ -480,6 +493,19 @@ rule executeCcipSend_EpochWithdraw_SendsEncodedEpochNoncePayload() {
     require getCrosschainVault(destSelector) != 0, "destination vault is registered";
     require !ccipRouter.getFeeReverts(), "router fee lookup does not revert";
     require !ccipRouter.ccipSendReverts(), "router send does not revert";
+
+    uint256 fee = ccipRouter.getFee();
+    address router = getRouter();
+    uint256 vaultLinkBalanceBefore = link.balanceOf(currentContract);
+    uint256 routerLinkBalanceBefore = link.balanceOf(router);
+    uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
+    uint256 routerAssetBalanceBefore = asset.balanceOf(router);
+
+    /// @dev mock token arithmetic conditions
+    require fee <= vaultLinkBalanceBefore, "vault LINK balance covers the CCIP fee";
+    require routerLinkBalanceBefore <= max_uint256 - fee, "router LINK balance does not overflow";
+    require bridgeAmount <= vaultAssetBalanceBefore, "vault asset balance covers the bridge amount";
+    require routerAssetBalanceBefore <= max_uint256 - bridgeAmount, "router asset balance does not overflow";
 
     bytes txData = encodeEpochNonce(epochNonce);
     bytes expectedMessageData = encodeCcipTxData(Types.CcipTx.EPOCH_NET_WITHDRAW, txData);

@@ -128,4 +128,12 @@ certoraRun certora/conf/vaults/ChildVault.BaseVault.conf
 certoraRun certora/conf/vaults/ChildVault.conf
 certoraRun certora/conf/vaults/ParentVault.conf
 
+certoraRun certora/conf/vaults/ParentVault.conf --rule SOLV_001_parentCoversClaimableWithdrawObligations SOLV_003_shareEscrowAttributableToWithdrawIntents SHARE_001_totalSupplyReconcilesWithTotalShares
+
+certoraRun certora/conf/vaults/ParentVault.conf --rule EPOCH_009_epochDepositCountersReachZeroTogether EPOCH_011_epochWithdrawCountersStayBounded EPOCH_012_epochWithdrawCountersReachZeroTogether
+
+certoraRun certora/conf/vaults/ParentVault.conf --rule epochRemainingCountersAreZeroBeforeClose EPOCH_008_epochDepositCountersStayBounded
+certoraRun certora/conf/vaults/ParentVault.conf --rule EPOCH_001_currentEpochIsOpen epochsBeyondCurrentAreNeverTouched
+certoraRun certora/conf/vaults/ParentVault.conf --rule epochNonceIsNeverZero recoveryModeIsRestrictedToRebalanceDeposit
+
 ```

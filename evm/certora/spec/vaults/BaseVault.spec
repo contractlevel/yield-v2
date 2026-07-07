@@ -44,6 +44,7 @@ methods {
                             ENVFREE GETTERS
     //////////////////////////////////////////////////////////////*/
     function asset.balanceOf(address) external returns (uint256) envfree;
+    function asset.allowance(address, address) external returns (uint256) envfree;
     function link.balanceOf(address) external returns (uint256) envfree;
     function adapter.getTVL() external returns (uint256) envfree;
     function adapter.getVault() external returns (address) envfree;
@@ -1361,6 +1362,13 @@ rule donate_RevertWhen_NoActiveAdapter() {
     /// @dev revert condition being verified
     require getActiveProtocolAdapter() == 0, "active adapter should be zero";
 
+    uint256 donorBalanceBefore = asset.balanceOf(e.msg.sender);
+    uint256 vaultBalanceBefore = asset.balanceOf(currentContract);
+    require donorBalanceBefore >= amount, "donor asset balance should cover donation";
+    require asset.allowance(e.msg.sender, currentContract) >= amount,
+        "vault should be approved to pull the donation";
+    require vaultBalanceBefore <= max_uint256 - amount, "vault asset balance should not overflow";
+
     /// @dev set ghost starting values
     require ghost_Donation_EventCount == 0;
 
@@ -1407,6 +1415,16 @@ rule donate_RevertWhen_DepositFails() {
     /// @dev revert condition being verified
     require adapter.depositReverts();
 
+    uint256 donorBalanceBefore = asset.balanceOf(e.msg.sender);
+    uint256 vaultBalanceBefore = asset.balanceOf(currentContract);
+    uint256 adapterBalanceBefore = asset.balanceOf(adapter);
+    require donorBalanceBefore >= amount, "donor asset balance should cover donation";
+    require asset.allowance(e.msg.sender, currentContract) >= amount,
+        "vault should be approved to pull the donation";
+    require vaultBalanceBefore <= max_uint256 - amount, "vault asset balance should not overflow";
+    require vaultBalanceBefore + amount >= amount, "vault should hold enough asset for adapter deposit";
+    require adapterBalanceBefore <= max_uint256 - amount, "adapter asset balance should not overflow";
+
     /// @dev set ghost starting values
     require ghost_Donation_EventCount == 0;
 
@@ -1425,10 +1443,22 @@ rule donate_Success() {
     require hasRole(DONATE_OPERATOR_ROLE(), e.msg.sender);
     require amount != 0, "amount should not be zero";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
+    require adapter != currentContract, "adapter should not be the vault";
+    require e.msg.sender != currentContract, "donor should not be the vault";
+    require e.msg.sender != adapter, "donor should not be the adapter";
     require !adapter.depositReverts();
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
-    
+
+    uint256 donorBalanceBefore = asset.balanceOf(e.msg.sender);
+    uint256 vaultBalanceBefore = asset.balanceOf(currentContract);
+    uint256 adapterBalanceBefore = asset.balanceOf(adapter);
     uint256 preTVL = adapter.getTVL();
+    require donorBalanceBefore >= amount, "donor asset balance should cover donation";
+    require asset.allowance(e.msg.sender, currentContract) >= amount,
+        "vault should be approved to pull the donation";
+    require vaultBalanceBefore <= max_uint256 - amount, "vault asset balance should not overflow";
+    require vaultBalanceBefore + amount >= amount, "vault should hold enough asset for adapter deposit";
+    require adapterBalanceBefore <= max_uint256 - amount, "adapter asset balance should not overflow";
     require preTVL <= max_uint256 - amount, "adapter TVL should not overflow";
 
     /// @dev set ghost starting values
@@ -1438,6 +1468,9 @@ rule donate_Success() {
 
     assert !lastReverted;
     assert adapter.getTVL() == preTVL + amount;
+    assert asset.balanceOf(e.msg.sender) == donorBalanceBefore - amount;
+    assert asset.balanceOf(currentContract) == vaultBalanceBefore;
+    assert asset.balanceOf(adapter) == adapterBalanceBefore + amount;
     assert ghost_Donation_EventCount == 1;
     assert ghost_Donation_Param_donor == e.msg.sender;
     assert ghost_Donation_Param_amount == amount;
@@ -1453,11 +1486,23 @@ rule donate_Success_WhenPaused() {
     require hasRole(DONATE_OPERATOR_ROLE(), e.msg.sender);
     require amount != 0, "amount should not be zero";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
+    require adapter != currentContract, "adapter should not be the vault";
+    require e.msg.sender != currentContract, "donor should not be the vault";
+    require e.msg.sender != adapter, "donor should not be the adapter";
     require !adapter.depositReverts();
     require paused(), "should be paused";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
 
+    uint256 donorBalanceBefore = asset.balanceOf(e.msg.sender);
+    uint256 vaultBalanceBefore = asset.balanceOf(currentContract);
+    uint256 adapterBalanceBefore = asset.balanceOf(adapter);
     uint256 preTVL = adapter.getTVL();
+    require donorBalanceBefore >= amount, "donor asset balance should cover donation";
+    require asset.allowance(e.msg.sender, currentContract) >= amount,
+        "vault should be approved to pull the donation";
+    require vaultBalanceBefore <= max_uint256 - amount, "vault asset balance should not overflow";
+    require vaultBalanceBefore + amount >= amount, "vault should hold enough asset for adapter deposit";
+    require adapterBalanceBefore <= max_uint256 - amount, "adapter asset balance should not overflow";
     require preTVL <= max_uint256 - amount, "adapter TVL should not overflow";
 
     /// @dev set ghost starting values
@@ -1468,6 +1513,9 @@ rule donate_Success_WhenPaused() {
     assert !lastReverted;
     assert paused();
     assert adapter.getTVL() == preTVL + amount;
+    assert asset.balanceOf(e.msg.sender) == donorBalanceBefore - amount;
+    assert asset.balanceOf(currentContract) == vaultBalanceBefore;
+    assert asset.balanceOf(adapter) == adapterBalanceBefore + amount;
     assert ghost_Donation_EventCount == 1;
     assert ghost_Donation_Param_donor == e.msg.sender;
     assert ghost_Donation_Param_amount == amount;

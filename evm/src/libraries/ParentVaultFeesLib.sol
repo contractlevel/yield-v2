@@ -123,7 +123,11 @@ library ParentVaultFeesLib {
         }
 
         settlementPricePerShare = _calculatePricePerShare($, tvl, sharePrecision);
-        $.s_performanceFeeHighWaterMark = settlementPricePerShare;
+        /// @dev feeShares rounds up and the settlement price rounds down, so dilution can land the
+        ///      settlement price a dust amount below the high water mark; only ever raise it (FEE-003)
+        if (settlementPricePerShare > highWaterMark) {
+            $.s_performanceFeeHighWaterMark = settlementPricePerShare;
+        }
 
         if (feeShares != 0) emit PerformanceFeeCollected(epochNonce, feeShares, settlementPricePerShare);
     }

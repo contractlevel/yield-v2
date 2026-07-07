@@ -82,6 +82,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         address treasury,
         address policyEngineManager,
         address policyEngine
+        // @review add reentrancy protection and refactor / update relevant tests, trees and specs
     ) external initializer {
         _revertIfZeroAddress(treasury);
         _revertIfZeroAddress(policyEngineManager);

@@ -33,6 +33,7 @@ methods {
 
     // Mock methods
     function share.balanceOf(address) external returns (uint256) envfree;
+    function share.totalSupply() external returns (uint256) envfree;
 
     // Dispatcher summaries
     function _.mint(address, uint256) external => DISPATCHER(true);
@@ -574,6 +575,7 @@ rule finalizeRebalance_Success_WhenManagementFeeSharesAreCollected() {
     require totalShares <= max_uint256 - feeShares, "total shares addition does not overflow";
     uint256 treasuryBalanceBefore = share.balanceOf(treasury);
     require treasuryBalanceBefore <= max_uint256 - feeShares, "treasury share balance does not overflow";
+    require share.totalSupply() <= max_uint256 - feeShares, "share total supply does not overflow";
 
     /// @dev ghost starting values
     require ghost_RebalanceCompleted_EventCount == 0, "RebalanceCompleted event count starts at zero";

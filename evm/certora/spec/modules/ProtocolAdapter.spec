@@ -122,6 +122,8 @@ rule deposit_Success_EmitsDepositEvent() {
     require e.msg.sender == getVault(), "caller is vault";
     require currentContract._status == 1, "deposit is nonReentrant";
     require getTVL() <= max_uint256 - amount, "deposit does not overflow TVL";
+    require asset.balanceOf(currentContract) >= amount, "adapter asset balance covers deposit";
+    require asset.balanceOf(getProtocolPool()) <= max_uint256 - amount, "protocol asset balance can receive deposit";
 
     /// @dev ghost starting values
     require ghost_Deposit_EventCount == 0, "Deposit event count starts at zero";
@@ -144,6 +146,8 @@ rule deposit_Success_IncreasesTVLByAmount() {
     require e.msg.sender == getVault(), "caller is vault";
     require currentContract._status == 1, "deposit is nonReentrant";
     require preTVL <= max_uint256 - amount, "deposit does not overflow TVL";
+    require asset.balanceOf(currentContract) >= amount, "adapter asset balance covers deposit";
+    require asset.balanceOf(getProtocolPool()) <= max_uint256 - amount, "protocol asset balance can receive deposit";
 
     deposit@withrevert(e, amount);
 
@@ -207,7 +211,12 @@ rule withdraw_Epoch_Success_ReturnsAtLeastAmountAndEmitsWithdrawEvent() {
     require currentContract._status == 1, "withdraw is nonReentrant";
     require amount <= preTVL, "amount does not exceed TVL";
     require preTVL - amount >= 0, "should not underflow";
-    require getAsset().balanceOf(e, currentContract) <= max_uint256 - preTVL, "adapter asset balance can receive withdraw";
+    uint256 adapterAssetBalanceBefore = getAsset().balanceOf(e, currentContract);
+    uint256 vaultAssetBalanceBefore = getAsset().balanceOf(e, getVault());
+    uint256 protocolAssetBalanceBefore = getAsset().balanceOf(e, getProtocolPool());
+    require protocolAssetBalanceBefore >= amount, "protocol asset balance covers withdraw";
+    require adapterAssetBalanceBefore <= max_uint256 - amount, "adapter asset balance can receive withdraw";
+    require vaultAssetBalanceBefore <= max_uint256 - amount, "vault asset balance can receive withdraw";
 
     /// @dev epoch withdraw condition
     require amount != max_uint256, "amount is not max uint256";
@@ -235,7 +244,12 @@ rule withdraw_Epoch_Success_DecreasesTVLByAmount() {
     require currentContract._status == 1, "withdraw is nonReentrant";
     require amount <= preTVL, "amount does not exceed TVL";
     require preTVL - amount >= 0, "should not underflow";
-    require getAsset().balanceOf(e, currentContract) <= max_uint256 - preTVL, "adapter asset balance can receive withdraw";
+    uint256 adapterAssetBalanceBefore = getAsset().balanceOf(e, currentContract);
+    uint256 vaultAssetBalanceBefore = getAsset().balanceOf(e, getVault());
+    uint256 protocolAssetBalanceBefore = getAsset().balanceOf(e, getProtocolPool());
+    require protocolAssetBalanceBefore >= amount, "protocol asset balance covers withdraw";
+    require adapterAssetBalanceBefore <= max_uint256 - amount, "adapter asset balance can receive withdraw";
+    require vaultAssetBalanceBefore <= max_uint256 - amount, "vault asset balance can receive withdraw";
 
     /// @dev epoch withdraw condition
     require amount != max_uint256, "amount is not max uint256";
@@ -256,7 +270,12 @@ rule withdraw_Rebalance_Success_ReturnsAtLeastPreWithdrawTVLAndEmitsWithdrawEven
     require e.msg.sender == getVault(), "caller is vault";
     require currentContract._status == 1, "withdraw is nonReentrant";
     require preTVL > 0, "should not be 0";
-    require getAsset().balanceOf(e, currentContract) <= max_uint256 - preTVL, "adapter asset balance can receive withdraw";
+    uint256 adapterAssetBalanceBefore = getAsset().balanceOf(e, currentContract);
+    uint256 vaultAssetBalanceBefore = getAsset().balanceOf(e, getVault());
+    uint256 protocolAssetBalanceBefore = getAsset().balanceOf(e, getProtocolPool());
+    require protocolAssetBalanceBefore >= preTVL, "protocol asset balance covers withdraw";
+    require adapterAssetBalanceBefore <= max_uint256 - preTVL, "adapter asset balance can receive withdraw";
+    require vaultAssetBalanceBefore <= max_uint256 - preTVL, "vault asset balance can receive withdraw";
 
     /// @dev ghost starting values
     require ghost_Withdraw_EventCount == 0, "Withdraw event count starts at zero";
@@ -279,10 +298,13 @@ rule withdraw_Success_IncreasesVaultBalances() {
     require e.msg.sender == getVault(), "caller is vault";
     require currentContract._status == 1, "withdraw is nonReentrant";
     require preTVL > 0, "should not be 0";
-    require asset.balanceOf(e, currentContract) <= max_uint256 - preTVL, "adapter asset balance can receive withdraw";
+    uint256 adapterBalanceBefore = asset.balanceOf(e, currentContract);
+    uint256 protocolBalanceBefore = asset.balanceOf(e, getProtocolPool());
+    require protocolBalanceBefore >= preTVL, "protocol asset balance covers withdraw";
+    require adapterBalanceBefore <= max_uint256 - preTVL, "adapter asset balance can receive withdraw";
 
     uint256 vaultBalanceBefore = asset.balanceOf(getVault());
-    require vaultBalanceBefore + preTVL <= max_uint256, "no overflow";
+    require vaultBalanceBefore <= max_uint256 - preTVL, "vault asset balance can receive withdraw";
 
     uint256 amountOut = withdraw@withrevert(e, max_uint256);
 

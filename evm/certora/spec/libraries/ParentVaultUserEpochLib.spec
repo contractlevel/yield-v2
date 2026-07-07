@@ -41,6 +41,7 @@ methods {
     function asset.allowance(address, address) external returns (uint256) envfree;
     function share.balanceOf(address) external returns (uint256) envfree;
     function share.allowance(address, address) external returns (uint256) envfree;
+    function share.totalSupply() external returns (uint256) envfree;
 
     // Dispatcher summaries
     function _.transfer(address, uint256) external => DISPATCHER(true);
@@ -751,6 +752,7 @@ rule claimShares_Success_WhenFinalDepositClaimant() {
     require depositAmount != 0, "user has a deposit";
     require depositAmount == getEpochRemainingDepositClaimAmount(epochNonce), "user is final deposit claimant";
     require userBalanceBefore <= max_uint256 - remainingShareMintAmount, "user share balance does not overflow";
+    require share.totalSupply() <= max_uint256 - remainingShareMintAmount, "share total supply does not overflow";
 
     /// @dev ghost starting values
     require ghost_DepositClaimed_EventCount == 0, "DepositClaimed event count starts at zero";
@@ -795,6 +797,7 @@ rule claimShares_Success_WhenProportionalDepositClaimant() {
     require depositAmount <= remainingDepositClaimAmount, "remaining deposit claim amount does not underflow";
     require shareMintAmount <= remainingShareMintAmount, "remaining share mint amount does not underflow";
     require userBalanceBefore <= max_uint256 - shareMintAmount, "user share balance does not overflow";
+    require share.totalSupply() <= max_uint256 - shareMintAmount, "share total supply does not overflow";
 
     /// @dev ghost starting values
     require ghost_DepositClaimed_EventCount == 0, "DepositClaimed event count starts at zero";
@@ -965,6 +968,7 @@ rule claimAsset_Success_WhenFinalWithdrawClaimantAndAmountNonzero() {
     require shareBurnAmount != 0, "user has a withdraw intent";
     require shareBurnAmount == getEpochRemainingShareBurnAmount(epochNonce), "user is final withdraw claimant";
     require remainingWithdrawClaimAmount != 0, "withdraw amount is nonzero";
+    require share.totalSupply() >= shareBurnAmount, "share total supply covers burn";
     require vaultAssetBalanceBefore >= remainingWithdrawClaimAmount, "vault has enough asset";
     require userAssetBalanceBefore <= max_uint256 - remainingWithdrawClaimAmount, "user asset balance does not overflow";
 
@@ -1005,6 +1009,7 @@ rule claimAsset_Success_WhenFinalWithdrawClaimantAndAmountZero() {
     require shareBurnAmount != 0, "user has a withdraw intent";
     require shareBurnAmount == getEpochRemainingShareBurnAmount(epochNonce), "user is final withdraw claimant";
     require getEpochRemainingWithdrawClaimAmount(epochNonce) == 0, "withdraw amount is zero";
+    require share.totalSupply() >= shareBurnAmount, "share total supply covers burn";
 
     /// @dev ghost starting values
     require ghost_WithdrawClaimed_EventCount == 0, "WithdrawClaimed event count starts at zero";
@@ -1050,6 +1055,7 @@ rule claimAsset_Success_WhenProportionalWithdrawClaimantAndAmountZero() {
     mathint withdrawAmount = shareBurnAmount * remainingWithdrawClaimAmount / remainingShareBurnAmount;
     require withdrawAmount == 0, "withdraw amount is zero";
     require shareBurnAmount <= remainingShareBurnAmount, "remaining share burn amount does not underflow";
+    require share.totalSupply() >= shareBurnAmount, "share total supply covers burn";
 
     /// @dev ghost starting values
     require ghost_WithdrawClaimed_EventCount == 0, "WithdrawClaimed event count starts at zero";
@@ -1097,6 +1103,7 @@ rule claimAsset_Success_WhenProportionalWithdrawClaimantAndAmountNonzero() {
     require withdrawAmount != 0, "withdraw amount is nonzero";
     require shareBurnAmount <= remainingShareBurnAmount, "remaining share burn amount does not underflow";
     require withdrawAmount <= remainingWithdrawClaimAmount, "remaining withdraw claim amount does not underflow";
+    require share.totalSupply() >= shareBurnAmount, "share total supply covers burn";
     require vaultAssetBalanceBefore >= withdrawAmount, "vault has enough asset";
     require userAssetBalanceBefore <= max_uint256 - withdrawAmount, "user asset balance does not overflow";
 

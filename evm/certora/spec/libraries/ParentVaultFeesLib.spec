@@ -23,6 +23,7 @@ methods {
 
     // Mock methods
     function share.balanceOf(address) external returns (uint256) envfree;
+    function share.totalSupply() external returns (uint256) envfree;
 
     // Dispatcher summaries
     function _.mint(address, uint256) external => DISPATCHER(true);
@@ -383,6 +384,7 @@ rule collectManagementFee_Success_WhenElapsedTimeExceedsOneYear() {
     require feeShares != 0, "fee shares are nonzero";
     require totalShares <= max_uint256 - feeShares, "total shares addition does not overflow";
     require share.balanceOf(treasury) <= max_uint256 - feeShares, "treasury share balance does not overflow";
+    require share.totalSupply() <= max_uint256 - feeShares, "share total supply does not overflow";
 
     /// @dev ghost starting values
     require ghost_ManagementFeeCollected_EventCount == 0, "ManagementFeeCollected event count starts at zero";
@@ -428,6 +430,7 @@ rule collectManagementFee_Success_WhenFeeSharesAreNonzero() {
     require feeShares != 0, "fee shares are nonzero";
     require totalShares <= max_uint256 - feeShares, "total shares addition does not overflow";
     require share.balanceOf(treasury) <= max_uint256 - feeShares, "treasury share balance does not overflow";
+    require share.totalSupply() <= max_uint256 - feeShares, "share total supply does not overflow";
 
     /// @dev ghost starting values
     require ghost_ManagementFeeCollected_EventCount == 0, "ManagementFeeCollected event count starts at zero";
@@ -687,6 +690,7 @@ rule collectPerformanceFee_RevertWhen_SettlementPriceMultiplicationOverflows() {
     require feeShares != 0, "fee shares are nonzero";
     require totalShares <= max_uint256 - feeShares, "total shares addition does not overflow";
     require share.balanceOf(treasury) <= max_uint256 - feeShares, "treasury share balance does not overflow";
+    require share.totalSupply() <= max_uint256 - feeShares, "share total supply does not overflow";
     require tvl > max_uint256 / sharePrecision, "settlement price multiplication overflows";
 
     storage before = lastStorage;
@@ -730,6 +734,7 @@ rule collectPerformanceFee_Success_WhenFeeSharesAreNonzero() {
     mathint newTotalShares = totalShares + feeShares;
     uint256 treasuryBalanceBefore = share.balanceOf(treasury);
     require treasuryBalanceBefore <= max_uint256 - feeShares, "treasury share balance does not overflow";
+    require share.totalSupply() <= max_uint256 - feeShares, "share total supply does not overflow";
     require tvl <= max_uint256 / sharePrecision, "settlement price multiplication does not overflow";
 
     /// @dev ghost starting values
