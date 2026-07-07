@@ -59,7 +59,7 @@ hook LOG3(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2) {
 /*//////////////////////////////////////////////////////////////
                              RULES
 //////////////////////////////////////////////////////////////*/
-rule setAdapter_RevertWhen_CallerDoesNotHaveCONFIG_OPERATOR_ROLE() {
+rule ADAPTER_001_setAdapter_RevertWhen_CallerDoesNotHaveCONFIG_OPERATOR_ROLE() {
     env e;
     bytes32 protocolId;
     address adapter;

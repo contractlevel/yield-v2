@@ -112,7 +112,7 @@ hook LOG3(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2) {
 
 /// @notice Setting the active adapter reverts when the protocol ID is not registered.
 /// @dev Verifies that active adapter storage is unchanged and no ActiveProtocolAdapterSet event is emitted.
-rule setActiveAdapter_RevertWhen_AdapterNotRegistered() {
+rule ADAPTER_002_setActiveAdapter_RevertWhen_AdapterNotRegistered() {
     env e;
     bytes32 protocolId;
 
@@ -138,7 +138,7 @@ rule setActiveAdapter_RevertWhen_AdapterNotRegistered() {
 
 /// @notice Setting the active adapter reverts when the registered adapter is bound to a different vault.
 /// @dev Verifies that active adapter storage is unchanged and no ActiveProtocolAdapterSet event is emitted.
-rule setActiveAdapter_RevertWhen_AdapterVaultIsInvalid() {
+rule ADAPTER_002_setActiveAdapter_RevertWhen_AdapterVaultIsInvalid() {
     env e;
     bytes32 protocolId;
 

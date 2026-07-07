@@ -790,7 +790,7 @@ rule initializeBaseVault_Success() {
 
 /// ─────────────────── PAUSE ───────────────────────────────────
 
-rule pause_RevertWhen_CallerDoesNotHavePAUSER_ROLE() {
+rule PAUSE_001_pause_RevertWhen_CallerDoesNotHavePAUSER_ROLE() {
     env e;
     
     /// @dev revert conditions NOT being verified
@@ -838,7 +838,7 @@ rule pause_Success() {
 
 /// ─────────────────── UNPAUSE ─────────────────────────────────
 
-rule unpause_RevertWhen_CallerDoesNotHaveUNPAUSER_ROLE() {
+rule PAUSE_002_unpause_RevertWhen_CallerDoesNotHaveUNPAUSER_ROLE() {
     env e;
     
     /// @dev revert conditions NOT being verified
@@ -1302,7 +1302,7 @@ rule withdrawLink_Success() {
 
 /// ─────────────────── DONATE ──────────────────────────────────
 
-rule donate_RevertWhen_CallerDoesNotHaveDONATE_OPERATOR_ROLE() {
+rule DONATE_005_donate_RevertWhen_CallerDoesNotHaveDONATE_OPERATOR_ROLE() {
     env e;
     uint256 amount;
 
@@ -1523,7 +1523,7 @@ rule donate_Success_WhenPaused() {
 
 /// ─────────────────── EMERGENCY DRAIN ─────────────────────────
 
-rule emergencyDrain_RevertWhen_CallerDoesNotHaveEMERGENCY_DRAINER_ROLE() {
+rule PAUSE_004_emergencyDrain_RevertWhen_CallerDoesNotHaveEMERGENCY_DRAINER_ROLE() {
     env e;
     bool revertOnFailure;
 
@@ -1593,7 +1593,7 @@ rule emergencyDrain_RevertWhen_ReentrantCall() {
 }
 
 /// EMERGENCY_DRAIN_DELAY = 1 days = 86400 seconds
-rule emergencyDrain_RevertWhen_DelayNotMet() {
+rule PAUSE_004_emergencyDrain_RevertWhen_DelayNotMet() {
     env e;
     bool revertOnFailure;
 
@@ -1821,7 +1821,7 @@ rule tryDepositToAdapter_Success() {
 
 /// @notice Storing recovery state reverts when another recovery is already pending
 /// @dev Verifies that the existing recovery state is unchanged and no event is emitted
-rule storeRebalanceDepositRecovery_RevertWhen_RecoveryAlreadyPending() {
+rule REC_005a_storeRebalanceDepositRecovery_RevertWhen_RecoveryAlreadyPending() {
     env e;
     uint256 rebalanceNonce;
     uint256 amount;

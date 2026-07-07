@@ -155,7 +155,7 @@ hook LOG4(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2, bytes32 
 
 /// @notice Initiating a rebalance reverts when another rebalance is already in progress.
 /// @dev Verifies active rebalance guard.
-rule initiateRebalance_RevertWhen_RebalanceInProgress() {
+rule REBAL_002_initiateRebalance_RevertWhen_RebalanceInProgress() {
     env e;
     bytes32 protocolId;
     uint64 chainSelector;
@@ -178,7 +178,7 @@ rule initiateRebalance_RevertWhen_RebalanceInProgress() {
 
 /// @notice Initiating a rebalance reverts when the new strategy equals the active strategy.
 /// @dev Verifies same strategy guard.
-rule initiateRebalance_RevertWhen_SameStrategy() {
+rule REBAL_003_initiateRebalance_RevertWhen_SameStrategy() {
     env e;
     uint64 thisChainSelector;
     bool isSupportedChain;

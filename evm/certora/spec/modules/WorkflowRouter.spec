@@ -256,7 +256,7 @@ rule setWorkflowSelectors_Success() {
     assert getAllowlistedWorkflowSelector(workflowId, s1) == isAllowlisted;
 }
 
-rule pause_RevertWhen_CallerDoesNotHavePAUSER_ROLE() {
+rule PAUSE_003_pause_RevertWhen_CallerDoesNotHavePAUSER_ROLE() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -283,7 +283,7 @@ rule pause_Success() {
     assert currentContract._paused;
 }
 
-rule unpause_RevertWhen_CallerDoesNotHaveUNPAUSER_ROLE() {
+rule PAUSE_003_unpause_RevertWhen_CallerDoesNotHaveUNPAUSER_ROLE() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -403,7 +403,7 @@ rule setWorkflowMetadata_Success() {
     assert metadata.name == name;
 }
 
-rule onReport_RevertWhen_Paused() {
+rule ROUTER_002_onReport_RevertWhen_Paused() {
     env e;
     bytes32 workflowId;
     bytes10 workflowName;
@@ -423,7 +423,7 @@ rule onReport_RevertWhen_Paused() {
     assert lastReverted;
 }
 
-rule onReport_RevertWhen_CallerDoesNotHaveKEYSTONE_FORWARDER_ROLE() {
+rule ROUTER_001_onReport_RevertWhen_CallerDoesNotHaveKEYSTONE_FORWARDER_ROLE() {
     env e;
     bytes32 workflowId;
     bytes10 workflowName;
@@ -512,7 +512,7 @@ rule onReport_RevertWhen_WorkflowOwnerIsZero() {
     assert lastReverted;
 }
 
-rule onReport_RevertWhen_WorkflowMetadataDoesNotMatch() {
+rule ROUTER_003_onReport_RevertWhen_WorkflowMetadataDoesNotMatch() {
     env e;
     bytes32 workflowId;
     bytes10 workflowName;
@@ -564,7 +564,7 @@ rule onReport_RevertWhen_ReportIsTooShort() {
     assert lastReverted;
 }
 
-rule onReport_RevertWhen_SelectorIsNotAllowlisted() {
+rule ROUTER_004_onReport_RevertWhen_SelectorIsNotAllowlisted() {
     env e;
     bytes32 workflowId;
     bytes10 workflowName;

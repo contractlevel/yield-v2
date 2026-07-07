@@ -209,7 +209,7 @@ hook LOG3(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2) {
 
 /// @notice Closing an epoch reverts when a rebalance is in progress.
 /// @dev Verifies that ParentVault storage is unchanged.
-rule closeEpoch_RevertWhen_RebalanceInProgress() {
+rule EPOCH_003_closeEpoch_RevertWhen_RebalanceInProgress() {
     env e;
     uint256 tvl;
     uint256 sharePrecision;
@@ -256,7 +256,7 @@ rule closeEpoch_RevertWhen_CurrentEpochNonceIsZero() {
 
 /// @notice Closing an epoch reverts when the previous nonzero epoch is not claimable.
 /// @dev Verifies that ParentVault storage is unchanged.
-rule closeEpoch_RevertWhen_PreviousEpochNotClaimable() {
+rule EPOCH_003_closeEpoch_RevertWhen_PreviousEpochNotClaimable() {
     env e;
     uint256 tvl;
     uint256 sharePrecision;

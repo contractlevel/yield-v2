@@ -1128,7 +1128,7 @@ rule ccipReceive_RevertWhen_TxTypeEncodingIsOutOfRange() {
 
 /// @notice CCIP receive reverts when the transaction type is unsupported by ChildVault
 /// @dev Verifies that an unsupported transaction type leaves all vault state unchanged
-rule ccipReceive_RevertWhen_TxTypeIsInvalid() {
+rule CCIP_004_ccipReceive_RevertWhen_TxTypeIsInvalid() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -2401,7 +2401,7 @@ rule executeRecovery_REBALANCE_DEPOSIT_Success() {
 
 /// @notice ChildVault CCIP send reverts when any recovery operation is already pending
 /// @dev Verifies that a pending recovery cannot be overwritten by a new send
-rule ccipSend_RevertWhen_RecoveryAlreadyPending() {
+rule REC_006_ccipSend_RevertWhen_RecoveryAlreadyPending() {
     env e;
     uint256 bridgeAmount;
     uint64 destinationChainSelector;

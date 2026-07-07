@@ -164,7 +164,7 @@ hook LOG4(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2, bytes32 
 
 /// @notice ParentVault CCIP receive reverts when the transaction type is unsupported.
 /// @dev Verifies that unsupported valid enum values leave ParentVault storage unchanged.
-rule receiveCcip_RevertWhen_TxTypeInvalid() {
+rule CCIP_004_receiveCcip_RevertWhen_TxTypeInvalid() {
     env e;
     bytes data;
     uint256 receivedAmount;

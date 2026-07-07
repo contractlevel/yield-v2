@@ -92,7 +92,7 @@ rule assetConsistency(env e) {
     assert currentContract.i_asset == currentContract.i_vault.getAsset(e);
 }
 
-rule deposit_RevertWhen_CallerIsNotVault() {
+rule ADAPTER_003_deposit_RevertWhen_CallerIsNotVault() {
     env e;
     uint256 amount;
 
@@ -155,7 +155,7 @@ rule deposit_Success_IncreasesTVLByAmount() {
     assert getTVL() >= preTVL + amount;
 }
 
-rule withdraw_RevertWhen_CallerIsNotVault() {
+rule ADAPTER_003_withdraw_RevertWhen_CallerIsNotVault() {
     env e;
     uint256 amount;
 

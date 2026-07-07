@@ -452,7 +452,7 @@ rule collectManagementFee_Success_WhenFeeSharesAreNonzero() {
 
 /// @notice Performance fee collection returns the gross price when it does not exceed the high-water mark.
 /// @dev Verifies no fee storage or event side effects.
-rule collectPerformanceFee_Success_WhenGrossPriceDoesNotExceedHighWaterMark() {
+rule SHARE_003_collectPerformanceFee_Success_WhenGrossPriceDoesNotExceedHighWaterMark() {
     env e;
     uint256 epochNonce;
     uint256 tvl;
@@ -512,7 +512,7 @@ rule collectPerformanceFee_RevertWhen_TotalYieldMultiplicationOverflows() {
 
 /// @notice Performance fee collection returns gross price when the fee would consume TVL.
 /// @dev Verifies fee >= tvl branch skips minting and high-water mark update.
-rule collectPerformanceFee_Success_WhenFeeConsumesTvl() {
+rule SHARE_003_collectPerformanceFee_Success_WhenFeeConsumesTvl() {
     env e;
     uint256 epochNonce;
     uint256 tvl;

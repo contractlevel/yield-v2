@@ -3781,7 +3781,7 @@ rule ccipReceive_RevertWhen_TxTypeEncodingIsOutOfRange() {
 /// @notice CCIP receive reverts when the transaction type is unsupported by ParentVault
 /// @dev Verifies that an unsupported transaction type (e.g. EPOCH_NET_DEPOSIT, which only
 ///      ChildVault handles) leaves all vault state unchanged
-rule ccipReceive_RevertWhen_TxTypeIsInvalid() {
+rule CCIP_004_ccipReceive_RevertWhen_TxTypeIsInvalid() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -4579,7 +4579,7 @@ rule initiateRebalance_RevertWhen_RecoveryAlreadyPending() {
 
 /// @notice Initiating a rebalance reverts when another rebalance is already in progress
 /// @dev Verifies that the active rebalance guard leaves all vault state unchanged
-rule initiateRebalance_RevertWhen_RebalanceInProgress() {
+rule REBAL_002_initiateRebalance_RevertWhen_RebalanceInProgress() {
     env e;
     Types.Strategy newStrategy;
 
@@ -4603,7 +4603,7 @@ rule initiateRebalance_RevertWhen_RebalanceInProgress() {
 
 /// @notice Initiating a rebalance reverts when the target strategy is already active
 /// @dev Verifies the same-strategy guard exposed through the ParentVault entry point
-rule initiateRebalance_RevertWhen_SameStrategy() {
+rule REBAL_003_initiateRebalance_RevertWhen_SameStrategy() {
     env e;
     Types.Strategy newStrategy;
 
@@ -5796,7 +5796,7 @@ rule closeEpoch_RevertWhen_RecoveryAlreadyPending() {
 /// @notice Closing an epoch reverts when a rebalance is in progress
 /// @dev Verifies that the vault-level entry point correctly surfaces ParentVaultEpochLib's guard
 ///      (exhaustively covered in ParentVaultEpochLib.spec) and leaves all vault state unchanged
-rule closeEpoch_RevertWhen_RebalanceInProgress() {
+rule EPOCH_003_closeEpoch_RevertWhen_RebalanceInProgress() {
     env e;
     uint256 tvl;
 
@@ -5845,7 +5845,7 @@ rule closeEpoch_RevertWhen_CurrentEpochNonceIsZero() {
 
 /// @notice Closing an epoch reverts when the previous nonzero epoch is not claimable
 /// @dev Verifies that ParentVault cannot close a new epoch while the prior epoch is unresolved
-rule closeEpoch_RevertWhen_PreviousEpochNotClaimable() {
+rule EPOCH_003_closeEpoch_RevertWhen_PreviousEpochNotClaimable() {
     env e;
     uint256 tvl;
 

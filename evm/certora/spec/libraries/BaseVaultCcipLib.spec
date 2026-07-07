@@ -101,7 +101,7 @@ hook LOG4(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2, bytes32 
 
 /// @notice Sender validation reverts when no vault is registered for the source chain.
 /// @dev Verifies that an unset cross-chain vault cannot authorize the zero address or modify harness storage.
-rule onlyAllowedSender_RevertWhen_RegisteredVaultIsZero() {
+rule CCIP_001_onlyAllowedSender_RevertWhen_RegisteredVaultIsZero() {
     env e;
     address sender;
     uint64 srcChainSelector;
@@ -123,7 +123,7 @@ rule onlyAllowedSender_RevertWhen_RegisteredVaultIsZero() {
 
 /// @notice Sender validation reverts when the sender is not the registered vault for the source chain.
 /// @dev Verifies that sender validation does not modify harness storage.
-rule onlyAllowedSender_RevertWhen_SenderIsNotRegisteredVault() {
+rule CCIP_001_onlyAllowedSender_RevertWhen_SenderIsNotRegisteredVault() {
     env e;
     address sender;
     uint64 srcChainSelector;
@@ -145,7 +145,7 @@ rule onlyAllowedSender_RevertWhen_SenderIsNotRegisteredVault() {
 
 /// @notice Sender validation succeeds for the registered vault of the source chain.
 /// @dev Verifies that successful sender validation does not modify harness storage.
-rule onlyAllowedSender_SuccessWhen_SenderIsRegisteredVault() {
+rule CCIP_001_onlyAllowedSender_SuccessWhen_SenderIsRegisteredVault() {
     env e;
     address sender;
     uint64 srcChainSelector;
@@ -654,7 +654,7 @@ rule executeCcipSend_RevertWhen_RouterCcipSendReverts() {
 
 /// @notice Received-token validation reverts unless exactly one token amount is delivered.
 /// @dev Verifies that validation does not modify harness storage.
-rule validateReceivedTokenAndGetAmount_RevertWhen_TokenAmountsLengthIsInvalid() {
+rule CCIP_002_validateReceivedTokenAndGetAmount_RevertWhen_TokenAmountsLengthIsInvalid() {
     env e;
     Client.Any2EVMMessage message;
 
@@ -674,7 +674,7 @@ rule validateReceivedTokenAndGetAmount_RevertWhen_TokenAmountsLengthIsInvalid() 
 
 /// @notice Received-token validation reverts when the delivered token is not the harness asset.
 /// @dev Verifies that validation does not modify harness storage.
-rule validateReceivedTokenAndGetAmount_RevertWhen_TokenIsInvalid() {
+rule CCIP_002_validateReceivedTokenAndGetAmount_RevertWhen_TokenIsInvalid() {
     env e;
     Client.Any2EVMMessage message;
 
@@ -696,7 +696,7 @@ rule validateReceivedTokenAndGetAmount_RevertWhen_TokenIsInvalid() {
 
 /// @notice Received-token validation reverts when the delivered asset amount is zero.
 /// @dev Verifies that validation does not modify harness storage.
-rule validateReceivedTokenAndGetAmount_RevertWhen_AmountIsZero() {
+rule CCIP_003_validateReceivedTokenAndGetAmount_RevertWhen_AmountIsZero() {
     env e;
     Client.Any2EVMMessage message;
 
