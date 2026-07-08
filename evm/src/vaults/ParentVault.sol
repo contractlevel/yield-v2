@@ -45,7 +45,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     address internal immutable i_share;
     /// @dev Initial Yieldcoin share mint precision: WAD_PRECISION / i_assetPrecision
     uint256 internal immutable i_sharePrecision;
-    /// @dev Minimum deposit amount: 100 * i_assetPrecision
+    /// @dev Minimum deposit amount: 1 * i_assetPrecision
     uint256 internal immutable i_minDepositAmount;
 
     /*//////////////////////////////////////////////////////////////
