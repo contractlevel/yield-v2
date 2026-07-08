@@ -492,6 +492,26 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         uint256 totalWithdrawUsdc = shareBurnAmount * settlementPricePerShare / SHARE_PRECISION;
         uint256 totalDepositAmount = parent.vault.getEpoch(epochNonce).totalDepositAmount;
         uint256 netWithdrawAmount = totalWithdrawUsdc - totalDepositAmount;
+
+        if (netWithdrawAmount == 0) {
+            _bootstrapActorShares(actor);
+            _ensureActiveStrategyOnChild(activeChild, protocolSeed, actorSeed, amountSeed);
+            _closeCurrentEpochIfNotEmpty();
+
+            shareBurnAmount = parent.share.balanceOf(actor);
+            epochNonce = parent.vault.getEpochNonce();
+            eq(parent.vault.getEpoch(epochNonce).totalDepositAmount, 0, "recovery setup: staged epoch has deposits");
+            t(shareBurnAmount != 0, "recovery setup: actor has no shares");
+
+            _withdrawAndAssert(actor, shareBurnAmount, "recovery setup: shares not escrowed");
+
+            tvl = _activeStrategyTvl();
+            settlementPricePerShare = _closeEpochSettlementPricePerShare(tvl);
+            totalWithdrawUsdc = shareBurnAmount * settlementPricePerShare / SHARE_PRECISION;
+            totalDepositAmount = parent.vault.getEpoch(epochNonce).totalDepositAmount;
+            netWithdrawAmount = totalWithdrawUsdc - totalDepositAmount;
+        }
+
         t(netWithdrawAmount != 0, "recovery setup: net withdraw is zero");
 
         _setActiveStrategyWithdrawReturn(netWithdrawAmount);

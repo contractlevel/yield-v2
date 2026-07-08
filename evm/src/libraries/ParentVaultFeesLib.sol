@@ -140,6 +140,7 @@ library ParentVaultFeesLib {
         uint256 totalShares = $.s_totalShares;
         if (totalShares != 0 && tvl != 0) {
             pricePerShare = tvl * sharePrecision / totalShares;
+            if (pricePerShare == 0) revert IParentVault.ParentVault__ZeroPricePerShare();
         } else if (totalShares == 0) {
             pricePerShare = sharePrecision;
         } else {

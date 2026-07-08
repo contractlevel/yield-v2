@@ -16,7 +16,7 @@ abstract contract Constants {
     bytes32 internal constant AAVE_V4_PROTOCOL_ID = keccak256("aave-v4");
     bytes32 internal constant COMPOUND_V3_PROTOCOL_ID = keccak256("compound-v3");
 
-    uint256 internal constant MIN_DEPOSIT_AMOUNT = 100 * 1e6;
+    uint256 internal constant MIN_DEPOSIT_AMOUNT = 1 * 1e6;
     uint256 internal constant DEPOSIT_AMOUNT = MIN_DEPOSIT_AMOUNT;
     uint256 internal constant SHARE_PRECISION = 1e12;
     uint256 internal constant MIN_EPOCH_PERIOD = 1 hours;

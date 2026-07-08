@@ -10,7 +10,7 @@ import {IProtocolAdapter} from "../../../../src/interfaces/IProtocolAdapter.sol"
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract AaveV4Adapter_DepositUnitTest is BaseAaveV4AdapterUnitTest {
-    uint256 internal constant PARTIAL_DEPOSIT_AMOUNT = 50 * 1e6;
+    uint256 internal constant PARTIAL_DEPOSIT_AMOUNT = DEPOSIT_AMOUNT / 2;
 
     function setUp() public {
         deal(address(s_mockUsdc), address(s_aaveV4Adapter), DEPOSIT_AMOUNT);

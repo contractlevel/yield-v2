@@ -58,13 +58,15 @@ library ParentVaultRebalanceLib {
         uint64 thisChainSelector,
         bool isSupportedChain
     ) internal returns (InitiateRebalanceResult memory result) {
-        if ($.s_rebalance.state != Types.RebalanceState.NONE) {
+        Types.Rebalance storage s_rebalance = $.s_rebalance;
+        if (s_rebalance.state != Types.RebalanceState.NONE) {
             revert IParentVault.ParentVault__RebalanceInProgress();
         }
 
+        Types.Strategy memory activeStrategy = s_rebalance.activeStrategy;
         if (
-            $.s_rebalance.activeStrategy.protocolId == newStrategy.protocolId
-                && $.s_rebalance.activeStrategy.chainSelector == newStrategy.chainSelector
+            activeStrategy.protocolId == newStrategy.protocolId
+                && activeStrategy.chainSelector == newStrategy.chainSelector
         ) {
             revert IParentVault.ParentVault__SameStrategy();
         }
@@ -80,14 +82,14 @@ library ParentVaultRebalanceLib {
             revert IParentVault.ParentVault__EpochExecuting(currentEpochNonce - 1);
         }
 
-        uint256 rebalanceNonce = $.s_rebalance.nonce;
-        $.s_rebalance.state = Types.RebalanceState.REBALANCING;
-        $.s_rebalance.pendingStrategy = newStrategy;
-        $.s_rebalance.lastRebalanceInitiatedTimestamp = block.timestamp;
+        uint256 rebalanceNonce = s_rebalance.nonce;
+        s_rebalance.state = Types.RebalanceState.REBALANCING;
+        s_rebalance.pendingStrategy = newStrategy;
+        s_rebalance.lastRebalanceInitiatedTimestamp = block.timestamp;
         emit RebalanceInitiated(rebalanceNonce, newStrategy.chainSelector, newStrategy.protocolId);
 
         result.rebalanceNonce = rebalanceNonce;
-        if ($.s_rebalance.activeStrategy.chainSelector == thisChainSelector) {
+        if (activeStrategy.chainSelector == thisChainSelector) {
             if (newStrategy.chainSelector == thisChainSelector) {
                 result.action = ExternalAction.WITHDRAW_LOCAL_TO_LOCAL;
             } else {
@@ -104,21 +106,22 @@ library ParentVaultRebalanceLib {
     }
 
     function _finalizeRebalance(ParentVaultStore.ParentVaultStorage storage $, address share) internal {
-        if ($.s_rebalance.state != Types.RebalanceState.REBALANCING) {
+        Types.Rebalance storage s_rebalance = $.s_rebalance;
+        if (s_rebalance.state != Types.RebalanceState.REBALANCING) {
             revert IParentVault.ParentVault__NoRebalanceInProgress();
         }
 
-        uint256 rebalanceNonce = $.s_rebalance.nonce;
-        uint256 lastRebalanceCompletedTimestamp = $.s_rebalance.lastRebalanceCompletedTimestamp;
+        uint256 rebalanceNonce = s_rebalance.nonce;
+        uint256 lastRebalanceCompletedTimestamp = s_rebalance.lastRebalanceCompletedTimestamp;
 
-        Types.Strategy memory newStrategy = $.s_rebalance.pendingStrategy;
-        $.s_rebalance.activeStrategy = newStrategy;
-        $.s_rebalance.state = Types.RebalanceState.NONE;
-        $.s_rebalance.lastRebalanceCompletedTimestamp = block.timestamp;
-        delete $.s_rebalance.pendingStrategy;
+        Types.Strategy memory newStrategy = s_rebalance.pendingStrategy;
+        s_rebalance.activeStrategy = newStrategy;
+        s_rebalance.state = Types.RebalanceState.NONE;
+        s_rebalance.lastRebalanceCompletedTimestamp = block.timestamp;
+        delete s_rebalance.pendingStrategy;
 
         emit RebalanceCompleted(rebalanceNonce, newStrategy.protocolId, newStrategy.chainSelector);
-        ++$.s_rebalance.nonce;
+        s_rebalance.nonce = rebalanceNonce + 1;
         ParentVaultFeesLib._collectManagementFee($, rebalanceNonce, lastRebalanceCompletedTimestamp, share);
     }
 }

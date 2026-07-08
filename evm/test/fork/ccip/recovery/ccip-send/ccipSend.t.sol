@@ -45,7 +45,7 @@ contract CcipSend_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
 
         _prepareBaseToParentRouting();
         _setCrosschainVault(baseChild.vault, arbitrumConfig.ccip.thisChainSelector, INVALID_CCIP_RECEIVER);
-        vm.warp(block.timestamp + 5 minutes);
+        vm.warp(block.timestamp + 1 days);
 
         vm.recordLogs();
         _executeEpochWithdrawThroughWorkflow(baseChild.workflowRouter, WITHDRAW_WORKFLOW_ID, 2, shareAmount);

@@ -25,6 +25,13 @@ contract YieldcoinShare is ComplianceTokenERC3643, YieldcoinShareStore {
     event CCIPAdminTransferred(address indexed previousAdmin, address indexed newAdmin);
 
     /*//////////////////////////////////////////////////////////////
+                              CONSTRUCTOR
+    //////////////////////////////////////////////////////////////*/
+    constructor() {
+        _disableInitializers();
+    }
+
+    /*//////////////////////////////////////////////////////////////
                                INITIALIZE
     //////////////////////////////////////////////////////////////*/
     /// @param policyEngine Chainlink ACE PolicyEngine component

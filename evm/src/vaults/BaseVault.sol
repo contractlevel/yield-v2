@@ -243,7 +243,7 @@ abstract contract BaseVault is
         if (success) {
             emit RebalanceDepositSuccess(rebalanceNonce, amount);
         } else {
-            _storeRebalanceDepositRecovery(rebalanceNonce, amount);
+            _storeRebalanceDepositRecovery(_baseVaultStorage(), rebalanceNonce, amount);
             emit RebalanceDepositFailure(rebalanceNonce, amount);
         }
     }
@@ -327,12 +327,20 @@ abstract contract BaseVault is
     function _storeRebalanceDepositRecovery(uint256 rebalanceNonce, uint256 amount) internal {
         //slither-disable-next-line incorrect-equality
         if (amount == 0) revert BaseVault__ZeroRecoveryAmount();
-        _requireNoRecovery();
+        BaseVaultStorage storage $ = _baseVaultStorage();
+        _requireNoRecovery($);
+        _storeRebalanceDepositRecovery($, rebalanceNonce, amount);
+    }
 
-        _baseVaultStorage().s_rebalanceDepositRecovery = Types.RebalanceDepositRecovery({
+    function _storeRebalanceDepositRecovery(
+        BaseVaultStorage storage $,
+        uint256 rebalanceNonce,
+        uint256 amount
+    ) internal {
+        $.s_rebalanceDepositRecovery = Types.RebalanceDepositRecovery({
             rebalanceNonce: rebalanceNonce, amount: amount, createdAt: block.timestamp
         });
-        _baseVaultStorage().s_recoveryMode = Types.RecoveryMode.REBALANCE_DEPOSIT;
+        $.s_recoveryMode = Types.RecoveryMode.REBALANCE_DEPOSIT;
         emit RebalanceDepositRecoveryStored(rebalanceNonce, amount);
     }
 
@@ -342,11 +350,15 @@ abstract contract BaseVault is
     /// @dev Deletes the recovery state
     /// @dev Emites RebalanceDepositRecoveryCleared event
     function _clearRebalanceDepositRecovery() internal {
-        _requireRecoveryMode(Types.RecoveryMode.REBALANCE_DEPOSIT);
-        uint256 rebalanceNonce = _baseVaultStorage().s_rebalanceDepositRecovery.rebalanceNonce;
+        BaseVaultStorage storage $ = _baseVaultStorage();
+        _requireRecoveryMode($, Types.RecoveryMode.REBALANCE_DEPOSIT);
+        _clearRebalanceDepositRecovery($);
+    }
 
-        delete _baseVaultStorage().s_rebalanceDepositRecovery;
-        _baseVaultStorage().s_recoveryMode = Types.RecoveryMode.NONE;
+    function _clearRebalanceDepositRecovery(BaseVaultStorage storage $) internal {
+        uint256 rebalanceNonce = $.s_rebalanceDepositRecovery.rebalanceNonce;
+        delete $.s_rebalanceDepositRecovery;
+        $.s_recoveryMode = Types.RecoveryMode.NONE;
         emit RebalanceDepositRecoveryCleared(rebalanceNonce);
     }
 
@@ -354,19 +366,28 @@ abstract contract BaseVault is
     /// @dev Precondition: A rebalance deposit recovery must exist
     /// @param recovery Types.RebalanceDepositRecovery
     function _requireRebalanceDepositRecovery() internal view returns (Types.RebalanceDepositRecovery memory recovery) {
-        _requireRecoveryMode(Types.RecoveryMode.REBALANCE_DEPOSIT);
-        recovery = _baseVaultStorage().s_rebalanceDepositRecovery;
+        BaseVaultStorage storage $ = _baseVaultStorage();
+        _requireRecoveryMode($, Types.RecoveryMode.REBALANCE_DEPOSIT);
+        recovery = $.s_rebalanceDepositRecovery;
     }
 
     /// @notice Reverts if any recovery state is pending
     function _requireNoRecovery() internal view {
-        if (_baseVaultStorage().s_recoveryMode != Types.RecoveryMode.NONE) revert BaseVault__RecoveryAlreadyPending();
+        _requireNoRecovery(_baseVaultStorage());
+    }
+
+    function _requireNoRecovery(BaseVaultStorage storage $) internal view {
+        if ($.s_recoveryMode != Types.RecoveryMode.NONE) revert BaseVault__RecoveryAlreadyPending();
     }
 
     /// @notice Reverts if the active recovery mode does not match the expected mode
     /// @param expected The recovery mode required by the caller
     function _requireRecoveryMode(Types.RecoveryMode expected) internal view {
-        if (_baseVaultStorage().s_recoveryMode != expected) revert BaseVault__NoPendingRecovery();
+        _requireRecoveryMode(_baseVaultStorage(), expected);
+    }
+
+    function _requireRecoveryMode(BaseVaultStorage storage $, Types.RecoveryMode expected) internal view {
+        if ($.s_recoveryMode != expected) revert BaseVault__NoPendingRecovery();
     }
 
     /// @notice Executes the active recovery mode, reverting if no recovery is pending
@@ -381,14 +402,23 @@ abstract contract BaseVault is
     /// @return rebalanceNonce the nonce of the recovered rebalance deposit
     /// @return amount the amount of the underlying asset rebalanced/deposited into the new strategy
     function _recoverFailedRebalanceDeposit() internal returns (uint256 rebalanceNonce, uint256 amount) {
-        Types.RebalanceDepositRecovery memory recovery = _requireRebalanceDepositRecovery();
+        BaseVaultStorage storage $ = _baseVaultStorage();
+        _requireRecoveryMode($, Types.RecoveryMode.REBALANCE_DEPOSIT);
+        (rebalanceNonce, amount) = _recoverFailedRebalanceDeposit($);
+    }
+
+    function _recoverFailedRebalanceDeposit(BaseVaultStorage storage $)
+        internal
+        returns (uint256 rebalanceNonce, uint256 amount)
+    {
+        Types.RebalanceDepositRecovery memory recovery = $.s_rebalanceDepositRecovery;
         rebalanceNonce = recovery.rebalanceNonce;
-
-        _executeDeposit(recovery.amount, true);
-        _clearRebalanceDepositRecovery();
-
-        emit RebalanceDepositSuccess(rebalanceNonce, recovery.amount);
         amount = recovery.amount;
+
+        _executeDeposit(amount, true);
+        _clearRebalanceDepositRecovery($);
+
+        emit RebalanceDepositSuccess(rebalanceNonce, amount);
     }
 
     /// @dev Precondition: Caller must have the EMERGENCY_DRAINER_ROLE
@@ -404,15 +434,16 @@ abstract contract BaseVault is
         onlyRole(Roles.EMERGENCY_DRAINER_ROLE)
         whenPaused
     {
+        BaseVaultStorage storage $ = _baseVaultStorage();
         //slither-disable-next-line timestamp
-        if (block.timestamp - _baseVaultStorage().s_pausedAt < EMERGENCY_DRAIN_DELAY) {
+        if (block.timestamp - $.s_pausedAt < EMERGENCY_DRAIN_DELAY) {
             revert BaseVault__EmergencyDrainDelayNotMet();
         }
 
         if (_getTVL() > 0) _executeWithdraw(type(uint256).max, revertOnFailure);
 
         uint256 balance = IERC20(i_asset).balanceOf(address(this));
-        address emergencyReceiver = _baseVaultStorage().s_emergencyReceiver;
+        address emergencyReceiver = $.s_emergencyReceiver;
         IERC20(i_asset).safeTransfer(emergencyReceiver, balance);
         emit EmergencyDrainExecuted(emergencyReceiver, balance);
     }

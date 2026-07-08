@@ -60,12 +60,12 @@ library ParentVaultUserEpochLib {
     ) internal returns (uint256 epochNonce) {
         if (amount < minDepositAmount) revert IParentVault.ParentVault__AmountTooSmall(amount);
         epochNonce = $.s_epochNonce;
-        Types.Epoch storage epoch = $.s_epochs[epochNonce];
+        Types.Epoch storage s_epoch = $.s_epochs[epochNonce];
         /// @dev This condition should never be hit under normal operations as the epoch nonce is incremented on openNextEpoch
-        if (epoch.status != Types.EpochStatus.OPEN) revert IParentVault.ParentVault__EpochNotOpen(epochNonce);
+        if (s_epoch.status != Types.EpochStatus.OPEN) revert IParentVault.ParentVault__EpochNotOpen(epochNonce);
 
         $.s_deposits[user][epochNonce] += amount;
-        epoch.totalDepositAmount += amount;
+        s_epoch.totalDepositAmount += amount;
 
         IERC20(asset).safeTransferFrom(user, address(this), amount);
         emit DepositSubmitted(epochNonce, user, amount);
@@ -97,12 +97,12 @@ library ParentVaultUserEpochLib {
     ) internal returns (uint256 epochNonce) {
         if (shareBurnAmount == 0) revert IParentVault.ParentVault__NoZeroAmount();
         epochNonce = $.s_epochNonce;
-        Types.Epoch storage epoch = $.s_epochs[epochNonce];
+        Types.Epoch storage s_epoch = $.s_epochs[epochNonce];
         /// @dev This condition should never be hit under normal operations as the epoch nonce is incremented on openNextEpoch
-        if (epoch.status != Types.EpochStatus.OPEN) revert IParentVault.ParentVault__EpochNotOpen(epochNonce);
+        if (s_epoch.status != Types.EpochStatus.OPEN) revert IParentVault.ParentVault__EpochNotOpen(epochNonce);
 
         $.s_withdraws[user][epochNonce] += shareBurnAmount;
-        epoch.totalShareBurnAmount += shareBurnAmount;
+        s_epoch.totalShareBurnAmount += shareBurnAmount;
 
         IERC20(share).safeTransferFrom(user, address(this), shareBurnAmount);
 
@@ -129,23 +129,24 @@ library ParentVaultUserEpochLib {
         internal
         returns (uint256 shareMintAmount)
     {
-        Types.Epoch storage epoch = $.s_epochs[epochNonce];
-        if (epoch.status != Types.EpochStatus.CLAIMABLE) {
+        Types.Epoch storage s_epoch = $.s_epochs[epochNonce];
+        if (s_epoch.status != Types.EpochStatus.CLAIMABLE) {
             revert IParentVault.ParentVault__EpochNotClaimable(epochNonce);
         }
 
         uint256 depositAmount = $.s_deposits[user][epochNonce];
         if (depositAmount == 0) revert IParentVault.ParentVault__NoDeposit(user, epochNonce);
 
-        if (depositAmount != epoch.remainingDepositClaimAmount) {
-            shareMintAmount =
-                proportionalAmount(depositAmount, epoch.remainingShareMintAmount, epoch.remainingDepositClaimAmount);
+        uint256 remainingDepositClaimAmount = s_epoch.remainingDepositClaimAmount;
+        uint256 remainingShareMintAmount = s_epoch.remainingShareMintAmount;
+        if (depositAmount != remainingDepositClaimAmount) {
+            shareMintAmount = proportionalAmount(depositAmount, remainingShareMintAmount, remainingDepositClaimAmount);
         } else {
-            shareMintAmount = epoch.remainingShareMintAmount;
+            shareMintAmount = remainingShareMintAmount;
         }
 
-        epoch.remainingDepositClaimAmount -= depositAmount;
-        epoch.remainingShareMintAmount -= shareMintAmount;
+        s_epoch.remainingDepositClaimAmount = remainingDepositClaimAmount - depositAmount;
+        s_epoch.remainingShareMintAmount -= shareMintAmount;
 
         delete $.s_deposits[user][epochNonce];
         IShare(share).mint(user, shareMintAmount);
@@ -180,23 +181,25 @@ library ParentVaultUserEpochLib {
         address user,
         uint256 epochNonce
     ) internal returns (uint256 withdrawAmount) {
-        Types.Epoch storage epoch = $.s_epochs[epochNonce];
-        if (epoch.status != Types.EpochStatus.CLAIMABLE) {
+        Types.Epoch storage s_epoch = $.s_epochs[epochNonce];
+        if (s_epoch.status != Types.EpochStatus.CLAIMABLE) {
             revert IParentVault.ParentVault__EpochNotClaimable(epochNonce);
         }
 
         uint256 shareBurnAmount = $.s_withdraws[user][epochNonce];
         if (shareBurnAmount == 0) revert IParentVault.ParentVault__NoWithdraw(user, epochNonce);
 
-        if (shareBurnAmount != epoch.remainingShareBurnAmount) {
+        uint256 remainingShareBurnAmount = s_epoch.remainingShareBurnAmount;
+        uint256 remainingWithdrawClaimAmount = s_epoch.remainingWithdrawClaimAmount;
+        if (shareBurnAmount != remainingShareBurnAmount) {
             withdrawAmount =
-                proportionalAmount(shareBurnAmount, epoch.remainingWithdrawClaimAmount, epoch.remainingShareBurnAmount);
+                proportionalAmount(shareBurnAmount, remainingWithdrawClaimAmount, remainingShareBurnAmount);
         } else {
-            withdrawAmount = epoch.remainingWithdrawClaimAmount;
+            withdrawAmount = remainingWithdrawClaimAmount;
         }
 
-        epoch.remainingShareBurnAmount -= shareBurnAmount;
-        epoch.remainingWithdrawClaimAmount -= withdrawAmount;
+        s_epoch.remainingShareBurnAmount = remainingShareBurnAmount - shareBurnAmount;
+        s_epoch.remainingWithdrawClaimAmount = remainingWithdrawClaimAmount - withdrawAmount;
 
         delete $.s_withdraws[user][epochNonce];
 
@@ -219,13 +222,13 @@ library ParentVaultUserEpochLib {
 
     function _cancelDeposit(ParentVaultStore.ParentVaultStorage storage $, address asset, address user) internal {
         uint256 epochNonce = $.s_epochNonce;
-        Types.Epoch storage epoch = $.s_epochs[epochNonce];
-        if (epoch.status != Types.EpochStatus.OPEN) revert IParentVault.ParentVault__EpochNotOpen(epochNonce);
+        Types.Epoch storage s_epoch = $.s_epochs[epochNonce];
+        if (s_epoch.status != Types.EpochStatus.OPEN) revert IParentVault.ParentVault__EpochNotOpen(epochNonce);
 
         uint256 depositAmount = $.s_deposits[user][epochNonce];
         if (depositAmount == 0) revert IParentVault.ParentVault__NoDeposit(user, epochNonce);
         delete $.s_deposits[user][epochNonce];
-        epoch.totalDepositAmount -= depositAmount;
+        s_epoch.totalDepositAmount -= depositAmount;
 
         IERC20(asset).safeTransfer(user, depositAmount);
 
@@ -245,14 +248,14 @@ library ParentVaultUserEpochLib {
 
     function _cancelWithdraw(ParentVaultStore.ParentVaultStorage storage $, address share, address user) internal {
         uint256 epochNonce = $.s_epochNonce;
-        Types.Epoch storage epoch = $.s_epochs[epochNonce];
-        if (epoch.status != Types.EpochStatus.OPEN) revert IParentVault.ParentVault__EpochNotOpen(epochNonce);
+        Types.Epoch storage s_epoch = $.s_epochs[epochNonce];
+        if (s_epoch.status != Types.EpochStatus.OPEN) revert IParentVault.ParentVault__EpochNotOpen(epochNonce);
 
         uint256 shareBurnAmount = $.s_withdraws[user][epochNonce];
         if (shareBurnAmount == 0) revert IParentVault.ParentVault__NoWithdraw(user, epochNonce);
         delete $.s_withdraws[user][epochNonce];
 
-        epoch.totalShareBurnAmount -= shareBurnAmount;
+        s_epoch.totalShareBurnAmount -= shareBurnAmount;
 
         IERC20(share).safeTransfer(user, shareBurnAmount);
 

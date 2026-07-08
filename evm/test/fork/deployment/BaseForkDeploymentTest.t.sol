@@ -38,7 +38,7 @@ abstract contract BaseForkDeploymentTest is BaseForkTest {
         assertEq(parent.vault.getAsset(), parent.asset);
         assertEq(parent.vault.getAssetPrecision(), 10 ** 6);
         assertEq(parent.vault.getSharePrecision(), 1e18 / parent.vault.getAssetPrecision());
-        assertEq(parent.vault.getMinDepositAmount(), 100 * parent.vault.getAssetPrecision());
+        assertEq(parent.vault.getMinDepositAmount(), 1 * parent.vault.getAssetPrecision());
         assertEq(parent.vault.getLink(), parent.link);
         assertEq(parent.vault.getThisChainSelector(), arbitrumConfig.ccip.parentChainSelector);
         assertEq(parent.vault.getDefaultCcipGasLimit(), arbitrumConfig.ccip.initialDefaultCcipGasLimit);

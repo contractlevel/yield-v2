@@ -53,7 +53,7 @@ contract ChildWithdraw_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
 
         _restoreBaseAaveV3Adapter();
         _prepareBaseToParentRouting();
-        vm.warp(block.timestamp + 5 minutes);
+        vm.warp(block.timestamp + 1 days);
         baseChild.vault.executeRecovery();
 
         _selectBaseFork();

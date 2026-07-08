@@ -60,8 +60,9 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
 
         i_share = share;
         i_sharePrecision = WAD_PRECISION / i_assetPrecision;
-        // @review changing this to 1
-        i_minDepositAmount = 100 * i_assetPrecision;
+        i_minDepositAmount = 1 * i_assetPrecision;
+
+        _disableInitializers();
     }
 
     /// @notice Initializes ParentVault mutable proxy state.
@@ -322,9 +323,10 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     ///         A DONATE_OPERATOR_ROLE holder can call donate() to restore TVL; the next close will price shares against the donated amount.
     function closeEpoch(uint256 tvl) external nonReentrant whenNotPaused onlyRole(Roles.EPOCH_OPERATOR_ROLE) {
         ParentVaultStorage storage $ = _parentVaultStorage();
-        _requireNoRecovery();
+        BaseVaultStorage storage $_baseVault = _baseVaultStorage();
+        _requireNoRecovery($_baseVault);
 
-        bool isLocalStrategy = _baseVaultStorage().s_activeProtocolAdapter != address(0);
+        bool isLocalStrategy = $_baseVault.s_activeProtocolAdapter != address(0);
         ParentVaultEpochLib.CloseEpochExternalAction memory externalAction =
             ParentVaultEpochLib.closeEpoch($, tvl, i_share, i_sharePrecision, i_minDepositAmount, isLocalStrategy);
 
@@ -369,9 +371,10 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         onlyRole(Roles.REBALANCE_OPERATOR_ROLE)
     {
         ParentVaultStorage storage $ = _parentVaultStorage();
-        _requireNoRecovery();
+        BaseVaultStorage storage $_baseVault = _baseVaultStorage();
+        _requireNoRecovery($_baseVault);
 
-        bool isSupportedChain = _baseVaultStorage().s_crosschainVaults[newStrategy.chainSelector] != address(0);
+        bool isSupportedChain = $_baseVault.s_crosschainVaults[newStrategy.chainSelector] != address(0);
         ParentVaultRebalanceLib.InitiateRebalanceResult memory result =
             ParentVaultRebalanceLib.initiateRebalance($, newStrategy, i_thisChainSelector, isSupportedChain);
 
@@ -417,8 +420,9 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @dev Precondition: function must not be reentered
     /// @dev For REBALANCE_DEPOSIT: also finalizes the rebalance in the same atomic tx
     function executeRecovery() external override(BaseVault, IBaseVault) nonReentrant {
-        if (_baseVaultStorage().s_recoveryMode == Types.RecoveryMode.NONE) revert BaseVault__NoPendingRecovery();
-        _recoverFailedRebalanceDeposit();
+        BaseVaultStorage storage $_baseVault = _baseVaultStorage();
+        if ($_baseVault.s_recoveryMode == Types.RecoveryMode.NONE) revert BaseVault__NoPendingRecovery();
+        _recoverFailedRebalanceDeposit($_baseVault);
         ParentVaultRebalanceLib.finalizeRebalance(_parentVaultStorage(), i_share);
     }
 

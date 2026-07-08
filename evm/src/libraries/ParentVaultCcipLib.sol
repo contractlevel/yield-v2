@@ -59,16 +59,18 @@ library ParentVaultCcipLib {
     ) internal {
         uint256 epochNonce = abi.decode(data, (uint256));
         if (epochNonce != $.s_epochNonce - 1) revert IParentVault.ParentVault__InvalidEpochNonce(epochNonce);
-        Types.Epoch storage epoch = $.s_epochs[epochNonce];
+        Types.Epoch storage s_epoch = $.s_epochs[epochNonce];
 
-        uint256 expectedWithdraw = epoch.totalWithdrawClaimAmount - epoch.totalDepositAmount;
-        epoch.totalWithdrawClaimAmount = epoch.totalDepositAmount + receivedAmount;
-        epoch.remainingWithdrawClaimAmount = epoch.totalWithdrawClaimAmount;
+        uint256 totalDepositAmount = s_epoch.totalDepositAmount;
+        uint256 expectedWithdraw = s_epoch.totalWithdrawClaimAmount - totalDepositAmount;
+        uint256 totalWithdrawClaimAmount = totalDepositAmount + receivedAmount;
+        s_epoch.totalWithdrawClaimAmount = totalWithdrawClaimAmount;
+        s_epoch.remainingWithdrawClaimAmount = totalWithdrawClaimAmount;
         if (receivedAmount < expectedWithdraw) {
             emit EpochWithdrawAmountShort(epochNonce, expectedWithdraw, receivedAmount);
         }
 
-        _finalizeEpoch($, epochNonce);
+        _finalizeEpoch(s_epoch, epochNonce);
     }
 
     function _validateRebalance(ParentVaultStore.ParentVaultStorage storage $, bytes memory data)
@@ -76,25 +78,26 @@ library ParentVaultCcipLib {
         view
         returns (uint256 rebalanceNonce, bytes32 protocolId)
     {
-        Types.Rebalance memory rebalance = $.s_rebalance;
-        if (rebalance.state != Types.RebalanceState.REBALANCING) {
+        Types.Rebalance storage s_rebalance = $.s_rebalance;
+        if (s_rebalance.state != Types.RebalanceState.REBALANCING) {
             revert IParentVault.ParentVault__NoRebalanceInProgress();
         }
 
         (rebalanceNonce, protocolId) = abi.decode(data, (uint256, bytes32));
-        if (rebalance.nonce != rebalanceNonce) revert IParentVault.ParentVault__InvalidRebalanceNonce(rebalanceNonce);
-        if (rebalance.pendingStrategy.protocolId != protocolId) {
+        if (s_rebalance.nonce != rebalanceNonce) {
+            revert IParentVault.ParentVault__InvalidRebalanceNonce(rebalanceNonce);
+        }
+        if (s_rebalance.pendingStrategy.protocolId != protocolId) {
             revert IParentVault.ParentVault__InvalidPendingProtocolId(protocolId);
         }
     }
 
-    function _finalizeEpoch(ParentVaultStore.ParentVaultStorage storage $, uint256 epochNonce) internal {
-        Types.Epoch storage epoch = $.s_epochs[epochNonce];
-        if (epoch.status != Types.EpochStatus.EXECUTING) {
+    function _finalizeEpoch(Types.Epoch storage s_epoch, uint256 epochNonce) internal {
+        if (s_epoch.status != Types.EpochStatus.EXECUTING) {
             revert IParentVault.ParentVault__EpochNotExecuting(epochNonce);
         }
 
-        epoch.status = Types.EpochStatus.CLAIMABLE;
+        s_epoch.status = Types.EpochStatus.CLAIMABLE;
         emit EpochClaimable(epochNonce);
     }
 }

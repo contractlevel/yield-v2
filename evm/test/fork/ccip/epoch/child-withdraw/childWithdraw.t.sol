@@ -38,7 +38,7 @@ contract ChildWithdraw_CcipForkTest is BaseCcipForkTest {
 
         _selectBaseFork();
         _setBaseChildActiveAdapterToAaveV3();
-        vm.warp(block.timestamp + 5 minutes); // skip time to avoid minor wei rounding issues when attempting to withdraw straight away
+        vm.warp(block.timestamp + 1 days); // skip time to avoid aToken rounding at 1 USDC scale
         _executeEpochWithdrawThroughWorkflow(baseChild.workflowRouter, WITHDRAW_WORKFLOW_ID, 2, shareAmount);
         _routeUsdcMessageTo(arbitrumFork);
 

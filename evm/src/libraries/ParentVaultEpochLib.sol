@@ -82,12 +82,14 @@ library ParentVaultEpochLib {
             revert IParentVault.ParentVault__EpochNotClaimable(previousEpochNonce);
         }
 
-        Types.Epoch storage epoch = $.s_epochs[epochNonce];
-        if (epoch.status != Types.EpochStatus.OPEN) revert IParentVault.ParentVault__EpochNotOpen(epochNonce);
-        if (block.timestamp < epoch.openedAtTimestamp + MIN_EPOCH_PERIOD) {
+        Types.Epoch storage s_epoch = $.s_epochs[epochNonce];
+        if (s_epoch.status != Types.EpochStatus.OPEN) revert IParentVault.ParentVault__EpochNotOpen(epochNonce);
+        if (block.timestamp < s_epoch.openedAtTimestamp + MIN_EPOCH_PERIOD) {
             revert IParentVault.ParentVault__EpochTooShort(epochNonce);
         }
-        if (epoch.totalDepositAmount == 0 && epoch.totalShareBurnAmount == 0) {
+        uint256 totalDepositAmount = s_epoch.totalDepositAmount;
+        uint256 totalShareBurnAmount = s_epoch.totalShareBurnAmount;
+        if (totalDepositAmount == 0 && totalShareBurnAmount == 0) {
             revert IParentVault.ParentVault__EmptyEpoch(epochNonce);
         }
 
@@ -95,26 +97,26 @@ library ParentVaultEpochLib {
         uint256 settlementPricePerShare =
             ParentVaultFeesLib._collectPerformanceFee($, epochNonce, tvl, grossPricePerShare, share, sharePrecision);
 
-        uint256 totalWithdraw = epoch.totalShareBurnAmount * settlementPricePerShare / sharePrecision;
-        int256 netFlow = int256(epoch.totalDepositAmount) - int256(totalWithdraw);
+        uint256 totalWithdraw = totalShareBurnAmount * settlementPricePerShare / sharePrecision;
+        int256 netFlow = int256(totalDepositAmount) - int256(totalWithdraw);
 
-        uint256 newShares = epoch.totalDepositAmount * sharePrecision / settlementPricePerShare;
-        if (epoch.totalDepositAmount != 0 && newShares * minDepositAmount < epoch.totalDepositAmount) {
+        uint256 newShares = totalDepositAmount * sharePrecision / settlementPricePerShare;
+        if (totalDepositAmount != 0 && newShares * minDepositAmount < totalDepositAmount) {
             revert IParentVault.ParentVault__DepositWouldMintZeroShares();
         }
-        $.s_totalShares = $.s_totalShares + newShares - epoch.totalShareBurnAmount;
+        $.s_totalShares = $.s_totalShares + newShares - totalShareBurnAmount;
 
-        epoch.totalWithdrawClaimAmount = totalWithdraw;
-        epoch.pricePerShare = settlementPricePerShare;
-        epoch.remainingDepositClaimAmount = epoch.totalDepositAmount;
-        epoch.remainingShareMintAmount = newShares;
-        epoch.remainingShareBurnAmount = epoch.totalShareBurnAmount;
-        epoch.remainingWithdrawClaimAmount = totalWithdraw;
-        epoch.closedAtTimestamp = block.timestamp;
+        s_epoch.totalWithdrawClaimAmount = totalWithdraw;
+        s_epoch.pricePerShare = settlementPricePerShare;
+        s_epoch.remainingDepositClaimAmount = totalDepositAmount;
+        s_epoch.remainingShareMintAmount = newShares;
+        s_epoch.remainingShareBurnAmount = totalShareBurnAmount;
+        s_epoch.remainingWithdrawClaimAmount = totalWithdraw;
+        s_epoch.closedAtTimestamp = block.timestamp;
 
         externalAction.epochNonce = epochNonce;
         if (netFlow >= 0) {
-            epoch.status = Types.EpochStatus.CLAIMABLE;
+            s_epoch.status = Types.EpochStatus.CLAIMABLE;
             emit EpochClaimable(epochNonce);
 
             if (netFlow == 0) return externalAction;
@@ -132,7 +134,7 @@ library ParentVaultEpochLib {
                 externalAction.action = ExternalAction.WITHDRAW_FROM_LOCAL_STRATEGY;
             } else {
                 externalAction.action = ExternalAction.WAIT_FOR_REMOTE_WITHDRAW;
-                epoch.status = Types.EpochStatus.EXECUTING;
+                s_epoch.status = Types.EpochStatus.EXECUTING;
                 emit EpochExecuting(epochNonce, netWithdrawAmount);
             }
         }
@@ -155,10 +157,11 @@ library ParentVaultEpochLib {
         uint256 epochNonce,
         uint256 amountOut
     ) internal {
-        Types.Epoch storage epoch = $.s_epochs[epochNonce];
-        epoch.totalWithdrawClaimAmount = epoch.totalDepositAmount + amountOut;
-        epoch.remainingWithdrawClaimAmount = epoch.totalWithdrawClaimAmount;
-        epoch.status = Types.EpochStatus.CLAIMABLE;
+        Types.Epoch storage s_epoch = $.s_epochs[epochNonce];
+        uint256 totalWithdrawClaimAmount = s_epoch.totalDepositAmount + amountOut;
+        s_epoch.totalWithdrawClaimAmount = totalWithdrawClaimAmount;
+        s_epoch.remainingWithdrawClaimAmount = totalWithdrawClaimAmount;
+        s_epoch.status = Types.EpochStatus.CLAIMABLE;
         emit EpochClaimable(epochNonce);
     }
 

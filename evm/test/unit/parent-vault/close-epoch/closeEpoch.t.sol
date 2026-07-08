@@ -86,6 +86,16 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         s_parentVault.closeEpoch(0);
     }
 
+    function test_ParentVault_closeEpoch_RevertWhen_PricePerShareRoundsToZero() public {
+        _setParentTotalShares(SHARE_PRECISION + 1);
+        _submitDeposit();
+
+        _warpPastMinEpoch();
+        _changePrank(i_epochOperator);
+        vm.expectRevert(IParentVault.ParentVault__ZeroPricePerShare.selector);
+        s_parentVault.closeEpoch(1);
+    }
+
     function test_ParentVault_closeEpoch_RevertWhen_DepositWouldMintZeroShares() public {
         uint256 totalShares = 1;
         uint256 tvl = DEPOSIT_AMOUNT + 1;
