@@ -20,7 +20,7 @@ IDs are stable. Once assigned, a KI-XXX identifier is never reused or renumbered
 
 ### Summary
 
-Yieldcoin v2 relies on multiple privileged roles for governance and operations. Human-held privileged roles include:
+Yieldcoin v2 relies on multiple privileged roles for protocol operation. Human-held privileged roles include:
 
 - **`DEFAULT_ADMIN_ROLE`** for local role administration (grant/revoke and admin-transfer acceptance via `AccessControlDefaultAdminRules`).
 - **`CONFIG_OPERATOR_ROLE`** for protocol configuration (vault/router/registry settings, adapter registration, treasury/emergency receiver, workflow metadata/selectors, token metadata/CCIP admin wiring).
@@ -47,7 +47,7 @@ A compromised or malicious signer controlling a privileged role can take adverse
 
 ### Residual risk
 
-This design still depends on trusted operators and governance signers acting correctly. The risk is accepted as an operational trust assumption and reviewed alongside role assignments and signer hygiene.
+This design still depends on trusted operator signers acting correctly. The risk is accepted as an operational trust assumption and reviewed alongside role assignments and signer hygiene.
 
 ---
 
@@ -86,7 +86,7 @@ This risk is intrinsic to using an issuer-controlled stablecoin as the underlyin
 - Wrapping or substituting the underlying at runtime would itself require moving funds through USDC, which is exactly what the blacklist/pause prevents.
 - Using a non-issuer-controlled asset would change the product (Yieldcoin v2 is intentionally a yield-bearing wrapper over a major stablecoin).
 
-The protocol team accepts issuer risk as the cost of denominating vaults in widely-used regulated stablecoins. Vault selection and underlying-asset choice are governance / product decisions, not security bugs.
+The protocol team accepts issuer risk as the cost of denominating vaults in widely-used regulated stablecoins. Vault selection and underlying-asset choice are commercial operator / product decisions, not security bugs.
 
 ### Operational assumptions
 
@@ -288,4 +288,60 @@ Shareholders can still pay management fees for time when the user-facing vault w
 
 ---
 
-<!-- @review known issue: epoch doesnt close if CRE workflow doesnt fire -->
+## KI-007 — Epoch close depends on CRE workflow execution
+
+**Status:** Accepted — operational liveness dependency.
+
+**Last reviewed:** 2026-07-08
+
+**Component:** CRE epoch workflow, `WorkflowRouter.onReport`, and `ParentVault.closeEpoch`.
+
+### Summary
+
+Epoch settlement is intentionally driven by the Chainlink CRE workflow. The workflow's cron handler reads the current parent epoch, checks that it is open, has activity, is past `MIN_EPOCH_PERIOD`, has no active rebalance, reads TVL from the active strategy chain, and submits `closeEpoch(tvl)` through `WorkflowRouter.onReport`.
+
+If the CRE workflow does not execute, cannot read the required state, cannot submit a valid report, or the report does not reach `WorkflowRouter`, the current parent epoch remains `OPEN`. There is no autonomous on-chain timer and no public `closeEpoch` path; `ParentVault.closeEpoch` is restricted to `EPOCH_OPERATOR_ROLE`, which is granted to the `WorkflowRouter` under the normal access-control model.
+
+### Impact
+
+The failure mode is delayed settlement:
+
+- The current epoch remains open until a valid workflow report closes it.
+- Depositors and withdrawers for that epoch cannot claim shares or assets while the epoch remains open.
+- The next epoch is not opened, so later user intents continue to accrue into the same open epoch rather than a new scheduled epoch.
+- The settlement price is based on TVL at the eventual close, not at the missed scheduled close time.
+- For remote-strategy net-withdraw epochs, the second CRE step (`EpochExecuting` log handling on the child chain) is also required before the parent epoch can become claimable.
+
+This does not by itself create an accounting inconsistency or direct loss of funds. User deposits and withdraw-intent shares remain escrowed by the protocol. While the epoch is still open, users may cancel their current-epoch deposit or withdraw intent through the normal cancellation functions, subject to the usual pause and policy checks.
+
+### Why this is accepted, not mitigated on-chain
+
+Closing an epoch requires a fresh TVL value for the active strategy, which may live on the parent chain or a child chain. The contracts deliberately do not compute or validate that cross-chain TVL on-chain. Instead, CRE is the trusted automation and reporting layer for epoch settlement, and `WorkflowRouter` is the narrow on-chain ingress point for CRE reports.
+
+Adding an on-chain time-based auto-close is not sufficient because the vault still needs the TVL input. Adding a broad manual close path would either:
+
+- require a privileged operator to provide the same trusted TVL value directly, increasing human operational authority; or
+- duplicate the existing CRE report path with another privileged ingress surface.
+
+The current design keeps the authority narrow: the router validates workflow metadata and selector allowlists, then calls only the configured vault. Liveness of that workflow is therefore an operational assumption, not a contract invariant.
+
+### Operational mitigations
+
+- Monitor missed CRE cron executions, failed workflow runs, Keystone Forwarder delivery failures, and `WorkflowRouter.onReport` reverts.
+- Alert when `ParentVault.getEpochNonce()` has not advanced after the expected close window and the open epoch has nonzero activity.
+- Ensure the deployed workflow metadata and selector allowlists include the `closeEpoch(uint256)` selector for the active workflow ID.
+- Keep CRE configuration, Keystone Forwarder configuration, workflow ownership, gas limits, and chain selectors under deployment/runbook review.
+- In an emergency, the commercial operator can update workflow configuration or, if explicitly accepted through an operational runbook, grant temporary epoch authority to a replacement router/operator and revoke it after recovery. This is a privileged break-glass action and should be treated as an operational trust escalation.
+
+### Residual risk
+
+Epoch settlement can be delayed indefinitely if CRE or report delivery remains unavailable and operators do not execute a recovery process. During that delay, claims are unavailable and the epoch's final price remains unset. The primary impact is availability and timing uncertainty, not protocol solvency.
+
+The risk is accepted because the protocol already trusts CRE for TVL reporting and workflow-triggered settlement. This entry documents that the same trust boundary includes liveness of the epoch-close workflow.
+
+### Conditions that would warrant revisiting
+
+- Product requirements change to require guaranteed epoch close by wall-clock time.
+- A reliable on-chain or independently verified TVL source becomes available for all supported strategy chains.
+- Operations require a standing manual close role rather than a break-glass process.
+- CRE or Keystone Forwarder reliability assumptions change materially.
