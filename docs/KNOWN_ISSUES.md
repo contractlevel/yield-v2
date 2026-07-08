@@ -347,3 +347,74 @@ The risk is accepted because the protocol already trusts CRE for TVL reporting a
 - CRE or Keystone Forwarder reliability assumptions change materially.
 
 ---
+
+## KI-008 — Strategy TVL can include permissionless third-party supplies
+
+**Status:** Accepted — epoch batching prevents the flash-loan variant; residual unsolicited-donation risk is monitored operationally.
+
+**Last reviewed:** 2026-07-08
+
+**Component:** Strategy adapters (`AaveV3Adapter`, `AaveV4Adapter`, `CompoundV3Adapter`), active strategy `getTVL`, CRE epoch workflow, and `ParentVault.closeEpoch`.
+
+### Summary
+
+The strategy adapters report TVL from the active lending-market position:
+
+- `CompoundV3Adapter` reads the adapter's Comet balance.
+- `AaveV3Adapter` reads the adapter's aToken balance.
+- `AaveV4Adapter` reads the adapter's supplied assets from the Aave v4 Spoke.
+
+The supported lending protocols allow assets to be supplied on behalf of another account. A third party can therefore supply underlying asset directly into the market on behalf of the adapter, increasing the adapter's reported strategy balance without calling the vault's `donate()` function.
+
+Because the CRE epoch workflow reads TVL from the active strategy chain's `getTVL()` and submits that value to `ParentVault.closeEpoch(tvl)`, unsolicited on-behalf-of supplies can be included in the epoch settlement TVL.
+
+### Why this is accepted, not mitigated in adapter accounting
+
+Yieldcoin v2 settles deposits and withdrawals through epochs, not through synchronous mint/redeem operations against live TVL:
+
+- `deposit()` records a pending deposit for the open epoch but does not mint shares immediately.
+- `withdraw()` records a pending withdraw intent and escrows shares but does not redeem immediately.
+- `closeEpoch(tvl)` is restricted to the epoch operator path and is executed by the CRE workflow.
+- Cross-chain strategy settlement is asynchronous and may require a second workflow step before claims become available.
+
+This architecture prevents the standard single-transaction flash-loan donation attack. An attacker who supplies on behalf of the adapter cannot withdraw those supplied funds back from the lending market; control of the credited position belongs to the adapter. The attacker therefore cannot flash-borrow, inflate TVL, complete a profitable mint/redeem cycle, withdraw the supplied funds, and repay the flash loan in one transaction.
+
+The robust on-chain mitigation would be for each adapter to track protocol position units attributable only to vault-originated deposits and value only those accounted units in `getTVL()`. For example, Aave v3 would track scaled aToken balance and value it through the reserve index, while Compound v3 would track accounted Comet principal/base units and convert them to present value.
+
+That mitigation was deferred because it materially increases adapter accounting complexity and must preserve legitimate organic yield while excluding unsolicited credited balances. Incorrect implementation could introduce more serious yield-accounting or withdrawal bugs than the residual issue accepted here.
+
+### Operational mitigation
+
+The CRE/operator process should monitor active strategy TVL for unexpected jumps before submitting `closeEpoch(tvl)`, especially changes that cannot be explained by:
+
+- pending epoch net deposits or withdrawals,
+- expected strategy yield,
+- completed rebalances,
+- recovery state, or
+- authorized `donate()` operations.
+
+Unexpected TVL changes should be investigated before epoch close where operationally feasible.
+
+### Residual risk
+
+A third party can still use real capital to inflate the active adapter's raw protocol balance before CRE samples TVL. This can affect:
+
+- the epoch price per share,
+- shares minted to pending depositors,
+- assets allocated to pending withdrawers,
+- performance-fee and high-water-mark accounting, and
+- rebalance or emergency paths that withdraw the adapter's full raw position.
+
+An attacker with a pending withdrawal may recover a pro-rata portion of their own unsolicited supply through that epoch's withdrawal settlement. Any unrecovered amount is absorbed by other participants, remaining shareholders, or protocol fees. The attacker cannot atomically recover the full supplied amount unless they also control privileged workflow or vault execution paths, which is outside the permissionless threat model.
+
+The accepted failure mode is settlement distortion funded by the attacker's own capital, not direct theft of protocol funds or a flash-loan-amplified insolvency path.
+
+### Conditions that would warrant revisiting
+
+- Evidence appears that unsolicited on-behalf-of supplies can be profitably extracted without privileged role compromise.
+- CRE TVL monitoring is removed or becomes unable to detect abnormal strategy-balance jumps.
+- A new adapter is registered whose `getTVL()` can be inflated and later deflated by the same third party.
+- Rebalance or emergency-drain behavior changes such that unsolicited strategy balances are routinely swept into canonical accounting.
+- Adapter-accounted protocol units become simple enough to implement and test without materially increasing strategy accounting risk.
+
+---

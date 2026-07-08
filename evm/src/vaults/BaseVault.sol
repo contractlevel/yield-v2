@@ -452,7 +452,7 @@ abstract contract BaseVault is
     /// @dev Precondition: the call must not be reentered
     /// @notice First-depositor captures full donation when `s_totalShares == 0` due to bootstrap pricing ignoring existing TVL
     ///         Donations should not be made before the first deposit.
-    /// @notice This is an operator emergency function that can destroy the system if used improperly.
+    /// @notice This is an operator emergency function that should not be used improperly (would require capital to do so).
     function donate(uint256 amount) external nonReentrant onlyRole(Roles.DONATE_OPERATOR_ROLE) {
         if (amount == 0) revert BaseVault__NoZeroAmount();
 
