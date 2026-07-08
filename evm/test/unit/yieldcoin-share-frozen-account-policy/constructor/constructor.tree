@@ -1,0 +1,5 @@
+YieldcoinShareFrozenAccountPolicy_constructor
+├── when the share address is zero
+│   └── it should revert with YieldcoinShareFrozenAccountPolicy__NoZeroAddress
+└── when the share address is valid
+    └── it should store the share address

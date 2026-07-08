@@ -121,9 +121,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     ) internal override {
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
         _requireNoRecovery($_baseVault);
-        BaseVaultCcipLib._validateCcipSend(
-            $_baseVault, bridgeAmount, destinationChainSelector, i_thisChainSelector
-        );
+        BaseVaultCcipLib._validateCcipSend($_baseVault, bridgeAmount, destinationChainSelector, i_thisChainSelector);
 
         try this.tryCcipSend(bridgeAmount, destinationChainSelector, ccipTxType, txData) {}
         catch {
@@ -284,9 +282,8 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @dev ChildVault has enough bytecode headroom to inline the library implementation,
     ///      which also avoids unresolved external library calls in ChildVault verification.
     function _setActiveAdapter(bytes32 protocolId) internal override returns (address adapter) {
-        adapter = BaseVaultStrategyLib._setActiveAdapter(
-            _baseVaultStorage(), protocolId, i_adapterRegistry, address(this)
-        );
+        adapter =
+            BaseVaultStrategyLib._setActiveAdapter(_baseVaultStorage(), protocolId, i_adapterRegistry, address(this));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -304,11 +301,9 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         _storeEpochDepositRecovery($_baseVault, epochNonce, amount);
     }
 
-    function _storeEpochDepositRecovery(
-        BaseVaultStorage storage $_baseVault,
-        uint256 epochNonce,
-        uint256 amount
-    ) internal {
+    function _storeEpochDepositRecovery(BaseVaultStorage storage $_baseVault, uint256 epochNonce, uint256 amount)
+        internal
+    {
         _childVaultStorage().s_epochDepositRecovery =
             Types.EpochRecovery({epochNonce: epochNonce, amount: amount, createdAt: block.timestamp});
         $_baseVault.s_recoveryMode = Types.RecoveryMode.EPOCH_DEPOSIT;
@@ -323,10 +318,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         _clearEpochDepositRecovery(_childVaultStorage(), $_baseVault);
     }
 
-    function _clearEpochDepositRecovery(
-        ChildVaultStorage storage $,
-        BaseVaultStorage storage $_baseVault
-    ) internal {
+    function _clearEpochDepositRecovery(ChildVaultStorage storage $, BaseVaultStorage storage $_baseVault) internal {
         uint256 epochNonce = $.s_epochDepositRecovery.epochNonce;
         delete $.s_epochDepositRecovery;
         $_baseVault.s_recoveryMode = Types.RecoveryMode.NONE;
@@ -354,11 +346,9 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         _storeEpochWithdrawRecovery($_baseVault, epochNonce, amount);
     }
 
-    function _storeEpochWithdrawRecovery(
-        BaseVaultStorage storage $_baseVault,
-        uint256 epochNonce,
-        uint256 amount
-    ) internal {
+    function _storeEpochWithdrawRecovery(BaseVaultStorage storage $_baseVault, uint256 epochNonce, uint256 amount)
+        internal
+    {
         _childVaultStorage().s_epochWithdrawRecovery =
             Types.EpochRecovery({epochNonce: epochNonce, amount: amount, createdAt: block.timestamp});
         $_baseVault.s_recoveryMode = Types.RecoveryMode.EPOCH_WITHDRAW;
@@ -373,10 +363,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         _clearEpochWithdrawRecovery(_childVaultStorage(), $_baseVault);
     }
 
-    function _clearEpochWithdrawRecovery(
-        ChildVaultStorage storage $,
-        BaseVaultStorage storage $_baseVault
-    ) internal {
+    function _clearEpochWithdrawRecovery(ChildVaultStorage storage $, BaseVaultStorage storage $_baseVault) internal {
         uint256 epochNonce = $.s_epochWithdrawRecovery.epochNonce;
         delete $.s_epochWithdrawRecovery;
         $_baseVault.s_recoveryMode = Types.RecoveryMode.NONE;
@@ -424,10 +411,9 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         _clearRebalanceWithdrawRecovery(_childVaultStorage(), $_baseVault);
     }
 
-    function _clearRebalanceWithdrawRecovery(
-        ChildVaultStorage storage $,
-        BaseVaultStorage storage $_baseVault
-    ) internal {
+    function _clearRebalanceWithdrawRecovery(ChildVaultStorage storage $, BaseVaultStorage storage $_baseVault)
+        internal
+    {
         uint256 rebalanceNonce = $.s_rebalanceWithdrawRecovery.rebalanceNonce;
         delete $.s_rebalanceWithdrawRecovery;
         $_baseVault.s_recoveryMode = Types.RecoveryMode.NONE;
@@ -455,10 +441,10 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         recovery = _clearCcipSendRecovery(_childVaultStorage(), $_baseVault);
     }
 
-    function _clearCcipSendRecovery(
-        ChildVaultStorage storage $,
-        BaseVaultStorage storage $_baseVault
-    ) internal returns (Types.CcipSendRecovery memory recovery) {
+    function _clearCcipSendRecovery(ChildVaultStorage storage $, BaseVaultStorage storage $_baseVault)
+        internal
+        returns (Types.CcipSendRecovery memory recovery)
+    {
         recovery = $.s_ccipSendRecovery;
         delete $.s_ccipSendRecovery;
         $_baseVault.s_recoveryMode = Types.RecoveryMode.NONE;
@@ -471,10 +457,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         _recoverFailedEpochDeposit(_childVaultStorage(), $_baseVault);
     }
 
-    function _recoverFailedEpochDeposit(
-        ChildVaultStorage storage $,
-        BaseVaultStorage storage $_baseVault
-    ) internal {
+    function _recoverFailedEpochDeposit(ChildVaultStorage storage $, BaseVaultStorage storage $_baseVault) internal {
         Types.EpochRecovery memory recovery = $.s_epochDepositRecovery;
         uint256 epochNonce = recovery.epochNonce;
 
@@ -490,10 +473,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         _recoverFailedEpochWithdraw(_childVaultStorage(), $_baseVault);
     }
 
-    function _recoverFailedEpochWithdraw(
-        ChildVaultStorage storage $,
-        BaseVaultStorage storage $_baseVault
-    ) internal {
+    function _recoverFailedEpochWithdraw(ChildVaultStorage storage $, BaseVaultStorage storage $_baseVault) internal {
         Types.EpochRecovery memory recovery = $.s_epochWithdrawRecovery;
         uint256 epochNonce = recovery.epochNonce;
 
@@ -512,10 +492,9 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         _recoverFailedRebalanceWithdraw(_childVaultStorage(), $_baseVault);
     }
 
-    function _recoverFailedRebalanceWithdraw(
-        ChildVaultStorage storage $,
-        BaseVaultStorage storage $_baseVault
-    ) internal {
+    function _recoverFailedRebalanceWithdraw(ChildVaultStorage storage $, BaseVaultStorage storage $_baseVault)
+        internal
+    {
         Types.RebalanceWithdrawRecovery memory recovery = $.s_rebalanceWithdrawRecovery;
         uint256 rebalanceNonce = recovery.rebalanceNonce;
 
@@ -536,14 +515,17 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         Types.RecoveryMode mode = $_baseVault.s_recoveryMode;
         if (mode == Types.RecoveryMode.NONE) revert BaseVault__NoPendingRecovery();
 
-        if (mode == Types.RecoveryMode.REBALANCE_DEPOSIT) _recoverFailedRebalanceDeposit($_baseVault);
-        else if (mode == Types.RecoveryMode.EPOCH_DEPOSIT) {
+        if (mode == Types.RecoveryMode.REBALANCE_DEPOSIT) {
+            _recoverFailedRebalanceDeposit($_baseVault);
+        } else if (mode == Types.RecoveryMode.EPOCH_DEPOSIT) {
             _recoverFailedEpochDeposit(_childVaultStorage(), $_baseVault);
         } else if (mode == Types.RecoveryMode.EPOCH_WITHDRAW) {
             _recoverFailedEpochWithdraw(_childVaultStorage(), $_baseVault);
         } else if (mode == Types.RecoveryMode.REBALANCE_WITHDRAW) {
             _recoverFailedRebalanceWithdraw(_childVaultStorage(), $_baseVault);
-        } else if (mode == Types.RecoveryMode.CCIP_SEND) _recoverFailedCcipSend($_baseVault);
+        } else if (mode == Types.RecoveryMode.CCIP_SEND) {
+            _recoverFailedCcipSend($_baseVault);
+        }
     }
 
     function _recoverFailedCcipSend() internal {
@@ -554,8 +536,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
 
     function _recoverFailedCcipSend(BaseVaultStorage storage $_baseVault) internal {
         // Clear before retry; if CCIP send reverts, EVM atomicity restores this recovery state.
-        Types.CcipSendRecovery memory recovery =
-            _clearCcipSendRecovery(_childVaultStorage(), $_baseVault);
+        Types.CcipSendRecovery memory recovery = _clearCcipSendRecovery(_childVaultStorage(), $_baseVault);
 
         BaseVaultCcipLib._send(
             $_baseVault,
@@ -625,8 +606,11 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         ChildVaultStorage storage $ = _childVaultStorage();
 
         address activeAdapter = $_baseVault.s_activeProtocolAdapter;
-        if (activeAdapter != address(0)) tvl = IProtocolAdapter(activeAdapter).getTVL() + $.s_epochDepositRecovery.amount
-            + $_baseVault.s_rebalanceDepositRecovery.amount + $.s_ccipSendRecovery.amount;
-        else tvl = 0;
+        if (activeAdapter != address(0)) {
+            tvl = IProtocolAdapter(activeAdapter).getTVL() + $.s_epochDepositRecovery.amount
+                + $_baseVault.s_rebalanceDepositRecovery.amount + $.s_ccipSendRecovery.amount;
+        } else {
+            tvl = 0;
+        }
     }
 }

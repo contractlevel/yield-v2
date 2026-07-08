@@ -582,7 +582,10 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     function _getTVL() internal view override returns (uint256 tvl) {
         BaseVaultStorage storage $ = _baseVaultStorage();
         address activeAdapter = $.s_activeProtocolAdapter;
-        if (activeAdapter != address(0)) tvl = IProtocolAdapter(activeAdapter).getTVL() + $.s_rebalanceDepositRecovery.amount;
-        else tvl = 0;
+        if (activeAdapter != address(0)) {
+            tvl = IProtocolAdapter(activeAdapter).getTVL() + $.s_rebalanceDepositRecovery.amount;
+        } else {
+            tvl = 0;
+        }
     }
 }

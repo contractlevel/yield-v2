@@ -235,10 +235,7 @@ abstract contract BaseVault is
     /// @notice Deposits a received CCIP rebalance amount into the active strategy or stores recovery on failure.
     /// @param rebalanceNonce The nonce of the rebalance
     /// @param amount The amount of USDC to rebalance(deposit) into the active strategy
-    function _handleCCIPRebalanceDeposit(uint256 rebalanceNonce, uint256 amount)
-        internal
-        returns (bool success)
-    {
+    function _handleCCIPRebalanceDeposit(uint256 rebalanceNonce, uint256 amount) internal returns (bool success) {
         success = _executeDeposit(amount, false);
         if (success) {
             emit RebalanceDepositSuccess(rebalanceNonce, amount);
@@ -332,11 +329,9 @@ abstract contract BaseVault is
         _storeRebalanceDepositRecovery($, rebalanceNonce, amount);
     }
 
-    function _storeRebalanceDepositRecovery(
-        BaseVaultStorage storage $,
-        uint256 rebalanceNonce,
-        uint256 amount
-    ) internal {
+    function _storeRebalanceDepositRecovery(BaseVaultStorage storage $, uint256 rebalanceNonce, uint256 amount)
+        internal
+    {
         $.s_rebalanceDepositRecovery = Types.RebalanceDepositRecovery({
             rebalanceNonce: rebalanceNonce, amount: amount, createdAt: block.timestamp
         });

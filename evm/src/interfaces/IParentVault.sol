@@ -119,7 +119,9 @@ interface IParentVault is IBaseVault {
     /// @param epochNonce The nonce of the epoch with the short withdrawal
     /// @param expectedAmount The amount of asset expected from the remote strategy
     /// @param actualAmount The amount of asset delivered by the CCIP message
-    event EpochWithdrawAmountShort(uint256 indexed epochNonce, uint256 indexed expectedAmount, uint256 indexed actualAmount);
+    event EpochWithdrawAmountShort(
+        uint256 indexed epochNonce, uint256 indexed expectedAmount, uint256 indexed actualAmount
+    );
     /// @notice Emitted when a rebalance is initiated
     /// @param rebalanceNonce The nonce of the rebalance
     /// @param chainSelector The target strategy chain selector

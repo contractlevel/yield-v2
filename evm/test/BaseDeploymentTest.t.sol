@@ -33,6 +33,7 @@ import {
     CredentialRegistryAccountListValidatorPolicy
 } from "../src/modules/policies/CredentialRegistryAccountListValidatorPolicy.sol";
 import {TerminalAllowPolicy} from "../src/modules/policies/TerminalAllowPolicy.sol";
+import {YieldcoinShareFrozenAccountPolicy} from "../src/modules/policies/YieldcoinShareFrozenAccountPolicy.sol";
 
 abstract contract BaseDeploymentTest is BaseTest {
     struct Parent {
@@ -56,6 +57,7 @@ abstract contract BaseDeploymentTest is BaseTest {
         PolicyEngine policyEngine;
         IdentityRegistry identityRegistry;
         CredentialRegistry credentialRegistry;
+        YieldcoinShareFrozenAccountPolicy vaultFrozenAccountPolicy;
         CredentialRegistryIdentityValidatorPolicy vaultKycPolicy;
         CredentialRegistryAccountListValidatorPolicy shareKycPolicy;
         RoleBasedAccessControlPolicy shareSupplyPolicy;
@@ -134,6 +136,7 @@ abstract contract BaseDeploymentTest is BaseTest {
             policyEngine: parentDeployment.policyEngine,
             identityRegistry: parentDeployment.identityRegistry,
             credentialRegistry: parentDeployment.credentialRegistry,
+            vaultFrozenAccountPolicy: parentDeployment.vaultFrozenAccountPolicy,
             vaultKycPolicy: parentDeployment.vaultKycPolicy,
             shareKycPolicy: parentDeployment.shareKycPolicy,
             shareSupplyPolicy: parentDeployment.shareSupplyPolicy,
@@ -246,6 +249,7 @@ abstract contract BaseDeploymentTest is BaseTest {
         vm.label(address(parent.policyEngine), "Integration PolicyEngine");
         vm.label(address(parent.identityRegistry), "Integration IdentityRegistry");
         vm.label(address(parent.credentialRegistry), "Integration CredentialRegistry");
+        vm.label(address(parent.vaultFrozenAccountPolicy), "Integration ParentVault Freeze Policy");
         vm.label(address(parent.vaultKycPolicy), "Integration ParentVault KYC Policy");
         vm.label(address(parent.shareKycPolicy), "Integration Share KYC Policy");
         vm.label(address(parent.shareSupplyPolicy), "Integration Share RBAC Policy");

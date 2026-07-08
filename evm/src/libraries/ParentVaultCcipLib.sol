@@ -16,7 +16,9 @@ library ParentVaultCcipLib {
     //////////////////////////////////////////////////////////////*/
     /// @dev Solidity requires locally declared events for emits; these must match IParentVault and emit from the vault via DELEGATECALL.
     event EpochClaimable(uint256 indexed epochNonce);
-    event EpochWithdrawAmountShort(uint256 indexed epochNonce, uint256 indexed expectedAmount, uint256 indexed actualAmount);
+    event EpochWithdrawAmountShort(
+        uint256 indexed epochNonce, uint256 indexed expectedAmount, uint256 indexed actualAmount
+    );
 
     /*//////////////////////////////////////////////////////////////
                                   CCIP

@@ -345,3 +345,7 @@ The risk is accepted because the protocol already trusts CRE for TVL reporting a
 - A reliable on-chain or independently verified TVL source becomes available for all supported strategy chains.
 - Operations require a standing manual close role rather than a break-glass process.
 - CRE or Keystone Forwarder reliability assumptions change materially.
+
+---
+
+<!-- compound v3 COMP rewards are structurally unrecoverable for users and not included in yield -->

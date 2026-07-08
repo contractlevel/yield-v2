@@ -505,7 +505,11 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
     }
 
     function _assertParentVaultKycPolicy(bytes4 selector) internal view {
-        _assertPolicyPair(address(parent.vault), selector, address(parent.vaultKycPolicy));
+        address[] memory policies = parent.policyEngine.getPolicies(address(parent.vault), selector);
+        assertEq(policies.length, 3);
+        assertEq(policies[0], address(parent.vaultFrozenAccountPolicy));
+        assertEq(policies[1], address(parent.vaultKycPolicy));
+        assertEq(policies[2], address(parent.terminalAllow));
     }
 
     function _assertShareKycPolicy(bytes4 selector) internal view {

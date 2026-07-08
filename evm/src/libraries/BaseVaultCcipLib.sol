@@ -72,17 +72,7 @@ library BaseVaultCcipLib {
         address ccipRouter,
         uint64 thisChainSelector
     ) public {
-        _send(
-            $,
-            bridgeAmount,
-            destinationChainSelector,
-            ccipTxType,
-            txData,
-            asset,
-            link,
-            ccipRouter,
-            thisChainSelector
-        );
+        _send($, bridgeAmount, destinationChainSelector, ccipTxType, txData, asset, link, ccipRouter, thisChainSelector);
     }
 
     /// @notice Validates that a CCIP message delivered the vault's configured asset token and returns the delivered amount.

@@ -84,8 +84,7 @@ contract ChildVault_ExecuteRecovery_EpochDeposit_UnitTest is BaseUnitTest {
         vm.recordLogs();
         s_childVault.executeRecovery();
 
-        Vm.Log memory log =
-            _assertEmittedBy(keccak256("EpochDepositRecoveryCleared(uint256)"), address(s_childVault));
+        Vm.Log memory log = _assertEmittedBy(keccak256("EpochDepositRecoveryCleared(uint256)"), address(s_childVault));
         assertEq(uint256(log.topics[1]), EPOCH_NONCE);
     }
 
@@ -189,8 +188,7 @@ contract ChildVault_ExecuteRecovery_EpochWithdraw_UnitTest is BaseUnitTest {
         vm.recordLogs();
         s_childVault.executeRecovery();
 
-        Vm.Log memory log =
-            _assertEmittedBy(keccak256("EpochWithdrawRecoveryCleared(uint256)"), address(s_childVault));
+        Vm.Log memory log = _assertEmittedBy(keccak256("EpochWithdrawRecoveryCleared(uint256)"), address(s_childVault));
         assertEq(uint256(log.topics[1]), EPOCH_NONCE);
     }
 

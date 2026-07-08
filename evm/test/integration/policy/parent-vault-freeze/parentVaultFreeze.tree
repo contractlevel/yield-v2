@@ -1,0 +1,13 @@
+ParentVault_freezePolicy
+├── freeze administration
+│   ├── non-compliance-operator should not be able to freeze an account
+│   └── compliance-operator should be able to freeze an account
+├── when a KYC-approved caller is frozen
+│   ├── deposit should revert through policy
+│   ├── withdraw should revert through policy
+│   ├── claimShares should revert through policy
+│   ├── claimAsset should revert through policy
+│   ├── cancelDeposit should revert through policy
+│   └── cancelWithdraw should revert through policy
+└── policy wiring
+    └── each ParentVault user selector should install freeze, KYC, then terminal allow

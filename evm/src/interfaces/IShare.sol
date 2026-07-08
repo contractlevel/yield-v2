@@ -15,4 +15,8 @@ interface IShare is IERC20 {
     /// @param user The address to burn shares from
     /// @param amount The amount of shares to burn
     function burn(address user, uint256 amount) external;
+    /// @notice Returns whether an address is frozen under ERC-3643 compliance controls
+    /// @param user The address to check
+    /// @return frozen True when the address is frozen
+    function isFrozen(address user) external view returns (bool frozen);
 }

@@ -125,10 +125,12 @@ library ParentVaultUserEpochLib {
         shareMintAmount = _claimShares($, share, user, epochNonce);
     }
 
-    function _claimShares(ParentVaultStore.ParentVaultStorage storage $, address share, address user, uint256 epochNonce)
-        internal
-        returns (uint256 shareMintAmount)
-    {
+    function _claimShares(
+        ParentVaultStore.ParentVaultStorage storage $,
+        address share,
+        address user,
+        uint256 epochNonce
+    ) internal returns (uint256 shareMintAmount) {
         Types.Epoch storage s_epoch = $.s_epochs[epochNonce];
         if (s_epoch.status != Types.EpochStatus.CLAIMABLE) {
             revert IParentVault.ParentVault__EpochNotClaimable(epochNonce);
@@ -192,8 +194,7 @@ library ParentVaultUserEpochLib {
         uint256 remainingShareBurnAmount = s_epoch.remainingShareBurnAmount;
         uint256 remainingWithdrawClaimAmount = s_epoch.remainingWithdrawClaimAmount;
         if (shareBurnAmount != remainingShareBurnAmount) {
-            withdrawAmount =
-                proportionalAmount(shareBurnAmount, remainingWithdrawClaimAmount, remainingShareBurnAmount);
+            withdrawAmount = proportionalAmount(shareBurnAmount, remainingWithdrawClaimAmount, remainingShareBurnAmount);
         } else {
             withdrawAmount = remainingWithdrawClaimAmount;
         }

@@ -32,6 +32,7 @@ import {
     CredentialRegistryAccountListValidatorPolicy
 } from "../../src/modules/policies/CredentialRegistryAccountListValidatorPolicy.sol";
 import {TerminalAllowPolicy} from "../../src/modules/policies/TerminalAllowPolicy.sol";
+import {YieldcoinShareFrozenAccountPolicy} from "../../src/modules/policies/YieldcoinShareFrozenAccountPolicy.sol";
 
 /// @title DeployParentVault Script
 /// @author @contractlevel
@@ -114,6 +115,7 @@ contract DeployParent is Script {
         PolicyEngine policyEngine;
         IdentityRegistry identityRegistry;
         CredentialRegistry credentialRegistry;
+        YieldcoinShareFrozenAccountPolicy vaultFrozenAccountPolicy;
         CredentialRegistryIdentityValidatorPolicy vaultKycPolicy;
         CredentialRegistryAccountListValidatorPolicy shareKycPolicy;
         RoleBasedAccessControlPolicy shareSupplyPolicy;
@@ -260,11 +262,14 @@ contract DeployParent is Script {
         deploy.workflowRouter = new WorkflowRouter(workflowRouterParams);
 
         deploy.terminalAllow = _deployTerminalAllowPolicy(deploy.policyEngine);
+        deploy.vaultFrozenAccountPolicy =
+            _deployYieldcoinShareFrozenAccountPolicy(deploy.policyEngine, deploy.yieldcoinProxy);
 
         deploy.vaultKycPolicy = _configureVaultKycPolicies(
             deploy.policyEngine,
             deploy.identityRegistry,
             deploy.credentialRegistry,
+            deploy.vaultFrozenAccountPolicy,
             deploy.parentVaultProxy,
             deploy.terminalAllow
         );
@@ -381,6 +386,21 @@ contract DeployParent is Script {
         terminalAllow = TerminalAllowPolicy(address(terminalAllowProxy));
     }
 
+    function _deployYieldcoinShareFrozenAccountPolicy(PolicyEngine policyEngine, YieldcoinShare yieldcoin)
+        internal
+        returns (YieldcoinShareFrozenAccountPolicy frozenAccountPolicy)
+    {
+        YieldcoinShareFrozenAccountPolicy frozenAccountPolicyImpl =
+            new YieldcoinShareFrozenAccountPolicy(address(yieldcoin));
+        ERC1967Proxy frozenAccountPolicyProxy = new ERC1967Proxy(
+            address(frozenAccountPolicyImpl),
+            abi.encodeWithSelector(
+                Policy.initialize.selector, address(policyEngine), address(policyEngine), new bytes(0)
+            )
+        );
+        frozenAccountPolicy = YieldcoinShareFrozenAccountPolicy(address(frozenAccountPolicyProxy));
+    }
+
     function _buildKycCredentialRequirements(IdentityRegistry identityRegistry, CredentialRegistry credentialRegistry)
         internal
         pure
@@ -416,6 +436,7 @@ contract DeployParent is Script {
         PolicyEngine policyEngine,
         IdentityRegistry identityRegistry,
         CredentialRegistry credentialRegistry,
+        YieldcoinShareFrozenAccountPolicy frozenAccountPolicy,
         ParentVault parentVault,
         TerminalAllowPolicy terminalAllow
     ) internal returns (CredentialRegistryIdentityValidatorPolicy kycPolicy) {
@@ -456,6 +477,7 @@ contract DeployParent is Script {
 
         bytes32[] memory noParameters = new bytes32[](0);
         for (uint256 i; i < selectors.length; ++i) {
+            policyEngine.addPolicy(address(parentVault), selectors[i], address(frozenAccountPolicy), senderParameter);
             policyEngine.addPolicy(address(parentVault), selectors[i], address(kycPolicy), senderParameter);
             policyEngine.addPolicy(address(parentVault), selectors[i], address(terminalAllow), noParameters);
         }
