@@ -53,6 +53,8 @@ The contracts do not include autonomous timers or broad manual public execution 
 
 This keeps operational authority concentrated in the CRE/router path rather than duplicating privileged execution surfaces. CRE liveness remains an accepted operational dependency.
 
+Some asynchronous rebalance paths complete through CRE calling `completeRebalance()` after observing a successful deposit event on the receiving chain. Completion does not always depend on an inbound CCIP message to the parent chain; the parent records the pending strategy at initiation and finalizes when the workflow reports that the receiving side completed the deposit.
+
 See [THREAT_MODEL - CRE, TVL, and rebalance decision failure](./THREAT_MODEL.md#33-cre-tvl-and-rebalance-decision-failure) and [KI-007](./KNOWN_ISSUES.md#ki-007--epoch-close-depends-on-cre-workflow-execution).
 
 ## DD-006 - `closeEpoch` Trusts CRE-Supplied TVL
@@ -71,6 +73,8 @@ Local parent-chain strategy failures revert atomically. Remote child-chain failu
 
 The parent can revert local adapter interactions and parent-originated CCIP sends in the same transaction because no cross-chain state has escaped. Child vault flows are asynchronous: once a message has arrived on a child chain or a child begins a remote operation, reverting the original parent transaction is no longer possible. In those cases, the child records the failed step for permissionless retry.
 
+This means a local Aave or Compound adapter revert during `closeEpoch` reverts the epoch close. The epoch remains open and CRE can retry after the underlying failure clears. No separate parent-side recovery state is stored for that local synchronous failure.
+
 The full path matrix is documented in [PATHS](./PATHS.md). Recovery invariants are documented in [INVARIANTS - Recovery](./INVARIANTS.md#recovery).
 
 ## DD-008 - Retry Is Event/Cron Driven, Not Timer Driven On-Chain
@@ -78,6 +82,8 @@ The full path matrix is documented in [PATHS](./PATHS.md). Recovery invariants a
 The system uses CRE cron triggers and log-triggered follow-up reports to progress epoch and rebalance workflows. Contracts do not run time-based autonomous retries.
 
 This keeps contract logic deterministic and avoids adding a second execution authority. When an operation fails and stores recovery state, retries occur through explicit recovery calls or later workflow execution, depending on the path.
+
+Log-triggered workflow submissions are expected only from standard protocol events emitted during normal state transitions, such as epoch execution and rebalance deposit success. The events do not themselves authorize arbitrary contract calls; `WorkflowRouter` still enforces workflow metadata, selector allowlists, and vault roles before dispatch.
 
 This design means liveness depends on CRE, CCIP, and operator monitoring. Accepted liveness dependencies are tracked in [KNOWN_ISSUES](./KNOWN_ISSUES.md).
 
