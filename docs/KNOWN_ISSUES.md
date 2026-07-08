@@ -418,3 +418,56 @@ The accepted failure mode is settlement distortion funded by the attacker's own 
 - Adapter-accounted protocol units become simple enough to implement and test without materially increasing strategy accounting risk.
 
 ---
+
+## KI-009 — Management fee base includes shares escrowed for pending withdraw intents
+
+**Status:** Accepted — pending withdraw intents remain economically active until epoch settlement.
+
+**Last reviewed:** 2026-07-08
+
+**Component:** `ParentVaultUserEpochLib.withdraw`, `ParentVaultEpochLib.closeEpoch`, `ParentVaultFeesLib._collectManagementFee`, and rebalance finalization.
+
+### Summary
+
+When a user submits a withdraw intent, `ParentVaultUserEpochLib.withdraw` transfers the user's shares into the `ParentVault` and records the amount in the current epoch's `totalShareBurnAmount`. The shares are held in escrow but are not burned immediately, and `s_totalShares` is not reduced at withdraw submission time.
+
+The authoritative share count is reduced later, when the epoch closes:
+
+`s_totalShares = s_totalShares + newShares - totalShareBurnAmount`
+
+Management fees are collected on rebalance finalization, not during epoch close. If a rebalance finalizes while an epoch is open and that epoch contains pending withdraw intents, `ParentVaultFeesLib._collectManagementFee` computes the fee against `s_totalShares`, which still includes the shares escrowed for those pending withdraws.
+
+### Why this is accepted, not mitigated
+
+A withdraw intent is not treated as an immediate economic exit from the vault. Until the epoch closes:
+
+- the withdrawer can cancel the intent and receive the escrowed shares back;
+- the shares have not been burned;
+- the withdrawal amount has not been price-locked;
+- the user remains exposed to the epoch's eventual settlement price; and
+- the shares remain part of the vault's authoritative share accounting.
+
+For that reason, management fee collection uses the same `s_totalShares` value that the rest of the vault treats as authoritative before epoch settlement. Excluding pending-withdraw shares from the management-fee base would require either decrementing `s_totalShares` at withdraw submission or tracking a separate pending-withdraw fee exclusion. That would add cancel-withdraw, close-epoch, and claim-path complexity and would create a split between shares that are still economically exposed to settlement and shares counted for management-fee purposes.
+
+The current design keeps share accounting simple: pending withdraw shares leave the fee base only when they are netted out at epoch close.
+
+### Residual risk
+
+If a rebalance finalizes after a withdraw intent is submitted but before that epoch closes, the management fee minted to the treasury includes the pending-withdraw shares in its fee base. This dilutes all shares that remain economically active at that time, including the escrowed shares that will later be burned for the withdraw claim.
+
+The effect is bounded by:
+
+- the management fee rate,
+- the elapsed time since the previous rebalance completion, capped at one year per collection, and
+- the amount of pending-withdraw shares still unsettled when the rebalance finalizes.
+
+The failure mode is an accepted fee-timing effect of epoch-batched withdrawal settlement, not a solvency issue or direct loss of vault assets.
+
+### Conditions that would warrant revisiting
+
+- Product policy changes to treat withdraw intent submission as immediate economic exit for fee purposes.
+- Rebalance cadence changes such that management fee collection commonly occurs while large withdraw intents remain pending.
+- Withdraw intents become non-cancellable before epoch close.
+- A simpler accounting model is introduced that can exclude pending-withdraw shares from management fees without complicating cancel-withdraw and close-epoch share accounting.
+
+---
