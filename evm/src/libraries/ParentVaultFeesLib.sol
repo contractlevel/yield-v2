@@ -43,11 +43,28 @@ library ParentVaultFeesLib {
         pricePerShare = _calculatePricePerShare($, tvl, sharePrecision);
     }
 
+    function _calculatePricePerShare(ParentVaultStore.ParentVaultStorage storage $, uint256 tvl, uint256 sharePrecision)
+        internal
+        view
+        returns (uint256 pricePerShare)
+    {
+        uint256 totalShares = $.s_totalShares;
+        if (totalShares != 0 && tvl != 0) {
+            pricePerShare = tvl * sharePrecision / totalShares;
+            if (pricePerShare == 0) revert IParentVault.ParentVault__ZeroPricePerShare();
+        } else if (totalShares == 0) {
+            pricePerShare = sharePrecision;
+        } else {
+            revert IParentVault.ParentVault__ZeroTvlWithOutstandingShares();
+        }
+    }
+
     /// @notice Calculates and collects the management fee based on time elapsed since the last rebalance completed.
     /// @param $ ParentVault namespaced storage
     /// @param rebalanceNonce The nonce of the rebalance collecting the fee
     /// @param lastRebalanceCompletedTimestamp The timestamp when the rebalance last completed
     /// @param share The Yieldcoin share token
+    /// @notice Elapsed time is capped at 365 days
     function collectManagementFee(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 rebalanceNonce,
@@ -130,22 +147,6 @@ library ParentVaultFeesLib {
         }
 
         if (feeShares != 0) emit PerformanceFeeCollected(epochNonce, feeShares, settlementPricePerShare);
-    }
-
-    function _calculatePricePerShare(ParentVaultStore.ParentVaultStorage storage $, uint256 tvl, uint256 sharePrecision)
-        internal
-        view
-        returns (uint256 pricePerShare)
-    {
-        uint256 totalShares = $.s_totalShares;
-        if (totalShares != 0 && tvl != 0) {
-            pricePerShare = tvl * sharePrecision / totalShares;
-            if (pricePerShare == 0) revert IParentVault.ParentVault__ZeroPricePerShare();
-        } else if (totalShares == 0) {
-            pricePerShare = sharePrecision;
-        } else {
-            revert IParentVault.ParentVault__ZeroTvlWithOutstandingShares();
-        }
     }
 
     // @review replace with OZ or solady
