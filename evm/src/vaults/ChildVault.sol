@@ -307,8 +307,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     {
         if (amount == 0) revert BaseVault__ZeroRecoveryAmount();
         _requireNoRecovery($_baseVault);
-        _childVaultStorage().s_epochDepositRecovery =
-            Types.EpochRecovery({epochNonce: epochNonce, amount: amount});
+        _childVaultStorage().s_epochDepositRecovery = Types.EpochRecovery({epochNonce: epochNonce, amount: amount});
         $_baseVault.s_recoveryMode = Types.RecoveryMode.EPOCH_DEPOSIT;
         emit EpochDepositRecoveryStored(epochNonce, amount);
     }
@@ -348,8 +347,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         //slither-disable-next-line incorrect-equality
         if (amount == 0) revert BaseVault__ZeroRecoveryAmount();
         _requireNoRecovery($_baseVault);
-        _childVaultStorage().s_epochWithdrawRecovery =
-            Types.EpochRecovery({epochNonce: epochNonce, amount: amount});
+        _childVaultStorage().s_epochWithdrawRecovery = Types.EpochRecovery({epochNonce: epochNonce, amount: amount});
         $_baseVault.s_recoveryMode = Types.RecoveryMode.EPOCH_WITHDRAW;
         emit EpochWithdrawRecoveryStored(epochNonce, amount);
     }
