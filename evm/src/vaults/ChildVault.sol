@@ -49,8 +49,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
 
     /// @notice Initializes ChildVault mutable proxy state.
     /// @param params BaseVault initializer parameters for roles and mutable vault configuration
-    // @review nonReentrant
-    function initialize(BaseVault.InitParams memory params) external initializer {
+    function initialize(BaseVault.InitParams memory params) external nonReentrant initializer {
         __BaseVault_init(params);
     }
 
