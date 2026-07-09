@@ -68,7 +68,8 @@ abstract contract BaseUnitTest is BaseTest {
                 initParams,
                 i_treasury,
                 i_policyEngineManager,
-                address(s_mockPolicyEngine)
+                address(s_mockPolicyEngine),
+                i_cancelDepositOperator
             )
         );
         s_parentVault = ParentVault(address(parentVaultProxy));
@@ -157,7 +158,8 @@ abstract contract BaseUnitTest is BaseTest {
                 _baseVaultInitParams(),
                 i_treasury,
                 i_policyEngineManager,
-                address(s_mockPolicyEngine)
+                address(s_mockPolicyEngine),
+                i_cancelDepositOperator
             )
         );
         parentVault = ParentVault(address(parentVaultProxy));

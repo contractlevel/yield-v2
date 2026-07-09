@@ -15,35 +15,19 @@ contract ChildVaultRecoveryInternalsHarness is ChildVault {
     {}
 
     function exposed_storeRebalanceDepositRecovery(uint256 rebalanceNonce, uint256 amount) external {
-        _storeRebalanceDepositRecovery(rebalanceNonce, amount);
-    }
-
-    function exposed_clearRebalanceDepositRecovery() external {
-        _clearRebalanceDepositRecovery();
+        _storeRebalanceDepositRecovery(_baseVaultStorage(), rebalanceNonce, amount);
     }
 
     function exposed_storeEpochDepositRecovery(uint256 epochNonce, uint256 amount) external {
-        _storeEpochDepositRecovery(epochNonce, amount);
-    }
-
-    function exposed_clearEpochDepositRecovery() external {
-        _clearEpochDepositRecovery();
+        _storeEpochDepositRecovery(_baseVaultStorage(), epochNonce, amount);
     }
 
     function exposed_storeEpochWithdrawRecovery(uint256 epochNonce, uint256 amount) external {
-        _storeEpochWithdrawRecovery(epochNonce, amount);
-    }
-
-    function exposed_clearEpochWithdrawRecovery() external {
-        _clearEpochWithdrawRecovery();
+        _storeEpochWithdrawRecovery(_baseVaultStorage(), epochNonce, amount);
     }
 
     function exposed_storeRebalanceWithdrawRecovery(uint256 rebalanceNonce, Types.Strategy memory strategy) external {
-        _storeRebalanceWithdrawRecovery(rebalanceNonce, strategy);
-    }
-
-    function exposed_clearRebalanceWithdrawRecovery() external {
-        _clearRebalanceWithdrawRecovery();
+        _storeRebalanceWithdrawRecovery(_baseVaultStorage(), rebalanceNonce, strategy);
     }
 }
 
@@ -61,12 +45,6 @@ contract ChildVault_RecoveryInternalsUnitTest is BaseUnitTest {
     function test_ChildVault_recoveryInternals_StoreRebalanceDepositRecovery_RevertWhen_AmountIsZero() public {
         vm.expectRevert(IBaseVault.BaseVault__ZeroRecoveryAmount.selector);
         s_harness.exposed_storeRebalanceDepositRecovery(REBALANCE_NONCE, 0);
-    }
-
-    function test_ChildVault_recoveryInternals_ClearRebalanceDepositRecovery_RevertWhen_NoPendingRecovery() public {
-        vm.expectRevert(IBaseVault.BaseVault__NoPendingRecovery.selector);
-        s_harness.exposed_clearRebalanceDepositRecovery();
-        assertTrue(s_harness.getRecoveryMode() == Types.RecoveryMode.NONE);
     }
 
     function test_ChildVault_recoveryInternals_StoreRebalanceDepositRecovery_RevertWhen_RecoveryStateAlreadyExists()
@@ -107,12 +85,6 @@ contract ChildVault_RecoveryInternalsUnitTest is BaseUnitTest {
         assertTrue(s_harness.getRecoveryMode() == Types.RecoveryMode.EPOCH_DEPOSIT);
     }
 
-    function test_ChildVault_recoveryInternals_ClearEpochDepositRecovery_RevertWhen_NoPendingRecovery() public {
-        vm.expectRevert(IBaseVault.BaseVault__NoPendingRecovery.selector);
-        s_harness.exposed_clearEpochDepositRecovery();
-        assertTrue(s_harness.getRecoveryMode() == Types.RecoveryMode.NONE);
-    }
-
     function test_ChildVault_recoveryInternals_StoreEpochWithdrawRecovery_RevertWhen_AmountIsZero() public {
         vm.expectRevert(IBaseVault.BaseVault__ZeroRecoveryAmount.selector);
         s_harness.exposed_storeEpochWithdrawRecovery(EPOCH_NONCE, 0);
@@ -140,12 +112,6 @@ contract ChildVault_RecoveryInternalsUnitTest is BaseUnitTest {
         assertTrue(s_harness.getRecoveryMode() == Types.RecoveryMode.EPOCH_WITHDRAW);
     }
 
-    function test_ChildVault_recoveryInternals_ClearEpochWithdrawRecovery_RevertWhen_NoPendingRecovery() public {
-        vm.expectRevert(IBaseVault.BaseVault__NoPendingRecovery.selector);
-        s_harness.exposed_clearEpochWithdrawRecovery();
-        assertTrue(s_harness.getRecoveryMode() == Types.RecoveryMode.NONE);
-    }
-
     function test_ChildVault_recoveryInternals_StoreRebalanceWithdrawRecovery_RevertWhen_StrategyChainSelectorIsZero()
         public
     {
@@ -153,12 +119,6 @@ contract ChildVault_RecoveryInternalsUnitTest is BaseUnitTest {
 
         vm.expectRevert(IChildVault.ChildVault__InvalidRecoveryStrategy.selector);
         s_harness.exposed_storeRebalanceWithdrawRecovery(REBALANCE_NONCE, strategy);
-    }
-
-    function test_ChildVault_recoveryInternals_ClearRebalanceWithdrawRecovery_RevertWhen_NoPendingRecovery() public {
-        vm.expectRevert(IBaseVault.BaseVault__NoPendingRecovery.selector);
-        s_harness.exposed_clearRebalanceWithdrawRecovery();
-        assertTrue(s_harness.getRecoveryMode() == Types.RecoveryMode.NONE);
     }
 
     function test_ChildVault_recoveryInternals_StoreRebalanceWithdrawRecovery_RevertWhen_RecoveryStateAlreadyExists()

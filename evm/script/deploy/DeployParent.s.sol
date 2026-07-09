@@ -58,6 +58,7 @@ import {YieldcoinShareFrozenAccountPolicy} from "../../src/modules/policies/Yiel
 ///      ParentVault.LINK_OPERATOR_ROLE: networkConfig.roles.linkOperator
 ///      ParentVault.DONATE_OPERATOR_ROLE: networkConfig.roles.donateOperator
 ///      ParentVault.REWARDS_OPERATOR_ROLE: networkConfig.roles.rewardsOperator
+///      ParentVault.CANCEL_DEPOSIT_OPERATOR_ROLE: networkConfig.roles.cancelDepositOperator (granted directly in initialize)
 ///      ParentVault.POLICY_ENGINE_MANAGER_ROLE: networkConfig.roles.policy.engineManager
 ///      ParentVault.PAUSER_ROLE: networkConfig.roles.pauser
 ///      ParentVault.UNPAUSER_ROLE: networkConfig.roles.unpauser
@@ -199,7 +200,8 @@ contract DeployParent is Script {
                 baseVaultInitParams,
                 networkConfig.treasury,
                 networkConfig.roles.policy.engineManager,
-                address(deploy.policyEngine)
+                address(deploy.policyEngine),
+                networkConfig.roles.cancelDepositOperator
             )
         );
         deploy.parentVaultProxy = ParentVault(address(parentVaultProxy));

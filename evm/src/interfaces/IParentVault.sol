@@ -153,6 +153,11 @@ interface IParentVault is IBaseVault {
     /// @param withdrawer The address of the withdrawer
     /// @param shareBurnAmount The amount of shares that were intended to burn to redeem the underlying asset
     event WithdrawCancelled(uint256 indexed epochNonce, address indexed withdrawer, uint256 indexed shareBurnAmount);
+    /// @notice Emitted when a deposit is force-cancelled by the cancel deposit operator
+    /// @param epochNonce The epoch nonce of the deposit
+    /// @param depositor The address of the depositor
+    /// @param amount The amount of asset that was cancelled
+    event DepositForceCancelled(uint256 indexed epochNonce, address indexed depositor, uint256 indexed amount);
     /// @notice Emitted when the initial active protocol adapter is set
     /// @param protocolId The protocol ID of the initial active strategy
     /// @param adapter The registered adapter for the protocol ID
@@ -187,6 +192,13 @@ interface IParentVault is IBaseVault {
     /// @param isSupported Whether the protocol is supported
     /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
     function setSupportedProtocol(bytes32 protocolId, bool isSupported) external;
+
+    /// @notice Force-cancels a user's deposit in the current open epoch, refunding their exact deposited amount
+    /// @param user The depositor whose deposit is being force-cancelled
+    /// @dev Precondition: Caller must have the CANCEL_DEPOSIT_OPERATOR_ROLE
+    /// @dev Precondition: the current epoch must be open
+    /// @dev Precondition: user must have a deposit for the current epoch
+    function forceCancelDeposit(address user) external;
 
     /*//////////////////////////////////////////////////////////////
                                GETTERS

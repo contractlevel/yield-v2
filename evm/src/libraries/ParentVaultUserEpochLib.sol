@@ -28,6 +28,7 @@ library ParentVaultUserEpochLib {
     event WithdrawClaimed(uint256 indexed epochNonce, address indexed withdrawer, uint256 indexed amount);
     event DepositCancelled(uint256 indexed epochNonce, address indexed depositor, uint256 indexed amount);
     event WithdrawCancelled(uint256 indexed epochNonce, address indexed withdrawer, uint256 indexed shareBurnAmount);
+    event DepositForceCancelled(uint256 indexed epochNonce, address indexed depositor, uint256 indexed amount);
 
     /*//////////////////////////////////////////////////////////////
                              USER FUNCTIONS
@@ -222,18 +223,48 @@ library ParentVaultUserEpochLib {
     }
 
     function _cancelDeposit(ParentVaultStore.ParentVaultStorage storage $, address asset, address user) internal {
-        uint256 epochNonce = $.s_epochNonce;
+        (uint256 epochNonce, uint256 depositAmount) = _cancelDepositCore($, asset, user);
+        emit DepositCancelled(epochNonce, user, depositAmount);
+    }
+
+    /// @notice Force-cancels a user's deposit in the current open epoch
+    /// @param $ ParentVault namespaced storage
+    /// @param asset The underlying asset token
+    /// @param user The depositor whose deposit is being force-cancelled
+    /// @dev This deletes the entire deposit entry for the user and epoch nonce
+    /// @dev Precondition: the current epoch must be open
+    /// @dev Precondition: the user must have a deposit for the epoch nonce
+    function forceCancelDeposit(ParentVaultStore.ParentVaultStorage storage $, address asset, address user) public {
+        _forceCancelDeposit($, asset, user);
+    }
+
+    function _forceCancelDeposit(ParentVaultStore.ParentVaultStorage storage $, address asset, address user) internal {
+        (uint256 epochNonce, uint256 depositAmount) = _cancelDepositCore($, asset, user);
+        emit DepositForceCancelled(epochNonce, user, depositAmount);
+    }
+
+    /// @notice Shared state-mutation core for cancelling a deposit in the current open epoch
+    /// @param $ ParentVault namespaced storage
+    /// @param asset The underlying asset token
+    /// @param user The depositor whose deposit is being cancelled
+    /// @return epochNonce The epoch nonce the deposit was cancelled from
+    /// @return depositAmount The amount of asset refunded to the user
+    /// @dev Precondition: the current epoch must be open
+    /// @dev Precondition: the user must have a deposit for the epoch nonce
+    function _cancelDepositCore(ParentVaultStore.ParentVaultStorage storage $, address asset, address user)
+        private
+        returns (uint256 epochNonce, uint256 depositAmount)
+    {
+        epochNonce = $.s_epochNonce;
         Types.Epoch storage s_epoch = $.s_epochs[epochNonce];
         if (s_epoch.status != Types.EpochStatus.OPEN) revert IParentVault.ParentVault__EpochNotOpen(epochNonce);
 
-        uint256 depositAmount = $.s_deposits[user][epochNonce];
+        depositAmount = $.s_deposits[user][epochNonce];
         if (depositAmount == 0) revert IParentVault.ParentVault__NoDeposit(user, epochNonce);
         delete $.s_deposits[user][epochNonce];
         s_epoch.totalDepositAmount -= depositAmount;
 
         IERC20(asset).safeTransfer(user, depositAmount);
-
-        emit DepositCancelled(epochNonce, user, depositAmount);
     }
 
     /// @notice Cancels a withdraw

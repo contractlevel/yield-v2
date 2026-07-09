@@ -70,9 +70,11 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @param treasury The address of the operator multisig for protocol fees
     /// @param policyEngineManager The address authorized to replace this vault's attached policy engine
     /// @param policyEngine The address of the Yieldcoin v2 PolicyEngine
+    /// @param cancelDepositOperator The address authorized to force-cancel stuck deposits
     /// @dev Precondition: treasury must not be the zero address
     /// @dev Precondition: policyEngineManager must not be the zero address
     /// @dev Precondition: policyEngine must not be the zero address
+    /// @dev Precondition: cancelDepositOperator must not be the zero address
     /// @dev PolicyProtected ownership is initialized to the vault default admin only to satisfy inherited Ownable state.
     ///      Runtime policy engine replacement is controlled by POLICY_ENGINE_MANAGER_ROLE.
     /// @dev The initial active protocol adapter is set after deployment with setInitialActiveProtocolAdapter.
@@ -82,11 +84,13 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         BaseVault.InitParams memory params,
         address treasury,
         address policyEngineManager,
-        address policyEngine
+        address policyEngine,
+        address cancelDepositOperator
         // @review add reentrancy protection and refactor / update relevant tests, trees and specs
     ) external initializer {
         _revertIfZeroAddress(treasury);
         _revertIfZeroAddress(policyEngineManager);
+        _revertIfZeroAddress(cancelDepositOperator);
         _validatePolicyEngine(policyEngine);
 
         __BaseVault_init(params);
@@ -101,6 +105,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         $.s_rebalance.lastRebalanceCompletedTimestamp = block.timestamp;
         $.s_treasury = treasury;
         _grantRole(Roles.POLICY_ENGINE_MANAGER_ROLE, policyEngineManager);
+        _grantRole(Roles.CANCEL_DEPOSIT_OPERATOR_ROLE, cancelDepositOperator);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -245,6 +250,18 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         ParentVaultUserEpochLib.cancelWithdraw(_parentVaultStorage(), i_share, msg.sender);
     }
 
+    /// @notice Force-cancels a user's deposit in the current open epoch, refunding their exact deposited amount
+    /// @param user The depositor whose deposit is being force-cancelled
+    /// @dev This deletes the entire deposit entry for the user and epoch nonce
+    /// @dev Precondition: the function must not be reentered
+    /// @dev Precondition: caller must have the CANCEL_DEPOSIT_OPERATOR_ROLE
+    /// @dev Precondition: the current epoch must be open
+    /// @dev Precondition: the user must have a deposit for the epoch nonce
+    /// @dev ParentVaultUserEpochLib is linked by Solidity and executes by DELEGATECALL in the vault context.
+    function forceCancelDeposit(address user) external nonReentrant onlyRole(Roles.CANCEL_DEPOSIT_OPERATOR_ROLE) {
+        ParentVaultUserEpochLib.forceCancelDeposit(_parentVaultStorage(), i_asset, user);
+    }
+
     /*//////////////////////////////////////////////////////////////
                                   CCIP
     //////////////////////////////////////////////////////////////*/
@@ -263,7 +280,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         nonReentrant
         onlyAllowedSender(abi.decode(message.sender, (address)), message.sourceChainSelector)
     {
-        _requireNoRecovery();
+        _requireNoRecovery(_baseVaultStorage());
         uint256 receivedAmount = BaseVaultCcipLib.validateReceivedTokenAndGetAmount(message, i_asset);
 
         /// @dev data decodes to a uint256 epochNonce for epoch net withdraws and a (uint256 rebalanceNonce, bytes32 protocolId) for rebalances
@@ -408,7 +425,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @dev Precondition: caller must have REBALANCE_OPERATOR_ROLE
     /// @dev Precondition: there must not be a stored recovery mode
     function completeRebalance() external nonReentrant onlyRole(Roles.REBALANCE_OPERATOR_ROLE) {
-        _requireNoRecovery();
+        _requireNoRecovery(_baseVaultStorage());
         ParentVaultRebalanceLib.finalizeRebalance(_parentVaultStorage(), i_share);
     }
 
@@ -416,12 +433,13 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
                                 RECOVERY
     //////////////////////////////////////////////////////////////*/
     /// @notice Executes the active recovery mode, reverting if no recovery is pending
+    /// @notice The only recovery mode that can be active on Parent is REBALANCE_DEPOSIT
     /// @dev Precondition: a recovery mode must be active (not NONE)
     /// @dev Precondition: function must not be reentered
-    /// @dev For REBALANCE_DEPOSIT: also finalizes the rebalance in the same atomic tx
+    /// @dev Finalizes the rebalance in the same atomic tx
     function executeRecovery() external override(BaseVault, IBaseVault) nonReentrant {
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
-        if ($_baseVault.s_recoveryMode == Types.RecoveryMode.NONE) revert BaseVault__NoPendingRecovery();
+        if ($_baseVault.s_recoveryMode != Types.RecoveryMode.REBALANCE_DEPOSIT) revert BaseVault__NoPendingRecovery();
         _recoverFailedRebalanceDeposit($_baseVault);
         ParentVaultRebalanceLib.finalizeRebalance(_parentVaultStorage(), i_share);
     }

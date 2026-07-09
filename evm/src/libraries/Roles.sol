@@ -37,4 +37,6 @@ library Roles {
     bytes32 internal constant BURNER_ROLE = keccak256("BURNER_ROLE");
     /// @notice Rewards operator role for claiming Compound V3 protocol rewards from the CompoundV3Adapter
     bytes32 internal constant REWARDS_OPERATOR_ROLE = keccak256("REWARDS_OPERATOR_ROLE");
+    /// @notice Cancel deposit operator role for force-cancelling stuck deposits to unblock epoch settlement
+    bytes32 internal constant CANCEL_DEPOSIT_OPERATOR_ROLE = keccak256("CANCEL_DEPOSIT_OPERATOR_ROLE");
 }

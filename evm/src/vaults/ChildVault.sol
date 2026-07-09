@@ -49,6 +49,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
 
     /// @notice Initializes ChildVault mutable proxy state.
     /// @param params BaseVault initializer parameters for roles and mutable vault configuration
+    // @review nonReentrant
     function initialize(BaseVault.InitParams memory params) external initializer {
         __BaseVault_init(params);
     }
@@ -125,24 +126,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
 
         try this.tryCcipSend(bridgeAmount, destinationChainSelector, ccipTxType, txData) {}
         catch {
-            uint256 nonce;
-            bytes32 protocolId;
-            // @review gas optimization: we'd have to pass nonce and protocolId to _ccipSend, refactoring Base/Parent too
-            if (ccipTxType == Types.CcipTx.REBALANCE) {
-                (nonce, protocolId) = abi.decode(txData, (uint256, bytes32));
-            } else {
-                nonce = abi.decode(txData, (uint256));
-            }
-            _childVaultStorage().s_ccipSendRecovery = Types.CcipSendRecovery({
-                ccipTxType: ccipTxType,
-                amount: bridgeAmount,
-                destinationChainSelector: destinationChainSelector,
-                nonce: nonce,
-                protocolId: protocolId,
-                createdAt: block.timestamp
-            });
-            $_baseVault.s_recoveryMode = Types.RecoveryMode.CCIP_SEND;
-            emit CcipSendRecoveryStored(ccipTxType, destinationChainSelector, bridgeAmount);
+            _storeCcipSendRecovery($_baseVault, bridgeAmount, destinationChainSelector, ccipTxType, txData);
         }
     }
 
@@ -289,224 +273,6 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /*//////////////////////////////////////////////////////////////
                                 RECOVERY
     //////////////////////////////////////////////////////////////*/
-    /// @notice Stores recovery state for a failed epoch deposit
-    /// @param epochNonce The epoch nonce of the failed deposit
-    /// @param amount The amount of asset to retry depositing
-    /// @dev Precondition: amount must not be zero
-    /// @dev Precondition: no recovery state must currently exist
-    function _storeEpochDepositRecovery(uint256 epochNonce, uint256 amount) internal {
-        if (amount == 0) revert BaseVault__ZeroRecoveryAmount();
-        BaseVaultStorage storage $_baseVault = _baseVaultStorage();
-        _requireNoRecovery($_baseVault);
-        _storeEpochDepositRecovery($_baseVault, epochNonce, amount);
-    }
-
-    function _storeEpochDepositRecovery(BaseVaultStorage storage $_baseVault, uint256 epochNonce, uint256 amount)
-        internal
-    {
-        _childVaultStorage().s_epochDepositRecovery =
-            Types.EpochRecovery({epochNonce: epochNonce, amount: amount, createdAt: block.timestamp});
-        $_baseVault.s_recoveryMode = Types.RecoveryMode.EPOCH_DEPOSIT;
-        emit EpochDepositRecoveryStored(epochNonce, amount);
-    }
-
-    /// @notice Clears recovery state for a failed epoch deposit
-    /// @dev Precondition: epoch deposit recovery state must exist
-    function _clearEpochDepositRecovery() internal {
-        BaseVaultStorage storage $_baseVault = _baseVaultStorage();
-        _requireRecoveryMode($_baseVault, Types.RecoveryMode.EPOCH_DEPOSIT);
-        _clearEpochDepositRecovery(_childVaultStorage(), $_baseVault);
-    }
-
-    function _clearEpochDepositRecovery(ChildVaultStorage storage $, BaseVaultStorage storage $_baseVault) internal {
-        uint256 epochNonce = $.s_epochDepositRecovery.epochNonce;
-        delete $.s_epochDepositRecovery;
-        $_baseVault.s_recoveryMode = Types.RecoveryMode.NONE;
-        emit EpochDepositRecoveryCleared(epochNonce);
-    }
-
-    /// @notice Requires and returns failed epoch deposit recovery state
-    /// @return recovery The stored epoch deposit recovery state
-    /// @dev Precondition: epoch deposit recovery state must exist
-    function _requireEpochDepositRecovery() internal view returns (Types.EpochRecovery memory recovery) {
-        _requireRecoveryMode(_baseVaultStorage(), Types.RecoveryMode.EPOCH_DEPOSIT);
-        recovery = _childVaultStorage().s_epochDepositRecovery;
-    }
-
-    /// @notice Stores recovery state for a failed epoch withdraw
-    /// @param epochNonce The epoch nonce of the failed withdraw
-    /// @param amount The amount of asset to retry withdrawing
-    /// @dev Precondition: amount must not be zero
-    /// @dev Precondition: no recovery state must currently exist
-    function _storeEpochWithdrawRecovery(uint256 epochNonce, uint256 amount) internal {
-        //slither-disable-next-line incorrect-equality
-        if (amount == 0) revert BaseVault__ZeroRecoveryAmount();
-        BaseVaultStorage storage $_baseVault = _baseVaultStorage();
-        _requireNoRecovery($_baseVault);
-        _storeEpochWithdrawRecovery($_baseVault, epochNonce, amount);
-    }
-
-    function _storeEpochWithdrawRecovery(BaseVaultStorage storage $_baseVault, uint256 epochNonce, uint256 amount)
-        internal
-    {
-        _childVaultStorage().s_epochWithdrawRecovery =
-            Types.EpochRecovery({epochNonce: epochNonce, amount: amount, createdAt: block.timestamp});
-        $_baseVault.s_recoveryMode = Types.RecoveryMode.EPOCH_WITHDRAW;
-        emit EpochWithdrawRecoveryStored(epochNonce, amount);
-    }
-
-    /// @notice Clears recovery state for a failed epoch withdraw
-    /// @dev Precondition: epoch withdraw recovery state must exist
-    function _clearEpochWithdrawRecovery() internal {
-        BaseVaultStorage storage $_baseVault = _baseVaultStorage();
-        _requireRecoveryMode($_baseVault, Types.RecoveryMode.EPOCH_WITHDRAW);
-        _clearEpochWithdrawRecovery(_childVaultStorage(), $_baseVault);
-    }
-
-    function _clearEpochWithdrawRecovery(ChildVaultStorage storage $, BaseVaultStorage storage $_baseVault) internal {
-        uint256 epochNonce = $.s_epochWithdrawRecovery.epochNonce;
-        delete $.s_epochWithdrawRecovery;
-        $_baseVault.s_recoveryMode = Types.RecoveryMode.NONE;
-        emit EpochWithdrawRecoveryCleared(epochNonce);
-    }
-
-    /// @notice Requires and returns failed epoch withdraw recovery state
-    /// @return recovery The stored epoch withdraw recovery state
-    /// @dev Precondition: epoch withdraw recovery state must exist
-    function _requireEpochWithdrawRecovery() internal view returns (Types.EpochRecovery memory recovery) {
-        _requireRecoveryMode(_baseVaultStorage(), Types.RecoveryMode.EPOCH_WITHDRAW);
-        recovery = _childVaultStorage().s_epochWithdrawRecovery;
-    }
-
-    /// @notice Stores recovery state for a failed rebalance withdraw
-    /// @param rebalanceNonce The rebalance nonce of the failed withdraw
-    /// @param strategy The target strategy to continue the rebalance into after withdraw succeeds
-    /// @dev Precondition: strategy chain selector must not be zero
-    /// @dev Precondition: no recovery state must currently exist
-    function _storeRebalanceWithdrawRecovery(uint256 rebalanceNonce, Types.Strategy memory strategy) internal {
-        //slither-disable-next-line incorrect-equality
-        if (strategy.chainSelector == 0) revert ChildVault__InvalidRecoveryStrategy();
-        BaseVaultStorage storage $_baseVault = _baseVaultStorage();
-        _requireNoRecovery($_baseVault);
-        _storeRebalanceWithdrawRecovery($_baseVault, rebalanceNonce, strategy);
-    }
-
-    function _storeRebalanceWithdrawRecovery(
-        BaseVaultStorage storage $_baseVault,
-        uint256 rebalanceNonce,
-        Types.Strategy memory strategy
-    ) internal {
-        _childVaultStorage().s_rebalanceWithdrawRecovery = Types.RebalanceWithdrawRecovery({
-            rebalanceNonce: rebalanceNonce, strategy: strategy, createdAt: block.timestamp
-        });
-        $_baseVault.s_recoveryMode = Types.RecoveryMode.REBALANCE_WITHDRAW;
-        emit RebalanceWithdrawRecoveryStored(rebalanceNonce, strategy.protocolId, strategy.chainSelector);
-    }
-
-    /// @notice Clears recovery state for a failed rebalance withdraw
-    /// @dev Precondition: rebalance withdraw recovery state must exist
-    function _clearRebalanceWithdrawRecovery() internal {
-        BaseVaultStorage storage $_baseVault = _baseVaultStorage();
-        _requireRecoveryMode($_baseVault, Types.RecoveryMode.REBALANCE_WITHDRAW);
-        _clearRebalanceWithdrawRecovery(_childVaultStorage(), $_baseVault);
-    }
-
-    function _clearRebalanceWithdrawRecovery(ChildVaultStorage storage $, BaseVaultStorage storage $_baseVault)
-        internal
-    {
-        uint256 rebalanceNonce = $.s_rebalanceWithdrawRecovery.rebalanceNonce;
-        delete $.s_rebalanceWithdrawRecovery;
-        $_baseVault.s_recoveryMode = Types.RecoveryMode.NONE;
-        emit RebalanceWithdrawRecoveryCleared(rebalanceNonce);
-    }
-
-    /// @notice Requires and returns failed rebalance withdraw recovery state
-    /// @return recovery The stored rebalance withdraw recovery state
-    /// @dev Precondition: rebalance withdraw recovery state must exist
-    function _requireRebalanceWithdrawRecovery()
-        internal
-        view
-        returns (Types.RebalanceWithdrawRecovery memory recovery)
-    {
-        _requireRecoveryMode(_baseVaultStorage(), Types.RecoveryMode.REBALANCE_WITHDRAW);
-        recovery = _childVaultStorage().s_rebalanceWithdrawRecovery;
-    }
-
-    /// @notice Clears recovery state for a failed CCIP send
-    /// @return recovery The cleared CCIP send recovery state
-    /// @dev Precondition: CCIP send recovery state must exist
-    function _clearCcipSendRecovery() internal returns (Types.CcipSendRecovery memory recovery) {
-        BaseVaultStorage storage $_baseVault = _baseVaultStorage();
-        _requireRecoveryMode($_baseVault, Types.RecoveryMode.CCIP_SEND);
-        recovery = _clearCcipSendRecovery(_childVaultStorage(), $_baseVault);
-    }
-
-    function _clearCcipSendRecovery(ChildVaultStorage storage $, BaseVaultStorage storage $_baseVault)
-        internal
-        returns (Types.CcipSendRecovery memory recovery)
-    {
-        recovery = $.s_ccipSendRecovery;
-        delete $.s_ccipSendRecovery;
-        $_baseVault.s_recoveryMode = Types.RecoveryMode.NONE;
-        emit CcipSendRecoveryCleared(recovery.ccipTxType, recovery.destinationChainSelector, recovery.amount);
-    }
-
-    function _recoverFailedEpochDeposit() internal {
-        BaseVaultStorage storage $_baseVault = _baseVaultStorage();
-        _requireRecoveryMode($_baseVault, Types.RecoveryMode.EPOCH_DEPOSIT);
-        _recoverFailedEpochDeposit(_childVaultStorage(), $_baseVault);
-    }
-
-    function _recoverFailedEpochDeposit(ChildVaultStorage storage $, BaseVaultStorage storage $_baseVault) internal {
-        Types.EpochRecovery memory recovery = $.s_epochDepositRecovery;
-        uint256 epochNonce = recovery.epochNonce;
-
-        _executeDeposit(recovery.amount, true);
-        _clearEpochDepositRecovery($, $_baseVault);
-
-        emit DepositToStrategySuccess(epochNonce, recovery.amount);
-    }
-
-    function _recoverFailedEpochWithdraw() internal {
-        BaseVaultStorage storage $_baseVault = _baseVaultStorage();
-        _requireRecoveryMode($_baseVault, Types.RecoveryMode.EPOCH_WITHDRAW);
-        _recoverFailedEpochWithdraw(_childVaultStorage(), $_baseVault);
-    }
-
-    function _recoverFailedEpochWithdraw(ChildVaultStorage storage $, BaseVaultStorage storage $_baseVault) internal {
-        Types.EpochRecovery memory recovery = $.s_epochWithdrawRecovery;
-        uint256 epochNonce = recovery.epochNonce;
-
-        (, uint256 amountOut) = _executeWithdraw(recovery.amount, true);
-        //slither-disable-next-line incorrect-equality
-        if (amountOut == 0) revert BaseVault__ZeroRecoveryAmount();
-
-        _clearEpochWithdrawRecovery($, $_baseVault);
-        emit WithdrawFromStrategySuccess(epochNonce, amountOut);
-        _ccipSend(amountOut, i_parentChainSelector, Types.CcipTx.EPOCH_NET_WITHDRAW, abi.encode(epochNonce));
-    }
-
-    function _recoverFailedRebalanceWithdraw() internal {
-        BaseVaultStorage storage $_baseVault = _baseVaultStorage();
-        _requireRecoveryMode($_baseVault, Types.RecoveryMode.REBALANCE_WITHDRAW);
-        _recoverFailedRebalanceWithdraw(_childVaultStorage(), $_baseVault);
-    }
-
-    function _recoverFailedRebalanceWithdraw(ChildVaultStorage storage $, BaseVaultStorage storage $_baseVault)
-        internal
-    {
-        Types.RebalanceWithdrawRecovery memory recovery = $.s_rebalanceWithdrawRecovery;
-        uint256 rebalanceNonce = recovery.rebalanceNonce;
-
-        (, uint256 amountRebalanced) = _executeWithdraw(type(uint256).max, true);
-        //slither-disable-next-line incorrect-equality
-        if (amountRebalanced == 0) revert BaseVault__ZeroRecoveryAmount();
-
-        _clearRebalanceWithdrawRecovery($, $_baseVault);
-        emit RebalanceWithdrawSuccess(rebalanceNonce, amountRebalanced);
-        _rebalanceToNewStrategy(rebalanceNonce, amountRebalanced, recovery.strategy);
-    }
-
     /// @notice Executes the active recovery mode, reverting if no recovery is pending
     /// @dev Precondition: a recovery mode must be active (not NONE)
     /// @dev Precondition: function must not be reentered
@@ -528,12 +294,182 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         }
     }
 
-    function _recoverFailedCcipSend() internal {
-        BaseVaultStorage storage $_baseVault = _baseVaultStorage();
-        _requireRecoveryMode($_baseVault, Types.RecoveryMode.CCIP_SEND);
-        _recoverFailedCcipSend($_baseVault);
+    // --- EPOCH DEPOSIT RECOVERY --- //
+
+    /// @notice Stores recovery state for a failed epoch deposit
+    /// @param $_baseVault BaseVaultStorage
+    /// @param epochNonce The epoch nonce of the failed deposit
+    /// @param amount The amount of asset to retry depositing
+    /// @dev Precondition: amount must not be zero
+    /// @dev Precondition: no recovery state must currently exist
+    function _storeEpochDepositRecovery(BaseVaultStorage storage $_baseVault, uint256 epochNonce, uint256 amount)
+        internal
+    {
+        if (amount == 0) revert BaseVault__ZeroRecoveryAmount();
+        _requireNoRecovery($_baseVault);
+        _childVaultStorage().s_epochDepositRecovery =
+            Types.EpochRecovery({epochNonce: epochNonce, amount: amount, createdAt: block.timestamp});
+        $_baseVault.s_recoveryMode = Types.RecoveryMode.EPOCH_DEPOSIT;
+        emit EpochDepositRecoveryStored(epochNonce, amount);
     }
 
+    /// @notice Recovers a failed epoch deposit tx
+    /// @param $ ChildVaultStorage
+    /// @param $_baseVault BaseVaultStorage
+    function _recoverFailedEpochDeposit(ChildVaultStorage storage $, BaseVaultStorage storage $_baseVault) internal {
+        Types.EpochRecovery memory recovery = $.s_epochDepositRecovery;
+        uint256 epochNonce = recovery.epochNonce;
+
+        _executeDeposit(recovery.amount, true);
+        _clearEpochDepositRecovery($, $_baseVault);
+
+        emit DepositToStrategySuccess(epochNonce, recovery.amount);
+    }
+
+    /// @notice Clears recovery state for a failed epoch deposit
+    function _clearEpochDepositRecovery(ChildVaultStorage storage $, BaseVaultStorage storage $_baseVault) internal {
+        uint256 epochNonce = $.s_epochDepositRecovery.epochNonce;
+        delete $.s_epochDepositRecovery;
+        $_baseVault.s_recoveryMode = Types.RecoveryMode.NONE;
+        emit EpochDepositRecoveryCleared(epochNonce);
+    }
+
+    // --- EPOCH WITHDRAW RECOVERY --- //
+
+    /// @notice Stores recovery state for a failed epoch withdraw
+    /// @param $_baseVault BaseVaultStorage
+    /// @param epochNonce The epoch nonce of the failed withdraw
+    /// @param amount The amount of asset to retry withdrawing
+    /// @dev Precondition: amount must not be zero
+    /// @dev Precondition: no recovery state must currently exist
+    function _storeEpochWithdrawRecovery(BaseVaultStorage storage $_baseVault, uint256 epochNonce, uint256 amount)
+        internal
+    {
+        //slither-disable-next-line incorrect-equality
+        if (amount == 0) revert BaseVault__ZeroRecoveryAmount();
+        _requireNoRecovery($_baseVault);
+        _childVaultStorage().s_epochWithdrawRecovery =
+            Types.EpochRecovery({epochNonce: epochNonce, amount: amount, createdAt: block.timestamp});
+        $_baseVault.s_recoveryMode = Types.RecoveryMode.EPOCH_WITHDRAW;
+        emit EpochWithdrawRecoveryStored(epochNonce, amount);
+    }
+
+    /// @notice Recovers a failed epoch withdraw tx
+    /// @param $ ChildVaultStorage
+    /// @param $_baseVault BaseVaultStorage
+    /// @dev Precondition: amountOut from strategy withdraw must not be 0
+    function _recoverFailedEpochWithdraw(ChildVaultStorage storage $, BaseVaultStorage storage $_baseVault) internal {
+        Types.EpochRecovery memory recovery = $.s_epochWithdrawRecovery;
+        uint256 epochNonce = recovery.epochNonce;
+
+        (, uint256 amountOut) = _executeWithdraw(recovery.amount, true);
+        //slither-disable-next-line incorrect-equality
+        if (amountOut == 0) revert BaseVault__ZeroRecoveryAmount();
+
+        _clearEpochWithdrawRecovery($, $_baseVault);
+        emit WithdrawFromStrategySuccess(epochNonce, amountOut);
+        _ccipSend(amountOut, i_parentChainSelector, Types.CcipTx.EPOCH_NET_WITHDRAW, abi.encode(epochNonce));
+    }
+
+    /// @notice Clears recovery state for a failed epoch withdraw
+    function _clearEpochWithdrawRecovery(ChildVaultStorage storage $, BaseVaultStorage storage $_baseVault) internal {
+        uint256 epochNonce = $.s_epochWithdrawRecovery.epochNonce;
+        delete $.s_epochWithdrawRecovery;
+        $_baseVault.s_recoveryMode = Types.RecoveryMode.NONE;
+        emit EpochWithdrawRecoveryCleared(epochNonce);
+    }
+
+    // --- REBALANCE WITHDRAW RECOVERY --- //
+
+    /// @notice Stores recovery state for a failed rebalance withdraw
+    /// @param $_baseVault BaseVaultStorage
+    /// @param rebalanceNonce The rebalance nonce of the failed withdraw
+    /// @param strategy The target strategy to continue the rebalance into after withdraw succeeds
+    /// @dev Precondition: strategy chain selector must not be zero
+    /// @dev Precondition: no recovery state must currently exist
+    function _storeRebalanceWithdrawRecovery(
+        BaseVaultStorage storage $_baseVault,
+        uint256 rebalanceNonce,
+        Types.Strategy memory strategy
+    ) internal {
+        //slither-disable-next-line incorrect-equality
+        if (strategy.chainSelector == 0) revert ChildVault__InvalidRecoveryStrategy();
+        _requireNoRecovery($_baseVault);
+        _childVaultStorage().s_rebalanceWithdrawRecovery = Types.RebalanceWithdrawRecovery({
+            rebalanceNonce: rebalanceNonce, strategy: strategy, createdAt: block.timestamp
+        });
+        $_baseVault.s_recoveryMode = Types.RecoveryMode.REBALANCE_WITHDRAW;
+        emit RebalanceWithdrawRecoveryStored(rebalanceNonce, strategy.protocolId, strategy.chainSelector);
+    }
+
+    /// @notice Recovers a failed rebalance withdraw tx
+    /// @param $ ChildVaultStorage
+    /// @param $_baseVault BaseVaultStorage
+    function _recoverFailedRebalanceWithdraw(ChildVaultStorage storage $, BaseVaultStorage storage $_baseVault)
+        internal
+    {
+        Types.RebalanceWithdrawRecovery memory recovery = $.s_rebalanceWithdrawRecovery;
+        uint256 rebalanceNonce = recovery.rebalanceNonce;
+
+        (, uint256 amountRebalanced) = _executeWithdraw(type(uint256).max, true);
+        //slither-disable-next-line incorrect-equality
+        if (amountRebalanced == 0) revert BaseVault__ZeroRecoveryAmount();
+
+        _clearRebalanceWithdrawRecovery($, $_baseVault);
+        emit RebalanceWithdrawSuccess(rebalanceNonce, amountRebalanced);
+        _rebalanceToNewStrategy(rebalanceNonce, amountRebalanced, recovery.strategy);
+    }
+
+    /// @notice Clears recovery state for a failed rebalance withdraw
+    function _clearRebalanceWithdrawRecovery(ChildVaultStorage storage $, BaseVaultStorage storage $_baseVault)
+        internal
+    {
+        uint256 rebalanceNonce = $.s_rebalanceWithdrawRecovery.rebalanceNonce;
+        delete $.s_rebalanceWithdrawRecovery;
+        $_baseVault.s_recoveryMode = Types.RecoveryMode.NONE;
+        emit RebalanceWithdrawRecoveryCleared(rebalanceNonce);
+    }
+
+    // --- CCIP SEND RECOVERY --- //
+
+    /// @notice Stores recovery state for a failed CCIP send
+    /// @param $_baseVault BaseVaultStorage
+    /// @param bridgeAmount The amount of asset that was being bridged
+    /// @param destinationChainSelector The CCIP selector of the destination chain
+    /// @param ccipTxType The type of CCIP transaction
+    /// @param txData abi.encode(epochNonce) for epoch net deposit/withdraw, or abi.encode(rebalanceNonce, newStrategy.protocolId) for rebalance
+    /// @dev Precondition: no recovery state must currently exist
+    function _storeCcipSendRecovery(
+        BaseVaultStorage storage $_baseVault,
+        uint256 bridgeAmount,
+        uint64 destinationChainSelector,
+        Types.CcipTx ccipTxType,
+        bytes memory txData
+    ) internal {
+        _requireNoRecovery($_baseVault);
+
+        uint256 nonce;
+        bytes32 protocolId;
+        // @review gas optimization: we'd have to pass nonce and protocolId to _ccipSend, refactoring Base/Parent too
+        if (ccipTxType == Types.CcipTx.REBALANCE) {
+            (nonce, protocolId) = abi.decode(txData, (uint256, bytes32));
+        } else {
+            nonce = abi.decode(txData, (uint256));
+        }
+        _childVaultStorage().s_ccipSendRecovery = Types.CcipSendRecovery({
+            ccipTxType: ccipTxType,
+            amount: bridgeAmount,
+            destinationChainSelector: destinationChainSelector,
+            nonce: nonce,
+            protocolId: protocolId,
+            createdAt: block.timestamp
+        });
+        $_baseVault.s_recoveryMode = Types.RecoveryMode.CCIP_SEND;
+        emit CcipSendRecoveryStored(ccipTxType, destinationChainSelector, bridgeAmount);
+    }
+
+    /// @notice Recovers a failed CCIP send by retrying it
+    /// @param $_baseVault BaseVaultStorage
     function _recoverFailedCcipSend(BaseVaultStorage storage $_baseVault) internal {
         // Clear before retry; if CCIP send reverts, EVM atomicity restores this recovery state.
         Types.CcipSendRecovery memory recovery = _clearCcipSendRecovery(_childVaultStorage(), $_baseVault);
@@ -549,6 +485,20 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
             i_ccipRouter,
             i_thisChainSelector
         );
+    }
+
+    /// @notice Clears recovery state for a failed CCIP send
+    /// @param $ ChildVaultStorage for Child Recovery state
+    /// @param $_baseVault BaseVaultStorage for recovery mode
+    /// @return recovery The cleared CCIP send recovery state
+    function _clearCcipSendRecovery(ChildVaultStorage storage $, BaseVaultStorage storage $_baseVault)
+        internal
+        returns (Types.CcipSendRecovery memory recovery)
+    {
+        recovery = $.s_ccipSendRecovery;
+        delete $.s_ccipSendRecovery;
+        $_baseVault.s_recoveryMode = Types.RecoveryMode.NONE;
+        emit CcipSendRecoveryCleared(recovery.ccipTxType, recovery.destinationChainSelector, recovery.amount);
     }
 
     /// @notice Rebuilds the CCIP send payload from stored recovery fields for retry

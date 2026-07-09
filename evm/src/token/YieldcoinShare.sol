@@ -4,6 +4,8 @@ pragma solidity 0.8.34;
 import {ComplianceTokenERC3643} from "@chainlink/tokens/erc-3643/src/ComplianceTokenERC3643.sol";
 import {YieldcoinShareStore} from "./YieldcoinShareStore.sol";
 
+// @review double check policies and pausable
+
 /// @title YieldcoinShare
 /// @author @contractlevel
 /// @notice YieldcoinShare is the compliance-ready share token of the Yieldcoin v2 system.
@@ -39,6 +41,7 @@ contract YieldcoinShare is ComplianceTokenERC3643, YieldcoinShareStore {
     /// @param upgrader Address authorized to upgrade this contract via UUPS (set as OZ owner)
     /// @dev Precondition: initialCcipAdmin must not be the zero address
     /// @dev Precondition: upgrader must not be the zero address
+    // @review nonReentrant
     function initialize(address policyEngine, address initialCcipAdmin, address upgrader) external initializer {
         if (upgrader == address(0)) revert YieldcoinShare__NoZeroAddress();
         _validatePolicyEngine(policyEngine);

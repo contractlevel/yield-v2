@@ -1,0 +1,13 @@
+ParentVault_forceCancelDeposit
+├── when the caller does not have the CANCEL_DEPOSIT_OPERATOR_ROLE
+│   └── it should revert
+└── when the caller has the CANCEL_DEPOSIT_OPERATOR_ROLE
+    ├── when the epoch is not open
+    │   └── it should revert with ParentVault__EpochNotOpen
+    ├── when the user has no deposit
+    │   └── it should revert with ParentVault__NoDeposit
+    └── when the force cancel is valid
+        ├── it should transfer USDC from the vault to the user
+        ├── it should delete the user's deposit mapping
+        ├── it should update the epoch total deposit amount
+        └── it should emit DepositForceCancelled

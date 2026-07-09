@@ -313,25 +313,33 @@ abstract contract BaseVault is
     /*//////////////////////////////////////////////////////////////
                                RECOVERY
     //////////////////////////////////////////////////////////////*/
-    /// @notice Recovery function for storing a failed rebalance deposit
-    /// @notice This is called when a rebalance attempts to deposit into a new strategy and fails
-    /// @param rebalanceNonce The nonce of the rebalance
-    /// @param amount The amount that should have been rebalanced into the new strategy
-    /// @dev Stores the rebalance nonce, amount, and block timestamp in one pending slot
-    /// @dev Emits RebalanceDepositRecoveryStored event
-    /// @dev Precondition: no recovery state must currently exist
-    /// @dev Precondition: amount should not be zero
-    function _storeRebalanceDepositRecovery(uint256 rebalanceNonce, uint256 amount) internal {
-        //slither-disable-next-line incorrect-equality
-        if (amount == 0) revert BaseVault__ZeroRecoveryAmount();
-        BaseVaultStorage storage $ = _baseVaultStorage();
-        _requireNoRecovery($);
-        _storeRebalanceDepositRecovery($, rebalanceNonce, amount);
+    /// @notice Executes the active recovery mode, reverting if no recovery is pending
+    /// @dev Inherited and implemented by ParentVault and ChildVault
+    /// @dev Precondition: a recovery mode must be active (not NONE)
+    /// @notice Deliberately permissionless to allow anyone to advance recovery state when conditions allow
+    function executeRecovery() external virtual;
+
+    /// @notice Reverts if any recovery state is pending
+    /// @param $ BaseVaultStorage to read the recovery mode
+    function _requireNoRecovery(BaseVaultStorage storage $) internal view {
+        if ($.s_recoveryMode != Types.RecoveryMode.NONE) revert BaseVault__RecoveryAlreadyPending();
     }
 
+    // --- REBALANCE DEPOSIT RECOVERY --- //
+
+    /// @notice Stores recovery state for a failed rebalance deposit
+    /// @notice This is called when a rebalance attempts to deposit into a new strategy and fails
+    /// @param $ BaseVaultStorage
+    /// @param rebalanceNonce The nonce of the rebalance
+    /// @param amount The amount that should have been rebalanced into the new strategy
+    /// @dev Precondition: amount must not be zero
+    /// @dev Precondition: no recovery state must currently exist
     function _storeRebalanceDepositRecovery(BaseVaultStorage storage $, uint256 rebalanceNonce, uint256 amount)
         internal
     {
+        //slither-disable-next-line incorrect-equality
+        if (amount == 0) revert BaseVault__ZeroRecoveryAmount();
+        _requireNoRecovery($);
         $.s_rebalanceDepositRecovery = Types.RebalanceDepositRecovery({
             rebalanceNonce: rebalanceNonce, amount: amount, createdAt: block.timestamp
         });
@@ -339,69 +347,11 @@ abstract contract BaseVault is
         emit RebalanceDepositRecoveryStored(rebalanceNonce, amount);
     }
 
-    /// @notice Recovery function for clearing a failed rebalance deposit that was previously stored
-    /// @notice This is called when a previously failed rebalance deposit succeeds
-    /// @dev Precondition: Failed rebalance deposit should exist
-    /// @dev Deletes the recovery state
-    /// @dev Emites RebalanceDepositRecoveryCleared event
-    function _clearRebalanceDepositRecovery() internal {
-        BaseVaultStorage storage $ = _baseVaultStorage();
-        _requireRecoveryMode($, Types.RecoveryMode.REBALANCE_DEPOSIT);
-        _clearRebalanceDepositRecovery($);
-    }
-
-    function _clearRebalanceDepositRecovery(BaseVaultStorage storage $) internal {
-        uint256 rebalanceNonce = $.s_rebalanceDepositRecovery.rebalanceNonce;
-        delete $.s_rebalanceDepositRecovery;
-        $.s_recoveryMode = Types.RecoveryMode.NONE;
-        emit RebalanceDepositRecoveryCleared(rebalanceNonce);
-    }
-
-    /// @notice Checks for an existing rebalance deposit recovery
-    /// @dev Precondition: A rebalance deposit recovery must exist
-    /// @param recovery Types.RebalanceDepositRecovery
-    function _requireRebalanceDepositRecovery() internal view returns (Types.RebalanceDepositRecovery memory recovery) {
-        BaseVaultStorage storage $ = _baseVaultStorage();
-        _requireRecoveryMode($, Types.RecoveryMode.REBALANCE_DEPOSIT);
-        recovery = $.s_rebalanceDepositRecovery;
-    }
-
-    /// @notice Reverts if any recovery state is pending
-    function _requireNoRecovery() internal view {
-        _requireNoRecovery(_baseVaultStorage());
-    }
-
-    function _requireNoRecovery(BaseVaultStorage storage $) internal view {
-        if ($.s_recoveryMode != Types.RecoveryMode.NONE) revert BaseVault__RecoveryAlreadyPending();
-    }
-
-    /// @notice Reverts if the active recovery mode does not match the expected mode
-    /// @param expected The recovery mode required by the caller
-    function _requireRecoveryMode(Types.RecoveryMode expected) internal view {
-        _requireRecoveryMode(_baseVaultStorage(), expected);
-    }
-
-    function _requireRecoveryMode(BaseVaultStorage storage $, Types.RecoveryMode expected) internal view {
-        if ($.s_recoveryMode != expected) revert BaseVault__NoPendingRecovery();
-    }
-
-    /// @notice Executes the active recovery mode, reverting if no recovery is pending
-    /// @dev Inherited and implemented by ParentVault and ChildVault
-    /// @dev Precondition: a recovery mode must be active (not NONE)
-    /// @notice Deliberately permissionless to allow anyone to advance recovery state when conditions allow
-    function executeRecovery() external virtual;
-
     /// @dev Precondition: rebalance deposit recovery state must exist
     /// @dev Precondition: active strategy adapter must be set
     /// @dev Precondition: the deposit into the strategy must be successful
     /// @return rebalanceNonce the nonce of the recovered rebalance deposit
     /// @return amount the amount of the underlying asset rebalanced/deposited into the new strategy
-    function _recoverFailedRebalanceDeposit() internal returns (uint256 rebalanceNonce, uint256 amount) {
-        BaseVaultStorage storage $ = _baseVaultStorage();
-        _requireRecoveryMode($, Types.RecoveryMode.REBALANCE_DEPOSIT);
-        (rebalanceNonce, amount) = _recoverFailedRebalanceDeposit($);
-    }
-
     function _recoverFailedRebalanceDeposit(BaseVaultStorage storage $)
         internal
         returns (uint256 rebalanceNonce, uint256 amount)
@@ -416,6 +366,17 @@ abstract contract BaseVault is
         emit RebalanceDepositSuccess(rebalanceNonce, amount);
     }
 
+    /// @notice Clears recovery state for a failed rebalance deposit
+    function _clearRebalanceDepositRecovery(BaseVaultStorage storage $) internal {
+        uint256 rebalanceNonce = $.s_rebalanceDepositRecovery.rebalanceNonce;
+        delete $.s_rebalanceDepositRecovery;
+        $.s_recoveryMode = Types.RecoveryMode.NONE;
+        emit RebalanceDepositRecoveryCleared(rebalanceNonce);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                               EMERGENCY
+    //////////////////////////////////////////////////////////////*/
     /// @dev Precondition: Caller must have the EMERGENCY_DRAINER_ROLE
     /// @dev Precondition: must be paused
     /// @dev Precondition: Vault must have been paused for at least EMERGENCY_DRAIN_DELAY
