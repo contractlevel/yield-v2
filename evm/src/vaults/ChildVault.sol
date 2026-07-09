@@ -97,7 +97,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @param epochNonce The nonce of the epoch
     /// @param amount The amount of asset that was bridged to deposit into the active strategy on this child chain
     function _handleCCIPDeposit(uint256 epochNonce, uint256 amount, BaseVaultStorage storage $_baseVault) internal {
-        bool success = _executeDeposit(amount, false);
+        bool success = _executeDeposit(amount, false, $_baseVault.s_activeProtocolAdapter);
         if (success) {
             emit DepositToStrategySuccess(epochNonce, amount);
         } else {
@@ -172,7 +172,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         _requireNoRecovery($_baseVault);
         _revertIfZeroAmount(amount);
 
-        (bool success, uint256 amountOut) = _executeWithdraw(amount, false);
+        (bool success, uint256 amountOut) = _executeWithdraw(amount, false, $_baseVault.s_activeProtocolAdapter);
         if (success) {
             if (amountOut == 0) revert ChildVault__ZeroAmountOut();
             emit WithdrawFromStrategySuccess(epochNonce, amountOut);
@@ -217,11 +217,12 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         internal
         returns (bool success, uint256 amountRebalanced)
     {
-        (success, amountRebalanced) = _executeWithdraw(type(uint256).max, false);
+        address activeAdapter = _baseVaultStorage().s_activeProtocolAdapter;
+        (success, amountRebalanced) = _executeWithdraw(type(uint256).max, false, activeAdapter);
         if (success) {
             if (amountRebalanced == 0) revert ChildVault__ZeroAmountOut();
             emit RebalanceWithdrawSuccess(rebalanceNonce, amountRebalanced);
-            _rebalanceToNewStrategy(rebalanceNonce, amountRebalanced, newStrategy);
+            _rebalanceToNewStrategy(rebalanceNonce, amountRebalanced, newStrategy, activeAdapter);
         } else {
             emit RebalanceWithdrawFailure(rebalanceNonce);
         }
@@ -231,15 +232,19 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @param rebalanceNonce The nonce of the rebalance
     /// @param tvlToRebalance The TVL amount to rebalance
     /// @param newStrategy The new strategy to rebalance to
+    /// @param oldAdapter The previously-active strategy adapter, already known by the caller
     /// @notice Handles a local rebalance on this chain or a crosschain rebalance to the new strategy chain
-    function _rebalanceToNewStrategy(uint256 rebalanceNonce, uint256 tvlToRebalance, Types.Strategy memory newStrategy)
-        internal
-    {
+    function _rebalanceToNewStrategy(
+        uint256 rebalanceNonce,
+        uint256 tvlToRebalance,
+        Types.Strategy memory newStrategy,
+        address oldAdapter
+    ) internal {
         //slither-disable-next-line incorrect-equality
         if (newStrategy.chainSelector == i_thisChainSelector) {
-            _setActiveAdapter(newStrategy.protocolId);
+            address newAdapter = _setActiveAdapter(newStrategy.protocolId);
 
-            bool success = _executeDeposit(tvlToRebalance, false);
+            bool success = _executeDeposit(tvlToRebalance, false, newAdapter);
             if (success) {
                 emit RebalanceDepositSuccess(rebalanceNonce, tvlToRebalance);
             } else {
@@ -247,7 +252,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
                 emit RebalanceDepositFailure(rebalanceNonce, tvlToRebalance);
             }
         } else {
-            _clearActiveAdapter();
+            _clearActiveAdapter(oldAdapter);
             _ccipSend(
                 tvlToRebalance,
                 newStrategy.chainSelector,
@@ -318,7 +323,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         Types.EpochRecovery memory recovery = $.s_epochDepositRecovery;
         uint256 epochNonce = recovery.epochNonce;
 
-        _executeDeposit(recovery.amount, true);
+        _executeDeposit(recovery.amount, true, $_baseVault.s_activeProtocolAdapter);
         _clearEpochDepositRecovery($, $_baseVault);
 
         emit DepositToStrategySuccess(epochNonce, recovery.amount);
@@ -359,7 +364,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         Types.EpochRecovery memory recovery = $.s_epochWithdrawRecovery;
         uint256 epochNonce = recovery.epochNonce;
 
-        (, uint256 amountOut) = _executeWithdraw(recovery.amount, true);
+        (, uint256 amountOut) = _executeWithdraw(recovery.amount, true, $_baseVault.s_activeProtocolAdapter);
         //slither-disable-next-line incorrect-equality
         if (amountOut == 0) revert BaseVault__ZeroRecoveryAmount();
 
@@ -407,13 +412,14 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         Types.RebalanceWithdrawRecovery memory recovery = $.s_rebalanceWithdrawRecovery;
         uint256 rebalanceNonce = recovery.rebalanceNonce;
 
-        (, uint256 amountRebalanced) = _executeWithdraw(type(uint256).max, true);
+        address activeAdapter = $_baseVault.s_activeProtocolAdapter;
+        (, uint256 amountRebalanced) = _executeWithdraw(type(uint256).max, true, activeAdapter);
         //slither-disable-next-line incorrect-equality
         if (amountRebalanced == 0) revert BaseVault__ZeroRecoveryAmount();
 
         _clearRebalanceWithdrawRecovery($, $_baseVault);
         emit RebalanceWithdrawSuccess(rebalanceNonce, amountRebalanced);
-        _rebalanceToNewStrategy(rebalanceNonce, amountRebalanced, recovery.strategy);
+        _rebalanceToNewStrategy(rebalanceNonce, amountRebalanced, recovery.strategy, activeAdapter);
     }
 
     /// @notice Clears recovery state for a failed rebalance withdraw

@@ -342,12 +342,13 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
         _requireNoRecovery($_baseVault);
 
-        bool isLocalStrategy = $_baseVault.s_activeProtocolAdapter != address(0);
+        address activeAdapter = $_baseVault.s_activeProtocolAdapter;
+        bool isLocalStrategy = activeAdapter != address(0);
         ParentVaultEpochLib.CloseEpochExternalAction memory externalAction =
             ParentVaultEpochLib.closeEpoch($, tvl, i_share, i_sharePrecision, i_minDepositAmount, isLocalStrategy);
 
         if (externalAction.action == ParentVaultEpochLib.ExternalAction.DEPOSIT_TO_LOCAL_STRATEGY) {
-            _executeDeposit(externalAction.amount, true);
+            _executeDeposit(externalAction.amount, true, activeAdapter);
             emit DepositToStrategySuccess(externalAction.epochNonce, externalAction.amount);
         } else if (externalAction.action == ParentVaultEpochLib.ExternalAction.SEND_DEPOSIT_TO_REMOTE_STRATEGY) {
             _ccipSend(
@@ -357,7 +358,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
                 abi.encode(externalAction.epochNonce)
             );
         } else if (externalAction.action == ParentVaultEpochLib.ExternalAction.WITHDRAW_FROM_LOCAL_STRATEGY) {
-            (, uint256 amountOut) = _executeWithdraw(externalAction.amount, true);
+            (, uint256 amountOut) = _executeWithdraw(externalAction.amount, true, activeAdapter);
             emit WithdrawFromStrategySuccess(externalAction.epochNonce, amountOut);
             ParentVaultEpochLib.finalizeLocalNetWithdraw($, externalAction.epochNonce, amountOut);
         }
@@ -398,17 +399,18 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         //slither-disable-next-line incorrect-equality
         if (result.action != ParentVaultRebalanceLib.ExternalAction.NONE) {
             // withdraw from local strategy
-            (, uint256 amountOut) = _executeWithdraw(type(uint256).max, true);
+            address activeAdapter = $_baseVault.s_activeProtocolAdapter;
+            (, uint256 amountOut) = _executeWithdraw(type(uint256).max, true, activeAdapter);
             emit RebalanceWithdrawSuccess(result.rebalanceNonce, amountOut);
             if (result.action == ParentVaultRebalanceLib.ExternalAction.WITHDRAW_LOCAL_TO_LOCAL) {
                 // deposit into local strategy
-                _setActiveAdapter(newStrategy.protocolId);
-                _executeDeposit(amountOut, true);
+                address newAdapter = _setActiveAdapter(newStrategy.protocolId);
+                _executeDeposit(amountOut, true, newAdapter);
                 emit RebalanceDepositSuccess(result.rebalanceNonce, amountOut);
                 ParentVaultRebalanceLib.finalizeRebalance($, i_share);
             } else {
                 // ccip send to new strategy chain
-                _clearActiveAdapter();
+                _clearActiveAdapter(activeAdapter);
                 _ccipSend(
                     amountOut,
                     newStrategy.chainSelector,

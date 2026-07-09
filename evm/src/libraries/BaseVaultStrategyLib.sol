@@ -36,10 +36,11 @@ library BaseVaultStrategyLib {
         adapter = _setActiveAdapter($, protocolId, adapterRegistry, vault);
     }
 
-    /// @notice Clears the active strategy protocol adapter for this chain.
+    /// @notice Clears the active strategy protocol adapter for this chain, given a known adapter.
     /// @param $ BaseVault namespaced storage
-    function clearActiveAdapter(BaseVaultStore.BaseVaultStorage storage $) public {
-        _clearActiveAdapter($);
+    /// @param adapter The active strategy adapter being cleared, already known by the caller
+    function clearActiveAdapter(BaseVaultStore.BaseVaultStorage storage $, address adapter) public {
+        _clearActiveAdapter($, adapter);
     }
 
     function _setActiveAdapter(
@@ -58,8 +59,7 @@ library BaseVaultStrategyLib {
         emit ActiveProtocolAdapterSet(protocolId, adapter);
     }
 
-    function _clearActiveAdapter(BaseVaultStore.BaseVaultStorage storage $) internal {
-        address adapter = $.s_activeProtocolAdapter;
+    function _clearActiveAdapter(BaseVaultStore.BaseVaultStorage storage $, address adapter) internal {
         $.s_activeProtocolAdapter = address(0);
         emit ActiveProtocolAdapterCleared(adapter);
     }

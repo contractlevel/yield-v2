@@ -228,15 +228,19 @@ abstract contract BaseVault is
         internal
         returns (bool success)
     {
-        _setActiveAdapter(protocolId);
-        success = _handleCCIPRebalanceDeposit(rebalanceNonce, amount);
+        address adapter = _setActiveAdapter(protocolId);
+        success = _handleCCIPRebalanceDeposit(rebalanceNonce, amount, adapter);
     }
 
     /// @notice Deposits a received CCIP rebalance amount into the active strategy or stores recovery on failure.
     /// @param rebalanceNonce The nonce of the rebalance
     /// @param amount The amount of USDC to rebalance(deposit) into the active strategy
-    function _handleCCIPRebalanceDeposit(uint256 rebalanceNonce, uint256 amount) internal returns (bool success) {
-        success = _executeDeposit(amount, false);
+    /// @param adapter The active strategy adapter, already known from _setActiveAdapter
+    function _handleCCIPRebalanceDeposit(uint256 rebalanceNonce, uint256 amount, address adapter)
+        internal
+        returns (bool success)
+    {
+        success = _executeDeposit(amount, false, adapter);
         if (success) {
             emit RebalanceDepositSuccess(rebalanceNonce, amount);
         } else {
@@ -251,10 +255,13 @@ abstract contract BaseVault is
     /// @notice Executes a deposit to the active strategy
     /// @param amount The amount to deposit
     /// @param revertOnFailure Indicates whether the call should revert if the deposit to strategy fails or not
+    /// @param activeAdapter The active strategy adapter
     /// @return success Whether the deposit succeeded or not
     /// @notice This function uses a trycatch to handle cases where the deposit to strategy fails
-    function _executeDeposit(uint256 amount, bool revertOnFailure) internal returns (bool success) {
-        address activeAdapter = _baseVaultStorage().s_activeProtocolAdapter;
+    function _executeDeposit(uint256 amount, bool revertOnFailure, address activeAdapter)
+        internal
+        returns (bool success)
+    {
         if (activeAdapter == address(0)) revert BaseVault__NoActiveAdapter();
         try this.tryDepositToAdapter(activeAdapter, amount) {
             success = true;
@@ -278,11 +285,14 @@ abstract contract BaseVault is
     /// @notice Executes a withdraw from the active strategy
     /// @param amount The amount to withdraw
     /// @param revertOnFailure Indicates whether the call should revert if the withdraw from strategy fails or not
+    /// @param activeAdapter The active strategy adapter
     /// @return success Whether the withdraw succeeded or not
     /// @return amountOut The amount withdrawn. This will be 0 if revertOnFailure is false and the withdraw failed
     /// @notice This function uses a trycatch to handle cases where the withdraw from strategy fails
-    function _executeWithdraw(uint256 amount, bool revertOnFailure) internal returns (bool success, uint256 amountOut) {
-        address activeAdapter = _baseVaultStorage().s_activeProtocolAdapter;
+    function _executeWithdraw(uint256 amount, bool revertOnFailure, address activeAdapter)
+        internal
+        returns (bool success, uint256 amountOut)
+    {
         if (activeAdapter == address(0)) revert BaseVault__NoActiveAdapter();
         try IProtocolAdapter(activeAdapter).withdraw(amount) returns (uint256 actual) {
             success = true;
@@ -304,10 +314,11 @@ abstract contract BaseVault is
             BaseVaultStrategyLib.setActiveAdapter(_baseVaultStorage(), protocolId, i_adapterRegistry, address(this));
     }
 
-    /// @notice Clears the active strategy protocol adapter for this chain
+    /// @notice Clears the active strategy protocol adapter for this chain, given a known adapter
+    /// @param adapter The active strategy adapter being cleared, already known by the caller
     /// @dev Precondition: this chain is no longer the active strategy chain
-    function _clearActiveAdapter() internal {
-        BaseVaultStrategyLib.clearActiveAdapter(_baseVaultStorage());
+    function _clearActiveAdapter(address adapter) internal {
+        BaseVaultStrategyLib.clearActiveAdapter(_baseVaultStorage(), adapter);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -358,7 +369,7 @@ abstract contract BaseVault is
         rebalanceNonce = recovery.rebalanceNonce;
         amount = recovery.amount;
 
-        _executeDeposit(amount, true);
+        _executeDeposit(amount, true, $.s_activeProtocolAdapter);
         _clearRebalanceDepositRecovery($);
 
         emit RebalanceDepositSuccess(rebalanceNonce, amount);
@@ -394,7 +405,7 @@ abstract contract BaseVault is
             revert BaseVault__EmergencyDrainDelayNotMet();
         }
 
-        if (_getTVL() > 0) _executeWithdraw(type(uint256).max, revertOnFailure);
+        if (_getTVL() > 0) _executeWithdraw(type(uint256).max, revertOnFailure, $.s_activeProtocolAdapter);
 
         uint256 balance = IERC20(i_asset).balanceOf(address(this));
         address emergencyReceiver = $.s_emergencyReceiver;
@@ -416,7 +427,7 @@ abstract contract BaseVault is
         if (amount == 0) revert BaseVault__NoZeroAmount();
 
         IERC20(i_asset).safeTransferFrom(msg.sender, address(this), amount);
-        _executeDeposit(amount, true);
+        _executeDeposit(amount, true, _baseVaultStorage().s_activeProtocolAdapter);
 
         emit Donation(msg.sender, amount);
     }

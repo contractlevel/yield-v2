@@ -4,12 +4,16 @@ pragma solidity 0.8.34;
 import {ComplianceTokenERC3643} from "@chainlink/tokens/erc-3643/src/ComplianceTokenERC3643.sol";
 import {YieldcoinShareStore} from "./YieldcoinShareStore.sol";
 
+import {
+    ReentrancyGuardTransientUpgradeable
+} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardTransientUpgradeable.sol";
+
 // @review double check policies and pausable
 
 /// @title YieldcoinShare
 /// @author @contractlevel
 /// @notice YieldcoinShare is the compliance-ready share token of the Yieldcoin v2 system.
-contract YieldcoinShare is ComplianceTokenERC3643, YieldcoinShareStore {
+contract YieldcoinShare is ComplianceTokenERC3643, YieldcoinShareStore, ReentrancyGuardTransientUpgradeable {
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
