@@ -337,7 +337,6 @@ contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
         Types.RebalanceDepositRecovery memory recovery = s_parentVault.getRebalanceDepositRecovery();
         assertEq(recovery.rebalanceNonce, REBALANCE_NONCE);
         assertEq(recovery.amount, BRIDGED_AMOUNT);
-        assertEq(recovery.createdAt, block.timestamp);
         assertTrue(s_parentVault.getRecoveryMode() == Types.RecoveryMode.REBALANCE_DEPOSIT);
     }
 

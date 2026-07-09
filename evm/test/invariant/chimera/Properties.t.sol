@@ -378,31 +378,27 @@ abstract contract Properties is BeforeAfter, Asserts {
         Types.RebalanceDepositRecovery memory recovery = vault.getRebalanceDepositRecovery();
 
         if (_rebalanceDepositRecoveryPending(recovery)) {
-            t(recovery.createdAt != 0, "REC-002: rebalance deposit recovery timestamp missing");
+            t(recovery.amount != 0, "REC-002: rebalance deposit recovery amount missing");
         } else {
             eq(recovery.rebalanceNonce, 0, "REC-002: cleared rebalance deposit recovery nonce set");
-            eq(recovery.createdAt, 0, "REC-002: cleared rebalance deposit recovery timestamp set");
+            eq(recovery.amount, 0, "REC-002: cleared rebalance deposit recovery amount set");
         }
     }
 
     function _assertEpochRecoverySentinel(Types.EpochRecovery memory recovery, string memory label) internal {
         if (_epochRecoveryPending(recovery)) {
             t(recovery.epochNonce != 0, label);
-            t(recovery.createdAt != 0, label);
         } else {
             eq(recovery.epochNonce, 0, label);
-            eq(recovery.createdAt, 0, label);
         }
     }
 
     function _assertRebalanceWithdrawRecoverySentinel(Types.RebalanceWithdrawRecovery memory recovery) internal {
         if (_rebalanceWithdrawRecoveryPending(recovery)) {
             t(recovery.strategy.protocolId != bytes32(0), "REC-002: rebalance withdraw recovery protocol missing");
-            t(recovery.createdAt != 0, "REC-002: rebalance withdraw recovery timestamp missing");
         } else {
             eq(recovery.rebalanceNonce, 0, "REC-002: cleared rebalance withdraw recovery nonce set");
             t(recovery.strategy.protocolId == bytes32(0), "REC-002: cleared rebalance withdraw recovery protocol set");
-            eq(recovery.createdAt, 0, "REC-002: cleared rebalance withdraw recovery timestamp set");
         }
     }
 
@@ -411,7 +407,6 @@ abstract contract Properties is BeforeAfter, Asserts {
             t(recovery.ccipTxType != Types.CcipTx.EPOCH_NET_DEPOSIT, "REC-002: invalid child CCIP recovery tx type");
             t(recovery.destinationChainSelector != 0, "REC-002: CCIP recovery destination missing");
             t(recovery.nonce != 0, "REC-002: CCIP recovery nonce missing");
-            t(recovery.createdAt != 0, "REC-002: CCIP recovery timestamp missing");
             if (recovery.ccipTxType == Types.CcipTx.REBALANCE) {
                 t(recovery.protocolId != bytes32(0), "REC-002: CCIP rebalance recovery protocol id missing");
             }
@@ -420,7 +415,6 @@ abstract contract Properties is BeforeAfter, Asserts {
             eq(uint256(recovery.destinationChainSelector), 0, "REC-002: cleared CCIP recovery destination set");
             eq(recovery.nonce, 0, "REC-002: cleared CCIP recovery nonce set");
             t(recovery.protocolId == bytes32(0), "REC-002: cleared CCIP recovery protocol id set");
-            eq(recovery.createdAt, 0, "REC-002: cleared CCIP recovery timestamp set");
         }
     }
 

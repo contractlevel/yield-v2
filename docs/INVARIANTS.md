@@ -128,6 +128,7 @@ These are desired configuration properties.
 | `AC-003` | Epoch and rebalance execution require the WorkflowRouter-held operator roles.                           | `unit`          | implemented: Certora (per-function rules)     |
 | `AC-004` | Parent user functions and share token privileged functions rely on ACE policy checks where implemented. | `manual + unit` | candidate                                     |
 | `AC-005` | Vault donations require `DONATE_OPERATOR_ROLE`, which is distinct from `CONFIG_OPERATOR_ROLE`.          | `unit`          | implemented: Certora (via `DONATE_005_` rule) |
+| `AC-006` | Force-cancelling a deposit requires `CANCEL_DEPOSIT_OPERATOR_ROLE`, which is distinct from `CONFIG_OPERATOR_ROLE` and `DONATE_OPERATOR_ROLE`. | `unit`          | candidate                                     |
 
 ## Pause And Emergency Behavior
 

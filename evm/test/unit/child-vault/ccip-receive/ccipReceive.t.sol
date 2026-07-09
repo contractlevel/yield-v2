@@ -160,7 +160,6 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
         Types.EpochRecovery memory recovery = s_childVault.getEpochDepositRecovery();
         assertEq(recovery.epochNonce, EPOCH_NONCE);
         assertEq(recovery.amount, BRIDGED_AMOUNT);
-        assertEq(recovery.createdAt, block.timestamp);
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.EPOCH_DEPOSIT);
     }
 
@@ -247,7 +246,6 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
         Types.RebalanceDepositRecovery memory recovery = s_childVault.getRebalanceDepositRecovery();
         assertEq(recovery.rebalanceNonce, REBALANCE_NONCE);
         assertEq(recovery.amount, BRIDGED_AMOUNT);
-        assertEq(recovery.createdAt, block.timestamp);
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.REBALANCE_DEPOSIT);
     }
 

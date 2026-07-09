@@ -308,7 +308,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         if (amount == 0) revert BaseVault__ZeroRecoveryAmount();
         _requireNoRecovery($_baseVault);
         _childVaultStorage().s_epochDepositRecovery =
-            Types.EpochRecovery({epochNonce: epochNonce, amount: amount, createdAt: block.timestamp});
+            Types.EpochRecovery({epochNonce: epochNonce, amount: amount});
         $_baseVault.s_recoveryMode = Types.RecoveryMode.EPOCH_DEPOSIT;
         emit EpochDepositRecoveryStored(epochNonce, amount);
     }
@@ -349,7 +349,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         if (amount == 0) revert BaseVault__ZeroRecoveryAmount();
         _requireNoRecovery($_baseVault);
         _childVaultStorage().s_epochWithdrawRecovery =
-            Types.EpochRecovery({epochNonce: epochNonce, amount: amount, createdAt: block.timestamp});
+            Types.EpochRecovery({epochNonce: epochNonce, amount: amount});
         $_baseVault.s_recoveryMode = Types.RecoveryMode.EPOCH_WITHDRAW;
         emit EpochWithdrawRecoveryStored(epochNonce, amount);
     }
@@ -395,9 +395,8 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         //slither-disable-next-line incorrect-equality
         if (strategy.chainSelector == 0) revert ChildVault__InvalidRecoveryStrategy();
         _requireNoRecovery($_baseVault);
-        _childVaultStorage().s_rebalanceWithdrawRecovery = Types.RebalanceWithdrawRecovery({
-            rebalanceNonce: rebalanceNonce, strategy: strategy, createdAt: block.timestamp
-        });
+        _childVaultStorage().s_rebalanceWithdrawRecovery =
+            Types.RebalanceWithdrawRecovery({rebalanceNonce: rebalanceNonce, strategy: strategy});
         $_baseVault.s_recoveryMode = Types.RecoveryMode.REBALANCE_WITHDRAW;
         emit RebalanceWithdrawRecoveryStored(rebalanceNonce, strategy.protocolId, strategy.chainSelector);
     }
@@ -461,8 +460,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
             amount: bridgeAmount,
             destinationChainSelector: destinationChainSelector,
             nonce: nonce,
-            protocolId: protocolId,
-            createdAt: block.timestamp
+            protocolId: protocolId
         });
         $_baseVault.s_recoveryMode = Types.RecoveryMode.CCIP_SEND;
         emit CcipSendRecoveryStored(ccipTxType, destinationChainSelector, bridgeAmount);

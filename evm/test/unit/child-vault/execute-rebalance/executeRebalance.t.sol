@@ -126,7 +126,6 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
         assertEq(recovery.destinationChainSelector, REMOTE_CHILD_CHAIN_SELECTOR);
         assertEq(recovery.nonce, REBALANCE_NONCE);
         assertEq(recovery.protocolId, AAVE_V4_PROTOCOL_ID);
-        assertEq(recovery.createdAt, block.timestamp);
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.CCIP_SEND);
     }
 
@@ -185,7 +184,6 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
         assertEq(recovery.rebalanceNonce, REBALANCE_NONCE);
         assertEq(recovery.strategy.protocolId, AAVE_V4_PROTOCOL_ID);
         assertEq(recovery.strategy.chainSelector, REMOTE_CHILD_CHAIN_SELECTOR);
-        assertEq(recovery.createdAt, block.timestamp);
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.REBALANCE_WITHDRAW);
     }
 
@@ -228,7 +226,6 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
         Types.RebalanceDepositRecovery memory recovery = s_childVault.getRebalanceDepositRecovery();
         assertEq(recovery.rebalanceNonce, REBALANCE_NONCE);
         assertEq(recovery.amount, REBALANCE_AMOUNT);
-        assertEq(recovery.createdAt, block.timestamp);
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.REBALANCE_DEPOSIT);
     }
 

@@ -57,31 +57,25 @@ library Types {
     /// @notice Recovery state for failed epoch operations
     /// @param epochNonce The nonce of the epoch
     /// @param amount The amount needed to retry the failed operation
-    /// @param createdAt The timestamp when the recovery state was stored
     struct EpochRecovery {
         uint256 epochNonce;
         uint256 amount;
-        uint256 createdAt;
     }
 
     /// @notice Recovery state for failed rebalance deposit operations
     /// @param rebalanceNonce The nonce of the rebalance
     /// @param amount The amount needed to retry the failed deposit
-    /// @param createdAt The timestamp when the recovery state was stored
     struct RebalanceDepositRecovery {
         uint256 rebalanceNonce;
         uint256 amount;
-        uint256 createdAt;
     }
 
     /// @notice Recovery state for failed rebalance withdraw operations
     /// @param rebalanceNonce The nonce of the rebalance
     /// @param strategy The target strategy to continue the rebalance into after withdraw succeeds
-    /// @param createdAt The timestamp when the recovery state was stored
     struct RebalanceWithdrawRecovery {
         uint256 rebalanceNonce;
         Strategy strategy;
-        uint256 createdAt;
     }
 
     /// @notice Recovery state for failed ChildVault CCIP send operations
@@ -90,14 +84,12 @@ library Types {
     /// @param destinationChainSelector The CCIP selector of the destination chain
     /// @param nonce The epoch nonce (EPOCH_NET_DEPOSIT/EPOCH_NET_WITHDRAW) or rebalance nonce (REBALANCE) to replay
     /// @param protocolId The target strategy protocol id to rebalance into; only meaningful when ccipTxType is REBALANCE
-    /// @param createdAt The timestamp when the recovery state was stored
     struct CcipSendRecovery {
         CcipTx ccipTxType;
         uint256 amount;
         uint64 destinationChainSelector;
         uint256 nonce;
         bytes32 protocolId;
-        uint256 createdAt;
     }
 
     /*//////////////////////////////////////////////////////////////

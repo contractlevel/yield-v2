@@ -340,9 +340,7 @@ abstract contract BaseVault is
         //slither-disable-next-line incorrect-equality
         if (amount == 0) revert BaseVault__ZeroRecoveryAmount();
         _requireNoRecovery($);
-        $.s_rebalanceDepositRecovery = Types.RebalanceDepositRecovery({
-            rebalanceNonce: rebalanceNonce, amount: amount, createdAt: block.timestamp
-        });
+        $.s_rebalanceDepositRecovery = Types.RebalanceDepositRecovery({rebalanceNonce: rebalanceNonce, amount: amount});
         $.s_recoveryMode = Types.RecoveryMode.REBALANCE_DEPOSIT;
         emit RebalanceDepositRecoveryStored(rebalanceNonce, amount);
     }
@@ -613,7 +611,6 @@ abstract contract BaseVault is
     /// @return recovery Types.RebalanceDepositRecovery struct includes:
     ///         uint256 rebalanceNonce - the nonce of the rebalance
     ///         uint256 amount - the amount that needs to be rebalanced/deposited into the new strategy
-    ///         uint256 createdAt - block.timestamp the recovery state was stored
     function getRebalanceDepositRecovery() external view returns (Types.RebalanceDepositRecovery memory recovery) {
         recovery = _baseVaultStorage().s_rebalanceDepositRecovery;
     }

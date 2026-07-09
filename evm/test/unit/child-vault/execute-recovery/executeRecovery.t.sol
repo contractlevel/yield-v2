@@ -66,7 +66,6 @@ contract ChildVault_ExecuteRecovery_EpochDeposit_UnitTest is BaseUnitTest {
         Types.EpochRecovery memory recovery = s_childVault.getEpochDepositRecovery();
         assertEq(recovery.epochNonce, 0);
         assertEq(recovery.amount, 0);
-        assertEq(recovery.createdAt, 0);
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.NONE);
     }
 
@@ -170,7 +169,6 @@ contract ChildVault_ExecuteRecovery_EpochWithdraw_UnitTest is BaseUnitTest {
         Types.EpochRecovery memory recovery = s_childVault.getEpochWithdrawRecovery();
         assertEq(recovery.epochNonce, 0);
         assertEq(recovery.amount, 0);
-        assertEq(recovery.createdAt, 0);
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.NONE);
     }
 
@@ -244,7 +242,6 @@ contract ChildVault_ExecuteRecovery_RebalanceDeposit_UnitTest is BaseUnitTest {
         Types.RebalanceDepositRecovery memory recovery = s_childVault.getRebalanceDepositRecovery();
         assertEq(recovery.rebalanceNonce, 0);
         assertEq(recovery.amount, 0);
-        assertEq(recovery.createdAt, 0);
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.NONE);
     }
 
@@ -358,7 +355,6 @@ contract ChildVault_ExecuteRecovery_RebalanceWithdraw_UnitTest is BaseUnitTest {
         assertEq(recovery.rebalanceNonce, 0);
         assertEq(recovery.strategy.protocolId, bytes32(0));
         assertEq(recovery.strategy.chainSelector, 0);
-        assertEq(recovery.createdAt, 0);
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.NONE);
     }
 
@@ -424,7 +420,6 @@ contract ChildVault_ExecuteRecovery_CcipSend_UnitTest is BaseUnitTest {
         assertEq(recovery.destinationChainSelector, PARENT_CHAIN_SELECTOR);
         assertEq(recovery.nonce, EPOCH_NONCE);
         assertEq(recovery.protocolId, bytes32(0));
-        assertEq(recovery.createdAt, block.timestamp);
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.CCIP_SEND);
     }
 
@@ -485,7 +480,6 @@ contract ChildVault_ExecuteRecovery_CcipSend_UnitTest is BaseUnitTest {
         assertEq(recovery.destinationChainSelector, 0);
         assertEq(recovery.nonce, 0);
         assertEq(recovery.protocolId, bytes32(0));
-        assertEq(recovery.createdAt, 0);
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.NONE);
     }
 
@@ -503,7 +497,6 @@ contract ChildVault_ExecuteRecovery_CcipSend_UnitTest is BaseUnitTest {
         assertEq(recovery.destinationChainSelector, 0);
         assertEq(recovery.nonce, 0);
         assertEq(recovery.protocolId, bytes32(0));
-        assertEq(recovery.createdAt, 0);
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.NONE);
     }
 

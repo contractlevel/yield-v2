@@ -89,7 +89,6 @@ contract ChildVault_ExecuteEpochWithdrawUnitTest is BaseUnitTest {
         assertEq(recovery.destinationChainSelector, PARENT_CHAIN_SELECTOR);
         assertEq(recovery.nonce, EPOCH_NONCE);
         assertEq(recovery.protocolId, bytes32(0));
-        assertEq(recovery.createdAt, block.timestamp);
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.CCIP_SEND);
     }
 
@@ -132,7 +131,6 @@ contract ChildVault_ExecuteEpochWithdrawUnitTest is BaseUnitTest {
         Types.EpochRecovery memory recovery = s_childVault.getEpochWithdrawRecovery();
         assertEq(recovery.epochNonce, EPOCH_NONCE);
         assertEq(recovery.amount, WITHDRAW_AMOUNT);
-        assertEq(recovery.createdAt, block.timestamp);
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.EPOCH_WITHDRAW);
     }
 

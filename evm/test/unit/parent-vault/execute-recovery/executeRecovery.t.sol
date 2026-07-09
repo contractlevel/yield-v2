@@ -76,7 +76,6 @@ contract ParentVault_ExecuteRecovery_RebalanceDeposit_UnitTest is BaseUnitTest {
         Types.RebalanceDepositRecovery memory recovery = s_parentVault.getRebalanceDepositRecovery();
         assertEq(recovery.rebalanceNonce, 0);
         assertEq(recovery.amount, 0);
-        assertEq(recovery.createdAt, 0);
         assertTrue(s_parentVault.getRecoveryMode() == Types.RecoveryMode.NONE);
     }
 

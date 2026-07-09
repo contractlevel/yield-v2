@@ -81,6 +81,45 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         );
     }
 
+    function handler_forceCancelDeposit(uint256 actorSeed, uint256 amountSeed) public {
+        address actor = _actor(actorSeed);
+        uint256 epochNonce = parent.vault.getEpochNonce();
+
+        if (parent.vault.getDepositAmount(actor, epochNonce) == 0) {
+            handler_deposit(actorSeed, amountSeed);
+        }
+
+        s_currentActor = actor;
+        uint256 amount = parent.vault.getDepositAmount(actor, epochNonce);
+
+        __before();
+
+        _changePrank(i_cancelDepositOperator);
+        parent.vault.forceCancelDeposit(actor);
+
+        __after();
+
+        _recordDepositCancelled(actor, amount);
+
+        eq(_after.epochNonce, epochNonce, "EPOCH-005: forceCancelDeposit changed epoch nonce");
+        eq(
+            _after.currentEpochTotalDepositAmount,
+            _before.currentEpochTotalDepositAmount - amount,
+            "EPOCH-005: forceCancelDeposit did not decrease current epoch total"
+        );
+        eq(_after.actorCurrentEpochDepositAmount, 0, "EPOCH-013: forceCancelDeposit did not clear actor deposit");
+        eq(
+            _after.actorUsdcBalance,
+            _before.actorUsdcBalance + amount,
+            "EPOCH-006: forceCancelDeposit did not refund USDC"
+        );
+        eq(
+            ghost_depositedByActorByEpoch[actor][epochNonce],
+            0,
+            "EPOCH-013: forceCancelDeposit did not clear actor deposit ghost"
+        );
+    }
+
     function handler_closeEpoch(uint256 tvlSeed) public {
         if (_recoveryModeExists()) {
             _resolvePendingRecovery();
@@ -1554,7 +1593,6 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         eq(recovery.epochNonce, epochNonce, "REC-002: wrong epoch deposit recovery nonce");
         eq(recovery.amount, amount, "REC-002: wrong epoch deposit recovery amount");
-        t(recovery.createdAt != 0, "REC-002: epoch deposit recovery timestamp not set");
     }
 
     function _assertEpochDepositRecoveryCleared(ChildVault vault) internal {
@@ -1562,7 +1600,6 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         eq(recovery.epochNonce, 0, "REC-003: epoch deposit recovery nonce not cleared");
         eq(recovery.amount, 0, "REC-003: epoch deposit recovery amount not cleared");
-        eq(recovery.createdAt, 0, "REC-003: epoch deposit recovery timestamp not cleared");
     }
 
     function _assertPendingEpochWithdrawRecovery(ChildVault vault, uint256 epochNonce, uint256 amount) internal {
@@ -1570,7 +1607,6 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         eq(recovery.epochNonce, epochNonce, "REC-002: wrong epoch withdraw recovery nonce");
         eq(recovery.amount, amount, "REC-002: wrong epoch withdraw recovery amount");
-        t(recovery.createdAt != 0, "REC-002: epoch withdraw recovery timestamp not set");
     }
 
     function _assertEpochWithdrawRecoveryCleared(ChildVault vault) internal {
@@ -1578,7 +1614,6 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         eq(recovery.epochNonce, 0, "REC-003: epoch withdraw recovery nonce not cleared");
         eq(recovery.amount, 0, "REC-003: epoch withdraw recovery amount not cleared");
-        eq(recovery.createdAt, 0, "REC-003: epoch withdraw recovery timestamp not cleared");
     }
 
     function _assertPendingRebalanceDepositRecovery(BaseVault vault, uint256 rebalanceNonce, uint256 amount) internal {
@@ -1586,7 +1621,6 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         eq(recovery.rebalanceNonce, rebalanceNonce, "REC-005a: wrong rebalance deposit recovery nonce");
         eq(recovery.amount, amount, "REC-005b: wrong rebalance deposit recovery amount");
-        t(recovery.createdAt != 0, "REC-002: rebalance deposit recovery timestamp not set");
     }
 
     function _assertRebalanceDepositRecoveryCleared(BaseVault vault) internal {
@@ -1594,7 +1628,6 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         eq(recovery.rebalanceNonce, 0, "REC-003: rebalance deposit recovery nonce not cleared");
         eq(recovery.amount, 0, "REC-003: rebalance deposit recovery amount not cleared");
-        eq(recovery.createdAt, 0, "REC-003: rebalance deposit recovery timestamp not cleared");
     }
 
     function _assertPendingRebalanceWithdrawRecovery(
@@ -1611,7 +1644,6 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             uint256(strategy.chainSelector),
             "REC-002: wrong rebalance withdraw recovery chain"
         );
-        t(recovery.createdAt != 0, "REC-002: rebalance withdraw recovery timestamp not set");
     }
 
     function _assertRebalanceWithdrawRecoveryCleared(ChildVault vault) internal {
@@ -1620,7 +1652,6 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         eq(recovery.rebalanceNonce, 0, "REC-003: rebalance withdraw recovery nonce not cleared");
         t(recovery.strategy.protocolId == bytes32(0), "REC-003: rebalance withdraw recovery protocol not cleared");
         eq(uint256(recovery.strategy.chainSelector), 0, "REC-003: rebalance withdraw recovery chain not cleared");
-        eq(recovery.createdAt, 0, "REC-003: rebalance withdraw recovery timestamp not cleared");
     }
 
     function _assertPendingCcipSendRecovery(
@@ -1642,7 +1673,6 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         eq(recovery.amount, amount, "CCIP-005a: wrong recovery amount");
         eq(recovery.nonce, nonce, "CCIP-005a: wrong recovery nonce");
         t(recovery.protocolId == protocolId, "CCIP-005a: wrong recovery protocol id");
-        t(recovery.createdAt != 0, "CCIP-005a: recovery timestamp not set");
     }
 
     function _assertCcipSendRecoveryCleared(ChildVault vault) internal {
@@ -1653,7 +1683,6 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         eq(uint256(recovery.destinationChainSelector), 0, "REC-003: recovery destination not cleared");
         eq(recovery.nonce, 0, "REC-003: recovery nonce not cleared");
         t(recovery.protocolId == bytes32(0), "REC-003: recovery protocol id not cleared");
-        eq(recovery.createdAt, 0, "REC-003: recovery timestamp not cleared");
     }
 
     function _rebalanceTarget(uint256 pathSeed, uint256 protocolSeed)
