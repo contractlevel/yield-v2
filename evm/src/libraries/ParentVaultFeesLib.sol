@@ -35,6 +35,10 @@ library ParentVaultFeesLib {
     /// @param tvl The Total Value Locked in the active strategy of the Yieldcoin v2 system
     /// @param sharePrecision The share precision factor
     /// @return pricePerShare Asset value of a Yieldcoin share token
+    /// @notice Bootstrap pricing: when totalShares == 0, pricePerShare is always sharePrecision (par),
+    ///         regardless of tvl. Any residual tvl at that point (e.g. dust left behind after a full
+    ///         exit) is captured by the next depositor's shares rather than the prior shareholders.
+    ///         See KI-010 in docs/KNOWN_ISSUES.md.
     function calculatePricePerShare(ParentVaultStore.ParentVaultStorage storage $, uint256 tvl, uint256 sharePrecision)
         public
         view

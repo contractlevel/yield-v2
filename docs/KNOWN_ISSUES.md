@@ -471,3 +471,58 @@ The failure mode is an accepted fee-timing effect of epoch-batched withdrawal se
 - A simpler accounting model is introduced that can exclude pending-withdraw shares from management fees without complicating cancel-withdraw and close-epoch share accounting.
 
 ---
+
+## KI-010 — Bootstrap price-per-share ignores residual TVL when total shares return to zero
+
+**Status:** Accepted — bounded to dust-level amounts, consistent with the existing `donate()` bootstrap-pricing tradeoff, and further mitigated operationally by a permanent admin seed deposit.
+
+**Last reviewed:** 2026-07-10
+
+**Component:** `ParentVaultFeesLib._calculatePricePerShare`, `ParentVaultEpochLib.closeEpoch`.
+
+### Summary
+
+`_calculatePricePerShare` prices shares at par (`sharePrecision`) whenever `s_totalShares == 0`, regardless of `tvl`:
+
+```solidity
+uint256 totalShares = $.s_totalShares;
+if (totalShares != 0 && tvl != 0) {
+    pricePerShare = tvl * sharePrecision / totalShares;
+    ...
+} else if (totalShares == 0) {
+    pricePerShare = sharePrecision;
+```
+
+`s_totalShares` can reach exactly zero through ordinary use: a full-supply exit, where the last holder's withdraw intent burns all outstanding shares in a `closeEpoch`. Nothing prevents this — `minDepositAmount` only floors new mints, not burns.
+
+At the epoch closing a full exit, the withdraw amount pulled from the strategy is the epoch's computed `netWithdrawAmount` (derived from the operator-supplied `tvl` snapshot), not a "withdraw everything" call. If the strategy's actual balance drifts even slightly above that snapshot by execution time (e.g. interest accrued between the CRE workflow's off-chain TVL read and the on-chain `closeEpoch` transaction), a small residual is left behind in the adapter after `s_totalShares` hits zero.
+
+The next epoch's depositor then mints shares at par against `_calculatePricePerShare`, which ignores that residual. Their shares end up backed by `residual + their own deposit`, so they receive the residual for free instead of it going to the exited shareholders.
+
+This is the same root-cause pattern already called out on `donate()` (`BaseVault.sol`): *"First-depositor captures full donation when `s_totalShares == 0` due to bootstrap pricing ignoring existing TVL."* This entry extends that acknowledgment to the organic (non-`donate()`) case.
+
+### Why this is accepted, not mitigated
+
+- **Operationally, `s_totalShares` should never actually return to zero after the first epoch.** The deployer/admin makes an initial seed deposit as part of launch and does not redeem it. This is not enforced on-chain (there is no dead-shares burn or minimum-liquidity lock in the contracts) — it is a deployment-runbook practice, so the trigger condition requires both every other holder to exit *and* the admin to redeem the permanent seed position, which is not expected operational behavior.
+- The residual is bounded to dust: the withdrawal amount is computed directly from a trusted, near-real-time operator TVL estimate, so any leftover is limited to accrual/rounding drift over a single transaction, not an arbitrary amount.
+- Reaching the trigger condition requires total share supply to hit exactly zero, which (even setting the seed deposit aside) is a specific and infrequent state (a full protocol exit), not routine operation.
+- Sweeping or reconciling the residual would require either tracking a per-reset "owed to exited holders" balance or an extra adapter call on the full-exit path — added accounting state and complexity to close a dust-sized gap, contrary to the project's simplicity priority.
+- No other user's balance is diluted or put at risk; the effect is a one-time transfer of dust value to whichever depositor happens to open the next epoch after a full reset.
+
+### Operational mitigation
+
+- Deployer/admin makes a seed deposit at launch and does not redeem it, keeping `s_totalShares > 0` permanently in practice. This is a runbook practice, not a contract-enforced invariant — nothing prevents the admin from redeeming it.
+
+### Residual risk
+
+If the seed-deposit practice is not followed, or the admin's seed position is ever fully redeemed alongside all other holders, the next depositor after a full-supply reset can receive a small amount of value (bounded by inter-transaction yield accrual / rounding on the prior full exit) that arguably belonged to the exited shareholders. This does not affect protocol solvency, other users' balances, or any live position — it is a bounded, one-time bootstrap-pricing artifact, and under normal operation is not expected to be reachable at all.
+
+### Conditions that would warrant revisiting
+
+- The admin seed deposit is redeemed (removing the operational mitigation) and total shares can realistically return to zero.
+- An adapter or strategy topology is introduced where the gap between the operator's TVL snapshot and actual on-chain execution can be large rather than dust-sized.
+- Full-supply resets become a routine/expected operational pattern rather than an edge case.
+- A cheap way to reconcile or sweep residual TVL at the zero-shares boundary becomes available without adding meaningful accounting complexity.
+- The seed-deposit practice is formalized as a contract-enforced invariant (e.g. a permanent minimum-liquidity lock), at which point this entry could be closed rather than merely mitigated.
+
+---
