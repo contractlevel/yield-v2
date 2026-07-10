@@ -19,6 +19,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 
 import {BaseVaultStore} from "./BaseVaultStore.sol";
 import {BaseVaultCcipLib} from "../libraries/BaseVaultCcipLib.sol";
+import {BaseVaultConfigLib} from "../libraries/BaseVaultConfigLib.sol";
 import {BaseVaultStrategyLib} from "../libraries/BaseVaultStrategyLib.sol";
 import {Roles} from "../libraries/Roles.sol";
 import {Types} from "../libraries/Types.sol";
@@ -479,15 +480,10 @@ abstract contract BaseVault is
     /// @notice This can orphan in-flight CCIP messages. Operator should ensure there are no active crosschain rebalance or epoch operations in progress.
     function setCrosschainVaults(uint64[] calldata chainSelectors, address[] calldata vaults)
         external
+        virtual
         onlyRole(Roles.CONFIG_OPERATOR_ROLE)
     {
-        if (chainSelectors.length == 0) revert BaseVault__EmptyInput();
-        if (chainSelectors.length != vaults.length) revert BaseVault__InvalidInputLengths();
-        for (uint256 i; i < chainSelectors.length; ++i) {
-            _revertIfZeroChainSelector(chainSelectors[i]);
-            _baseVaultStorage().s_crosschainVaults[chainSelectors[i]] = vaults[i];
-            emit CrosschainVaultSet(chainSelectors[i], vaults[i]);
-        }
+        BaseVaultConfigLib.setCrosschainVaults(_baseVaultStorage(), chainSelectors, vaults);
     }
 
     /// @notice Sets the CCIP gas limit for a given chain selector
@@ -497,10 +493,12 @@ abstract contract BaseVault is
     /// @dev Precondition: chainSelector must not be zero
     /// @dev Sets the CCIP gas limit
     /// @dev Emits the CcipGasLimitSet event
-    function setCcipGasLimit(uint64 chainSelector, uint256 gasLimit) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
-        _revertIfZeroChainSelector(chainSelector);
-        _baseVaultStorage().s_ccipGasLimits[chainSelector] = gasLimit;
-        emit CcipGasLimitSet(chainSelector, gasLimit);
+    function setCcipGasLimit(uint64 chainSelector, uint256 gasLimit)
+        external
+        virtual
+        onlyRole(Roles.CONFIG_OPERATOR_ROLE)
+    {
+        BaseVaultConfigLib.setCcipGasLimit(_baseVaultStorage(), chainSelector, gasLimit);
     }
 
     /// @notice Sets the default CCIP gas limit
@@ -510,10 +508,8 @@ abstract contract BaseVault is
     /// @dev Precondition: gasLimit must not be zero
     /// @dev Sets the default CCIP gas limit
     /// @dev Emits the DefaultCcipGasLimitSet event
-    function setDefaultCcipGasLimit(uint256 gasLimit) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
-        _revertIfZeroAmount(gasLimit);
-        _baseVaultStorage().s_defaultCcipGasLimit = gasLimit;
-        emit DefaultCcipGasLimitSet(gasLimit);
+    function setDefaultCcipGasLimit(uint256 gasLimit) external virtual onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
+        BaseVaultConfigLib.setDefaultCcipGasLimit(_baseVaultStorage(), gasLimit);
     }
 
     /// @notice Sets the emergency receiver
@@ -521,10 +517,8 @@ abstract contract BaseVault is
     /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
     /// @dev Precondition: emergencyReceiver must not be the zero address
     /// @dev Emits the EmergencyReceiverSet event
-    function setEmergencyReceiver(address emergencyReceiver) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
-        _revertIfZeroAddress(emergencyReceiver);
-        _baseVaultStorage().s_emergencyReceiver = emergencyReceiver;
-        emit EmergencyReceiverSet(emergencyReceiver);
+    function setEmergencyReceiver(address emergencyReceiver) external virtual onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
+        BaseVaultConfigLib.setEmergencyReceiver(_baseVaultStorage(), emergencyReceiver);
     }
 
     /*//////////////////////////////////////////////////////////////

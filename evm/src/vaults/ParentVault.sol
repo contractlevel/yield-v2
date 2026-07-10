@@ -9,6 +9,7 @@ import {Types} from "../libraries/Types.sol";
 import {Roles} from "../libraries/Roles.sol";
 import {BaseVaultCcipLib} from "../libraries/BaseVaultCcipLib.sol";
 import {ParentVaultCcipLib} from "../libraries/ParentVaultCcipLib.sol";
+import {ParentVaultConfigLib} from "../libraries/ParentVaultConfigLib.sol";
 import {ParentVaultEpochLib} from "../libraries/ParentVaultEpochLib.sol";
 import {ParentVaultRebalanceLib} from "../libraries/ParentVaultRebalanceLib.sol";
 import {ParentVaultUserEpochLib} from "../libraries/ParentVaultUserEpochLib.sol";
@@ -142,9 +143,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
     /// @dev Precondition: treasury must not be the zero address
     function setTreasury(address treasury) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
-        _revertIfZeroAddress(treasury);
-        _parentVaultStorage().s_treasury = treasury;
-        emit TreasurySet(treasury);
+        ParentVaultConfigLib.setTreasury(_parentVaultStorage(), treasury);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -458,18 +457,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @dev Precondition: an unsupported protocol must not be the active or pending strategy protocol
     /// @dev Emits SupportedProtocolSet event
     function setSupportedProtocol(bytes32 protocolId, bool isSupported) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
-        if (protocolId == bytes32(0)) revert ParentVault__NoZeroProtocolId();
-        ParentVaultStorage storage $ = _parentVaultStorage();
-        if (!isSupported) {
-            if (protocolId == $.s_rebalance.activeStrategy.protocolId) {
-                revert ParentVault__CannotRemoveActiveProtocol(protocolId);
-            }
-            if (protocolId == $.s_rebalance.pendingStrategy.protocolId) {
-                revert ParentVault__CannotRemovePendingProtocol(protocolId);
-            }
-        }
-        $.s_supportedProtocol[protocolId] = isSupported;
-        emit SupportedProtocolSet(protocolId, isSupported);
+        ParentVaultConfigLib.setSupportedProtocol(_parentVaultStorage(), protocolId, isSupported);
     }
 
     /*//////////////////////////////////////////////////////////////

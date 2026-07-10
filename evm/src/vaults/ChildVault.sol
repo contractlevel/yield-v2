@@ -7,6 +7,7 @@ import {ChildVaultStore} from "./ChildVaultStore.sol";
 import {IBaseVault} from "../interfaces/IBaseVault.sol";
 import {IChildVault} from "../interfaces/IChildVault.sol";
 import {BaseVaultCcipLib} from "../libraries/BaseVaultCcipLib.sol";
+import {BaseVaultConfigLib} from "../libraries/BaseVaultConfigLib.sol";
 import {BaseVaultStrategyLib} from "../libraries/BaseVaultStrategyLib.sol";
 import {Types} from "../libraries/Types.sol";
 import {Roles} from "../libraries/Roles.sol";
@@ -534,6 +535,45 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @return recovery The stored CCIP send recovery state
     function getCcipSendRecovery() external view returns (Types.CcipSendRecovery memory recovery) {
         recovery = _childVaultStorage().s_ccipSendRecovery;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                             CONFIG SETTERS
+    //////////////////////////////////////////////////////////////*/
+    /// @inheritdoc IBaseVault
+    function setCrosschainVaults(uint64[] calldata chainSelectors, address[] calldata vaults)
+        external
+        override(BaseVault, IBaseVault)
+        onlyRole(Roles.CONFIG_OPERATOR_ROLE)
+    {
+        BaseVaultConfigLib._setCrosschainVaults(_baseVaultStorage(), chainSelectors, vaults);
+    }
+
+    /// @inheritdoc IBaseVault
+    function setCcipGasLimit(uint64 chainSelector, uint256 gasLimit)
+        external
+        override(BaseVault, IBaseVault)
+        onlyRole(Roles.CONFIG_OPERATOR_ROLE)
+    {
+        BaseVaultConfigLib._setCcipGasLimit(_baseVaultStorage(), chainSelector, gasLimit);
+    }
+
+    /// @inheritdoc IBaseVault
+    function setDefaultCcipGasLimit(uint256 gasLimit)
+        external
+        override(BaseVault, IBaseVault)
+        onlyRole(Roles.CONFIG_OPERATOR_ROLE)
+    {
+        BaseVaultConfigLib._setDefaultCcipGasLimit(_baseVaultStorage(), gasLimit);
+    }
+
+    /// @inheritdoc IBaseVault
+    function setEmergencyReceiver(address emergencyReceiver)
+        external
+        override(BaseVault, IBaseVault)
+        onlyRole(Roles.CONFIG_OPERATOR_ROLE)
+    {
+        BaseVaultConfigLib._setEmergencyReceiver(_baseVaultStorage(), emergencyReceiver);
     }
 
     /*//////////////////////////////////////////////////////////////
