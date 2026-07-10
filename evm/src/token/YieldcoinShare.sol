@@ -8,8 +8,6 @@ import {
     ReentrancyGuardTransientUpgradeable
 } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardTransientUpgradeable.sol";
 
-// @review double check policies and pausable
-
 /// @title YieldcoinShare
 /// @author @contractlevel
 /// @notice YieldcoinShare is the compliance-ready share token of the Yieldcoin v2 system.
