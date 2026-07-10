@@ -111,7 +111,6 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
 
         if (report.length < 4) revert WorkflowRouter__ReportTooShort(report.length);
         bytes4 selector = bytes4(report[:4]);
-        // @review if report.length > max size?
 
         if (!s_workflowSelectors[workflowId][selector]) {
             revert WorkflowRouter__SelectorNotAllowlisted(workflowId, selector);
