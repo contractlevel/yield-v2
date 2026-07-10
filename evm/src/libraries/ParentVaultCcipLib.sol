@@ -66,9 +66,11 @@ library ParentVaultCcipLib {
         uint256 totalDepositAmount = s_epoch.totalDepositAmount;
         uint256 expectedWithdraw = s_epoch.totalWithdrawClaimAmount - totalDepositAmount;
         uint256 totalWithdrawClaimAmount = totalDepositAmount + receivedAmount;
+        /// @dev Intentional overwrite. The amount could be higher than expected.
         s_epoch.totalWithdrawClaimAmount = totalWithdrawClaimAmount;
         s_epoch.remainingWithdrawClaimAmount = totalWithdrawClaimAmount;
         if (receivedAmount < expectedWithdraw) {
+            /// @dev Shouldn't happen because we revert at the adapter level if shortfall withdraw amount
             emit EpochWithdrawAmountShort(epochNonce, expectedWithdraw, receivedAmount);
         }
 
