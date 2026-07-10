@@ -194,7 +194,8 @@ abstract contract BaseVault is
     /// @param bridgeAmount The amount of asset to bridge
     /// @param destinationChainSelector The CCIP selector of the destination chain
     /// @param ccipTxType The type of CCIP transaction
-    /// @param txData abi.encode(epochNonce) for epoch net deposit/withdraw, or abi.encode(rebalanceNonce, newStrategy.protocolId) for rebalance
+    /// @param nonce The epoch nonce (EPOCH_NET_DEPOSIT/EPOCH_NET_WITHDRAW) or rebalance nonce (REBALANCE)
+    /// @param protocolId The target strategy protocol id; only meaningful when ccipTxType is REBALANCE
     /// @dev Precondition: bridgeAmount must be more than 0
     /// @dev Precondition: destinationChainSelector must be non-zero
     /// @dev Precondition: destinationChainSelector must not equal the current chain selector
@@ -203,14 +204,16 @@ abstract contract BaseVault is
         uint256 bridgeAmount,
         uint64 destinationChainSelector,
         Types.CcipTx ccipTxType,
-        bytes memory txData
+        uint256 nonce,
+        bytes32 protocolId
     ) internal virtual {
         BaseVaultCcipLib.send(
             _baseVaultStorage(),
             bridgeAmount,
             destinationChainSelector,
             ccipTxType,
-            txData,
+            nonce,
+            protocolId,
             i_asset,
             i_link,
             i_ccipRouter,

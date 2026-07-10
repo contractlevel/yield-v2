@@ -56,7 +56,8 @@ library BaseVaultCcipLib {
     /// @param bridgeAmount The amount of asset to bridge
     /// @param destinationChainSelector The CCIP selector of the destination chain
     /// @param ccipTxType The type of CCIP transaction
-    /// @param txData Encoded CCIP payload for the target vault
+    /// @param nonce The epoch nonce (EPOCH_NET_DEPOSIT/EPOCH_NET_WITHDRAW) or rebalance nonce (REBALANCE)
+    /// @param protocolId The target strategy protocol id; only meaningful when ccipTxType is REBALANCE
     /// @param asset The underlying asset managed by the vault
     /// @param link The LINK token used to pay CCIP fees
     /// @param ccipRouter The CCIP router
@@ -66,13 +67,25 @@ library BaseVaultCcipLib {
         uint256 bridgeAmount,
         uint64 destinationChainSelector,
         Types.CcipTx ccipTxType,
-        bytes memory txData,
+        uint256 nonce,
+        bytes32 protocolId,
         address asset,
         address link,
         address ccipRouter,
         uint64 thisChainSelector
     ) public {
-        _send($, bridgeAmount, destinationChainSelector, ccipTxType, txData, asset, link, ccipRouter, thisChainSelector);
+        _send(
+            $,
+            bridgeAmount,
+            destinationChainSelector,
+            ccipTxType,
+            nonce,
+            protocolId,
+            asset,
+            link,
+            ccipRouter,
+            thisChainSelector
+        );
     }
 
     /// @notice Validates that a CCIP message delivered the vault's configured asset token and returns the delivered amount.
@@ -102,7 +115,8 @@ library BaseVaultCcipLib {
         uint256 bridgeAmount,
         uint64 destinationChainSelector,
         Types.CcipTx ccipTxType,
-        bytes memory txData,
+        uint256 nonce,
+        bytes32 protocolId,
         address asset,
         address link,
         address ccipRouter,
@@ -110,6 +124,7 @@ library BaseVaultCcipLib {
     ) internal {
         address vault = _validateCcipSend($, bridgeAmount, destinationChainSelector, thisChainSelector);
         uint256 gasLimit = _getCcipGasLimit($, destinationChainSelector);
+        bytes memory txData = ccipTxType == Types.CcipTx.REBALANCE ? abi.encode(nonce, protocolId) : abi.encode(nonce);
         bytes memory data = abi.encode(ccipTxType, txData);
 
         Client.EVMTokenAmount[] memory tokenAmounts = new Client.EVMTokenAmount[](1);

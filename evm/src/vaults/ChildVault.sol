@@ -111,21 +111,23 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @param bridgeAmount The amount of asset to bridge
     /// @param destinationChainSelector The CCIP selector of the destination chain
     /// @param ccipTxType The type of CCIP transaction
-    /// @param txData abi.encode(epochNonce) for epoch net deposit/withdraw, or abi.encode(rebalanceNonce, newStrategy.protocolId) for rebalance
+    /// @param nonce The epoch nonce (EPOCH_NET_DEPOSIT/EPOCH_NET_WITHDRAW) or rebalance nonce (REBALANCE)
+    /// @param protocolId The target strategy protocol id; only meaningful when ccipTxType is REBALANCE
     /// @dev Precondition: no recovery state must currently exist
     function _ccipSend(
         uint256 bridgeAmount,
         uint64 destinationChainSelector,
         Types.CcipTx ccipTxType,
-        bytes memory txData
+        uint256 nonce,
+        bytes32 protocolId
     ) internal override {
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
         _requireNoRecovery($_baseVault);
         BaseVaultCcipLib._validateCcipSend($_baseVault, bridgeAmount, destinationChainSelector, i_thisChainSelector);
 
-        try this.tryCcipSend(bridgeAmount, destinationChainSelector, ccipTxType, txData) {}
+        try this.tryCcipSend(bridgeAmount, destinationChainSelector, ccipTxType, nonce, protocolId) {}
         catch {
-            _storeCcipSendRecovery($_baseVault, bridgeAmount, destinationChainSelector, ccipTxType, txData);
+            _storeCcipSendRecovery($_baseVault, bridgeAmount, destinationChainSelector, ccipTxType, nonce, protocolId);
         }
     }
 
@@ -134,12 +136,14 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @param bridgeAmount The amount of asset to bridge
     /// @param destinationChainSelector The CCIP selector of the destination chain
     /// @param ccipTxType The type of CCIP transaction
-    /// @param txData abi.encode(epochNonce) for epoch net deposit/withdraw, or abi.encode(rebalanceNonce, newStrategy.protocolId) for rebalance
+    /// @param nonce The epoch nonce (EPOCH_NET_DEPOSIT/EPOCH_NET_WITHDRAW) or rebalance nonce (REBALANCE)
+    /// @param protocolId The target strategy protocol id; only meaningful when ccipTxType is REBALANCE
     function tryCcipSend(
         uint256 bridgeAmount,
         uint64 destinationChainSelector,
         Types.CcipTx ccipTxType,
-        bytes calldata txData
+        uint256 nonce,
+        bytes32 protocolId
     ) external {
         if (msg.sender != address(this)) revert ChildVault__OnlySelf();
         BaseVaultCcipLib._send(
@@ -147,7 +151,8 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
             bridgeAmount,
             destinationChainSelector,
             ccipTxType,
-            txData,
+            nonce,
+            protocolId,
             i_asset,
             i_link,
             i_ccipRouter,
@@ -176,7 +181,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         if (success) {
             if (amountOut == 0) revert ChildVault__ZeroAmountOut();
             emit WithdrawFromStrategySuccess(epochNonce, amountOut);
-            _ccipSend(amountOut, i_parentChainSelector, Types.CcipTx.EPOCH_NET_WITHDRAW, abi.encode(epochNonce));
+            _ccipSend(amountOut, i_parentChainSelector, Types.CcipTx.EPOCH_NET_WITHDRAW, epochNonce, bytes32(0));
         } else {
             _storeEpochWithdrawRecovery($_baseVault, epochNonce, amount);
             emit WithdrawFromStrategyFailure(epochNonce, amount);
@@ -257,7 +262,8 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
                 tvlToRebalance,
                 newStrategy.chainSelector,
                 Types.CcipTx.REBALANCE,
-                abi.encode(rebalanceNonce, newStrategy.protocolId)
+                rebalanceNonce,
+                newStrategy.protocolId
             );
         }
     }
@@ -370,7 +376,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
 
         _clearEpochWithdrawRecovery($, $_baseVault);
         emit WithdrawFromStrategySuccess(epochNonce, amountOut);
-        _ccipSend(amountOut, i_parentChainSelector, Types.CcipTx.EPOCH_NET_WITHDRAW, abi.encode(epochNonce));
+        _ccipSend(amountOut, i_parentChainSelector, Types.CcipTx.EPOCH_NET_WITHDRAW, epochNonce, bytes32(0));
     }
 
     /// @notice Clears recovery state for a failed epoch withdraw
@@ -439,25 +445,19 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @param bridgeAmount The amount of asset that was being bridged
     /// @param destinationChainSelector The CCIP selector of the destination chain
     /// @param ccipTxType The type of CCIP transaction
-    /// @param txData abi.encode(epochNonce) for epoch net deposit/withdraw, or abi.encode(rebalanceNonce, newStrategy.protocolId) for rebalance
+    /// @param nonce The epoch nonce (EPOCH_NET_DEPOSIT/EPOCH_NET_WITHDRAW) or rebalance nonce (REBALANCE)
+    /// @param protocolId The target strategy protocol id; only meaningful when ccipTxType is REBALANCE
     /// @dev Precondition: no recovery state must currently exist
     function _storeCcipSendRecovery(
         BaseVaultStorage storage $_baseVault,
         uint256 bridgeAmount,
         uint64 destinationChainSelector,
         Types.CcipTx ccipTxType,
-        bytes memory txData
+        uint256 nonce,
+        bytes32 protocolId
     ) internal {
         _requireNoRecovery($_baseVault);
 
-        uint256 nonce;
-        bytes32 protocolId;
-        // @review gas optimization: we'd have to pass nonce and protocolId to _ccipSend, refactoring Base/Parent too
-        if (ccipTxType == Types.CcipTx.REBALANCE) {
-            (nonce, protocolId) = abi.decode(txData, (uint256, bytes32));
-        } else {
-            nonce = abi.decode(txData, (uint256));
-        }
         _childVaultStorage().s_ccipSendRecovery = Types.CcipSendRecovery({
             ccipTxType: ccipTxType,
             amount: bridgeAmount,
@@ -480,7 +480,8 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
             recovery.amount,
             recovery.destinationChainSelector,
             recovery.ccipTxType,
-            _encodeCcipTxPayload(recovery),
+            recovery.nonce,
+            recovery.protocolId,
             i_asset,
             i_link,
             i_ccipRouter,
@@ -500,15 +501,6 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         delete $.s_ccipSendRecovery;
         $_baseVault.s_recoveryMode = Types.RecoveryMode.NONE;
         emit CcipSendRecoveryCleared(recovery.ccipTxType, recovery.destinationChainSelector, recovery.amount);
-    }
-
-    /// @notice Rebuilds the CCIP send payload from stored recovery fields for retry
-    /// @param recovery The cleared CCIP send recovery state
-    /// @return data abi.encode(recovery.nonce) for epoch net deposit/withdraw, or abi.encode(recovery.nonce, recovery.protocolId) for rebalance
-    function _encodeCcipTxPayload(Types.CcipSendRecovery memory recovery) internal pure returns (bytes memory data) {
-        data = recovery.ccipTxType == Types.CcipTx.REBALANCE
-            ? abi.encode(recovery.nonce, recovery.protocolId)
-            : abi.encode(recovery.nonce);
     }
 
     /*//////////////////////////////////////////////////////////////

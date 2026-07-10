@@ -355,7 +355,8 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
                 externalAction.amount,
                 $.s_rebalance.activeStrategy.chainSelector,
                 Types.CcipTx.EPOCH_NET_DEPOSIT,
-                abi.encode(externalAction.epochNonce)
+                externalAction.epochNonce,
+                bytes32(0)
             );
         } else if (externalAction.action == ParentVaultEpochLib.ExternalAction.WITHDRAW_FROM_LOCAL_STRATEGY) {
             (, uint256 amountOut) = _executeWithdraw(externalAction.amount, true, activeAdapter);
@@ -415,7 +416,8 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
                     amountOut,
                     newStrategy.chainSelector,
                     Types.CcipTx.REBALANCE,
-                    abi.encode(result.rebalanceNonce, newStrategy.protocolId)
+                    result.rebalanceNonce,
+                    newStrategy.protocolId
                 );
             }
         } // else, CRE is trigged by the event to write to old strategy chain and rebalance/bridge from there

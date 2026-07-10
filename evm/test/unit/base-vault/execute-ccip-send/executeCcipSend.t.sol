@@ -17,14 +17,16 @@ contract BaseVaultCcipHarness is ChildVault {
         uint256 bridgeAmount,
         uint64 destinationChainSelector,
         Types.CcipTx ccipTxType,
-        bytes memory txData
+        uint256 nonce,
+        bytes32 protocolId
     ) external {
         BaseVaultCcipLib.send(
             _baseVaultStorage(),
             bridgeAmount,
             destinationChainSelector,
             ccipTxType,
-            txData,
+            nonce,
+            protocolId,
             i_asset,
             i_link,
             i_ccipRouter,
@@ -43,27 +45,27 @@ contract BaseVault_ExecuteCcipSendUnitTest is BaseUnitTest {
 
     function test_BaseVault_executeCcipSend_RevertWhen_BridgeAmountIsZero() external {
         vm.expectRevert(IBaseVault.BaseVault__NoZeroAmount.selector);
-        s_harness.exposed_executeCcipSend(0, REMOTE_CHILD_CHAIN_SELECTOR, Types.CcipTx.REBALANCE, "");
+        s_harness.exposed_executeCcipSend(0, REMOTE_CHILD_CHAIN_SELECTOR, Types.CcipTx.REBALANCE, 0, bytes32(0));
     }
 
     function test_BaseVault_executeCcipSend_RevertWhen_DestinationChainSelectorIsZero() external {
         vm.expectRevert(
             abi.encodeWithSelector(IBaseVault.BaseVault__InvalidDestinationChainSelector.selector, uint64(0))
         );
-        s_harness.exposed_executeCcipSend(1, 0, Types.CcipTx.REBALANCE, "");
+        s_harness.exposed_executeCcipSend(1, 0, Types.CcipTx.REBALANCE, 0, bytes32(0));
     }
 
     function test_BaseVault_executeCcipSend_RevertWhen_DestinationChainSelectorIsSelf() external {
         vm.expectRevert(
             abi.encodeWithSelector(IBaseVault.BaseVault__InvalidDestinationChainSelector.selector, CHILD_CHAIN_SELECTOR)
         );
-        s_harness.exposed_executeCcipSend(1, CHILD_CHAIN_SELECTOR, Types.CcipTx.REBALANCE, "");
+        s_harness.exposed_executeCcipSend(1, CHILD_CHAIN_SELECTOR, Types.CcipTx.REBALANCE, 0, bytes32(0));
     }
 
     function test_BaseVault_executeCcipSend_RevertWhen_DestinationVaultNotRegistered() external {
         vm.expectRevert(
             abi.encodeWithSelector(IBaseVault.BaseVault__DestinationVaultNotSet.selector, REMOTE_CHILD_CHAIN_SELECTOR)
         );
-        s_harness.exposed_executeCcipSend(1, REMOTE_CHILD_CHAIN_SELECTOR, Types.CcipTx.REBALANCE, "");
+        s_harness.exposed_executeCcipSend(1, REMOTE_CHILD_CHAIN_SELECTOR, Types.CcipTx.REBALANCE, 0, bytes32(0));
     }
 }
