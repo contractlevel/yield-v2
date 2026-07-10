@@ -14,6 +14,10 @@ interface IProtocolAdapter {
     error ProtocolAdapter__NoZeroAddress();
     /// @dev Thrown when an epoch withdraw amount exceeds the adapter TVL
     error ProtocolAdapter__WithdrawAmountExceedsTotalValue();
+    /// @dev Thrown when the wired protocol's configured asset does not match the adapter's underlying asset
+    error ProtocolAdapter__AssetMismatch();
+    /// @dev Thrown when the protocol credits less than the requested deposit amount, beyond rounding tolerance
+    error ProtocolAdapter__IncompleteDeposit();
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS

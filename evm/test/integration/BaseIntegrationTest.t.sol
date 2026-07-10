@@ -65,16 +65,16 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
         local.link = linkToken;
         local.usdc = new MockUSDC();
 
-        MockAaveV3Pool parentAaveV3Pool = new MockAaveV3Pool();
-        MockAaveV3Pool childAaveV3Pool = new MockAaveV3Pool();
+        MockAaveV3Pool parentAaveV3Pool = new MockAaveV3Pool(address(local.usdc));
+        MockAaveV3Pool childAaveV3Pool = new MockAaveV3Pool(address(local.usdc));
         MockAaveV3PoolAddressesProvider parentAaveV3PoolAddressesProvider =
             new MockAaveV3PoolAddressesProvider(address(parentAaveV3Pool));
         MockAaveV3PoolAddressesProvider childAaveV3PoolAddressesProvider =
             new MockAaveV3PoolAddressesProvider(address(childAaveV3Pool));
         MockAaveV4Spoke parentAaveV4Spoke = new MockAaveV4Spoke(address(local.usdc));
         MockAaveV4Spoke childAaveV4Spoke = new MockAaveV4Spoke(address(local.usdc));
-        MockComet parentComet = new MockComet();
-        MockComet childComet = new MockComet();
+        MockComet parentComet = new MockComet(address(local.usdc));
+        MockComet childComet = new MockComet(address(local.usdc));
 
         HelperConfig.NetworkConfig memory parentConfig = _localConfig(
             address(parentAaveV3PoolAddressesProvider),
@@ -116,9 +116,9 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
         local.link = linkToken;
         local.usdc = new MockUSDC();
 
-        MockAaveV3Pool parentAaveV3Pool = new MockAaveV3Pool();
-        MockAaveV3Pool childAaveV3Pool = new MockAaveV3Pool();
-        MockAaveV3Pool remoteChildAaveV3Pool = new MockAaveV3Pool();
+        MockAaveV3Pool parentAaveV3Pool = new MockAaveV3Pool(address(local.usdc));
+        MockAaveV3Pool childAaveV3Pool = new MockAaveV3Pool(address(local.usdc));
+        MockAaveV3Pool remoteChildAaveV3Pool = new MockAaveV3Pool(address(local.usdc));
         MockAaveV3PoolAddressesProvider parentAaveV3PoolAddressesProvider =
             new MockAaveV3PoolAddressesProvider(address(parentAaveV3Pool));
         MockAaveV3PoolAddressesProvider childAaveV3PoolAddressesProvider =
@@ -128,9 +128,9 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
         MockAaveV4Spoke parentAaveV4Spoke = new MockAaveV4Spoke(address(local.usdc));
         MockAaveV4Spoke childAaveV4Spoke = new MockAaveV4Spoke(address(local.usdc));
         MockAaveV4Spoke remoteChildAaveV4Spoke = new MockAaveV4Spoke(address(local.usdc));
-        MockComet parentComet = new MockComet();
-        MockComet childComet = new MockComet();
-        MockComet remoteChildComet = new MockComet();
+        MockComet parentComet = new MockComet(address(local.usdc));
+        MockComet childComet = new MockComet(address(local.usdc));
+        MockComet remoteChildComet = new MockComet(address(local.usdc));
 
         HelperConfig.NetworkConfig memory parentConfig = _localConfig(
             address(parentAaveV3PoolAddressesProvider),

@@ -10,6 +10,13 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 /// @notice Base contract for protocol adapters
 abstract contract ProtocolAdapter is IProtocolAdapter, ReentrancyGuard {
     /*//////////////////////////////////////////////////////////////
+                               CONSTANTS
+    //////////////////////////////////////////////////////////////*/
+    /// @dev Small tolerance for protocol-side share/index rounding on deposit (e.g. Aave's
+    /// ray-scaled aToken mint/balanceOf round-trip, Compound's base-index principal rounding)
+    uint256 internal constant DEPOSIT_ROUNDING_TOLERANCE_WEI = 10;
+
+    /*//////////////////////////////////////////////////////////////
                                IMMUTABLE
     //////////////////////////////////////////////////////////////*/
     /// @dev The Yieldcoin v2 Vault on this chain
@@ -40,6 +47,23 @@ abstract contract ProtocolAdapter is IProtocolAdapter, ReentrancyGuard {
     /// @param tvl The adapter TVL before withdrawing
     function _revertIfEpochWithdrawAmountExceedsTVL(uint256 amount, uint256 tvl) internal pure {
         if (amount > tvl) revert ProtocolAdapter__WithdrawAmountExceedsTotalValue();
+    }
+
+    /// @notice Reverts when the wired protocol's configured asset does not match the adapter's underlying asset
+    /// @param protocolAsset The asset reported by the wired protocol contract
+    /// @param vaultAsset The adapter's underlying asset
+    function _revertIfAssetMismatch(address protocolAsset, address vaultAsset) internal pure {
+        if (protocolAsset != vaultAsset) revert ProtocolAdapter__AssetMismatch();
+    }
+
+    /// @notice Reverts when the protocol credits less than the requested deposit amount, beyond rounding tolerance
+    /// @param tvlBefore The adapter's TVL in the protocol before depositing
+    /// @param tvlAfter The adapter's TVL in the protocol after depositing
+    /// @param amount The amount requested to be deposited
+    function _revertIfIncompleteDeposit(uint256 tvlBefore, uint256 tvlAfter, uint256 amount) internal pure {
+        if (tvlAfter - tvlBefore + DEPOSIT_ROUNDING_TOLERANCE_WEI < amount) {
+            revert ProtocolAdapter__IncompleteDeposit();
+        }
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -348,12 +348,12 @@ contract HelperConfig is Script {
     }
 
     function _getMockProtocolsConfig(address usdc) private returns (ProtocolsConfig memory) {
-        address aaveV3Pool = address(new MockAaveV3Pool());
+        address aaveV3Pool = address(new MockAaveV3Pool(usdc));
 
         return ProtocolsConfig({
             aaveV3PoolAddressesProvider: address(new MockAaveV3PoolAddressesProvider(aaveV3Pool)),
             aaveV4Spoke: address(new MockAaveV4Spoke(usdc)),
-            compoundV3Comet: address(new MockComet()),
+            compoundV3Comet: address(new MockComet(usdc)),
             compoundV3CometRewards: address(new MockCometRewards())
         });
     }

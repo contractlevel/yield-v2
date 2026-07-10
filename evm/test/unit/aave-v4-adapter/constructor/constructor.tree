@@ -5,6 +5,6 @@ constructor
   ├── when spoke is the zero address
   │   └── it should revert with ProtocolAdapter__NoZeroAddress
   ├── when the reserve is not found
-  │   └── it should revert
+  │   └── it should revert with ProtocolAdapter__AssetMismatch
   └── when a duplicate reserve is found
-      └── it should revert
+      └── it should revert with AaveV4Adapter__DuplicateReserveFound

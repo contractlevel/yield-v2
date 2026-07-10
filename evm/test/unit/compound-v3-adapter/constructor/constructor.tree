@@ -5,5 +5,7 @@ constructor
   │   └── it should revert with ProtocolAdapter__NoZeroAddress
   ├── when Comet is the zero address
   │   └── it should revert with ProtocolAdapter__NoZeroAddress
-  └── when CometRewards is the zero address
-      └── it should revert with ProtocolAdapter__NoZeroAddress
+  ├── when CometRewards is the zero address
+  │   └── it should revert with ProtocolAdapter__NoZeroAddress
+  └── when Comet's base token does not match the vault asset
+      └── it should revert with ProtocolAdapter__AssetMismatch

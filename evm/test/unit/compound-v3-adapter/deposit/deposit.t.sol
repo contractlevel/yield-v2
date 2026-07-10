@@ -6,6 +6,9 @@ import {BaseCompoundV3AdapterUnitTest, Vm} from "../BaseCompoundV3AdapterUnitTes
 import {IProtocolAdapter} from "../../../../src/interfaces/IProtocolAdapter.sol";
 
 contract CompoundV3Adapter_DepositUnitTest is BaseCompoundV3AdapterUnitTest {
+    uint256 internal constant PARTIAL_DEPOSIT_AMOUNT = DEPOSIT_AMOUNT / 2;
+    uint256 internal constant TOLERANCE_SHORTFALL_AMOUNT = DEPOSIT_AMOUNT - 10;
+
     function setUp() public {
         deal(address(s_mockUsdc), address(s_compoundV3Adapter), DEPOSIT_AMOUNT);
         _changePrank(address(s_parentVault));
@@ -15,6 +18,21 @@ contract CompoundV3Adapter_DepositUnitTest is BaseCompoundV3AdapterUnitTest {
         _changePrank(i_nonOwner);
         vm.expectRevert(IProtocolAdapter.ProtocolAdapter__OnlyVault.selector);
         s_compoundV3Adapter.deposit(DEPOSIT_AMOUNT);
+    }
+
+    function test_CompoundV3Adapter_deposit_RevertWhen_DepositAmountIsLessThanRequested() external {
+        s_mockComet.setSupplyCreditAmount(PARTIAL_DEPOSIT_AMOUNT);
+
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__IncompleteDeposit.selector);
+        s_compoundV3Adapter.deposit(DEPOSIT_AMOUNT);
+    }
+
+    function test_CompoundV3Adapter_deposit_SucceedsWhen_CreditedAmountIsWithinRoundingTolerance() external {
+        s_mockComet.setSupplyCreditAmount(TOLERANCE_SHORTFALL_AMOUNT);
+
+        s_compoundV3Adapter.deposit(DEPOSIT_AMOUNT);
+
+        assertEq(s_compoundV3Adapter.getTVL(), TOLERANCE_SHORTFALL_AMOUNT);
     }
 
     function test_CompoundV3Adapter_deposit_Success() external {

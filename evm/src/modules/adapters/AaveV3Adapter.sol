@@ -35,8 +35,15 @@ contract AaveV3Adapter is ProtocolAdapter {
     /// @param vault The address of the Yieldcoin v2 Vault
     /// @param poolAddressesProvider The address of the Aave V3 pool addresses provider
     /// @dev Precondition: poolAddressesProvider must not be the zero address
+    /// @dev Precondition: the vault's asset must be a listed reserve on the Aave V3 pool
     constructor(address vault, address poolAddressesProvider) ProtocolAdapter(vault) {
         _revertIfZeroAddress(poolAddressesProvider);
+
+        address pool = IPoolAddressesProvider(poolAddressesProvider).getPool();
+        if (IPool(pool).getReserveData(i_asset).aTokenAddress == address(0)) {
+            revert ProtocolAdapter__AssetMismatch();
+        }
+
         i_poolAddressesProvider = poolAddressesProvider;
     }
 
@@ -51,8 +58,12 @@ contract AaveV3Adapter is ProtocolAdapter {
         emit Deposit(amount);
 
         address pool = _getAavePool();
+        uint256 tvlBefore = _getTVL(pool);
         IERC20(i_asset).forceApprove(pool, amount);
         IPool(pool).supply(i_asset, amount, address(this), 0);
+        uint256 tvlAfter = _getTVL(pool);
+
+        _revertIfIncompleteDeposit(tvlBefore, tvlAfter, amount);
     }
 
     /// @notice Withdraws the underlying asset from the Aave V3 pool

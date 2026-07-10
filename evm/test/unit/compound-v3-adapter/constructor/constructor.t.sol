@@ -4,6 +4,7 @@ pragma solidity 0.8.34;
 import {BaseCompoundV3AdapterUnitTest} from "../BaseCompoundV3AdapterUnitTest.t.sol";
 import {CompoundV3Adapter} from "../../../../src/modules/adapters/CompoundV3Adapter.sol";
 import {IProtocolAdapter} from "../../../../src/interfaces/IProtocolAdapter.sol";
+import {MockComet} from "../../../mocks/MockComet.sol";
 
 contract CompoundV3Adapter_ConstructorUnitTest is BaseCompoundV3AdapterUnitTest {
     function test_CompoundV3Adapter_constructor_SetsComet() public view {
@@ -27,5 +28,12 @@ contract CompoundV3Adapter_ConstructorUnitTest is BaseCompoundV3AdapterUnitTest 
     function test_CompoundV3Adapter_constructor_RevertWhen_CometRewardsIsZeroAddress() public {
         vm.expectRevert(IProtocolAdapter.ProtocolAdapter__NoZeroAddress.selector);
         new CompoundV3Adapter(address(s_parentVault), address(s_mockComet), address(0));
+    }
+
+    function test_CompoundV3Adapter_constructor_RevertWhen_AssetMismatch() external {
+        MockComet mismatchedComet = new MockComet(address(1));
+
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__AssetMismatch.selector);
+        new CompoundV3Adapter(address(s_parentVault), address(mismatchedComet), address(s_mockCometRewards));
     }
 }

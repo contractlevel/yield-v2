@@ -91,7 +91,7 @@ abstract contract Setup is BaseSetup, BaseIntegrationTest {
         usdc.mint(aaveV4Spoke, INVARIANT_PROTOCOL_USDC_LIQUIDITY);
         usdc.mint(comet, INVARIANT_PROTOCOL_USDC_LIQUIDITY);
 
-        MockAaveV3Pool(aaveV3Pool).setATokenAddress(address(aToken));
+        MockAaveV3Pool(aaveV3Pool).setATokenAddress(address(usdc), address(aToken));
     }
 
     function _setActiveStrategyWithdrawReturn(uint256 amount) internal {

@@ -10,20 +10,22 @@ contract MockAaveV3Pool {
     error MockAaveV3Pool__WithdrawReverts();
     error MockAaveV3Pool__UnexpectedWithdrawAmount(uint256 actual, uint256 expected);
 
-    address internal s_aTokenAddress;
+    mapping(address asset => DataTypes.ReserveDataLegacy) internal s_reserveData;
     uint256 internal s_withdrawReturn;
     uint256 internal s_expectedWithdrawAmount;
+    uint256 internal s_supplyCreditAmount;
     bool internal s_supplyReverts;
     bool internal s_withdrawReverts;
     bool internal s_useWithdrawReturn;
     bool internal s_useExpectedWithdrawAmount;
+    bool internal s_useSupplyCreditAmount;
 
-    constructor() {
-        s_aTokenAddress = address(new MockAToken());
+    constructor(address asset) {
+        s_reserveData[asset].aTokenAddress = address(new MockAToken());
     }
 
-    function setATokenAddress(address aTokenAddress) external {
-        s_aTokenAddress = aTokenAddress;
+    function setATokenAddress(address asset, address aTokenAddress) external {
+        s_reserveData[asset].aTokenAddress = aTokenAddress;
     }
 
     function setWithdrawReturn(uint256 amount) external {
@@ -45,21 +47,28 @@ contract MockAaveV3Pool {
         s_withdrawReverts = withdrawReverts;
     }
 
+    function setSupplyCreditAmount(uint256 amount) external {
+        s_supplyCreditAmount = amount;
+        s_useSupplyCreditAmount = true;
+    }
+
     function supply(address asset, uint256 amount, address onBehalfOf, uint16) external {
         if (s_supplyReverts) revert MockAaveV3Pool__SupplyReverts();
         IERC20(asset).transferFrom(msg.sender, address(this), amount);
-        MockAToken(s_aTokenAddress).mint(onBehalfOf, amount);
+        uint256 creditAmount = s_useSupplyCreditAmount ? s_supplyCreditAmount : amount;
+        MockAToken(s_reserveData[asset].aTokenAddress).mint(onBehalfOf, creditAmount);
     }
 
     function withdraw(address asset, uint256 amount, address to) external returns (uint256) {
         if (s_withdrawReverts) revert MockAaveV3Pool__WithdrawReverts();
+        address aTokenAddress = s_reserveData[asset].aTokenAddress;
         if (amount == type(uint256).max) {
             if (s_useExpectedWithdrawAmount && amount != s_expectedWithdrawAmount) {
                 revert MockAaveV3Pool__UnexpectedWithdrawAmount(amount, s_expectedWithdrawAmount);
             }
 
-            uint256 tvl = IERC20(s_aTokenAddress).balanceOf(msg.sender);
-            MockAToken(s_aTokenAddress).burn(msg.sender, tvl);
+            uint256 tvl = IERC20(aTokenAddress).balanceOf(msg.sender);
+            MockAToken(aTokenAddress).burn(msg.sender, tvl);
             IERC20(asset).transfer(to, tvl);
             return tvl;
         }
@@ -68,18 +77,18 @@ contract MockAaveV3Pool {
             if (amount != s_expectedWithdrawAmount) {
                 revert MockAaveV3Pool__UnexpectedWithdrawAmount(amount, s_expectedWithdrawAmount);
             }
-            MockAToken(s_aTokenAddress).burn(msg.sender, amount);
+            MockAToken(aTokenAddress).burn(msg.sender, amount);
             IERC20(asset).transfer(to, amount);
             return amount;
         }
 
         uint256 returnAmount = s_useWithdrawReturn ? s_withdrawReturn : amount;
-        MockAToken(s_aTokenAddress).burn(msg.sender, returnAmount);
+        MockAToken(aTokenAddress).burn(msg.sender, returnAmount);
         IERC20(asset).transfer(to, returnAmount);
         return returnAmount;
     }
 
-    function getReserveData(address) external view returns (DataTypes.ReserveDataLegacy memory data) {
-        data.aTokenAddress = s_aTokenAddress;
+    function getReserveData(address asset) external view returns (DataTypes.ReserveDataLegacy memory data) {
+        data = s_reserveData[asset];
     }
 }

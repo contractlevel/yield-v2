@@ -22,9 +22,11 @@ contract MockAaveV4Spoke {
     Reserve[] internal s_reserves;
     uint256 internal s_withdrawReturn;
     uint256 internal s_expectedWithdrawAmount;
+    uint256 internal s_supplyCreditAmount;
     bool internal s_supplyReverts;
     bool internal s_withdrawReverts;
     bool internal s_useExpectedWithdrawAmount;
+    bool internal s_useSupplyCreditAmount;
 
     mapping(uint256 reserveId => mapping(address user => uint256 suppliedAssets)) internal s_suppliedAssets;
 
@@ -63,13 +65,19 @@ contract MockAaveV4Spoke {
         s_suppliedAssets[reserveId][user] = amount;
     }
 
+    function setSupplyCreditAmount(uint256 amount) external {
+        s_supplyCreditAmount = amount;
+        s_useSupplyCreditAmount = true;
+    }
+
     function supply(uint256 reserveId, uint256 amount, address onBehalfOf)
         external
         returns (uint256 suppliedShares, uint256 suppliedAmount)
     {
         if (s_supplyReverts) revert MockAaveV4Spoke__SupplyReverts();
         IERC20(i_underlying).transferFrom(msg.sender, address(this), amount);
-        s_suppliedAssets[reserveId][onBehalfOf] += amount;
+        uint256 creditAmount = s_useSupplyCreditAmount ? s_supplyCreditAmount : amount;
+        s_suppliedAssets[reserveId][onBehalfOf] += creditAmount;
         return (amount, amount);
     }
 

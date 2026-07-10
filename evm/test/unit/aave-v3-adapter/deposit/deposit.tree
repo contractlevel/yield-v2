@@ -2,5 +2,8 @@ AaveV3Adapter_deposit
   ├── when the caller is not the vault
   │   └── it should revert
   └── when the caller is the vault
-      ├── it should emit a Deposit event
-      └── it should supply USDC to the Aave V3 pool
+      ├── when the actual deposited amount is less than the amount requested
+      │   └── it should revert
+      └── when the actual deposited amount is at least the amount requested
+          ├── it should emit a Deposit event
+          └── it should supply USDC to the Aave V3 pool

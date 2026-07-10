@@ -23,10 +23,10 @@ contract AaveV4Adapter_ConstructorUnitTest is BaseAaveV4AdapterUnitTest {
         new AaveV4Adapter(address(s_parentVault), address(0));
     }
 
-    function test_AaveV4Adapter_constructor_RevertWhen_ReserveNotFound() external {
+    function test_AaveV4Adapter_constructor_RevertWhen_AssetMismatch() external {
         MockAaveV4Spoke mockAaveV4Spoke = new MockAaveV4Spoke(address(1));
 
-        vm.expectRevert(AaveV4Adapter.AaveV4Adapter__ReserveNotFound.selector);
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__AssetMismatch.selector);
         new AaveV4Adapter(address(s_parentVault), address(mockAaveV4Spoke));
     }
 

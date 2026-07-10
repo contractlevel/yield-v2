@@ -20,10 +20,6 @@ contract AaveV4Adapter is ProtocolAdapter {
     //////////////////////////////////////////////////////////////*/
     /// @dev Thrown when the actual withdrawn amount is less than the amount requested
     error AaveV4Adapter__IncorrectWithdrawAmount();
-    /// @dev Thrown when the actual deposited amount is less than the amount supplied
-    error AaveV4Adapter__IncompleteDeposit();
-    /// @dev Thrown when the configured asset token is not listed as a reserve on the Spoke
-    error AaveV4Adapter__ReserveNotFound();
     /// @dev Thrown when the configured asset token is listed more than once on the Spoke
     error AaveV4Adapter__DuplicateReserveFound();
 
@@ -57,10 +53,13 @@ contract AaveV4Adapter is ProtocolAdapter {
     function deposit(uint256 amount) external nonReentrant onlyVault {
         emit Deposit(amount);
 
+        uint256 tvlBefore = _getTVL();
         IERC20(i_asset).forceApprove(i_spoke, amount);
         //slither-disable-next-line unused-return
-        (, uint256 suppliedAmount) = IAaveV4Spoke(i_spoke).supply(i_reserveId, amount, address(this));
-        if (suppliedAmount < amount) revert AaveV4Adapter__IncompleteDeposit();
+        IAaveV4Spoke(i_spoke).supply(i_reserveId, amount, address(this));
+        uint256 tvlAfter = _getTVL();
+
+        _revertIfIncompleteDeposit(tvlBefore, tvlAfter, amount);
     }
 
     /// @notice Withdraws the underlying asset from the Aave v4 Spoke
@@ -121,7 +120,7 @@ contract AaveV4Adapter is ProtocolAdapter {
             reserveId = i;
         }
 
-        if (!found) revert AaveV4Adapter__ReserveNotFound();
+        if (!found) revert ProtocolAdapter__AssetMismatch();
     }
 
     /*//////////////////////////////////////////////////////////////

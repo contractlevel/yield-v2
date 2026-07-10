@@ -9,11 +9,22 @@ contract MockComet {
     error MockComet__UnexpectedWithdrawAmount(uint256 actual, uint256 expected);
 
     mapping(address account => uint256 balance) internal s_balances;
+    address internal immutable i_baseToken;
     uint256 internal s_withdrawReturn;
     uint256 internal s_expectedWithdrawAmount;
+    uint256 internal s_supplyCreditAmount;
     bool internal s_supplyReverts;
     bool internal s_withdrawReverts;
     bool internal s_useExpectedWithdrawAmount;
+    bool internal s_useSupplyCreditAmount;
+
+    constructor(address _baseToken) {
+        i_baseToken = _baseToken;
+    }
+
+    function baseToken() external view returns (address) {
+        return i_baseToken;
+    }
 
     function setBalance(address account, uint256 amount) external {
         s_balances[account] = amount;
@@ -37,10 +48,15 @@ contract MockComet {
         s_withdrawReverts = withdrawReverts;
     }
 
+    function setSupplyCreditAmount(uint256 amount) external {
+        s_supplyCreditAmount = amount;
+        s_useSupplyCreditAmount = true;
+    }
+
     function supply(address asset, uint256 amount) external {
         if (s_supplyReverts) revert MockComet__SupplyReverts();
         IERC20(asset).transferFrom(msg.sender, address(this), amount);
-        s_balances[msg.sender] += amount;
+        s_balances[msg.sender] += s_useSupplyCreditAmount ? s_supplyCreditAmount : amount;
     }
 
     function withdraw(address asset, uint256 amount) external {

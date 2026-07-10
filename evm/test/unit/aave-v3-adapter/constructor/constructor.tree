@@ -2,5 +2,7 @@ constructor
   ├── it should set the pool addresses provider
   ├── when vault is the zero address
   │   └── it should revert with ProtocolAdapter__NoZeroAddress
-  └── when pool addresses provider is the zero address
-      └── it should revert with ProtocolAdapter__NoZeroAddress
+  ├── when pool addresses provider is the zero address
+  │   └── it should revert with ProtocolAdapter__NoZeroAddress
+  └── when the asset is not a listed reserve on the pool
+      └── it should revert with ProtocolAdapter__AssetMismatch

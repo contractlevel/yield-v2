@@ -50,9 +50,11 @@ contract CompoundV3Adapter is ProtocolAdapter {
     /// @param cometRewards The address of the Compound V3 rewards contract
     /// @dev Precondition: comet must not be the zero address
     /// @dev Precondition: cometRewards must not be the zero address
+    /// @dev Precondition: comet's base token must equal the vault's asset
     constructor(address vault, address comet, address cometRewards) ProtocolAdapter(vault) {
         _revertIfZeroAddress(comet);
         _revertIfZeroAddress(cometRewards);
+        _revertIfAssetMismatch(IComet(comet).baseToken(), i_asset);
 
         i_comet = comet;
         i_cometRewards = cometRewards;
@@ -67,8 +69,12 @@ contract CompoundV3Adapter is ProtocolAdapter {
     function deposit(uint256 amount) external nonReentrant onlyVault {
         emit Deposit(amount);
 
+        uint256 tvlBefore = _getTVL();
         IERC20(i_asset).forceApprove(i_comet, amount);
         IComet(i_comet).supply(i_asset, amount);
+        uint256 tvlAfter = _getTVL();
+
+        _revertIfIncompleteDeposit(tvlBefore, tvlAfter, amount);
     }
 
     /// @notice Withdraws the underlying asset from the Compound V3 pool

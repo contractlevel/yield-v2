@@ -32,7 +32,7 @@ contract CompoundV3Adapter_WithdrawUnitTest is BaseCompoundV3AdapterUnitTest {
     }
 
     function test_CompoundV3Adapter_withdraw_RevertWhen_RebalanceWithdrawAmountIsLessThanTVL() external {
-        UnderpayingComet underpayingComet = new UnderpayingComet(TVL, INSUFFICIENT_AMOUNT);
+        UnderpayingComet underpayingComet = new UnderpayingComet(address(s_mockUsdc), TVL, INSUFFICIENT_AMOUNT);
         CompoundV3Adapter adapter =
             new CompoundV3Adapter(address(s_parentVault), address(underpayingComet), address(s_mockCometRewards));
         deal(address(s_mockUsdc), address(underpayingComet), INSUFFICIENT_AMOUNT);
@@ -91,12 +91,18 @@ contract CompoundV3Adapter_WithdrawUnitTest is BaseCompoundV3AdapterUnitTest {
 }
 
 contract UnderpayingComet {
+    address internal immutable i_baseToken;
     uint256 internal immutable i_tvl;
     uint256 internal immutable i_withdrawReturn;
 
-    constructor(uint256 tvl, uint256 withdrawReturn) {
+    constructor(address _baseToken, uint256 tvl, uint256 withdrawReturn) {
+        i_baseToken = _baseToken;
         i_tvl = tvl;
         i_withdrawReturn = withdrawReturn;
+    }
+
+    function baseToken() external view returns (address) {
+        return i_baseToken;
     }
 
     function withdraw(address asset, uint256) external {
