@@ -311,13 +311,12 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @param $_baseVault BaseVaultStorage
     /// @param epochNonce The epoch nonce of the failed deposit
     /// @param amount The amount of asset to retry depositing
-    /// @dev Precondition: amount must not be zero
-    /// @dev Precondition: no recovery state must currently exist
+    /// @dev amount is already checked non-zero upstream, by `_ccipReceive`'s call to `_validateReceivedTokenAndGetAmount`
+    /// @dev No recovery state must currently exist - already enforced by the sole caller, `_ccipReceive`,
+    ///      which checks `_requireNoRecovery` before this is reached, with no recovery-mutating call in between.
     function _storeEpochDepositRecovery(BaseVaultStorage storage $_baseVault, uint256 epochNonce, uint256 amount)
         internal
     {
-        if (amount == 0) revert BaseVault__ZeroRecoveryAmount();
-        _requireNoRecovery($_baseVault);
         _childVaultStorage().s_epochDepositRecovery = Types.EpochRecovery({epochNonce: epochNonce, amount: amount});
         $_baseVault.s_recoveryMode = Types.RecoveryMode.EPOCH_DEPOSIT;
         emit EpochDepositRecoveryStored(epochNonce, amount);
@@ -350,14 +349,12 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @param $_baseVault BaseVaultStorage
     /// @param epochNonce The epoch nonce of the failed withdraw
     /// @param amount The amount of asset to retry withdrawing
-    /// @dev Precondition: amount must not be zero
-    /// @dev Precondition: no recovery state must currently exist
+    /// @dev amount is already checked non-zero upstream, by `executeEpochWithdraw`'s call to `_revertIfZeroAmount`
+    /// @dev No recovery state must currently exist - already enforced by the sole caller, `executeEpochWithdraw`,
+    ///      which checks `_requireNoRecovery` before this is reached, with no recovery-mutating call in between.
     function _storeEpochWithdrawRecovery(BaseVaultStorage storage $_baseVault, uint256 epochNonce, uint256 amount)
         internal
     {
-        //slither-disable-next-line incorrect-equality
-        if (amount == 0) revert BaseVault__ZeroRecoveryAmount();
-        _requireNoRecovery($_baseVault);
         _childVaultStorage().s_epochWithdrawRecovery = Types.EpochRecovery({epochNonce: epochNonce, amount: amount});
         $_baseVault.s_recoveryMode = Types.RecoveryMode.EPOCH_WITHDRAW;
         emit EpochWithdrawRecoveryStored(epochNonce, amount);
@@ -395,7 +392,8 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @param rebalanceNonce The rebalance nonce of the failed withdraw
     /// @param strategy The target strategy to continue the rebalance into after withdraw succeeds
     /// @dev Precondition: strategy chain selector must not be zero
-    /// @dev Precondition: no recovery state must currently exist
+    /// @dev No recovery state must currently exist - already enforced by the sole caller, `executeRebalance`,
+    ///      which checks `_requireNoRecovery` before this is reached, with no recovery-mutating call in between.
     function _storeRebalanceWithdrawRecovery(
         BaseVaultStorage storage $_baseVault,
         uint256 rebalanceNonce,
@@ -403,7 +401,6 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     ) internal {
         //slither-disable-next-line incorrect-equality
         if (strategy.chainSelector == 0) revert ChildVault__InvalidRecoveryStrategy();
-        _requireNoRecovery($_baseVault);
         _childVaultStorage().s_rebalanceWithdrawRecovery =
             Types.RebalanceWithdrawRecovery({rebalanceNonce: rebalanceNonce, strategy: strategy});
         $_baseVault.s_recoveryMode = Types.RecoveryMode.REBALANCE_WITHDRAW;
@@ -448,7 +445,10 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @param ccipTxType The type of CCIP transaction
     /// @param nonce The epoch nonce (EPOCH_NET_DEPOSIT/EPOCH_NET_WITHDRAW) or rebalance nonce (REBALANCE)
     /// @param protocolId The target strategy protocol id; only meaningful when ccipTxType is REBALANCE
-    /// @dev Precondition: no recovery state must currently exist
+    /// @dev No recovery state must currently exist - already enforced by the sole caller, `_ccipSend`'s own
+    ///      catch block, which checks `_requireNoRecovery` at the top of the same function, immediately
+    ///      before the try/catch; the only intervening action is the CCIP send attempt itself, and
+    ///      `nonReentrant` blocks any reentrant call from mutating recovery state in between.
     function _storeCcipSendRecovery(
         BaseVaultStorage storage $_baseVault,
         uint256 bridgeAmount,
@@ -457,8 +457,6 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         uint256 nonce,
         bytes32 protocolId
     ) internal {
-        _requireNoRecovery($_baseVault);
-
         _childVaultStorage().s_ccipSendRecovery = Types.CcipSendRecovery({
             ccipTxType: ccipTxType,
             amount: bridgeAmount,

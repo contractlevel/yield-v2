@@ -368,7 +368,7 @@ contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
         assertEq(rebalance.pendingStrategy.chainSelector, PARENT_CHAIN_SELECTOR);
     }
 
-    function test_ParentVault_ccipReceive_Rebalance_WhenRebalanceDepositRecoveryAlreadyExists_Reverts() public {
+    function test_ParentVault_ccipReceive_Rebalance_RevertWhen_RecoveryExists() public {
         _setParentPendingRebalance(AAVE_V3_PROTOCOL_ID, PARENT_CHAIN_SELECTOR);
         s_mockProtocolAdapter.setDepositReverts(true);
 

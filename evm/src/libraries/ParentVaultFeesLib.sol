@@ -44,15 +44,17 @@ library ParentVaultFeesLib {
         view
         returns (uint256 pricePerShare)
     {
-        pricePerShare = _calculatePricePerShare($, tvl, sharePrecision);
+        pricePerShare = _calculatePricePerShare(tvl, $.s_totalShares, sharePrecision);
     }
 
-    function _calculatePricePerShare(ParentVaultStore.ParentVaultStorage storage $, uint256 tvl, uint256 sharePrecision)
+    /// @param tvl The Total Value Locked in the active strategy of the Yieldcoin v2 system
+    /// @param totalShares The total outstanding Yieldcoin shares (caller-supplied to avoid a redundant SLOAD)
+    /// @param sharePrecision The share precision factor
+    function _calculatePricePerShare(uint256 tvl, uint256 totalShares, uint256 sharePrecision)
         internal
-        view
+        pure
         returns (uint256 pricePerShare)
     {
-        uint256 totalShares = $.s_totalShares;
         if (totalShares != 0 && tvl != 0) {
             pricePerShare = tvl * sharePrecision / totalShares;
             if (pricePerShare == 0) revert IParentVault.ParentVault__ZeroPricePerShare();
@@ -113,21 +115,23 @@ library ParentVaultFeesLib {
         address share,
         uint256 sharePrecision
     ) public returns (uint256 settlementPricePerShare) {
-        settlementPricePerShare = _collectPerformanceFee($, epochNonce, tvl, grossPricePerShare, share, sharePrecision);
+        settlementPricePerShare =
+            _collectPerformanceFee($, epochNonce, tvl, grossPricePerShare, $.s_totalShares, share, sharePrecision);
     }
 
+    /// @param totalShares The total outstanding Yieldcoin shares (caller-supplied to avoid a redundant SLOAD)
     function _collectPerformanceFee(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 epochNonce,
         uint256 tvl,
         uint256 grossPricePerShare,
+        uint256 totalShares,
         address share,
         uint256 sharePrecision
     ) internal returns (uint256 settlementPricePerShare) {
         uint256 highWaterMark = $.s_performanceFeeHighWaterMark;
         if (grossPricePerShare <= highWaterMark) return grossPricePerShare;
 
-        uint256 totalShares = $.s_totalShares;
         uint256 yieldPerShare = grossPricePerShare - highWaterMark;
         uint256 totalYield = _ceilDiv(yieldPerShare * totalShares, sharePrecision);
         uint256 fee = _ceilDiv(totalYield * PERFORMANCE_FEE_BPS, BPS_DENOMINATOR);
@@ -138,12 +142,14 @@ library ParentVaultFeesLib {
 
         uint256 feeShares = _ceilDiv(fee * totalShares, tvl - fee);
 
+        uint256 newTotalShares = totalShares;
         if (feeShares != 0) {
-            $.s_totalShares = totalShares + feeShares;
+            newTotalShares = totalShares + feeShares;
+            $.s_totalShares = newTotalShares;
             IShare(share).mint($.s_treasury, feeShares);
         }
 
-        settlementPricePerShare = _calculatePricePerShare($, tvl, sharePrecision);
+        settlementPricePerShare = _calculatePricePerShare(tvl, newTotalShares, sharePrecision);
         /// @dev feeShares rounds up and the settlement price rounds down, so dilution can land the
         ///      settlement price a dust amount below the high water mark; only ever raise it (FEE-003)
         if (settlementPricePerShare > highWaterMark) {

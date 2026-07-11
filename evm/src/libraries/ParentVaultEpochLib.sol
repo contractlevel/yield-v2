@@ -32,6 +32,7 @@ library ParentVaultEpochLib {
         uint256 epochNonce;
         ExternalAction action;
         uint256 amount;
+        uint256 totalDepositAmount;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -93,9 +94,11 @@ library ParentVaultEpochLib {
             revert IParentVault.ParentVault__EmptyEpoch(epochNonce);
         }
 
-        uint256 grossPricePerShare = ParentVaultFeesLib._calculatePricePerShare($, tvl, sharePrecision);
-        uint256 settlementPricePerShare =
-            ParentVaultFeesLib._collectPerformanceFee($, epochNonce, tvl, grossPricePerShare, share, sharePrecision);
+        uint256 totalShares = $.s_totalShares;
+        uint256 grossPricePerShare = ParentVaultFeesLib._calculatePricePerShare(tvl, totalShares, sharePrecision);
+        uint256 settlementPricePerShare = ParentVaultFeesLib._collectPerformanceFee(
+            $, epochNonce, tvl, grossPricePerShare, totalShares, share, sharePrecision
+        );
 
         uint256 totalWithdraw = totalShareBurnAmount * settlementPricePerShare / sharePrecision;
         int256 netFlow = int256(totalDepositAmount) - int256(totalWithdraw);
@@ -115,6 +118,7 @@ library ParentVaultEpochLib {
         s_epoch.closedAtTimestamp = block.timestamp;
 
         externalAction.epochNonce = epochNonce;
+        externalAction.totalDepositAmount = totalDepositAmount;
         if (netFlow >= 0) {
             s_epoch.status = Types.EpochStatus.CLAIMABLE;
             emit EpochClaimable(epochNonce);
@@ -143,22 +147,25 @@ library ParentVaultEpochLib {
     /// @notice Finalizes a local net-withdraw epoch after ParentVault receives actual adapter output.
     /// @param $ ParentVault namespaced storage
     /// @param epochNonce The epoch nonce being finalized
+    /// @param totalDepositAmount The epoch's total deposit amount, as already settled by `closeEpoch`
     /// @param amountOut The actual amount withdrawn from the local strategy
     function finalizeLocalNetWithdraw(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 epochNonce,
+        uint256 totalDepositAmount,
         uint256 amountOut
     ) public {
-        _finalizeLocalNetWithdraw($, epochNonce, amountOut);
+        _finalizeLocalNetWithdraw($, epochNonce, totalDepositAmount, amountOut);
     }
 
     function _finalizeLocalNetWithdraw(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 epochNonce,
+        uint256 totalDepositAmount,
         uint256 amountOut
     ) internal {
         Types.Epoch storage s_epoch = $.s_epochs[epochNonce];
-        uint256 totalWithdrawClaimAmount = s_epoch.totalDepositAmount + amountOut;
+        uint256 totalWithdrawClaimAmount = totalDepositAmount + amountOut;
         s_epoch.totalWithdrawClaimAmount = totalWithdrawClaimAmount;
         s_epoch.remainingWithdrawClaimAmount = totalWithdrawClaimAmount;
         s_epoch.status = Types.EpochStatus.CLAIMABLE;
@@ -167,12 +174,14 @@ library ParentVaultEpochLib {
 
     /// @notice Opens the next epoch.
     /// @param $ ParentVault namespaced storage
-    function openNextEpoch(ParentVaultStore.ParentVaultStorage storage $) public {
-        _openNextEpoch($);
+    /// @param epochNonce The epoch nonce just closed by `closeEpoch`, as the next nonce is `epochNonce + 1`
+    function openNextEpoch(ParentVaultStore.ParentVaultStorage storage $, uint256 epochNonce) public {
+        _openNextEpoch($, epochNonce);
     }
 
-    function _openNextEpoch(ParentVaultStore.ParentVaultStorage storage $) internal {
-        uint256 nextNonce = ++$.s_epochNonce;
+    function _openNextEpoch(ParentVaultStore.ParentVaultStorage storage $, uint256 epochNonce) internal {
+        uint256 nextNonce = epochNonce + 1;
+        $.s_epochNonce = nextNonce;
         $.s_epochs[nextNonce].status = Types.EpochStatus.OPEN;
         $.s_epochs[nextNonce].openedAtTimestamp = block.timestamp;
         emit EpochOpen(nextNonce);

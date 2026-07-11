@@ -288,7 +288,12 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
             ParentVaultCcipLib.receiveCcip($, ccipTxType, data, receivedAmount);
         if (rebalanceNonce != 0) {
             bool success = _handleCCIPRebalance(rebalanceNonce, protocolId, receivedAmount);
-            if (success) ParentVaultRebalanceLib.finalizeRebalance($, i_share);
+            /// @dev _ccipReceive only runs on the chain a rebalance CCIP message was sent to, so the
+            ///      pending strategy's chain selector is always this chain - no need to read it from
+            ///      storage (BaseVaultCcipLib.sol -> BaseVault._ccipSend sends to newStrategy.chainSelector).
+            if (success) {
+                _finalizeRebalance(rebalanceNonce, Types.Strategy({protocolId: protocolId, chainSelector: i_thisChainSelector}));
+            }
         }
     }
 
@@ -360,11 +365,13 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         } else if (externalAction.action == ParentVaultEpochLib.ExternalAction.WITHDRAW_FROM_LOCAL_STRATEGY) {
             (, uint256 amountOut) = _executeWithdraw(externalAction.amount, true, activeAdapter);
             emit WithdrawFromStrategySuccess(externalAction.epochNonce, amountOut);
-            ParentVaultEpochLib.finalizeLocalNetWithdraw($, externalAction.epochNonce, amountOut);
+            ParentVaultEpochLib.finalizeLocalNetWithdraw(
+                $, externalAction.epochNonce, externalAction.totalDepositAmount, amountOut
+            );
         }
         // else CRE is trigged via EpochExecuting event emission in ParentVaultEpochLib.closeEpoch, which writes to strategy chain to withdraw and ccipSend here
 
-        ParentVaultEpochLib.openNextEpoch($);
+        ParentVaultEpochLib.openNextEpoch($, externalAction.epochNonce);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -407,7 +414,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
                 address newAdapter = _setActiveAdapter(newStrategy.protocolId);
                 _executeDeposit(amountOut, true, newAdapter);
                 emit RebalanceDepositSuccess(result.rebalanceNonce, amountOut);
-                ParentVaultRebalanceLib.finalizeRebalance($, i_share);
+                _finalizeRebalance(result.rebalanceNonce, newStrategy);
             } else {
                 // ccip send to new strategy chain
                 _clearActiveAdapter(activeAdapter);
@@ -426,9 +433,25 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @notice The WorkflowRouter calls this
     /// @dev Precondition: caller must have REBALANCE_OPERATOR_ROLE
     /// @dev Precondition: there must not be a stored recovery mode
+    /// @dev Precondition: function must not be reentered
     function completeRebalance() external nonReentrant onlyRole(Roles.REBALANCE_OPERATOR_ROLE) {
         _requireNoRecovery(_baseVaultStorage());
-        ParentVaultRebalanceLib.finalizeRebalance(_parentVaultStorage(), i_share);
+        Types.Rebalance storage s_rebalance = _parentVaultStorage().s_rebalance;
+        _finalizeRebalance(s_rebalance.nonce, s_rebalance.pendingStrategy);
+    }
+
+    /// @notice Finalizes an in-progress rebalance via ParentVaultRebalanceLib.
+    /// @dev Every ParentVault call site funnels through here rather than calling
+    ///      ParentVaultRebalanceLib.finalizeRebalance directly, so there is exactly one place that knows
+    ///      how to reach the library. Callers that already have `rebalanceNonce`/`newStrategy` in memory
+    ///      (`initiateRebalance`'s same-chain branch, `_ccipReceive`'s rebalance-complete branch) pass
+    ///      them straight through, avoiding a redundant SLOAD of `s_rebalance.nonce`/`pendingStrategy`.
+    ///      Callers that don't (`completeRebalance`, `executeRecovery`) read them from storage once,
+    ///      immediately before calling.
+    /// @param rebalanceNonce The current `s_rebalance.nonce`
+    /// @param newStrategy The current `s_rebalance.pendingStrategy`
+    function _finalizeRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy) internal {
+        ParentVaultRebalanceLib.finalizeRebalance(_parentVaultStorage(), i_share, rebalanceNonce, newStrategy);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -443,7 +466,8 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
         if ($_baseVault.s_recoveryMode != Types.RecoveryMode.REBALANCE_DEPOSIT) revert BaseVault__NoPendingRecovery();
         _recoverFailedRebalanceDeposit($_baseVault);
-        ParentVaultRebalanceLib.finalizeRebalance(_parentVaultStorage(), i_share);
+        Types.Rebalance storage s_rebalance = _parentVaultStorage().s_rebalance;
+        _finalizeRebalance(s_rebalance.nonce, s_rebalance.pendingStrategy);
     }
 
     /*//////////////////////////////////////////////////////////////

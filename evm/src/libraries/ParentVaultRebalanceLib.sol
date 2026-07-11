@@ -101,20 +101,30 @@ library ParentVaultRebalanceLib {
     /// @notice Finalizes an in-progress rebalance and collects management fees.
     /// @param $ ParentVault namespaced storage
     /// @param share The Yieldcoin share token
-    function finalizeRebalance(ParentVaultStore.ParentVaultStorage storage $, address share) public {
-        _finalizeRebalance($, share);
+    /// @param rebalanceNonce The current `s_rebalance.nonce`
+    /// @param newStrategy The current `s_rebalance.pendingStrategy`
+    function finalizeRebalance(
+        ParentVaultStore.ParentVaultStorage storage $,
+        address share,
+        uint256 rebalanceNonce,
+        Types.Strategy memory newStrategy
+    ) public {
+        _finalizeRebalance($, share, rebalanceNonce, newStrategy);
     }
 
-    function _finalizeRebalance(ParentVaultStore.ParentVaultStorage storage $, address share) internal {
+    function _finalizeRebalance(
+        ParentVaultStore.ParentVaultStorage storage $,
+        address share,
+        uint256 rebalanceNonce,
+        Types.Strategy memory newStrategy
+    ) internal {
         Types.Rebalance storage s_rebalance = $.s_rebalance;
         if (s_rebalance.state != Types.RebalanceState.REBALANCING) {
             revert IParentVault.ParentVault__NoRebalanceInProgress();
         }
 
-        uint256 rebalanceNonce = s_rebalance.nonce;
         uint256 lastRebalanceCompletedTimestamp = s_rebalance.lastRebalanceCompletedTimestamp;
 
-        Types.Strategy memory newStrategy = s_rebalance.pendingStrategy;
         s_rebalance.activeStrategy = newStrategy;
         s_rebalance.state = Types.RebalanceState.NONE;
         s_rebalance.lastRebalanceCompletedTimestamp = block.timestamp;

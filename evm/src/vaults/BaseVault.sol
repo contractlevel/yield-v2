@@ -347,14 +347,13 @@ abstract contract BaseVault is
     /// @param $ BaseVaultStorage
     /// @param rebalanceNonce The nonce of the rebalance
     /// @param amount The amount that should have been rebalanced into the new strategy
-    /// @dev Precondition: amount must not be zero
-    /// @dev Precondition: no recovery state must currently exist
+    /// @dev amount is already checked non-zero upstream - by `_validateReceivedTokenAndGetAmount` (CCIP callers)
+    ///      or by `ChildVault__ZeroAmountOut`/`BaseVault__ZeroRecoveryAmount` (`_rebalanceToNewStrategy` callers)
+    /// @dev No recovery state must currently exist - already enforced upstream by every caller (`_ccipReceive`
+    ///      on Child and Parent, `executeRebalance`); see GAS_OPTS.md for the full call-path proof
     function _storeRebalanceDepositRecovery(BaseVaultStorage storage $, uint256 rebalanceNonce, uint256 amount)
         internal
     {
-        //slither-disable-next-line incorrect-equality
-        if (amount == 0) revert BaseVault__ZeroRecoveryAmount();
-        _requireNoRecovery($);
         $.s_rebalanceDepositRecovery = Types.RebalanceDepositRecovery({rebalanceNonce: rebalanceNonce, amount: amount});
         $.s_recoveryMode = Types.RecoveryMode.REBALANCE_DEPOSIT;
         emit RebalanceDepositRecoveryStored(rebalanceNonce, amount);

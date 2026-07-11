@@ -83,7 +83,7 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
         s_childVault.ccipReceive(_depositMessage(EPOCH_NONCE, 0));
     }
 
-    function test_ChildVault_ccipReceive_RevertWhen_RecoveryAlreadyPending() public {
+    function test_ChildVault_ccipReceive_RevertWhen_RecoveryExists() public {
         _setChildActiveAdapter(address(s_mockProtocolAdapter));
         s_mockProtocolAdapter.setDepositReverts(true);
         s_childVault.ccipReceive(_depositMessage(EPOCH_NONCE));
