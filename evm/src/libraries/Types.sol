@@ -117,7 +117,7 @@ library Types {
         RebalanceState state;
         Strategy activeStrategy;
         Strategy pendingStrategy;
-        uint256 lastRebalanceInitiatedTimestamp;
+        uint256 lastRebalanceInitiatedTimestamp; // @review not used in recovery timeouts. do we actually need this?
         uint256 lastRebalanceCompletedTimestamp;
     }
 

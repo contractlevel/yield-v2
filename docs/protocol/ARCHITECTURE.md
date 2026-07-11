@@ -15,7 +15,7 @@ Yieldcoin v2 is a multichain yield vault. Users interact only with `ParentVault`
 - **CCIP** — cross-chain messaging and token transport between parent and child vaults.
 - **DefiLlama relay** — off-chain process that fetches yield data from the DefiLlama API and feeds it to the CRE workflow; it does not touch on-chain state. The CRE workflow is what reaches contracts, via `WorkflowRouter`.
 
-See [`ACCESS_CONTROL_MATRIX`](./ACCESS_CONTROL_MATRIX.md) for the roles that gate each privileged entry point.
+See [`ACCESS_CONTROL_MATRIX`](../security/ACCESS_CONTROL_MATRIX.md) for the roles that gate each privileged entry point.
 
 ## 3. How they connect
 
@@ -61,6 +61,6 @@ See [`PATHS`](PATHS.md) for the full step-by-step paths, including failure and r
 ## 5. Further reading
 
 - [`PATHS`](PATHS.md) — every execution path in detail
-- [`INVARIANTS`](./INVARIANTS.md) — protocol-level safety properties
-- [`ACCESS_CONTROL_MATRIX`](./ACCESS_CONTROL_MATRIX.md) — roles and privileged functions
-- [`KNOWN_ISSUES`](KNOWN_ISSUES.md) — accepted limitations and caveats
+- [`INVARIANTS`](../security/INVARIANTS.md) — protocol-level safety properties
+- [`ACCESS_CONTROL_MATRIX`](../security/ACCESS_CONTROL_MATRIX.md) — roles and privileged functions
+- [`KNOWN_ISSUES`](../security/KNOWN_ISSUES.md) — accepted limitations and caveats

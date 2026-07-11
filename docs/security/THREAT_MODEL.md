@@ -81,8 +81,8 @@ Auditors should verify these controls against code and tests:
 
 ## 5. Related documents
 
-- [ARCHITECTURE](./ARCHITECTURE.md) — System overview and component relationships.
-- [PATHS](./PATHS.md) — Full epoch and rebalance execution paths.
+- [ARCHITECTURE](../protocol/ARCHITECTURE.md) — System overview and component relationships.
+- [PATHS](../protocol/PATHS.md) — Full epoch and rebalance execution paths.
 - [INVARIANTS](./INVARIANTS.md) — Protocol safety properties and test coverage.
 - [ACCESS_CONTROL_MATRIX](./ACCESS_CONTROL_MATRIX.md) — Role meanings and privileged entry points.
 - [KNOWN_ISSUES](./KNOWN_ISSUES.md) — Accepted residual risks and revisit conditions.

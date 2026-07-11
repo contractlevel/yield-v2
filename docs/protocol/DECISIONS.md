@@ -8,10 +8,10 @@ This is not the canonical source for execution paths, invariants, roles, or acce
 
 - [ARCHITECTURE](./ARCHITECTURE.md) for system components and relationships.
 - [PATHS](./PATHS.md) for epoch and rebalance flows.
-- [INVARIANTS](./INVARIANTS.md) for safety properties and verification status.
-- [ACCESS_CONTROL_MATRIX](./ACCESS_CONTROL_MATRIX.md) for privileged roles and authorities.
-- [THREAT_MODEL](./THREAT_MODEL.md) for trust boundaries and threat surfaces.
-- [KNOWN_ISSUES](./KNOWN_ISSUES.md) for accepted limitations and caveats.
+- [INVARIANTS](../security/INVARIANTS.md) for safety properties and verification status.
+- [ACCESS_CONTROL_MATRIX](../security/ACCESS_CONTROL_MATRIX.md) for privileged roles and authorities.
+- [THREAT_MODEL](../security/THREAT_MODEL.md) for trust boundaries and threat surfaces.
+- [KNOWN_ISSUES](../security/KNOWN_ISSUES.md) for accepted limitations and caveats.
 
 ## DD-001 - Event Shapes Favor Certora Verification
 
@@ -27,7 +27,7 @@ Recovery functions are designed as public retries of already-authorized failed o
 
 This avoids a separate recovery operator role while still allowing anyone to advance the system when the original failure condition clears. Authorization happens when the failed operation stores recovery state; execution consumes that state.
 
-See [ACCESS_CONTROL_MATRIX - Vault Recovery](./ACCESS_CONTROL_MATRIX.md#vault-recovery) and [INVARIANTS - Recovery](./INVARIANTS.md#recovery).
+See [ACCESS_CONTROL_MATRIX - Vault Recovery](../security/ACCESS_CONTROL_MATRIX.md#vault-recovery) and [INVARIANTS - Recovery](../security/INVARIANTS.md#recovery).
 
 ## DD-003 - Vault Logic Is Split Into Libraries
 
@@ -43,7 +43,7 @@ This split is an implementation boundary, not a trust boundary: linked libraries
 
 A pause should stop new user activity and new privileged operations where appropriate, but it should not necessarily freeze an already-started rebalance in an intermediate state. Allowing completion while paused can restore a coherent active strategy and clear recovery state.
 
-Emergency behavior and pause-related residual risks are tracked in [INVARIANTS - Pause And Emergency Behavior](./INVARIANTS.md#pause-and-emergency-behavior) and [KNOWN_ISSUES](./KNOWN_ISSUES.md).
+Emergency behavior and pause-related residual risks are tracked in [INVARIANTS - Pause And Emergency Behavior](../security/INVARIANTS.md#pause-and-emergency-behavior) and [KNOWN_ISSUES](../security/KNOWN_ISSUES.md).
 
 ## DD-005 - CRE Is The Automation And TVL Reporting Layer
 
@@ -55,7 +55,7 @@ This keeps operational authority concentrated in the CRE/router path rather than
 
 Some asynchronous rebalance paths complete through CRE calling `completeRebalance()` after observing a successful deposit event on the receiving chain. Completion does not always depend on an inbound CCIP message to the parent chain; the parent records the pending strategy at initiation and finalizes when the workflow reports that the receiving side completed the deposit.
 
-See [THREAT_MODEL - CRE, TVL, and rebalance decision failure](./THREAT_MODEL.md#33-cre-tvl-and-rebalance-decision-failure) and [KI-007](./KNOWN_ISSUES.md#ki-007--epoch-close-depends-on-cre-workflow-execution).
+See [THREAT_MODEL - CRE, TVL, and rebalance decision failure](../security/THREAT_MODEL.md#33-cre-tvl-and-rebalance-decision-failure) and [KI-007](../security/KNOWN_ISSUES.md#ki-007--epoch-close-depends-on-cre-workflow-execution).
 
 ## DD-006 - `closeEpoch` Trusts CRE-Supplied TVL
 
@@ -65,7 +65,7 @@ This is deliberate because the active strategy may be on a child chain. The same
 
 Incorrect TVL can corrupt epoch pricing once users claim against the affected epoch. This is a trust-boundary decision, not a hidden invariant.
 
-See [INVARIANTS - External Assumptions](./INVARIANTS.md#external-assumptions) and [THREAT_MODEL - CRE, TVL, and rebalance decision failure](./THREAT_MODEL.md#33-cre-tvl-and-rebalance-decision-failure).
+See [INVARIANTS - External Assumptions](../security/INVARIANTS.md#external-assumptions) and [THREAT_MODEL - CRE, TVL, and rebalance decision failure](../security/THREAT_MODEL.md#33-cre-tvl-and-rebalance-decision-failure).
 
 ## DD-007 - Local Failures Revert, Remote Child Failures Store Recovery
 
@@ -75,7 +75,7 @@ The parent can revert local adapter interactions and parent-originated CCIP send
 
 This means a local Aave or Compound adapter revert during `closeEpoch` reverts the epoch close. The epoch remains open and CRE can retry after the underlying failure clears. No separate parent-side recovery state is stored for that local synchronous failure.
 
-The full path matrix is documented in [PATHS](./PATHS.md). Recovery invariants are documented in [INVARIANTS - Recovery](./INVARIANTS.md#recovery).
+The full path matrix is documented in [PATHS](./PATHS.md). Recovery invariants are documented in [INVARIANTS - Recovery](../security/INVARIANTS.md#recovery).
 
 ## DD-008 - Retry Is Event/Cron Driven, Not Timer Driven On-Chain
 
@@ -85,7 +85,7 @@ This keeps contract logic deterministic and avoids adding a second execution aut
 
 Log-triggered workflow submissions are expected only from standard protocol events emitted during normal state transitions, such as epoch execution and rebalance deposit success. The events do not themselves authorize arbitrary contract calls; `WorkflowRouter` still enforces workflow metadata, selector allowlists, and vault roles before dispatch.
 
-This design means liveness depends on CRE, CCIP, and operator monitoring. Accepted liveness dependencies are tracked in [KNOWN_ISSUES](./KNOWN_ISSUES.md).
+This design means liveness depends on CRE, CCIP, and operator monitoring. Accepted liveness dependencies are tracked in [KNOWN_ISSUES](../security/KNOWN_ISSUES.md).
 
 ## DD-009 - Yield Accounting Is Underlying-Asset-Only
 
@@ -97,4 +97,4 @@ Secondary protocol rewards are outside this accounting model. For Compound V3, C
 
 The protocol does not currently decide whether claimed COMP is retained, sold, manually distributed, or routed into a future rewards distributor. Handling that on-chain would require additional reward-token accounting, distribution policy, and operational controls. The current design avoids that complexity and keeps user-facing yield calculations underlying-only.
 
-See [ACCESS_CONTROL_MATRIX - Protocol rewards claiming](./ACCESS_CONTROL_MATRIX.md#authority-matrix). If product requirements change to include secondary reward tokens in user yield, this design decision and related accounting invariants should be revisited.
+See [ACCESS_CONTROL_MATRIX - Protocol rewards claiming](../security/ACCESS_CONTROL_MATRIX.md#authority-matrix). If product requirements change to include secondary reward tokens in user yield, this design decision and related accounting invariants should be revisited.

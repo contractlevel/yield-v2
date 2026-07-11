@@ -129,6 +129,8 @@ Because this is integer division, it rounds down. For very small `shareBurnAmoun
 
 ---
 
+<!-- @review distinguishing compromised relay/defillama api as separate known issue -->
+
 ## KI-004 — Residual CPU/memory DoS surface in `defillama-relay` upstream processing
 
 **Status:** Accepted — mitigated but not eliminated.
@@ -499,11 +501,11 @@ At the epoch closing a full exit, the withdraw amount pulled from the strategy i
 
 The next epoch's depositor then mints shares at par against `_calculatePricePerShare`, which ignores that residual. Their shares end up backed by `residual + their own deposit`, so they receive the residual for free instead of it going to the exited shareholders.
 
-This is the same root-cause pattern already called out on `donate()` (`BaseVault.sol`): *"First-depositor captures full donation when `s_totalShares == 0` due to bootstrap pricing ignoring existing TVL."* This entry extends that acknowledgment to the organic (non-`donate()`) case.
+This is the same root-cause pattern already called out on `donate()` (`BaseVault.sol`): _"First-depositor captures full donation when `s_totalShares == 0` due to bootstrap pricing ignoring existing TVL."_ This entry extends that acknowledgment to the organic (non-`donate()`) case.
 
 ### Why this is accepted, not mitigated
 
-- **Operationally, `s_totalShares` should never actually return to zero after the first epoch.** The deployer/admin makes an initial seed deposit as part of launch and does not redeem it. This is not enforced on-chain (there is no dead-shares burn or minimum-liquidity lock in the contracts) — it is a deployment-runbook practice, so the trigger condition requires both every other holder to exit *and* the admin to redeem the permanent seed position, which is not expected operational behavior.
+- **Operationally, `s_totalShares` should never actually return to zero after the first epoch.** The deployer/admin makes an initial seed deposit as part of launch and does not redeem it. This is not enforced on-chain (there is no dead-shares burn or minimum-liquidity lock in the contracts) — it is a deployment-runbook practice, so the trigger condition requires both every other holder to exit _and_ the admin to redeem the permanent seed position, which is not expected operational behavior.
 - The residual is bounded to dust: the withdrawal amount is computed directly from a trusted, near-real-time operator TVL estimate, so any leftover is limited to accrual/rounding drift over a single transaction, not an arbitrary amount.
 - Reaching the trigger condition requires total share supply to hit exactly zero, which (even setting the seed deposit aside) is a specific and infrequent state (a full protocol exit), not routine operation.
 - Sweeping or reconciling the residual would require either tracking a per-reset "owed to exited holders" balance or an extra adapter call on the full-exit path — added accounting state and complexity to close a dust-sized gap, contrary to the project's simplicity priority.
