@@ -115,8 +115,9 @@ library ParentVaultFeesLib {
         address share,
         uint256 sharePrecision
     ) public returns (uint256 settlementPricePerShare) {
-        settlementPricePerShare =
-            _collectPerformanceFee($, epochNonce, tvl, grossPricePerShare, $.s_totalShares, share, sharePrecision);
+        settlementPricePerShare = _collectPerformanceFee(
+            $, epochNonce, tvl, grossPricePerShare, $.s_totalShares, share, sharePrecision
+        );
     }
 
     /// @param totalShares The total outstanding Yieldcoin shares (caller-supplied to avoid a redundant SLOAD)

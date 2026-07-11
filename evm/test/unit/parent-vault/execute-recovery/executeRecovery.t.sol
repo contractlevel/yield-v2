@@ -79,9 +79,7 @@ contract ParentVault_ExecuteRecovery_RebalanceDeposit_UnitTest is BaseUnitTest {
         assertTrue(s_parentVault.getRecoveryMode() == Types.RecoveryMode.NONE);
     }
 
-    function test_ParentVault_executeRecovery_REBALANCE_DEPOSIT_RevertWhen_CalledAgainAfterRecoveryCompletes()
-        public
-    {
+    function test_ParentVault_executeRecovery_REBALANCE_DEPOSIT_RevertWhen_CalledAgainAfterRecoveryCompletes() public {
         s_parentVault.executeRecovery();
         assertTrue(s_parentVault.getRecoveryMode() == Types.RecoveryMode.NONE);
 

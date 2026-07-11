@@ -292,7 +292,9 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
             ///      pending strategy's chain selector is always this chain - no need to read it from
             ///      storage (BaseVaultCcipLib.sol -> BaseVault._ccipSend sends to newStrategy.chainSelector).
             if (success) {
-                _finalizeRebalance(rebalanceNonce, Types.Strategy({protocolId: protocolId, chainSelector: i_thisChainSelector}));
+                _finalizeRebalance(
+                    rebalanceNonce, Types.Strategy({protocolId: protocolId, chainSelector: i_thisChainSelector})
+                );
             }
         }
     }
