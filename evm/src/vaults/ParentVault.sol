@@ -169,6 +169,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @dev Precondition: the function must not be reentered
     /// @dev Precondition: the contract must not be paused
     /// @dev Precondition: tx must be compliant with the policy
+    /// @dev ParentVault policy intentionally overlaps with YieldcoinShare transfer checks for defense-in-depth.
     /// @dev Precondition: the current epoch must be open
     /// @dev Precondition: user must approve address(this) to transfer their shareBurnAmount
     /// @dev ParentVaultUserEpochLib is linked by Solidity and executes by DELEGATECALL in the vault context.
@@ -241,6 +242,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @dev Precondition: the function must not be reentered
     /// @dev Precondition: the contract must not be paused
     /// @dev Precondition: tx must be compliant with the policy
+    /// @dev ParentVault policy intentionally overlaps with YieldcoinShare transfer checks for defense-in-depth.
     /// @dev Precondition: the current epoch must be open
     /// @dev Precondition: the user must have a withdraw intent for the epoch nonce
     /// @dev ParentVaultUserEpochLib is linked by Solidity and executes by DELEGATECALL in the vault context.

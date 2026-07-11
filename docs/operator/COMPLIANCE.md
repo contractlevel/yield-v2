@@ -53,6 +53,10 @@ For each selector, the deploy script configures [`SenderExtractor`](../../evm/sr
 
 This means a user must be KYC-approved and not frozen before using the vault's direct user entry points.
 
+#### Deliberate overlap with share-token checks
+
+`withdraw` and `cancelWithdraw` move `YieldcoinShare` tokens after the ParentVault policy check. Those share-token transfers also enforce KYC and frozen-account restrictions through `YieldcoinShare` / ERC-3643 transfer policy. The overlap is intentional: ParentVault keeps a uniform fail-closed policy stack for all direct user entry points, while the share token remains the final enforcement boundary for token movement. The extra policy calls are accepted as defense-in-depth despite the additional gas cost.
+
 ### YieldcoinShare Transfers And Approvals
 
 The following `YieldcoinShare` user actions are ACE-gated:
