@@ -129,8 +129,6 @@ Because this is integer division, it rounds down. For very small `shareBurnAmoun
 
 ---
 
-<!-- @review distinguishing compromised relay/defillama api as separate known issue -->
-
 ## KI-004 — Residual CPU/memory DoS surface in `defillama-relay` upstream processing
 
 **Status:** Accepted — mitigated but not eliminated.
@@ -139,7 +137,7 @@ Because this is integer division, it rounds down. For very small `shareBurnAmoun
 
 **Component:** `services/defillama-relay` (`src/lib.rs`, `read_upstream_json`, `read_upstream_body`, and `parse_upstream_json` → `serde_json::from_slice::<DefiLlamaResponse>`).
 
-**Threat model:** DefiLlama compromise, TLS-terminating/MITM compromise, or misconfiguration of DEFILLAMA_UPSTREAM_URL to an attacker-controlled endpoint.
+**Threat model:** A hostile or broken upstream response delivered by DefiLlama, a TLS-terminating/MITM path, or a misconfigured `DEFILLAMA_UPSTREAM_URL`.
 
 ### Summary
 
@@ -207,6 +205,10 @@ The team accepts the residual as commensurate with the impact and the simplicity
 - The relay's output begins driving automated on-chain actions without independent sanity checks downstream.
 - DefiLlama's response format changes in a way that makes 12 MiB an uncomfortable fit, forcing the cap upward.
 - A bounded-deserializer or streaming-parse implementation becomes cheap enough (in code complexity terms) to justify closing the residual.
+
+### Related accepted risks
+
+This entry is limited to relay resource consumption while processing upstream responses. Incorrect or manipulated yield data from a compromised DefiLlama API, relay deployment, or relay configuration is documented separately in [KI-011](#ki-011--compromised-defillama-api-or-relay-can-skew-rebalance-inputs).
 
 ---
 
@@ -528,3 +530,57 @@ If the seed-deposit practice is not followed, or the admin's seed position is ev
 - The seed-deposit practice is formalized as a contract-enforced invariant (e.g. a permanent minimum-liquidity lock), at which point this entry could be closed rather than merely mitigated.
 
 ---
+
+## KI-011 — Compromised DefiLlama API or relay can skew rebalance inputs
+
+**Status:** Accepted — bounded off-chain data-integrity dependency.
+
+**Last reviewed:** 2026-07-11
+
+**Component:** DefiLlama API, `services/defillama-relay`, CRE rebalance workflow, `WorkflowRouter.onReport`, `AdapterRegistry`, and rebalance execution paths.
+
+### Summary
+
+Yieldcoin v2 uses off-chain DefiLlama pool data, fetched through the `defillama-relay`, to inform rebalance decisions. The relay is a read-only data service: it fetches upstream yield data, filters it to configured pool IDs, bounds returned metadata, and serves the result to the CRE workflow.
+
+If the DefiLlama API, relay deployment, relay configuration, or TLS-terminating path is compromised, the CRE workflow can receive plausible but incorrect APY / yield data for otherwise allowed pools. That can cause the workflow to select a suboptimal supported strategy or to rebalance when it otherwise would not have.
+
+This is distinct from [KI-004](#ki-004--residual-cpumemory-dos-surface-in-defillama-relay-upstream-processing), which covers CPU/memory resource exhaustion while parsing upstream responses.
+
+### Mitigations already in place
+
+- The relay does not hold funds, sign transactions, or write on-chain state.
+- The relay filters responses to configured pool IDs; arbitrary upstream pool IDs are discarded.
+- CRE reports still enter on-chain state only through `WorkflowRouter.onReport`.
+- `WorkflowRouter` validates workflow metadata and allowlisted selectors before dispatching.
+- Rebalance execution is constrained to supported protocols, registered adapters, and registered destination chains.
+
+### Residual risk
+
+A compromised or misconfigured data source can still influence strategy selection within the configured rebalance universe. The primary impact is economic underperformance or unnecessary rebalance activity, not direct theft:
+
+- Capital may be moved to a lower-yield strategy than the true best option.
+- A rebalance may execute based on overstated APY improvement.
+- Expected yield may be reduced until operators detect the bad feed or correct the relay configuration.
+
+The relay cannot by itself transfer funds, register adapters, add supported protocols, grant roles, or call vault functions. Any on-chain action still requires a valid CRE report and the existing on-chain allowlists and registry checks.
+
+### Why this is accepted, not mitigated on-chain
+
+The protocol intentionally treats rebalance choice as an off-chain optimization problem. On-chain contracts cannot cheaply verify third-party APY data across chains and lending protocols. Adding multiple oracle sources, quorum rules, or on-chain yield proofs would add substantial complexity while still leaving operational judgement in the rebalance process.
+
+The current design keeps the data feed read-only and constrains the executable action space on-chain. The team accepts the residual as an operational data-integrity assumption for automated rebalancing.
+
+### Operational mitigations
+
+- Monitor relay responses and rebalance decisions for unexpected APY jumps, missing pools, or sudden strategy changes.
+- Keep allowed pool IDs, supported protocols, adapter registrations, and destination chains under deployment/runbook review.
+- Alert on relay configuration changes, `DEFILLAMA_UPSTREAM_URL` changes, and repeated divergence from independent market/yield observations.
+- Pause rebalance execution or update relay/workflow configuration if the data source is suspected to be compromised.
+
+### Conditions that would warrant revisiting
+
+- The relay output begins driving broader on-chain actions beyond bounded rebalance selection.
+- Product requirements change to require independently verified yield data.
+- A practical multi-source or cryptographically verifiable yield-data source becomes available.
+- Operators remove monitoring or manual review around rebalance decisions.

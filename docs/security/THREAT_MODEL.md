@@ -48,7 +48,7 @@ Code-level mitigations include role separation, explicit role checks, `AccessCon
 
 `ParentVault.closeEpoch(tvl)` trusts the TVL supplied through CRE. An incorrect TVL can corrupt epoch settlement once users claim against the affected epoch. CRE liveness is also required for scheduled epoch close. See [KI-007](./KNOWN_ISSUES.md#ki-007--epoch-close-depends-on-cre-workflow-execution).
 
-Rebalance decisions depend on off-chain yield data. A compromised or degraded relay can influence strategy selection, but cannot directly call contracts. On-chain controls still require a valid workflow report, allowlisted selector, supported protocol, registered adapter, and registered destination chain. Relay resource-exhaustion residuals are documented in [KI-004](./KNOWN_ISSUES.md#ki-004--residual-cpumemory-dos-surface-in-defillama-relay-upstream-processing).
+Rebalance decisions depend on off-chain yield data. A compromised relay or upstream data source can influence strategy selection, but cannot directly call contracts. On-chain controls still require a valid workflow report, allowlisted selector, supported protocol, registered adapter, and registered destination chain. Relay data-integrity risk is documented in [KI-011](./KNOWN_ISSUES.md#ki-011--compromised-defillama-api-or-relay-can-skew-rebalance-inputs), while relay resource-exhaustion residuals are documented in [KI-004](./KNOWN_ISSUES.md#ki-004--residual-cpumemory-dos-surface-in-defillama-relay-upstream-processing).
 
 ### 3.4 Underlying asset issuer controls
 
