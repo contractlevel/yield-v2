@@ -115,13 +115,24 @@ library ParentVaultEpochLib {
         ///      fold in this epoch's deposits/withdraws.
         $.s_totalShares = totalShares + feeShares + newShares - totalShareBurnAmount;
 
-        s_epoch.totalWithdrawClaimAmount = totalWithdraw;
         s_epoch.pricePerShare = settlementPricePerShare;
         s_epoch.remainingDepositClaimAmount = totalDepositAmount;
         s_epoch.remainingShareMintAmount = newShares;
         s_epoch.remainingShareBurnAmount = totalShareBurnAmount;
-        s_epoch.remainingWithdrawClaimAmount = totalWithdraw;
         s_epoch.closedAtTimestamp = block.timestamp;
+
+        bool isSynchronousLocalWithdraw = isLocalStrategy && netFlow < 0;
+        if (!isSynchronousLocalWithdraw) {
+            // WITHDRAW_FROM_LOCAL_STRATEGY resolves synchronously within the same
+            // transaction via finalizeLocalNetWithdraw, which writes the actual (not
+            // theoretical) totalWithdrawClaimAmount/remainingWithdrawClaimAmount once the
+            // real adapter withdraw amount is known - writing the theoretical `totalWithdraw`
+            // here would just be overwritten moments later. Every other case (both deposit
+            // branches, and the remote-withdraw path - which resolves in a later transaction,
+            // so the theoretical value must be observable in the meantime) still needs it.
+            s_epoch.totalWithdrawClaimAmount = totalWithdraw;
+            s_epoch.remainingWithdrawClaimAmount = totalWithdraw;
+        }
 
         externalAction.epochNonce = epochNonce;
         externalAction.totalDepositAmount = totalDepositAmount;

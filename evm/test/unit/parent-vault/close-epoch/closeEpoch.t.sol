@@ -314,6 +314,39 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         assertEq(s_parentVault.getEpoch(1).remainingWithdrawClaimAmount, amountOut);
     }
 
+    function test_ParentVault_closeEpoch_RemoteNetWithdraw_StoresTotalWithdrawClaimAmount() public {
+        _prepareRemoteStrategy();
+        _prepareNetWithdraw();
+
+        _closeEpoch(TVL);
+
+        assertEq(s_parentVault.getEpoch(1).totalWithdrawClaimAmount, TVL);
+        assertEq(s_parentVault.getEpoch(1).remainingWithdrawClaimAmount, TVL);
+    }
+
+    function test_ParentVault_closeEpoch_Success_WhenNetFlowIsZero_ClosesWithoutExternalAction() public {
+        // _prepareNetWithdraw() sizes the withdraw so that, with exact SHARE_PRECISION division and
+        // no performance fee active, closing at tvl == DEPOSIT_AMOUNT prices the withdraw at exactly
+        // DEPOSIT_AMOUNT too - matching _submitDeposit()'s fixed amount, so netFlow == 0 exactly.
+        _submitDeposit();
+        _prepareNetWithdraw();
+
+        vm.recordLogs();
+        _closeEpoch(DEPOSIT_AMOUNT);
+
+        assertEq(uint8(s_parentVault.getEpoch(1).status), uint8(Types.EpochStatus.CLAIMABLE));
+        assertEq(s_mockProtocolAdapter.getDepositCalls(), 0);
+        assertEq(s_mockProtocolAdapter.getWithdrawCalls(), 0);
+        assertEq(s_parentVault.getEpoch(1).totalWithdrawClaimAmount, DEPOSIT_AMOUNT);
+        assertEq(s_parentVault.getEpoch(1).remainingWithdrawClaimAmount, DEPOSIT_AMOUNT);
+
+        bytes32 ccipBridgedSig = keccak256("CCIPBridged(bytes32,uint256,uint8)");
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        for (uint256 i; i < logs.length; ++i) {
+            assertFalse(logs[i].topics[0] == ccipBridgedSig && logs[i].emitter == address(s_parentVault));
+        }
+    }
+
     function test_ParentVault_closeEpoch_Success_StoresClosedAtTimestampOnEpoch() public {
         _submitDeposit();
         _closeEpoch(TVL);
