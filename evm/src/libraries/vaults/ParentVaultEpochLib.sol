@@ -97,7 +97,7 @@ library ParentVaultEpochLib {
 
         uint256 totalShares = $.s_totalShares;
         uint256 grossPricePerShare = ParentVaultFeesLib._calculatePricePerShare(tvl, totalShares, sharePrecision);
-        uint256 settlementPricePerShare = ParentVaultFeesLib._collectPerformanceFee(
+        (uint256 settlementPricePerShare, uint256 feeShares) = ParentVaultFeesLib._collectPerformanceFee(
             $, epochNonce, tvl, grossPricePerShare, totalShares, share, sharePrecision
         );
 
@@ -109,7 +109,11 @@ library ParentVaultEpochLib {
         if (totalDepositAmount != 0 && newShares * minDepositAmount < totalDepositAmount) {
             revert IParentVault.ParentVault__DepositWouldMintZeroShares();
         }
-        $.s_totalShares = $.s_totalShares + newShares - totalShareBurnAmount;
+        /// @dev This is the sole write to s_totalShares for the epoch: totalShares is the pre-fee value
+        ///      read above, feeShares folds in any performance-fee dilution _collectPerformanceFee minted
+        ///      (without itself writing storage - see its NatSpec), and newShares/totalShareBurnAmount
+        ///      fold in this epoch's deposits/withdraws.
+        $.s_totalShares = totalShares + feeShares + newShares - totalShareBurnAmount;
 
         s_epoch.totalWithdrawClaimAmount = totalWithdraw;
         s_epoch.pricePerShare = settlementPricePerShare;

@@ -330,14 +330,18 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         uint256 epochNonce = recovery.epochNonce;
 
         _executeDeposit(recovery.amount, true, $_baseVault.s_activeProtocolAdapter);
-        _clearEpochDepositRecovery($, $_baseVault);
+        _clearEpochDepositRecovery($, $_baseVault, epochNonce);
 
         emit DepositToStrategySuccess(epochNonce, recovery.amount);
     }
 
     /// @notice Clears recovery state for a failed epoch deposit
-    function _clearEpochDepositRecovery(ChildVaultStorage storage $, BaseVaultStorage storage $_baseVault) internal {
-        uint256 epochNonce = $.s_epochDepositRecovery.epochNonce;
+    /// @param epochNonce The epoch nonce of the recovery being cleared, already known by the caller
+    function _clearEpochDepositRecovery(
+        ChildVaultStorage storage $,
+        BaseVaultStorage storage $_baseVault,
+        uint256 epochNonce
+    ) internal {
         delete $.s_epochDepositRecovery;
         $_baseVault.s_recoveryMode = Types.RecoveryMode.NONE;
         emit EpochDepositRecoveryCleared(epochNonce);
@@ -372,14 +376,18 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         //slither-disable-next-line incorrect-equality
         if (amountOut == 0) revert BaseVault__ZeroRecoveryAmount();
 
-        _clearEpochWithdrawRecovery($, $_baseVault);
+        _clearEpochWithdrawRecovery($, $_baseVault, epochNonce);
         emit WithdrawFromStrategySuccess(epochNonce, amountOut);
         _ccipSend(amountOut, i_parentChainSelector, Types.CcipTx.EPOCH_NET_WITHDRAW, epochNonce, bytes32(0));
     }
 
     /// @notice Clears recovery state for a failed epoch withdraw
-    function _clearEpochWithdrawRecovery(ChildVaultStorage storage $, BaseVaultStorage storage $_baseVault) internal {
-        uint256 epochNonce = $.s_epochWithdrawRecovery.epochNonce;
+    /// @param epochNonce The epoch nonce of the recovery being cleared, already known by the caller
+    function _clearEpochWithdrawRecovery(
+        ChildVaultStorage storage $,
+        BaseVaultStorage storage $_baseVault,
+        uint256 epochNonce
+    ) internal {
         delete $.s_epochWithdrawRecovery;
         $_baseVault.s_recoveryMode = Types.RecoveryMode.NONE;
         emit EpochWithdrawRecoveryCleared(epochNonce);
@@ -421,16 +429,18 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         //slither-disable-next-line incorrect-equality
         if (amountRebalanced == 0) revert BaseVault__ZeroRecoveryAmount();
 
-        _clearRebalanceWithdrawRecovery($, $_baseVault);
+        _clearRebalanceWithdrawRecovery($, $_baseVault, rebalanceNonce);
         emit RebalanceWithdrawSuccess(rebalanceNonce, amountRebalanced);
         _rebalanceToNewStrategy(rebalanceNonce, amountRebalanced, recovery.strategy, activeAdapter);
     }
 
     /// @notice Clears recovery state for a failed rebalance withdraw
-    function _clearRebalanceWithdrawRecovery(ChildVaultStorage storage $, BaseVaultStorage storage $_baseVault)
-        internal
-    {
-        uint256 rebalanceNonce = $.s_rebalanceWithdrawRecovery.rebalanceNonce;
+    /// @param rebalanceNonce The rebalance nonce of the recovery being cleared, already known by the caller
+    function _clearRebalanceWithdrawRecovery(
+        ChildVaultStorage storage $,
+        BaseVaultStorage storage $_baseVault,
+        uint256 rebalanceNonce
+    ) internal {
         delete $.s_rebalanceWithdrawRecovery;
         $_baseVault.s_recoveryMode = Types.RecoveryMode.NONE;
         emit RebalanceWithdrawRecoveryCleared(rebalanceNonce);

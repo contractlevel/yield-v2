@@ -373,14 +373,14 @@ abstract contract BaseVault is
         amount = recovery.amount;
 
         _executeDeposit(amount, true, $.s_activeProtocolAdapter);
-        _clearRebalanceDepositRecovery($);
+        _clearRebalanceDepositRecovery($, rebalanceNonce);
 
         emit RebalanceDepositSuccess(rebalanceNonce, amount);
     }
 
     /// @notice Clears recovery state for a failed rebalance deposit
-    function _clearRebalanceDepositRecovery(BaseVaultStorage storage $) internal {
-        uint256 rebalanceNonce = $.s_rebalanceDepositRecovery.rebalanceNonce;
+    /// @param rebalanceNonce The nonce of the rebalance deposit recovery being cleared, already known by the caller
+    function _clearRebalanceDepositRecovery(BaseVaultStorage storage $, uint256 rebalanceNonce) internal {
         delete $.s_rebalanceDepositRecovery;
         $.s_recoveryMode = Types.RecoveryMode.NONE;
         emit RebalanceDepositRecoveryCleared(rebalanceNonce);

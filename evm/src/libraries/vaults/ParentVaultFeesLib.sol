@@ -116,12 +116,18 @@ library ParentVaultFeesLib {
         address share,
         uint256 sharePrecision
     ) public returns (uint256 settlementPricePerShare) {
-        settlementPricePerShare = _collectPerformanceFee(
+        (settlementPricePerShare,) = _collectPerformanceFee(
             $, epochNonce, tvl, grossPricePerShare, $.s_totalShares, share, sharePrecision
         );
     }
 
     /// @param totalShares The total outstanding Yieldcoin shares (caller-supplied to avoid a redundant SLOAD)
+    /// @return settlementPricePerShare The epoch price per share after performance fee dilution
+    /// @return feeShares The number of shares minted as a performance fee (0 if none were minted).
+    /// @dev This function mints feeShares but deliberately does NOT write `s_totalShares` - the caller
+    ///      is the sole writer of that ledger, computing `totalShares + feeShares` (plus its own epoch
+    ///      deposit/withdraw deltas) in a single write, instead of this function writing an intermediate
+    ///      value that the caller would immediately overwrite.
     function _collectPerformanceFee(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 epochNonce,
@@ -130,26 +136,21 @@ library ParentVaultFeesLib {
         uint256 totalShares,
         address share,
         uint256 sharePrecision
-    ) internal returns (uint256 settlementPricePerShare) {
+    ) internal returns (uint256 settlementPricePerShare, uint256 feeShares) {
         uint256 highWaterMark = $.s_performanceFeeHighWaterMark;
-        if (grossPricePerShare <= highWaterMark) return grossPricePerShare;
+        if (grossPricePerShare <= highWaterMark) return (grossPricePerShare, 0);
 
         uint256 yieldPerShare = grossPricePerShare - highWaterMark;
         uint256 totalYield = ParentVaultMathLib._mulDivUp(yieldPerShare, totalShares, sharePrecision);
         uint256 fee = ParentVaultMathLib._mulDivUp(totalYield, PERFORMANCE_FEE_BPS, BPS_DENOMINATOR);
 
         if (fee >= tvl) {
-            return grossPricePerShare;
+            return (grossPricePerShare, 0);
         }
 
-        uint256 feeShares = ParentVaultMathLib._mulDivUp(fee, totalShares, tvl - fee);
+        feeShares = ParentVaultMathLib._mulDivUp(fee, totalShares, tvl - fee);
 
-        uint256 newTotalShares = totalShares;
-        if (feeShares != 0) {
-            newTotalShares = totalShares + feeShares;
-            $.s_totalShares = newTotalShares;
-            IShare(share).mint($.s_treasury, feeShares);
-        }
+        uint256 newTotalShares = totalShares + feeShares;
 
         settlementPricePerShare = _calculatePricePerShare(tvl, newTotalShares, sharePrecision);
         /// @dev feeShares rounds up and the settlement price rounds down, so dilution can land the
@@ -158,6 +159,9 @@ library ParentVaultFeesLib {
             $.s_performanceFeeHighWaterMark = settlementPricePerShare;
         }
 
-        if (feeShares != 0) emit PerformanceFeeCollected(epochNonce, feeShares, settlementPricePerShare);
+        if (feeShares != 0) {
+            emit PerformanceFeeCollected(epochNonce, feeShares, settlementPricePerShare);
+            IShare(share).mint($.s_treasury, feeShares);
+        }
     }
 }
