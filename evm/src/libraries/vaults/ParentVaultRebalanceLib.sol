@@ -78,7 +78,7 @@ library ParentVaultRebalanceLib {
 
         uint256 currentEpochNonce = $.s_epochNonce;
         if (currentEpochNonce == 1) revert IParentVault.ParentVault__NoCompletedEpoch();
-        if (currentEpochNonce > 1 && $.s_epochs[currentEpochNonce - 1].status == Types.EpochStatus.EXECUTING) {
+        if ($.s_epochs[currentEpochNonce - 1].status == Types.EpochStatus.EXECUTING) {
             revert IParentVault.ParentVault__EpochExecuting(currentEpochNonce - 1);
         }
 
