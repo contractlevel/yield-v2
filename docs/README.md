@@ -8,7 +8,7 @@ This documentation is public. The codebase is under active development, has no l
 
 | Reader | Start with | Purpose |
 | --- | --- | --- |
-| Auditors and security reviewers | [`protocol/ARCHITECTURE`](./protocol/ARCHITECTURE.md), [`security/THREAT_MODEL`](./security/THREAT_MODEL.md), [`security/INVARIANTS`](./security/INVARIANTS.md), [`security/ACCESS_CONTROL_MATRIX`](./security/ACCESS_CONTROL_MATRIX.md), [`security/KNOWN_ISSUES`](./security/KNOWN_ISSUES.md), [`protocol/PATHS`](./protocol/PATHS.md), [`protocol/DECISIONS`](./protocol/DECISIONS.md) | Understand system shape, authority, assumptions, safety claims, accepted limitations, exact flows, and design rationale. |
+| Auditors and security reviewers | [`protocol/ARCHITECTURE`](./protocol/ARCHITECTURE.md), [`security/THREAT_MODEL`](./security/THREAT_MODEL.md), [`security/INVARIANTS`](./security/INVARIANTS.md), [`security/ACCESS_CONTROL_MATRIX`](./security/ACCESS_CONTROL_MATRIX.md), [`security/KNOWN_ISSUES`](./security/KNOWN_ISSUES.md), [`protocol/PATHS`](./protocol/PATHS.md), [`protocol/DECISIONS`](./protocol/DECISIONS.md), [`protocol/GAS`](./protocol/GAS.md) | Understand system shape, authority, assumptions, safety claims, accepted limitations, exact flows, design rationale, and accepted gas tradeoffs. |
 | Users | [`USER_GUIDE`](./USER_GUIDE.md) | Understand direct `ParentVault` interactions and KYC-gated user flows. |
 | Operators | [`operator/DEPLOYMENT`](./operator/DEPLOYMENT.md), [`operator/OPERATIONS`](./operator/OPERATIONS.md), [`operator/COMPLIANCE`](./operator/COMPLIANCE.md), [`operator/INCIDENT_RESPONSE`](./operator/INCIDENT_RESPONSE.md), [`operator/UPGRADES`](./operator/UPGRADES.md) | Deploy, configure, monitor, and operate the protocol. |
 | Contributors and testers | [`test/EVM`](./test/EVM.md), [`test/CRE`](./test/CRE.md), [`test/SERVICES`](./test/SERVICES.md) | Run local checks, fuzzing, formal verification, workflow tests, and service tests. |
@@ -22,6 +22,7 @@ These docs intentionally avoid duplicating canonical details across multiple fil
 | [`protocol/ARCHITECTURE`](./protocol/ARCHITECTURE.md) | System components, relationships, and lifecycle overview. |
 | [`protocol/PATHS`](./protocol/PATHS.md) | Canonical epoch and rebalance execution paths. |
 | [`protocol/DECISIONS`](./protocol/DECISIONS.md) | Design rationale and intentional tradeoffs. |
+| [`protocol/GAS`](./protocol/GAS.md) | Known, deliberately-accepted gas inefficiencies. |
 | [`security/THREAT_MODEL`](./security/THREAT_MODEL.md) | Trust boundaries, threat surfaces, and controls. |
 | [`security/ACCESS_CONTROL_MATRIX`](./security/ACCESS_CONTROL_MATRIX.md) | Role meanings, authorities, and privileged entry points. |
 | [`security/INVARIANTS`](./security/INVARIANTS.md) | Safety properties and verification status. |

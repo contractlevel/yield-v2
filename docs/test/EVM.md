@@ -137,3 +137,9 @@ certoraRun certora/conf/vaults/ParentVault.conf --rule EPOCH_001_currentEpochIsO
 certoraRun certora/conf/vaults/ParentVault.conf --rule epochNonceIsNeverZero recoveryModeIsRestrictedToRebalanceDeposit
 
 ```
+
+---
+
+## Note
+
+The Foundry test suite uses the [Contract Level fork](https://github.com/contractlevel/chainlink-local/tree/main) of Chainlink's CCIP local simulator for added USDC/CCTP support.
