@@ -140,12 +140,6 @@ contract ParentVault_InitiateRebalanceUnitTest is BaseUnitTest {
         assertEq(bytes32(log.topics[3]), AAVE_V4_PROTOCOL_ID);
     }
 
-    function test_ParentVault_initiateRebalance_LocalToLocal_StoresLastRebalanceInitiatedTimestamp() public {
-        _initiateLocalToLocal();
-
-        assertEq(s_parentVault.getRebalance().lastRebalanceInitiatedTimestamp, block.timestamp);
-    }
-
     function test_ParentVault_initiateRebalance_LocalToLocal_EmitsRebalanceWithdrawSuccess() public {
         vm.recordLogs();
         _initiateLocalToLocal();

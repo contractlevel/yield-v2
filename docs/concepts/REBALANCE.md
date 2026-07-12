@@ -37,7 +37,6 @@ The returned `Rebalance` value includes:
 - `state` — `NONE` (`0`) when no rebalance is active, or `REBALANCING` (`1`) while a rebalance is in progress.
 - `activeStrategy` — the strategy where capital is currently allocated.
 - `pendingStrategy` — the strategy where capital is being moved during an active rebalance.
-- `lastRebalanceInitiatedTimestamp` — when the last rebalance was initiated; used for recovery timing. // @review whether we actually need this
 - `lastRebalanceCompletedTimestamp` — when the last rebalance completed; used for fee collection.
 
 Each strategy is a `protocolId` and a `chainSelector`.

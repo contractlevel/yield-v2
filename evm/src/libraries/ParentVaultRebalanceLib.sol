@@ -85,7 +85,6 @@ library ParentVaultRebalanceLib {
         uint256 rebalanceNonce = s_rebalance.nonce;
         s_rebalance.state = Types.RebalanceState.REBALANCING;
         s_rebalance.pendingStrategy = newStrategy;
-        s_rebalance.lastRebalanceInitiatedTimestamp = block.timestamp;
         emit RebalanceInitiated(rebalanceNonce, newStrategy.chainSelector, newStrategy.protocolId);
 
         result.rebalanceNonce = rebalanceNonce;

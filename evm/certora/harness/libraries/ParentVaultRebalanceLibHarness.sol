@@ -56,10 +56,6 @@ contract ParentVaultRebalanceLibHarness is ParentVaultStore, HelperHarness {
         chainSelector = _parentVaultStorage().s_rebalance.pendingStrategy.chainSelector;
     }
 
-    function getLastRebalanceInitiatedTimestamp() external view returns (uint256 timestamp) {
-        timestamp = _parentVaultStorage().s_rebalance.lastRebalanceInitiatedTimestamp;
-    }
-
     function getLastRebalanceCompletedTimestamp() external view returns (uint256 timestamp) {
         timestamp = _parentVaultStorage().s_rebalance.lastRebalanceCompletedTimestamp;
     }

@@ -15,7 +15,6 @@ methods {
     function getActiveStrategyChainSelector() external returns (uint64) envfree;
     function getPendingStrategyProtocolId() external returns (bytes32) envfree;
     function getPendingStrategyChainSelector() external returns (uint64) envfree;
-    function getLastRebalanceInitiatedTimestamp() external returns (uint256) envfree;
     function getLastRebalanceCompletedTimestamp() external returns (uint256) envfree;
     function getEpochNonce() external returns (uint256) envfree;
     function getPreviousEpochStatus() external returns (Types.EpochStatus) envfree;
@@ -345,7 +344,6 @@ rule initiateRebalance_Success_WhenLocalToLocal() {
     assert getRebalanceState() == Types.RebalanceState.REBALANCING;
     assert getPendingStrategyProtocolId() == protocolId;
     assert getPendingStrategyChainSelector() == chainSelector;
-    assert getLastRebalanceInitiatedTimestamp() == e.block.timestamp;
     assert ghost_RebalanceInitiated_EventCount == 1;
     assert ghost_RebalanceInitiated_Param_rebalanceNonce == rebalanceNonce;
     assert ghost_RebalanceInitiated_Param_chainSelector == chainSelector;
@@ -390,7 +388,6 @@ rule initiateRebalance_Success_WhenLocalToRemote() {
     assert getRebalanceState() == Types.RebalanceState.REBALANCING;
     assert getPendingStrategyProtocolId() == protocolId;
     assert getPendingStrategyChainSelector() == chainSelector;
-    assert getLastRebalanceInitiatedTimestamp() == e.block.timestamp;
     assert ghost_RebalanceInitiated_EventCount == 1;
     assert ghost_RebalanceInitiated_Param_rebalanceNonce == rebalanceNonce;
     assert ghost_RebalanceInitiated_Param_chainSelector == chainSelector;
@@ -434,7 +431,6 @@ rule initiateRebalance_Success_WhenActiveStrategyIsRemote() {
     assert getRebalanceState() == Types.RebalanceState.REBALANCING;
     assert getPendingStrategyProtocolId() == protocolId;
     assert getPendingStrategyChainSelector() == chainSelector;
-    assert getLastRebalanceInitiatedTimestamp() == e.block.timestamp;
     assert ghost_RebalanceInitiated_EventCount == 1;
     assert ghost_RebalanceInitiated_Param_rebalanceNonce == rebalanceNonce;
     assert ghost_RebalanceInitiated_Param_chainSelector == chainSelector;

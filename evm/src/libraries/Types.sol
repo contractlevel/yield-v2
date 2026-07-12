@@ -110,14 +110,12 @@ library Types {
     /// @param state The state of the rebalance operation
     /// @param activeStrategy The active strategy, where the Yieldcoin TVL is currently allocated
     /// @param pendingStrategy The pending strategy, where the Yieldcoin TVL is going to be allocated
-    /// @param lastRebalanceInitiatedTimestamp The timestamp of the last rebalance operation initiated. This is for recovery timeouts.
     /// @param lastRebalanceCompletedTimestamp The timestamp of the last rebalance operation completed. This is for fee collection.
     struct Rebalance {
         uint256 nonce;
         RebalanceState state;
         Strategy activeStrategy;
         Strategy pendingStrategy;
-        uint256 lastRebalanceInitiatedTimestamp; // @review not used in recovery timeouts. do we actually need this?
         uint256 lastRebalanceCompletedTimestamp;
     }
 

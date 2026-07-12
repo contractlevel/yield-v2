@@ -518,14 +518,6 @@ ghost uint64 ghost_rebalance_pendingStrategy_chainSelector_StoredValue {
     init_state axiom ghost_rebalance_pendingStrategy_chainSelector_StoredValue == 0;
 }
 
-/// ─── s_rebalance.lastRebalanceInitiatedTimestamp ─────────────
-ghost mathint ghost_rebalance_lastRebalanceInitiatedTimestamp_StoreCount {
-    init_state axiom ghost_rebalance_lastRebalanceInitiatedTimestamp_StoreCount == 0;
-}
-ghost uint256 ghost_rebalance_lastRebalanceInitiatedTimestamp_StoredValue {
-    init_state axiom ghost_rebalance_lastRebalanceInitiatedTimestamp_StoredValue == 0;
-}
-
 /// ─── s_rebalance.lastRebalanceCompletedTimestamp ─────────────
 ghost mathint ghost_rebalance_lastRebalanceCompletedTimestamp_StoreCount {
     init_state axiom ghost_rebalance_lastRebalanceCompletedTimestamp_StoreCount == 0;
@@ -1017,11 +1009,6 @@ hook Sstore currentContract.ext_yieldcoin_storage_ParentVault.s_rebalance.pendin
 hook Sstore currentContract.ext_yieldcoin_storage_ParentVault.s_rebalance.pendingStrategy.chainSelector uint64 newValue {
     ghost_rebalance_pendingStrategy_chainSelector_StoreCount = ghost_rebalance_pendingStrategy_chainSelector_StoreCount + 1;
     ghost_rebalance_pendingStrategy_chainSelector_StoredValue = newValue;
-}
-
-hook Sstore currentContract.ext_yieldcoin_storage_ParentVault.s_rebalance.lastRebalanceInitiatedTimestamp uint256 newValue {
-    ghost_rebalance_lastRebalanceInitiatedTimestamp_StoreCount = ghost_rebalance_lastRebalanceInitiatedTimestamp_StoreCount + 1;
-    ghost_rebalance_lastRebalanceInitiatedTimestamp_StoredValue = newValue;
 }
 
 hook Sstore currentContract.ext_yieldcoin_storage_ParentVault.s_rebalance.lastRebalanceCompletedTimestamp uint256 newValue {
@@ -5451,7 +5438,6 @@ rule initiateRebalance_REMOTE_ACTIVE_Success() {
     require ghost_rebalance_state_StoreCount == 0;
     require ghost_rebalance_pendingStrategy_protocolId_StoreCount == 0;
     require ghost_rebalance_pendingStrategy_chainSelector_StoreCount == 0;
-    require ghost_rebalance_lastRebalanceInitiatedTimestamp_StoreCount == 0;
 
     initiateRebalance@withrevert(e, newStrategy);
 
@@ -5459,7 +5445,6 @@ rule initiateRebalance_REMOTE_ACTIVE_Success() {
     assert getRebalance().state == Types.RebalanceState.REBALANCING;
     assert getRebalance().pendingStrategy.protocolId == newStrategy.protocolId;
     assert getRebalance().pendingStrategy.chainSelector == newStrategy.chainSelector;
-    assert getRebalance().lastRebalanceInitiatedTimestamp == e.block.timestamp;
     assert ghost_RebalanceInitiated_EventCount == 1;
     assert ghost_RebalanceInitiated_Param_rebalanceNonce == rebalanceNonce;
     assert ghost_RebalanceInitiated_Param_chainSelector == newStrategy.chainSelector;
@@ -5526,7 +5511,6 @@ rule initiateRebalance_LOCAL_TO_REMOTE_Success() {
     assert getRebalance().state == Types.RebalanceState.REBALANCING;
     assert getRebalance().pendingStrategy.protocolId == newStrategy.protocolId;
     assert getRebalance().pendingStrategy.chainSelector == newStrategy.chainSelector;
-    assert getRebalance().lastRebalanceInitiatedTimestamp == e.block.timestamp;
     assert adapter.getTVL() == 0;
     assert asset.balanceOf(adapter) == adapterBalanceBefore - amountOut;
     assert ghost_RebalanceInitiated_EventCount == 1;
@@ -5620,7 +5604,6 @@ rule initiateRebalance_LOCAL_TO_LOCAL_Success() {
     assert getRebalance().pendingStrategy.protocolId == to_bytes32(0);
     assert getRebalance().pendingStrategy.chainSelector == 0;
     assert getRebalance().nonce == rebalanceNonce + 1;
-    assert getRebalance().lastRebalanceInitiatedTimestamp == e.block.timestamp;
     assert getRebalance().lastRebalanceCompletedTimestamp == e.block.timestamp;
     assert adapter.getTVL() == amountOut;
     assert asset.balanceOf(currentContract) == vaultBalanceBefore;
