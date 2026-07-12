@@ -418,7 +418,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
                 address newAdapter = _setActiveAdapter(newStrategy.protocolId);
                 _executeDeposit(amountOut, true, newAdapter);
                 emit RebalanceDepositSuccess(result.rebalanceNonce, amountOut);
-                _finalizeRebalance(result.rebalanceNonce, newStrategy);
+                _finalizeLocalToLocalRebalance(result.rebalanceNonce, newStrategy);
             } else {
                 // ccip send to new strategy chain
                 _clearActiveAdapter(activeAdapter);
@@ -445,17 +445,27 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     }
 
     /// @notice Finalizes an in-progress rebalance via ParentVaultRebalanceLib.
-    /// @dev Every ParentVault call site funnels through here rather than calling
-    ///      ParentVaultRebalanceLib.finalizeRebalance directly, so there is exactly one place that knows
-    ///      how to reach the library. Callers that already have `rebalanceNonce`/`newStrategy` in memory
-    ///      (`initiateRebalance`'s same-chain branch, `_ccipReceive`'s rebalance-complete branch) pass
-    ///      them straight through, avoiding a redundant SLOAD of `s_rebalance.nonce`/`pendingStrategy`.
-    ///      Callers that don't (`completeRebalance`, `executeRecovery`) read them from storage once,
-    ///      immediately before calling.
+    /// @dev Every ParentVault call site with a persisted pending rebalance funnels through here rather
+    ///      than calling ParentVaultRebalanceLib.finalizeRebalance directly, so there is exactly one
+    ///      place that knows how to reach the library. `_ccipReceive`'s rebalance-complete branch
+    ///      already has `rebalanceNonce`/`newStrategy` in memory and passes them straight through,
+    ///      avoiding a redundant SLOAD of `s_rebalance.nonce`/`pendingStrategy`. Callers that don't
+    ///      (`completeRebalance`, `executeRecovery`) read them from storage once, immediately before
+    ///      calling. The local-to-local path never persists a pending rebalance in the first place -
+    ///      see `_finalizeLocalToLocalRebalance` below.
     /// @param rebalanceNonce The current `s_rebalance.nonce`
     /// @param newStrategy The current `s_rebalance.pendingStrategy`
     function _finalizeRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy) internal {
-        ParentVaultRebalanceLib.finalizeRebalance(_parentVaultStorage(), i_share, rebalanceNonce, newStrategy);
+        ParentVaultRebalanceLib.finalizeRebalance(_parentVaultStorage(), i_share, rebalanceNonce, newStrategy, false);
+    }
+
+    /// @notice Finalizes a rebalance that resolved synchronously within the same initiateRebalance()
+    ///         call (both old and new strategy on this chain) - state/pendingStrategy were never
+    ///         persisted, so there is nothing to validate or clear.
+    /// @param rebalanceNonce The rebalance nonce, already known by the caller
+    /// @param newStrategy The new strategy, already known by the caller
+    function _finalizeLocalToLocalRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy) internal {
+        ParentVaultRebalanceLib.finalizeRebalance(_parentVaultStorage(), i_share, rebalanceNonce, newStrategy, true);
     }
 
     /*//////////////////////////////////////////////////////////////

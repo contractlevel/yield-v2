@@ -83,17 +83,22 @@ library ParentVaultRebalanceLib {
         }
 
         uint256 rebalanceNonce = s_rebalance.nonce;
+        emit RebalanceInitiated(rebalanceNonce, newStrategy.chainSelector, newStrategy.protocolId);
+        result.rebalanceNonce = rebalanceNonce;
+
+        bool isLocalActive = activeStrategy.chainSelector == thisChainSelector;
+        if (isLocalActive && newStrategy.chainSelector == thisChainSelector) {
+            // Local-to-local: resolves synchronously within this same transaction, so state/
+            // pendingStrategy are never persisted - _finalizeLocalToLocalRebalance is called
+            // moments later in the same call, which would just overwrite them straight back.
+            result.action = ExternalAction.WITHDRAW_LOCAL_TO_LOCAL;
+            return result;
+        }
+
         s_rebalance.state = Types.RebalanceState.REBALANCING;
         s_rebalance.pendingStrategy = newStrategy;
-        emit RebalanceInitiated(rebalanceNonce, newStrategy.chainSelector, newStrategy.protocolId);
-
-        result.rebalanceNonce = rebalanceNonce;
-        if (activeStrategy.chainSelector == thisChainSelector) {
-            if (newStrategy.chainSelector == thisChainSelector) {
-                result.action = ExternalAction.WITHDRAW_LOCAL_TO_LOCAL;
-            } else {
-                result.action = ExternalAction.WITHDRAW_LOCAL_TO_REMOTE;
-            }
+        if (isLocalActive) {
+            result.action = ExternalAction.WITHDRAW_LOCAL_TO_REMOTE;
         }
     }
 
@@ -102,32 +107,41 @@ library ParentVaultRebalanceLib {
     /// @param share The Yieldcoin share token
     /// @param rebalanceNonce The current `s_rebalance.nonce`
     /// @param newStrategy The current `s_rebalance.pendingStrategy`
+    /// @param isLocalToLocalRebalance See `_finalizeRebalance` below
     function finalizeRebalance(
         ParentVaultStore.ParentVaultStorage storage $,
         address share,
         uint256 rebalanceNonce,
-        Types.Strategy memory newStrategy
+        Types.Strategy memory newStrategy,
+        bool isLocalToLocalRebalance
     ) public {
-        _finalizeRebalance($, share, rebalanceNonce, newStrategy);
+        _finalizeRebalance($, share, rebalanceNonce, newStrategy, isLocalToLocalRebalance);
     }
 
+    /// @param isLocalToLocalRebalance True when finalizing a rebalance that stayed on this chain and
+    ///        resolved synchronously within the same initiateRebalance() call - state/pendingStrategy
+    ///        were never written to storage (see _initiateRebalance), so there is nothing to validate
+    ///        or clear here.
     function _finalizeRebalance(
         ParentVaultStore.ParentVaultStorage storage $,
         address share,
         uint256 rebalanceNonce,
-        Types.Strategy memory newStrategy
+        Types.Strategy memory newStrategy,
+        bool isLocalToLocalRebalance
     ) internal {
         Types.Rebalance storage s_rebalance = $.s_rebalance;
-        if (s_rebalance.state != Types.RebalanceState.REBALANCING) {
+        if (!isLocalToLocalRebalance && s_rebalance.state != Types.RebalanceState.REBALANCING) {
             revert IParentVault.ParentVault__NoRebalanceInProgress();
         }
 
         uint256 lastRebalanceCompletedTimestamp = s_rebalance.lastRebalanceCompletedTimestamp;
 
         s_rebalance.activeStrategy = newStrategy;
-        s_rebalance.state = Types.RebalanceState.NONE;
+        if (!isLocalToLocalRebalance) {
+            s_rebalance.state = Types.RebalanceState.NONE;
+            delete s_rebalance.pendingStrategy;
+        }
         s_rebalance.lastRebalanceCompletedTimestamp = block.timestamp;
-        delete s_rebalance.pendingStrategy;
 
         emit RebalanceCompleted(rebalanceNonce, newStrategy.protocolId, newStrategy.chainSelector);
         s_rebalance.nonce = rebalanceNonce + 1;
