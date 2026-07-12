@@ -25,6 +25,7 @@ abstract contract ChildVaultStore {
         0x78e4dbdeeaf798c2dd37013d97b7b9a2111b1f613652054109dec720ccf6f400;
 
     function _childVaultStorage() internal pure returns (ChildVaultStorage storage $) {
+        //slither-disable-next-line assembly
         assembly {
             $.slot := CHILD_VAULT_STORAGE_LOCATION
         }

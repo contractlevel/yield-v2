@@ -9,5 +9,6 @@ import {IExtractor} from "@chainlink/policy-management/interfaces/IExtractor.sol
 interface IYieldcoinShareKycExtractor is IExtractor {
     /// @notice Parameter key for the encoded address array of accounts requiring KYC
     /// @return paramKycAccounts The KYC accounts parameter key
+    //slither-disable-next-line naming-convention
     function PARAM_KYC_ACCOUNTS() external pure returns (bytes32 paramKycAccounts);
 }

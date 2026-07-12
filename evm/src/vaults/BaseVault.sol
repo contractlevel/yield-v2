@@ -165,6 +165,7 @@ abstract contract BaseVault is
     /// @notice Grants UPGRADER_ROLE to params.upgrader.
     /// @dev Precondition: required address params must not be the zero address
     /// @dev Precondition: params.initialDefaultCcipGasLimit must not be zero
+    //slither-disable-next-line naming-convention
     function __BaseVault_init(InitParams memory params) internal onlyInitializing {
         _revertIfZeroAddress(params.defaultAdmin);
         _revertIfZeroAddress(params.pauser);

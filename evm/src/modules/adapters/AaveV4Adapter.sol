@@ -106,6 +106,7 @@ contract AaveV4Adapter is ProtocolAdapter, IAaveV4Adapter {
     function _getReserveId(address spoke, address underlying) internal view returns (uint256 reserveId) {
         IAaveV4Spoke aaveV4Spoke = IAaveV4Spoke(spoke);
         uint256 reserveCount = aaveV4Spoke.getReserveCount();
+        //slither-disable-next-line uninitialized-local
         bool found;
 
         for (uint256 i; i < reserveCount; ++i) {

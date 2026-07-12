@@ -11,6 +11,8 @@ import {
 /// @title YieldcoinShare
 /// @author @contractlevel
 /// @notice YieldcoinShare is the compliance-ready share token of the Yieldcoin v2 system.
+/// @notice The YieldcoinShare token does not inherit IShare because Chainlink ACE's ComplianceTokenERC3643 functions are not virtual.
+//slither-disable-next-line missing-inheritance
 contract YieldcoinShare is ComplianceTokenERC3643, YieldcoinShareStore, ReentrancyGuardTransientUpgradeable {
     /*//////////////////////////////////////////////////////////////
                                  ERRORS

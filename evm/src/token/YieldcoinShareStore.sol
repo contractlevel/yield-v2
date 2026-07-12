@@ -16,6 +16,7 @@ contract YieldcoinShareStore {
         0x41e0a3d2fe098fdb6914a7f5b701ff6b1c613a556bd3607f71a6be16b1a71800;
 
     function getYieldcoinShareStorage() internal pure returns (YieldcoinShareStorage storage $) {
+        //slither-disable-next-line assembly
         assembly {
             $.slot := YIELDCOIN_SHARE_STORAGE_LOCATION
         }

@@ -6,17 +6,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 /// @title Yieldcoin v2 Share Interface
 /// @author @contractlevel
 /// @notice Interface for the Yieldcoin v2 Share contract
+/// @notice The YieldcoinShare token does not inherit this because Chainlink ACE's ComplianceTokenERC3643 functions are not virtual.
 interface IShare is IERC20 {
-    /// @dev Thrown when the zero address is provided for required configuration
-    error YieldcoinShare__NoZeroAddress();
-    /// @dev Thrown to permanently prevent renouncing ownership, which would irrecoverably disable UUPS upgrades
-    error YieldcoinShare__CannotRenounceOwnership();
-
-    /// @notice Emitted when the CCIP token admin identity changes
-    /// @param previousAdmin The previous CCIP admin
-    /// @param newAdmin The new CCIP admin
-    event CCIPAdminTransferred(address indexed previousAdmin, address indexed newAdmin);
-
     /// @notice Mints shares to an address
     /// @param to The address to mint shares to
     /// @param amount The amount of shares to mint

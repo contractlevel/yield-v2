@@ -9,5 +9,6 @@ import {IExtractor} from "@chainlink/policy-management/interfaces/IExtractor.sol
 interface ISenderExtractor is IExtractor {
     /// @notice The parameter key for the sender
     /// @return paramSender The sender parameter key
+    //slither-disable-next-line naming-convention
     function PARAM_SENDER() external pure returns (bytes32 paramSender);
 }

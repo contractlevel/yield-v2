@@ -124,6 +124,11 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     ) internal override {
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
         _requireNoRecovery($_baseVault);
+        /// @notice This same check runs again inside BaseVaultCcipLib._send (reached below via
+        ///         tryCcipSend), but it's deliberately duplicated here too, outside the try/catch,
+        ///         so a config error (e.g. an unregistered destination chain) reverts atomically
+        ///         instead of being caught below and misfiled as retryable CCIP send recovery state.
+        //slither-disable-next-line unused-return
         BaseVaultCcipLib._validateCcipSend($_baseVault, bridgeAmount, destinationChainSelector, i_thisChainSelector);
 
         try this.tryCcipSend(bridgeAmount, destinationChainSelector, ccipTxType, nonce, protocolId) {}

@@ -40,6 +40,7 @@ abstract contract ParentVaultStore {
         0x4d89b729d7d5f9a6740a79abcbedc524fd1c9bd2e1f192f6caeffd6a1cf4ea00;
 
     function _parentVaultStorage() internal pure returns (ParentVaultStorage storage $) {
+        //slither-disable-next-line assembly
         assembly {
             $.slot := PARENT_VAULT_STORAGE_LOCATION
         }

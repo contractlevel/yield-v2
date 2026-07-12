@@ -2,7 +2,6 @@
 pragma solidity 0.8.34;
 
 import {ComplianceTokenERC3643} from "@chainlink/tokens/erc-3643/src/ComplianceTokenERC3643.sol";
-import {IExtractor} from "@chainlink/policy-management/interfaces/IExtractor.sol";
 import {IPolicyEngine} from "@chainlink/policy-management/interfaces/IPolicyEngine.sol";
 import {IYieldcoinShareKycExtractor} from "../../interfaces/extractors/IYieldcoinShareKycExtractor.sol";
 

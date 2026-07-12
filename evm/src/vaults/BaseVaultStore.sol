@@ -36,6 +36,7 @@ abstract contract BaseVaultStore {
         0x99afdd01627a14a05f9b616b4e511b7ffe10b226156d7b6f476c4380e58f9d00;
 
     function _baseVaultStorage() internal pure returns (BaseVaultStorage storage $) {
+        //slither-disable-next-line assembly
         assembly {
             $.slot := BASE_VAULT_STORAGE_LOCATION
         }
