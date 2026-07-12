@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.34;
 
-import {ParentVaultStore} from "../vaults/ParentVaultStore.sol";
-import {IParentVault} from "../interfaces/vaults/IParentVault.sol";
-import {IShare} from "../interfaces/token/IShare.sol";
-import {Types} from "./Types.sol";
+import {ParentVaultStore} from "../../vaults/ParentVaultStore.sol";
+import {IParentVault} from "../../interfaces/vaults/IParentVault.sol";
+import {IShare} from "../../interfaces/token/IShare.sol";
+import {ParentVaultMathLib} from "./ParentVaultMathLib.sol";
+import {Types} from "../Types.sol";
 
 import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -143,7 +144,8 @@ library ParentVaultUserEpochLib {
         uint256 remainingDepositClaimAmount = s_epoch.remainingDepositClaimAmount;
         uint256 remainingShareMintAmount = s_epoch.remainingShareMintAmount;
         if (depositAmount != remainingDepositClaimAmount) {
-            shareMintAmount = proportionalAmount(depositAmount, remainingShareMintAmount, remainingDepositClaimAmount);
+            shareMintAmount =
+                ParentVaultMathLib._mulDivDown(depositAmount, remainingShareMintAmount, remainingDepositClaimAmount);
         } else {
             shareMintAmount = remainingShareMintAmount;
         }
@@ -195,7 +197,8 @@ library ParentVaultUserEpochLib {
         uint256 remainingShareBurnAmount = s_epoch.remainingShareBurnAmount;
         uint256 remainingWithdrawClaimAmount = s_epoch.remainingWithdrawClaimAmount;
         if (shareBurnAmount != remainingShareBurnAmount) {
-            withdrawAmount = proportionalAmount(shareBurnAmount, remainingWithdrawClaimAmount, remainingShareBurnAmount);
+            withdrawAmount =
+                ParentVaultMathLib._mulDivDown(shareBurnAmount, remainingWithdrawClaimAmount, remainingShareBurnAmount);
         } else {
             withdrawAmount = remainingWithdrawClaimAmount;
         }
@@ -292,29 +295,5 @@ library ParentVaultUserEpochLib {
         IERC20(share).safeTransfer(user, shareBurnAmount);
 
         emit WithdrawCancelled(epochNonce, user, shareBurnAmount);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                            PURE FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-    /// @notice Calculates a user's proportional amount using floor division
-    /// @param userAmount The user's amount to apply proportionally
-    /// @param remainingNumerator The remaining amount being allocated proportionally
-    /// @param remainingDenominator The remaining total amount used as the proportional denominator
-    /// @return proportionalAmount_ The user's proportional amount
-    function proportionalAmount(uint256 userAmount, uint256 remainingNumerator, uint256 remainingDenominator)
-        public
-        pure
-        returns (uint256 proportionalAmount_)
-    {
-        proportionalAmount_ = _proportionalAmount(userAmount, remainingNumerator, remainingDenominator);
-    }
-
-    function _proportionalAmount(uint256 userAmount, uint256 remainingNumerator, uint256 remainingDenominator)
-        internal
-        pure
-        returns (uint256 proportionalAmount_)
-    {
-        proportionalAmount_ = userAmount * remainingNumerator / remainingDenominator;
     }
 }

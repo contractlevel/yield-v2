@@ -6,9 +6,9 @@ import {ChildVaultStore} from "./ChildVaultStore.sol";
 
 import {IBaseVault} from "../interfaces/vaults/IBaseVault.sol";
 import {IChildVault} from "../interfaces/vaults/IChildVault.sol";
-import {BaseVaultCcipLib} from "../libraries/BaseVaultCcipLib.sol";
-import {BaseVaultConfigLib} from "../libraries/BaseVaultConfigLib.sol";
-import {BaseVaultStrategyLib} from "../libraries/BaseVaultStrategyLib.sol";
+import {BaseVaultCcipLib} from "../libraries/vaults/BaseVaultCcipLib.sol";
+import {BaseVaultConfigLib} from "../libraries/vaults/BaseVaultConfigLib.sol";
+import {BaseVaultStrategyLib} from "../libraries/vaults/BaseVaultStrategyLib.sol";
 import {Types} from "../libraries/Types.sol";
 import {Roles} from "../libraries/Roles.sol";
 import {IProtocolAdapter} from "../interfaces/adapters/IProtocolAdapter.sol";

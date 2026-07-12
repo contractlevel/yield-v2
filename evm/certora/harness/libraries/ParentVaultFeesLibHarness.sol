@@ -3,7 +3,7 @@ pragma solidity 0.8.34;
 
 import {HelperHarness} from "../HelperHarness.sol";
 import {ParentVaultStore} from "../../../src/vaults/ParentVaultStore.sol";
-import {ParentVaultFeesLib} from "../../../src/libraries/ParentVaultFeesLib.sol";
+import {ParentVaultFeesLib} from "../../../src/libraries/vaults/ParentVaultFeesLib.sol";
 
 contract ParentVaultFeesLibHarness is ParentVaultStore, HelperHarness {
     address internal immutable i_share;

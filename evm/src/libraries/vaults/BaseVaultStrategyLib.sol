@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.34;
 
-import {BaseVaultStore} from "../vaults/BaseVaultStore.sol";
-import {IBaseVault} from "../interfaces/vaults/IBaseVault.sol";
-import {IAdapterRegistry} from "../interfaces/modules/IAdapterRegistry.sol";
-import {IProtocolAdapter} from "../interfaces/adapters/IProtocolAdapter.sol";
+import {BaseVaultStore} from "../../vaults/BaseVaultStore.sol";
+import {IBaseVault} from "../../interfaces/vaults/IBaseVault.sol";
+import {IAdapterRegistry} from "../../interfaces/modules/IAdapterRegistry.sol";
+import {IProtocolAdapter} from "../../interfaces/adapters/IProtocolAdapter.sol";
 
 /// @title Yieldcoin v2 BaseVault strategy adapter logic library
 /// @author @contractlevel

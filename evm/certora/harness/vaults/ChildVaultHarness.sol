@@ -4,7 +4,7 @@ pragma solidity 0.8.34;
 import {HelperHarness} from "../HelperHarness.sol";
 import {ChildVault} from "../../../src/vaults/ChildVault.sol";
 import {BaseVault} from "../../../src/vaults/BaseVault.sol";
-import {BaseVaultStrategyLib} from "../../../src/libraries/BaseVaultStrategyLib.sol";
+import {BaseVaultStrategyLib} from "../../../src/libraries/vaults/BaseVaultStrategyLib.sol";
 import {Types} from "../../../src/libraries/Types.sol";
 
 contract ChildVaultHarness is ChildVault, HelperHarness {

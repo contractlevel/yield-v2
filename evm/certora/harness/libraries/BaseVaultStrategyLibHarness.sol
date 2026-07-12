@@ -3,7 +3,7 @@ pragma solidity 0.8.34;
 
 import {HelperHarness} from "../HelperHarness.sol";
 import {BaseVaultStore} from "../../../src/vaults/BaseVaultStore.sol";
-import {BaseVaultStrategyLib} from "../../../src/libraries/BaseVaultStrategyLib.sol";
+import {BaseVaultStrategyLib} from "../../../src/libraries/vaults/BaseVaultStrategyLib.sol";
 
 contract BaseVaultStrategyLibHarness is BaseVaultStore, HelperHarness {
     address internal immutable i_adapterRegistry;

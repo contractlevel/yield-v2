@@ -3,7 +3,7 @@ pragma solidity 0.8.34;
 
 import {HelperHarness} from "../HelperHarness.sol";
 import {ParentVaultStore} from "../../../src/vaults/ParentVaultStore.sol";
-import {ParentVaultEpochLib} from "../../../src/libraries/ParentVaultEpochLib.sol";
+import {ParentVaultEpochLib} from "../../../src/libraries/vaults/ParentVaultEpochLib.sol";
 import {Types} from "../../../src/libraries/Types.sol";
 
 contract ParentVaultEpochLibHarness is ParentVaultStore, HelperHarness {

@@ -268,9 +268,9 @@ rule proportionalAmount_RevertWhen_ZeroProductAndDenominatorIsZero() {
     assert lastReverted;
 }
 
-/// @notice Proportional amount reverts when multiplication overflows.
-/// @dev Verifies userAmount * remainingNumerator overflow.
-rule proportionalAmount_RevertWhen_MultiplicationOverflows() {
+/// @notice Proportional amount reverts when the full-precision result overflows uint256.
+/// @dev Verifies full-precision mulDivDown result overflow.
+rule proportionalAmount_RevertWhen_ResultOverflows() {
     env e;
     uint256 userAmount;
     uint256 remainingNumerator;
@@ -280,9 +280,9 @@ rule proportionalAmount_RevertWhen_MultiplicationOverflows() {
     require e.msg.value == 0, "proportionalAmount is nonpayable";
 
     /// @dev revert condition being verified
-    require remainingNumerator != 0, "remaining numerator is nonzero";
-    require userAmount > max_uint256 / remainingNumerator, "proportional multiplication overflows";
     require remainingDenominator != 0, "remaining denominator is nonzero";
+    require userAmount * remainingNumerator > max_uint256 * remainingDenominator,
+        "proportional full-precision result overflows";
 
     proportionalAmount@withrevert(e, userAmount, remainingNumerator, remainingDenominator);
 
@@ -299,11 +299,10 @@ rule proportionalAmount_Success() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "proportionalAmount is nonpayable";
-    require remainingNumerator == 0 || userAmount <= max_uint256 / remainingNumerator,
-        "proportional multiplication does not overflow";
-
     /// @dev success conditions being verified
     require remainingDenominator != 0, "remaining denominator is nonzero";
+    require userAmount * remainingNumerator <= max_uint256 * remainingDenominator,
+        "proportional full-precision result does not overflow";
 
     uint256 amount = proportionalAmount@withrevert(e, userAmount, remainingNumerator, remainingDenominator);
     mathint expectedAmount = userAmount * remainingNumerator / remainingDenominator;

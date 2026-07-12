@@ -3,7 +3,7 @@ pragma solidity 0.8.34;
 
 import {HelperHarness} from "../HelperHarness.sol";
 import {BaseVaultStore} from "../../../src/vaults/BaseVaultStore.sol";
-import {BaseVaultCcipLib} from "../../../src/libraries/BaseVaultCcipLib.sol";
+import {BaseVaultCcipLib} from "../../../src/libraries/vaults/BaseVaultCcipLib.sol";
 import {Types} from "../../../src/libraries/Types.sol";
 import {Client} from "@chainlink/contracts-ccip/contracts/libraries/Client.sol";
 

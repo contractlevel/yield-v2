@@ -3,7 +3,7 @@ pragma solidity 0.8.34;
 
 import {HelperHarness} from "../HelperHarness.sol";
 import {ParentVaultStore} from "../../../src/vaults/ParentVaultStore.sol";
-import {ParentVaultCcipLib} from "../../../src/libraries/ParentVaultCcipLib.sol";
+import {ParentVaultCcipLib} from "../../../src/libraries/vaults/ParentVaultCcipLib.sol";
 import {Types} from "../../../src/libraries/Types.sol";
 
 contract ParentVaultCcipLibHarness is ParentVaultStore, HelperHarness {

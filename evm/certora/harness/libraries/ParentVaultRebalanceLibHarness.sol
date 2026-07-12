@@ -3,7 +3,7 @@ pragma solidity 0.8.34;
 
 import {HelperHarness} from "../HelperHarness.sol";
 import {ParentVaultStore} from "../../../src/vaults/ParentVaultStore.sol";
-import {ParentVaultRebalanceLib} from "../../../src/libraries/ParentVaultRebalanceLib.sol";
+import {ParentVaultRebalanceLib} from "../../../src/libraries/vaults/ParentVaultRebalanceLib.sol";
 import {Types} from "../../../src/libraries/Types.sol";
 
 contract ParentVaultRebalanceLibHarness is ParentVaultStore, HelperHarness {

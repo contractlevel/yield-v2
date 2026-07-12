@@ -7,12 +7,12 @@ import {IBaseVault} from "../interfaces/vaults/IBaseVault.sol";
 import {IParentVault} from "../interfaces/vaults/IParentVault.sol";
 import {Types} from "../libraries/Types.sol";
 import {Roles} from "../libraries/Roles.sol";
-import {BaseVaultCcipLib} from "../libraries/BaseVaultCcipLib.sol";
-import {ParentVaultCcipLib} from "../libraries/ParentVaultCcipLib.sol";
-import {ParentVaultConfigLib} from "../libraries/ParentVaultConfigLib.sol";
-import {ParentVaultEpochLib} from "../libraries/ParentVaultEpochLib.sol";
-import {ParentVaultRebalanceLib} from "../libraries/ParentVaultRebalanceLib.sol";
-import {ParentVaultUserEpochLib} from "../libraries/ParentVaultUserEpochLib.sol";
+import {BaseVaultCcipLib} from "../libraries/vaults/BaseVaultCcipLib.sol";
+import {ParentVaultCcipLib} from "../libraries/vaults/ParentVaultCcipLib.sol";
+import {ParentVaultConfigLib} from "../libraries/vaults/ParentVaultConfigLib.sol";
+import {ParentVaultEpochLib} from "../libraries/vaults/ParentVaultEpochLib.sol";
+import {ParentVaultRebalanceLib} from "../libraries/vaults/ParentVaultRebalanceLib.sol";
+import {ParentVaultUserEpochLib} from "../libraries/vaults/ParentVaultUserEpochLib.sol";
 import {IProtocolAdapter} from "../interfaces/adapters/IProtocolAdapter.sol";
 
 import {Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";

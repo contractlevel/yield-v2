@@ -5,7 +5,7 @@ import {BaseUnitTest} from "../../BaseUnitTest.t.sol";
 
 import {BaseVault, IBaseVault} from "../../../../src/vaults/BaseVault.sol";
 import {ChildVault} from "../../../../src/vaults/ChildVault.sol";
-import {BaseVaultCcipLib} from "../../../../src/libraries/BaseVaultCcipLib.sol";
+import {BaseVaultCcipLib} from "../../../../src/libraries/vaults/BaseVaultCcipLib.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
 
 contract BaseVaultCcipHarness is ChildVault {

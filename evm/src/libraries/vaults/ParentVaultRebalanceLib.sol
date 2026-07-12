@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.34;
 
-import {ParentVaultStore} from "../vaults/ParentVaultStore.sol";
-import {IParentVault} from "../interfaces/vaults/IParentVault.sol";
+import {ParentVaultStore} from "../../vaults/ParentVaultStore.sol";
+import {IParentVault} from "../../interfaces/vaults/IParentVault.sol";
 import {ParentVaultFeesLib} from "./ParentVaultFeesLib.sol";
-import {Types} from "./Types.sol";
+import {Types} from "../Types.sol";
 
 /// @title Yieldcoin v2 ParentVault rebalance logic library
 /// @author @contractlevel

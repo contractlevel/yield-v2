@@ -3,7 +3,8 @@ pragma solidity 0.8.34;
 
 import {HelperHarness} from "../HelperHarness.sol";
 import {ParentVaultStore} from "../../../src/vaults/ParentVaultStore.sol";
-import {ParentVaultUserEpochLib} from "../../../src/libraries/ParentVaultUserEpochLib.sol";
+import {ParentVaultMathLib} from "../../../src/libraries/vaults/ParentVaultMathLib.sol";
+import {ParentVaultUserEpochLib} from "../../../src/libraries/vaults/ParentVaultUserEpochLib.sol";
 import {Types} from "../../../src/libraries/Types.sol";
 
 contract ParentVaultUserEpochLibHarness is ParentVaultStore, HelperHarness {
@@ -44,7 +45,7 @@ contract ParentVaultUserEpochLibHarness is ParentVaultStore, HelperHarness {
         pure
         returns (uint256 amount)
     {
-        amount = ParentVaultUserEpochLib._proportionalAmount(userAmount, remainingNumerator, remainingDenominator);
+        amount = ParentVaultMathLib._mulDivDown(userAmount, remainingNumerator, remainingDenominator);
     }
 
     function getAsset() external view returns (address asset) {

@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.34;
 
-import {ParentVaultStore} from "../vaults/ParentVaultStore.sol";
-import {IParentVault} from "../interfaces/vaults/IParentVault.sol";
+import {ParentVaultStore} from "../../vaults/ParentVaultStore.sol";
+import {IParentVault} from "../../interfaces/vaults/IParentVault.sol";
 import {ParentVaultFeesLib} from "./ParentVaultFeesLib.sol";
-import {Types} from "./Types.sol";
+import {ParentVaultMathLib} from "./ParentVaultMathLib.sol";
+import {Types} from "../Types.sol";
 
 /// @title Yieldcoin v2 ParentVault epoch lifecycle logic library
 /// @author @contractlevel
@@ -100,10 +101,11 @@ library ParentVaultEpochLib {
             $, epochNonce, tvl, grossPricePerShare, totalShares, share, sharePrecision
         );
 
-        uint256 totalWithdraw = totalShareBurnAmount * settlementPricePerShare / sharePrecision;
+        uint256 totalWithdraw =
+            ParentVaultMathLib._mulDivDown(totalShareBurnAmount, settlementPricePerShare, sharePrecision);
         int256 netFlow = int256(totalDepositAmount) - int256(totalWithdraw);
 
-        uint256 newShares = totalDepositAmount * sharePrecision / settlementPricePerShare;
+        uint256 newShares = ParentVaultMathLib._mulDivDown(totalDepositAmount, sharePrecision, settlementPricePerShare);
         if (totalDepositAmount != 0 && newShares * minDepositAmount < totalDepositAmount) {
             revert IParentVault.ParentVault__DepositWouldMintZeroShares();
         }
