@@ -3,8 +3,8 @@ pragma solidity 0.8.34;
 
 import {BaseVault} from "./BaseVault.sol";
 import {ParentVaultStore} from "./ParentVaultStore.sol";
-import {IBaseVault} from "../interfaces/IBaseVault.sol";
-import {IParentVault} from "../interfaces/IParentVault.sol";
+import {IBaseVault} from "../interfaces/vaults/IBaseVault.sol";
+import {IParentVault} from "../interfaces/vaults/IParentVault.sol";
 import {Types} from "../libraries/Types.sol";
 import {Roles} from "../libraries/Roles.sol";
 import {BaseVaultCcipLib} from "../libraries/BaseVaultCcipLib.sol";
@@ -13,7 +13,7 @@ import {ParentVaultConfigLib} from "../libraries/ParentVaultConfigLib.sol";
 import {ParentVaultEpochLib} from "../libraries/ParentVaultEpochLib.sol";
 import {ParentVaultRebalanceLib} from "../libraries/ParentVaultRebalanceLib.sol";
 import {ParentVaultUserEpochLib} from "../libraries/ParentVaultUserEpochLib.sol";
-import {IProtocolAdapter} from "../interfaces/IProtocolAdapter.sol";
+import {IProtocolAdapter} from "../interfaces/adapters/IProtocolAdapter.sol";
 
 import {Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
 import {CCIPReceiver, IAny2EVMMessageReceiver} from "@chainlink/contracts-ccip/contracts/applications/CCIPReceiver.sol";

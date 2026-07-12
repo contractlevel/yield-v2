@@ -4,8 +4,8 @@ pragma solidity 0.8.34;
 import {BaseUnitTest} from "../../BaseUnitTest.t.sol";
 
 import {ChildVault} from "../../../../src/vaults/ChildVault.sol";
-import {IBaseVault} from "../../../../src/interfaces/IBaseVault.sol";
-import {IChildVault} from "../../../../src/interfaces/IChildVault.sol";
+import {IBaseVault} from "../../../../src/interfaces/vaults/IBaseVault.sol";
+import {IChildVault} from "../../../../src/interfaces/vaults/IChildVault.sol";
 
 contract ChildVault_ConstructorUnitTest is BaseUnitTest {
     function test_ChildVault_constructor() public {

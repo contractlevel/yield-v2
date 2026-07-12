@@ -4,11 +4,12 @@ pragma solidity 0.8.34;
 import {ComplianceTokenERC3643} from "@chainlink/tokens/erc-3643/src/ComplianceTokenERC3643.sol";
 import {IExtractor} from "@chainlink/policy-management/interfaces/IExtractor.sol";
 import {IPolicyEngine} from "@chainlink/policy-management/interfaces/IPolicyEngine.sol";
+import {IYieldcoinShareKycExtractor} from "../../interfaces/extractors/IYieldcoinShareKycExtractor.sol";
 
 /// @title YieldcoinShareKycExtractor
 /// @author @contractlevel
 /// @notice Extracts every account that must pass KYC for YieldcoinShare user actions.
-contract YieldcoinShareKycExtractor is IExtractor {
+contract YieldcoinShareKycExtractor is IYieldcoinShareKycExtractor {
     /// @notice The type and version of the extractor
     string public constant override typeAndVersion = "YieldcoinShareKycExtractor 1.0.0";
 

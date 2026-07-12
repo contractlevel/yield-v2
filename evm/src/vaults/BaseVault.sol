@@ -23,8 +23,8 @@ import {BaseVaultConfigLib} from "../libraries/BaseVaultConfigLib.sol";
 import {BaseVaultStrategyLib} from "../libraries/BaseVaultStrategyLib.sol";
 import {Roles} from "../libraries/Roles.sol";
 import {Types} from "../libraries/Types.sol";
-import {IBaseVault} from "../interfaces/IBaseVault.sol";
-import {IProtocolAdapter} from "../interfaces/IProtocolAdapter.sol";
+import {IBaseVault} from "../interfaces/vaults/IBaseVault.sol";
+import {IProtocolAdapter} from "../interfaces/adapters/IProtocolAdapter.sol";
 
 /// @title Yieldcoin v2 BaseVault
 /// @author @contractlevel

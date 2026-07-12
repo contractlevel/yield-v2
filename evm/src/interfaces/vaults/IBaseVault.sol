@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.34;
 
-import {IPauseable} from "./IPauseable.sol";
-import {Types} from "../libraries/Types.sol";
+import {IPauseable} from "../common/IPauseable.sol";
+import {Types} from "../../libraries/Types.sol";
 
 /// @title Yieldcoin v2 BaseVault Interface
 /// @author @contractlevel

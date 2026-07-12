@@ -2,8 +2,8 @@
 pragma solidity 0.8.34;
 
 import {ParentVaultStore} from "../vaults/ParentVaultStore.sol";
-import {IParentVault} from "../interfaces/IParentVault.sol";
-import {IShare} from "../interfaces/IShare.sol";
+import {IParentVault} from "../interfaces/vaults/IParentVault.sol";
+import {IShare} from "../interfaces/token/IShare.sol";
 
 /// @title Yieldcoin v2 ParentVault fee logic library
 /// @author @contractlevel

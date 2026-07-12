@@ -5,7 +5,7 @@ import {Test, Vm} from "forge-std/Test.sol";
 
 import {Constants} from "./Constants.t.sol";
 
-import {IPauseable} from "../src/interfaces/IPauseable.sol";
+import {IPauseable} from "../src/interfaces/common/IPauseable.sol";
 
 contract BaseTest is Constants, Test {
     address internal immutable i_owner = makeAddr("owner");

@@ -2,8 +2,8 @@
 pragma solidity 0.8.34;
 
 import {ParentVaultStore} from "../vaults/ParentVaultStore.sol";
-import {IBaseVault} from "../interfaces/IBaseVault.sol";
-import {IParentVault} from "../interfaces/IParentVault.sol";
+import {IBaseVault} from "../interfaces/vaults/IBaseVault.sol";
+import {IParentVault} from "../interfaces/vaults/IParentVault.sol";
 import {Types} from "./Types.sol";
 
 /// @title Yieldcoin v2 ParentVault CCIP receive logic library

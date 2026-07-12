@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.34;
 
-import {IProtocolAdapter} from "../../src/interfaces/IProtocolAdapter.sol";
+import {IProtocolAdapter} from "../../src/interfaces/adapters/IProtocolAdapter.sol";
 
 contract MockProtocolAdapter is IProtocolAdapter {
     uint256 internal s_lastDepositAmount;

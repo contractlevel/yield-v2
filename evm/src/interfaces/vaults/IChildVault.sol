@@ -2,7 +2,7 @@
 pragma solidity 0.8.34;
 
 import {IBaseVault} from "./IBaseVault.sol";
-import {Types} from "../libraries/Types.sol";
+import {Types} from "../../libraries/Types.sol";
 
 /// @title Yieldcoin v2 ChildVault Interface
 /// @author @contractlevel
@@ -84,8 +84,29 @@ interface IChildVault is IBaseVault {
     );
 
     /*//////////////////////////////////////////////////////////////
+                                  CRE
+    //////////////////////////////////////////////////////////////*/
+    /// @notice Executes the epoch withdraw from a strategy
+    /// @notice Called by the WorkflowRouter when net flow is negative
+    /// @param epochNonce The nonce of the epoch
+    /// @param amount The amount of asset to withdraw from the active strategy
+    /// @dev Precondition: caller must have the EPOCH_OPERATOR_ROLE
+    function executeEpochWithdraw(uint256 epochNonce, uint256 amount) external;
+
+    /// @notice Withdraws the entire TVL from the active strategy adapter and sends it to the new strategy
+    /// @param rebalanceNonce The nonce of the rebalance
+    /// @param newStrategy The new strategy to rebalance to
+    /// @dev Precondition: caller must have the REBALANCE_OPERATOR_ROLE
+    /// @dev Precondition: there must be no existent recovery mode
+    function executeRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy) external;
+
+    /*//////////////////////////////////////////////////////////////
                                 GETTERS
     //////////////////////////////////////////////////////////////*/
+    /// @notice Gets the CCIP selector for the parent chain
+    /// @return parentChainSelector The CCIP selector for the parent chain
+    function getParentChainSelector() external view returns (uint64 parentChainSelector);
+
     /// @notice Gets failed epoch deposit recovery state
     /// @return recovery The stored epoch deposit recovery state
     function getEpochDepositRecovery() external view returns (Types.EpochRecovery memory recovery);

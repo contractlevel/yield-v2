@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.34;
 
-import {IShare} from "../../interfaces/IShare.sol";
+import {IShare} from "../../interfaces/token/IShare.sol";
+import {IYieldcoinShareFrozenAccountPolicy} from "../../interfaces/policies/IYieldcoinShareFrozenAccountPolicy.sol";
 
 import {IPolicyEngine} from "@chainlink/policy-management/interfaces/IPolicyEngine.sol";
+import {IPolicy} from "@chainlink/policy-management/interfaces/IPolicy.sol";
 import {Policy} from "@chainlink/policy-management/core/Policy.sol";
 
 /// @title YieldcoinShareFrozenAccountPolicy
 /// @author @contractlevel
 /// @notice Rejects actions for accounts frozen on the YieldcoinShare ERC-3643 token.
-contract YieldcoinShareFrozenAccountPolicy is Policy {
-    /// @dev Thrown when the zero address is provided for required configuration
-    error YieldcoinShareFrozenAccountPolicy__NoZeroAddress();
-
+contract YieldcoinShareFrozenAccountPolicy is Policy, IYieldcoinShareFrozenAccountPolicy {
     /// @notice The type and version of the policy
     string public constant override typeAndVersion = "YieldcoinShareFrozenAccountPolicy 1.0.0";
 
@@ -36,7 +35,7 @@ contract YieldcoinShareFrozenAccountPolicy is Policy {
     function run(address, address, bytes4, bytes[] calldata parameters, bytes calldata)
         public
         view
-        override
+        override(Policy, IPolicy)
         returns (IPolicyEngine.PolicyResult)
     {
         if (parameters.length != 1) revert InvalidParameters("expected account");

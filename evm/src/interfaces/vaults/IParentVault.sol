@@ -2,6 +2,7 @@
 pragma solidity 0.8.34;
 
 import {IBaseVault} from "./IBaseVault.sol";
+import {Types} from "../../libraries/Types.sol";
 
 /// @title Yieldcoin v2 ParentVault Interface
 /// @author @contractlevel
@@ -201,6 +202,87 @@ interface IParentVault is IBaseVault {
     function forceCancelDeposit(address user) external;
 
     /*//////////////////////////////////////////////////////////////
+                            USER FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+    /// @notice Deposits the underlying asset into the vault
+    /// @param amount The amount of asset to deposit
+    /// @return epochNonce The epoch nonce of the deposit
+    /// @dev Precondition: amount must meet the minimum deposit amount requirement
+    /// @dev Precondition: the contract must not be paused
+    /// @dev Precondition: tx must be compliant with the policy
+    /// @dev Precondition: the current epoch must be open
+    function deposit(uint256 amount) external returns (uint256 epochNonce);
+
+    /// @notice Submit USDC withdraw intent
+    /// @param shareBurnAmount The amount of shares to burn for the withdraw
+    /// @return epochNonce The epoch nonce of the withdraw
+    /// @dev Precondition: the contract must not be paused
+    /// @dev Precondition: tx must be compliant with the policy
+    /// @dev Precondition: the current epoch must be open
+    /// @dev Precondition: user must approve address(this) to transfer their shareBurnAmount
+    function withdraw(uint256 shareBurnAmount) external returns (uint256 epochNonce);
+
+    /// @notice Claim Yieldcoin shares after a deposit
+    /// @notice Finalizes an individual deposit
+    /// @param epochNonce The epoch nonce of the deposit
+    /// @return shareMintAmount The amount of Yieldcoin shares minted for the deposit
+    /// @dev Precondition: the contract must not be paused
+    /// @dev Precondition: tx must be compliant with the policy
+    /// @dev Precondition: the epoch nonce must be claimable
+    /// @dev Precondition: the user must have a deposit for the epoch nonce
+    function claimShares(uint256 epochNonce) external returns (uint256 shareMintAmount);
+
+    /// @notice Claims the underlying asset for a completed epoch withdrawal
+    /// @notice Finalizes an individual withdraw
+    /// @param epochNonce The nonce of the epoch to claim from
+    /// @return withdrawAmount The amount of asset transferred to the withdrawer
+    /// @dev Precondition: the contract must not be paused
+    /// @dev Precondition: tx must be compliant with the policy
+    /// @dev Precondition: the epoch nonce must be claimable
+    /// @dev Precondition: the user must have a withdraw intent for the epoch nonce
+    function claimAsset(uint256 epochNonce) external returns (uint256 withdrawAmount);
+
+    /// @notice Cancels a deposit
+    /// @dev Precondition: the contract must not be paused
+    /// @dev Precondition: tx must be compliant with the policy
+    /// @dev Precondition: the current epoch must be open
+    /// @dev Precondition: the user must have a deposit for the epoch nonce
+    function cancelDeposit() external;
+
+    /// @notice Cancels a withdraw
+    /// @dev Precondition: the contract must not be paused
+    /// @dev Precondition: tx must be compliant with the policy
+    /// @dev Precondition: the current epoch must be open
+    /// @dev Precondition: the user must have a withdraw intent for the epoch nonce
+    function cancelWithdraw() external;
+
+    /*//////////////////////////////////////////////////////////////
+                              OPERATIONS
+    //////////////////////////////////////////////////////////////*/
+    /// @notice Closes an epoch and handles the net flow
+    /// @notice Opens the next epoch
+    /// @param tvl The Total Value Locked in the active strategy of the Yieldcoin v2 system
+    /// @dev Precondition: caller must have the EPOCH_OPERATOR_ROLE
+    /// @dev Precondition: there must not be an active rebalance
+    /// @dev Precondition: there must not be a stored recovery mode
+    /// @dev Precondition: the epoch must be open
+    /// @dev Precondition: the contract must not be paused
+    function closeEpoch(uint256 tvl) external;
+
+    /// @notice Initiates a rebalance from the current strategy to a new strategy
+    /// @param newStrategy The new strategy to rebalance to
+    /// @dev Precondition: caller must have the REBALANCE_OPERATOR_ROLE
+    /// @dev Precondition: the contract must not be paused
+    /// @dev Precondition: a rebalance must not already be in progress
+    /// @dev Precondition: there must not be a stored recovery mode
+    function initiateRebalance(Types.Strategy memory newStrategy) external;
+
+    /// @notice Completes a rebalance
+    /// @dev Precondition: caller must have the REBALANCE_OPERATOR_ROLE
+    /// @dev Precondition: there must not be a stored recovery mode
+    function completeRebalance() external;
+
+    /*//////////////////////////////////////////////////////////////
                                GETTERS
     //////////////////////////////////////////////////////////////*/
     /// @notice Returns whether the initial active protocol adapter has been set
@@ -224,10 +306,43 @@ interface IParentVault is IBaseVault {
     /// @return isSupported Whether the protocol ID is supported
     function getSupportedProtocol(bytes32 protocolId) external view returns (bool isSupported);
 
-    /// @notice Claims the underlying asset for a completed epoch withdrawal
-    /// @param epochNonce The nonce of the epoch to claim from
-    /// @return withdrawAmount The amount of asset transferred to the withdrawer
-    function claimAsset(uint256 epochNonce) external returns (uint256 withdrawAmount);
+    /// @notice Returns the rebalance state
+    /// @return rebalance The current rebalance state
+    function getRebalance() external view returns (Types.Rebalance memory rebalance);
 
-    // @review we want to add all functions to this and all interfaces
+    /// @notice Returns the epoch data for a given epoch nonce
+    /// @param epochNonce The epoch nonce to query
+    /// @return epoch The epoch data including status, deposit/withdraw totals, price per share, and timestamps
+    function getEpoch(uint256 epochNonce) external view returns (Types.Epoch memory epoch);
+
+    /// @notice Returns the current epoch nonce
+    /// @return epochNonce The nonce of the currently active epoch
+    function getEpochNonce() external view returns (uint256 epochNonce);
+
+    /// @notice Returns the total number of Yieldcoin shares tracked by the vault
+    /// @return totalShares The total share count tracked by the vault
+    function getTotalShares() external view returns (uint256 totalShares);
+
+    /// @notice Returns the asset deposit amount submitted by a user for a given epoch
+    /// @param user The address of the depositor
+    /// @param epochNonce The epoch nonce of the deposit
+    /// @return amount The asset amount the user deposited into the given epoch
+    function getDepositAmount(address user, uint256 epochNonce) external view returns (uint256 amount);
+
+    /// @notice Returns the share burn amount submitted by a user for a given epoch withdraw intent
+    /// @param user The address of the withdrawer
+    /// @param epochNonce The epoch nonce of the withdraw intent
+    /// @return shareBurnAmount The number of Yieldcoin shares the user submitted for burning in the given epoch
+    function getWithdrawShareBurnAmount(address user, uint256 epochNonce)
+        external
+        view
+        returns (uint256 shareBurnAmount);
+
+    /// @notice Gets the operator multisig for protocol fees
+    /// @return treasury The address of the operator multisig for protocol fees
+    function getTreasury() external view returns (address treasury);
+
+    /// @notice Gets the Yieldcoin share token
+    /// @return share The address of the Yieldcoin share token
+    function getShare() external view returns (address share);
 }

@@ -17,7 +17,7 @@ import {AaveV4Adapter} from "../../src/modules/adapters/AaveV4Adapter.sol";
 import {CompoundV3Adapter} from "../../src/modules/adapters/CompoundV3Adapter.sol";
 import {WorkflowRouter} from "../../src/modules/WorkflowRouter.sol";
 import {YieldcoinShare} from "../../src/token/YieldcoinShare.sol";
-import {IProtocolAdapter} from "../../src/interfaces/IProtocolAdapter.sol";
+import {IProtocolAdapter} from "../../src/interfaces/adapters/IProtocolAdapter.sol";
 import {Roles} from "../../src/libraries/Roles.sol";
 import {Types} from "../../src/libraries/Types.sol";
 

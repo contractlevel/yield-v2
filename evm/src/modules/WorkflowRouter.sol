@@ -6,7 +6,7 @@ import {
     AccessControlDefaultAdminRules
 } from "@openzeppelin/contracts/access/extensions/AccessControlDefaultAdminRules.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
-import {IWorkflowRouter} from "../interfaces/IWorkflowRouter.sol";
+import {IWorkflowRouter} from "../interfaces/modules/IWorkflowRouter.sol";
 import {Roles} from "../libraries/Roles.sol";
 
 /// @title Yieldcoin v2 WorkflowRouter
@@ -24,13 +24,6 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
     /*//////////////////////////////////////////////////////////////
                                  STATE
     //////////////////////////////////////////////////////////////*/
-    /// @dev Struct for workflow metadata
-    /// @param owner The address that deployed the workflow
-    /// @param name The hash-encoded workflow name (bytes10)
-    struct WorkflowMetadata {
-        address owner;
-        bytes10 name;
-    }
     /// @dev Mapping of workflow IDs to metadata
     mapping(bytes32 workflowId => WorkflowMetadata) internal s_workflowMetadata;
     /// @dev Mapping of workflow IDs to allowed function selectors

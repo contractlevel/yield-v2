@@ -3,7 +3,7 @@ pragma solidity 0.8.34;
 
 import {BaseForkTest} from "../../BaseForkTest.t.sol";
 import {AaveV4Adapter} from "../../../../src/modules/adapters/AaveV4Adapter.sol";
-import {IProtocolAdapter} from "../../../../src/interfaces/IProtocolAdapter.sol";
+import {IProtocolAdapter} from "../../../../src/interfaces/adapters/IProtocolAdapter.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 abstract contract BaseAaveV4ForkTest is BaseForkTest {

@@ -3,7 +3,7 @@ pragma solidity 0.8.34;
 
 import {BaseAaveV3AdapterUnitTest, Vm} from "../BaseAaveV3AdapterUnitTest.t.sol";
 
-import {IProtocolAdapter} from "../../../../src/interfaces/IProtocolAdapter.sol";
+import {IProtocolAdapter} from "../../../../src/interfaces/adapters/IProtocolAdapter.sol";
 
 contract AaveV3Adapter_DepositUnitTest is BaseAaveV3AdapterUnitTest {
     uint256 internal constant PARTIAL_DEPOSIT_AMOUNT = DEPOSIT_AMOUNT / 2;

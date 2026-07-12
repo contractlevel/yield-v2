@@ -4,7 +4,7 @@ pragma solidity 0.8.34;
 import {BaseUnitTest} from "../../BaseUnitTest.t.sol";
 
 import {ParentVault} from "../../../../src/vaults/ParentVault.sol";
-import {IBaseVault} from "../../../../src/interfaces/IBaseVault.sol";
+import {IBaseVault} from "../../../../src/interfaces/vaults/IBaseVault.sol";
 
 contract ParentVault_ConstructorUnitTest is BaseUnitTest {
     function test_ParentVault_constructor() public {

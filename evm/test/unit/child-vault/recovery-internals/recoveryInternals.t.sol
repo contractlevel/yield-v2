@@ -3,7 +3,7 @@ pragma solidity 0.8.34;
 
 import {BaseUnitTest} from "../../BaseUnitTest.t.sol";
 
-import {IChildVault} from "../../../../src/interfaces/IChildVault.sol";
+import {IChildVault} from "../../../../src/interfaces/vaults/IChildVault.sol";
 import {BaseVault} from "../../../../src/vaults/BaseVault.sol";
 import {ChildVault} from "../../../../src/vaults/ChildVault.sol";
 import {Types} from "../../../../src/libraries/Types.sol";

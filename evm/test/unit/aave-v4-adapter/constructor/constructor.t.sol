@@ -3,7 +3,8 @@ pragma solidity 0.8.34;
 
 import {BaseAaveV4AdapterUnitTest} from "../BaseAaveV4AdapterUnitTest.t.sol";
 import {AaveV4Adapter} from "../../../../src/modules/adapters/AaveV4Adapter.sol";
-import {IProtocolAdapter} from "../../../../src/interfaces/IProtocolAdapter.sol";
+import {IAaveV4Adapter} from "../../../../src/interfaces/adapters/IAaveV4Adapter.sol";
+import {IProtocolAdapter} from "../../../../src/interfaces/adapters/IProtocolAdapter.sol";
 import {MockAaveV4Spoke} from "../../../mocks/MockAaveV4Spoke.sol";
 
 contract AaveV4Adapter_ConstructorUnitTest is BaseAaveV4AdapterUnitTest {
@@ -33,7 +34,7 @@ contract AaveV4Adapter_ConstructorUnitTest is BaseAaveV4AdapterUnitTest {
     function test_AaveV4Adapter_constructor_RevertWhen_DuplicateReserveFound() external {
         s_mockAaveV4Spoke.addReserve(address(s_mockUsdc));
 
-        vm.expectRevert(AaveV4Adapter.AaveV4Adapter__DuplicateReserveFound.selector);
+        vm.expectRevert(IAaveV4Adapter.AaveV4Adapter__DuplicateReserveFound.selector);
         new AaveV4Adapter(address(s_parentVault), address(s_mockAaveV4Spoke));
     }
 }

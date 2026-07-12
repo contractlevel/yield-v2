@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.34;
 
-import {IProtocolAdapter} from "../../../src/interfaces/IProtocolAdapter.sol";
+import {IProtocolAdapter} from "../../../src/interfaces/adapters/IProtocolAdapter.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract MockProtocolAdapter is IProtocolAdapter {

@@ -3,7 +3,7 @@ pragma solidity 0.8.34;
 
 import {BaseUnitTest, Vm} from "../../BaseUnitTest.t.sol";
 
-import {IAdapterRegistry} from "../../../../src/interfaces/IAdapterRegistry.sol";
+import {IAdapterRegistry} from "../../../../src/interfaces/modules/IAdapterRegistry.sol";
 import {Roles} from "../../../../src/libraries/Roles.sol";
 
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";

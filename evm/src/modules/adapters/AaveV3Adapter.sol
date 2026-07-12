@@ -2,6 +2,7 @@
 pragma solidity 0.8.34;
 
 import {ProtocolAdapter} from "../ProtocolAdapter.sol";
+import {IAaveV3Adapter} from "../../interfaces/adapters/IAaveV3Adapter.sol";
 import {IPoolAddressesProvider} from "@aave/v3-origin/src/contracts/interfaces/IPoolAddressesProvider.sol";
 import {IPool} from "@aave/v3-origin/src/contracts/interfaces/IPool.sol";
 import {DataTypes} from "@aave/v3-origin/src/contracts/protocol/libraries/types/DataTypes.sol";
@@ -11,7 +12,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 /// @title Yieldcoin v2 Aave v3 Adapter
 /// @author @contractlevel
 /// @notice Adapter for the Aave v3 protocol
-contract AaveV3Adapter is ProtocolAdapter {
+contract AaveV3Adapter is ProtocolAdapter, IAaveV3Adapter {
     /*//////////////////////////////////////////////////////////////
                            TYPE DECLARATIONS
     //////////////////////////////////////////////////////////////*/
@@ -20,9 +21,6 @@ contract AaveV3Adapter is ProtocolAdapter {
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
-    /// @dev Thrown when the actual withdrawn amount is less than the amount requested
-    error AaveV3Adapter__IncorrectWithdrawAmount();
-
     /*//////////////////////////////////////////////////////////////
                                IMMUTABLE
     //////////////////////////////////////////////////////////////*/
@@ -83,7 +81,7 @@ contract AaveV3Adapter is ProtocolAdapter {
 
             actualWithdrawnAmount = IPool(pool).withdraw(i_asset, amount, address(this));
             /// @dev Precondition: the actual withdrawn amount must not be less than the requested amount
-            if (actualWithdrawnAmount < amount) revert AaveV3Adapter__IncorrectWithdrawAmount();
+            if (actualWithdrawnAmount < amount) revert ProtocolAdapter__IncorrectWithdrawAmount();
         }
         /// @dev Scenario 2: Rebalance Withdraw - when the amount is type(uint256).max
         else {
@@ -92,7 +90,7 @@ contract AaveV3Adapter is ProtocolAdapter {
             actualWithdrawnAmount = IPool(pool).withdraw(i_asset, amount, address(this));
 
             /// @dev Precondition: the actual withdrawn amount must not be less than the TVL
-            if (actualWithdrawnAmount < tvl) revert AaveV3Adapter__IncorrectWithdrawAmount();
+            if (actualWithdrawnAmount < tvl) revert ProtocolAdapter__IncorrectWithdrawAmount();
         }
         emit Withdraw(actualWithdrawnAmount);
         IERC20(i_asset).safeTransfer(i_vault, actualWithdrawnAmount);

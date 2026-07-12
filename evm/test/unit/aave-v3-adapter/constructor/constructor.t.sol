@@ -3,7 +3,7 @@ pragma solidity 0.8.34;
 
 import {BaseAaveV3AdapterUnitTest} from "../BaseAaveV3AdapterUnitTest.t.sol";
 import {AaveV3Adapter} from "../../../../src/modules/adapters/AaveV3Adapter.sol";
-import {IProtocolAdapter} from "../../../../src/interfaces/IProtocolAdapter.sol";
+import {IProtocolAdapter} from "../../../../src/interfaces/adapters/IProtocolAdapter.sol";
 import {MockAaveV3Pool} from "../../../mocks/MockAaveV3Pool.sol";
 import {MockAaveV3PoolAddressesProvider} from "../../../mocks/MockAaveV3PoolAddressesProvider.sol";
 

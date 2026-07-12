@@ -4,7 +4,7 @@ pragma solidity 0.8.34;
 import {BaseAaveV3AdapterUnitTest, Vm} from "../BaseAaveV3AdapterUnitTest.t.sol";
 
 import {AaveV3Adapter} from "../../../../src/modules/adapters/AaveV3Adapter.sol";
-import {IProtocolAdapter} from "../../../../src/interfaces/IProtocolAdapter.sol";
+import {IProtocolAdapter} from "../../../../src/interfaces/adapters/IProtocolAdapter.sol";
 import {MockAaveV3PoolAddressesProvider} from "../../../mocks/MockAaveV3PoolAddressesProvider.sol";
 
 import {DataTypes} from "@aave/v3-origin/src/contracts/protocol/libraries/types/DataTypes.sol";
@@ -33,7 +33,7 @@ contract AaveV3Adapter_WithdrawUnitTest is BaseAaveV3AdapterUnitTest {
         s_mockAToken.mint(address(adapter), TVL);
         deal(address(s_mockUsdc), address(underpayingPool), INSUFFICIENT_AMOUNT);
 
-        vm.expectRevert(AaveV3Adapter.AaveV3Adapter__IncorrectWithdrawAmount.selector);
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__IncorrectWithdrawAmount.selector);
         adapter.withdraw(type(uint256).max);
     }
 
@@ -63,7 +63,7 @@ contract AaveV3Adapter_WithdrawUnitTest is BaseAaveV3AdapterUnitTest {
         deal(address(s_mockUsdc), address(s_mockAaveV3Pool), INSUFFICIENT_AMOUNT);
         s_mockAaveV3Pool.setWithdrawReturn(INSUFFICIENT_AMOUNT);
 
-        vm.expectRevert(AaveV3Adapter.AaveV3Adapter__IncorrectWithdrawAmount.selector);
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__IncorrectWithdrawAmount.selector);
         s_aaveV3Adapter.withdraw(TVL);
     }
 

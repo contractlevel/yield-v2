@@ -4,6 +4,8 @@ pragma solidity 0.8.34;
 import {BaseCompoundV3AdapterUnitTest, Vm} from "../BaseCompoundV3AdapterUnitTest.t.sol";
 
 import {CompoundV3Adapter} from "../../../../src/modules/adapters/CompoundV3Adapter.sol";
+import {ICompoundV3Adapter} from "../../../../src/interfaces/adapters/ICompoundV3Adapter.sol";
+import {IProtocolAdapter} from "../../../../src/interfaces/adapters/IProtocolAdapter.sol";
 import {Roles} from "../../../../src/libraries/Roles.sol";
 
 contract CompoundV3Adapter_ClaimRewardsUnitTest is BaseCompoundV3AdapterUnitTest {
@@ -16,13 +18,13 @@ contract CompoundV3Adapter_ClaimRewardsUnitTest is BaseCompoundV3AdapterUnitTest
 
     function test_CompoundV3Adapter_claimRewards_RevertWhen_CallerNotRewardsOperator() external {
         _changePrank(i_nonOwner);
-        vm.expectRevert(CompoundV3Adapter.CompoundV3Adapter__CallerNotRewardsOperator.selector);
+        vm.expectRevert(ICompoundV3Adapter.CompoundV3Adapter__CallerNotRewardsOperator.selector);
         s_compoundV3Adapter.claimRewards(i_nonOwner);
     }
 
     function test_CompoundV3Adapter_claimRewards_RevertWhen_ToIsZeroAddress() external {
         _changePrank(s_rewardsOperator);
-        vm.expectRevert(CompoundV3Adapter.CompoundV3Adapter__NoZeroAddress.selector);
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__NoZeroAddress.selector);
         s_compoundV3Adapter.claimRewards(address(0));
     }
 

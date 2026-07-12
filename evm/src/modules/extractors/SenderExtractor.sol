@@ -3,11 +3,12 @@ pragma solidity 0.8.34;
 
 import {IExtractor} from "@chainlink/policy-management/interfaces/IExtractor.sol";
 import {IPolicyEngine} from "@chainlink/policy-management/interfaces/IPolicyEngine.sol";
+import {ISenderExtractor} from "../../interfaces/extractors/ISenderExtractor.sol";
 
 /// @title SenderExtractor
 /// @author @contractlevel
 /// @notice Extracts the sender from a policy engine payload
-contract SenderExtractor is IExtractor {
+contract SenderExtractor is ISenderExtractor {
     /// @notice The type and version of the extractor
     string public constant override typeAndVersion = "SenderExtractor 1.0.0";
 

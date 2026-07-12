@@ -2,7 +2,7 @@
 pragma solidity 0.8.34;
 
 import {ParentVaultStore} from "../vaults/ParentVaultStore.sol";
-import {IParentVault} from "../interfaces/IParentVault.sol";
+import {IParentVault} from "../interfaces/vaults/IParentVault.sol";
 import {ParentVaultFeesLib} from "./ParentVaultFeesLib.sol";
 import {Types} from "./Types.sol";
 

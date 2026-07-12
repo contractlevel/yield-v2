@@ -18,6 +18,8 @@ interface IProtocolAdapter {
     error ProtocolAdapter__AssetMismatch();
     /// @dev Thrown when the protocol credits less than the requested deposit amount, beyond rounding tolerance
     error ProtocolAdapter__IncompleteDeposit();
+    /// @dev Thrown when the protocol returns less asset than the requested withdraw amount
+    error ProtocolAdapter__IncorrectWithdrawAmount();
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS

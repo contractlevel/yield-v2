@@ -6,10 +6,13 @@ import {BaseUnitTest} from "../../BaseUnitTest.t.sol";
 import {
     YieldcoinShareFrozenAccountPolicy
 } from "../../../../src/modules/policies/YieldcoinShareFrozenAccountPolicy.sol";
+import {
+    IYieldcoinShareFrozenAccountPolicy
+} from "../../../../src/interfaces/policies/IYieldcoinShareFrozenAccountPolicy.sol";
 
 contract YieldcoinShareFrozenAccountPolicy_ConstructorUnitTest is BaseUnitTest {
     function test_YieldcoinShareFrozenAccountPolicy_constructor_RevertWhen_ShareIsZeroAddress() external {
-        vm.expectRevert(YieldcoinShareFrozenAccountPolicy.YieldcoinShareFrozenAccountPolicy__NoZeroAddress.selector);
+        vm.expectRevert(IYieldcoinShareFrozenAccountPolicy.YieldcoinShareFrozenAccountPolicy__NoZeroAddress.selector);
         new YieldcoinShareFrozenAccountPolicy(address(0));
     }
 

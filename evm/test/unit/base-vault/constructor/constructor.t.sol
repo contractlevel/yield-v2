@@ -6,7 +6,7 @@ import {BaseUnitTest} from "../../BaseUnitTest.t.sol";
 import {BaseVault} from "../../../../src/vaults/BaseVault.sol";
 import {ParentVault} from "../../../../src/vaults/ParentVault.sol";
 import {ChildVault} from "../../../../src/vaults/ChildVault.sol";
-import {IBaseVault} from "../../../../src/interfaces/IBaseVault.sol";
+import {IBaseVault} from "../../../../src/interfaces/vaults/IBaseVault.sol";
 
 import {CCIPReceiver} from "@chainlink/contracts-ccip/contracts/applications/CCIPReceiver.sol";
 

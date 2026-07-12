@@ -3,8 +3,8 @@ pragma solidity 0.8.34;
 
 import {BaseUnitTest, Vm} from "../../BaseUnitTest.t.sol";
 
-import {IBaseVault} from "../../../../src/interfaces/IBaseVault.sol";
-import {IParentVault} from "../../../../src/interfaces/IParentVault.sol";
+import {IBaseVault} from "../../../../src/interfaces/vaults/IBaseVault.sol";
+import {IParentVault} from "../../../../src/interfaces/vaults/IParentVault.sol";
 import {MockCCIPRouter} from "../../../mocks/MockCCIPRouter.sol";
 import {MockProtocolAdapter} from "../../../mocks/MockProtocolAdapter.sol";
 import {Types} from "../../../../src/libraries/Types.sol";

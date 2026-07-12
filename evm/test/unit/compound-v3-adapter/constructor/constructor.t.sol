@@ -3,7 +3,7 @@ pragma solidity 0.8.34;
 
 import {BaseCompoundV3AdapterUnitTest} from "../BaseCompoundV3AdapterUnitTest.t.sol";
 import {CompoundV3Adapter} from "../../../../src/modules/adapters/CompoundV3Adapter.sol";
-import {IProtocolAdapter} from "../../../../src/interfaces/IProtocolAdapter.sol";
+import {IProtocolAdapter} from "../../../../src/interfaces/adapters/IProtocolAdapter.sol";
 import {MockComet} from "../../../mocks/MockComet.sol";
 
 contract CompoundV3Adapter_ConstructorUnitTest is BaseCompoundV3AdapterUnitTest {

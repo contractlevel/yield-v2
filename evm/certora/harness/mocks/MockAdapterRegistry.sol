@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.34;
 
-import {IAdapterRegistry} from "../../../src/interfaces/IAdapterRegistry.sol";
+import {IAdapterRegistry} from "../../../src/interfaces/modules/IAdapterRegistry.sol";
 
 contract MockAdapterRegistry is IAdapterRegistry {
     mapping(bytes32 protocolId => address adapter) internal s_adapters;

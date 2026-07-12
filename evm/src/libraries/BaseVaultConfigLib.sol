@@ -2,7 +2,7 @@
 pragma solidity 0.8.34;
 
 import {BaseVaultStore} from "../vaults/BaseVaultStore.sol";
-import {IBaseVault} from "../interfaces/IBaseVault.sol";
+import {IBaseVault} from "../interfaces/vaults/IBaseVault.sol";
 
 /// @title Yieldcoin v2 BaseVault config logic library
 /// @author @contractlevel

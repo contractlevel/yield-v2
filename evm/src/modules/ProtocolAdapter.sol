@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.34;
 
-import {IProtocolAdapter} from "../interfaces/IProtocolAdapter.sol";
-import {IBaseVault} from "../interfaces/IBaseVault.sol";
+import {IProtocolAdapter} from "../interfaces/adapters/IProtocolAdapter.sol";
+import {IBaseVault} from "../interfaces/vaults/IBaseVault.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /// @title Yieldcoin v2 Protocol Adapter

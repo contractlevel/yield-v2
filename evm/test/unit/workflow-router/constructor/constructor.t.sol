@@ -3,7 +3,7 @@ pragma solidity 0.8.34;
 
 import {BaseWorkflowRouterUnitTest} from "../BaseWorkflowRouterUnitTest.t.sol";
 import {WorkflowRouter} from "../../../../src/modules/WorkflowRouter.sol";
-import {IWorkflowRouter} from "../../../../src/interfaces/IWorkflowRouter.sol";
+import {IWorkflowRouter} from "../../../../src/interfaces/modules/IWorkflowRouter.sol";
 import {Roles} from "../../../../src/libraries/Roles.sol";
 
 contract WorkflowRouter_ConstructorUnitTest is BaseWorkflowRouterUnitTest {

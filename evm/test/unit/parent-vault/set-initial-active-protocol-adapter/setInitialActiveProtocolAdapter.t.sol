@@ -4,8 +4,8 @@ pragma solidity 0.8.34;
 import {BaseUnitTest, Vm} from "../../BaseUnitTest.t.sol";
 
 import {ParentVault} from "../../../../src/vaults/ParentVault.sol";
-import {IBaseVault} from "../../../../src/interfaces/IBaseVault.sol";
-import {IParentVault} from "../../../../src/interfaces/IParentVault.sol";
+import {IBaseVault} from "../../../../src/interfaces/vaults/IBaseVault.sol";
+import {IParentVault} from "../../../../src/interfaces/vaults/IParentVault.sol";
 
 contract ParentVault_SetInitialActiveProtocolAdapterUnitTest is BaseUnitTest {
     ParentVault internal s_uninitializedParentVault;

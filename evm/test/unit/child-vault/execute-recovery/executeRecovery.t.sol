@@ -3,7 +3,7 @@ pragma solidity 0.8.34;
 
 import {BaseUnitTest, Vm} from "../../BaseUnitTest.t.sol";
 
-import {IBaseVault} from "../../../../src/interfaces/IBaseVault.sol";
+import {IBaseVault} from "../../../../src/interfaces/vaults/IBaseVault.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
 
 import {Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";

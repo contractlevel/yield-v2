@@ -4,8 +4,8 @@ pragma solidity 0.8.34;
 import {BaseAaveV4AdapterUnitTest, Vm} from "../BaseAaveV4AdapterUnitTest.t.sol";
 
 import {AaveV4Adapter} from "../../../../src/modules/adapters/AaveV4Adapter.sol";
-import {IAaveV4Spoke} from "../../../../src/interfaces/IAaveV4Spoke.sol";
-import {IProtocolAdapter} from "../../../../src/interfaces/IProtocolAdapter.sol";
+import {IAaveV4Spoke} from "../../../../src/interfaces/external/IAaveV4Spoke.sol";
+import {IProtocolAdapter} from "../../../../src/interfaces/adapters/IProtocolAdapter.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -31,7 +31,7 @@ contract AaveV4Adapter_WithdrawUnitTest is BaseAaveV4AdapterUnitTest {
         AaveV4Adapter adapter = new AaveV4Adapter(address(s_parentVault), address(underpayingSpoke));
         deal(address(s_mockUsdc), address(underpayingSpoke), INSUFFICIENT_AMOUNT);
 
-        vm.expectRevert(AaveV4Adapter.AaveV4Adapter__IncorrectWithdrawAmount.selector);
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__IncorrectWithdrawAmount.selector);
         adapter.withdraw(type(uint256).max);
     }
 
@@ -63,7 +63,7 @@ contract AaveV4Adapter_WithdrawUnitTest is BaseAaveV4AdapterUnitTest {
         deal(address(s_mockUsdc), address(s_mockAaveV4Spoke), INSUFFICIENT_AMOUNT);
         s_mockAaveV4Spoke.setWithdrawReturn(INSUFFICIENT_AMOUNT);
 
-        vm.expectRevert(AaveV4Adapter.AaveV4Adapter__IncorrectWithdrawAmount.selector);
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__IncorrectWithdrawAmount.selector);
         s_aaveV4Adapter.withdraw(WITHDRAW_AMOUNT);
     }
 

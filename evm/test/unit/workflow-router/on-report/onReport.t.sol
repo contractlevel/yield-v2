@@ -3,7 +3,7 @@ pragma solidity 0.8.34;
 
 import {BaseWorkflowRouterUnitTest, WorkflowRouter, Vm, Target} from "../BaseWorkflowRouterUnitTest.t.sol";
 
-import {IWorkflowRouter} from "../../../../src/interfaces/IWorkflowRouter.sol";
+import {IWorkflowRouter} from "../../../../src/interfaces/modules/IWorkflowRouter.sol";
 import {Roles} from "../../../../src/libraries/Roles.sol";
 
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";

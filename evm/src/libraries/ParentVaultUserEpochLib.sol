@@ -2,8 +2,8 @@
 pragma solidity 0.8.34;
 
 import {ParentVaultStore} from "../vaults/ParentVaultStore.sol";
-import {IParentVault} from "../interfaces/IParentVault.sol";
-import {IShare} from "../interfaces/IShare.sol";
+import {IParentVault} from "../interfaces/vaults/IParentVault.sol";
+import {IShare} from "../interfaces/token/IShare.sol";
 import {Types} from "./Types.sol";
 
 import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";

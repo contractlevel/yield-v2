@@ -2,8 +2,9 @@
 pragma solidity 0.8.34;
 
 import {ProtocolAdapter} from "../ProtocolAdapter.sol";
-import {IComet} from "../../interfaces/IComet.sol";
-import {ICometRewards} from "../../interfaces/ICometRewards.sol";
+import {ICompoundV3Adapter} from "../../interfaces/adapters/ICompoundV3Adapter.sol";
+import {IComet} from "../../interfaces/external/IComet.sol";
+import {ICometRewards} from "../../interfaces/external/ICometRewards.sol";
 import {Roles} from "../../libraries/Roles.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -12,7 +13,7 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 /// @title Yieldcoin v2 Compound v3 Adapter
 /// @author @contractlevel
 /// @notice Adapter for the Compound v3 protocol
-contract CompoundV3Adapter is ProtocolAdapter {
+contract CompoundV3Adapter is ProtocolAdapter, ICompoundV3Adapter {
     /*//////////////////////////////////////////////////////////////
                            TYPE DECLARATIONS
     //////////////////////////////////////////////////////////////*/
@@ -21,19 +22,6 @@ contract CompoundV3Adapter is ProtocolAdapter {
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
-    /// @dev Thrown when the actual withdrawn amount is less than the amount requested
-    error CompoundV3Adapter__IncorrectWithdrawAmount();
-    /// @dev Thrown when zero address passed as param
-    error CompoundV3Adapter__NoZeroAddress();
-    /// @dev Thrown when the caller does not have REWARDS_OPERATOR_ROLE on the vault
-    error CompoundV3Adapter__CallerNotRewardsOperator();
-
-    /*//////////////////////////////////////////////////////////////
-                                 EVENTS
-    //////////////////////////////////////////////////////////////*/
-    /// @dev Emitted when rewards are claimed
-    event RewardsClaimed(address indexed to);
-
     /*//////////////////////////////////////////////////////////////
                                VARIABLES
     //////////////////////////////////////////////////////////////*/
@@ -102,7 +90,7 @@ contract CompoundV3Adapter is ProtocolAdapter {
             /// @dev calculate actual amount received from withdrawing
             uint256 balanceAfter = IERC20(i_asset).balanceOf(address(this));
             actualWithdrawnAmount = balanceAfter - balanceBefore;
-            if (actualWithdrawnAmount < amount) revert CompoundV3Adapter__IncorrectWithdrawAmount();
+            if (actualWithdrawnAmount < amount) revert ProtocolAdapter__IncorrectWithdrawAmount();
         }
         /// @dev Scenario 2: Rebalance Withdraw - when the amount is type(uint256).max
         else {
@@ -112,7 +100,7 @@ contract CompoundV3Adapter is ProtocolAdapter {
             uint256 balanceAfter = IERC20(i_asset).balanceOf(address(this));
             actualWithdrawnAmount = balanceAfter - balanceBefore;
 
-            if (actualWithdrawnAmount < tvl) revert CompoundV3Adapter__IncorrectWithdrawAmount();
+            if (actualWithdrawnAmount < tvl) revert ProtocolAdapter__IncorrectWithdrawAmount();
         }
 
         emit Withdraw(actualWithdrawnAmount);
@@ -127,7 +115,7 @@ contract CompoundV3Adapter is ProtocolAdapter {
         if (!IAccessControl(i_vault).hasRole(Roles.REWARDS_OPERATOR_ROLE, msg.sender)) {
             revert CompoundV3Adapter__CallerNotRewardsOperator();
         }
-        if (to == address(0)) revert CompoundV3Adapter__NoZeroAddress();
+        _revertIfZeroAddress(to);
         emit RewardsClaimed(to);
         ICometRewards(i_cometRewards).claimTo(i_comet, address(this), to, true);
     }

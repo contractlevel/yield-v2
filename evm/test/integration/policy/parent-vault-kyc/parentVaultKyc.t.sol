@@ -3,7 +3,7 @@ pragma solidity 0.8.34;
 
 import {BaseIntegrationTest} from "../../BaseIntegrationTest.t.sol";
 
-import {IParentVault} from "../../../../src/interfaces/IParentVault.sol";
+import {IParentVault} from "../../../../src/interfaces/vaults/IParentVault.sol";
 import {ParentVault} from "../../../../src/vaults/ParentVault.sol";
 
 contract ParentVault_KycPolicyIntegrationTest is BaseIntegrationTest {

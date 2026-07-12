@@ -4,7 +4,7 @@ pragma solidity 0.8.34;
 import {BaseCompoundV3AdapterUnitTest, Vm} from "../BaseCompoundV3AdapterUnitTest.t.sol";
 
 import {CompoundV3Adapter} from "../../../../src/modules/adapters/CompoundV3Adapter.sol";
-import {IProtocolAdapter} from "../../../../src/interfaces/IProtocolAdapter.sol";
+import {IProtocolAdapter} from "../../../../src/interfaces/adapters/IProtocolAdapter.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -37,7 +37,7 @@ contract CompoundV3Adapter_WithdrawUnitTest is BaseCompoundV3AdapterUnitTest {
             new CompoundV3Adapter(address(s_parentVault), address(underpayingComet), address(s_mockCometRewards));
         deal(address(s_mockUsdc), address(underpayingComet), INSUFFICIENT_AMOUNT);
 
-        vm.expectRevert(CompoundV3Adapter.CompoundV3Adapter__IncorrectWithdrawAmount.selector);
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__IncorrectWithdrawAmount.selector);
         adapter.withdraw(type(uint256).max);
     }
 
@@ -60,7 +60,7 @@ contract CompoundV3Adapter_WithdrawUnitTest is BaseCompoundV3AdapterUnitTest {
         deal(address(s_mockUsdc), address(s_mockComet), INSUFFICIENT_AMOUNT);
         s_mockComet.setWithdrawReturn(INSUFFICIENT_AMOUNT);
 
-        vm.expectRevert(CompoundV3Adapter.CompoundV3Adapter__IncorrectWithdrawAmount.selector);
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__IncorrectWithdrawAmount.selector);
         s_compoundV3Adapter.withdraw(WITHDRAW_AMOUNT);
     }
 

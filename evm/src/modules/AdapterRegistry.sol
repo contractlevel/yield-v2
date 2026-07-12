@@ -5,7 +5,7 @@ import {
     AccessControlDefaultAdminRules
 } from "@openzeppelin/contracts/access/extensions/AccessControlDefaultAdminRules.sol";
 
-import {IAdapterRegistry} from "../interfaces/IAdapterRegistry.sol";
+import {IAdapterRegistry} from "../interfaces/modules/IAdapterRegistry.sol";
 import {Roles} from "../libraries/Roles.sol";
 
 /// @title Yieldcoin v2 Adapter Registry

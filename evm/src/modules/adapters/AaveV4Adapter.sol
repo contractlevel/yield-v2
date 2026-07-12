@@ -2,14 +2,15 @@
 pragma solidity 0.8.34;
 
 import {ProtocolAdapter} from "../ProtocolAdapter.sol";
-import {IAaveV4Spoke} from "../../interfaces/IAaveV4Spoke.sol";
+import {IAaveV4Adapter} from "../../interfaces/adapters/IAaveV4Adapter.sol";
+import {IAaveV4Spoke} from "../../interfaces/external/IAaveV4Spoke.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /// @title Yieldcoin v2 Aave v4 Adapter
 /// @author @contractlevel
 /// @notice Adapter for the Aave v4 protocol
-contract AaveV4Adapter is ProtocolAdapter {
+contract AaveV4Adapter is ProtocolAdapter, IAaveV4Adapter {
     /*//////////////////////////////////////////////////////////////
                            TYPE DECLARATIONS
     //////////////////////////////////////////////////////////////*/
@@ -18,11 +19,6 @@ contract AaveV4Adapter is ProtocolAdapter {
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
-    /// @dev Thrown when the actual withdrawn amount is less than the amount requested
-    error AaveV4Adapter__IncorrectWithdrawAmount();
-    /// @dev Thrown when the configured asset token is listed more than once on the Spoke
-    error AaveV4Adapter__DuplicateReserveFound();
-
     /*//////////////////////////////////////////////////////////////
                                IMMUTABLE
     //////////////////////////////////////////////////////////////*/
@@ -78,7 +74,7 @@ contract AaveV4Adapter is ProtocolAdapter {
             //slither-disable-next-line unused-return
             (, actualWithdrawnAmount) = IAaveV4Spoke(i_spoke).withdraw(i_reserveId, amount, address(this));
             /// @dev Precondition: the actual withdrawn amount must not be less than the requested amount
-            if (actualWithdrawnAmount < amount) revert AaveV4Adapter__IncorrectWithdrawAmount();
+            if (actualWithdrawnAmount < amount) revert ProtocolAdapter__IncorrectWithdrawAmount();
         }
         /// @dev Scenario 2: Rebalance Withdraw - when the amount is type(uint256).max
         else {
@@ -88,7 +84,7 @@ contract AaveV4Adapter is ProtocolAdapter {
             (, actualWithdrawnAmount) = IAaveV4Spoke(i_spoke).withdraw(i_reserveId, amount, address(this));
 
             /// @dev Precondition: the actual withdrawn amount must not be less than the TVL
-            if (actualWithdrawnAmount < tvl) revert AaveV4Adapter__IncorrectWithdrawAmount();
+            if (actualWithdrawnAmount < tvl) revert ProtocolAdapter__IncorrectWithdrawAmount();
         }
         emit Withdraw(actualWithdrawnAmount);
         IERC20(i_asset).safeTransfer(i_vault, actualWithdrawnAmount);

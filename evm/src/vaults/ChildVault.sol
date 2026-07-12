@@ -4,14 +4,14 @@ pragma solidity 0.8.34;
 import {BaseVault} from "./BaseVault.sol";
 import {ChildVaultStore} from "./ChildVaultStore.sol";
 
-import {IBaseVault} from "../interfaces/IBaseVault.sol";
-import {IChildVault} from "../interfaces/IChildVault.sol";
+import {IBaseVault} from "../interfaces/vaults/IBaseVault.sol";
+import {IChildVault} from "../interfaces/vaults/IChildVault.sol";
 import {BaseVaultCcipLib} from "../libraries/BaseVaultCcipLib.sol";
 import {BaseVaultConfigLib} from "../libraries/BaseVaultConfigLib.sol";
 import {BaseVaultStrategyLib} from "../libraries/BaseVaultStrategyLib.sol";
 import {Types} from "../libraries/Types.sol";
 import {Roles} from "../libraries/Roles.sol";
-import {IProtocolAdapter} from "../interfaces/IProtocolAdapter.sol";
+import {IProtocolAdapter} from "../interfaces/adapters/IProtocolAdapter.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";

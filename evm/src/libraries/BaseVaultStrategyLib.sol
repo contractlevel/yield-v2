@@ -2,9 +2,9 @@
 pragma solidity 0.8.34;
 
 import {BaseVaultStore} from "../vaults/BaseVaultStore.sol";
-import {IBaseVault} from "../interfaces/IBaseVault.sol";
-import {IAdapterRegistry} from "../interfaces/IAdapterRegistry.sol";
-import {IProtocolAdapter} from "../interfaces/IProtocolAdapter.sol";
+import {IBaseVault} from "../interfaces/vaults/IBaseVault.sol";
+import {IAdapterRegistry} from "../interfaces/modules/IAdapterRegistry.sol";
+import {IProtocolAdapter} from "../interfaces/adapters/IProtocolAdapter.sol";
 
 /// @title Yieldcoin v2 BaseVault strategy adapter logic library
 /// @author @contractlevel
