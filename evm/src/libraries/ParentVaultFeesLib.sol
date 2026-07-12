@@ -5,6 +5,10 @@ import {ParentVaultStore} from "../vaults/ParentVaultStore.sol";
 import {IParentVault} from "../interfaces/vaults/IParentVault.sol";
 import {IShare} from "../interfaces/token/IShare.sol";
 
+import {FixedPointMathLib} from "@solady/utils/FixedPointMathLib.sol";
+// Formal-verification fallback:
+// import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+
 /// @title Yieldcoin v2 ParentVault fee logic library
 /// @author @contractlevel
 /// @notice Handles ParentVault fee accounting while ParentVault keeps lifecycle orchestration.
@@ -91,7 +95,7 @@ library ParentVaultFeesLib {
 
         uint256 totalShares = $.s_totalShares;
         uint256 denominator = BPS_DENOMINATOR * 365 days;
-        uint256 feeShares = (totalShares * MANAGEMENT_FEE_BPS * elapsed + denominator - 1) / denominator;
+        uint256 feeShares = _mulDivUp(totalShares, MANAGEMENT_FEE_BPS * elapsed, denominator);
         if (feeShares != 0) {
             $.s_totalShares = totalShares + feeShares;
             IShare(share).mint($.s_treasury, feeShares);
@@ -134,14 +138,14 @@ library ParentVaultFeesLib {
         if (grossPricePerShare <= highWaterMark) return grossPricePerShare;
 
         uint256 yieldPerShare = grossPricePerShare - highWaterMark;
-        uint256 totalYield = _ceilDiv(yieldPerShare * totalShares, sharePrecision);
-        uint256 fee = _ceilDiv(totalYield * PERFORMANCE_FEE_BPS, BPS_DENOMINATOR);
+        uint256 totalYield = _mulDivUp(yieldPerShare, totalShares, sharePrecision);
+        uint256 fee = _mulDivUp(totalYield, PERFORMANCE_FEE_BPS, BPS_DENOMINATOR);
 
         if (fee >= tvl) {
             return grossPricePerShare;
         }
 
-        uint256 feeShares = _ceilDiv(fee * totalShares, tvl - fee);
+        uint256 feeShares = _mulDivUp(fee, totalShares, tvl - fee);
 
         uint256 newTotalShares = totalShares;
         if (feeShares != 0) {
@@ -160,8 +164,8 @@ library ParentVaultFeesLib {
         if (feeShares != 0) emit PerformanceFeeCollected(epochNonce, feeShares, settlementPricePerShare);
     }
 
-    // @review replace with OZ or solady
-    function _ceilDiv(uint256 numerator, uint256 denominator) private pure returns (uint256 result) {
-        result = numerator == 0 ? 0 : (numerator - 1) / denominator + 1;
+    function _mulDivUp(uint256 x, uint256 y, uint256 denominator) private pure returns (uint256 result) {
+        result = FixedPointMathLib.fullMulDivUp(x, y, denominator);
+        // OZ equivalent: result = Math.mulDiv(x, y, denominator, Math.Rounding.Ceil);
     }
 }

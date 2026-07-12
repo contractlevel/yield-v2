@@ -631,6 +631,9 @@ abstract contract BaseVault is
     /*//////////////////////////////////////////////////////////////
                                 OVERRIDE
     //////////////////////////////////////////////////////////////*/
+    /// @dev Authorizes UUPS implementation upgrades.
+    function _authorizeUpgrade(address) internal override onlyRole(Roles.UPGRADER_ROLE) {}
+
     /// @inheritdoc IERC165
     /**
      * @dev Returns true if this contract implements the interface defined by
@@ -640,11 +643,6 @@ abstract contract BaseVault is
      *
      * This function call must use less than 30 000 gas.
      */
-    /// @dev Authorizes UUPS implementation upgrades.
-    function _authorizeUpgrade(address) internal override onlyRole(Roles.UPGRADER_ROLE) {
-        // @review timelock delay?
-    }
-
     /// @dev Overrides CCIPReceiver and AccessControlDefaultAdminRulesUpgradeable
     function supportsInterface(bytes4 interfaceId)
         public

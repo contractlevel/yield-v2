@@ -8,6 +8,8 @@ import {IBaseVault} from "../../../../src/interfaces/vaults/IBaseVault.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
 import {MockCCIPRouter} from "../../../mocks/MockCCIPRouter.sol";
 
+import {FixedPointMathLib} from "@solady/utils/FixedPointMathLib.sol";
+
 contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
     uint256 internal constant WITHDRAW_SHARES = MIN_DEPOSIT_AMOUNT;
     uint256 internal constant TVL = 1_000 * 1e6;
@@ -567,16 +569,14 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         uint256 grossPricePerShare,
         uint256 highWaterMark
     ) internal pure returns (uint256 feeShares) {
-        uint256 totalYield = _ceilDiv((grossPricePerShare - highWaterMark) * totalShares, SHARE_PRECISION);
-        uint256 feeUsdc = _ceilDiv(totalYield * PERFORMANCE_FEE_BPS, BPS_DENOMINATOR);
-        feeShares = _ceilDiv(feeUsdc * totalShares, tvl - feeUsdc);
+        uint256 totalYield = FixedPointMathLib.fullMulDivUp(
+            grossPricePerShare - highWaterMark, totalShares, SHARE_PRECISION
+        );
+        uint256 feeUsdc = FixedPointMathLib.fullMulDivUp(totalYield, PERFORMANCE_FEE_BPS, BPS_DENOMINATOR);
+        feeShares = FixedPointMathLib.fullMulDivUp(feeUsdc, totalShares, tvl - feeUsdc);
     }
 
     function _pricePerShare(uint256 tvl, uint256 totalShares) internal pure returns (uint256 pricePerShare) {
         pricePerShare = tvl * SHARE_PRECISION / totalShares;
-    }
-
-    function _ceilDiv(uint256 numerator, uint256 denominator) internal pure returns (uint256 result) {
-        result = numerator == 0 ? 0 : (numerator - 1) / denominator + 1;
     }
 }

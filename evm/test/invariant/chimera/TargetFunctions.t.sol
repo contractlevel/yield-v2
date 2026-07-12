@@ -10,6 +10,7 @@ import {MockAaveV3Pool} from "../../mocks/MockAaveV3Pool.sol";
 import {MockAaveV4Spoke} from "../../mocks/MockAaveV4Spoke.sol";
 import {MockComet} from "../../mocks/MockComet.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {FixedPointMathLib} from "@solady/utils/FixedPointMathLib.sol";
 
 abstract contract TargetFunctions is BaseTargetFunctions, Properties {
     uint256 internal constant BPS_DENOMINATOR = 10_000;
@@ -1160,16 +1161,13 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         if (grossPricePerShare <= highWaterMark) return grossPricePerShare;
 
         uint256 totalShares = parent.vault.getTotalShares();
-        uint256 totalYield = _ceilDiv((grossPricePerShare - highWaterMark) * totalShares, SHARE_PRECISION);
-        uint256 feeUsdc = _ceilDiv(totalYield * PERFORMANCE_FEE_BPS, BPS_DENOMINATOR);
+        uint256 totalYield =
+            FixedPointMathLib.fullMulDivUp(grossPricePerShare - highWaterMark, totalShares, SHARE_PRECISION);
+        uint256 feeUsdc = FixedPointMathLib.fullMulDivUp(totalYield, PERFORMANCE_FEE_BPS, BPS_DENOMINATOR);
         if (feeUsdc >= tvl) return grossPricePerShare;
 
-        uint256 feeShares = _ceilDiv(feeUsdc * totalShares, tvl - feeUsdc);
+        uint256 feeShares = FixedPointMathLib.fullMulDivUp(feeUsdc, totalShares, tvl - feeUsdc);
         return tvl * SHARE_PRECISION / (totalShares + feeShares);
-    }
-
-    function _ceilDiv(uint256 numerator, uint256 denominator) internal pure returns (uint256) {
-        return numerator == 0 ? 0 : (numerator - 1) / denominator + 1;
     }
 
     function _rebalanceTo(Types.Strategy memory target) internal {
