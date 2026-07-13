@@ -33,7 +33,6 @@ contract ParentVault_InitializeUnitTest is BaseUnitTest {
         assertEq(rebalance.lastRebalanceCompletedTimestamp, block.timestamp);
         assertEq(uint256(epoch.status), uint256(Types.EpochStatus.OPEN));
         assertEq(epoch.openedAtTimestamp, block.timestamp);
-        assertEq(epoch.closedAtTimestamp, 0);
     }
 
     function test_ParentVault_initialize_Success_GrantsPolicyEngineManagerRole() external {

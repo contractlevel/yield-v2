@@ -30,7 +30,6 @@ ParentVault_closeEpoch
 │   └── it should store calculated pricePerShare on the epoch
 ├── it should store totalWithdrawClaimAmount on the epoch
 ├── it should initialize remaining claim amounts on the epoch
-├── it should store closedAtTimestamp on the epoch
 ├── it should update totalShares
 ├── it should make the epoch claimable
 ├── it should open the next epoch

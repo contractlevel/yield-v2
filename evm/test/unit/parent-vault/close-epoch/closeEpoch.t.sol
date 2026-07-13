@@ -347,13 +347,6 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         }
     }
 
-    function test_ParentVault_closeEpoch_Success_StoresClosedAtTimestampOnEpoch() public {
-        _submitDeposit();
-        _closeEpoch(TVL);
-
-        assertEq(s_parentVault.getEpoch(1).closedAtTimestamp, block.timestamp);
-    }
-
     function test_ParentVault_closeEpoch_Success_UpdatesTotalShares() public {
         _submitDeposit();
         _closeEpoch(TVL);

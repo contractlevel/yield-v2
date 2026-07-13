@@ -26,7 +26,6 @@ methods {
     function getEpochRemainingShareBurnAmount(uint256) external returns (uint256) envfree;
     function getEpochRemainingWithdrawClaimAmount(uint256) external returns (uint256) envfree;
     function getEpochOpenedAtTimestamp(uint256) external returns (uint256) envfree;
-    function getEpochClosedAtTimestamp(uint256) external returns (uint256) envfree;
     function getEpochStatus(uint256) external returns (Types.EpochStatus) envfree;
 
     // Library internal wrappers
@@ -891,7 +890,6 @@ rule closeEpoch_Success_WhenNetFlowIsZero() {
     assert getEpochRemainingShareMintAmount(epochNonce) == depositAmount;
     assert getEpochRemainingShareBurnAmount(epochNonce) == shareBurnAmount;
     assert getEpochRemainingWithdrawClaimAmount(epochNonce) == shareBurnAmount;
-    assert getEpochClosedAtTimestamp(epochNonce) == e.block.timestamp;
     assert ghost_EpochClaimable_EventCount == 1;
     assert ghost_EpochClaimable_Param_epochNonce == epochNonce;
     assert ghost_epoch_status_StoreCount == 1;

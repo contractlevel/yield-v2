@@ -665,17 +665,6 @@ ghost uint256 ghost_epoch_openedAtTimestamp_StoredValue {
     init_state axiom ghost_epoch_openedAtTimestamp_StoredValue == 0;
 }
 
-/// ─── s_epochs[epochNonce].closedAtTimestamp ──────────────────────
-ghost mathint ghost_epoch_closedAtTimestamp_StoreCount {
-    init_state axiom ghost_epoch_closedAtTimestamp_StoreCount == 0;
-}
-ghost uint256 ghost_epoch_closedAtTimestamp_StoredKey {
-    init_state axiom ghost_epoch_closedAtTimestamp_StoredKey == 0;
-}
-ghost uint256 ghost_epoch_closedAtTimestamp_StoredValue {
-    init_state axiom ghost_epoch_closedAtTimestamp_StoredValue == 0;
-}
-
 /// ─── s_epochs[epochNonce].status ─────────────────────────────────
 ghost mathint ghost_epoch_status_StoreCount {
     init_state axiom ghost_epoch_status_StoreCount == 0;
@@ -1108,12 +1097,6 @@ hook Sstore currentContract.ext_yieldcoin_storage_ParentVault.s_epochs[KEY uint2
     ghost_epoch_openedAtTimestamp_StoreCount = ghost_epoch_openedAtTimestamp_StoreCount + 1;
     ghost_epoch_openedAtTimestamp_StoredKey = epochNonce;
     ghost_epoch_openedAtTimestamp_StoredValue = newValue;
-}
-
-hook Sstore currentContract.ext_yieldcoin_storage_ParentVault.s_epochs[KEY uint256 epochNonce].closedAtTimestamp uint256 newValue {
-    ghost_epoch_closedAtTimestamp_StoreCount = ghost_epoch_closedAtTimestamp_StoreCount + 1;
-    ghost_epoch_closedAtTimestamp_StoredKey = epochNonce;
-    ghost_epoch_closedAtTimestamp_StoredValue = newValue;
 }
 
 hook Sstore currentContract.ext_yieldcoin_storage_ParentVault.s_epochs[KEY uint256 epochNonce].status

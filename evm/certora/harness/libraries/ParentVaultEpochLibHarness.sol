@@ -121,10 +121,6 @@ contract ParentVaultEpochLibHarness is ParentVaultStore, HelperHarness {
         openedAtTimestamp = _parentVaultStorage().s_epochs[epochNonce].openedAtTimestamp;
     }
 
-    function getEpochClosedAtTimestamp(uint256 epochNonce) external view returns (uint256 closedAtTimestamp) {
-        closedAtTimestamp = _parentVaultStorage().s_epochs[epochNonce].closedAtTimestamp;
-    }
-
     function getEpochStatus(uint256 epochNonce) external view returns (Types.EpochStatus status) {
         status = _parentVaultStorage().s_epochs[epochNonce].status;
     }

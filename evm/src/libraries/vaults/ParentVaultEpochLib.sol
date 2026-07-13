@@ -119,7 +119,6 @@ library ParentVaultEpochLib {
         s_epoch.remainingDepositClaimAmount = totalDepositAmount;
         s_epoch.remainingShareMintAmount = newShares;
         s_epoch.remainingShareBurnAmount = totalShareBurnAmount;
-        s_epoch.closedAtTimestamp = block.timestamp;
 
         bool isSynchronousLocalWithdraw = isLocalStrategy && netFlow < 0;
         if (!isSynchronousLocalWithdraw) {

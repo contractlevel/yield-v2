@@ -144,7 +144,6 @@ library Types {
     /// @param remainingShareBurnAmount The unclaimed shares submitted for withdraw claims
     /// @param remainingWithdrawClaimAmount The unclaimed asset available for withdraw claims
     /// @param openedAtTimestamp The timestamp when the epoch was opened
-    /// @param closedAtTimestamp The timestamp when the epoch was closed
     /// @param status The status of the epoch
     /// @dev Remaining counter pairs are mutable claim-settlement state. Existing totals remain historical settlement state.
     ///      The claimant who exhausts a side's input pool receives that side's rounding remainder, bounded per side per epoch
@@ -160,7 +159,6 @@ library Types {
         uint256 remainingShareBurnAmount;
         uint256 remainingWithdrawClaimAmount;
         uint256 openedAtTimestamp;
-        uint256 closedAtTimestamp;
         EpochStatus status;
     }
 }
