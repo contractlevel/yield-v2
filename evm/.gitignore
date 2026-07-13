@@ -31,3 +31,4 @@ recon-corpus
 .audit-prep
 out-halmos/
 AUDIT_REPORT.MD
+.audit
