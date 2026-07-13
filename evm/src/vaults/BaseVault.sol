@@ -81,7 +81,7 @@ abstract contract BaseVault is
     /// @param sender The address of the sender
     /// @param srcChainSelector The CCIP selector of the chain
     /// @dev Precondition: Sender must be the crosschain vault for the source chain selector
-    function _onlyAllowedSender(address sender, uint64 srcChainSelector) internal view {
+    function _onlyAllowedSender(address sender, uint64 srcChainSelector) internal virtual view {
         BaseVaultCcipLib.onlyAllowedSender(_baseVaultStorage(), sender, srcChainSelector);
     }
 

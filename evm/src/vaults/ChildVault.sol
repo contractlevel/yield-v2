@@ -92,6 +92,14 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         }
     }
 
+    /// @notice Internal function to only allow messages from allowed crosschain vaults
+    /// @param sender The address of the sender
+    /// @param srcChainSelector The CCIP selector of the chain
+    /// @dev Precondition: Sender must be the crosschain vault for the source chain selector
+    function _onlyAllowedSender(address sender, uint64 srcChainSelector) internal override view {
+        BaseVaultCcipLib._onlyAllowedSender(_baseVaultStorage(), sender, srcChainSelector);
+    }
+
     /// @notice Handles the CCIP EPOCH_NET_DEPOSIT deposit message
     /// @notice This will only be implemented in the ChildVault.
     ///         The ParentVault sends a CCIP deposit to the active strategy chain when an epoch's net flow is positive. (more deposits than withdraws)
