@@ -14,6 +14,19 @@
   },
   {
     "type": "function",
+    "name": "UPGRADE_INTERFACE_VERSION",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "acceptDefaultAdminTransfer",
     "inputs": [],
     "outputs": [],
@@ -145,6 +158,19 @@
   },
   {
     "type": "function",
+    "name": "donate",
+    "inputs": [
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "emergencyDrain",
     "inputs": [
       {
@@ -153,6 +179,13 @@
         "internalType": "bool"
       }
     ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "executeRecovery",
+    "inputs": [],
     "outputs": [],
     "stateMutability": "nonpayable"
   },
@@ -178,6 +211,32 @@
         "name": "adapterRegistry",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getAsset",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "asset",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getAssetPrecision",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "assetPrecision",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -274,6 +333,19 @@
   },
   {
     "type": "function",
+    "name": "getEmergencyReceiver",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "emergencyReceiver",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getLink",
     "inputs": [],
     "outputs": [
@@ -301,30 +373,37 @@
   {
     "type": "function",
     "name": "getRebalanceDepositRecovery",
-    "inputs": [
-      {
-        "name": "rebalanceNonce",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
+    "inputs": [],
     "outputs": [
       {
         "name": "recovery",
         "type": "tuple",
-        "internalType": "struct Types.AmountRecovery",
+        "internalType": "struct Types.RebalanceDepositRecovery",
         "components": [
           {
-            "name": "amount",
+            "name": "rebalanceNonce",
             "type": "uint256",
             "internalType": "uint256"
           },
           {
-            "name": "createdAt",
+            "name": "amount",
             "type": "uint256",
             "internalType": "uint256"
           }
         ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getRecoveryMode",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "recoveryMode",
+        "type": "uint8",
+        "internalType": "enum Types.RecoveryMode"
       }
     ],
     "stateMutability": "view"
@@ -383,19 +462,6 @@
         "name": "thisChainSelector",
         "type": "uint64",
         "internalType": "uint64"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getUsdc",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "usdc",
-        "type": "address",
-        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -513,16 +579,16 @@
   },
   {
     "type": "function",
-    "name": "recoverFailedRebalanceDeposit",
-    "inputs": [
+    "name": "proxiableUUID",
+    "inputs": [],
+    "outputs": [
       {
-        "name": "rebalanceNonce",
-        "type": "uint256",
-        "internalType": "uint256"
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -618,6 +684,19 @@
   },
   {
     "type": "function",
+    "name": "setEmergencyReceiver",
+    "inputs": [
+      {
+        "name": "emergencyReceiver",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "supportsInterface",
     "inputs": [
       {
@@ -662,6 +741,24 @@
   },
   {
     "type": "function",
+    "name": "upgradeToAndCall",
+    "inputs": [
+      {
+        "name": "newImplementation",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "data",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
     "name": "withdrawLink",
     "inputs": [
       {
@@ -672,6 +769,63 @@
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "event",
+    "name": "ActiveProtocolAdapterCleared",
+    "inputs": [
+      {
+        "name": "adapter",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ActiveProtocolAdapterSet",
+    "inputs": [
+      {
+        "name": "protocolId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "adapter",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "CCIPBridged",
+    "inputs": [
+      {
+        "name": "ccipMessageId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "ccipTxType",
+        "type": "uint8",
+        "indexed": true,
+        "internalType": "enum Types.CcipTx"
+      }
+    ],
+    "anonymous": false
   },
   {
     "type": "event",
@@ -776,25 +930,6 @@
   },
   {
     "type": "event",
-    "name": "DepositToStrategyFailure",
-    "inputs": [
-      {
-        "name": "epochNonce",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
     "name": "DepositToStrategySuccess",
     "inputs": [
       {
@@ -814,10 +949,10 @@
   },
   {
     "type": "event",
-    "name": "EmergencyDrainExecuted",
+    "name": "Donation",
     "inputs": [
       {
-        "name": "drainer",
+        "name": "donor",
         "type": "address",
         "indexed": true,
         "internalType": "address"
@@ -827,6 +962,51 @@
         "type": "uint256",
         "indexed": true,
         "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "EmergencyDrainExecuted",
+    "inputs": [
+      {
+        "name": "emergencyReceiver",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "EmergencyReceiverSet",
+    "inputs": [
+      {
+        "name": "emergencyReceiver",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "Initialized",
+    "inputs": [
+      {
+        "name": "version",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
       }
     ],
     "anonymous": false
@@ -935,19 +1115,6 @@
   },
   {
     "type": "event",
-    "name": "RebalanceWithdrawFailure",
-    "inputs": [
-      {
-        "name": "rebalanceNonce",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
     "name": "RebalanceWithdrawSuccess",
     "inputs": [
       {
@@ -1042,31 +1209,6 @@
   },
   {
     "type": "event",
-    "name": "CCIPBridged",
-    "inputs": [
-      {
-        "name": "ccipMessageId",
-        "type": "bytes32",
-        "indexed": true,
-        "internalType": "bytes32"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "ccipTxType",
-        "type": "uint8",
-        "indexed": true,
-        "internalType": "enum Types.CcipTx"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
     "name": "Unpaused",
     "inputs": [
       {
@@ -1080,19 +1222,13 @@
   },
   {
     "type": "event",
-    "name": "WithdrawFromStrategyFailure",
+    "name": "Upgraded",
     "inputs": [
       {
-        "name": "epochNonce",
-        "type": "uint256",
+        "name": "implementation",
+        "type": "address",
         "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
+        "internalType": "address"
       }
     ],
     "anonymous": false
@@ -1166,6 +1302,17 @@
   },
   {
     "type": "error",
+    "name": "AddressEmptyCode",
+    "inputs": [
+      {
+        "name": "target",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "BaseVault__DepositFailed",
     "inputs": [
       {
@@ -1177,13 +1324,77 @@
   },
   {
     "type": "error",
+    "name": "BaseVault__DestinationVaultNotSet",
+    "inputs": [
+      {
+        "name": "destinationChainSelector",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "BaseVault__EmergencyDrainDelayNotMet",
     "inputs": []
   },
   {
     "type": "error",
+    "name": "BaseVault__EmptyInput",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "BaseVault__InvalidAdapterVault",
+    "inputs": [
+      {
+        "name": "adapter",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "actualVault",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "expectedVault",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "BaseVault__InvalidDestinationChainSelector",
+    "inputs": [
+      {
+        "name": "destinationChainSelector",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "BaseVault__InvalidInputLengths",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "BaseVault__InvalidReceivedToken",
+    "inputs": [
+      {
+        "name": "receivedToken",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "expectedToken",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
   },
   {
     "type": "error",
@@ -1198,6 +1409,33 @@
         "name": "srcChainSelector",
         "type": "uint64",
         "internalType": "uint64"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "BaseVault__InvalidTokenAmountsLength",
+    "inputs": [
+      {
+        "name": "receivedLength",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "expectedLength",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "BaseVault__InvalidTxType",
+    "inputs": [
+      {
+        "name": "ccipTxType",
+        "type": "uint8",
+        "internalType": "enum Types.CcipTx"
       }
     ]
   },
@@ -1224,7 +1462,17 @@
   },
   {
     "type": "error",
+    "name": "BaseVault__NoZeroAddress",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "BaseVault__NoZeroAmount",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "BaseVault__NoZeroChainSelector",
     "inputs": []
   },
   {
@@ -1255,12 +1503,38 @@
   },
   {
     "type": "error",
+    "name": "ERC1967InvalidImplementation",
+    "inputs": [
+      {
+        "name": "implementation",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "ERC1967NonPayable",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "EnforcedPause",
     "inputs": []
   },
   {
     "type": "error",
     "name": "ExpectedPause",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "FailedCall",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidInitialization",
     "inputs": []
   },
   {
@@ -1273,6 +1547,11 @@
         "internalType": "address"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "NotInitializing",
+    "inputs": []
   },
   {
     "type": "error",
@@ -1303,6 +1582,22 @@
         "name": "token",
         "type": "address",
         "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "UUPSUnauthorizedCallContext",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "UUPSUnsupportedProxiableUUID",
+    "inputs": [
+      {
+        "name": "slot",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ]
   }

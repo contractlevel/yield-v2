@@ -247,7 +247,7 @@ contract HelperConfig is Script {
             }),
             protocols: ProtocolsConfig({
                 aaveV3PoolAddressesProvider: 0xa97684ead0e402dC232d5A977953DF7ECBaB3CDb,
-                aaveV4Spoke: address(0),
+                aaveV4Spoke: address(0), // @review https://x.com/avax/status/2077414595405504930
                 compoundV3Comet: address(0),
                 compoundV3CometRewards: address(0)
             }),

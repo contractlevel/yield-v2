@@ -23,39 +23,48 @@ var (
 // ParentVaultMock is a mock implementation of ParentVault for testing.
 type ParentVaultMock struct {
 	DEFAULTADMINROLE                   func() ([32]byte, error)
+	UPGRADEINTERFACEVERSION            func() (string, error)
 	DefaultAdmin                       func() (common.Address, error)
 	DefaultAdminDelay                  func() (*big.Int, error)
 	DefaultAdminDelayIncreaseWait      func() (*big.Int, error)
 	GetActiveProtocolAdapter           func() (common.Address, error)
 	GetAdapterRegistry                 func() (common.Address, error)
+	GetAsset                           func() (common.Address, error)
+	GetAssetPrecision                  func() (*big.Int, error)
 	GetCCVsAndFinalityConfig           func(GetCCVsAndFinalityConfigInput) (GetCCVsAndFinalityConfigOutput, error)
 	GetCcipGasLimit                    func(GetCcipGasLimitInput) (*big.Int, error)
 	GetContext                         func() ([]byte, error)
 	GetCrosschainVault                 func(GetCrosschainVaultInput) (common.Address, error)
 	GetDefaultCcipGasLimit             func() (*big.Int, error)
 	GetDepositAmount                   func(GetDepositAmountInput) (*big.Int, error)
+	GetEmergencyReceiver               func() (common.Address, error)
 	GetEpoch                           func(GetEpochInput) (TypesEpoch, error)
 	GetEpochNonce                      func() (*big.Int, error)
 	GetInitialActiveProtocolAdapterSet func() (bool, error)
 	GetLink                            func() (common.Address, error)
+	GetMinDepositAmount                func() (*big.Int, error)
 	GetPausedAt                        func() (*big.Int, error)
+	GetPerformanceFeeHighWaterMark     func() (*big.Int, error)
 	GetPolicyEngine                    func() (common.Address, error)
 	GetRebalance                       func() (TypesRebalance, error)
-	GetRebalanceDepositRecovery        func(GetRebalanceDepositRecoveryInput) (TypesAmountRecovery, error)
+	GetRebalanceDepositRecovery        func() (TypesRebalanceDepositRecovery, error)
+	GetRecoveryMode                    func() (uint8, error)
 	GetRoleAdmin                       func(GetRoleAdminInput) ([32]byte, error)
 	GetRouter                          func() (common.Address, error)
 	GetShare                           func() (common.Address, error)
+	GetSharePrecision                  func() (*big.Int, error)
+	GetSupportedProtocol               func(GetSupportedProtocolInput) (bool, error)
 	GetTVL                             func() (*big.Int, error)
 	GetThisChainSelector               func() (uint64, error)
 	GetTotalShares                     func() (*big.Int, error)
 	GetTreasury                        func() (common.Address, error)
-	GetUsdc                            func() (common.Address, error)
 	GetWithdrawShareBurnAmount         func(GetWithdrawShareBurnAmountInput) (*big.Int, error)
 	HasRole                            func(HasRoleInput) (bool, error)
 	Owner                              func() (common.Address, error)
 	Paused                             func() (bool, error)
 	PendingDefaultAdmin                func() (PendingDefaultAdminOutput, error)
 	PendingDefaultAdminDelay           func() (PendingDefaultAdminDelayOutput, error)
+	ProxiableUUID                      func() ([32]byte, error)
 }
 
 // NewParentVaultMock creates a new ParentVaultMock for testing.
@@ -80,6 +89,16 @@ func NewParentVaultMock(address common.Address, clientMock *evmmock.ClientCapabi
 				return nil, err
 			}
 			return abi.Methods["DEFAULT_ADMIN_ROLE"].Outputs.Pack(result)
+		},
+		string(abi.Methods["UPGRADE_INTERFACE_VERSION"].ID[:4]): func(payload []byte) ([]byte, error) {
+			if mock.UPGRADEINTERFACEVERSION == nil {
+				return nil, errors.New("UPGRADE_INTERFACE_VERSION method not mocked")
+			}
+			result, err := mock.UPGRADEINTERFACEVERSION()
+			if err != nil {
+				return nil, err
+			}
+			return abi.Methods["UPGRADE_INTERFACE_VERSION"].Outputs.Pack(result)
 		},
 		string(abi.Methods["defaultAdmin"].ID[:4]): func(payload []byte) ([]byte, error) {
 			if mock.DefaultAdmin == nil {
@@ -130,6 +149,26 @@ func NewParentVaultMock(address common.Address, clientMock *evmmock.ClientCapabi
 				return nil, err
 			}
 			return abi.Methods["getAdapterRegistry"].Outputs.Pack(result)
+		},
+		string(abi.Methods["getAsset"].ID[:4]): func(payload []byte) ([]byte, error) {
+			if mock.GetAsset == nil {
+				return nil, errors.New("getAsset method not mocked")
+			}
+			result, err := mock.GetAsset()
+			if err != nil {
+				return nil, err
+			}
+			return abi.Methods["getAsset"].Outputs.Pack(result)
+		},
+		string(abi.Methods["getAssetPrecision"].ID[:4]): func(payload []byte) ([]byte, error) {
+			if mock.GetAssetPrecision == nil {
+				return nil, errors.New("getAssetPrecision method not mocked")
+			}
+			result, err := mock.GetAssetPrecision()
+			if err != nil {
+				return nil, err
+			}
+			return abi.Methods["getAssetPrecision"].Outputs.Pack(result)
 		},
 		string(abi.Methods["getCCVsAndFinalityConfig"].ID[:4]): func(payload []byte) ([]byte, error) {
 			if mock.GetCCVsAndFinalityConfig == nil {
@@ -254,6 +293,16 @@ func NewParentVaultMock(address common.Address, clientMock *evmmock.ClientCapabi
 			}
 			return abi.Methods["getDepositAmount"].Outputs.Pack(result)
 		},
+		string(abi.Methods["getEmergencyReceiver"].ID[:4]): func(payload []byte) ([]byte, error) {
+			if mock.GetEmergencyReceiver == nil {
+				return nil, errors.New("getEmergencyReceiver method not mocked")
+			}
+			result, err := mock.GetEmergencyReceiver()
+			if err != nil {
+				return nil, err
+			}
+			return abi.Methods["getEmergencyReceiver"].Outputs.Pack(result)
+		},
 		string(abi.Methods["getEpoch"].ID[:4]): func(payload []byte) ([]byte, error) {
 			if mock.GetEpoch == nil {
 				return nil, errors.New("getEpoch method not mocked")
@@ -308,6 +357,16 @@ func NewParentVaultMock(address common.Address, clientMock *evmmock.ClientCapabi
 			}
 			return abi.Methods["getLink"].Outputs.Pack(result)
 		},
+		string(abi.Methods["getMinDepositAmount"].ID[:4]): func(payload []byte) ([]byte, error) {
+			if mock.GetMinDepositAmount == nil {
+				return nil, errors.New("getMinDepositAmount method not mocked")
+			}
+			result, err := mock.GetMinDepositAmount()
+			if err != nil {
+				return nil, err
+			}
+			return abi.Methods["getMinDepositAmount"].Outputs.Pack(result)
+		},
 		string(abi.Methods["getPausedAt"].ID[:4]): func(payload []byte) ([]byte, error) {
 			if mock.GetPausedAt == nil {
 				return nil, errors.New("getPausedAt method not mocked")
@@ -317,6 +376,16 @@ func NewParentVaultMock(address common.Address, clientMock *evmmock.ClientCapabi
 				return nil, err
 			}
 			return abi.Methods["getPausedAt"].Outputs.Pack(result)
+		},
+		string(abi.Methods["getPerformanceFeeHighWaterMark"].ID[:4]): func(payload []byte) ([]byte, error) {
+			if mock.GetPerformanceFeeHighWaterMark == nil {
+				return nil, errors.New("getPerformanceFeeHighWaterMark method not mocked")
+			}
+			result, err := mock.GetPerformanceFeeHighWaterMark()
+			if err != nil {
+				return nil, err
+			}
+			return abi.Methods["getPerformanceFeeHighWaterMark"].Outputs.Pack(result)
 		},
 		string(abi.Methods["getPolicyEngine"].ID[:4]): func(payload []byte) ([]byte, error) {
 			if mock.GetPolicyEngine == nil {
@@ -342,25 +411,21 @@ func NewParentVaultMock(address common.Address, clientMock *evmmock.ClientCapabi
 			if mock.GetRebalanceDepositRecovery == nil {
 				return nil, errors.New("getRebalanceDepositRecovery method not mocked")
 			}
-			inputs := abi.Methods["getRebalanceDepositRecovery"].Inputs
-
-			values, err := inputs.Unpack(payload)
-			if err != nil {
-				return nil, errors.New("Failed to unpack payload")
-			}
-			if len(values) != 1 {
-				return nil, errors.New("expected 1 input value")
-			}
-
-			args := GetRebalanceDepositRecoveryInput{
-				RebalanceNonce: values[0].(*big.Int),
-			}
-
-			result, err := mock.GetRebalanceDepositRecovery(args)
+			result, err := mock.GetRebalanceDepositRecovery()
 			if err != nil {
 				return nil, err
 			}
 			return abi.Methods["getRebalanceDepositRecovery"].Outputs.Pack(result)
+		},
+		string(abi.Methods["getRecoveryMode"].ID[:4]): func(payload []byte) ([]byte, error) {
+			if mock.GetRecoveryMode == nil {
+				return nil, errors.New("getRecoveryMode method not mocked")
+			}
+			result, err := mock.GetRecoveryMode()
+			if err != nil {
+				return nil, err
+			}
+			return abi.Methods["getRecoveryMode"].Outputs.Pack(result)
 		},
 		string(abi.Methods["getRoleAdmin"].ID[:4]): func(payload []byte) ([]byte, error) {
 			if mock.GetRoleAdmin == nil {
@@ -406,6 +471,40 @@ func NewParentVaultMock(address common.Address, clientMock *evmmock.ClientCapabi
 			}
 			return abi.Methods["getShare"].Outputs.Pack(result)
 		},
+		string(abi.Methods["getSharePrecision"].ID[:4]): func(payload []byte) ([]byte, error) {
+			if mock.GetSharePrecision == nil {
+				return nil, errors.New("getSharePrecision method not mocked")
+			}
+			result, err := mock.GetSharePrecision()
+			if err != nil {
+				return nil, err
+			}
+			return abi.Methods["getSharePrecision"].Outputs.Pack(result)
+		},
+		string(abi.Methods["getSupportedProtocol"].ID[:4]): func(payload []byte) ([]byte, error) {
+			if mock.GetSupportedProtocol == nil {
+				return nil, errors.New("getSupportedProtocol method not mocked")
+			}
+			inputs := abi.Methods["getSupportedProtocol"].Inputs
+
+			values, err := inputs.Unpack(payload)
+			if err != nil {
+				return nil, errors.New("Failed to unpack payload")
+			}
+			if len(values) != 1 {
+				return nil, errors.New("expected 1 input value")
+			}
+
+			args := GetSupportedProtocolInput{
+				ProtocolId: values[0].([32]byte),
+			}
+
+			result, err := mock.GetSupportedProtocol(args)
+			if err != nil {
+				return nil, err
+			}
+			return abi.Methods["getSupportedProtocol"].Outputs.Pack(result)
+		},
 		string(abi.Methods["getTVL"].ID[:4]): func(payload []byte) ([]byte, error) {
 			if mock.GetTVL == nil {
 				return nil, errors.New("getTVL method not mocked")
@@ -445,16 +544,6 @@ func NewParentVaultMock(address common.Address, clientMock *evmmock.ClientCapabi
 				return nil, err
 			}
 			return abi.Methods["getTreasury"].Outputs.Pack(result)
-		},
-		string(abi.Methods["getUsdc"].ID[:4]): func(payload []byte) ([]byte, error) {
-			if mock.GetUsdc == nil {
-				return nil, errors.New("getUsdc method not mocked")
-			}
-			result, err := mock.GetUsdc()
-			if err != nil {
-				return nil, err
-			}
-			return abi.Methods["getUsdc"].Outputs.Pack(result)
 		},
 		string(abi.Methods["getWithdrawShareBurnAmount"].ID[:4]): func(payload []byte) ([]byte, error) {
 			if mock.GetWithdrawShareBurnAmount == nil {
@@ -551,6 +640,16 @@ func NewParentVaultMock(address common.Address, clientMock *evmmock.ClientCapabi
 				result.NewDelay,
 				result.Schedule,
 			)
+		},
+		string(abi.Methods["proxiableUUID"].ID[:4]): func(payload []byte) ([]byte, error) {
+			if mock.ProxiableUUID == nil {
+				return nil, errors.New("proxiableUUID method not mocked")
+			}
+			result, err := mock.ProxiableUUID()
+			if err != nil {
+				return nil, err
+			}
+			return abi.Methods["proxiableUUID"].Outputs.Pack(result)
 		},
 	}
 

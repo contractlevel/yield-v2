@@ -51,20 +51,26 @@ var (
 )
 
 var ParentVaultMetaData = &bind.MetaData{
-	ABI: "[{\"type\":\"constructor\",\"inputs\":[{\"name\":\"params\",\"type\":\"tuple\",\"internalType\":\"structBaseVault.ConstructorParams\",\"components\":[{\"name\":\"link\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"usdc\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"ccipRouter\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"defaultAdmin\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"pauser\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"unpauser\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"configOperator\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"adapterRegistry\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"thisChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]},{\"name\":\"treasury\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"share\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"policyEngineManager\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"policyEngine\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"DEFAULT_ADMIN_ROLE\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"acceptDefaultAdminTransfer\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"attachPolicyEngine\",\"inputs\":[{\"name\":\"policyEngine\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"beginDefaultAdminTransfer\",\"inputs\":[{\"name\":\"newAdmin\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"cancelDefaultAdminTransfer\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"cancelDeposit\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"cancelWithdraw\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"ccipReceive\",\"inputs\":[{\"name\":\"message\",\"type\":\"tuple\",\"internalType\":\"structClient.Any2EVMMessage\",\"components\":[{\"name\":\"messageId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"sourceChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"sender\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"destTokenAmounts\",\"type\":\"tuple[]\",\"internalType\":\"structClient.EVMTokenAmount[]\",\"components\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}]}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"changeDefaultAdminDelay\",\"inputs\":[{\"name\":\"newDelay\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"claimShares\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"shareMintAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"claimUsdc\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"usdcWithdrawAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"clearContext\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"closeEpoch\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"tvl\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"completeRebalance\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"defaultAdmin\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"defaultAdminDelay\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"defaultAdminDelayIncreaseWait\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"deposit\",\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"emergencyDrain\",\"inputs\":[{\"name\":\"revertOnFailure\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"getActiveProtocolAdapter\",\"inputs\":[],\"outputs\":[{\"name\":\"activeProtocolAdapter\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getAdapterRegistry\",\"inputs\":[],\"outputs\":[{\"name\":\"adapterRegistry\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getCCVsAndFinalityConfig\",\"inputs\":[{\"name\":\"\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[{\"name\":\"requiredCCVs\",\"type\":\"address[]\",\"internalType\":\"address[]\"},{\"name\":\"optionalCCVs\",\"type\":\"address[]\",\"internalType\":\"address[]\"},{\"name\":\"optionalThreshold\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"allowedFinalityConfig\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getCcipGasLimit\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"outputs\":[{\"name\":\"gasLimit\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getContext\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getCrosschainVault\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"outputs\":[{\"name\":\"vault\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getDefaultCcipGasLimit\",\"inputs\":[],\"outputs\":[{\"name\":\"defaultCcipGasLimit\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getDepositAmount\",\"inputs\":[{\"name\":\"user\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getEpoch\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"epoch\",\"type\":\"tuple\",\"internalType\":\"structTypes.Epoch\",\"components\":[{\"name\":\"totalDepositAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"totalShareBurnAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"totalWithdrawClaimAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"pricePerShare\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"openedAtTimestamp\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"closedAtTimestamp\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"status\",\"type\":\"uint8\",\"internalType\":\"enumTypes.EpochStatus\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getEpochNonce\",\"inputs\":[],\"outputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getInitialActiveProtocolAdapterSet\",\"inputs\":[],\"outputs\":[{\"name\":\"initialActiveProtocolAdapterSet\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getLink\",\"inputs\":[],\"outputs\":[{\"name\":\"link\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getNetAmountAndOperationFee\",\"inputs\":[{\"name\":\"grossAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"netAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"feeAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"pure\"},{\"type\":\"function\",\"name\":\"getPausedAt\",\"inputs\":[],\"outputs\":[{\"name\":\"pausedAt\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getPolicyEngine\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRebalance\",\"inputs\":[],\"outputs\":[{\"name\":\"rebalance\",\"type\":\"tuple\",\"internalType\":\"structTypes.Rebalance\",\"components\":[{\"name\":\"nonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"state\",\"type\":\"uint8\",\"internalType\":\"enumTypes.RebalanceState\"},{\"name\":\"activeStrategy\",\"type\":\"tuple\",\"internalType\":\"structTypes.Strategy\",\"components\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]},{\"name\":\"pendingStrategy\",\"type\":\"tuple\",\"internalType\":\"structTypes.Strategy\",\"components\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]},{\"name\":\"lastRebalanceInitiatedTimestamp\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"lastRebalanceCompletedTimestamp\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRebalanceDepositRecovery\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"recovery\",\"type\":\"tuple\",\"internalType\":\"structTypes.AmountRecovery\",\"components\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"createdAt\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRoleAdmin\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRouter\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getShare\",\"inputs\":[],\"outputs\":[{\"name\":\"share\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getTVL\",\"inputs\":[],\"outputs\":[{\"name\":\"tvl\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getThisChainSelector\",\"inputs\":[],\"outputs\":[{\"name\":\"thisChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getTotalShares\",\"inputs\":[],\"outputs\":[{\"name\":\"totalShares\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getTreasury\",\"inputs\":[],\"outputs\":[{\"name\":\"treasury\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getUsdc\",\"inputs\":[],\"outputs\":[{\"name\":\"usdc\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getWithdrawShareBurnAmount\",\"inputs\":[{\"name\":\"user\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"shareBurnAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"grantRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"hasRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"initiateRebalance\",\"inputs\":[{\"name\":\"newStrategy\",\"type\":\"tuple\",\"internalType\":\"structTypes.Strategy\",\"components\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"owner\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"pause\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"paused\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"pendingDefaultAdmin\",\"inputs\":[],\"outputs\":[{\"name\":\"newAdmin\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"schedule\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"pendingDefaultAdminDelay\",\"inputs\":[],\"outputs\":[{\"name\":\"newDelay\",\"type\":\"uint48\",\"internalType\":\"uint48\"},{\"name\":\"schedule\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"recoverFailedRebalanceDeposit\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"renounceOwnership\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"renounceRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"revokeRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"rollbackDefaultAdminDelay\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setCcipGasLimit\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"gasLimit\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setContext\",\"inputs\":[{\"name\":\"context\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setCrosschainVaults\",\"inputs\":[{\"name\":\"chainSelectors\",\"type\":\"uint64[]\",\"internalType\":\"uint64[]\"},{\"name\":\"vaults\",\"type\":\"address[]\",\"internalType\":\"address[]\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setDefaultCcipGasLimit\",\"inputs\":[{\"name\":\"gasLimit\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setInitialActiveProtocolAdapter\",\"inputs\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setTreasury\",\"inputs\":[{\"name\":\"treasury\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"supportsInterface\",\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"pure\"},{\"type\":\"function\",\"name\":\"transferOwnership\",\"inputs\":[{\"name\":\"newOwner\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"tryDepositToAdapter\",\"inputs\":[{\"name\":\"adapter\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"unpause\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"withdraw\",\"inputs\":[{\"name\":\"shareBurnAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"withdrawLink\",\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"CcipGasLimitSet\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"},{\"name\":\"gasLimit\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CrosschainVaultSet\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"},{\"name\":\"vault\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminDelayChangeCanceled\",\"inputs\":[],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminDelayChangeScheduled\",\"inputs\":[{\"name\":\"newDelay\",\"type\":\"uint48\",\"indexed\":false,\"internalType\":\"uint48\"},{\"name\":\"effectSchedule\",\"type\":\"uint48\",\"indexed\":false,\"internalType\":\"uint48\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminTransferCanceled\",\"inputs\":[],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminTransferScheduled\",\"inputs\":[{\"name\":\"newAdmin\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"acceptSchedule\",\"type\":\"uint48\",\"indexed\":false,\"internalType\":\"uint48\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultCcipGasLimitSet\",\"inputs\":[{\"name\":\"gasLimit\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DepositCancelled\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"depositor\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DepositClaimed\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"depositor\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"shareMintAmount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DepositFeeCollected\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"depositor\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"fee\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DepositSubmitted\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"depositor\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DepositToStrategyFailure\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DepositToStrategySuccess\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EmergencyDrainExecuted\",\"inputs\":[{\"name\":\"drainer\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EpochClaimable\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EpochExecuting\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EpochOpen\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EpochWithdrawAmountShort\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"expectedAmount\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"actualAmount\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"InitialActiveProtocolAdapterSet\",\"inputs\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"adapter\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"LinkWithdrawn\",\"inputs\":[{\"name\":\"operator\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ManagementFeeCollected\",\"inputs\":[{\"name\":\"feeShares\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OwnershipTransferred\",\"inputs\":[{\"name\":\"previousOwner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"newOwner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Paused\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"PolicyEngineAttached\",\"inputs\":[{\"name\":\"policyEngine\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"PolicyEngineDetachFailed\",\"inputs\":[{\"name\":\"policyEngine\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"reason\",\"type\":\"bytes\",\"indexed\":false,\"internalType\":\"bytes\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceCompleted\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceDepositFailure\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceDepositRecoveryCleared\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceDepositRecoveryStored\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceDepositSuccess\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceInitiated\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"chainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"},{\"name\":\"protocolId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceWithdrawFailure\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceWithdrawSuccess\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleAdminChanged\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"previousAdminRole\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"newAdminRole\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleGranted\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleRevoked\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"TreasurySet\",\"inputs\":[{\"name\":\"treasury\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CCIPBridged\",\"inputs\":[{\"name\":\"ccipMessageId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"ccipTxType\",\"type\":\"uint8\",\"indexed\":true,\"internalType\":\"enumTypes.CcipTx\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Unpaused\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"WithdrawCancelled\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"withdrawer\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"WithdrawClaimed\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"withdrawer\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"WithdrawFeeCollected\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"withdrawer\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"fee\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"WithdrawFromStrategyFailure\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"WithdrawFromStrategySuccess\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"WithdrawSubmitted\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"withdrawer\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"shareBurnAmount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"AccessControlBadConfirmation\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"AccessControlEnforcedDefaultAdminDelay\",\"inputs\":[{\"name\":\"schedule\",\"type\":\"uint48\",\"internalType\":\"uint48\"}]},{\"type\":\"error\",\"name\":\"AccessControlEnforcedDefaultAdminRules\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"AccessControlInvalidDefaultAdmin\",\"inputs\":[{\"name\":\"defaultAdmin\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"AccessControlUnauthorizedAccount\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"neededRole\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"type\":\"error\",\"name\":\"BaseVault__DepositFailed\",\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"BaseVault__EmergencyDrainDelayNotMet\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidInputLengths\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidSender\",\"inputs\":[{\"name\":\"sender\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"srcChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]},{\"type\":\"error\",\"name\":\"BaseVault__NoActiveAdapter\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__NoAdapterRegistered\",\"inputs\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"type\":\"error\",\"name\":\"BaseVault__NoPendingRecovery\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__NoZeroAmount\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__OnlySelf\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__RecoveryAlreadyPending\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__WithdrawFailed\",\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"BaseVault__ZeroRecoveryAmount\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EnforcedPause\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ExpectedPause\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidRouter\",\"inputs\":[{\"name\":\"router\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"OwnableInvalidOwner\",\"inputs\":[{\"name\":\"owner\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"OwnableUnauthorizedAccount\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"ParentVault__AmountTooSmall\",\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"ParentVault__EmptyEpoch\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"ParentVault__EpochExecuting\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"ParentVault__EpochNotClaimable\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"ParentVault__EpochNotExecuting\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"ParentVault__EpochNotOpen\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"ParentVault__EpochTooShort\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"ParentVault__InitialActiveProtocolAdapterAlreadySet\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ParentVault__InvalidRebalanceNonce\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"ParentVault__NoDeposit\",\"inputs\":[{\"name\":\"depositor\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"ParentVault__NoRebalanceInProgress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ParentVault__NoWithdraw\",\"inputs\":[{\"name\":\"withdrawer\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"ParentVault__NoZeroAmount\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ParentVault__RebalanceInProgress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ParentVault__SameStrategy\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ParentVault__WithdrawFailed\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"PolicyEngineUndefined\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ReentrancyGuardReentrantCall\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"SafeCastOverflowedUintDowncast\",\"inputs\":[{\"name\":\"bits\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"value\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"SafeERC20FailedOperation\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"}]}]",
+	ABI: "[{\"type\":\"constructor\",\"inputs\":[{\"name\":\"params\",\"type\":\"tuple\",\"internalType\":\"structBaseVault.ConstructorParams\",\"components\":[{\"name\":\"link\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"asset\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"ccipRouter\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"adapterRegistry\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"thisChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]},{\"name\":\"share\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"DEFAULT_ADMIN_ROLE\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"UPGRADE_INTERFACE_VERSION\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"string\",\"internalType\":\"string\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"acceptDefaultAdminTransfer\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"attachPolicyEngine\",\"inputs\":[{\"name\":\"policyEngine\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"beginDefaultAdminTransfer\",\"inputs\":[{\"name\":\"newAdmin\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"cancelDefaultAdminTransfer\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"cancelDeposit\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"cancelWithdraw\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"ccipReceive\",\"inputs\":[{\"name\":\"message\",\"type\":\"tuple\",\"internalType\":\"structClient.Any2EVMMessage\",\"components\":[{\"name\":\"messageId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"sourceChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"sender\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"destTokenAmounts\",\"type\":\"tuple[]\",\"internalType\":\"structClient.EVMTokenAmount[]\",\"components\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}]}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"changeDefaultAdminDelay\",\"inputs\":[{\"name\":\"newDelay\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"claimAsset\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"withdrawAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"claimShares\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"shareMintAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"clearContext\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"closeEpoch\",\"inputs\":[{\"name\":\"tvl\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"completeRebalance\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"defaultAdmin\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"defaultAdminDelay\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"defaultAdminDelayIncreaseWait\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"deposit\",\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"donate\",\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"emergencyDrain\",\"inputs\":[{\"name\":\"revertOnFailure\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"executeRecovery\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"forceCancelDeposit\",\"inputs\":[{\"name\":\"user\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"getActiveProtocolAdapter\",\"inputs\":[],\"outputs\":[{\"name\":\"activeProtocolAdapter\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getAdapterRegistry\",\"inputs\":[],\"outputs\":[{\"name\":\"adapterRegistry\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getAsset\",\"inputs\":[],\"outputs\":[{\"name\":\"asset\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getAssetPrecision\",\"inputs\":[],\"outputs\":[{\"name\":\"assetPrecision\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getCCVsAndFinalityConfig\",\"inputs\":[{\"name\":\"\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[{\"name\":\"requiredCCVs\",\"type\":\"address[]\",\"internalType\":\"address[]\"},{\"name\":\"optionalCCVs\",\"type\":\"address[]\",\"internalType\":\"address[]\"},{\"name\":\"optionalThreshold\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"allowedFinalityConfig\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getCcipGasLimit\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"outputs\":[{\"name\":\"gasLimit\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getContext\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getCrosschainVault\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"outputs\":[{\"name\":\"vault\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getDefaultCcipGasLimit\",\"inputs\":[],\"outputs\":[{\"name\":\"defaultCcipGasLimit\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getDepositAmount\",\"inputs\":[{\"name\":\"user\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getEmergencyReceiver\",\"inputs\":[],\"outputs\":[{\"name\":\"emergencyReceiver\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getEpoch\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"epoch\",\"type\":\"tuple\",\"internalType\":\"structTypes.Epoch\",\"components\":[{\"name\":\"totalDepositAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"totalShareBurnAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"totalWithdrawClaimAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"pricePerShare\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"remainingDepositClaimAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"remainingShareMintAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"remainingShareBurnAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"remainingWithdrawClaimAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"openedAtTimestamp\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"status\",\"type\":\"uint8\",\"internalType\":\"enumTypes.EpochStatus\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getEpochNonce\",\"inputs\":[],\"outputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getInitialActiveProtocolAdapterSet\",\"inputs\":[],\"outputs\":[{\"name\":\"initialActiveProtocolAdapterSet\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getLink\",\"inputs\":[],\"outputs\":[{\"name\":\"link\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getMinDepositAmount\",\"inputs\":[],\"outputs\":[{\"name\":\"minDepositAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getPausedAt\",\"inputs\":[],\"outputs\":[{\"name\":\"pausedAt\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getPerformanceFeeHighWaterMark\",\"inputs\":[],\"outputs\":[{\"name\":\"highWaterMark\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getPolicyEngine\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRebalance\",\"inputs\":[],\"outputs\":[{\"name\":\"rebalance\",\"type\":\"tuple\",\"internalType\":\"structTypes.Rebalance\",\"components\":[{\"name\":\"nonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"state\",\"type\":\"uint8\",\"internalType\":\"enumTypes.RebalanceState\"},{\"name\":\"activeStrategy\",\"type\":\"tuple\",\"internalType\":\"structTypes.Strategy\",\"components\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]},{\"name\":\"pendingStrategy\",\"type\":\"tuple\",\"internalType\":\"structTypes.Strategy\",\"components\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]},{\"name\":\"lastRebalanceCompletedTimestamp\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRebalanceDepositRecovery\",\"inputs\":[],\"outputs\":[{\"name\":\"recovery\",\"type\":\"tuple\",\"internalType\":\"structTypes.RebalanceDepositRecovery\",\"components\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRecoveryMode\",\"inputs\":[],\"outputs\":[{\"name\":\"recoveryMode\",\"type\":\"uint8\",\"internalType\":\"enumTypes.RecoveryMode\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRoleAdmin\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRouter\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getShare\",\"inputs\":[],\"outputs\":[{\"name\":\"share\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getSharePrecision\",\"inputs\":[],\"outputs\":[{\"name\":\"sharePrecision\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getSupportedProtocol\",\"inputs\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"isSupported\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getTVL\",\"inputs\":[],\"outputs\":[{\"name\":\"tvl\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getThisChainSelector\",\"inputs\":[],\"outputs\":[{\"name\":\"thisChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getTotalShares\",\"inputs\":[],\"outputs\":[{\"name\":\"totalShares\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getTreasury\",\"inputs\":[],\"outputs\":[{\"name\":\"treasury\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getWithdrawShareBurnAmount\",\"inputs\":[{\"name\":\"user\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"shareBurnAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"grantRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"hasRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"initialize\",\"inputs\":[{\"name\":\"params\",\"type\":\"tuple\",\"internalType\":\"structBaseVault.InitParams\",\"components\":[{\"name\":\"defaultAdmin\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"pauser\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"unpauser\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"configOperator\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"emergencyReceiver\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"initialDefaultCcipGasLimit\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"upgrader\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"name\":\"treasury\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"policyEngineManager\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"policyEngine\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"cancelDepositOperator\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"initiateRebalance\",\"inputs\":[{\"name\":\"newStrategy\",\"type\":\"tuple\",\"internalType\":\"structTypes.Strategy\",\"components\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"owner\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"pause\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"paused\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"pendingDefaultAdmin\",\"inputs\":[],\"outputs\":[{\"name\":\"newAdmin\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"schedule\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"pendingDefaultAdminDelay\",\"inputs\":[],\"outputs\":[{\"name\":\"newDelay\",\"type\":\"uint48\",\"internalType\":\"uint48\"},{\"name\":\"schedule\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"proxiableUUID\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"renounceOwnership\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"renounceRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"revokeRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"rollbackDefaultAdminDelay\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setCcipGasLimit\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"gasLimit\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setContext\",\"inputs\":[{\"name\":\"context\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setCrosschainVaults\",\"inputs\":[{\"name\":\"chainSelectors\",\"type\":\"uint64[]\",\"internalType\":\"uint64[]\"},{\"name\":\"vaults\",\"type\":\"address[]\",\"internalType\":\"address[]\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setDefaultCcipGasLimit\",\"inputs\":[{\"name\":\"gasLimit\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setEmergencyReceiver\",\"inputs\":[{\"name\":\"emergencyReceiver\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setInitialActiveProtocolAdapter\",\"inputs\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setSupportedProtocol\",\"inputs\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"isSupported\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setTreasury\",\"inputs\":[{\"name\":\"treasury\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"supportsInterface\",\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"pure\"},{\"type\":\"function\",\"name\":\"transferOwnership\",\"inputs\":[{\"name\":\"newOwner\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"tryDepositToAdapter\",\"inputs\":[{\"name\":\"adapter\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"unpause\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"upgradeToAndCall\",\"inputs\":[{\"name\":\"newImplementation\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"withdraw\",\"inputs\":[{\"name\":\"shareBurnAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"withdrawLink\",\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"ActiveProtocolAdapterCleared\",\"inputs\":[{\"name\":\"adapter\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ActiveProtocolAdapterSet\",\"inputs\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"adapter\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CCIPBridged\",\"inputs\":[{\"name\":\"ccipMessageId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"ccipTxType\",\"type\":\"uint8\",\"indexed\":true,\"internalType\":\"enumTypes.CcipTx\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CcipGasLimitSet\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"},{\"name\":\"gasLimit\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CrosschainVaultSet\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"},{\"name\":\"vault\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminDelayChangeCanceled\",\"inputs\":[],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminDelayChangeScheduled\",\"inputs\":[{\"name\":\"newDelay\",\"type\":\"uint48\",\"indexed\":false,\"internalType\":\"uint48\"},{\"name\":\"effectSchedule\",\"type\":\"uint48\",\"indexed\":false,\"internalType\":\"uint48\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminTransferCanceled\",\"inputs\":[],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminTransferScheduled\",\"inputs\":[{\"name\":\"newAdmin\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"acceptSchedule\",\"type\":\"uint48\",\"indexed\":false,\"internalType\":\"uint48\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultCcipGasLimitSet\",\"inputs\":[{\"name\":\"gasLimit\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DepositCancelled\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"depositor\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DepositClaimed\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"depositor\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"shareMintAmount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DepositForceCancelled\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"depositor\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DepositSubmitted\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"depositor\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DepositToStrategySuccess\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Donation\",\"inputs\":[{\"name\":\"donor\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EmergencyDrainExecuted\",\"inputs\":[{\"name\":\"emergencyReceiver\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EmergencyReceiverSet\",\"inputs\":[{\"name\":\"emergencyReceiver\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EpochClaimable\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EpochExecuting\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EpochOpen\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EpochWithdrawAmountShort\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"expectedAmount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"actualAmount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"InitialActiveProtocolAdapterSet\",\"inputs\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"adapter\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Initialized\",\"inputs\":[{\"name\":\"version\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"LinkWithdrawn\",\"inputs\":[{\"name\":\"operator\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ManagementFeeCollected\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"feeShares\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OwnershipTransferred\",\"inputs\":[{\"name\":\"previousOwner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"newOwner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Paused\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"PerformanceFeeCollected\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"feeShares\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"settlementPricePerShare\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"PolicyEngineAttached\",\"inputs\":[{\"name\":\"policyEngine\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"PolicyEngineDetachFailed\",\"inputs\":[{\"name\":\"policyEngine\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"reason\",\"type\":\"bytes\",\"indexed\":false,\"internalType\":\"bytes\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceCompleted\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"newProtocolId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"newChainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceDepositFailure\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceDepositRecoveryCleared\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceDepositRecoveryStored\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceDepositSuccess\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceInitiated\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"chainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"},{\"name\":\"protocolId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceWithdrawSuccess\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleAdminChanged\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"previousAdminRole\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"newAdminRole\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleGranted\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleRevoked\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"SupportedProtocolSet\",\"inputs\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"isSupported\",\"type\":\"bool\",\"indexed\":true,\"internalType\":\"bool\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"TreasurySet\",\"inputs\":[{\"name\":\"treasury\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Unpaused\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Upgraded\",\"inputs\":[{\"name\":\"implementation\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"WithdrawCancelled\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"withdrawer\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"shareBurnAmount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"WithdrawClaimed\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"withdrawer\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"WithdrawFromStrategySuccess\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"WithdrawSubmitted\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"withdrawer\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"shareBurnAmount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"AccessControlBadConfirmation\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"AccessControlEnforcedDefaultAdminDelay\",\"inputs\":[{\"name\":\"schedule\",\"type\":\"uint48\",\"internalType\":\"uint48\"}]},{\"type\":\"error\",\"name\":\"AccessControlEnforcedDefaultAdminRules\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"AccessControlInvalidDefaultAdmin\",\"inputs\":[{\"name\":\"defaultAdmin\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"AccessControlUnauthorizedAccount\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"neededRole\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"type\":\"error\",\"name\":\"AddressEmptyCode\",\"inputs\":[{\"name\":\"target\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"BaseVault__DepositFailed\",\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"BaseVault__DestinationVaultNotSet\",\"inputs\":[{\"name\":\"destinationChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]},{\"type\":\"error\",\"name\":\"BaseVault__EmergencyDrainDelayNotMet\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__EmptyInput\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidAdapterVault\",\"inputs\":[{\"name\":\"adapter\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"actualVault\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"expectedVault\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidDestinationChainSelector\",\"inputs\":[{\"name\":\"destinationChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidInputLengths\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidReceivedToken\",\"inputs\":[{\"name\":\"receivedToken\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"expectedToken\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidSender\",\"inputs\":[{\"name\":\"sender\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"srcChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidTokenAmountsLength\",\"inputs\":[{\"name\":\"receivedLength\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"expectedLength\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidTxType\",\"inputs\":[{\"name\":\"ccipTxType\",\"type\":\"uint8\",\"internalType\":\"enumTypes.CcipTx\"}]},{\"type\":\"error\",\"name\":\"BaseVault__NoActiveAdapter\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__NoAdapterRegistered\",\"inputs\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"type\":\"error\",\"name\":\"BaseVault__NoPendingRecovery\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__NoZeroAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__NoZeroAmount\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__NoZeroChainSelector\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__OnlySelf\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__RecoveryAlreadyPending\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__WithdrawFailed\",\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"BaseVault__ZeroRecoveryAmount\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ERC1967InvalidImplementation\",\"inputs\":[{\"name\":\"implementation\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"ERC1967NonPayable\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EnforcedPause\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ExpectedPause\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"FailedCall\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidInitialization\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidRouter\",\"inputs\":[{\"name\":\"router\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"NotInitializing\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"OwnableInvalidOwner\",\"inputs\":[{\"name\":\"owner\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"OwnableUnauthorizedAccount\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"ParentVault__AmountTooSmall\",\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"ParentVault__CannotRemoveActiveProtocol\",\"inputs\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"type\":\"error\",\"name\":\"ParentVault__CannotRemovePendingProtocol\",\"inputs\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"type\":\"error\",\"name\":\"ParentVault__DepositWouldMintZeroShares\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ParentVault__EmptyEpoch\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"ParentVault__EpochExecuting\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"ParentVault__EpochNotClaimable\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"ParentVault__EpochNotExecuting\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"ParentVault__EpochNotOpen\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"ParentVault__EpochTooShort\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"ParentVault__InitialActiveProtocolAdapterAlreadySet\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ParentVault__InvalidChainSelector\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]},{\"type\":\"error\",\"name\":\"ParentVault__InvalidEpochNonce\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"ParentVault__InvalidPendingProtocolId\",\"inputs\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"type\":\"error\",\"name\":\"ParentVault__InvalidProtocolId\",\"inputs\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"type\":\"error\",\"name\":\"ParentVault__InvalidRebalanceNonce\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"ParentVault__NoCompletedEpoch\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ParentVault__NoDeposit\",\"inputs\":[{\"name\":\"depositor\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"ParentVault__NoRebalanceInProgress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ParentVault__NoWithdraw\",\"inputs\":[{\"name\":\"withdrawer\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"ParentVault__NoZeroAmount\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ParentVault__NoZeroProtocolId\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ParentVault__RebalanceInProgress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ParentVault__SameStrategy\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ParentVault__ZeroPricePerShare\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ParentVault__ZeroTvlWithOutstandingShares\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"PolicyEngineUndefined\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ReentrancyGuardReentrantCall\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"SafeCastOverflowedUintDowncast\",\"inputs\":[{\"name\":\"bits\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"value\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"SafeERC20FailedOperation\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"UUPSUnauthorizedCallContext\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"UUPSUnsupportedProxiableUUID\",\"inputs\":[{\"name\":\"slot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]}]",
 }
 
 // Structs
 type BaseVaultConstructorParams struct {
 	Link              common.Address
-	Usdc              common.Address
+	Asset             common.Address
 	CcipRouter        common.Address
-	DefaultAdmin      common.Address
-	Pauser            common.Address
-	Unpauser          common.Address
-	ConfigOperator    common.Address
 	AdapterRegistry   common.Address
 	ThisChainSelector uint64
+}
+
+type BaseVaultInitParams struct {
+	DefaultAdmin               common.Address
+	Pauser                     common.Address
+	Unpauser                   common.Address
+	ConfigOperator             common.Address
+	EmergencyReceiver          common.Address
+	InitialDefaultCcipGasLimit *big.Int
+	Upgrader                   common.Address
 }
 
 type ClientAny2EVMMessage struct {
@@ -80,19 +86,17 @@ type ClientEVMTokenAmount struct {
 	Amount *big.Int
 }
 
-type TypesAmountRecovery struct {
-	Amount    *big.Int
-	CreatedAt *big.Int
-}
-
 type TypesEpoch struct {
-	TotalDepositAmount       *big.Int
-	TotalShareBurnAmount     *big.Int
-	TotalWithdrawClaimAmount *big.Int
-	PricePerShare            *big.Int
-	OpenedAtTimestamp        *big.Int
-	ClosedAtTimestamp        *big.Int
-	Status                   uint8
+	TotalDepositAmount           *big.Int
+	TotalShareBurnAmount         *big.Int
+	TotalWithdrawClaimAmount     *big.Int
+	PricePerShare                *big.Int
+	RemainingDepositClaimAmount  *big.Int
+	RemainingShareMintAmount     *big.Int
+	RemainingShareBurnAmount     *big.Int
+	RemainingWithdrawClaimAmount *big.Int
+	OpenedAtTimestamp            *big.Int
+	Status                       uint8
 }
 
 type TypesRebalance struct {
@@ -100,8 +104,12 @@ type TypesRebalance struct {
 	State                           uint8
 	ActiveStrategy                  TypesStrategy
 	PendingStrategy                 TypesStrategy
-	LastRebalanceInitiatedTimestamp *big.Int
 	LastRebalanceCompletedTimestamp *big.Int
+}
+
+type TypesRebalanceDepositRecovery struct {
+	RebalanceNonce *big.Int
+	Amount         *big.Int
 }
 
 type TypesStrategy struct {
@@ -126,29 +134,32 @@ type ChangeDefaultAdminDelayInput struct {
 	NewDelay *big.Int
 }
 
+type ClaimAssetInput struct {
+	EpochNonce *big.Int
+}
+
 type ClaimSharesInput struct {
 	EpochNonce *big.Int
 }
 
-type ClaimUsdcInput struct {
-	EpochNonce *big.Int
-}
-
 type CloseEpochInput struct {
-	EpochNonce *big.Int
-	Tvl        *big.Int
-}
-
-type CompleteRebalanceInput struct {
-	RebalanceNonce *big.Int
+	Tvl *big.Int
 }
 
 type DepositInput struct {
 	Amount *big.Int
 }
 
+type DonateInput struct {
+	Amount *big.Int
+}
+
 type EmergencyDrainInput struct {
 	RevertOnFailure bool
+}
+
+type ForceCancelDepositInput struct {
+	User common.Address
 }
 
 type GetCCVsAndFinalityConfigInput struct {
@@ -173,16 +184,12 @@ type GetEpochInput struct {
 	EpochNonce *big.Int
 }
 
-type GetNetAmountAndOperationFeeInput struct {
-	GrossAmount *big.Int
-}
-
-type GetRebalanceDepositRecoveryInput struct {
-	RebalanceNonce *big.Int
-}
-
 type GetRoleAdminInput struct {
 	Role [32]byte
+}
+
+type GetSupportedProtocolInput struct {
+	ProtocolId [32]byte
 }
 
 type GetWithdrawShareBurnAmountInput struct {
@@ -200,12 +207,16 @@ type HasRoleInput struct {
 	Account common.Address
 }
 
-type InitiateRebalanceInput struct {
-	NewStrategy TypesStrategy
+type InitializeInput struct {
+	Params                BaseVaultInitParams
+	Treasury              common.Address
+	PolicyEngineManager   common.Address
+	PolicyEngine          common.Address
+	CancelDepositOperator common.Address
 }
 
-type RecoverFailedRebalanceDepositInput struct {
-	RebalanceNonce *big.Int
+type InitiateRebalanceInput struct {
+	NewStrategy TypesStrategy
 }
 
 type RenounceRoleInput struct {
@@ -236,8 +247,17 @@ type SetDefaultCcipGasLimitInput struct {
 	GasLimit *big.Int
 }
 
+type SetEmergencyReceiverInput struct {
+	EmergencyReceiver common.Address
+}
+
 type SetInitialActiveProtocolAdapterInput struct {
 	ProtocolId [32]byte
+}
+
+type SetSupportedProtocolInput struct {
+	ProtocolId  [32]byte
+	IsSupported bool
 }
 
 type SetTreasuryInput struct {
@@ -257,6 +277,11 @@ type TryDepositToAdapterInput struct {
 	Amount  *big.Int
 }
 
+type UpgradeToAndCallInput struct {
+	NewImplementation common.Address
+	Data              []byte
+}
+
 type WithdrawInput struct {
 	ShareBurnAmount *big.Int
 }
@@ -271,11 +296,6 @@ type GetCCVsAndFinalityConfigOutput struct {
 	OptionalCCVs          []common.Address
 	OptionalThreshold     uint8
 	AllowedFinalityConfig [4]byte
-}
-
-type GetNetAmountAndOperationFeeOutput struct {
-	NetAmount *big.Int
-	FeeAmount *big.Int
 }
 
 type PendingDefaultAdminOutput struct {
@@ -308,19 +328,54 @@ type AccessControlUnauthorizedAccount struct {
 	NeededRole [32]byte
 }
 
+type AddressEmptyCode struct {
+	Target common.Address
+}
+
 type BaseVaultDepositFailed struct {
 	Amount *big.Int
+}
+
+type BaseVaultDestinationVaultNotSet struct {
+	DestinationChainSelector uint64
 }
 
 type BaseVaultEmergencyDrainDelayNotMet struct {
 }
 
+type BaseVaultEmptyInput struct {
+}
+
+type BaseVaultInvalidAdapterVault struct {
+	Adapter       common.Address
+	ActualVault   common.Address
+	ExpectedVault common.Address
+}
+
+type BaseVaultInvalidDestinationChainSelector struct {
+	DestinationChainSelector uint64
+}
+
 type BaseVaultInvalidInputLengths struct {
+}
+
+type BaseVaultInvalidReceivedToken struct {
+	ReceivedToken common.Address
+	ExpectedToken common.Address
 }
 
 type BaseVaultInvalidSender struct {
 	Sender           common.Address
 	SrcChainSelector uint64
+}
+
+type BaseVaultInvalidTokenAmountsLength struct {
+	ReceivedLength *big.Int
+	ExpectedLength *big.Int
+}
+
+type BaseVaultInvalidTxType struct {
+	CcipTxType uint8
 }
 
 type BaseVaultNoActiveAdapter struct {
@@ -333,7 +388,13 @@ type BaseVaultNoAdapterRegistered struct {
 type BaseVaultNoPendingRecovery struct {
 }
 
+type BaseVaultNoZeroAddress struct {
+}
+
 type BaseVaultNoZeroAmount struct {
+}
+
+type BaseVaultNoZeroChainSelector struct {
 }
 
 type BaseVaultOnlySelf struct {
@@ -349,14 +410,30 @@ type BaseVaultWithdrawFailed struct {
 type BaseVaultZeroRecoveryAmount struct {
 }
 
+type ERC1967InvalidImplementation struct {
+	Implementation common.Address
+}
+
+type ERC1967NonPayable struct {
+}
+
 type EnforcedPause struct {
 }
 
 type ExpectedPause struct {
 }
 
+type FailedCall struct {
+}
+
+type InvalidInitialization struct {
+}
+
 type InvalidRouter struct {
 	Router common.Address
+}
+
+type NotInitializing struct {
 }
 
 type OwnableInvalidOwner struct {
@@ -369,6 +446,17 @@ type OwnableUnauthorizedAccount struct {
 
 type ParentVaultAmountTooSmall struct {
 	Amount *big.Int
+}
+
+type ParentVaultCannotRemoveActiveProtocol struct {
+	ProtocolId [32]byte
+}
+
+type ParentVaultCannotRemovePendingProtocol struct {
+	ProtocolId [32]byte
+}
+
+type ParentVaultDepositWouldMintZeroShares struct {
 }
 
 type ParentVaultEmptyEpoch struct {
@@ -398,8 +486,27 @@ type ParentVaultEpochTooShort struct {
 type ParentVaultInitialActiveProtocolAdapterAlreadySet struct {
 }
 
+type ParentVaultInvalidChainSelector struct {
+	ChainSelector uint64
+}
+
+type ParentVaultInvalidEpochNonce struct {
+	EpochNonce *big.Int
+}
+
+type ParentVaultInvalidPendingProtocolId struct {
+	ProtocolId [32]byte
+}
+
+type ParentVaultInvalidProtocolId struct {
+	ProtocolId [32]byte
+}
+
 type ParentVaultInvalidRebalanceNonce struct {
 	RebalanceNonce *big.Int
+}
+
+type ParentVaultNoCompletedEpoch struct {
 }
 
 type ParentVaultNoDeposit struct {
@@ -418,15 +525,19 @@ type ParentVaultNoWithdraw struct {
 type ParentVaultNoZeroAmount struct {
 }
 
+type ParentVaultNoZeroProtocolId struct {
+}
+
 type ParentVaultRebalanceInProgress struct {
 }
 
 type ParentVaultSameStrategy struct {
 }
 
-type ParentVaultWithdrawFailed struct {
-	EpochNonce *big.Int
-	Amount     *big.Int
+type ParentVaultZeroPricePerShare struct {
+}
+
+type ParentVaultZeroTvlWithOutstandingShares struct {
 }
 
 type PolicyEngineUndefined struct {
@@ -444,6 +555,13 @@ type SafeERC20FailedOperation struct {
 	Token common.Address
 }
 
+type UUPSUnauthorizedCallContext struct {
+}
+
+type UUPSUnsupportedProxiableUUID struct {
+	Slot [32]byte
+}
+
 // Events
 // The <Event>Topics struct should be used as a filter (for log triggers).
 // Note: It is only possible to filter on indexed fields.
@@ -453,6 +571,24 @@ type SafeERC20FailedOperation struct {
 //
 // The <Event>Decoded struct will be the result of calling decode (Adapt) on the log trigger result.
 // Indexed dynamic type fields will be of type common.Hash.
+
+type ActiveProtocolAdapterClearedTopics struct {
+	Adapter common.Address
+}
+
+type ActiveProtocolAdapterClearedDecoded struct {
+	Adapter common.Address
+}
+
+type ActiveProtocolAdapterSetTopics struct {
+	ProtocolId [32]byte
+	Adapter    common.Address
+}
+
+type ActiveProtocolAdapterSetDecoded struct {
+	ProtocolId [32]byte
+	Adapter    common.Address
+}
 
 type CCIPBridgedTopics struct {
 	CcipMessageId [32]byte
@@ -547,16 +683,16 @@ type DepositClaimedDecoded struct {
 	ShareMintAmount *big.Int
 }
 
-type DepositFeeCollectedTopics struct {
+type DepositForceCancelledTopics struct {
 	EpochNonce *big.Int
 	Depositor  common.Address
-	Fee        *big.Int
+	Amount     *big.Int
 }
 
-type DepositFeeCollectedDecoded struct {
+type DepositForceCancelledDecoded struct {
 	EpochNonce *big.Int
 	Depositor  common.Address
-	Fee        *big.Int
+	Amount     *big.Int
 }
 
 type DepositSubmittedTopics struct {
@@ -571,16 +707,6 @@ type DepositSubmittedDecoded struct {
 	Amount     *big.Int
 }
 
-type DepositToStrategyFailureTopics struct {
-	EpochNonce *big.Int
-	Amount     *big.Int
-}
-
-type DepositToStrategyFailureDecoded struct {
-	EpochNonce *big.Int
-	Amount     *big.Int
-}
-
 type DepositToStrategySuccessTopics struct {
 	EpochNonce *big.Int
 	Amount     *big.Int
@@ -591,14 +717,32 @@ type DepositToStrategySuccessDecoded struct {
 	Amount     *big.Int
 }
 
+type DonationTopics struct {
+	Donor  common.Address
+	Amount *big.Int
+}
+
+type DonationDecoded struct {
+	Donor  common.Address
+	Amount *big.Int
+}
+
 type EmergencyDrainExecutedTopics struct {
-	Drainer common.Address
-	Amount  *big.Int
+	EmergencyReceiver common.Address
+	Amount            *big.Int
 }
 
 type EmergencyDrainExecutedDecoded struct {
-	Drainer common.Address
-	Amount  *big.Int
+	EmergencyReceiver common.Address
+	Amount            *big.Int
+}
+
+type EmergencyReceiverSetTopics struct {
+	EmergencyReceiver common.Address
+}
+
+type EmergencyReceiverSetDecoded struct {
+	EmergencyReceiver common.Address
 }
 
 type EpochClaimableTopics struct {
@@ -628,7 +772,9 @@ type EpochOpenDecoded struct {
 }
 
 type EpochWithdrawAmountShortTopics struct {
-	EpochNonce *big.Int
+	EpochNonce     *big.Int
+	ExpectedAmount *big.Int
+	ActualAmount   *big.Int
 }
 
 type EpochWithdrawAmountShortDecoded struct {
@@ -647,6 +793,13 @@ type InitialActiveProtocolAdapterSetDecoded struct {
 	Adapter    common.Address
 }
 
+type InitializedTopics struct {
+}
+
+type InitializedDecoded struct {
+	Version uint64
+}
+
 type LinkWithdrawnTopics struct {
 	Operator common.Address
 	Amount   *big.Int
@@ -658,11 +811,13 @@ type LinkWithdrawnDecoded struct {
 }
 
 type ManagementFeeCollectedTopics struct {
-	FeeShares *big.Int
+	RebalanceNonce *big.Int
+	FeeShares      *big.Int
 }
 
 type ManagementFeeCollectedDecoded struct {
-	FeeShares *big.Int
+	RebalanceNonce *big.Int
+	FeeShares      *big.Int
 }
 
 type OwnershipTransferredTopics struct {
@@ -680,6 +835,18 @@ type PausedTopics struct {
 
 type PausedDecoded struct {
 	Account common.Address
+}
+
+type PerformanceFeeCollectedTopics struct {
+	EpochNonce              *big.Int
+	FeeShares               *big.Int
+	SettlementPricePerShare *big.Int
+}
+
+type PerformanceFeeCollectedDecoded struct {
+	EpochNonce              *big.Int
+	FeeShares               *big.Int
+	SettlementPricePerShare *big.Int
 }
 
 type PolicyEngineAttachedTopics struct {
@@ -700,11 +867,15 @@ type PolicyEngineDetachFailedDecoded struct {
 }
 
 type RebalanceCompletedTopics struct {
-	RebalanceNonce *big.Int
+	RebalanceNonce   *big.Int
+	NewProtocolId    [32]byte
+	NewChainSelector uint64
 }
 
 type RebalanceCompletedDecoded struct {
-	RebalanceNonce *big.Int
+	RebalanceNonce   *big.Int
+	NewProtocolId    [32]byte
+	NewChainSelector uint64
 }
 
 type RebalanceDepositFailureTopics struct {
@@ -757,14 +928,6 @@ type RebalanceInitiatedDecoded struct {
 	ProtocolId     [32]byte
 }
 
-type RebalanceWithdrawFailureTopics struct {
-	RebalanceNonce *big.Int
-}
-
-type RebalanceWithdrawFailureDecoded struct {
-	RebalanceNonce *big.Int
-}
-
 type RebalanceWithdrawSuccessTopics struct {
 	RebalanceNonce *big.Int
 	Amount         *big.Int
@@ -811,6 +974,16 @@ type RoleRevokedDecoded struct {
 	Sender  common.Address
 }
 
+type SupportedProtocolSetTopics struct {
+	ProtocolId  [32]byte
+	IsSupported bool
+}
+
+type SupportedProtocolSetDecoded struct {
+	ProtocolId  [32]byte
+	IsSupported bool
+}
+
 type TreasurySetTopics struct {
 	Treasury common.Address
 }
@@ -826,16 +999,24 @@ type UnpausedDecoded struct {
 	Account common.Address
 }
 
+type UpgradedTopics struct {
+	Implementation common.Address
+}
+
+type UpgradedDecoded struct {
+	Implementation common.Address
+}
+
 type WithdrawCancelledTopics struct {
-	EpochNonce *big.Int
-	Withdrawer common.Address
-	Amount     *big.Int
+	EpochNonce      *big.Int
+	Withdrawer      common.Address
+	ShareBurnAmount *big.Int
 }
 
 type WithdrawCancelledDecoded struct {
-	EpochNonce *big.Int
-	Withdrawer common.Address
-	Amount     *big.Int
+	EpochNonce      *big.Int
+	Withdrawer      common.Address
+	ShareBurnAmount *big.Int
 }
 
 type WithdrawClaimedTopics struct {
@@ -847,28 +1028,6 @@ type WithdrawClaimedTopics struct {
 type WithdrawClaimedDecoded struct {
 	EpochNonce *big.Int
 	Withdrawer common.Address
-	Amount     *big.Int
-}
-
-type WithdrawFeeCollectedTopics struct {
-	EpochNonce *big.Int
-	Withdrawer common.Address
-	Fee        *big.Int
-}
-
-type WithdrawFeeCollectedDecoded struct {
-	EpochNonce *big.Int
-	Withdrawer common.Address
-	Fee        *big.Int
-}
-
-type WithdrawFromStrategyFailureTopics struct {
-	EpochNonce *big.Int
-	Amount     *big.Int
-}
-
-type WithdrawFromStrategyFailureDecoded struct {
-	EpochNonce *big.Int
 	Amount     *big.Int
 }
 
@@ -906,6 +1065,8 @@ type ParentVault struct {
 type ParentVaultCodec interface {
 	EncodeDEFAULTADMINROLEMethodCall() ([]byte, error)
 	DecodeDEFAULTADMINROLEMethodOutput(data []byte) ([32]byte, error)
+	EncodeUPGRADEINTERFACEVERSIONMethodCall() ([]byte, error)
+	DecodeUPGRADEINTERFACEVERSIONMethodOutput(data []byte) (string, error)
 	EncodeAcceptDefaultAdminTransferMethodCall() ([]byte, error)
 	EncodeAttachPolicyEngineMethodCall(in AttachPolicyEngineInput) ([]byte, error)
 	EncodeBeginDefaultAdminTransferMethodCall(in BeginDefaultAdminTransferInput) ([]byte, error)
@@ -914,13 +1075,13 @@ type ParentVaultCodec interface {
 	EncodeCancelWithdrawMethodCall() ([]byte, error)
 	EncodeCcipReceiveMethodCall(in CcipReceiveInput) ([]byte, error)
 	EncodeChangeDefaultAdminDelayMethodCall(in ChangeDefaultAdminDelayInput) ([]byte, error)
+	EncodeClaimAssetMethodCall(in ClaimAssetInput) ([]byte, error)
+	DecodeClaimAssetMethodOutput(data []byte) (*big.Int, error)
 	EncodeClaimSharesMethodCall(in ClaimSharesInput) ([]byte, error)
 	DecodeClaimSharesMethodOutput(data []byte) (*big.Int, error)
-	EncodeClaimUsdcMethodCall(in ClaimUsdcInput) ([]byte, error)
-	DecodeClaimUsdcMethodOutput(data []byte) (*big.Int, error)
 	EncodeClearContextMethodCall() ([]byte, error)
 	EncodeCloseEpochMethodCall(in CloseEpochInput) ([]byte, error)
-	EncodeCompleteRebalanceMethodCall(in CompleteRebalanceInput) ([]byte, error)
+	EncodeCompleteRebalanceMethodCall() ([]byte, error)
 	EncodeDefaultAdminMethodCall() ([]byte, error)
 	DecodeDefaultAdminMethodOutput(data []byte) (common.Address, error)
 	EncodeDefaultAdminDelayMethodCall() ([]byte, error)
@@ -929,11 +1090,18 @@ type ParentVaultCodec interface {
 	DecodeDefaultAdminDelayIncreaseWaitMethodOutput(data []byte) (*big.Int, error)
 	EncodeDepositMethodCall(in DepositInput) ([]byte, error)
 	DecodeDepositMethodOutput(data []byte) (*big.Int, error)
+	EncodeDonateMethodCall(in DonateInput) ([]byte, error)
 	EncodeEmergencyDrainMethodCall(in EmergencyDrainInput) ([]byte, error)
+	EncodeExecuteRecoveryMethodCall() ([]byte, error)
+	EncodeForceCancelDepositMethodCall(in ForceCancelDepositInput) ([]byte, error)
 	EncodeGetActiveProtocolAdapterMethodCall() ([]byte, error)
 	DecodeGetActiveProtocolAdapterMethodOutput(data []byte) (common.Address, error)
 	EncodeGetAdapterRegistryMethodCall() ([]byte, error)
 	DecodeGetAdapterRegistryMethodOutput(data []byte) (common.Address, error)
+	EncodeGetAssetMethodCall() ([]byte, error)
+	DecodeGetAssetMethodOutput(data []byte) (common.Address, error)
+	EncodeGetAssetPrecisionMethodCall() ([]byte, error)
+	DecodeGetAssetPrecisionMethodOutput(data []byte) (*big.Int, error)
 	EncodeGetCCVsAndFinalityConfigMethodCall(in GetCCVsAndFinalityConfigInput) ([]byte, error)
 	DecodeGetCCVsAndFinalityConfigMethodOutput(data []byte) (GetCCVsAndFinalityConfigOutput, error)
 	EncodeGetCcipGasLimitMethodCall(in GetCcipGasLimitInput) ([]byte, error)
@@ -946,6 +1114,8 @@ type ParentVaultCodec interface {
 	DecodeGetDefaultCcipGasLimitMethodOutput(data []byte) (*big.Int, error)
 	EncodeGetDepositAmountMethodCall(in GetDepositAmountInput) ([]byte, error)
 	DecodeGetDepositAmountMethodOutput(data []byte) (*big.Int, error)
+	EncodeGetEmergencyReceiverMethodCall() ([]byte, error)
+	DecodeGetEmergencyReceiverMethodOutput(data []byte) (common.Address, error)
 	EncodeGetEpochMethodCall(in GetEpochInput) ([]byte, error)
 	DecodeGetEpochMethodOutput(data []byte) (TypesEpoch, error)
 	EncodeGetEpochNonceMethodCall() ([]byte, error)
@@ -954,22 +1124,30 @@ type ParentVaultCodec interface {
 	DecodeGetInitialActiveProtocolAdapterSetMethodOutput(data []byte) (bool, error)
 	EncodeGetLinkMethodCall() ([]byte, error)
 	DecodeGetLinkMethodOutput(data []byte) (common.Address, error)
-	EncodeGetNetAmountAndOperationFeeMethodCall(in GetNetAmountAndOperationFeeInput) ([]byte, error)
-	DecodeGetNetAmountAndOperationFeeMethodOutput(data []byte) (GetNetAmountAndOperationFeeOutput, error)
+	EncodeGetMinDepositAmountMethodCall() ([]byte, error)
+	DecodeGetMinDepositAmountMethodOutput(data []byte) (*big.Int, error)
 	EncodeGetPausedAtMethodCall() ([]byte, error)
 	DecodeGetPausedAtMethodOutput(data []byte) (*big.Int, error)
+	EncodeGetPerformanceFeeHighWaterMarkMethodCall() ([]byte, error)
+	DecodeGetPerformanceFeeHighWaterMarkMethodOutput(data []byte) (*big.Int, error)
 	EncodeGetPolicyEngineMethodCall() ([]byte, error)
 	DecodeGetPolicyEngineMethodOutput(data []byte) (common.Address, error)
 	EncodeGetRebalanceMethodCall() ([]byte, error)
 	DecodeGetRebalanceMethodOutput(data []byte) (TypesRebalance, error)
-	EncodeGetRebalanceDepositRecoveryMethodCall(in GetRebalanceDepositRecoveryInput) ([]byte, error)
-	DecodeGetRebalanceDepositRecoveryMethodOutput(data []byte) (TypesAmountRecovery, error)
+	EncodeGetRebalanceDepositRecoveryMethodCall() ([]byte, error)
+	DecodeGetRebalanceDepositRecoveryMethodOutput(data []byte) (TypesRebalanceDepositRecovery, error)
+	EncodeGetRecoveryModeMethodCall() ([]byte, error)
+	DecodeGetRecoveryModeMethodOutput(data []byte) (uint8, error)
 	EncodeGetRoleAdminMethodCall(in GetRoleAdminInput) ([]byte, error)
 	DecodeGetRoleAdminMethodOutput(data []byte) ([32]byte, error)
 	EncodeGetRouterMethodCall() ([]byte, error)
 	DecodeGetRouterMethodOutput(data []byte) (common.Address, error)
 	EncodeGetShareMethodCall() ([]byte, error)
 	DecodeGetShareMethodOutput(data []byte) (common.Address, error)
+	EncodeGetSharePrecisionMethodCall() ([]byte, error)
+	DecodeGetSharePrecisionMethodOutput(data []byte) (*big.Int, error)
+	EncodeGetSupportedProtocolMethodCall(in GetSupportedProtocolInput) ([]byte, error)
+	DecodeGetSupportedProtocolMethodOutput(data []byte) (bool, error)
 	EncodeGetTVLMethodCall() ([]byte, error)
 	DecodeGetTVLMethodOutput(data []byte) (*big.Int, error)
 	EncodeGetThisChainSelectorMethodCall() ([]byte, error)
@@ -978,13 +1156,12 @@ type ParentVaultCodec interface {
 	DecodeGetTotalSharesMethodOutput(data []byte) (*big.Int, error)
 	EncodeGetTreasuryMethodCall() ([]byte, error)
 	DecodeGetTreasuryMethodOutput(data []byte) (common.Address, error)
-	EncodeGetUsdcMethodCall() ([]byte, error)
-	DecodeGetUsdcMethodOutput(data []byte) (common.Address, error)
 	EncodeGetWithdrawShareBurnAmountMethodCall(in GetWithdrawShareBurnAmountInput) ([]byte, error)
 	DecodeGetWithdrawShareBurnAmountMethodOutput(data []byte) (*big.Int, error)
 	EncodeGrantRoleMethodCall(in GrantRoleInput) ([]byte, error)
 	EncodeHasRoleMethodCall(in HasRoleInput) ([]byte, error)
 	DecodeHasRoleMethodOutput(data []byte) (bool, error)
+	EncodeInitializeMethodCall(in InitializeInput) ([]byte, error)
 	EncodeInitiateRebalanceMethodCall(in InitiateRebalanceInput) ([]byte, error)
 	EncodeOwnerMethodCall() ([]byte, error)
 	DecodeOwnerMethodOutput(data []byte) (common.Address, error)
@@ -995,7 +1172,8 @@ type ParentVaultCodec interface {
 	DecodePendingDefaultAdminMethodOutput(data []byte) (PendingDefaultAdminOutput, error)
 	EncodePendingDefaultAdminDelayMethodCall() ([]byte, error)
 	DecodePendingDefaultAdminDelayMethodOutput(data []byte) (PendingDefaultAdminDelayOutput, error)
-	EncodeRecoverFailedRebalanceDepositMethodCall(in RecoverFailedRebalanceDepositInput) ([]byte, error)
+	EncodeProxiableUUIDMethodCall() ([]byte, error)
+	DecodeProxiableUUIDMethodOutput(data []byte) ([32]byte, error)
 	EncodeRenounceOwnershipMethodCall() ([]byte, error)
 	EncodeRenounceRoleMethodCall(in RenounceRoleInput) ([]byte, error)
 	EncodeRevokeRoleMethodCall(in RevokeRoleInput) ([]byte, error)
@@ -1004,23 +1182,33 @@ type ParentVaultCodec interface {
 	EncodeSetContextMethodCall(in SetContextInput) ([]byte, error)
 	EncodeSetCrosschainVaultsMethodCall(in SetCrosschainVaultsInput) ([]byte, error)
 	EncodeSetDefaultCcipGasLimitMethodCall(in SetDefaultCcipGasLimitInput) ([]byte, error)
+	EncodeSetEmergencyReceiverMethodCall(in SetEmergencyReceiverInput) ([]byte, error)
 	EncodeSetInitialActiveProtocolAdapterMethodCall(in SetInitialActiveProtocolAdapterInput) ([]byte, error)
+	EncodeSetSupportedProtocolMethodCall(in SetSupportedProtocolInput) ([]byte, error)
 	EncodeSetTreasuryMethodCall(in SetTreasuryInput) ([]byte, error)
 	EncodeSupportsInterfaceMethodCall(in SupportsInterfaceInput) ([]byte, error)
 	DecodeSupportsInterfaceMethodOutput(data []byte) (bool, error)
 	EncodeTransferOwnershipMethodCall(in TransferOwnershipInput) ([]byte, error)
 	EncodeTryDepositToAdapterMethodCall(in TryDepositToAdapterInput) ([]byte, error)
 	EncodeUnpauseMethodCall() ([]byte, error)
+	EncodeUpgradeToAndCallMethodCall(in UpgradeToAndCallInput) ([]byte, error)
 	EncodeWithdrawMethodCall(in WithdrawInput) ([]byte, error)
 	DecodeWithdrawMethodOutput(data []byte) (*big.Int, error)
 	EncodeWithdrawLinkMethodCall(in WithdrawLinkInput) ([]byte, error)
 	EncodeBaseVaultConstructorParamsStruct(in BaseVaultConstructorParams) ([]byte, error)
+	EncodeBaseVaultInitParamsStruct(in BaseVaultInitParams) ([]byte, error)
 	EncodeClientAny2EVMMessageStruct(in ClientAny2EVMMessage) ([]byte, error)
 	EncodeClientEVMTokenAmountStruct(in ClientEVMTokenAmount) ([]byte, error)
-	EncodeTypesAmountRecoveryStruct(in TypesAmountRecovery) ([]byte, error)
 	EncodeTypesEpochStruct(in TypesEpoch) ([]byte, error)
 	EncodeTypesRebalanceStruct(in TypesRebalance) ([]byte, error)
+	EncodeTypesRebalanceDepositRecoveryStruct(in TypesRebalanceDepositRecovery) ([]byte, error)
 	EncodeTypesStrategyStruct(in TypesStrategy) ([]byte, error)
+	ActiveProtocolAdapterClearedLogHash() []byte
+	EncodeActiveProtocolAdapterClearedTopics(evt abi.Event, values []ActiveProtocolAdapterClearedTopics) ([]*evm.TopicValues, error)
+	DecodeActiveProtocolAdapterCleared(log *evm.Log) (*ActiveProtocolAdapterClearedDecoded, error)
+	ActiveProtocolAdapterSetLogHash() []byte
+	EncodeActiveProtocolAdapterSetTopics(evt abi.Event, values []ActiveProtocolAdapterSetTopics) ([]*evm.TopicValues, error)
+	DecodeActiveProtocolAdapterSet(log *evm.Log) (*ActiveProtocolAdapterSetDecoded, error)
 	CCIPBridgedLogHash() []byte
 	EncodeCCIPBridgedTopics(evt abi.Event, values []CCIPBridgedTopics) ([]*evm.TopicValues, error)
 	DecodeCCIPBridged(log *evm.Log) (*CCIPBridgedDecoded, error)
@@ -1051,21 +1239,24 @@ type ParentVaultCodec interface {
 	DepositClaimedLogHash() []byte
 	EncodeDepositClaimedTopics(evt abi.Event, values []DepositClaimedTopics) ([]*evm.TopicValues, error)
 	DecodeDepositClaimed(log *evm.Log) (*DepositClaimedDecoded, error)
-	DepositFeeCollectedLogHash() []byte
-	EncodeDepositFeeCollectedTopics(evt abi.Event, values []DepositFeeCollectedTopics) ([]*evm.TopicValues, error)
-	DecodeDepositFeeCollected(log *evm.Log) (*DepositFeeCollectedDecoded, error)
+	DepositForceCancelledLogHash() []byte
+	EncodeDepositForceCancelledTopics(evt abi.Event, values []DepositForceCancelledTopics) ([]*evm.TopicValues, error)
+	DecodeDepositForceCancelled(log *evm.Log) (*DepositForceCancelledDecoded, error)
 	DepositSubmittedLogHash() []byte
 	EncodeDepositSubmittedTopics(evt abi.Event, values []DepositSubmittedTopics) ([]*evm.TopicValues, error)
 	DecodeDepositSubmitted(log *evm.Log) (*DepositSubmittedDecoded, error)
-	DepositToStrategyFailureLogHash() []byte
-	EncodeDepositToStrategyFailureTopics(evt abi.Event, values []DepositToStrategyFailureTopics) ([]*evm.TopicValues, error)
-	DecodeDepositToStrategyFailure(log *evm.Log) (*DepositToStrategyFailureDecoded, error)
 	DepositToStrategySuccessLogHash() []byte
 	EncodeDepositToStrategySuccessTopics(evt abi.Event, values []DepositToStrategySuccessTopics) ([]*evm.TopicValues, error)
 	DecodeDepositToStrategySuccess(log *evm.Log) (*DepositToStrategySuccessDecoded, error)
+	DonationLogHash() []byte
+	EncodeDonationTopics(evt abi.Event, values []DonationTopics) ([]*evm.TopicValues, error)
+	DecodeDonation(log *evm.Log) (*DonationDecoded, error)
 	EmergencyDrainExecutedLogHash() []byte
 	EncodeEmergencyDrainExecutedTopics(evt abi.Event, values []EmergencyDrainExecutedTopics) ([]*evm.TopicValues, error)
 	DecodeEmergencyDrainExecuted(log *evm.Log) (*EmergencyDrainExecutedDecoded, error)
+	EmergencyReceiverSetLogHash() []byte
+	EncodeEmergencyReceiverSetTopics(evt abi.Event, values []EmergencyReceiverSetTopics) ([]*evm.TopicValues, error)
+	DecodeEmergencyReceiverSet(log *evm.Log) (*EmergencyReceiverSetDecoded, error)
 	EpochClaimableLogHash() []byte
 	EncodeEpochClaimableTopics(evt abi.Event, values []EpochClaimableTopics) ([]*evm.TopicValues, error)
 	DecodeEpochClaimable(log *evm.Log) (*EpochClaimableDecoded, error)
@@ -1081,6 +1272,9 @@ type ParentVaultCodec interface {
 	InitialActiveProtocolAdapterSetLogHash() []byte
 	EncodeInitialActiveProtocolAdapterSetTopics(evt abi.Event, values []InitialActiveProtocolAdapterSetTopics) ([]*evm.TopicValues, error)
 	DecodeInitialActiveProtocolAdapterSet(log *evm.Log) (*InitialActiveProtocolAdapterSetDecoded, error)
+	InitializedLogHash() []byte
+	EncodeInitializedTopics(evt abi.Event, values []InitializedTopics) ([]*evm.TopicValues, error)
+	DecodeInitialized(log *evm.Log) (*InitializedDecoded, error)
 	LinkWithdrawnLogHash() []byte
 	EncodeLinkWithdrawnTopics(evt abi.Event, values []LinkWithdrawnTopics) ([]*evm.TopicValues, error)
 	DecodeLinkWithdrawn(log *evm.Log) (*LinkWithdrawnDecoded, error)
@@ -1093,6 +1287,9 @@ type ParentVaultCodec interface {
 	PausedLogHash() []byte
 	EncodePausedTopics(evt abi.Event, values []PausedTopics) ([]*evm.TopicValues, error)
 	DecodePaused(log *evm.Log) (*PausedDecoded, error)
+	PerformanceFeeCollectedLogHash() []byte
+	EncodePerformanceFeeCollectedTopics(evt abi.Event, values []PerformanceFeeCollectedTopics) ([]*evm.TopicValues, error)
+	DecodePerformanceFeeCollected(log *evm.Log) (*PerformanceFeeCollectedDecoded, error)
 	PolicyEngineAttachedLogHash() []byte
 	EncodePolicyEngineAttachedTopics(evt abi.Event, values []PolicyEngineAttachedTopics) ([]*evm.TopicValues, error)
 	DecodePolicyEngineAttached(log *evm.Log) (*PolicyEngineAttachedDecoded, error)
@@ -1117,9 +1314,6 @@ type ParentVaultCodec interface {
 	RebalanceInitiatedLogHash() []byte
 	EncodeRebalanceInitiatedTopics(evt abi.Event, values []RebalanceInitiatedTopics) ([]*evm.TopicValues, error)
 	DecodeRebalanceInitiated(log *evm.Log) (*RebalanceInitiatedDecoded, error)
-	RebalanceWithdrawFailureLogHash() []byte
-	EncodeRebalanceWithdrawFailureTopics(evt abi.Event, values []RebalanceWithdrawFailureTopics) ([]*evm.TopicValues, error)
-	DecodeRebalanceWithdrawFailure(log *evm.Log) (*RebalanceWithdrawFailureDecoded, error)
 	RebalanceWithdrawSuccessLogHash() []byte
 	EncodeRebalanceWithdrawSuccessTopics(evt abi.Event, values []RebalanceWithdrawSuccessTopics) ([]*evm.TopicValues, error)
 	DecodeRebalanceWithdrawSuccess(log *evm.Log) (*RebalanceWithdrawSuccessDecoded, error)
@@ -1132,24 +1326,24 @@ type ParentVaultCodec interface {
 	RoleRevokedLogHash() []byte
 	EncodeRoleRevokedTopics(evt abi.Event, values []RoleRevokedTopics) ([]*evm.TopicValues, error)
 	DecodeRoleRevoked(log *evm.Log) (*RoleRevokedDecoded, error)
+	SupportedProtocolSetLogHash() []byte
+	EncodeSupportedProtocolSetTopics(evt abi.Event, values []SupportedProtocolSetTopics) ([]*evm.TopicValues, error)
+	DecodeSupportedProtocolSet(log *evm.Log) (*SupportedProtocolSetDecoded, error)
 	TreasurySetLogHash() []byte
 	EncodeTreasurySetTopics(evt abi.Event, values []TreasurySetTopics) ([]*evm.TopicValues, error)
 	DecodeTreasurySet(log *evm.Log) (*TreasurySetDecoded, error)
 	UnpausedLogHash() []byte
 	EncodeUnpausedTopics(evt abi.Event, values []UnpausedTopics) ([]*evm.TopicValues, error)
 	DecodeUnpaused(log *evm.Log) (*UnpausedDecoded, error)
+	UpgradedLogHash() []byte
+	EncodeUpgradedTopics(evt abi.Event, values []UpgradedTopics) ([]*evm.TopicValues, error)
+	DecodeUpgraded(log *evm.Log) (*UpgradedDecoded, error)
 	WithdrawCancelledLogHash() []byte
 	EncodeWithdrawCancelledTopics(evt abi.Event, values []WithdrawCancelledTopics) ([]*evm.TopicValues, error)
 	DecodeWithdrawCancelled(log *evm.Log) (*WithdrawCancelledDecoded, error)
 	WithdrawClaimedLogHash() []byte
 	EncodeWithdrawClaimedTopics(evt abi.Event, values []WithdrawClaimedTopics) ([]*evm.TopicValues, error)
 	DecodeWithdrawClaimed(log *evm.Log) (*WithdrawClaimedDecoded, error)
-	WithdrawFeeCollectedLogHash() []byte
-	EncodeWithdrawFeeCollectedTopics(evt abi.Event, values []WithdrawFeeCollectedTopics) ([]*evm.TopicValues, error)
-	DecodeWithdrawFeeCollected(log *evm.Log) (*WithdrawFeeCollectedDecoded, error)
-	WithdrawFromStrategyFailureLogHash() []byte
-	EncodeWithdrawFromStrategyFailureTopics(evt abi.Event, values []WithdrawFromStrategyFailureTopics) ([]*evm.TopicValues, error)
-	DecodeWithdrawFromStrategyFailure(log *evm.Log) (*WithdrawFromStrategyFailureDecoded, error)
 	WithdrawFromStrategySuccessLogHash() []byte
 	EncodeWithdrawFromStrategySuccessTopics(evt abi.Event, values []WithdrawFromStrategySuccessTopics) ([]*evm.TopicValues, error)
 	DecodeWithdrawFromStrategySuccess(log *evm.Log) (*WithdrawFromStrategySuccessDecoded, error)
@@ -1214,6 +1408,28 @@ func (c *Codec) DecodeDEFAULTADMINROLEMethodOutput(data []byte) ([32]byte, error
 	return result, nil
 }
 
+func (c *Codec) EncodeUPGRADEINTERFACEVERSIONMethodCall() ([]byte, error) {
+	return c.abi.Pack("UPGRADE_INTERFACE_VERSION")
+}
+
+func (c *Codec) DecodeUPGRADEINTERFACEVERSIONMethodOutput(data []byte) (string, error) {
+	vals, err := c.abi.Methods["UPGRADE_INTERFACE_VERSION"].Outputs.Unpack(data)
+	if err != nil {
+		return *new(string), err
+	}
+	jsonData, err := json.Marshal(vals[0])
+	if err != nil {
+		return *new(string), fmt.Errorf("failed to marshal ABI result: %w", err)
+	}
+
+	var result string
+	if err := json.Unmarshal(jsonData, &result); err != nil {
+		return *new(string), fmt.Errorf("failed to unmarshal to string: %w", err)
+	}
+
+	return result, nil
+}
+
 func (c *Codec) EncodeAcceptDefaultAdminTransferMethodCall() ([]byte, error) {
 	return c.abi.Pack("acceptDefaultAdminTransfer")
 }
@@ -1246,6 +1462,28 @@ func (c *Codec) EncodeChangeDefaultAdminDelayMethodCall(in ChangeDefaultAdminDel
 	return c.abi.Pack("changeDefaultAdminDelay", in.NewDelay)
 }
 
+func (c *Codec) EncodeClaimAssetMethodCall(in ClaimAssetInput) ([]byte, error) {
+	return c.abi.Pack("claimAsset", in.EpochNonce)
+}
+
+func (c *Codec) DecodeClaimAssetMethodOutput(data []byte) (*big.Int, error) {
+	vals, err := c.abi.Methods["claimAsset"].Outputs.Unpack(data)
+	if err != nil {
+		return *new(*big.Int), err
+	}
+	jsonData, err := json.Marshal(vals[0])
+	if err != nil {
+		return *new(*big.Int), fmt.Errorf("failed to marshal ABI result: %w", err)
+	}
+
+	var result *big.Int
+	if err := json.Unmarshal(jsonData, &result); err != nil {
+		return *new(*big.Int), fmt.Errorf("failed to unmarshal to *big.Int: %w", err)
+	}
+
+	return result, nil
+}
+
 func (c *Codec) EncodeClaimSharesMethodCall(in ClaimSharesInput) ([]byte, error) {
 	return c.abi.Pack("claimShares", in.EpochNonce)
 }
@@ -1268,38 +1506,16 @@ func (c *Codec) DecodeClaimSharesMethodOutput(data []byte) (*big.Int, error) {
 	return result, nil
 }
 
-func (c *Codec) EncodeClaimUsdcMethodCall(in ClaimUsdcInput) ([]byte, error) {
-	return c.abi.Pack("claimUsdc", in.EpochNonce)
-}
-
-func (c *Codec) DecodeClaimUsdcMethodOutput(data []byte) (*big.Int, error) {
-	vals, err := c.abi.Methods["claimUsdc"].Outputs.Unpack(data)
-	if err != nil {
-		return *new(*big.Int), err
-	}
-	jsonData, err := json.Marshal(vals[0])
-	if err != nil {
-		return *new(*big.Int), fmt.Errorf("failed to marshal ABI result: %w", err)
-	}
-
-	var result *big.Int
-	if err := json.Unmarshal(jsonData, &result); err != nil {
-		return *new(*big.Int), fmt.Errorf("failed to unmarshal to *big.Int: %w", err)
-	}
-
-	return result, nil
-}
-
 func (c *Codec) EncodeClearContextMethodCall() ([]byte, error) {
 	return c.abi.Pack("clearContext")
 }
 
 func (c *Codec) EncodeCloseEpochMethodCall(in CloseEpochInput) ([]byte, error) {
-	return c.abi.Pack("closeEpoch", in.EpochNonce, in.Tvl)
+	return c.abi.Pack("closeEpoch", in.Tvl)
 }
 
-func (c *Codec) EncodeCompleteRebalanceMethodCall(in CompleteRebalanceInput) ([]byte, error) {
-	return c.abi.Pack("completeRebalance", in.RebalanceNonce)
+func (c *Codec) EncodeCompleteRebalanceMethodCall() ([]byte, error) {
+	return c.abi.Pack("completeRebalance")
 }
 
 func (c *Codec) EncodeDefaultAdminMethodCall() ([]byte, error) {
@@ -1390,8 +1606,20 @@ func (c *Codec) DecodeDepositMethodOutput(data []byte) (*big.Int, error) {
 	return result, nil
 }
 
+func (c *Codec) EncodeDonateMethodCall(in DonateInput) ([]byte, error) {
+	return c.abi.Pack("donate", in.Amount)
+}
+
 func (c *Codec) EncodeEmergencyDrainMethodCall(in EmergencyDrainInput) ([]byte, error) {
 	return c.abi.Pack("emergencyDrain", in.RevertOnFailure)
+}
+
+func (c *Codec) EncodeExecuteRecoveryMethodCall() ([]byte, error) {
+	return c.abi.Pack("executeRecovery")
+}
+
+func (c *Codec) EncodeForceCancelDepositMethodCall(in ForceCancelDepositInput) ([]byte, error) {
+	return c.abi.Pack("forceCancelDeposit", in.User)
 }
 
 func (c *Codec) EncodeGetActiveProtocolAdapterMethodCall() ([]byte, error) {
@@ -1433,6 +1661,50 @@ func (c *Codec) DecodeGetAdapterRegistryMethodOutput(data []byte) (common.Addres
 	var result common.Address
 	if err := json.Unmarshal(jsonData, &result); err != nil {
 		return *new(common.Address), fmt.Errorf("failed to unmarshal to common.Address: %w", err)
+	}
+
+	return result, nil
+}
+
+func (c *Codec) EncodeGetAssetMethodCall() ([]byte, error) {
+	return c.abi.Pack("getAsset")
+}
+
+func (c *Codec) DecodeGetAssetMethodOutput(data []byte) (common.Address, error) {
+	vals, err := c.abi.Methods["getAsset"].Outputs.Unpack(data)
+	if err != nil {
+		return *new(common.Address), err
+	}
+	jsonData, err := json.Marshal(vals[0])
+	if err != nil {
+		return *new(common.Address), fmt.Errorf("failed to marshal ABI result: %w", err)
+	}
+
+	var result common.Address
+	if err := json.Unmarshal(jsonData, &result); err != nil {
+		return *new(common.Address), fmt.Errorf("failed to unmarshal to common.Address: %w", err)
+	}
+
+	return result, nil
+}
+
+func (c *Codec) EncodeGetAssetPrecisionMethodCall() ([]byte, error) {
+	return c.abi.Pack("getAssetPrecision")
+}
+
+func (c *Codec) DecodeGetAssetPrecisionMethodOutput(data []byte) (*big.Int, error) {
+	vals, err := c.abi.Methods["getAssetPrecision"].Outputs.Unpack(data)
+	if err != nil {
+		return *new(*big.Int), err
+	}
+	jsonData, err := json.Marshal(vals[0])
+	if err != nil {
+		return *new(*big.Int), fmt.Errorf("failed to marshal ABI result: %w", err)
+	}
+
+	var result *big.Int
+	if err := json.Unmarshal(jsonData, &result); err != nil {
+		return *new(*big.Int), fmt.Errorf("failed to unmarshal to *big.Int: %w", err)
 	}
 
 	return result, nil
@@ -1605,6 +1877,28 @@ func (c *Codec) DecodeGetDepositAmountMethodOutput(data []byte) (*big.Int, error
 	return result, nil
 }
 
+func (c *Codec) EncodeGetEmergencyReceiverMethodCall() ([]byte, error) {
+	return c.abi.Pack("getEmergencyReceiver")
+}
+
+func (c *Codec) DecodeGetEmergencyReceiverMethodOutput(data []byte) (common.Address, error) {
+	vals, err := c.abi.Methods["getEmergencyReceiver"].Outputs.Unpack(data)
+	if err != nil {
+		return *new(common.Address), err
+	}
+	jsonData, err := json.Marshal(vals[0])
+	if err != nil {
+		return *new(common.Address), fmt.Errorf("failed to marshal ABI result: %w", err)
+	}
+
+	var result common.Address
+	if err := json.Unmarshal(jsonData, &result); err != nil {
+		return *new(common.Address), fmt.Errorf("failed to unmarshal to common.Address: %w", err)
+	}
+
+	return result, nil
+}
+
 func (c *Codec) EncodeGetEpochMethodCall(in GetEpochInput) ([]byte, error) {
 	return c.abi.Pack("getEpoch", in.EpochNonce)
 }
@@ -1693,41 +1987,26 @@ func (c *Codec) DecodeGetLinkMethodOutput(data []byte) (common.Address, error) {
 	return result, nil
 }
 
-func (c *Codec) EncodeGetNetAmountAndOperationFeeMethodCall(in GetNetAmountAndOperationFeeInput) ([]byte, error) {
-	return c.abi.Pack("getNetAmountAndOperationFee", in.GrossAmount)
+func (c *Codec) EncodeGetMinDepositAmountMethodCall() ([]byte, error) {
+	return c.abi.Pack("getMinDepositAmount")
 }
 
-func (c *Codec) DecodeGetNetAmountAndOperationFeeMethodOutput(data []byte) (GetNetAmountAndOperationFeeOutput, error) {
-	vals, err := c.abi.Methods["getNetAmountAndOperationFee"].Outputs.Unpack(data)
+func (c *Codec) DecodeGetMinDepositAmountMethodOutput(data []byte) (*big.Int, error) {
+	vals, err := c.abi.Methods["getMinDepositAmount"].Outputs.Unpack(data)
 	if err != nil {
-		return GetNetAmountAndOperationFeeOutput{}, err
+		return *new(*big.Int), err
 	}
-	if len(vals) != 2 {
-		return GetNetAmountAndOperationFeeOutput{}, fmt.Errorf("expected 2 values, got %d", len(vals))
-	}
-	jsonData0, err := json.Marshal(vals[0])
+	jsonData, err := json.Marshal(vals[0])
 	if err != nil {
-		return GetNetAmountAndOperationFeeOutput{}, fmt.Errorf("failed to marshal ABI result 0: %w", err)
+		return *new(*big.Int), fmt.Errorf("failed to marshal ABI result: %w", err)
 	}
 
-	var result0 *big.Int
-	if err := json.Unmarshal(jsonData0, &result0); err != nil {
-		return GetNetAmountAndOperationFeeOutput{}, fmt.Errorf("failed to unmarshal to *big.Int: %w", err)
-	}
-	jsonData1, err := json.Marshal(vals[1])
-	if err != nil {
-		return GetNetAmountAndOperationFeeOutput{}, fmt.Errorf("failed to marshal ABI result 1: %w", err)
+	var result *big.Int
+	if err := json.Unmarshal(jsonData, &result); err != nil {
+		return *new(*big.Int), fmt.Errorf("failed to unmarshal to *big.Int: %w", err)
 	}
 
-	var result1 *big.Int
-	if err := json.Unmarshal(jsonData1, &result1); err != nil {
-		return GetNetAmountAndOperationFeeOutput{}, fmt.Errorf("failed to unmarshal to *big.Int: %w", err)
-	}
-
-	return GetNetAmountAndOperationFeeOutput{
-		NetAmount: result0,
-		FeeAmount: result1,
-	}, nil
+	return result, nil
 }
 
 func (c *Codec) EncodeGetPausedAtMethodCall() ([]byte, error) {
@@ -1736,6 +2015,28 @@ func (c *Codec) EncodeGetPausedAtMethodCall() ([]byte, error) {
 
 func (c *Codec) DecodeGetPausedAtMethodOutput(data []byte) (*big.Int, error) {
 	vals, err := c.abi.Methods["getPausedAt"].Outputs.Unpack(data)
+	if err != nil {
+		return *new(*big.Int), err
+	}
+	jsonData, err := json.Marshal(vals[0])
+	if err != nil {
+		return *new(*big.Int), fmt.Errorf("failed to marshal ABI result: %w", err)
+	}
+
+	var result *big.Int
+	if err := json.Unmarshal(jsonData, &result); err != nil {
+		return *new(*big.Int), fmt.Errorf("failed to unmarshal to *big.Int: %w", err)
+	}
+
+	return result, nil
+}
+
+func (c *Codec) EncodeGetPerformanceFeeHighWaterMarkMethodCall() ([]byte, error) {
+	return c.abi.Pack("getPerformanceFeeHighWaterMark")
+}
+
+func (c *Codec) DecodeGetPerformanceFeeHighWaterMarkMethodOutput(data []byte) (*big.Int, error) {
+	vals, err := c.abi.Methods["getPerformanceFeeHighWaterMark"].Outputs.Unpack(data)
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -1796,23 +2097,45 @@ func (c *Codec) DecodeGetRebalanceMethodOutput(data []byte) (TypesRebalance, err
 	return result, nil
 }
 
-func (c *Codec) EncodeGetRebalanceDepositRecoveryMethodCall(in GetRebalanceDepositRecoveryInput) ([]byte, error) {
-	return c.abi.Pack("getRebalanceDepositRecovery", in.RebalanceNonce)
+func (c *Codec) EncodeGetRebalanceDepositRecoveryMethodCall() ([]byte, error) {
+	return c.abi.Pack("getRebalanceDepositRecovery")
 }
 
-func (c *Codec) DecodeGetRebalanceDepositRecoveryMethodOutput(data []byte) (TypesAmountRecovery, error) {
+func (c *Codec) DecodeGetRebalanceDepositRecoveryMethodOutput(data []byte) (TypesRebalanceDepositRecovery, error) {
 	vals, err := c.abi.Methods["getRebalanceDepositRecovery"].Outputs.Unpack(data)
 	if err != nil {
-		return *new(TypesAmountRecovery), err
+		return *new(TypesRebalanceDepositRecovery), err
 	}
 	jsonData, err := json.Marshal(vals[0])
 	if err != nil {
-		return *new(TypesAmountRecovery), fmt.Errorf("failed to marshal ABI result: %w", err)
+		return *new(TypesRebalanceDepositRecovery), fmt.Errorf("failed to marshal ABI result: %w", err)
 	}
 
-	var result TypesAmountRecovery
+	var result TypesRebalanceDepositRecovery
 	if err := json.Unmarshal(jsonData, &result); err != nil {
-		return *new(TypesAmountRecovery), fmt.Errorf("failed to unmarshal to TypesAmountRecovery: %w", err)
+		return *new(TypesRebalanceDepositRecovery), fmt.Errorf("failed to unmarshal to TypesRebalanceDepositRecovery: %w", err)
+	}
+
+	return result, nil
+}
+
+func (c *Codec) EncodeGetRecoveryModeMethodCall() ([]byte, error) {
+	return c.abi.Pack("getRecoveryMode")
+}
+
+func (c *Codec) DecodeGetRecoveryModeMethodOutput(data []byte) (uint8, error) {
+	vals, err := c.abi.Methods["getRecoveryMode"].Outputs.Unpack(data)
+	if err != nil {
+		return *new(uint8), err
+	}
+	jsonData, err := json.Marshal(vals[0])
+	if err != nil {
+		return *new(uint8), fmt.Errorf("failed to marshal ABI result: %w", err)
+	}
+
+	var result uint8
+	if err := json.Unmarshal(jsonData, &result); err != nil {
+		return *new(uint8), fmt.Errorf("failed to unmarshal to uint8: %w", err)
 	}
 
 	return result, nil
@@ -1879,6 +2202,50 @@ func (c *Codec) DecodeGetShareMethodOutput(data []byte) (common.Address, error) 
 	var result common.Address
 	if err := json.Unmarshal(jsonData, &result); err != nil {
 		return *new(common.Address), fmt.Errorf("failed to unmarshal to common.Address: %w", err)
+	}
+
+	return result, nil
+}
+
+func (c *Codec) EncodeGetSharePrecisionMethodCall() ([]byte, error) {
+	return c.abi.Pack("getSharePrecision")
+}
+
+func (c *Codec) DecodeGetSharePrecisionMethodOutput(data []byte) (*big.Int, error) {
+	vals, err := c.abi.Methods["getSharePrecision"].Outputs.Unpack(data)
+	if err != nil {
+		return *new(*big.Int), err
+	}
+	jsonData, err := json.Marshal(vals[0])
+	if err != nil {
+		return *new(*big.Int), fmt.Errorf("failed to marshal ABI result: %w", err)
+	}
+
+	var result *big.Int
+	if err := json.Unmarshal(jsonData, &result); err != nil {
+		return *new(*big.Int), fmt.Errorf("failed to unmarshal to *big.Int: %w", err)
+	}
+
+	return result, nil
+}
+
+func (c *Codec) EncodeGetSupportedProtocolMethodCall(in GetSupportedProtocolInput) ([]byte, error) {
+	return c.abi.Pack("getSupportedProtocol", in.ProtocolId)
+}
+
+func (c *Codec) DecodeGetSupportedProtocolMethodOutput(data []byte) (bool, error) {
+	vals, err := c.abi.Methods["getSupportedProtocol"].Outputs.Unpack(data)
+	if err != nil {
+		return *new(bool), err
+	}
+	jsonData, err := json.Marshal(vals[0])
+	if err != nil {
+		return *new(bool), fmt.Errorf("failed to marshal ABI result: %w", err)
+	}
+
+	var result bool
+	if err := json.Unmarshal(jsonData, &result); err != nil {
+		return *new(bool), fmt.Errorf("failed to unmarshal to bool: %w", err)
 	}
 
 	return result, nil
@@ -1972,28 +2339,6 @@ func (c *Codec) DecodeGetTreasuryMethodOutput(data []byte) (common.Address, erro
 	return result, nil
 }
 
-func (c *Codec) EncodeGetUsdcMethodCall() ([]byte, error) {
-	return c.abi.Pack("getUsdc")
-}
-
-func (c *Codec) DecodeGetUsdcMethodOutput(data []byte) (common.Address, error) {
-	vals, err := c.abi.Methods["getUsdc"].Outputs.Unpack(data)
-	if err != nil {
-		return *new(common.Address), err
-	}
-	jsonData, err := json.Marshal(vals[0])
-	if err != nil {
-		return *new(common.Address), fmt.Errorf("failed to marshal ABI result: %w", err)
-	}
-
-	var result common.Address
-	if err := json.Unmarshal(jsonData, &result); err != nil {
-		return *new(common.Address), fmt.Errorf("failed to unmarshal to common.Address: %w", err)
-	}
-
-	return result, nil
-}
-
 func (c *Codec) EncodeGetWithdrawShareBurnAmountMethodCall(in GetWithdrawShareBurnAmountInput) ([]byte, error) {
 	return c.abi.Pack("getWithdrawShareBurnAmount", in.User, in.EpochNonce)
 }
@@ -2040,6 +2385,10 @@ func (c *Codec) DecodeHasRoleMethodOutput(data []byte) (bool, error) {
 	}
 
 	return result, nil
+}
+
+func (c *Codec) EncodeInitializeMethodCall(in InitializeInput) ([]byte, error) {
+	return c.abi.Pack("initialize", in.Params, in.Treasury, in.PolicyEngineManager, in.PolicyEngine, in.CancelDepositOperator)
 }
 
 func (c *Codec) EncodeInitiateRebalanceMethodCall(in InitiateRebalanceInput) ([]byte, error) {
@@ -2168,8 +2517,26 @@ func (c *Codec) DecodePendingDefaultAdminDelayMethodOutput(data []byte) (Pending
 	}, nil
 }
 
-func (c *Codec) EncodeRecoverFailedRebalanceDepositMethodCall(in RecoverFailedRebalanceDepositInput) ([]byte, error) {
-	return c.abi.Pack("recoverFailedRebalanceDeposit", in.RebalanceNonce)
+func (c *Codec) EncodeProxiableUUIDMethodCall() ([]byte, error) {
+	return c.abi.Pack("proxiableUUID")
+}
+
+func (c *Codec) DecodeProxiableUUIDMethodOutput(data []byte) ([32]byte, error) {
+	vals, err := c.abi.Methods["proxiableUUID"].Outputs.Unpack(data)
+	if err != nil {
+		return *new([32]byte), err
+	}
+	jsonData, err := json.Marshal(vals[0])
+	if err != nil {
+		return *new([32]byte), fmt.Errorf("failed to marshal ABI result: %w", err)
+	}
+
+	var result [32]byte
+	if err := json.Unmarshal(jsonData, &result); err != nil {
+		return *new([32]byte), fmt.Errorf("failed to unmarshal to [32]byte: %w", err)
+	}
+
+	return result, nil
 }
 
 func (c *Codec) EncodeRenounceOwnershipMethodCall() ([]byte, error) {
@@ -2204,8 +2571,16 @@ func (c *Codec) EncodeSetDefaultCcipGasLimitMethodCall(in SetDefaultCcipGasLimit
 	return c.abi.Pack("setDefaultCcipGasLimit", in.GasLimit)
 }
 
+func (c *Codec) EncodeSetEmergencyReceiverMethodCall(in SetEmergencyReceiverInput) ([]byte, error) {
+	return c.abi.Pack("setEmergencyReceiver", in.EmergencyReceiver)
+}
+
 func (c *Codec) EncodeSetInitialActiveProtocolAdapterMethodCall(in SetInitialActiveProtocolAdapterInput) ([]byte, error) {
 	return c.abi.Pack("setInitialActiveProtocolAdapter", in.ProtocolId)
+}
+
+func (c *Codec) EncodeSetSupportedProtocolMethodCall(in SetSupportedProtocolInput) ([]byte, error) {
+	return c.abi.Pack("setSupportedProtocol", in.ProtocolId, in.IsSupported)
 }
 
 func (c *Codec) EncodeSetTreasuryMethodCall(in SetTreasuryInput) ([]byte, error) {
@@ -2246,6 +2621,10 @@ func (c *Codec) EncodeUnpauseMethodCall() ([]byte, error) {
 	return c.abi.Pack("unpause")
 }
 
+func (c *Codec) EncodeUpgradeToAndCallMethodCall(in UpgradeToAndCallInput) ([]byte, error) {
+	return c.abi.Pack("upgradeToAndCall", in.NewImplementation, in.Data)
+}
+
 func (c *Codec) EncodeWithdrawMethodCall(in WithdrawInput) ([]byte, error) {
 	return c.abi.Pack("withdraw", in.ShareBurnAmount)
 }
@@ -2277,12 +2656,8 @@ func (c *Codec) EncodeBaseVaultConstructorParamsStruct(in BaseVaultConstructorPa
 		"tuple", "",
 		[]abi.ArgumentMarshaling{
 			{Name: "link", Type: "address"},
-			{Name: "usdc", Type: "address"},
+			{Name: "asset", Type: "address"},
 			{Name: "ccipRouter", Type: "address"},
-			{Name: "defaultAdmin", Type: "address"},
-			{Name: "pauser", Type: "address"},
-			{Name: "unpauser", Type: "address"},
-			{Name: "configOperator", Type: "address"},
 			{Name: "adapterRegistry", Type: "address"},
 			{Name: "thisChainSelector", Type: "uint64"},
 		},
@@ -2292,6 +2667,28 @@ func (c *Codec) EncodeBaseVaultConstructorParamsStruct(in BaseVaultConstructorPa
 	}
 	args := abi.Arguments{
 		{Name: "baseVaultConstructorParams", Type: tupleType},
+	}
+
+	return args.Pack(in)
+}
+func (c *Codec) EncodeBaseVaultInitParamsStruct(in BaseVaultInitParams) ([]byte, error) {
+	tupleType, err := abi.NewType(
+		"tuple", "",
+		[]abi.ArgumentMarshaling{
+			{Name: "defaultAdmin", Type: "address"},
+			{Name: "pauser", Type: "address"},
+			{Name: "unpauser", Type: "address"},
+			{Name: "configOperator", Type: "address"},
+			{Name: "emergencyReceiver", Type: "address"},
+			{Name: "initialDefaultCcipGasLimit", Type: "uint256"},
+			{Name: "upgrader", Type: "address"},
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create tuple type for BaseVaultInitParams: %w", err)
+	}
+	args := abi.Arguments{
+		{Name: "baseVaultInitParams", Type: tupleType},
 	}
 
 	return args.Pack(in)
@@ -2333,23 +2730,6 @@ func (c *Codec) EncodeClientEVMTokenAmountStruct(in ClientEVMTokenAmount) ([]byt
 
 	return args.Pack(in)
 }
-func (c *Codec) EncodeTypesAmountRecoveryStruct(in TypesAmountRecovery) ([]byte, error) {
-	tupleType, err := abi.NewType(
-		"tuple", "",
-		[]abi.ArgumentMarshaling{
-			{Name: "amount", Type: "uint256"},
-			{Name: "createdAt", Type: "uint256"},
-		},
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create tuple type for TypesAmountRecovery: %w", err)
-	}
-	args := abi.Arguments{
-		{Name: "typesAmountRecovery", Type: tupleType},
-	}
-
-	return args.Pack(in)
-}
 func (c *Codec) EncodeTypesEpochStruct(in TypesEpoch) ([]byte, error) {
 	tupleType, err := abi.NewType(
 		"tuple", "",
@@ -2358,8 +2738,11 @@ func (c *Codec) EncodeTypesEpochStruct(in TypesEpoch) ([]byte, error) {
 			{Name: "totalShareBurnAmount", Type: "uint256"},
 			{Name: "totalWithdrawClaimAmount", Type: "uint256"},
 			{Name: "pricePerShare", Type: "uint256"},
+			{Name: "remainingDepositClaimAmount", Type: "uint256"},
+			{Name: "remainingShareMintAmount", Type: "uint256"},
+			{Name: "remainingShareBurnAmount", Type: "uint256"},
+			{Name: "remainingWithdrawClaimAmount", Type: "uint256"},
 			{Name: "openedAtTimestamp", Type: "uint256"},
-			{Name: "closedAtTimestamp", Type: "uint256"},
 			{Name: "status", Type: "uint8"},
 		},
 	)
@@ -2380,7 +2763,6 @@ func (c *Codec) EncodeTypesRebalanceStruct(in TypesRebalance) ([]byte, error) {
 			{Name: "state", Type: "uint8"},
 			{Name: "activeStrategy", Type: "(bytes32,uint64)"},
 			{Name: "pendingStrategy", Type: "(bytes32,uint64)"},
-			{Name: "lastRebalanceInitiatedTimestamp", Type: "uint256"},
 			{Name: "lastRebalanceCompletedTimestamp", Type: "uint256"},
 		},
 	)
@@ -2389,6 +2771,23 @@ func (c *Codec) EncodeTypesRebalanceStruct(in TypesRebalance) ([]byte, error) {
 	}
 	args := abi.Arguments{
 		{Name: "typesRebalance", Type: tupleType},
+	}
+
+	return args.Pack(in)
+}
+func (c *Codec) EncodeTypesRebalanceDepositRecoveryStruct(in TypesRebalanceDepositRecovery) ([]byte, error) {
+	tupleType, err := abi.NewType(
+		"tuple", "",
+		[]abi.ArgumentMarshaling{
+			{Name: "rebalanceNonce", Type: "uint256"},
+			{Name: "amount", Type: "uint256"},
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create tuple type for TypesRebalanceDepositRecovery: %w", err)
+	}
+	args := abi.Arguments{
+		{Name: "typesRebalanceDepositRecovery", Type: tupleType},
 	}
 
 	return args.Pack(in)
@@ -2409,6 +2808,139 @@ func (c *Codec) EncodeTypesStrategyStruct(in TypesStrategy) ([]byte, error) {
 	}
 
 	return args.Pack(in)
+}
+
+func (c *Codec) ActiveProtocolAdapterClearedLogHash() []byte {
+	return c.abi.Events["ActiveProtocolAdapterCleared"].ID.Bytes()
+}
+
+func (c *Codec) EncodeActiveProtocolAdapterClearedTopics(
+	evt abi.Event,
+	values []ActiveProtocolAdapterClearedTopics,
+) ([]*evm.TopicValues, error) {
+	var adapterRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.Adapter).IsZero() {
+			adapterRule = append(adapterRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.Adapter)
+		if err != nil {
+			return nil, err
+		}
+		adapterRule = append(adapterRule, fieldVal)
+	}
+
+	rawTopics, err := abi.MakeTopics(
+		adapterRule,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
+}
+
+// DecodeActiveProtocolAdapterCleared decodes a log into a ActiveProtocolAdapterCleared struct.
+func (c *Codec) DecodeActiveProtocolAdapterCleared(log *evm.Log) (*ActiveProtocolAdapterClearedDecoded, error) {
+	event := new(ActiveProtocolAdapterClearedDecoded)
+	if err := c.abi.UnpackIntoInterface(event, "ActiveProtocolAdapterCleared", log.Data); err != nil {
+		return nil, err
+	}
+	var indexed abi.Arguments
+	for _, arg := range c.abi.Events["ActiveProtocolAdapterCleared"].Inputs {
+		if arg.Indexed {
+			if arg.Type.T == abi.TupleTy {
+				// abigen throws on tuple, so converting to bytes to
+				// receive back the common.Hash as is instead of error
+				arg.Type.T = abi.BytesTy
+			}
+			indexed = append(indexed, arg)
+		}
+	}
+	// Convert [][]byte → []common.Hash
+	topics := make([]common.Hash, len(log.Topics))
+	for i, t := range log.Topics {
+		topics[i] = common.BytesToHash(t)
+	}
+
+	if err := abi.ParseTopics(event, indexed, topics[1:]); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+func (c *Codec) ActiveProtocolAdapterSetLogHash() []byte {
+	return c.abi.Events["ActiveProtocolAdapterSet"].ID.Bytes()
+}
+
+func (c *Codec) EncodeActiveProtocolAdapterSetTopics(
+	evt abi.Event,
+	values []ActiveProtocolAdapterSetTopics,
+) ([]*evm.TopicValues, error) {
+	var protocolIdRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.ProtocolId).IsZero() {
+			protocolIdRule = append(protocolIdRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.ProtocolId)
+		if err != nil {
+			return nil, err
+		}
+		protocolIdRule = append(protocolIdRule, fieldVal)
+	}
+	var adapterRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.Adapter).IsZero() {
+			adapterRule = append(adapterRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[1], v.Adapter)
+		if err != nil {
+			return nil, err
+		}
+		adapterRule = append(adapterRule, fieldVal)
+	}
+
+	rawTopics, err := abi.MakeTopics(
+		protocolIdRule,
+		adapterRule,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
+}
+
+// DecodeActiveProtocolAdapterSet decodes a log into a ActiveProtocolAdapterSet struct.
+func (c *Codec) DecodeActiveProtocolAdapterSet(log *evm.Log) (*ActiveProtocolAdapterSetDecoded, error) {
+	event := new(ActiveProtocolAdapterSetDecoded)
+	if err := c.abi.UnpackIntoInterface(event, "ActiveProtocolAdapterSet", log.Data); err != nil {
+		return nil, err
+	}
+	var indexed abi.Arguments
+	for _, arg := range c.abi.Events["ActiveProtocolAdapterSet"].Inputs {
+		if arg.Indexed {
+			if arg.Type.T == abi.TupleTy {
+				// abigen throws on tuple, so converting to bytes to
+				// receive back the common.Hash as is instead of error
+				arg.Type.T = abi.BytesTy
+			}
+			indexed = append(indexed, arg)
+		}
+	}
+	// Convert [][]byte → []common.Hash
+	topics := make([]common.Hash, len(log.Topics))
+	for i, t := range log.Topics {
+		topics[i] = common.BytesToHash(t)
+	}
+
+	if err := abi.ParseTopics(event, indexed, topics[1:]); err != nil {
+		return nil, err
+	}
+	return event, nil
 }
 
 func (c *Codec) CCIPBridgedLogHash() []byte {
@@ -3073,13 +3605,13 @@ func (c *Codec) DecodeDepositClaimed(log *evm.Log) (*DepositClaimedDecoded, erro
 	return event, nil
 }
 
-func (c *Codec) DepositFeeCollectedLogHash() []byte {
-	return c.abi.Events["DepositFeeCollected"].ID.Bytes()
+func (c *Codec) DepositForceCancelledLogHash() []byte {
+	return c.abi.Events["DepositForceCancelled"].ID.Bytes()
 }
 
-func (c *Codec) EncodeDepositFeeCollectedTopics(
+func (c *Codec) EncodeDepositForceCancelledTopics(
 	evt abi.Event,
-	values []DepositFeeCollectedTopics,
+	values []DepositForceCancelledTopics,
 ) ([]*evm.TopicValues, error) {
 	var epochNonceRule []interface{}
 	for _, v := range values {
@@ -3105,23 +3637,23 @@ func (c *Codec) EncodeDepositFeeCollectedTopics(
 		}
 		depositorRule = append(depositorRule, fieldVal)
 	}
-	var feeRule []interface{}
+	var amountRule []interface{}
 	for _, v := range values {
-		if reflect.ValueOf(v.Fee).IsZero() {
-			feeRule = append(feeRule, common.Hash{})
+		if reflect.ValueOf(v.Amount).IsZero() {
+			amountRule = append(amountRule, common.Hash{})
 			continue
 		}
-		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[2], v.Fee)
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[2], v.Amount)
 		if err != nil {
 			return nil, err
 		}
-		feeRule = append(feeRule, fieldVal)
+		amountRule = append(amountRule, fieldVal)
 	}
 
 	rawTopics, err := abi.MakeTopics(
 		epochNonceRule,
 		depositorRule,
-		feeRule,
+		amountRule,
 	)
 	if err != nil {
 		return nil, err
@@ -3130,14 +3662,14 @@ func (c *Codec) EncodeDepositFeeCollectedTopics(
 	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
 }
 
-// DecodeDepositFeeCollected decodes a log into a DepositFeeCollected struct.
-func (c *Codec) DecodeDepositFeeCollected(log *evm.Log) (*DepositFeeCollectedDecoded, error) {
-	event := new(DepositFeeCollectedDecoded)
-	if err := c.abi.UnpackIntoInterface(event, "DepositFeeCollected", log.Data); err != nil {
+// DecodeDepositForceCancelled decodes a log into a DepositForceCancelled struct.
+func (c *Codec) DecodeDepositForceCancelled(log *evm.Log) (*DepositForceCancelledDecoded, error) {
+	event := new(DepositForceCancelledDecoded)
+	if err := c.abi.UnpackIntoInterface(event, "DepositForceCancelled", log.Data); err != nil {
 		return nil, err
 	}
 	var indexed abi.Arguments
-	for _, arg := range c.abi.Events["DepositFeeCollected"].Inputs {
+	for _, arg := range c.abi.Events["DepositForceCancelled"].Inputs {
 		if arg.Indexed {
 			if arg.Type.T == abi.TupleTy {
 				// abigen throws on tuple, so converting to bytes to
@@ -3245,79 +3777,6 @@ func (c *Codec) DecodeDepositSubmitted(log *evm.Log) (*DepositSubmittedDecoded, 
 	return event, nil
 }
 
-func (c *Codec) DepositToStrategyFailureLogHash() []byte {
-	return c.abi.Events["DepositToStrategyFailure"].ID.Bytes()
-}
-
-func (c *Codec) EncodeDepositToStrategyFailureTopics(
-	evt abi.Event,
-	values []DepositToStrategyFailureTopics,
-) ([]*evm.TopicValues, error) {
-	var epochNonceRule []interface{}
-	for _, v := range values {
-		if reflect.ValueOf(v.EpochNonce).IsZero() {
-			epochNonceRule = append(epochNonceRule, common.Hash{})
-			continue
-		}
-		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.EpochNonce)
-		if err != nil {
-			return nil, err
-		}
-		epochNonceRule = append(epochNonceRule, fieldVal)
-	}
-	var amountRule []interface{}
-	for _, v := range values {
-		if reflect.ValueOf(v.Amount).IsZero() {
-			amountRule = append(amountRule, common.Hash{})
-			continue
-		}
-		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[1], v.Amount)
-		if err != nil {
-			return nil, err
-		}
-		amountRule = append(amountRule, fieldVal)
-	}
-
-	rawTopics, err := abi.MakeTopics(
-		epochNonceRule,
-		amountRule,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
-}
-
-// DecodeDepositToStrategyFailure decodes a log into a DepositToStrategyFailure struct.
-func (c *Codec) DecodeDepositToStrategyFailure(log *evm.Log) (*DepositToStrategyFailureDecoded, error) {
-	event := new(DepositToStrategyFailureDecoded)
-	if err := c.abi.UnpackIntoInterface(event, "DepositToStrategyFailure", log.Data); err != nil {
-		return nil, err
-	}
-	var indexed abi.Arguments
-	for _, arg := range c.abi.Events["DepositToStrategyFailure"].Inputs {
-		if arg.Indexed {
-			if arg.Type.T == abi.TupleTy {
-				// abigen throws on tuple, so converting to bytes to
-				// receive back the common.Hash as is instead of error
-				arg.Type.T = abi.BytesTy
-			}
-			indexed = append(indexed, arg)
-		}
-	}
-	// Convert [][]byte → []common.Hash
-	topics := make([]common.Hash, len(log.Topics))
-	for i, t := range log.Topics {
-		topics[i] = common.BytesToHash(t)
-	}
-
-	if err := abi.ParseTopics(event, indexed, topics[1:]); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
 func (c *Codec) DepositToStrategySuccessLogHash() []byte {
 	return c.abi.Events["DepositToStrategySuccess"].ID.Bytes()
 }
@@ -3391,25 +3850,25 @@ func (c *Codec) DecodeDepositToStrategySuccess(log *evm.Log) (*DepositToStrategy
 	return event, nil
 }
 
-func (c *Codec) EmergencyDrainExecutedLogHash() []byte {
-	return c.abi.Events["EmergencyDrainExecuted"].ID.Bytes()
+func (c *Codec) DonationLogHash() []byte {
+	return c.abi.Events["Donation"].ID.Bytes()
 }
 
-func (c *Codec) EncodeEmergencyDrainExecutedTopics(
+func (c *Codec) EncodeDonationTopics(
 	evt abi.Event,
-	values []EmergencyDrainExecutedTopics,
+	values []DonationTopics,
 ) ([]*evm.TopicValues, error) {
-	var drainerRule []interface{}
+	var donorRule []interface{}
 	for _, v := range values {
-		if reflect.ValueOf(v.Drainer).IsZero() {
-			drainerRule = append(drainerRule, common.Hash{})
+		if reflect.ValueOf(v.Donor).IsZero() {
+			donorRule = append(donorRule, common.Hash{})
 			continue
 		}
-		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.Drainer)
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.Donor)
 		if err != nil {
 			return nil, err
 		}
-		drainerRule = append(drainerRule, fieldVal)
+		donorRule = append(donorRule, fieldVal)
 	}
 	var amountRule []interface{}
 	for _, v := range values {
@@ -3425,7 +3884,80 @@ func (c *Codec) EncodeEmergencyDrainExecutedTopics(
 	}
 
 	rawTopics, err := abi.MakeTopics(
-		drainerRule,
+		donorRule,
+		amountRule,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
+}
+
+// DecodeDonation decodes a log into a Donation struct.
+func (c *Codec) DecodeDonation(log *evm.Log) (*DonationDecoded, error) {
+	event := new(DonationDecoded)
+	if err := c.abi.UnpackIntoInterface(event, "Donation", log.Data); err != nil {
+		return nil, err
+	}
+	var indexed abi.Arguments
+	for _, arg := range c.abi.Events["Donation"].Inputs {
+		if arg.Indexed {
+			if arg.Type.T == abi.TupleTy {
+				// abigen throws on tuple, so converting to bytes to
+				// receive back the common.Hash as is instead of error
+				arg.Type.T = abi.BytesTy
+			}
+			indexed = append(indexed, arg)
+		}
+	}
+	// Convert [][]byte → []common.Hash
+	topics := make([]common.Hash, len(log.Topics))
+	for i, t := range log.Topics {
+		topics[i] = common.BytesToHash(t)
+	}
+
+	if err := abi.ParseTopics(event, indexed, topics[1:]); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+func (c *Codec) EmergencyDrainExecutedLogHash() []byte {
+	return c.abi.Events["EmergencyDrainExecuted"].ID.Bytes()
+}
+
+func (c *Codec) EncodeEmergencyDrainExecutedTopics(
+	evt abi.Event,
+	values []EmergencyDrainExecutedTopics,
+) ([]*evm.TopicValues, error) {
+	var emergencyReceiverRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.EmergencyReceiver).IsZero() {
+			emergencyReceiverRule = append(emergencyReceiverRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.EmergencyReceiver)
+		if err != nil {
+			return nil, err
+		}
+		emergencyReceiverRule = append(emergencyReceiverRule, fieldVal)
+	}
+	var amountRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.Amount).IsZero() {
+			amountRule = append(amountRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[1], v.Amount)
+		if err != nil {
+			return nil, err
+		}
+		amountRule = append(amountRule, fieldVal)
+	}
+
+	rawTopics, err := abi.MakeTopics(
+		emergencyReceiverRule,
 		amountRule,
 	)
 	if err != nil {
@@ -3443,6 +3975,66 @@ func (c *Codec) DecodeEmergencyDrainExecuted(log *evm.Log) (*EmergencyDrainExecu
 	}
 	var indexed abi.Arguments
 	for _, arg := range c.abi.Events["EmergencyDrainExecuted"].Inputs {
+		if arg.Indexed {
+			if arg.Type.T == abi.TupleTy {
+				// abigen throws on tuple, so converting to bytes to
+				// receive back the common.Hash as is instead of error
+				arg.Type.T = abi.BytesTy
+			}
+			indexed = append(indexed, arg)
+		}
+	}
+	// Convert [][]byte → []common.Hash
+	topics := make([]common.Hash, len(log.Topics))
+	for i, t := range log.Topics {
+		topics[i] = common.BytesToHash(t)
+	}
+
+	if err := abi.ParseTopics(event, indexed, topics[1:]); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+func (c *Codec) EmergencyReceiverSetLogHash() []byte {
+	return c.abi.Events["EmergencyReceiverSet"].ID.Bytes()
+}
+
+func (c *Codec) EncodeEmergencyReceiverSetTopics(
+	evt abi.Event,
+	values []EmergencyReceiverSetTopics,
+) ([]*evm.TopicValues, error) {
+	var emergencyReceiverRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.EmergencyReceiver).IsZero() {
+			emergencyReceiverRule = append(emergencyReceiverRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.EmergencyReceiver)
+		if err != nil {
+			return nil, err
+		}
+		emergencyReceiverRule = append(emergencyReceiverRule, fieldVal)
+	}
+
+	rawTopics, err := abi.MakeTopics(
+		emergencyReceiverRule,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
+}
+
+// DecodeEmergencyReceiverSet decodes a log into a EmergencyReceiverSet struct.
+func (c *Codec) DecodeEmergencyReceiverSet(log *evm.Log) (*EmergencyReceiverSetDecoded, error) {
+	event := new(EmergencyReceiverSetDecoded)
+	if err := c.abi.UnpackIntoInterface(event, "EmergencyReceiverSet", log.Data); err != nil {
+		return nil, err
+	}
+	var indexed abi.Arguments
+	for _, arg := range c.abi.Events["EmergencyReceiverSet"].Inputs {
 		if arg.Indexed {
 			if arg.Type.T == abi.TupleTy {
 				// abigen throws on tuple, so converting to bytes to
@@ -3677,9 +4269,35 @@ func (c *Codec) EncodeEpochWithdrawAmountShortTopics(
 		}
 		epochNonceRule = append(epochNonceRule, fieldVal)
 	}
+	var expectedAmountRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.ExpectedAmount).IsZero() {
+			expectedAmountRule = append(expectedAmountRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[1], v.ExpectedAmount)
+		if err != nil {
+			return nil, err
+		}
+		expectedAmountRule = append(expectedAmountRule, fieldVal)
+	}
+	var actualAmountRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.ActualAmount).IsZero() {
+			actualAmountRule = append(actualAmountRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[2], v.ActualAmount)
+		if err != nil {
+			return nil, err
+		}
+		actualAmountRule = append(actualAmountRule, fieldVal)
+	}
 
 	rawTopics, err := abi.MakeTopics(
 		epochNonceRule,
+		expectedAmountRule,
+		actualAmountRule,
 	)
 	if err != nil {
 		return nil, err
@@ -3790,6 +4408,52 @@ func (c *Codec) DecodeInitialActiveProtocolAdapterSet(log *evm.Log) (*InitialAct
 	return event, nil
 }
 
+func (c *Codec) InitializedLogHash() []byte {
+	return c.abi.Events["Initialized"].ID.Bytes()
+}
+
+func (c *Codec) EncodeInitializedTopics(
+	evt abi.Event,
+	values []InitializedTopics,
+) ([]*evm.TopicValues, error) {
+
+	rawTopics, err := abi.MakeTopics()
+	if err != nil {
+		return nil, err
+	}
+
+	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
+}
+
+// DecodeInitialized decodes a log into a Initialized struct.
+func (c *Codec) DecodeInitialized(log *evm.Log) (*InitializedDecoded, error) {
+	event := new(InitializedDecoded)
+	if err := c.abi.UnpackIntoInterface(event, "Initialized", log.Data); err != nil {
+		return nil, err
+	}
+	var indexed abi.Arguments
+	for _, arg := range c.abi.Events["Initialized"].Inputs {
+		if arg.Indexed {
+			if arg.Type.T == abi.TupleTy {
+				// abigen throws on tuple, so converting to bytes to
+				// receive back the common.Hash as is instead of error
+				arg.Type.T = abi.BytesTy
+			}
+			indexed = append(indexed, arg)
+		}
+	}
+	// Convert [][]byte → []common.Hash
+	topics := make([]common.Hash, len(log.Topics))
+	for i, t := range log.Topics {
+		topics[i] = common.BytesToHash(t)
+	}
+
+	if err := abi.ParseTopics(event, indexed, topics[1:]); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
 func (c *Codec) LinkWithdrawnLogHash() []byte {
 	return c.abi.Events["LinkWithdrawn"].ID.Bytes()
 }
@@ -3871,13 +4535,25 @@ func (c *Codec) EncodeManagementFeeCollectedTopics(
 	evt abi.Event,
 	values []ManagementFeeCollectedTopics,
 ) ([]*evm.TopicValues, error) {
+	var rebalanceNonceRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.RebalanceNonce).IsZero() {
+			rebalanceNonceRule = append(rebalanceNonceRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.RebalanceNonce)
+		if err != nil {
+			return nil, err
+		}
+		rebalanceNonceRule = append(rebalanceNonceRule, fieldVal)
+	}
 	var feeSharesRule []interface{}
 	for _, v := range values {
 		if reflect.ValueOf(v.FeeShares).IsZero() {
 			feeSharesRule = append(feeSharesRule, common.Hash{})
 			continue
 		}
-		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.FeeShares)
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[1], v.FeeShares)
 		if err != nil {
 			return nil, err
 		}
@@ -3885,6 +4561,7 @@ func (c *Codec) EncodeManagementFeeCollectedTopics(
 	}
 
 	rawTopics, err := abi.MakeTopics(
+		rebalanceNonceRule,
 		feeSharesRule,
 	)
 	if err != nil {
@@ -4021,6 +4698,92 @@ func (c *Codec) DecodePaused(log *evm.Log) (*PausedDecoded, error) {
 	}
 	var indexed abi.Arguments
 	for _, arg := range c.abi.Events["Paused"].Inputs {
+		if arg.Indexed {
+			if arg.Type.T == abi.TupleTy {
+				// abigen throws on tuple, so converting to bytes to
+				// receive back the common.Hash as is instead of error
+				arg.Type.T = abi.BytesTy
+			}
+			indexed = append(indexed, arg)
+		}
+	}
+	// Convert [][]byte → []common.Hash
+	topics := make([]common.Hash, len(log.Topics))
+	for i, t := range log.Topics {
+		topics[i] = common.BytesToHash(t)
+	}
+
+	if err := abi.ParseTopics(event, indexed, topics[1:]); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+func (c *Codec) PerformanceFeeCollectedLogHash() []byte {
+	return c.abi.Events["PerformanceFeeCollected"].ID.Bytes()
+}
+
+func (c *Codec) EncodePerformanceFeeCollectedTopics(
+	evt abi.Event,
+	values []PerformanceFeeCollectedTopics,
+) ([]*evm.TopicValues, error) {
+	var epochNonceRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.EpochNonce).IsZero() {
+			epochNonceRule = append(epochNonceRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.EpochNonce)
+		if err != nil {
+			return nil, err
+		}
+		epochNonceRule = append(epochNonceRule, fieldVal)
+	}
+	var feeSharesRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.FeeShares).IsZero() {
+			feeSharesRule = append(feeSharesRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[1], v.FeeShares)
+		if err != nil {
+			return nil, err
+		}
+		feeSharesRule = append(feeSharesRule, fieldVal)
+	}
+	var settlementPricePerShareRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.SettlementPricePerShare).IsZero() {
+			settlementPricePerShareRule = append(settlementPricePerShareRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[2], v.SettlementPricePerShare)
+		if err != nil {
+			return nil, err
+		}
+		settlementPricePerShareRule = append(settlementPricePerShareRule, fieldVal)
+	}
+
+	rawTopics, err := abi.MakeTopics(
+		epochNonceRule,
+		feeSharesRule,
+		settlementPricePerShareRule,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
+}
+
+// DecodePerformanceFeeCollected decodes a log into a PerformanceFeeCollected struct.
+func (c *Codec) DecodePerformanceFeeCollected(log *evm.Log) (*PerformanceFeeCollectedDecoded, error) {
+	event := new(PerformanceFeeCollectedDecoded)
+	if err := c.abi.UnpackIntoInterface(event, "PerformanceFeeCollected", log.Data); err != nil {
+		return nil, err
+	}
+	var indexed abi.Arguments
+	for _, arg := range c.abi.Events["PerformanceFeeCollected"].Inputs {
 		if arg.Indexed {
 			if arg.Type.T == abi.TupleTy {
 				// abigen throws on tuple, so converting to bytes to
@@ -4182,9 +4945,35 @@ func (c *Codec) EncodeRebalanceCompletedTopics(
 		}
 		rebalanceNonceRule = append(rebalanceNonceRule, fieldVal)
 	}
+	var newProtocolIdRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.NewProtocolId).IsZero() {
+			newProtocolIdRule = append(newProtocolIdRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[1], v.NewProtocolId)
+		if err != nil {
+			return nil, err
+		}
+		newProtocolIdRule = append(newProtocolIdRule, fieldVal)
+	}
+	var newChainSelectorRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.NewChainSelector).IsZero() {
+			newChainSelectorRule = append(newChainSelectorRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[2], v.NewChainSelector)
+		if err != nil {
+			return nil, err
+		}
+		newChainSelectorRule = append(newChainSelectorRule, fieldVal)
+	}
 
 	rawTopics, err := abi.MakeTopics(
 		rebalanceNonceRule,
+		newProtocolIdRule,
+		newChainSelectorRule,
 	)
 	if err != nil {
 		return nil, err
@@ -4587,66 +5376,6 @@ func (c *Codec) DecodeRebalanceInitiated(log *evm.Log) (*RebalanceInitiatedDecod
 	return event, nil
 }
 
-func (c *Codec) RebalanceWithdrawFailureLogHash() []byte {
-	return c.abi.Events["RebalanceWithdrawFailure"].ID.Bytes()
-}
-
-func (c *Codec) EncodeRebalanceWithdrawFailureTopics(
-	evt abi.Event,
-	values []RebalanceWithdrawFailureTopics,
-) ([]*evm.TopicValues, error) {
-	var rebalanceNonceRule []interface{}
-	for _, v := range values {
-		if reflect.ValueOf(v.RebalanceNonce).IsZero() {
-			rebalanceNonceRule = append(rebalanceNonceRule, common.Hash{})
-			continue
-		}
-		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.RebalanceNonce)
-		if err != nil {
-			return nil, err
-		}
-		rebalanceNonceRule = append(rebalanceNonceRule, fieldVal)
-	}
-
-	rawTopics, err := abi.MakeTopics(
-		rebalanceNonceRule,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
-}
-
-// DecodeRebalanceWithdrawFailure decodes a log into a RebalanceWithdrawFailure struct.
-func (c *Codec) DecodeRebalanceWithdrawFailure(log *evm.Log) (*RebalanceWithdrawFailureDecoded, error) {
-	event := new(RebalanceWithdrawFailureDecoded)
-	if err := c.abi.UnpackIntoInterface(event, "RebalanceWithdrawFailure", log.Data); err != nil {
-		return nil, err
-	}
-	var indexed abi.Arguments
-	for _, arg := range c.abi.Events["RebalanceWithdrawFailure"].Inputs {
-		if arg.Indexed {
-			if arg.Type.T == abi.TupleTy {
-				// abigen throws on tuple, so converting to bytes to
-				// receive back the common.Hash as is instead of error
-				arg.Type.T = abi.BytesTy
-			}
-			indexed = append(indexed, arg)
-		}
-	}
-	// Convert [][]byte → []common.Hash
-	topics := make([]common.Hash, len(log.Topics))
-	for i, t := range log.Topics {
-		topics[i] = common.BytesToHash(t)
-	}
-
-	if err := abi.ParseTopics(event, indexed, topics[1:]); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
 func (c *Codec) RebalanceWithdrawSuccessLogHash() []byte {
 	return c.abi.Events["RebalanceWithdrawSuccess"].ID.Bytes()
 }
@@ -4978,6 +5707,79 @@ func (c *Codec) DecodeRoleRevoked(log *evm.Log) (*RoleRevokedDecoded, error) {
 	return event, nil
 }
 
+func (c *Codec) SupportedProtocolSetLogHash() []byte {
+	return c.abi.Events["SupportedProtocolSet"].ID.Bytes()
+}
+
+func (c *Codec) EncodeSupportedProtocolSetTopics(
+	evt abi.Event,
+	values []SupportedProtocolSetTopics,
+) ([]*evm.TopicValues, error) {
+	var protocolIdRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.ProtocolId).IsZero() {
+			protocolIdRule = append(protocolIdRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.ProtocolId)
+		if err != nil {
+			return nil, err
+		}
+		protocolIdRule = append(protocolIdRule, fieldVal)
+	}
+	var isSupportedRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.IsSupported).IsZero() {
+			isSupportedRule = append(isSupportedRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[1], v.IsSupported)
+		if err != nil {
+			return nil, err
+		}
+		isSupportedRule = append(isSupportedRule, fieldVal)
+	}
+
+	rawTopics, err := abi.MakeTopics(
+		protocolIdRule,
+		isSupportedRule,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
+}
+
+// DecodeSupportedProtocolSet decodes a log into a SupportedProtocolSet struct.
+func (c *Codec) DecodeSupportedProtocolSet(log *evm.Log) (*SupportedProtocolSetDecoded, error) {
+	event := new(SupportedProtocolSetDecoded)
+	if err := c.abi.UnpackIntoInterface(event, "SupportedProtocolSet", log.Data); err != nil {
+		return nil, err
+	}
+	var indexed abi.Arguments
+	for _, arg := range c.abi.Events["SupportedProtocolSet"].Inputs {
+		if arg.Indexed {
+			if arg.Type.T == abi.TupleTy {
+				// abigen throws on tuple, so converting to bytes to
+				// receive back the common.Hash as is instead of error
+				arg.Type.T = abi.BytesTy
+			}
+			indexed = append(indexed, arg)
+		}
+	}
+	// Convert [][]byte → []common.Hash
+	topics := make([]common.Hash, len(log.Topics))
+	for i, t := range log.Topics {
+		topics[i] = common.BytesToHash(t)
+	}
+
+	if err := abi.ParseTopics(event, indexed, topics[1:]); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
 func (c *Codec) TreasurySetLogHash() []byte {
 	return c.abi.Events["TreasurySet"].ID.Bytes()
 }
@@ -5084,6 +5886,66 @@ func (c *Codec) DecodeUnpaused(log *evm.Log) (*UnpausedDecoded, error) {
 	return event, nil
 }
 
+func (c *Codec) UpgradedLogHash() []byte {
+	return c.abi.Events["Upgraded"].ID.Bytes()
+}
+
+func (c *Codec) EncodeUpgradedTopics(
+	evt abi.Event,
+	values []UpgradedTopics,
+) ([]*evm.TopicValues, error) {
+	var implementationRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.Implementation).IsZero() {
+			implementationRule = append(implementationRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.Implementation)
+		if err != nil {
+			return nil, err
+		}
+		implementationRule = append(implementationRule, fieldVal)
+	}
+
+	rawTopics, err := abi.MakeTopics(
+		implementationRule,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
+}
+
+// DecodeUpgraded decodes a log into a Upgraded struct.
+func (c *Codec) DecodeUpgraded(log *evm.Log) (*UpgradedDecoded, error) {
+	event := new(UpgradedDecoded)
+	if err := c.abi.UnpackIntoInterface(event, "Upgraded", log.Data); err != nil {
+		return nil, err
+	}
+	var indexed abi.Arguments
+	for _, arg := range c.abi.Events["Upgraded"].Inputs {
+		if arg.Indexed {
+			if arg.Type.T == abi.TupleTy {
+				// abigen throws on tuple, so converting to bytes to
+				// receive back the common.Hash as is instead of error
+				arg.Type.T = abi.BytesTy
+			}
+			indexed = append(indexed, arg)
+		}
+	}
+	// Convert [][]byte → []common.Hash
+	topics := make([]common.Hash, len(log.Topics))
+	for i, t := range log.Topics {
+		topics[i] = common.BytesToHash(t)
+	}
+
+	if err := abi.ParseTopics(event, indexed, topics[1:]); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
 func (c *Codec) WithdrawCancelledLogHash() []byte {
 	return c.abi.Events["WithdrawCancelled"].ID.Bytes()
 }
@@ -5116,23 +5978,23 @@ func (c *Codec) EncodeWithdrawCancelledTopics(
 		}
 		withdrawerRule = append(withdrawerRule, fieldVal)
 	}
-	var amountRule []interface{}
+	var shareBurnAmountRule []interface{}
 	for _, v := range values {
-		if reflect.ValueOf(v.Amount).IsZero() {
-			amountRule = append(amountRule, common.Hash{})
+		if reflect.ValueOf(v.ShareBurnAmount).IsZero() {
+			shareBurnAmountRule = append(shareBurnAmountRule, common.Hash{})
 			continue
 		}
-		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[2], v.Amount)
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[2], v.ShareBurnAmount)
 		if err != nil {
 			return nil, err
 		}
-		amountRule = append(amountRule, fieldVal)
+		shareBurnAmountRule = append(shareBurnAmountRule, fieldVal)
 	}
 
 	rawTopics, err := abi.MakeTopics(
 		epochNonceRule,
 		withdrawerRule,
-		amountRule,
+		shareBurnAmountRule,
 	)
 	if err != nil {
 		return nil, err
@@ -5235,165 +6097,6 @@ func (c *Codec) DecodeWithdrawClaimed(log *evm.Log) (*WithdrawClaimedDecoded, er
 	}
 	var indexed abi.Arguments
 	for _, arg := range c.abi.Events["WithdrawClaimed"].Inputs {
-		if arg.Indexed {
-			if arg.Type.T == abi.TupleTy {
-				// abigen throws on tuple, so converting to bytes to
-				// receive back the common.Hash as is instead of error
-				arg.Type.T = abi.BytesTy
-			}
-			indexed = append(indexed, arg)
-		}
-	}
-	// Convert [][]byte → []common.Hash
-	topics := make([]common.Hash, len(log.Topics))
-	for i, t := range log.Topics {
-		topics[i] = common.BytesToHash(t)
-	}
-
-	if err := abi.ParseTopics(event, indexed, topics[1:]); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
-func (c *Codec) WithdrawFeeCollectedLogHash() []byte {
-	return c.abi.Events["WithdrawFeeCollected"].ID.Bytes()
-}
-
-func (c *Codec) EncodeWithdrawFeeCollectedTopics(
-	evt abi.Event,
-	values []WithdrawFeeCollectedTopics,
-) ([]*evm.TopicValues, error) {
-	var epochNonceRule []interface{}
-	for _, v := range values {
-		if reflect.ValueOf(v.EpochNonce).IsZero() {
-			epochNonceRule = append(epochNonceRule, common.Hash{})
-			continue
-		}
-		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.EpochNonce)
-		if err != nil {
-			return nil, err
-		}
-		epochNonceRule = append(epochNonceRule, fieldVal)
-	}
-	var withdrawerRule []interface{}
-	for _, v := range values {
-		if reflect.ValueOf(v.Withdrawer).IsZero() {
-			withdrawerRule = append(withdrawerRule, common.Hash{})
-			continue
-		}
-		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[1], v.Withdrawer)
-		if err != nil {
-			return nil, err
-		}
-		withdrawerRule = append(withdrawerRule, fieldVal)
-	}
-	var feeRule []interface{}
-	for _, v := range values {
-		if reflect.ValueOf(v.Fee).IsZero() {
-			feeRule = append(feeRule, common.Hash{})
-			continue
-		}
-		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[2], v.Fee)
-		if err != nil {
-			return nil, err
-		}
-		feeRule = append(feeRule, fieldVal)
-	}
-
-	rawTopics, err := abi.MakeTopics(
-		epochNonceRule,
-		withdrawerRule,
-		feeRule,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
-}
-
-// DecodeWithdrawFeeCollected decodes a log into a WithdrawFeeCollected struct.
-func (c *Codec) DecodeWithdrawFeeCollected(log *evm.Log) (*WithdrawFeeCollectedDecoded, error) {
-	event := new(WithdrawFeeCollectedDecoded)
-	if err := c.abi.UnpackIntoInterface(event, "WithdrawFeeCollected", log.Data); err != nil {
-		return nil, err
-	}
-	var indexed abi.Arguments
-	for _, arg := range c.abi.Events["WithdrawFeeCollected"].Inputs {
-		if arg.Indexed {
-			if arg.Type.T == abi.TupleTy {
-				// abigen throws on tuple, so converting to bytes to
-				// receive back the common.Hash as is instead of error
-				arg.Type.T = abi.BytesTy
-			}
-			indexed = append(indexed, arg)
-		}
-	}
-	// Convert [][]byte → []common.Hash
-	topics := make([]common.Hash, len(log.Topics))
-	for i, t := range log.Topics {
-		topics[i] = common.BytesToHash(t)
-	}
-
-	if err := abi.ParseTopics(event, indexed, topics[1:]); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
-func (c *Codec) WithdrawFromStrategyFailureLogHash() []byte {
-	return c.abi.Events["WithdrawFromStrategyFailure"].ID.Bytes()
-}
-
-func (c *Codec) EncodeWithdrawFromStrategyFailureTopics(
-	evt abi.Event,
-	values []WithdrawFromStrategyFailureTopics,
-) ([]*evm.TopicValues, error) {
-	var epochNonceRule []interface{}
-	for _, v := range values {
-		if reflect.ValueOf(v.EpochNonce).IsZero() {
-			epochNonceRule = append(epochNonceRule, common.Hash{})
-			continue
-		}
-		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.EpochNonce)
-		if err != nil {
-			return nil, err
-		}
-		epochNonceRule = append(epochNonceRule, fieldVal)
-	}
-	var amountRule []interface{}
-	for _, v := range values {
-		if reflect.ValueOf(v.Amount).IsZero() {
-			amountRule = append(amountRule, common.Hash{})
-			continue
-		}
-		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[1], v.Amount)
-		if err != nil {
-			return nil, err
-		}
-		amountRule = append(amountRule, fieldVal)
-	}
-
-	rawTopics, err := abi.MakeTopics(
-		epochNonceRule,
-		amountRule,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
-}
-
-// DecodeWithdrawFromStrategyFailure decodes a log into a WithdrawFromStrategyFailure struct.
-func (c *Codec) DecodeWithdrawFromStrategyFailure(log *evm.Log) (*WithdrawFromStrategyFailureDecoded, error) {
-	event := new(WithdrawFromStrategyFailureDecoded)
-	if err := c.abi.UnpackIntoInterface(event, "WithdrawFromStrategyFailure", log.Data); err != nil {
-		return nil, err
-	}
-	var indexed abi.Arguments
-	for _, arg := range c.abi.Events["WithdrawFromStrategyFailure"].Inputs {
 		if arg.Indexed {
 			if arg.Type.T == abi.TupleTy {
 				// abigen throws on tuple, so converting to bytes to
@@ -5611,6 +6314,43 @@ func (c ParentVault) DEFAULTADMINROLE(
 
 }
 
+func (c ParentVault) UPGRADEINTERFACEVERSION(
+	runtime cre.Runtime,
+	blockNumber *big.Int,
+) cre.Promise[string] {
+	calldata, err := c.Codec.EncodeUPGRADEINTERFACEVERSIONMethodCall()
+	if err != nil {
+		return cre.PromiseFromResult[string](*new(string), err)
+	}
+
+	var bn cre.Promise[*pb.BigInt]
+	if blockNumber == nil {
+		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
+			BlockNumber: bindings.FinalizedBlockNumber,
+		})
+
+		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
+			if finalizedBlock == nil || finalizedBlock.Header == nil {
+				return nil, errors.New("failed to get finalized block header")
+			}
+			return finalizedBlock.Header.BlockNumber, nil
+		})
+	} else {
+		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	}
+
+	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+		return c.client.CallContract(runtime, &evm.CallContractRequest{
+			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
+			BlockNumber: bn,
+		})
+	})
+	return cre.Then(promise, func(response *evm.CallContractReply) (string, error) {
+		return c.Codec.DecodeUPGRADEINTERFACEVERSIONMethodOutput(response.Data)
+	})
+
+}
+
 func (c ParentVault) DefaultAdmin(
 	runtime cre.Runtime,
 	blockNumber *big.Int,
@@ -5792,6 +6532,80 @@ func (c ParentVault) GetAdapterRegistry(
 	})
 	return cre.Then(promise, func(response *evm.CallContractReply) (common.Address, error) {
 		return c.Codec.DecodeGetAdapterRegistryMethodOutput(response.Data)
+	})
+
+}
+
+func (c ParentVault) GetAsset(
+	runtime cre.Runtime,
+	blockNumber *big.Int,
+) cre.Promise[common.Address] {
+	calldata, err := c.Codec.EncodeGetAssetMethodCall()
+	if err != nil {
+		return cre.PromiseFromResult[common.Address](*new(common.Address), err)
+	}
+
+	var bn cre.Promise[*pb.BigInt]
+	if blockNumber == nil {
+		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
+			BlockNumber: bindings.FinalizedBlockNumber,
+		})
+
+		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
+			if finalizedBlock == nil || finalizedBlock.Header == nil {
+				return nil, errors.New("failed to get finalized block header")
+			}
+			return finalizedBlock.Header.BlockNumber, nil
+		})
+	} else {
+		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	}
+
+	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+		return c.client.CallContract(runtime, &evm.CallContractRequest{
+			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
+			BlockNumber: bn,
+		})
+	})
+	return cre.Then(promise, func(response *evm.CallContractReply) (common.Address, error) {
+		return c.Codec.DecodeGetAssetMethodOutput(response.Data)
+	})
+
+}
+
+func (c ParentVault) GetAssetPrecision(
+	runtime cre.Runtime,
+	blockNumber *big.Int,
+) cre.Promise[*big.Int] {
+	calldata, err := c.Codec.EncodeGetAssetPrecisionMethodCall()
+	if err != nil {
+		return cre.PromiseFromResult[*big.Int](*new(*big.Int), err)
+	}
+
+	var bn cre.Promise[*pb.BigInt]
+	if blockNumber == nil {
+		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
+			BlockNumber: bindings.FinalizedBlockNumber,
+		})
+
+		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
+			if finalizedBlock == nil || finalizedBlock.Header == nil {
+				return nil, errors.New("failed to get finalized block header")
+			}
+			return finalizedBlock.Header.BlockNumber, nil
+		})
+	} else {
+		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	}
+
+	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+		return c.client.CallContract(runtime, &evm.CallContractRequest{
+			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
+			BlockNumber: bn,
+		})
+	})
+	return cre.Then(promise, func(response *evm.CallContractReply) (*big.Int, error) {
+		return c.Codec.DecodeGetAssetPrecisionMethodOutput(response.Data)
 	})
 
 }
@@ -6022,6 +6836,43 @@ func (c ParentVault) GetDepositAmount(
 
 }
 
+func (c ParentVault) GetEmergencyReceiver(
+	runtime cre.Runtime,
+	blockNumber *big.Int,
+) cre.Promise[common.Address] {
+	calldata, err := c.Codec.EncodeGetEmergencyReceiverMethodCall()
+	if err != nil {
+		return cre.PromiseFromResult[common.Address](*new(common.Address), err)
+	}
+
+	var bn cre.Promise[*pb.BigInt]
+	if blockNumber == nil {
+		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
+			BlockNumber: bindings.FinalizedBlockNumber,
+		})
+
+		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
+			if finalizedBlock == nil || finalizedBlock.Header == nil {
+				return nil, errors.New("failed to get finalized block header")
+			}
+			return finalizedBlock.Header.BlockNumber, nil
+		})
+	} else {
+		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	}
+
+	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+		return c.client.CallContract(runtime, &evm.CallContractRequest{
+			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
+			BlockNumber: bn,
+		})
+	})
+	return cre.Then(promise, func(response *evm.CallContractReply) (common.Address, error) {
+		return c.Codec.DecodeGetEmergencyReceiverMethodOutput(response.Data)
+	})
+
+}
+
 func (c ParentVault) GetEpoch(
 	runtime cre.Runtime,
 	args GetEpochInput,
@@ -6171,6 +7022,43 @@ func (c ParentVault) GetLink(
 
 }
 
+func (c ParentVault) GetMinDepositAmount(
+	runtime cre.Runtime,
+	blockNumber *big.Int,
+) cre.Promise[*big.Int] {
+	calldata, err := c.Codec.EncodeGetMinDepositAmountMethodCall()
+	if err != nil {
+		return cre.PromiseFromResult[*big.Int](*new(*big.Int), err)
+	}
+
+	var bn cre.Promise[*pb.BigInt]
+	if blockNumber == nil {
+		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
+			BlockNumber: bindings.FinalizedBlockNumber,
+		})
+
+		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
+			if finalizedBlock == nil || finalizedBlock.Header == nil {
+				return nil, errors.New("failed to get finalized block header")
+			}
+			return finalizedBlock.Header.BlockNumber, nil
+		})
+	} else {
+		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	}
+
+	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+		return c.client.CallContract(runtime, &evm.CallContractRequest{
+			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
+			BlockNumber: bn,
+		})
+	})
+	return cre.Then(promise, func(response *evm.CallContractReply) (*big.Int, error) {
+		return c.Codec.DecodeGetMinDepositAmountMethodOutput(response.Data)
+	})
+
+}
+
 func (c ParentVault) GetPausedAt(
 	runtime cre.Runtime,
 	blockNumber *big.Int,
@@ -6204,6 +7092,43 @@ func (c ParentVault) GetPausedAt(
 	})
 	return cre.Then(promise, func(response *evm.CallContractReply) (*big.Int, error) {
 		return c.Codec.DecodeGetPausedAtMethodOutput(response.Data)
+	})
+
+}
+
+func (c ParentVault) GetPerformanceFeeHighWaterMark(
+	runtime cre.Runtime,
+	blockNumber *big.Int,
+) cre.Promise[*big.Int] {
+	calldata, err := c.Codec.EncodeGetPerformanceFeeHighWaterMarkMethodCall()
+	if err != nil {
+		return cre.PromiseFromResult[*big.Int](*new(*big.Int), err)
+	}
+
+	var bn cre.Promise[*pb.BigInt]
+	if blockNumber == nil {
+		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
+			BlockNumber: bindings.FinalizedBlockNumber,
+		})
+
+		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
+			if finalizedBlock == nil || finalizedBlock.Header == nil {
+				return nil, errors.New("failed to get finalized block header")
+			}
+			return finalizedBlock.Header.BlockNumber, nil
+		})
+	} else {
+		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	}
+
+	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+		return c.client.CallContract(runtime, &evm.CallContractRequest{
+			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
+			BlockNumber: bn,
+		})
+	})
+	return cre.Then(promise, func(response *evm.CallContractReply) (*big.Int, error) {
+		return c.Codec.DecodeGetPerformanceFeeHighWaterMarkMethodOutput(response.Data)
 	})
 
 }
@@ -6284,12 +7209,11 @@ func (c ParentVault) GetRebalance(
 
 func (c ParentVault) GetRebalanceDepositRecovery(
 	runtime cre.Runtime,
-	args GetRebalanceDepositRecoveryInput,
 	blockNumber *big.Int,
-) cre.Promise[TypesAmountRecovery] {
-	calldata, err := c.Codec.EncodeGetRebalanceDepositRecoveryMethodCall(args)
+) cre.Promise[TypesRebalanceDepositRecovery] {
+	calldata, err := c.Codec.EncodeGetRebalanceDepositRecoveryMethodCall()
 	if err != nil {
-		return cre.PromiseFromResult[TypesAmountRecovery](*new(TypesAmountRecovery), err)
+		return cre.PromiseFromResult[TypesRebalanceDepositRecovery](*new(TypesRebalanceDepositRecovery), err)
 	}
 
 	var bn cre.Promise[*pb.BigInt]
@@ -6314,8 +7238,45 @@ func (c ParentVault) GetRebalanceDepositRecovery(
 			BlockNumber: bn,
 		})
 	})
-	return cre.Then(promise, func(response *evm.CallContractReply) (TypesAmountRecovery, error) {
+	return cre.Then(promise, func(response *evm.CallContractReply) (TypesRebalanceDepositRecovery, error) {
 		return c.Codec.DecodeGetRebalanceDepositRecoveryMethodOutput(response.Data)
+	})
+
+}
+
+func (c ParentVault) GetRecoveryMode(
+	runtime cre.Runtime,
+	blockNumber *big.Int,
+) cre.Promise[uint8] {
+	calldata, err := c.Codec.EncodeGetRecoveryModeMethodCall()
+	if err != nil {
+		return cre.PromiseFromResult[uint8](*new(uint8), err)
+	}
+
+	var bn cre.Promise[*pb.BigInt]
+	if blockNumber == nil {
+		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
+			BlockNumber: bindings.FinalizedBlockNumber,
+		})
+
+		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
+			if finalizedBlock == nil || finalizedBlock.Header == nil {
+				return nil, errors.New("failed to get finalized block header")
+			}
+			return finalizedBlock.Header.BlockNumber, nil
+		})
+	} else {
+		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	}
+
+	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+		return c.client.CallContract(runtime, &evm.CallContractRequest{
+			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
+			BlockNumber: bn,
+		})
+	})
+	return cre.Then(promise, func(response *evm.CallContractReply) (uint8, error) {
+		return c.Codec.DecodeGetRecoveryModeMethodOutput(response.Data)
 	})
 
 }
@@ -6428,6 +7389,81 @@ func (c ParentVault) GetShare(
 	})
 	return cre.Then(promise, func(response *evm.CallContractReply) (common.Address, error) {
 		return c.Codec.DecodeGetShareMethodOutput(response.Data)
+	})
+
+}
+
+func (c ParentVault) GetSharePrecision(
+	runtime cre.Runtime,
+	blockNumber *big.Int,
+) cre.Promise[*big.Int] {
+	calldata, err := c.Codec.EncodeGetSharePrecisionMethodCall()
+	if err != nil {
+		return cre.PromiseFromResult[*big.Int](*new(*big.Int), err)
+	}
+
+	var bn cre.Promise[*pb.BigInt]
+	if blockNumber == nil {
+		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
+			BlockNumber: bindings.FinalizedBlockNumber,
+		})
+
+		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
+			if finalizedBlock == nil || finalizedBlock.Header == nil {
+				return nil, errors.New("failed to get finalized block header")
+			}
+			return finalizedBlock.Header.BlockNumber, nil
+		})
+	} else {
+		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	}
+
+	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+		return c.client.CallContract(runtime, &evm.CallContractRequest{
+			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
+			BlockNumber: bn,
+		})
+	})
+	return cre.Then(promise, func(response *evm.CallContractReply) (*big.Int, error) {
+		return c.Codec.DecodeGetSharePrecisionMethodOutput(response.Data)
+	})
+
+}
+
+func (c ParentVault) GetSupportedProtocol(
+	runtime cre.Runtime,
+	args GetSupportedProtocolInput,
+	blockNumber *big.Int,
+) cre.Promise[bool] {
+	calldata, err := c.Codec.EncodeGetSupportedProtocolMethodCall(args)
+	if err != nil {
+		return cre.PromiseFromResult[bool](*new(bool), err)
+	}
+
+	var bn cre.Promise[*pb.BigInt]
+	if blockNumber == nil {
+		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
+			BlockNumber: bindings.FinalizedBlockNumber,
+		})
+
+		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
+			if finalizedBlock == nil || finalizedBlock.Header == nil {
+				return nil, errors.New("failed to get finalized block header")
+			}
+			return finalizedBlock.Header.BlockNumber, nil
+		})
+	} else {
+		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	}
+
+	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+		return c.client.CallContract(runtime, &evm.CallContractRequest{
+			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
+			BlockNumber: bn,
+		})
+	})
+	return cre.Then(promise, func(response *evm.CallContractReply) (bool, error) {
+		return c.Codec.DecodeGetSupportedProtocolMethodOutput(response.Data)
 	})
 
 }
@@ -6576,43 +7612,6 @@ func (c ParentVault) GetTreasury(
 	})
 	return cre.Then(promise, func(response *evm.CallContractReply) (common.Address, error) {
 		return c.Codec.DecodeGetTreasuryMethodOutput(response.Data)
-	})
-
-}
-
-func (c ParentVault) GetUsdc(
-	runtime cre.Runtime,
-	blockNumber *big.Int,
-) cre.Promise[common.Address] {
-	calldata, err := c.Codec.EncodeGetUsdcMethodCall()
-	if err != nil {
-		return cre.PromiseFromResult[common.Address](*new(common.Address), err)
-	}
-
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
-	}
-
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
-		return c.client.CallContract(runtime, &evm.CallContractRequest{
-			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
-			BlockNumber: bn,
-		})
-	})
-	return cre.Then(promise, func(response *evm.CallContractReply) (common.Address, error) {
-		return c.Codec.DecodeGetUsdcMethodOutput(response.Data)
 	})
 
 }
@@ -6841,12 +7840,74 @@ func (c ParentVault) PendingDefaultAdminDelay(
 
 }
 
+func (c ParentVault) ProxiableUUID(
+	runtime cre.Runtime,
+	blockNumber *big.Int,
+) cre.Promise[[32]byte] {
+	calldata, err := c.Codec.EncodeProxiableUUIDMethodCall()
+	if err != nil {
+		return cre.PromiseFromResult[[32]byte](*new([32]byte), err)
+	}
+
+	var bn cre.Promise[*pb.BigInt]
+	if blockNumber == nil {
+		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
+			BlockNumber: bindings.FinalizedBlockNumber,
+		})
+
+		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
+			if finalizedBlock == nil || finalizedBlock.Header == nil {
+				return nil, errors.New("failed to get finalized block header")
+			}
+			return finalizedBlock.Header.BlockNumber, nil
+		})
+	} else {
+		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	}
+
+	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+		return c.client.CallContract(runtime, &evm.CallContractRequest{
+			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
+			BlockNumber: bn,
+		})
+	})
+	return cre.Then(promise, func(response *evm.CallContractReply) ([32]byte, error) {
+		return c.Codec.DecodeProxiableUUIDMethodOutput(response.Data)
+	})
+
+}
+
 func (c ParentVault) WriteReportFromBaseVaultConstructorParams(
 	runtime cre.Runtime,
 	input BaseVaultConstructorParams,
 	gasConfig *evm.GasConfig,
 ) cre.Promise[*evm.WriteReportReply] {
 	encoded, err := c.Codec.EncodeBaseVaultConstructorParamsStruct(input)
+	if err != nil {
+		return cre.PromiseFromResult[*evm.WriteReportReply](nil, err)
+	}
+	promise := runtime.GenerateReport(&pb2.ReportRequest{
+		EncodedPayload: encoded,
+		EncoderName:    "evm",
+		SigningAlgo:    "ecdsa",
+		HashingAlgo:    "keccak256",
+	})
+
+	return cre.ThenPromise(promise, func(report *cre.Report) cre.Promise[*evm.WriteReportReply] {
+		return c.client.WriteReport(runtime, &evm.WriteCreReportRequest{
+			Receiver:  c.Address.Bytes(),
+			Report:    report,
+			GasConfig: gasConfig,
+		})
+	})
+}
+
+func (c ParentVault) WriteReportFromBaseVaultInitParams(
+	runtime cre.Runtime,
+	input BaseVaultInitParams,
+	gasConfig *evm.GasConfig,
+) cre.Promise[*evm.WriteReportReply] {
+	encoded, err := c.Codec.EncodeBaseVaultInitParamsStruct(input)
 	if err != nil {
 		return cre.PromiseFromResult[*evm.WriteReportReply](nil, err)
 	}
@@ -6916,31 +7977,6 @@ func (c ParentVault) WriteReportFromClientEVMTokenAmount(
 	})
 }
 
-func (c ParentVault) WriteReportFromTypesAmountRecovery(
-	runtime cre.Runtime,
-	input TypesAmountRecovery,
-	gasConfig *evm.GasConfig,
-) cre.Promise[*evm.WriteReportReply] {
-	encoded, err := c.Codec.EncodeTypesAmountRecoveryStruct(input)
-	if err != nil {
-		return cre.PromiseFromResult[*evm.WriteReportReply](nil, err)
-	}
-	promise := runtime.GenerateReport(&pb2.ReportRequest{
-		EncodedPayload: encoded,
-		EncoderName:    "evm",
-		SigningAlgo:    "ecdsa",
-		HashingAlgo:    "keccak256",
-	})
-
-	return cre.ThenPromise(promise, func(report *cre.Report) cre.Promise[*evm.WriteReportReply] {
-		return c.client.WriteReport(runtime, &evm.WriteCreReportRequest{
-			Receiver:  c.Address.Bytes(),
-			Report:    report,
-			GasConfig: gasConfig,
-		})
-	})
-}
-
 func (c ParentVault) WriteReportFromTypesEpoch(
 	runtime cre.Runtime,
 	input TypesEpoch,
@@ -6972,6 +8008,31 @@ func (c ParentVault) WriteReportFromTypesRebalance(
 	gasConfig *evm.GasConfig,
 ) cre.Promise[*evm.WriteReportReply] {
 	encoded, err := c.Codec.EncodeTypesRebalanceStruct(input)
+	if err != nil {
+		return cre.PromiseFromResult[*evm.WriteReportReply](nil, err)
+	}
+	promise := runtime.GenerateReport(&pb2.ReportRequest{
+		EncodedPayload: encoded,
+		EncoderName:    "evm",
+		SigningAlgo:    "ecdsa",
+		HashingAlgo:    "keccak256",
+	})
+
+	return cre.ThenPromise(promise, func(report *cre.Report) cre.Promise[*evm.WriteReportReply] {
+		return c.client.WriteReport(runtime, &evm.WriteCreReportRequest{
+			Receiver:  c.Address.Bytes(),
+			Report:    report,
+			GasConfig: gasConfig,
+		})
+	})
+}
+
+func (c ParentVault) WriteReportFromTypesRebalanceDepositRecovery(
+	runtime cre.Runtime,
+	input TypesRebalanceDepositRecovery,
+	gasConfig *evm.GasConfig,
+) cre.Promise[*evm.WriteReportReply] {
+	encoded, err := c.Codec.EncodeTypesRebalanceDepositRecoveryStruct(input)
 	if err != nil {
 		return cre.PromiseFromResult[*evm.WriteReportReply](nil, err)
 	}
@@ -7150,6 +8211,32 @@ func (e *AccessControlUnauthorizedAccount) Error() string {
 	return fmt.Sprintf("AccessControlUnauthorizedAccount error: account=%v; neededRole=%v;", e.Account, e.NeededRole)
 }
 
+// DecodeAddressEmptyCodeError decodes a AddressEmptyCode error from revert data.
+func (c *ParentVault) DecodeAddressEmptyCodeError(data []byte) (*AddressEmptyCode, error) {
+	args := c.ABI.Errors["AddressEmptyCode"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 1 {
+		return nil, fmt.Errorf("expected 1 values, got %d", len(values))
+	}
+
+	target, ok0 := values[0].(common.Address)
+	if !ok0 {
+		return nil, fmt.Errorf("unexpected type for target in AddressEmptyCode error")
+	}
+
+	return &AddressEmptyCode{
+		Target: target,
+	}, nil
+}
+
+// Error implements the error interface for AddressEmptyCode.
+func (e *AddressEmptyCode) Error() string {
+	return fmt.Sprintf("AddressEmptyCode error: target=%v;", e.Target)
+}
+
 // DecodeBaseVaultDepositFailedError decodes a BaseVault__DepositFailed error from revert data.
 func (c *ParentVault) DecodeBaseVaultDepositFailedError(data []byte) (*BaseVaultDepositFailed, error) {
 	args := c.ABI.Errors["BaseVault__DepositFailed"].Inputs
@@ -7176,6 +8263,32 @@ func (e *BaseVaultDepositFailed) Error() string {
 	return fmt.Sprintf("BaseVaultDepositFailed error: amount=%v;", e.Amount)
 }
 
+// DecodeBaseVaultDestinationVaultNotSetError decodes a BaseVault__DestinationVaultNotSet error from revert data.
+func (c *ParentVault) DecodeBaseVaultDestinationVaultNotSetError(data []byte) (*BaseVaultDestinationVaultNotSet, error) {
+	args := c.ABI.Errors["BaseVault__DestinationVaultNotSet"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 1 {
+		return nil, fmt.Errorf("expected 1 values, got %d", len(values))
+	}
+
+	destinationChainSelector, ok0 := values[0].(uint64)
+	if !ok0 {
+		return nil, fmt.Errorf("unexpected type for destinationChainSelector in BaseVaultDestinationVaultNotSet error")
+	}
+
+	return &BaseVaultDestinationVaultNotSet{
+		DestinationChainSelector: destinationChainSelector,
+	}, nil
+}
+
+// Error implements the error interface for BaseVaultDestinationVaultNotSet.
+func (e *BaseVaultDestinationVaultNotSet) Error() string {
+	return fmt.Sprintf("BaseVaultDestinationVaultNotSet error: destinationChainSelector=%v;", e.DestinationChainSelector)
+}
+
 // DecodeBaseVaultEmergencyDrainDelayNotMetError decodes a BaseVault__EmergencyDrainDelayNotMet error from revert data.
 func (c *ParentVault) DecodeBaseVaultEmergencyDrainDelayNotMetError(data []byte) (*BaseVaultEmergencyDrainDelayNotMet, error) {
 	args := c.ABI.Errors["BaseVault__EmergencyDrainDelayNotMet"].Inputs
@@ -7195,6 +8308,89 @@ func (e *BaseVaultEmergencyDrainDelayNotMet) Error() string {
 	return fmt.Sprintf("BaseVaultEmergencyDrainDelayNotMet error:")
 }
 
+// DecodeBaseVaultEmptyInputError decodes a BaseVault__EmptyInput error from revert data.
+func (c *ParentVault) DecodeBaseVaultEmptyInputError(data []byte) (*BaseVaultEmptyInput, error) {
+	args := c.ABI.Errors["BaseVault__EmptyInput"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 0 {
+		return nil, fmt.Errorf("expected 0 values, got %d", len(values))
+	}
+
+	return &BaseVaultEmptyInput{}, nil
+}
+
+// Error implements the error interface for BaseVaultEmptyInput.
+func (e *BaseVaultEmptyInput) Error() string {
+	return fmt.Sprintf("BaseVaultEmptyInput error:")
+}
+
+// DecodeBaseVaultInvalidAdapterVaultError decodes a BaseVault__InvalidAdapterVault error from revert data.
+func (c *ParentVault) DecodeBaseVaultInvalidAdapterVaultError(data []byte) (*BaseVaultInvalidAdapterVault, error) {
+	args := c.ABI.Errors["BaseVault__InvalidAdapterVault"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 3 {
+		return nil, fmt.Errorf("expected 3 values, got %d", len(values))
+	}
+
+	adapter, ok0 := values[0].(common.Address)
+	if !ok0 {
+		return nil, fmt.Errorf("unexpected type for adapter in BaseVaultInvalidAdapterVault error")
+	}
+
+	actualVault, ok1 := values[1].(common.Address)
+	if !ok1 {
+		return nil, fmt.Errorf("unexpected type for actualVault in BaseVaultInvalidAdapterVault error")
+	}
+
+	expectedVault, ok2 := values[2].(common.Address)
+	if !ok2 {
+		return nil, fmt.Errorf("unexpected type for expectedVault in BaseVaultInvalidAdapterVault error")
+	}
+
+	return &BaseVaultInvalidAdapterVault{
+		Adapter:       adapter,
+		ActualVault:   actualVault,
+		ExpectedVault: expectedVault,
+	}, nil
+}
+
+// Error implements the error interface for BaseVaultInvalidAdapterVault.
+func (e *BaseVaultInvalidAdapterVault) Error() string {
+	return fmt.Sprintf("BaseVaultInvalidAdapterVault error: adapter=%v; actualVault=%v; expectedVault=%v;", e.Adapter, e.ActualVault, e.ExpectedVault)
+}
+
+// DecodeBaseVaultInvalidDestinationChainSelectorError decodes a BaseVault__InvalidDestinationChainSelector error from revert data.
+func (c *ParentVault) DecodeBaseVaultInvalidDestinationChainSelectorError(data []byte) (*BaseVaultInvalidDestinationChainSelector, error) {
+	args := c.ABI.Errors["BaseVault__InvalidDestinationChainSelector"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 1 {
+		return nil, fmt.Errorf("expected 1 values, got %d", len(values))
+	}
+
+	destinationChainSelector, ok0 := values[0].(uint64)
+	if !ok0 {
+		return nil, fmt.Errorf("unexpected type for destinationChainSelector in BaseVaultInvalidDestinationChainSelector error")
+	}
+
+	return &BaseVaultInvalidDestinationChainSelector{
+		DestinationChainSelector: destinationChainSelector,
+	}, nil
+}
+
+// Error implements the error interface for BaseVaultInvalidDestinationChainSelector.
+func (e *BaseVaultInvalidDestinationChainSelector) Error() string {
+	return fmt.Sprintf("BaseVaultInvalidDestinationChainSelector error: destinationChainSelector=%v;", e.DestinationChainSelector)
+}
+
 // DecodeBaseVaultInvalidInputLengthsError decodes a BaseVault__InvalidInputLengths error from revert data.
 func (c *ParentVault) DecodeBaseVaultInvalidInputLengthsError(data []byte) (*BaseVaultInvalidInputLengths, error) {
 	args := c.ABI.Errors["BaseVault__InvalidInputLengths"].Inputs
@@ -7212,6 +8408,38 @@ func (c *ParentVault) DecodeBaseVaultInvalidInputLengthsError(data []byte) (*Bas
 // Error implements the error interface for BaseVaultInvalidInputLengths.
 func (e *BaseVaultInvalidInputLengths) Error() string {
 	return fmt.Sprintf("BaseVaultInvalidInputLengths error:")
+}
+
+// DecodeBaseVaultInvalidReceivedTokenError decodes a BaseVault__InvalidReceivedToken error from revert data.
+func (c *ParentVault) DecodeBaseVaultInvalidReceivedTokenError(data []byte) (*BaseVaultInvalidReceivedToken, error) {
+	args := c.ABI.Errors["BaseVault__InvalidReceivedToken"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 2 {
+		return nil, fmt.Errorf("expected 2 values, got %d", len(values))
+	}
+
+	receivedToken, ok0 := values[0].(common.Address)
+	if !ok0 {
+		return nil, fmt.Errorf("unexpected type for receivedToken in BaseVaultInvalidReceivedToken error")
+	}
+
+	expectedToken, ok1 := values[1].(common.Address)
+	if !ok1 {
+		return nil, fmt.Errorf("unexpected type for expectedToken in BaseVaultInvalidReceivedToken error")
+	}
+
+	return &BaseVaultInvalidReceivedToken{
+		ReceivedToken: receivedToken,
+		ExpectedToken: expectedToken,
+	}, nil
+}
+
+// Error implements the error interface for BaseVaultInvalidReceivedToken.
+func (e *BaseVaultInvalidReceivedToken) Error() string {
+	return fmt.Sprintf("BaseVaultInvalidReceivedToken error: receivedToken=%v; expectedToken=%v;", e.ReceivedToken, e.ExpectedToken)
 }
 
 // DecodeBaseVaultInvalidSenderError decodes a BaseVault__InvalidSender error from revert data.
@@ -7244,6 +8472,64 @@ func (c *ParentVault) DecodeBaseVaultInvalidSenderError(data []byte) (*BaseVault
 // Error implements the error interface for BaseVaultInvalidSender.
 func (e *BaseVaultInvalidSender) Error() string {
 	return fmt.Sprintf("BaseVaultInvalidSender error: sender=%v; srcChainSelector=%v;", e.Sender, e.SrcChainSelector)
+}
+
+// DecodeBaseVaultInvalidTokenAmountsLengthError decodes a BaseVault__InvalidTokenAmountsLength error from revert data.
+func (c *ParentVault) DecodeBaseVaultInvalidTokenAmountsLengthError(data []byte) (*BaseVaultInvalidTokenAmountsLength, error) {
+	args := c.ABI.Errors["BaseVault__InvalidTokenAmountsLength"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 2 {
+		return nil, fmt.Errorf("expected 2 values, got %d", len(values))
+	}
+
+	receivedLength, ok0 := values[0].(*big.Int)
+	if !ok0 {
+		return nil, fmt.Errorf("unexpected type for receivedLength in BaseVaultInvalidTokenAmountsLength error")
+	}
+
+	expectedLength, ok1 := values[1].(*big.Int)
+	if !ok1 {
+		return nil, fmt.Errorf("unexpected type for expectedLength in BaseVaultInvalidTokenAmountsLength error")
+	}
+
+	return &BaseVaultInvalidTokenAmountsLength{
+		ReceivedLength: receivedLength,
+		ExpectedLength: expectedLength,
+	}, nil
+}
+
+// Error implements the error interface for BaseVaultInvalidTokenAmountsLength.
+func (e *BaseVaultInvalidTokenAmountsLength) Error() string {
+	return fmt.Sprintf("BaseVaultInvalidTokenAmountsLength error: receivedLength=%v; expectedLength=%v;", e.ReceivedLength, e.ExpectedLength)
+}
+
+// DecodeBaseVaultInvalidTxTypeError decodes a BaseVault__InvalidTxType error from revert data.
+func (c *ParentVault) DecodeBaseVaultInvalidTxTypeError(data []byte) (*BaseVaultInvalidTxType, error) {
+	args := c.ABI.Errors["BaseVault__InvalidTxType"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 1 {
+		return nil, fmt.Errorf("expected 1 values, got %d", len(values))
+	}
+
+	ccipTxType, ok0 := values[0].(uint8)
+	if !ok0 {
+		return nil, fmt.Errorf("unexpected type for ccipTxType in BaseVaultInvalidTxType error")
+	}
+
+	return &BaseVaultInvalidTxType{
+		CcipTxType: ccipTxType,
+	}, nil
+}
+
+// Error implements the error interface for BaseVaultInvalidTxType.
+func (e *BaseVaultInvalidTxType) Error() string {
+	return fmt.Sprintf("BaseVaultInvalidTxType error: ccipTxType=%v;", e.CcipTxType)
 }
 
 // DecodeBaseVaultNoActiveAdapterError decodes a BaseVault__NoActiveAdapter error from revert data.
@@ -7310,6 +8596,25 @@ func (e *BaseVaultNoPendingRecovery) Error() string {
 	return fmt.Sprintf("BaseVaultNoPendingRecovery error:")
 }
 
+// DecodeBaseVaultNoZeroAddressError decodes a BaseVault__NoZeroAddress error from revert data.
+func (c *ParentVault) DecodeBaseVaultNoZeroAddressError(data []byte) (*BaseVaultNoZeroAddress, error) {
+	args := c.ABI.Errors["BaseVault__NoZeroAddress"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 0 {
+		return nil, fmt.Errorf("expected 0 values, got %d", len(values))
+	}
+
+	return &BaseVaultNoZeroAddress{}, nil
+}
+
+// Error implements the error interface for BaseVaultNoZeroAddress.
+func (e *BaseVaultNoZeroAddress) Error() string {
+	return fmt.Sprintf("BaseVaultNoZeroAddress error:")
+}
+
 // DecodeBaseVaultNoZeroAmountError decodes a BaseVault__NoZeroAmount error from revert data.
 func (c *ParentVault) DecodeBaseVaultNoZeroAmountError(data []byte) (*BaseVaultNoZeroAmount, error) {
 	args := c.ABI.Errors["BaseVault__NoZeroAmount"].Inputs
@@ -7327,6 +8632,25 @@ func (c *ParentVault) DecodeBaseVaultNoZeroAmountError(data []byte) (*BaseVaultN
 // Error implements the error interface for BaseVaultNoZeroAmount.
 func (e *BaseVaultNoZeroAmount) Error() string {
 	return fmt.Sprintf("BaseVaultNoZeroAmount error:")
+}
+
+// DecodeBaseVaultNoZeroChainSelectorError decodes a BaseVault__NoZeroChainSelector error from revert data.
+func (c *ParentVault) DecodeBaseVaultNoZeroChainSelectorError(data []byte) (*BaseVaultNoZeroChainSelector, error) {
+	args := c.ABI.Errors["BaseVault__NoZeroChainSelector"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 0 {
+		return nil, fmt.Errorf("expected 0 values, got %d", len(values))
+	}
+
+	return &BaseVaultNoZeroChainSelector{}, nil
+}
+
+// Error implements the error interface for BaseVaultNoZeroChainSelector.
+func (e *BaseVaultNoZeroChainSelector) Error() string {
+	return fmt.Sprintf("BaseVaultNoZeroChainSelector error:")
 }
 
 // DecodeBaseVaultOnlySelfError decodes a BaseVault__OnlySelf error from revert data.
@@ -7412,6 +8736,51 @@ func (e *BaseVaultZeroRecoveryAmount) Error() string {
 	return fmt.Sprintf("BaseVaultZeroRecoveryAmount error:")
 }
 
+// DecodeERC1967InvalidImplementationError decodes a ERC1967InvalidImplementation error from revert data.
+func (c *ParentVault) DecodeERC1967InvalidImplementationError(data []byte) (*ERC1967InvalidImplementation, error) {
+	args := c.ABI.Errors["ERC1967InvalidImplementation"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 1 {
+		return nil, fmt.Errorf("expected 1 values, got %d", len(values))
+	}
+
+	implementation, ok0 := values[0].(common.Address)
+	if !ok0 {
+		return nil, fmt.Errorf("unexpected type for implementation in ERC1967InvalidImplementation error")
+	}
+
+	return &ERC1967InvalidImplementation{
+		Implementation: implementation,
+	}, nil
+}
+
+// Error implements the error interface for ERC1967InvalidImplementation.
+func (e *ERC1967InvalidImplementation) Error() string {
+	return fmt.Sprintf("ERC1967InvalidImplementation error: implementation=%v;", e.Implementation)
+}
+
+// DecodeERC1967NonPayableError decodes a ERC1967NonPayable error from revert data.
+func (c *ParentVault) DecodeERC1967NonPayableError(data []byte) (*ERC1967NonPayable, error) {
+	args := c.ABI.Errors["ERC1967NonPayable"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 0 {
+		return nil, fmt.Errorf("expected 0 values, got %d", len(values))
+	}
+
+	return &ERC1967NonPayable{}, nil
+}
+
+// Error implements the error interface for ERC1967NonPayable.
+func (e *ERC1967NonPayable) Error() string {
+	return fmt.Sprintf("ERC1967NonPayable error:")
+}
+
 // DecodeEnforcedPauseError decodes a EnforcedPause error from revert data.
 func (c *ParentVault) DecodeEnforcedPauseError(data []byte) (*EnforcedPause, error) {
 	args := c.ABI.Errors["EnforcedPause"].Inputs
@@ -7450,6 +8819,44 @@ func (e *ExpectedPause) Error() string {
 	return fmt.Sprintf("ExpectedPause error:")
 }
 
+// DecodeFailedCallError decodes a FailedCall error from revert data.
+func (c *ParentVault) DecodeFailedCallError(data []byte) (*FailedCall, error) {
+	args := c.ABI.Errors["FailedCall"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 0 {
+		return nil, fmt.Errorf("expected 0 values, got %d", len(values))
+	}
+
+	return &FailedCall{}, nil
+}
+
+// Error implements the error interface for FailedCall.
+func (e *FailedCall) Error() string {
+	return fmt.Sprintf("FailedCall error:")
+}
+
+// DecodeInvalidInitializationError decodes a InvalidInitialization error from revert data.
+func (c *ParentVault) DecodeInvalidInitializationError(data []byte) (*InvalidInitialization, error) {
+	args := c.ABI.Errors["InvalidInitialization"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 0 {
+		return nil, fmt.Errorf("expected 0 values, got %d", len(values))
+	}
+
+	return &InvalidInitialization{}, nil
+}
+
+// Error implements the error interface for InvalidInitialization.
+func (e *InvalidInitialization) Error() string {
+	return fmt.Sprintf("InvalidInitialization error:")
+}
+
 // DecodeInvalidRouterError decodes a InvalidRouter error from revert data.
 func (c *ParentVault) DecodeInvalidRouterError(data []byte) (*InvalidRouter, error) {
 	args := c.ABI.Errors["InvalidRouter"].Inputs
@@ -7474,6 +8881,25 @@ func (c *ParentVault) DecodeInvalidRouterError(data []byte) (*InvalidRouter, err
 // Error implements the error interface for InvalidRouter.
 func (e *InvalidRouter) Error() string {
 	return fmt.Sprintf("InvalidRouter error: router=%v;", e.Router)
+}
+
+// DecodeNotInitializingError decodes a NotInitializing error from revert data.
+func (c *ParentVault) DecodeNotInitializingError(data []byte) (*NotInitializing, error) {
+	args := c.ABI.Errors["NotInitializing"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 0 {
+		return nil, fmt.Errorf("expected 0 values, got %d", len(values))
+	}
+
+	return &NotInitializing{}, nil
+}
+
+// Error implements the error interface for NotInitializing.
+func (e *NotInitializing) Error() string {
+	return fmt.Sprintf("NotInitializing error:")
 }
 
 // DecodeOwnableInvalidOwnerError decodes a OwnableInvalidOwner error from revert data.
@@ -7552,6 +8978,77 @@ func (c *ParentVault) DecodeParentVaultAmountTooSmallError(data []byte) (*Parent
 // Error implements the error interface for ParentVaultAmountTooSmall.
 func (e *ParentVaultAmountTooSmall) Error() string {
 	return fmt.Sprintf("ParentVaultAmountTooSmall error: amount=%v;", e.Amount)
+}
+
+// DecodeParentVaultCannotRemoveActiveProtocolError decodes a ParentVault__CannotRemoveActiveProtocol error from revert data.
+func (c *ParentVault) DecodeParentVaultCannotRemoveActiveProtocolError(data []byte) (*ParentVaultCannotRemoveActiveProtocol, error) {
+	args := c.ABI.Errors["ParentVault__CannotRemoveActiveProtocol"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 1 {
+		return nil, fmt.Errorf("expected 1 values, got %d", len(values))
+	}
+
+	protocolId, ok0 := values[0].([32]byte)
+	if !ok0 {
+		return nil, fmt.Errorf("unexpected type for protocolId in ParentVaultCannotRemoveActiveProtocol error")
+	}
+
+	return &ParentVaultCannotRemoveActiveProtocol{
+		ProtocolId: protocolId,
+	}, nil
+}
+
+// Error implements the error interface for ParentVaultCannotRemoveActiveProtocol.
+func (e *ParentVaultCannotRemoveActiveProtocol) Error() string {
+	return fmt.Sprintf("ParentVaultCannotRemoveActiveProtocol error: protocolId=%v;", e.ProtocolId)
+}
+
+// DecodeParentVaultCannotRemovePendingProtocolError decodes a ParentVault__CannotRemovePendingProtocol error from revert data.
+func (c *ParentVault) DecodeParentVaultCannotRemovePendingProtocolError(data []byte) (*ParentVaultCannotRemovePendingProtocol, error) {
+	args := c.ABI.Errors["ParentVault__CannotRemovePendingProtocol"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 1 {
+		return nil, fmt.Errorf("expected 1 values, got %d", len(values))
+	}
+
+	protocolId, ok0 := values[0].([32]byte)
+	if !ok0 {
+		return nil, fmt.Errorf("unexpected type for protocolId in ParentVaultCannotRemovePendingProtocol error")
+	}
+
+	return &ParentVaultCannotRemovePendingProtocol{
+		ProtocolId: protocolId,
+	}, nil
+}
+
+// Error implements the error interface for ParentVaultCannotRemovePendingProtocol.
+func (e *ParentVaultCannotRemovePendingProtocol) Error() string {
+	return fmt.Sprintf("ParentVaultCannotRemovePendingProtocol error: protocolId=%v;", e.ProtocolId)
+}
+
+// DecodeParentVaultDepositWouldMintZeroSharesError decodes a ParentVault__DepositWouldMintZeroShares error from revert data.
+func (c *ParentVault) DecodeParentVaultDepositWouldMintZeroSharesError(data []byte) (*ParentVaultDepositWouldMintZeroShares, error) {
+	args := c.ABI.Errors["ParentVault__DepositWouldMintZeroShares"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 0 {
+		return nil, fmt.Errorf("expected 0 values, got %d", len(values))
+	}
+
+	return &ParentVaultDepositWouldMintZeroShares{}, nil
+}
+
+// Error implements the error interface for ParentVaultDepositWouldMintZeroShares.
+func (e *ParentVaultDepositWouldMintZeroShares) Error() string {
+	return fmt.Sprintf("ParentVaultDepositWouldMintZeroShares error:")
 }
 
 // DecodeParentVaultEmptyEpochError decodes a ParentVault__EmptyEpoch error from revert data.
@@ -7729,6 +9226,110 @@ func (e *ParentVaultInitialActiveProtocolAdapterAlreadySet) Error() string {
 	return fmt.Sprintf("ParentVaultInitialActiveProtocolAdapterAlreadySet error:")
 }
 
+// DecodeParentVaultInvalidChainSelectorError decodes a ParentVault__InvalidChainSelector error from revert data.
+func (c *ParentVault) DecodeParentVaultInvalidChainSelectorError(data []byte) (*ParentVaultInvalidChainSelector, error) {
+	args := c.ABI.Errors["ParentVault__InvalidChainSelector"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 1 {
+		return nil, fmt.Errorf("expected 1 values, got %d", len(values))
+	}
+
+	chainSelector, ok0 := values[0].(uint64)
+	if !ok0 {
+		return nil, fmt.Errorf("unexpected type for chainSelector in ParentVaultInvalidChainSelector error")
+	}
+
+	return &ParentVaultInvalidChainSelector{
+		ChainSelector: chainSelector,
+	}, nil
+}
+
+// Error implements the error interface for ParentVaultInvalidChainSelector.
+func (e *ParentVaultInvalidChainSelector) Error() string {
+	return fmt.Sprintf("ParentVaultInvalidChainSelector error: chainSelector=%v;", e.ChainSelector)
+}
+
+// DecodeParentVaultInvalidEpochNonceError decodes a ParentVault__InvalidEpochNonce error from revert data.
+func (c *ParentVault) DecodeParentVaultInvalidEpochNonceError(data []byte) (*ParentVaultInvalidEpochNonce, error) {
+	args := c.ABI.Errors["ParentVault__InvalidEpochNonce"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 1 {
+		return nil, fmt.Errorf("expected 1 values, got %d", len(values))
+	}
+
+	epochNonce, ok0 := values[0].(*big.Int)
+	if !ok0 {
+		return nil, fmt.Errorf("unexpected type for epochNonce in ParentVaultInvalidEpochNonce error")
+	}
+
+	return &ParentVaultInvalidEpochNonce{
+		EpochNonce: epochNonce,
+	}, nil
+}
+
+// Error implements the error interface for ParentVaultInvalidEpochNonce.
+func (e *ParentVaultInvalidEpochNonce) Error() string {
+	return fmt.Sprintf("ParentVaultInvalidEpochNonce error: epochNonce=%v;", e.EpochNonce)
+}
+
+// DecodeParentVaultInvalidPendingProtocolIdError decodes a ParentVault__InvalidPendingProtocolId error from revert data.
+func (c *ParentVault) DecodeParentVaultInvalidPendingProtocolIdError(data []byte) (*ParentVaultInvalidPendingProtocolId, error) {
+	args := c.ABI.Errors["ParentVault__InvalidPendingProtocolId"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 1 {
+		return nil, fmt.Errorf("expected 1 values, got %d", len(values))
+	}
+
+	protocolId, ok0 := values[0].([32]byte)
+	if !ok0 {
+		return nil, fmt.Errorf("unexpected type for protocolId in ParentVaultInvalidPendingProtocolId error")
+	}
+
+	return &ParentVaultInvalidPendingProtocolId{
+		ProtocolId: protocolId,
+	}, nil
+}
+
+// Error implements the error interface for ParentVaultInvalidPendingProtocolId.
+func (e *ParentVaultInvalidPendingProtocolId) Error() string {
+	return fmt.Sprintf("ParentVaultInvalidPendingProtocolId error: protocolId=%v;", e.ProtocolId)
+}
+
+// DecodeParentVaultInvalidProtocolIdError decodes a ParentVault__InvalidProtocolId error from revert data.
+func (c *ParentVault) DecodeParentVaultInvalidProtocolIdError(data []byte) (*ParentVaultInvalidProtocolId, error) {
+	args := c.ABI.Errors["ParentVault__InvalidProtocolId"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 1 {
+		return nil, fmt.Errorf("expected 1 values, got %d", len(values))
+	}
+
+	protocolId, ok0 := values[0].([32]byte)
+	if !ok0 {
+		return nil, fmt.Errorf("unexpected type for protocolId in ParentVaultInvalidProtocolId error")
+	}
+
+	return &ParentVaultInvalidProtocolId{
+		ProtocolId: protocolId,
+	}, nil
+}
+
+// Error implements the error interface for ParentVaultInvalidProtocolId.
+func (e *ParentVaultInvalidProtocolId) Error() string {
+	return fmt.Sprintf("ParentVaultInvalidProtocolId error: protocolId=%v;", e.ProtocolId)
+}
+
 // DecodeParentVaultInvalidRebalanceNonceError decodes a ParentVault__InvalidRebalanceNonce error from revert data.
 func (c *ParentVault) DecodeParentVaultInvalidRebalanceNonceError(data []byte) (*ParentVaultInvalidRebalanceNonce, error) {
 	args := c.ABI.Errors["ParentVault__InvalidRebalanceNonce"].Inputs
@@ -7753,6 +9354,25 @@ func (c *ParentVault) DecodeParentVaultInvalidRebalanceNonceError(data []byte) (
 // Error implements the error interface for ParentVaultInvalidRebalanceNonce.
 func (e *ParentVaultInvalidRebalanceNonce) Error() string {
 	return fmt.Sprintf("ParentVaultInvalidRebalanceNonce error: rebalanceNonce=%v;", e.RebalanceNonce)
+}
+
+// DecodeParentVaultNoCompletedEpochError decodes a ParentVault__NoCompletedEpoch error from revert data.
+func (c *ParentVault) DecodeParentVaultNoCompletedEpochError(data []byte) (*ParentVaultNoCompletedEpoch, error) {
+	args := c.ABI.Errors["ParentVault__NoCompletedEpoch"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 0 {
+		return nil, fmt.Errorf("expected 0 values, got %d", len(values))
+	}
+
+	return &ParentVaultNoCompletedEpoch{}, nil
+}
+
+// Error implements the error interface for ParentVaultNoCompletedEpoch.
+func (e *ParentVaultNoCompletedEpoch) Error() string {
+	return fmt.Sprintf("ParentVaultNoCompletedEpoch error:")
 }
 
 // DecodeParentVaultNoDepositError decodes a ParentVault__NoDeposit error from revert data.
@@ -7857,6 +9477,25 @@ func (e *ParentVaultNoZeroAmount) Error() string {
 	return fmt.Sprintf("ParentVaultNoZeroAmount error:")
 }
 
+// DecodeParentVaultNoZeroProtocolIdError decodes a ParentVault__NoZeroProtocolId error from revert data.
+func (c *ParentVault) DecodeParentVaultNoZeroProtocolIdError(data []byte) (*ParentVaultNoZeroProtocolId, error) {
+	args := c.ABI.Errors["ParentVault__NoZeroProtocolId"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 0 {
+		return nil, fmt.Errorf("expected 0 values, got %d", len(values))
+	}
+
+	return &ParentVaultNoZeroProtocolId{}, nil
+}
+
+// Error implements the error interface for ParentVaultNoZeroProtocolId.
+func (e *ParentVaultNoZeroProtocolId) Error() string {
+	return fmt.Sprintf("ParentVaultNoZeroProtocolId error:")
+}
+
 // DecodeParentVaultRebalanceInProgressError decodes a ParentVault__RebalanceInProgress error from revert data.
 func (c *ParentVault) DecodeParentVaultRebalanceInProgressError(data []byte) (*ParentVaultRebalanceInProgress, error) {
 	args := c.ABI.Errors["ParentVault__RebalanceInProgress"].Inputs
@@ -7895,36 +9534,42 @@ func (e *ParentVaultSameStrategy) Error() string {
 	return fmt.Sprintf("ParentVaultSameStrategy error:")
 }
 
-// DecodeParentVaultWithdrawFailedError decodes a ParentVault__WithdrawFailed error from revert data.
-func (c *ParentVault) DecodeParentVaultWithdrawFailedError(data []byte) (*ParentVaultWithdrawFailed, error) {
-	args := c.ABI.Errors["ParentVault__WithdrawFailed"].Inputs
+// DecodeParentVaultZeroPricePerShareError decodes a ParentVault__ZeroPricePerShare error from revert data.
+func (c *ParentVault) DecodeParentVaultZeroPricePerShareError(data []byte) (*ParentVaultZeroPricePerShare, error) {
+	args := c.ABI.Errors["ParentVault__ZeroPricePerShare"].Inputs
 	values, err := args.Unpack(data[4:])
 	if err != nil {
 		return nil, fmt.Errorf("failed to unpack error: %w", err)
 	}
-	if len(values) != 2 {
-		return nil, fmt.Errorf("expected 2 values, got %d", len(values))
+	if len(values) != 0 {
+		return nil, fmt.Errorf("expected 0 values, got %d", len(values))
 	}
 
-	epochNonce, ok0 := values[0].(*big.Int)
-	if !ok0 {
-		return nil, fmt.Errorf("unexpected type for epochNonce in ParentVaultWithdrawFailed error")
-	}
-
-	amount, ok1 := values[1].(*big.Int)
-	if !ok1 {
-		return nil, fmt.Errorf("unexpected type for amount in ParentVaultWithdrawFailed error")
-	}
-
-	return &ParentVaultWithdrawFailed{
-		EpochNonce: epochNonce,
-		Amount:     amount,
-	}, nil
+	return &ParentVaultZeroPricePerShare{}, nil
 }
 
-// Error implements the error interface for ParentVaultWithdrawFailed.
-func (e *ParentVaultWithdrawFailed) Error() string {
-	return fmt.Sprintf("ParentVaultWithdrawFailed error: epochNonce=%v; amount=%v;", e.EpochNonce, e.Amount)
+// Error implements the error interface for ParentVaultZeroPricePerShare.
+func (e *ParentVaultZeroPricePerShare) Error() string {
+	return fmt.Sprintf("ParentVaultZeroPricePerShare error:")
+}
+
+// DecodeParentVaultZeroTvlWithOutstandingSharesError decodes a ParentVault__ZeroTvlWithOutstandingShares error from revert data.
+func (c *ParentVault) DecodeParentVaultZeroTvlWithOutstandingSharesError(data []byte) (*ParentVaultZeroTvlWithOutstandingShares, error) {
+	args := c.ABI.Errors["ParentVault__ZeroTvlWithOutstandingShares"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 0 {
+		return nil, fmt.Errorf("expected 0 values, got %d", len(values))
+	}
+
+	return &ParentVaultZeroTvlWithOutstandingShares{}, nil
+}
+
+// Error implements the error interface for ParentVaultZeroTvlWithOutstandingShares.
+func (e *ParentVaultZeroTvlWithOutstandingShares) Error() string {
+	return fmt.Sprintf("ParentVaultZeroTvlWithOutstandingShares error:")
 }
 
 // DecodePolicyEngineUndefinedError decodes a PolicyEngineUndefined error from revert data.
@@ -8023,6 +9668,51 @@ func (e *SafeERC20FailedOperation) Error() string {
 	return fmt.Sprintf("SafeERC20FailedOperation error: token=%v;", e.Token)
 }
 
+// DecodeUUPSUnauthorizedCallContextError decodes a UUPSUnauthorizedCallContext error from revert data.
+func (c *ParentVault) DecodeUUPSUnauthorizedCallContextError(data []byte) (*UUPSUnauthorizedCallContext, error) {
+	args := c.ABI.Errors["UUPSUnauthorizedCallContext"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 0 {
+		return nil, fmt.Errorf("expected 0 values, got %d", len(values))
+	}
+
+	return &UUPSUnauthorizedCallContext{}, nil
+}
+
+// Error implements the error interface for UUPSUnauthorizedCallContext.
+func (e *UUPSUnauthorizedCallContext) Error() string {
+	return fmt.Sprintf("UUPSUnauthorizedCallContext error:")
+}
+
+// DecodeUUPSUnsupportedProxiableUUIDError decodes a UUPSUnsupportedProxiableUUID error from revert data.
+func (c *ParentVault) DecodeUUPSUnsupportedProxiableUUIDError(data []byte) (*UUPSUnsupportedProxiableUUID, error) {
+	args := c.ABI.Errors["UUPSUnsupportedProxiableUUID"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 1 {
+		return nil, fmt.Errorf("expected 1 values, got %d", len(values))
+	}
+
+	slot, ok0 := values[0].([32]byte)
+	if !ok0 {
+		return nil, fmt.Errorf("unexpected type for slot in UUPSUnsupportedProxiableUUID error")
+	}
+
+	return &UUPSUnsupportedProxiableUUID{
+		Slot: slot,
+	}, nil
+}
+
+// Error implements the error interface for UUPSUnsupportedProxiableUUID.
+func (e *UUPSUnsupportedProxiableUUID) Error() string {
+	return fmt.Sprintf("UUPSUnsupportedProxiableUUID error: slot=%v;", e.Slot)
+}
+
 func (c *ParentVault) UnpackError(data []byte) (any, error) {
 	switch common.Bytes2Hex(data[:4]) {
 	case common.Bytes2Hex(c.ABI.Errors["AccessControlBadConfirmation"].ID.Bytes()[:4]):
@@ -8035,22 +9725,42 @@ func (c *ParentVault) UnpackError(data []byte) (any, error) {
 		return c.DecodeAccessControlInvalidDefaultAdminError(data)
 	case common.Bytes2Hex(c.ABI.Errors["AccessControlUnauthorizedAccount"].ID.Bytes()[:4]):
 		return c.DecodeAccessControlUnauthorizedAccountError(data)
+	case common.Bytes2Hex(c.ABI.Errors["AddressEmptyCode"].ID.Bytes()[:4]):
+		return c.DecodeAddressEmptyCodeError(data)
 	case common.Bytes2Hex(c.ABI.Errors["BaseVault__DepositFailed"].ID.Bytes()[:4]):
 		return c.DecodeBaseVaultDepositFailedError(data)
+	case common.Bytes2Hex(c.ABI.Errors["BaseVault__DestinationVaultNotSet"].ID.Bytes()[:4]):
+		return c.DecodeBaseVaultDestinationVaultNotSetError(data)
 	case common.Bytes2Hex(c.ABI.Errors["BaseVault__EmergencyDrainDelayNotMet"].ID.Bytes()[:4]):
 		return c.DecodeBaseVaultEmergencyDrainDelayNotMetError(data)
+	case common.Bytes2Hex(c.ABI.Errors["BaseVault__EmptyInput"].ID.Bytes()[:4]):
+		return c.DecodeBaseVaultEmptyInputError(data)
+	case common.Bytes2Hex(c.ABI.Errors["BaseVault__InvalidAdapterVault"].ID.Bytes()[:4]):
+		return c.DecodeBaseVaultInvalidAdapterVaultError(data)
+	case common.Bytes2Hex(c.ABI.Errors["BaseVault__InvalidDestinationChainSelector"].ID.Bytes()[:4]):
+		return c.DecodeBaseVaultInvalidDestinationChainSelectorError(data)
 	case common.Bytes2Hex(c.ABI.Errors["BaseVault__InvalidInputLengths"].ID.Bytes()[:4]):
 		return c.DecodeBaseVaultInvalidInputLengthsError(data)
+	case common.Bytes2Hex(c.ABI.Errors["BaseVault__InvalidReceivedToken"].ID.Bytes()[:4]):
+		return c.DecodeBaseVaultInvalidReceivedTokenError(data)
 	case common.Bytes2Hex(c.ABI.Errors["BaseVault__InvalidSender"].ID.Bytes()[:4]):
 		return c.DecodeBaseVaultInvalidSenderError(data)
+	case common.Bytes2Hex(c.ABI.Errors["BaseVault__InvalidTokenAmountsLength"].ID.Bytes()[:4]):
+		return c.DecodeBaseVaultInvalidTokenAmountsLengthError(data)
+	case common.Bytes2Hex(c.ABI.Errors["BaseVault__InvalidTxType"].ID.Bytes()[:4]):
+		return c.DecodeBaseVaultInvalidTxTypeError(data)
 	case common.Bytes2Hex(c.ABI.Errors["BaseVault__NoActiveAdapter"].ID.Bytes()[:4]):
 		return c.DecodeBaseVaultNoActiveAdapterError(data)
 	case common.Bytes2Hex(c.ABI.Errors["BaseVault__NoAdapterRegistered"].ID.Bytes()[:4]):
 		return c.DecodeBaseVaultNoAdapterRegisteredError(data)
 	case common.Bytes2Hex(c.ABI.Errors["BaseVault__NoPendingRecovery"].ID.Bytes()[:4]):
 		return c.DecodeBaseVaultNoPendingRecoveryError(data)
+	case common.Bytes2Hex(c.ABI.Errors["BaseVault__NoZeroAddress"].ID.Bytes()[:4]):
+		return c.DecodeBaseVaultNoZeroAddressError(data)
 	case common.Bytes2Hex(c.ABI.Errors["BaseVault__NoZeroAmount"].ID.Bytes()[:4]):
 		return c.DecodeBaseVaultNoZeroAmountError(data)
+	case common.Bytes2Hex(c.ABI.Errors["BaseVault__NoZeroChainSelector"].ID.Bytes()[:4]):
+		return c.DecodeBaseVaultNoZeroChainSelectorError(data)
 	case common.Bytes2Hex(c.ABI.Errors["BaseVault__OnlySelf"].ID.Bytes()[:4]):
 		return c.DecodeBaseVaultOnlySelfError(data)
 	case common.Bytes2Hex(c.ABI.Errors["BaseVault__RecoveryAlreadyPending"].ID.Bytes()[:4]):
@@ -8059,18 +9769,34 @@ func (c *ParentVault) UnpackError(data []byte) (any, error) {
 		return c.DecodeBaseVaultWithdrawFailedError(data)
 	case common.Bytes2Hex(c.ABI.Errors["BaseVault__ZeroRecoveryAmount"].ID.Bytes()[:4]):
 		return c.DecodeBaseVaultZeroRecoveryAmountError(data)
+	case common.Bytes2Hex(c.ABI.Errors["ERC1967InvalidImplementation"].ID.Bytes()[:4]):
+		return c.DecodeERC1967InvalidImplementationError(data)
+	case common.Bytes2Hex(c.ABI.Errors["ERC1967NonPayable"].ID.Bytes()[:4]):
+		return c.DecodeERC1967NonPayableError(data)
 	case common.Bytes2Hex(c.ABI.Errors["EnforcedPause"].ID.Bytes()[:4]):
 		return c.DecodeEnforcedPauseError(data)
 	case common.Bytes2Hex(c.ABI.Errors["ExpectedPause"].ID.Bytes()[:4]):
 		return c.DecodeExpectedPauseError(data)
+	case common.Bytes2Hex(c.ABI.Errors["FailedCall"].ID.Bytes()[:4]):
+		return c.DecodeFailedCallError(data)
+	case common.Bytes2Hex(c.ABI.Errors["InvalidInitialization"].ID.Bytes()[:4]):
+		return c.DecodeInvalidInitializationError(data)
 	case common.Bytes2Hex(c.ABI.Errors["InvalidRouter"].ID.Bytes()[:4]):
 		return c.DecodeInvalidRouterError(data)
+	case common.Bytes2Hex(c.ABI.Errors["NotInitializing"].ID.Bytes()[:4]):
+		return c.DecodeNotInitializingError(data)
 	case common.Bytes2Hex(c.ABI.Errors["OwnableInvalidOwner"].ID.Bytes()[:4]):
 		return c.DecodeOwnableInvalidOwnerError(data)
 	case common.Bytes2Hex(c.ABI.Errors["OwnableUnauthorizedAccount"].ID.Bytes()[:4]):
 		return c.DecodeOwnableUnauthorizedAccountError(data)
 	case common.Bytes2Hex(c.ABI.Errors["ParentVault__AmountTooSmall"].ID.Bytes()[:4]):
 		return c.DecodeParentVaultAmountTooSmallError(data)
+	case common.Bytes2Hex(c.ABI.Errors["ParentVault__CannotRemoveActiveProtocol"].ID.Bytes()[:4]):
+		return c.DecodeParentVaultCannotRemoveActiveProtocolError(data)
+	case common.Bytes2Hex(c.ABI.Errors["ParentVault__CannotRemovePendingProtocol"].ID.Bytes()[:4]):
+		return c.DecodeParentVaultCannotRemovePendingProtocolError(data)
+	case common.Bytes2Hex(c.ABI.Errors["ParentVault__DepositWouldMintZeroShares"].ID.Bytes()[:4]):
+		return c.DecodeParentVaultDepositWouldMintZeroSharesError(data)
 	case common.Bytes2Hex(c.ABI.Errors["ParentVault__EmptyEpoch"].ID.Bytes()[:4]):
 		return c.DecodeParentVaultEmptyEpochError(data)
 	case common.Bytes2Hex(c.ABI.Errors["ParentVault__EpochExecuting"].ID.Bytes()[:4]):
@@ -8085,8 +9811,18 @@ func (c *ParentVault) UnpackError(data []byte) (any, error) {
 		return c.DecodeParentVaultEpochTooShortError(data)
 	case common.Bytes2Hex(c.ABI.Errors["ParentVault__InitialActiveProtocolAdapterAlreadySet"].ID.Bytes()[:4]):
 		return c.DecodeParentVaultInitialActiveProtocolAdapterAlreadySetError(data)
+	case common.Bytes2Hex(c.ABI.Errors["ParentVault__InvalidChainSelector"].ID.Bytes()[:4]):
+		return c.DecodeParentVaultInvalidChainSelectorError(data)
+	case common.Bytes2Hex(c.ABI.Errors["ParentVault__InvalidEpochNonce"].ID.Bytes()[:4]):
+		return c.DecodeParentVaultInvalidEpochNonceError(data)
+	case common.Bytes2Hex(c.ABI.Errors["ParentVault__InvalidPendingProtocolId"].ID.Bytes()[:4]):
+		return c.DecodeParentVaultInvalidPendingProtocolIdError(data)
+	case common.Bytes2Hex(c.ABI.Errors["ParentVault__InvalidProtocolId"].ID.Bytes()[:4]):
+		return c.DecodeParentVaultInvalidProtocolIdError(data)
 	case common.Bytes2Hex(c.ABI.Errors["ParentVault__InvalidRebalanceNonce"].ID.Bytes()[:4]):
 		return c.DecodeParentVaultInvalidRebalanceNonceError(data)
+	case common.Bytes2Hex(c.ABI.Errors["ParentVault__NoCompletedEpoch"].ID.Bytes()[:4]):
+		return c.DecodeParentVaultNoCompletedEpochError(data)
 	case common.Bytes2Hex(c.ABI.Errors["ParentVault__NoDeposit"].ID.Bytes()[:4]):
 		return c.DecodeParentVaultNoDepositError(data)
 	case common.Bytes2Hex(c.ABI.Errors["ParentVault__NoRebalanceInProgress"].ID.Bytes()[:4]):
@@ -8095,12 +9831,16 @@ func (c *ParentVault) UnpackError(data []byte) (any, error) {
 		return c.DecodeParentVaultNoWithdrawError(data)
 	case common.Bytes2Hex(c.ABI.Errors["ParentVault__NoZeroAmount"].ID.Bytes()[:4]):
 		return c.DecodeParentVaultNoZeroAmountError(data)
+	case common.Bytes2Hex(c.ABI.Errors["ParentVault__NoZeroProtocolId"].ID.Bytes()[:4]):
+		return c.DecodeParentVaultNoZeroProtocolIdError(data)
 	case common.Bytes2Hex(c.ABI.Errors["ParentVault__RebalanceInProgress"].ID.Bytes()[:4]):
 		return c.DecodeParentVaultRebalanceInProgressError(data)
 	case common.Bytes2Hex(c.ABI.Errors["ParentVault__SameStrategy"].ID.Bytes()[:4]):
 		return c.DecodeParentVaultSameStrategyError(data)
-	case common.Bytes2Hex(c.ABI.Errors["ParentVault__WithdrawFailed"].ID.Bytes()[:4]):
-		return c.DecodeParentVaultWithdrawFailedError(data)
+	case common.Bytes2Hex(c.ABI.Errors["ParentVault__ZeroPricePerShare"].ID.Bytes()[:4]):
+		return c.DecodeParentVaultZeroPricePerShareError(data)
+	case common.Bytes2Hex(c.ABI.Errors["ParentVault__ZeroTvlWithOutstandingShares"].ID.Bytes()[:4]):
+		return c.DecodeParentVaultZeroTvlWithOutstandingSharesError(data)
 	case common.Bytes2Hex(c.ABI.Errors["PolicyEngineUndefined"].ID.Bytes()[:4]):
 		return c.DecodePolicyEngineUndefinedError(data)
 	case common.Bytes2Hex(c.ABI.Errors["ReentrancyGuardReentrantCall"].ID.Bytes()[:4]):
@@ -8109,9 +9849,125 @@ func (c *ParentVault) UnpackError(data []byte) (any, error) {
 		return c.DecodeSafeCastOverflowedUintDowncastError(data)
 	case common.Bytes2Hex(c.ABI.Errors["SafeERC20FailedOperation"].ID.Bytes()[:4]):
 		return c.DecodeSafeERC20FailedOperationError(data)
+	case common.Bytes2Hex(c.ABI.Errors["UUPSUnauthorizedCallContext"].ID.Bytes()[:4]):
+		return c.DecodeUUPSUnauthorizedCallContextError(data)
+	case common.Bytes2Hex(c.ABI.Errors["UUPSUnsupportedProxiableUUID"].ID.Bytes()[:4]):
+		return c.DecodeUUPSUnsupportedProxiableUUIDError(data)
 	default:
 		return nil, errors.New("unknown error selector")
 	}
+}
+
+// ActiveProtocolAdapterClearedTrigger wraps the raw log trigger and provides decoded ActiveProtocolAdapterClearedDecoded data
+type ActiveProtocolAdapterClearedTrigger struct {
+	cre.Trigger[*evm.Log, *evm.Log]              // Embed the raw trigger
+	contract                        *ParentVault // Keep reference for decoding
+}
+
+// Adapt method that decodes the log into ActiveProtocolAdapterCleared data
+func (t *ActiveProtocolAdapterClearedTrigger) Adapt(l *evm.Log) (*bindings.DecodedLog[ActiveProtocolAdapterClearedDecoded], error) {
+	// Decode the log using the contract's codec
+	decoded, err := t.contract.Codec.DecodeActiveProtocolAdapterCleared(l)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode ActiveProtocolAdapterCleared log: %w", err)
+	}
+
+	return &bindings.DecodedLog[ActiveProtocolAdapterClearedDecoded]{
+		Log:  l,        // Original log
+		Data: *decoded, // Decoded data
+	}, nil
+}
+
+func (c *ParentVault) LogTriggerActiveProtocolAdapterClearedLog(chainSelector uint64, confidence evm.ConfidenceLevel, filters []ActiveProtocolAdapterClearedTopics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[ActiveProtocolAdapterClearedDecoded]], error) {
+	event := c.ABI.Events["ActiveProtocolAdapterCleared"]
+	topics, err := c.Codec.EncodeActiveProtocolAdapterClearedTopics(event, filters)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode topics for ActiveProtocolAdapterCleared: %w", err)
+	}
+
+	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
+		Addresses:  [][]byte{c.Address.Bytes()},
+		Topics:     topics,
+		Confidence: confidence,
+	})
+
+	return &ActiveProtocolAdapterClearedTrigger{
+		Trigger:  rawTrigger,
+		contract: c,
+	}, nil
+}
+
+func (c *ParentVault) FilterLogsActiveProtocolAdapterCleared(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
+	if options == nil {
+		return nil, errors.New("FilterLogs options are required.")
+	}
+	return c.client.FilterLogs(runtime, &evm.FilterLogsRequest{
+		FilterQuery: &evm.FilterQuery{
+			Addresses: [][]byte{c.Address.Bytes()},
+			Topics: []*evm.Topics{
+				{Topic: [][]byte{c.Codec.ActiveProtocolAdapterClearedLogHash()}},
+			},
+			BlockHash: options.BlockHash,
+			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
+			ToBlock:   pb.NewBigIntFromInt(options.ToBlock),
+		},
+	}), nil
+}
+
+// ActiveProtocolAdapterSetTrigger wraps the raw log trigger and provides decoded ActiveProtocolAdapterSetDecoded data
+type ActiveProtocolAdapterSetTrigger struct {
+	cre.Trigger[*evm.Log, *evm.Log]              // Embed the raw trigger
+	contract                        *ParentVault // Keep reference for decoding
+}
+
+// Adapt method that decodes the log into ActiveProtocolAdapterSet data
+func (t *ActiveProtocolAdapterSetTrigger) Adapt(l *evm.Log) (*bindings.DecodedLog[ActiveProtocolAdapterSetDecoded], error) {
+	// Decode the log using the contract's codec
+	decoded, err := t.contract.Codec.DecodeActiveProtocolAdapterSet(l)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode ActiveProtocolAdapterSet log: %w", err)
+	}
+
+	return &bindings.DecodedLog[ActiveProtocolAdapterSetDecoded]{
+		Log:  l,        // Original log
+		Data: *decoded, // Decoded data
+	}, nil
+}
+
+func (c *ParentVault) LogTriggerActiveProtocolAdapterSetLog(chainSelector uint64, confidence evm.ConfidenceLevel, filters []ActiveProtocolAdapterSetTopics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[ActiveProtocolAdapterSetDecoded]], error) {
+	event := c.ABI.Events["ActiveProtocolAdapterSet"]
+	topics, err := c.Codec.EncodeActiveProtocolAdapterSetTopics(event, filters)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode topics for ActiveProtocolAdapterSet: %w", err)
+	}
+
+	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
+		Addresses:  [][]byte{c.Address.Bytes()},
+		Topics:     topics,
+		Confidence: confidence,
+	})
+
+	return &ActiveProtocolAdapterSetTrigger{
+		Trigger:  rawTrigger,
+		contract: c,
+	}, nil
+}
+
+func (c *ParentVault) FilterLogsActiveProtocolAdapterSet(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
+	if options == nil {
+		return nil, errors.New("FilterLogs options are required.")
+	}
+	return c.client.FilterLogs(runtime, &evm.FilterLogsRequest{
+		FilterQuery: &evm.FilterQuery{
+			Addresses: [][]byte{c.Address.Bytes()},
+			Topics: []*evm.Topics{
+				{Topic: [][]byte{c.Codec.ActiveProtocolAdapterSetLogHash()}},
+			},
+			BlockHash: options.BlockHash,
+			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
+			ToBlock:   pb.NewBigIntFromInt(options.ToBlock),
+		},
+	}), nil
 }
 
 // CCIPBridgedTrigger wraps the raw log trigger and provides decoded CCIPBridgedDecoded data
@@ -8674,31 +10530,31 @@ func (c *ParentVault) FilterLogsDepositClaimed(runtime cre.Runtime, options *bin
 	}), nil
 }
 
-// DepositFeeCollectedTrigger wraps the raw log trigger and provides decoded DepositFeeCollectedDecoded data
-type DepositFeeCollectedTrigger struct {
+// DepositForceCancelledTrigger wraps the raw log trigger and provides decoded DepositForceCancelledDecoded data
+type DepositForceCancelledTrigger struct {
 	cre.Trigger[*evm.Log, *evm.Log]              // Embed the raw trigger
 	contract                        *ParentVault // Keep reference for decoding
 }
 
-// Adapt method that decodes the log into DepositFeeCollected data
-func (t *DepositFeeCollectedTrigger) Adapt(l *evm.Log) (*bindings.DecodedLog[DepositFeeCollectedDecoded], error) {
+// Adapt method that decodes the log into DepositForceCancelled data
+func (t *DepositForceCancelledTrigger) Adapt(l *evm.Log) (*bindings.DecodedLog[DepositForceCancelledDecoded], error) {
 	// Decode the log using the contract's codec
-	decoded, err := t.contract.Codec.DecodeDepositFeeCollected(l)
+	decoded, err := t.contract.Codec.DecodeDepositForceCancelled(l)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode DepositFeeCollected log: %w", err)
+		return nil, fmt.Errorf("failed to decode DepositForceCancelled log: %w", err)
 	}
 
-	return &bindings.DecodedLog[DepositFeeCollectedDecoded]{
+	return &bindings.DecodedLog[DepositForceCancelledDecoded]{
 		Log:  l,        // Original log
 		Data: *decoded, // Decoded data
 	}, nil
 }
 
-func (c *ParentVault) LogTriggerDepositFeeCollectedLog(chainSelector uint64, confidence evm.ConfidenceLevel, filters []DepositFeeCollectedTopics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[DepositFeeCollectedDecoded]], error) {
-	event := c.ABI.Events["DepositFeeCollected"]
-	topics, err := c.Codec.EncodeDepositFeeCollectedTopics(event, filters)
+func (c *ParentVault) LogTriggerDepositForceCancelledLog(chainSelector uint64, confidence evm.ConfidenceLevel, filters []DepositForceCancelledTopics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[DepositForceCancelledDecoded]], error) {
+	event := c.ABI.Events["DepositForceCancelled"]
+	topics, err := c.Codec.EncodeDepositForceCancelledTopics(event, filters)
 	if err != nil {
-		return nil, fmt.Errorf("failed to encode topics for DepositFeeCollected: %w", err)
+		return nil, fmt.Errorf("failed to encode topics for DepositForceCancelled: %w", err)
 	}
 
 	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
@@ -8707,13 +10563,13 @@ func (c *ParentVault) LogTriggerDepositFeeCollectedLog(chainSelector uint64, con
 		Confidence: confidence,
 	})
 
-	return &DepositFeeCollectedTrigger{
+	return &DepositForceCancelledTrigger{
 		Trigger:  rawTrigger,
 		contract: c,
 	}, nil
 }
 
-func (c *ParentVault) FilterLogsDepositFeeCollected(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
+func (c *ParentVault) FilterLogsDepositForceCancelled(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
 	if options == nil {
 		return nil, errors.New("FilterLogs options are required.")
 	}
@@ -8721,7 +10577,7 @@ func (c *ParentVault) FilterLogsDepositFeeCollected(runtime cre.Runtime, options
 		FilterQuery: &evm.FilterQuery{
 			Addresses: [][]byte{c.Address.Bytes()},
 			Topics: []*evm.Topics{
-				{Topic: [][]byte{c.Codec.DepositFeeCollectedLogHash()}},
+				{Topic: [][]byte{c.Codec.DepositForceCancelledLogHash()}},
 			},
 			BlockHash: options.BlockHash,
 			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
@@ -8786,62 +10642,6 @@ func (c *ParentVault) FilterLogsDepositSubmitted(runtime cre.Runtime, options *b
 	}), nil
 }
 
-// DepositToStrategyFailureTrigger wraps the raw log trigger and provides decoded DepositToStrategyFailureDecoded data
-type DepositToStrategyFailureTrigger struct {
-	cre.Trigger[*evm.Log, *evm.Log]              // Embed the raw trigger
-	contract                        *ParentVault // Keep reference for decoding
-}
-
-// Adapt method that decodes the log into DepositToStrategyFailure data
-func (t *DepositToStrategyFailureTrigger) Adapt(l *evm.Log) (*bindings.DecodedLog[DepositToStrategyFailureDecoded], error) {
-	// Decode the log using the contract's codec
-	decoded, err := t.contract.Codec.DecodeDepositToStrategyFailure(l)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode DepositToStrategyFailure log: %w", err)
-	}
-
-	return &bindings.DecodedLog[DepositToStrategyFailureDecoded]{
-		Log:  l,        // Original log
-		Data: *decoded, // Decoded data
-	}, nil
-}
-
-func (c *ParentVault) LogTriggerDepositToStrategyFailureLog(chainSelector uint64, confidence evm.ConfidenceLevel, filters []DepositToStrategyFailureTopics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[DepositToStrategyFailureDecoded]], error) {
-	event := c.ABI.Events["DepositToStrategyFailure"]
-	topics, err := c.Codec.EncodeDepositToStrategyFailureTopics(event, filters)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode topics for DepositToStrategyFailure: %w", err)
-	}
-
-	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
-		Addresses:  [][]byte{c.Address.Bytes()},
-		Topics:     topics,
-		Confidence: confidence,
-	})
-
-	return &DepositToStrategyFailureTrigger{
-		Trigger:  rawTrigger,
-		contract: c,
-	}, nil
-}
-
-func (c *ParentVault) FilterLogsDepositToStrategyFailure(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
-	if options == nil {
-		return nil, errors.New("FilterLogs options are required.")
-	}
-	return c.client.FilterLogs(runtime, &evm.FilterLogsRequest{
-		FilterQuery: &evm.FilterQuery{
-			Addresses: [][]byte{c.Address.Bytes()},
-			Topics: []*evm.Topics{
-				{Topic: [][]byte{c.Codec.DepositToStrategyFailureLogHash()}},
-			},
-			BlockHash: options.BlockHash,
-			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
-			ToBlock:   pb.NewBigIntFromInt(options.ToBlock),
-		},
-	}), nil
-}
-
 // DepositToStrategySuccessTrigger wraps the raw log trigger and provides decoded DepositToStrategySuccessDecoded data
 type DepositToStrategySuccessTrigger struct {
 	cre.Trigger[*evm.Log, *evm.Log]              // Embed the raw trigger
@@ -8898,6 +10698,62 @@ func (c *ParentVault) FilterLogsDepositToStrategySuccess(runtime cre.Runtime, op
 	}), nil
 }
 
+// DonationTrigger wraps the raw log trigger and provides decoded DonationDecoded data
+type DonationTrigger struct {
+	cre.Trigger[*evm.Log, *evm.Log]              // Embed the raw trigger
+	contract                        *ParentVault // Keep reference for decoding
+}
+
+// Adapt method that decodes the log into Donation data
+func (t *DonationTrigger) Adapt(l *evm.Log) (*bindings.DecodedLog[DonationDecoded], error) {
+	// Decode the log using the contract's codec
+	decoded, err := t.contract.Codec.DecodeDonation(l)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode Donation log: %w", err)
+	}
+
+	return &bindings.DecodedLog[DonationDecoded]{
+		Log:  l,        // Original log
+		Data: *decoded, // Decoded data
+	}, nil
+}
+
+func (c *ParentVault) LogTriggerDonationLog(chainSelector uint64, confidence evm.ConfidenceLevel, filters []DonationTopics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[DonationDecoded]], error) {
+	event := c.ABI.Events["Donation"]
+	topics, err := c.Codec.EncodeDonationTopics(event, filters)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode topics for Donation: %w", err)
+	}
+
+	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
+		Addresses:  [][]byte{c.Address.Bytes()},
+		Topics:     topics,
+		Confidence: confidence,
+	})
+
+	return &DonationTrigger{
+		Trigger:  rawTrigger,
+		contract: c,
+	}, nil
+}
+
+func (c *ParentVault) FilterLogsDonation(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
+	if options == nil {
+		return nil, errors.New("FilterLogs options are required.")
+	}
+	return c.client.FilterLogs(runtime, &evm.FilterLogsRequest{
+		FilterQuery: &evm.FilterQuery{
+			Addresses: [][]byte{c.Address.Bytes()},
+			Topics: []*evm.Topics{
+				{Topic: [][]byte{c.Codec.DonationLogHash()}},
+			},
+			BlockHash: options.BlockHash,
+			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
+			ToBlock:   pb.NewBigIntFromInt(options.ToBlock),
+		},
+	}), nil
+}
+
 // EmergencyDrainExecutedTrigger wraps the raw log trigger and provides decoded EmergencyDrainExecutedDecoded data
 type EmergencyDrainExecutedTrigger struct {
 	cre.Trigger[*evm.Log, *evm.Log]              // Embed the raw trigger
@@ -8946,6 +10802,62 @@ func (c *ParentVault) FilterLogsEmergencyDrainExecuted(runtime cre.Runtime, opti
 			Addresses: [][]byte{c.Address.Bytes()},
 			Topics: []*evm.Topics{
 				{Topic: [][]byte{c.Codec.EmergencyDrainExecutedLogHash()}},
+			},
+			BlockHash: options.BlockHash,
+			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
+			ToBlock:   pb.NewBigIntFromInt(options.ToBlock),
+		},
+	}), nil
+}
+
+// EmergencyReceiverSetTrigger wraps the raw log trigger and provides decoded EmergencyReceiverSetDecoded data
+type EmergencyReceiverSetTrigger struct {
+	cre.Trigger[*evm.Log, *evm.Log]              // Embed the raw trigger
+	contract                        *ParentVault // Keep reference for decoding
+}
+
+// Adapt method that decodes the log into EmergencyReceiverSet data
+func (t *EmergencyReceiverSetTrigger) Adapt(l *evm.Log) (*bindings.DecodedLog[EmergencyReceiverSetDecoded], error) {
+	// Decode the log using the contract's codec
+	decoded, err := t.contract.Codec.DecodeEmergencyReceiverSet(l)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode EmergencyReceiverSet log: %w", err)
+	}
+
+	return &bindings.DecodedLog[EmergencyReceiverSetDecoded]{
+		Log:  l,        // Original log
+		Data: *decoded, // Decoded data
+	}, nil
+}
+
+func (c *ParentVault) LogTriggerEmergencyReceiverSetLog(chainSelector uint64, confidence evm.ConfidenceLevel, filters []EmergencyReceiverSetTopics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[EmergencyReceiverSetDecoded]], error) {
+	event := c.ABI.Events["EmergencyReceiverSet"]
+	topics, err := c.Codec.EncodeEmergencyReceiverSetTopics(event, filters)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode topics for EmergencyReceiverSet: %w", err)
+	}
+
+	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
+		Addresses:  [][]byte{c.Address.Bytes()},
+		Topics:     topics,
+		Confidence: confidence,
+	})
+
+	return &EmergencyReceiverSetTrigger{
+		Trigger:  rawTrigger,
+		contract: c,
+	}, nil
+}
+
+func (c *ParentVault) FilterLogsEmergencyReceiverSet(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
+	if options == nil {
+		return nil, errors.New("FilterLogs options are required.")
+	}
+	return c.client.FilterLogs(runtime, &evm.FilterLogsRequest{
+		FilterQuery: &evm.FilterQuery{
+			Addresses: [][]byte{c.Address.Bytes()},
+			Topics: []*evm.Topics{
+				{Topic: [][]byte{c.Codec.EmergencyReceiverSetLogHash()}},
 			},
 			BlockHash: options.BlockHash,
 			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
@@ -9234,6 +11146,62 @@ func (c *ParentVault) FilterLogsInitialActiveProtocolAdapterSet(runtime cre.Runt
 	}), nil
 }
 
+// InitializedTrigger wraps the raw log trigger and provides decoded InitializedDecoded data
+type InitializedTrigger struct {
+	cre.Trigger[*evm.Log, *evm.Log]              // Embed the raw trigger
+	contract                        *ParentVault // Keep reference for decoding
+}
+
+// Adapt method that decodes the log into Initialized data
+func (t *InitializedTrigger) Adapt(l *evm.Log) (*bindings.DecodedLog[InitializedDecoded], error) {
+	// Decode the log using the contract's codec
+	decoded, err := t.contract.Codec.DecodeInitialized(l)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode Initialized log: %w", err)
+	}
+
+	return &bindings.DecodedLog[InitializedDecoded]{
+		Log:  l,        // Original log
+		Data: *decoded, // Decoded data
+	}, nil
+}
+
+func (c *ParentVault) LogTriggerInitializedLog(chainSelector uint64, confidence evm.ConfidenceLevel, filters []InitializedTopics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[InitializedDecoded]], error) {
+	event := c.ABI.Events["Initialized"]
+	topics, err := c.Codec.EncodeInitializedTopics(event, filters)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode topics for Initialized: %w", err)
+	}
+
+	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
+		Addresses:  [][]byte{c.Address.Bytes()},
+		Topics:     topics,
+		Confidence: confidence,
+	})
+
+	return &InitializedTrigger{
+		Trigger:  rawTrigger,
+		contract: c,
+	}, nil
+}
+
+func (c *ParentVault) FilterLogsInitialized(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
+	if options == nil {
+		return nil, errors.New("FilterLogs options are required.")
+	}
+	return c.client.FilterLogs(runtime, &evm.FilterLogsRequest{
+		FilterQuery: &evm.FilterQuery{
+			Addresses: [][]byte{c.Address.Bytes()},
+			Topics: []*evm.Topics{
+				{Topic: [][]byte{c.Codec.InitializedLogHash()}},
+			},
+			BlockHash: options.BlockHash,
+			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
+			ToBlock:   pb.NewBigIntFromInt(options.ToBlock),
+		},
+	}), nil
+}
+
 // LinkWithdrawnTrigger wraps the raw log trigger and provides decoded LinkWithdrawnDecoded data
 type LinkWithdrawnTrigger struct {
 	cre.Trigger[*evm.Log, *evm.Log]              // Embed the raw trigger
@@ -9450,6 +11418,62 @@ func (c *ParentVault) FilterLogsPaused(runtime cre.Runtime, options *bindings.Fi
 			Addresses: [][]byte{c.Address.Bytes()},
 			Topics: []*evm.Topics{
 				{Topic: [][]byte{c.Codec.PausedLogHash()}},
+			},
+			BlockHash: options.BlockHash,
+			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
+			ToBlock:   pb.NewBigIntFromInt(options.ToBlock),
+		},
+	}), nil
+}
+
+// PerformanceFeeCollectedTrigger wraps the raw log trigger and provides decoded PerformanceFeeCollectedDecoded data
+type PerformanceFeeCollectedTrigger struct {
+	cre.Trigger[*evm.Log, *evm.Log]              // Embed the raw trigger
+	contract                        *ParentVault // Keep reference for decoding
+}
+
+// Adapt method that decodes the log into PerformanceFeeCollected data
+func (t *PerformanceFeeCollectedTrigger) Adapt(l *evm.Log) (*bindings.DecodedLog[PerformanceFeeCollectedDecoded], error) {
+	// Decode the log using the contract's codec
+	decoded, err := t.contract.Codec.DecodePerformanceFeeCollected(l)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode PerformanceFeeCollected log: %w", err)
+	}
+
+	return &bindings.DecodedLog[PerformanceFeeCollectedDecoded]{
+		Log:  l,        // Original log
+		Data: *decoded, // Decoded data
+	}, nil
+}
+
+func (c *ParentVault) LogTriggerPerformanceFeeCollectedLog(chainSelector uint64, confidence evm.ConfidenceLevel, filters []PerformanceFeeCollectedTopics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[PerformanceFeeCollectedDecoded]], error) {
+	event := c.ABI.Events["PerformanceFeeCollected"]
+	topics, err := c.Codec.EncodePerformanceFeeCollectedTopics(event, filters)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode topics for PerformanceFeeCollected: %w", err)
+	}
+
+	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
+		Addresses:  [][]byte{c.Address.Bytes()},
+		Topics:     topics,
+		Confidence: confidence,
+	})
+
+	return &PerformanceFeeCollectedTrigger{
+		Trigger:  rawTrigger,
+		contract: c,
+	}, nil
+}
+
+func (c *ParentVault) FilterLogsPerformanceFeeCollected(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
+	if options == nil {
+		return nil, errors.New("FilterLogs options are required.")
+	}
+	return c.client.FilterLogs(runtime, &evm.FilterLogsRequest{
+		FilterQuery: &evm.FilterQuery{
+			Addresses: [][]byte{c.Address.Bytes()},
+			Topics: []*evm.Topics{
+				{Topic: [][]byte{c.Codec.PerformanceFeeCollectedLogHash()}},
 			},
 			BlockHash: options.BlockHash,
 			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
@@ -9906,62 +11930,6 @@ func (c *ParentVault) FilterLogsRebalanceInitiated(runtime cre.Runtime, options 
 	}), nil
 }
 
-// RebalanceWithdrawFailureTrigger wraps the raw log trigger and provides decoded RebalanceWithdrawFailureDecoded data
-type RebalanceWithdrawFailureTrigger struct {
-	cre.Trigger[*evm.Log, *evm.Log]              // Embed the raw trigger
-	contract                        *ParentVault // Keep reference for decoding
-}
-
-// Adapt method that decodes the log into RebalanceWithdrawFailure data
-func (t *RebalanceWithdrawFailureTrigger) Adapt(l *evm.Log) (*bindings.DecodedLog[RebalanceWithdrawFailureDecoded], error) {
-	// Decode the log using the contract's codec
-	decoded, err := t.contract.Codec.DecodeRebalanceWithdrawFailure(l)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode RebalanceWithdrawFailure log: %w", err)
-	}
-
-	return &bindings.DecodedLog[RebalanceWithdrawFailureDecoded]{
-		Log:  l,        // Original log
-		Data: *decoded, // Decoded data
-	}, nil
-}
-
-func (c *ParentVault) LogTriggerRebalanceWithdrawFailureLog(chainSelector uint64, confidence evm.ConfidenceLevel, filters []RebalanceWithdrawFailureTopics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[RebalanceWithdrawFailureDecoded]], error) {
-	event := c.ABI.Events["RebalanceWithdrawFailure"]
-	topics, err := c.Codec.EncodeRebalanceWithdrawFailureTopics(event, filters)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode topics for RebalanceWithdrawFailure: %w", err)
-	}
-
-	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
-		Addresses:  [][]byte{c.Address.Bytes()},
-		Topics:     topics,
-		Confidence: confidence,
-	})
-
-	return &RebalanceWithdrawFailureTrigger{
-		Trigger:  rawTrigger,
-		contract: c,
-	}, nil
-}
-
-func (c *ParentVault) FilterLogsRebalanceWithdrawFailure(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
-	if options == nil {
-		return nil, errors.New("FilterLogs options are required.")
-	}
-	return c.client.FilterLogs(runtime, &evm.FilterLogsRequest{
-		FilterQuery: &evm.FilterQuery{
-			Addresses: [][]byte{c.Address.Bytes()},
-			Topics: []*evm.Topics{
-				{Topic: [][]byte{c.Codec.RebalanceWithdrawFailureLogHash()}},
-			},
-			BlockHash: options.BlockHash,
-			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
-			ToBlock:   pb.NewBigIntFromInt(options.ToBlock),
-		},
-	}), nil
-}
-
 // RebalanceWithdrawSuccessTrigger wraps the raw log trigger and provides decoded RebalanceWithdrawSuccessDecoded data
 type RebalanceWithdrawSuccessTrigger struct {
 	cre.Trigger[*evm.Log, *evm.Log]              // Embed the raw trigger
@@ -10186,6 +12154,62 @@ func (c *ParentVault) FilterLogsRoleRevoked(runtime cre.Runtime, options *bindin
 	}), nil
 }
 
+// SupportedProtocolSetTrigger wraps the raw log trigger and provides decoded SupportedProtocolSetDecoded data
+type SupportedProtocolSetTrigger struct {
+	cre.Trigger[*evm.Log, *evm.Log]              // Embed the raw trigger
+	contract                        *ParentVault // Keep reference for decoding
+}
+
+// Adapt method that decodes the log into SupportedProtocolSet data
+func (t *SupportedProtocolSetTrigger) Adapt(l *evm.Log) (*bindings.DecodedLog[SupportedProtocolSetDecoded], error) {
+	// Decode the log using the contract's codec
+	decoded, err := t.contract.Codec.DecodeSupportedProtocolSet(l)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode SupportedProtocolSet log: %w", err)
+	}
+
+	return &bindings.DecodedLog[SupportedProtocolSetDecoded]{
+		Log:  l,        // Original log
+		Data: *decoded, // Decoded data
+	}, nil
+}
+
+func (c *ParentVault) LogTriggerSupportedProtocolSetLog(chainSelector uint64, confidence evm.ConfidenceLevel, filters []SupportedProtocolSetTopics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[SupportedProtocolSetDecoded]], error) {
+	event := c.ABI.Events["SupportedProtocolSet"]
+	topics, err := c.Codec.EncodeSupportedProtocolSetTopics(event, filters)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode topics for SupportedProtocolSet: %w", err)
+	}
+
+	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
+		Addresses:  [][]byte{c.Address.Bytes()},
+		Topics:     topics,
+		Confidence: confidence,
+	})
+
+	return &SupportedProtocolSetTrigger{
+		Trigger:  rawTrigger,
+		contract: c,
+	}, nil
+}
+
+func (c *ParentVault) FilterLogsSupportedProtocolSet(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
+	if options == nil {
+		return nil, errors.New("FilterLogs options are required.")
+	}
+	return c.client.FilterLogs(runtime, &evm.FilterLogsRequest{
+		FilterQuery: &evm.FilterQuery{
+			Addresses: [][]byte{c.Address.Bytes()},
+			Topics: []*evm.Topics{
+				{Topic: [][]byte{c.Codec.SupportedProtocolSetLogHash()}},
+			},
+			BlockHash: options.BlockHash,
+			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
+			ToBlock:   pb.NewBigIntFromInt(options.ToBlock),
+		},
+	}), nil
+}
+
 // TreasurySetTrigger wraps the raw log trigger and provides decoded TreasurySetDecoded data
 type TreasurySetTrigger struct {
 	cre.Trigger[*evm.Log, *evm.Log]              // Embed the raw trigger
@@ -10298,6 +12322,62 @@ func (c *ParentVault) FilterLogsUnpaused(runtime cre.Runtime, options *bindings.
 	}), nil
 }
 
+// UpgradedTrigger wraps the raw log trigger and provides decoded UpgradedDecoded data
+type UpgradedTrigger struct {
+	cre.Trigger[*evm.Log, *evm.Log]              // Embed the raw trigger
+	contract                        *ParentVault // Keep reference for decoding
+}
+
+// Adapt method that decodes the log into Upgraded data
+func (t *UpgradedTrigger) Adapt(l *evm.Log) (*bindings.DecodedLog[UpgradedDecoded], error) {
+	// Decode the log using the contract's codec
+	decoded, err := t.contract.Codec.DecodeUpgraded(l)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode Upgraded log: %w", err)
+	}
+
+	return &bindings.DecodedLog[UpgradedDecoded]{
+		Log:  l,        // Original log
+		Data: *decoded, // Decoded data
+	}, nil
+}
+
+func (c *ParentVault) LogTriggerUpgradedLog(chainSelector uint64, confidence evm.ConfidenceLevel, filters []UpgradedTopics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[UpgradedDecoded]], error) {
+	event := c.ABI.Events["Upgraded"]
+	topics, err := c.Codec.EncodeUpgradedTopics(event, filters)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode topics for Upgraded: %w", err)
+	}
+
+	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
+		Addresses:  [][]byte{c.Address.Bytes()},
+		Topics:     topics,
+		Confidence: confidence,
+	})
+
+	return &UpgradedTrigger{
+		Trigger:  rawTrigger,
+		contract: c,
+	}, nil
+}
+
+func (c *ParentVault) FilterLogsUpgraded(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
+	if options == nil {
+		return nil, errors.New("FilterLogs options are required.")
+	}
+	return c.client.FilterLogs(runtime, &evm.FilterLogsRequest{
+		FilterQuery: &evm.FilterQuery{
+			Addresses: [][]byte{c.Address.Bytes()},
+			Topics: []*evm.Topics{
+				{Topic: [][]byte{c.Codec.UpgradedLogHash()}},
+			},
+			BlockHash: options.BlockHash,
+			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
+			ToBlock:   pb.NewBigIntFromInt(options.ToBlock),
+		},
+	}), nil
+}
+
 // WithdrawCancelledTrigger wraps the raw log trigger and provides decoded WithdrawCancelledDecoded data
 type WithdrawCancelledTrigger struct {
 	cre.Trigger[*evm.Log, *evm.Log]              // Embed the raw trigger
@@ -10402,118 +12482,6 @@ func (c *ParentVault) FilterLogsWithdrawClaimed(runtime cre.Runtime, options *bi
 			Addresses: [][]byte{c.Address.Bytes()},
 			Topics: []*evm.Topics{
 				{Topic: [][]byte{c.Codec.WithdrawClaimedLogHash()}},
-			},
-			BlockHash: options.BlockHash,
-			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
-			ToBlock:   pb.NewBigIntFromInt(options.ToBlock),
-		},
-	}), nil
-}
-
-// WithdrawFeeCollectedTrigger wraps the raw log trigger and provides decoded WithdrawFeeCollectedDecoded data
-type WithdrawFeeCollectedTrigger struct {
-	cre.Trigger[*evm.Log, *evm.Log]              // Embed the raw trigger
-	contract                        *ParentVault // Keep reference for decoding
-}
-
-// Adapt method that decodes the log into WithdrawFeeCollected data
-func (t *WithdrawFeeCollectedTrigger) Adapt(l *evm.Log) (*bindings.DecodedLog[WithdrawFeeCollectedDecoded], error) {
-	// Decode the log using the contract's codec
-	decoded, err := t.contract.Codec.DecodeWithdrawFeeCollected(l)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode WithdrawFeeCollected log: %w", err)
-	}
-
-	return &bindings.DecodedLog[WithdrawFeeCollectedDecoded]{
-		Log:  l,        // Original log
-		Data: *decoded, // Decoded data
-	}, nil
-}
-
-func (c *ParentVault) LogTriggerWithdrawFeeCollectedLog(chainSelector uint64, confidence evm.ConfidenceLevel, filters []WithdrawFeeCollectedTopics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[WithdrawFeeCollectedDecoded]], error) {
-	event := c.ABI.Events["WithdrawFeeCollected"]
-	topics, err := c.Codec.EncodeWithdrawFeeCollectedTopics(event, filters)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode topics for WithdrawFeeCollected: %w", err)
-	}
-
-	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
-		Addresses:  [][]byte{c.Address.Bytes()},
-		Topics:     topics,
-		Confidence: confidence,
-	})
-
-	return &WithdrawFeeCollectedTrigger{
-		Trigger:  rawTrigger,
-		contract: c,
-	}, nil
-}
-
-func (c *ParentVault) FilterLogsWithdrawFeeCollected(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
-	if options == nil {
-		return nil, errors.New("FilterLogs options are required.")
-	}
-	return c.client.FilterLogs(runtime, &evm.FilterLogsRequest{
-		FilterQuery: &evm.FilterQuery{
-			Addresses: [][]byte{c.Address.Bytes()},
-			Topics: []*evm.Topics{
-				{Topic: [][]byte{c.Codec.WithdrawFeeCollectedLogHash()}},
-			},
-			BlockHash: options.BlockHash,
-			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
-			ToBlock:   pb.NewBigIntFromInt(options.ToBlock),
-		},
-	}), nil
-}
-
-// WithdrawFromStrategyFailureTrigger wraps the raw log trigger and provides decoded WithdrawFromStrategyFailureDecoded data
-type WithdrawFromStrategyFailureTrigger struct {
-	cre.Trigger[*evm.Log, *evm.Log]              // Embed the raw trigger
-	contract                        *ParentVault // Keep reference for decoding
-}
-
-// Adapt method that decodes the log into WithdrawFromStrategyFailure data
-func (t *WithdrawFromStrategyFailureTrigger) Adapt(l *evm.Log) (*bindings.DecodedLog[WithdrawFromStrategyFailureDecoded], error) {
-	// Decode the log using the contract's codec
-	decoded, err := t.contract.Codec.DecodeWithdrawFromStrategyFailure(l)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode WithdrawFromStrategyFailure log: %w", err)
-	}
-
-	return &bindings.DecodedLog[WithdrawFromStrategyFailureDecoded]{
-		Log:  l,        // Original log
-		Data: *decoded, // Decoded data
-	}, nil
-}
-
-func (c *ParentVault) LogTriggerWithdrawFromStrategyFailureLog(chainSelector uint64, confidence evm.ConfidenceLevel, filters []WithdrawFromStrategyFailureTopics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[WithdrawFromStrategyFailureDecoded]], error) {
-	event := c.ABI.Events["WithdrawFromStrategyFailure"]
-	topics, err := c.Codec.EncodeWithdrawFromStrategyFailureTopics(event, filters)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode topics for WithdrawFromStrategyFailure: %w", err)
-	}
-
-	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
-		Addresses:  [][]byte{c.Address.Bytes()},
-		Topics:     topics,
-		Confidence: confidence,
-	})
-
-	return &WithdrawFromStrategyFailureTrigger{
-		Trigger:  rawTrigger,
-		contract: c,
-	}, nil
-}
-
-func (c *ParentVault) FilterLogsWithdrawFromStrategyFailure(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
-	if options == nil {
-		return nil, errors.New("FilterLogs options are required.")
-	}
-	return c.client.FilterLogs(runtime, &evm.FilterLogsRequest{
-		FilterQuery: &evm.FilterQuery{
-			Addresses: [][]byte{c.Address.Bytes()},
-			Topics: []*evm.Topics{
-				{Topic: [][]byte{c.Codec.WithdrawFromStrategyFailureLogHash()}},
 			},
 			BlockHash: options.BlockHash,
 			FromBlock: pb.NewBigIntFromInt(options.FromBlock),

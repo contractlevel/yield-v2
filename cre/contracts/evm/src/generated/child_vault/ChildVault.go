@@ -51,20 +51,26 @@ var (
 )
 
 var ChildVaultMetaData = &bind.MetaData{
-	ABI: "[{\"type\":\"constructor\",\"inputs\":[{\"name\":\"params\",\"type\":\"tuple\",\"internalType\":\"structBaseVault.ConstructorParams\",\"components\":[{\"name\":\"link\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"usdc\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"ccipRouter\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"defaultAdmin\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"pauser\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"unpauser\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"configOperator\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"adapterRegistry\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"thisChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]},{\"name\":\"parentChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"DEFAULT_ADMIN_ROLE\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"acceptDefaultAdminTransfer\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"beginDefaultAdminTransfer\",\"inputs\":[{\"name\":\"newAdmin\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"cancelDefaultAdminTransfer\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"ccipReceive\",\"inputs\":[{\"name\":\"message\",\"type\":\"tuple\",\"internalType\":\"structClient.Any2EVMMessage\",\"components\":[{\"name\":\"messageId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"sourceChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"sender\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"destTokenAmounts\",\"type\":\"tuple[]\",\"internalType\":\"structClient.EVMTokenAmount[]\",\"components\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}]}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"changeDefaultAdminDelay\",\"inputs\":[{\"name\":\"newDelay\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"defaultAdmin\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"defaultAdminDelay\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"defaultAdminDelayIncreaseWait\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"emergencyDrain\",\"inputs\":[{\"name\":\"revertOnFailure\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"executeEpochWithdraw\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"executeRebalance\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"newStrategy\",\"type\":\"tuple\",\"internalType\":\"structTypes.Strategy\",\"components\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"getActiveProtocolAdapter\",\"inputs\":[],\"outputs\":[{\"name\":\"activeProtocolAdapter\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getAdapterRegistry\",\"inputs\":[],\"outputs\":[{\"name\":\"adapterRegistry\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getCCVsAndFinalityConfig\",\"inputs\":[{\"name\":\"\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[{\"name\":\"requiredCCVs\",\"type\":\"address[]\",\"internalType\":\"address[]\"},{\"name\":\"optionalCCVs\",\"type\":\"address[]\",\"internalType\":\"address[]\"},{\"name\":\"optionalThreshold\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"allowedFinalityConfig\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getCcipGasLimit\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"outputs\":[{\"name\":\"gasLimit\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getCrosschainVault\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"outputs\":[{\"name\":\"vault\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getDefaultCcipGasLimit\",\"inputs\":[],\"outputs\":[{\"name\":\"defaultCcipGasLimit\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getEpochDepositRecovery\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"recovery\",\"type\":\"tuple\",\"internalType\":\"structTypes.AmountRecovery\",\"components\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"createdAt\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getEpochWithdrawRecovery\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"recovery\",\"type\":\"tuple\",\"internalType\":\"structTypes.AmountRecovery\",\"components\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"createdAt\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getLink\",\"inputs\":[],\"outputs\":[{\"name\":\"link\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getParentChainSelector\",\"inputs\":[],\"outputs\":[{\"name\":\"parentChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getPausedAt\",\"inputs\":[],\"outputs\":[{\"name\":\"pausedAt\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRebalanceDepositRecovery\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"recovery\",\"type\":\"tuple\",\"internalType\":\"structTypes.AmountRecovery\",\"components\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"createdAt\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRebalanceWithdrawRecovery\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"recovery\",\"type\":\"tuple\",\"internalType\":\"structTypes.RebalanceWithdrawRecovery\",\"components\":[{\"name\":\"strategy\",\"type\":\"tuple\",\"internalType\":\"structTypes.Strategy\",\"components\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]},{\"name\":\"createdAt\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRoleAdmin\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRouter\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getTVL\",\"inputs\":[],\"outputs\":[{\"name\":\"tvl\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getThisChainSelector\",\"inputs\":[],\"outputs\":[{\"name\":\"thisChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getUsdc\",\"inputs\":[],\"outputs\":[{\"name\":\"usdc\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"grantRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"hasRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"owner\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"pause\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"paused\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"pendingDefaultAdmin\",\"inputs\":[],\"outputs\":[{\"name\":\"newAdmin\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"schedule\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"pendingDefaultAdminDelay\",\"inputs\":[],\"outputs\":[{\"name\":\"newDelay\",\"type\":\"uint48\",\"internalType\":\"uint48\"},{\"name\":\"schedule\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"recoverFailedEpochDeposit\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"recoverFailedEpochWithdraw\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"recoverFailedRebalanceDeposit\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"recoverFailedRebalanceWithdraw\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"renounceRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"revokeRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"rollbackDefaultAdminDelay\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setCcipGasLimit\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"gasLimit\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setCrosschainVaults\",\"inputs\":[{\"name\":\"chainSelectors\",\"type\":\"uint64[]\",\"internalType\":\"uint64[]\"},{\"name\":\"vaults\",\"type\":\"address[]\",\"internalType\":\"address[]\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setDefaultCcipGasLimit\",\"inputs\":[{\"name\":\"gasLimit\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"supportsInterface\",\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"pure\"},{\"type\":\"function\",\"name\":\"tryDepositToAdapter\",\"inputs\":[{\"name\":\"adapter\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"unpause\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"withdrawLink\",\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"CcipGasLimitSet\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"},{\"name\":\"gasLimit\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CrosschainVaultSet\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"},{\"name\":\"vault\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminDelayChangeCanceled\",\"inputs\":[],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminDelayChangeScheduled\",\"inputs\":[{\"name\":\"newDelay\",\"type\":\"uint48\",\"indexed\":false,\"internalType\":\"uint48\"},{\"name\":\"effectSchedule\",\"type\":\"uint48\",\"indexed\":false,\"internalType\":\"uint48\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminTransferCanceled\",\"inputs\":[],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminTransferScheduled\",\"inputs\":[{\"name\":\"newAdmin\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"acceptSchedule\",\"type\":\"uint48\",\"indexed\":false,\"internalType\":\"uint48\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultCcipGasLimitSet\",\"inputs\":[{\"name\":\"gasLimit\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DepositToStrategyFailure\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DepositToStrategySuccess\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EmergencyDrainExecuted\",\"inputs\":[{\"name\":\"drainer\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EpochDepositRecoveryCleared\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EpochDepositRecoveryStored\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EpochWithdrawRecoveryCleared\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EpochWithdrawRecoveryStored\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"LinkWithdrawn\",\"inputs\":[{\"name\":\"operator\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Paused\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceDepositFailure\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceDepositRecoveryCleared\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceDepositRecoveryStored\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceDepositSuccess\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceWithdrawFailure\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceWithdrawRecoveryCleared\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceWithdrawRecoveryStored\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"protocolId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"chainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceWithdrawSuccess\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleAdminChanged\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"previousAdminRole\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"newAdminRole\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleGranted\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleRevoked\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CCIPBridged\",\"inputs\":[{\"name\":\"ccipMessageId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"ccipTxType\",\"type\":\"uint8\",\"indexed\":true,\"internalType\":\"enumTypes.CcipTx\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Unpaused\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"WithdrawFromStrategyFailure\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"WithdrawFromStrategySuccess\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"AccessControlBadConfirmation\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"AccessControlEnforcedDefaultAdminDelay\",\"inputs\":[{\"name\":\"schedule\",\"type\":\"uint48\",\"internalType\":\"uint48\"}]},{\"type\":\"error\",\"name\":\"AccessControlEnforcedDefaultAdminRules\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"AccessControlInvalidDefaultAdmin\",\"inputs\":[{\"name\":\"defaultAdmin\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"AccessControlUnauthorizedAccount\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"neededRole\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"type\":\"error\",\"name\":\"BaseVault__DepositFailed\",\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"BaseVault__EmergencyDrainDelayNotMet\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidInputLengths\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidSender\",\"inputs\":[{\"name\":\"sender\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"srcChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]},{\"type\":\"error\",\"name\":\"BaseVault__NoActiveAdapter\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__NoAdapterRegistered\",\"inputs\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"type\":\"error\",\"name\":\"BaseVault__NoPendingRecovery\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__NoZeroAmount\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__OnlySelf\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__RecoveryAlreadyPending\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__WithdrawFailed\",\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"BaseVault__ZeroRecoveryAmount\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ChildVault__InvalidRecoveryStrategy\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EnforcedPause\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ExpectedPause\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidRouter\",\"inputs\":[{\"name\":\"router\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"ReentrancyGuardReentrantCall\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"SafeCastOverflowedUintDowncast\",\"inputs\":[{\"name\":\"bits\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"value\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"SafeERC20FailedOperation\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"}]}]",
+	ABI: "[{\"type\":\"constructor\",\"inputs\":[{\"name\":\"params\",\"type\":\"tuple\",\"internalType\":\"structBaseVault.ConstructorParams\",\"components\":[{\"name\":\"link\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"asset\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"ccipRouter\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"adapterRegistry\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"thisChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]},{\"name\":\"parentChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"DEFAULT_ADMIN_ROLE\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"UPGRADE_INTERFACE_VERSION\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"string\",\"internalType\":\"string\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"acceptDefaultAdminTransfer\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"beginDefaultAdminTransfer\",\"inputs\":[{\"name\":\"newAdmin\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"cancelDefaultAdminTransfer\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"ccipReceive\",\"inputs\":[{\"name\":\"message\",\"type\":\"tuple\",\"internalType\":\"structClient.Any2EVMMessage\",\"components\":[{\"name\":\"messageId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"sourceChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"sender\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"destTokenAmounts\",\"type\":\"tuple[]\",\"internalType\":\"structClient.EVMTokenAmount[]\",\"components\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}]}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"changeDefaultAdminDelay\",\"inputs\":[{\"name\":\"newDelay\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"defaultAdmin\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"defaultAdminDelay\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"defaultAdminDelayIncreaseWait\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"donate\",\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"emergencyDrain\",\"inputs\":[{\"name\":\"revertOnFailure\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"executeEpochWithdraw\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"executeRebalance\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"newStrategy\",\"type\":\"tuple\",\"internalType\":\"structTypes.Strategy\",\"components\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"executeRecovery\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"getActiveProtocolAdapter\",\"inputs\":[],\"outputs\":[{\"name\":\"activeProtocolAdapter\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getAdapterRegistry\",\"inputs\":[],\"outputs\":[{\"name\":\"adapterRegistry\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getAsset\",\"inputs\":[],\"outputs\":[{\"name\":\"asset\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getAssetPrecision\",\"inputs\":[],\"outputs\":[{\"name\":\"assetPrecision\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getCCVsAndFinalityConfig\",\"inputs\":[{\"name\":\"\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[{\"name\":\"requiredCCVs\",\"type\":\"address[]\",\"internalType\":\"address[]\"},{\"name\":\"optionalCCVs\",\"type\":\"address[]\",\"internalType\":\"address[]\"},{\"name\":\"optionalThreshold\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"allowedFinalityConfig\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getCcipGasLimit\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"outputs\":[{\"name\":\"gasLimit\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getCcipSendRecovery\",\"inputs\":[],\"outputs\":[{\"name\":\"recovery\",\"type\":\"tuple\",\"internalType\":\"structTypes.CcipSendRecovery\",\"components\":[{\"name\":\"ccipTxType\",\"type\":\"uint8\",\"internalType\":\"enumTypes.CcipTx\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"destinationChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"nonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getCrosschainVault\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"outputs\":[{\"name\":\"vault\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getDefaultCcipGasLimit\",\"inputs\":[],\"outputs\":[{\"name\":\"defaultCcipGasLimit\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getEmergencyReceiver\",\"inputs\":[],\"outputs\":[{\"name\":\"emergencyReceiver\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getEpochDepositRecovery\",\"inputs\":[],\"outputs\":[{\"name\":\"recovery\",\"type\":\"tuple\",\"internalType\":\"structTypes.EpochRecovery\",\"components\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getEpochWithdrawRecovery\",\"inputs\":[],\"outputs\":[{\"name\":\"recovery\",\"type\":\"tuple\",\"internalType\":\"structTypes.EpochRecovery\",\"components\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getLink\",\"inputs\":[],\"outputs\":[{\"name\":\"link\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getParentChainSelector\",\"inputs\":[],\"outputs\":[{\"name\":\"parentChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getPausedAt\",\"inputs\":[],\"outputs\":[{\"name\":\"pausedAt\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRebalanceDepositRecovery\",\"inputs\":[],\"outputs\":[{\"name\":\"recovery\",\"type\":\"tuple\",\"internalType\":\"structTypes.RebalanceDepositRecovery\",\"components\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRebalanceWithdrawRecovery\",\"inputs\":[],\"outputs\":[{\"name\":\"recovery\",\"type\":\"tuple\",\"internalType\":\"structTypes.RebalanceWithdrawRecovery\",\"components\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"strategy\",\"type\":\"tuple\",\"internalType\":\"structTypes.Strategy\",\"components\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRecoveryMode\",\"inputs\":[],\"outputs\":[{\"name\":\"recoveryMode\",\"type\":\"uint8\",\"internalType\":\"enumTypes.RecoveryMode\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRoleAdmin\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRouter\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getTVL\",\"inputs\":[],\"outputs\":[{\"name\":\"tvl\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getThisChainSelector\",\"inputs\":[],\"outputs\":[{\"name\":\"thisChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"grantRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"hasRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"initialize\",\"inputs\":[{\"name\":\"params\",\"type\":\"tuple\",\"internalType\":\"structBaseVault.InitParams\",\"components\":[{\"name\":\"defaultAdmin\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"pauser\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"unpauser\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"configOperator\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"emergencyReceiver\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"initialDefaultCcipGasLimit\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"upgrader\",\"type\":\"address\",\"internalType\":\"address\"}]}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"owner\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"pause\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"paused\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"pendingDefaultAdmin\",\"inputs\":[],\"outputs\":[{\"name\":\"newAdmin\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"schedule\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"pendingDefaultAdminDelay\",\"inputs\":[],\"outputs\":[{\"name\":\"newDelay\",\"type\":\"uint48\",\"internalType\":\"uint48\"},{\"name\":\"schedule\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"proxiableUUID\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"renounceRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"revokeRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"rollbackDefaultAdminDelay\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setCcipGasLimit\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"gasLimit\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setCrosschainVaults\",\"inputs\":[{\"name\":\"chainSelectors\",\"type\":\"uint64[]\",\"internalType\":\"uint64[]\"},{\"name\":\"vaults\",\"type\":\"address[]\",\"internalType\":\"address[]\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setDefaultCcipGasLimit\",\"inputs\":[{\"name\":\"gasLimit\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setEmergencyReceiver\",\"inputs\":[{\"name\":\"emergencyReceiver\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"supportsInterface\",\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"pure\"},{\"type\":\"function\",\"name\":\"tryCcipSend\",\"inputs\":[{\"name\":\"bridgeAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"destinationChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"ccipTxType\",\"type\":\"uint8\",\"internalType\":\"enumTypes.CcipTx\"},{\"name\":\"nonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"tryDepositToAdapter\",\"inputs\":[{\"name\":\"adapter\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"unpause\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"upgradeToAndCall\",\"inputs\":[{\"name\":\"newImplementation\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"withdrawLink\",\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"ActiveProtocolAdapterCleared\",\"inputs\":[{\"name\":\"adapter\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ActiveProtocolAdapterSet\",\"inputs\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"adapter\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ActiveProtocolAdapterSet\",\"inputs\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"adapter\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CCIPBridged\",\"inputs\":[{\"name\":\"ccipMessageId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"ccipTxType\",\"type\":\"uint8\",\"indexed\":true,\"internalType\":\"enumTypes.CcipTx\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CCIPBridged\",\"inputs\":[{\"name\":\"ccipMessageId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"ccipTxType\",\"type\":\"uint8\",\"indexed\":true,\"internalType\":\"enumTypes.CcipTx\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CcipGasLimitSet\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"},{\"name\":\"gasLimit\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CcipGasLimitSet\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"},{\"name\":\"gasLimit\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CcipSendRecoveryCleared\",\"inputs\":[{\"name\":\"ccipTxType\",\"type\":\"uint8\",\"indexed\":true,\"internalType\":\"enumTypes.CcipTx\"},{\"name\":\"destinationChainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CcipSendRecoveryStored\",\"inputs\":[{\"name\":\"ccipTxType\",\"type\":\"uint8\",\"indexed\":true,\"internalType\":\"enumTypes.CcipTx\"},{\"name\":\"destinationChainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CrosschainVaultSet\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"},{\"name\":\"vault\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CrosschainVaultSet\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"},{\"name\":\"vault\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminDelayChangeCanceled\",\"inputs\":[],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminDelayChangeScheduled\",\"inputs\":[{\"name\":\"newDelay\",\"type\":\"uint48\",\"indexed\":false,\"internalType\":\"uint48\"},{\"name\":\"effectSchedule\",\"type\":\"uint48\",\"indexed\":false,\"internalType\":\"uint48\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminTransferCanceled\",\"inputs\":[],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminTransferScheduled\",\"inputs\":[{\"name\":\"newAdmin\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"acceptSchedule\",\"type\":\"uint48\",\"indexed\":false,\"internalType\":\"uint48\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultCcipGasLimitSet\",\"inputs\":[{\"name\":\"gasLimit\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultCcipGasLimitSet\",\"inputs\":[{\"name\":\"gasLimit\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DepositToStrategyFailure\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DepositToStrategySuccess\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Donation\",\"inputs\":[{\"name\":\"donor\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EmergencyDrainExecuted\",\"inputs\":[{\"name\":\"emergencyReceiver\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EmergencyReceiverSet\",\"inputs\":[{\"name\":\"emergencyReceiver\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EmergencyReceiverSet\",\"inputs\":[{\"name\":\"emergencyReceiver\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EpochDepositRecoveryCleared\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EpochDepositRecoveryStored\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EpochWithdrawRecoveryCleared\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EpochWithdrawRecoveryStored\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Initialized\",\"inputs\":[{\"name\":\"version\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"LinkWithdrawn\",\"inputs\":[{\"name\":\"operator\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Paused\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceDepositFailure\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceDepositRecoveryCleared\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceDepositRecoveryStored\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceDepositSuccess\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceWithdrawFailure\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceWithdrawRecoveryCleared\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceWithdrawRecoveryStored\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"protocolId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"chainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceWithdrawSuccess\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleAdminChanged\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"previousAdminRole\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"newAdminRole\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleGranted\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleRevoked\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Unpaused\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Upgraded\",\"inputs\":[{\"name\":\"implementation\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"WithdrawFromStrategyFailure\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"WithdrawFromStrategySuccess\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"AccessControlBadConfirmation\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"AccessControlEnforcedDefaultAdminDelay\",\"inputs\":[{\"name\":\"schedule\",\"type\":\"uint48\",\"internalType\":\"uint48\"}]},{\"type\":\"error\",\"name\":\"AccessControlEnforcedDefaultAdminRules\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"AccessControlInvalidDefaultAdmin\",\"inputs\":[{\"name\":\"defaultAdmin\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"AccessControlUnauthorizedAccount\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"neededRole\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"type\":\"error\",\"name\":\"AddressEmptyCode\",\"inputs\":[{\"name\":\"target\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"BaseVault__DepositFailed\",\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"BaseVault__DestinationVaultNotSet\",\"inputs\":[{\"name\":\"destinationChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]},{\"type\":\"error\",\"name\":\"BaseVault__EmergencyDrainDelayNotMet\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__EmptyInput\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidAdapterVault\",\"inputs\":[{\"name\":\"adapter\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"actualVault\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"expectedVault\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidDestinationChainSelector\",\"inputs\":[{\"name\":\"destinationChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidInputLengths\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidReceivedToken\",\"inputs\":[{\"name\":\"receivedToken\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"expectedToken\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidSender\",\"inputs\":[{\"name\":\"sender\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"srcChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidTokenAmountsLength\",\"inputs\":[{\"name\":\"receivedLength\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"expectedLength\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidTxType\",\"inputs\":[{\"name\":\"ccipTxType\",\"type\":\"uint8\",\"internalType\":\"enumTypes.CcipTx\"}]},{\"type\":\"error\",\"name\":\"BaseVault__NoActiveAdapter\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__NoAdapterRegistered\",\"inputs\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"type\":\"error\",\"name\":\"BaseVault__NoPendingRecovery\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__NoZeroAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__NoZeroAmount\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__NoZeroChainSelector\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__OnlySelf\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__RecoveryAlreadyPending\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__WithdrawFailed\",\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"BaseVault__ZeroRecoveryAmount\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ChildVault__InvalidParentChainSelector\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ChildVault__InvalidRecoveryStrategy\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ChildVault__OnlySelf\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ERC1967InvalidImplementation\",\"inputs\":[{\"name\":\"implementation\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"ERC1967NonPayable\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EnforcedPause\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ExpectedPause\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"FailedCall\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidInitialization\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidRouter\",\"inputs\":[{\"name\":\"router\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"NotInitializing\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ReentrancyGuardReentrantCall\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"SafeCastOverflowedUintDowncast\",\"inputs\":[{\"name\":\"bits\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"value\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"SafeERC20FailedOperation\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"UUPSUnauthorizedCallContext\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"UUPSUnsupportedProxiableUUID\",\"inputs\":[{\"name\":\"slot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]}]",
 }
 
 // Structs
 type BaseVaultConstructorParams struct {
 	Link              common.Address
-	Usdc              common.Address
+	Asset             common.Address
 	CcipRouter        common.Address
-	DefaultAdmin      common.Address
-	Pauser            common.Address
-	Unpauser          common.Address
-	ConfigOperator    common.Address
 	AdapterRegistry   common.Address
 	ThisChainSelector uint64
+}
+
+type BaseVaultInitParams struct {
+	DefaultAdmin               common.Address
+	Pauser                     common.Address
+	Unpauser                   common.Address
+	ConfigOperator             common.Address
+	EmergencyReceiver          common.Address
+	InitialDefaultCcipGasLimit *big.Int
+	Upgrader                   common.Address
 }
 
 type ClientAny2EVMMessage struct {
@@ -80,14 +86,27 @@ type ClientEVMTokenAmount struct {
 	Amount *big.Int
 }
 
-type TypesAmountRecovery struct {
-	Amount    *big.Int
-	CreatedAt *big.Int
+type TypesCcipSendRecovery struct {
+	CcipTxType               uint8
+	Amount                   *big.Int
+	DestinationChainSelector uint64
+	Nonce                    *big.Int
+	ProtocolId               [32]byte
+}
+
+type TypesEpochRecovery struct {
+	EpochNonce *big.Int
+	Amount     *big.Int
+}
+
+type TypesRebalanceDepositRecovery struct {
+	RebalanceNonce *big.Int
+	Amount         *big.Int
 }
 
 type TypesRebalanceWithdrawRecovery struct {
-	Strategy  TypesStrategy
-	CreatedAt *big.Int
+	RebalanceNonce *big.Int
+	Strategy       TypesStrategy
 }
 
 type TypesStrategy struct {
@@ -106,6 +125,10 @@ type CcipReceiveInput struct {
 
 type ChangeDefaultAdminDelayInput struct {
 	NewDelay *big.Int
+}
+
+type DonateInput struct {
+	Amount *big.Int
 }
 
 type EmergencyDrainInput struct {
@@ -135,22 +158,6 @@ type GetCrosschainVaultInput struct {
 	ChainSelector uint64
 }
 
-type GetEpochDepositRecoveryInput struct {
-	EpochNonce *big.Int
-}
-
-type GetEpochWithdrawRecoveryInput struct {
-	EpochNonce *big.Int
-}
-
-type GetRebalanceDepositRecoveryInput struct {
-	RebalanceNonce *big.Int
-}
-
-type GetRebalanceWithdrawRecoveryInput struct {
-	RebalanceNonce *big.Int
-}
-
 type GetRoleAdminInput struct {
 	Role [32]byte
 }
@@ -165,20 +172,8 @@ type HasRoleInput struct {
 	Account common.Address
 }
 
-type RecoverFailedEpochDepositInput struct {
-	EpochNonce *big.Int
-}
-
-type RecoverFailedEpochWithdrawInput struct {
-	EpochNonce *big.Int
-}
-
-type RecoverFailedRebalanceDepositInput struct {
-	RebalanceNonce *big.Int
-}
-
-type RecoverFailedRebalanceWithdrawInput struct {
-	RebalanceNonce *big.Int
+type InitializeInput struct {
+	Params BaseVaultInitParams
 }
 
 type RenounceRoleInput struct {
@@ -205,13 +200,30 @@ type SetDefaultCcipGasLimitInput struct {
 	GasLimit *big.Int
 }
 
+type SetEmergencyReceiverInput struct {
+	EmergencyReceiver common.Address
+}
+
 type SupportsInterfaceInput struct {
 	InterfaceId [4]byte
+}
+
+type TryCcipSendInput struct {
+	BridgeAmount             *big.Int
+	DestinationChainSelector uint64
+	CcipTxType               uint8
+	Nonce                    *big.Int
+	ProtocolId               [32]byte
 }
 
 type TryDepositToAdapterInput struct {
 	Adapter common.Address
 	Amount  *big.Int
+}
+
+type UpgradeToAndCallInput struct {
+	NewImplementation common.Address
+	Data              []byte
 }
 
 type WithdrawLinkInput struct {
@@ -256,19 +268,54 @@ type AccessControlUnauthorizedAccount struct {
 	NeededRole [32]byte
 }
 
+type AddressEmptyCode struct {
+	Target common.Address
+}
+
 type BaseVaultDepositFailed struct {
 	Amount *big.Int
+}
+
+type BaseVaultDestinationVaultNotSet struct {
+	DestinationChainSelector uint64
 }
 
 type BaseVaultEmergencyDrainDelayNotMet struct {
 }
 
+type BaseVaultEmptyInput struct {
+}
+
+type BaseVaultInvalidAdapterVault struct {
+	Adapter       common.Address
+	ActualVault   common.Address
+	ExpectedVault common.Address
+}
+
+type BaseVaultInvalidDestinationChainSelector struct {
+	DestinationChainSelector uint64
+}
+
 type BaseVaultInvalidInputLengths struct {
+}
+
+type BaseVaultInvalidReceivedToken struct {
+	ReceivedToken common.Address
+	ExpectedToken common.Address
 }
 
 type BaseVaultInvalidSender struct {
 	Sender           common.Address
 	SrcChainSelector uint64
+}
+
+type BaseVaultInvalidTokenAmountsLength struct {
+	ReceivedLength *big.Int
+	ExpectedLength *big.Int
+}
+
+type BaseVaultInvalidTxType struct {
+	CcipTxType uint8
 }
 
 type BaseVaultNoActiveAdapter struct {
@@ -281,7 +328,13 @@ type BaseVaultNoAdapterRegistered struct {
 type BaseVaultNoPendingRecovery struct {
 }
 
+type BaseVaultNoZeroAddress struct {
+}
+
 type BaseVaultNoZeroAmount struct {
+}
+
+type BaseVaultNoZeroChainSelector struct {
 }
 
 type BaseVaultOnlySelf struct {
@@ -297,7 +350,20 @@ type BaseVaultWithdrawFailed struct {
 type BaseVaultZeroRecoveryAmount struct {
 }
 
+type ChildVaultInvalidParentChainSelector struct {
+}
+
 type ChildVaultInvalidRecoveryStrategy struct {
+}
+
+type ChildVaultOnlySelf struct {
+}
+
+type ERC1967InvalidImplementation struct {
+	Implementation common.Address
+}
+
+type ERC1967NonPayable struct {
 }
 
 type EnforcedPause struct {
@@ -306,8 +372,17 @@ type EnforcedPause struct {
 type ExpectedPause struct {
 }
 
+type FailedCall struct {
+}
+
+type InvalidInitialization struct {
+}
+
 type InvalidRouter struct {
 	Router common.Address
+}
+
+type NotInitializing struct {
 }
 
 type ReentrancyGuardReentrantCall struct {
@@ -322,6 +397,13 @@ type SafeERC20FailedOperation struct {
 	Token common.Address
 }
 
+type UUPSUnauthorizedCallContext struct {
+}
+
+type UUPSUnsupportedProxiableUUID struct {
+	Slot [32]byte
+}
+
 // Events
 // The <Event>Topics struct should be used as a filter (for log triggers).
 // Note: It is only possible to filter on indexed fields.
@@ -332,6 +414,34 @@ type SafeERC20FailedOperation struct {
 // The <Event>Decoded struct will be the result of calling decode (Adapt) on the log trigger result.
 // Indexed dynamic type fields will be of type common.Hash.
 
+type ActiveProtocolAdapterClearedTopics struct {
+	Adapter common.Address
+}
+
+type ActiveProtocolAdapterClearedDecoded struct {
+	Adapter common.Address
+}
+
+type ActiveProtocolAdapterSetTopics struct {
+	ProtocolId [32]byte
+	Adapter    common.Address
+}
+
+type ActiveProtocolAdapterSetDecoded struct {
+	ProtocolId [32]byte
+	Adapter    common.Address
+}
+
+type ActiveProtocolAdapterSet0Topics struct {
+	ProtocolId [32]byte
+	Adapter    common.Address
+}
+
+type ActiveProtocolAdapterSet0Decoded struct {
+	ProtocolId [32]byte
+	Adapter    common.Address
+}
+
 type CCIPBridgedTopics struct {
 	CcipMessageId [32]byte
 	Amount        *big.Int
@@ -339,6 +449,18 @@ type CCIPBridgedTopics struct {
 }
 
 type CCIPBridgedDecoded struct {
+	CcipMessageId [32]byte
+	Amount        *big.Int
+	CcipTxType    uint8
+}
+
+type CCIPBridged0Topics struct {
+	CcipMessageId [32]byte
+	Amount        *big.Int
+	CcipTxType    uint8
+}
+
+type CCIPBridged0Decoded struct {
 	CcipMessageId [32]byte
 	Amount        *big.Int
 	CcipTxType    uint8
@@ -354,12 +476,56 @@ type CcipGasLimitSetDecoded struct {
 	GasLimit      *big.Int
 }
 
+type CcipGasLimitSet0Topics struct {
+	ChainSelector uint64
+	GasLimit      *big.Int
+}
+
+type CcipGasLimitSet0Decoded struct {
+	ChainSelector uint64
+	GasLimit      *big.Int
+}
+
+type CcipSendRecoveryClearedTopics struct {
+	CcipTxType               uint8
+	DestinationChainSelector uint64
+	Amount                   *big.Int
+}
+
+type CcipSendRecoveryClearedDecoded struct {
+	CcipTxType               uint8
+	DestinationChainSelector uint64
+	Amount                   *big.Int
+}
+
+type CcipSendRecoveryStoredTopics struct {
+	CcipTxType               uint8
+	DestinationChainSelector uint64
+	Amount                   *big.Int
+}
+
+type CcipSendRecoveryStoredDecoded struct {
+	CcipTxType               uint8
+	DestinationChainSelector uint64
+	Amount                   *big.Int
+}
+
 type CrosschainVaultSetTopics struct {
 	ChainSelector uint64
 	Vault         common.Address
 }
 
 type CrosschainVaultSetDecoded struct {
+	ChainSelector uint64
+	Vault         common.Address
+}
+
+type CrosschainVaultSet0Topics struct {
+	ChainSelector uint64
+	Vault         common.Address
+}
+
+type CrosschainVaultSet0Decoded struct {
 	ChainSelector uint64
 	Vault         common.Address
 }
@@ -401,6 +567,14 @@ type DefaultCcipGasLimitSetDecoded struct {
 	GasLimit *big.Int
 }
 
+type DefaultCcipGasLimitSet0Topics struct {
+	GasLimit *big.Int
+}
+
+type DefaultCcipGasLimitSet0Decoded struct {
+	GasLimit *big.Int
+}
+
 type DepositToStrategyFailureTopics struct {
 	EpochNonce *big.Int
 	Amount     *big.Int
@@ -421,14 +595,40 @@ type DepositToStrategySuccessDecoded struct {
 	Amount     *big.Int
 }
 
+type DonationTopics struct {
+	Donor  common.Address
+	Amount *big.Int
+}
+
+type DonationDecoded struct {
+	Donor  common.Address
+	Amount *big.Int
+}
+
 type EmergencyDrainExecutedTopics struct {
-	Drainer common.Address
-	Amount  *big.Int
+	EmergencyReceiver common.Address
+	Amount            *big.Int
 }
 
 type EmergencyDrainExecutedDecoded struct {
-	Drainer common.Address
-	Amount  *big.Int
+	EmergencyReceiver common.Address
+	Amount            *big.Int
+}
+
+type EmergencyReceiverSetTopics struct {
+	EmergencyReceiver common.Address
+}
+
+type EmergencyReceiverSetDecoded struct {
+	EmergencyReceiver common.Address
+}
+
+type EmergencyReceiverSet0Topics struct {
+	EmergencyReceiver common.Address
+}
+
+type EmergencyReceiverSet0Decoded struct {
+	EmergencyReceiver common.Address
 }
 
 type EpochDepositRecoveryClearedTopics struct {
@@ -465,6 +665,13 @@ type EpochWithdrawRecoveryStoredTopics struct {
 type EpochWithdrawRecoveryStoredDecoded struct {
 	EpochNonce *big.Int
 	Amount     *big.Int
+}
+
+type InitializedTopics struct {
+}
+
+type InitializedDecoded struct {
+	Version uint64
 }
 
 type LinkWithdrawnTopics struct {
@@ -603,6 +810,14 @@ type UnpausedDecoded struct {
 	Account common.Address
 }
 
+type UpgradedTopics struct {
+	Implementation common.Address
+}
+
+type UpgradedDecoded struct {
+	Implementation common.Address
+}
+
 type WithdrawFromStrategyFailureTopics struct {
 	EpochNonce *big.Int
 	Amount     *big.Int
@@ -635,6 +850,8 @@ type ChildVault struct {
 type ChildVaultCodec interface {
 	EncodeDEFAULTADMINROLEMethodCall() ([]byte, error)
 	DecodeDEFAULTADMINROLEMethodOutput(data []byte) ([32]byte, error)
+	EncodeUPGRADEINTERFACEVERSIONMethodCall() ([]byte, error)
+	DecodeUPGRADEINTERFACEVERSIONMethodOutput(data []byte) (string, error)
 	EncodeAcceptDefaultAdminTransferMethodCall() ([]byte, error)
 	EncodeBeginDefaultAdminTransferMethodCall(in BeginDefaultAdminTransferInput) ([]byte, error)
 	EncodeCancelDefaultAdminTransferMethodCall() ([]byte, error)
@@ -646,35 +863,47 @@ type ChildVaultCodec interface {
 	DecodeDefaultAdminDelayMethodOutput(data []byte) (*big.Int, error)
 	EncodeDefaultAdminDelayIncreaseWaitMethodCall() ([]byte, error)
 	DecodeDefaultAdminDelayIncreaseWaitMethodOutput(data []byte) (*big.Int, error)
+	EncodeDonateMethodCall(in DonateInput) ([]byte, error)
 	EncodeEmergencyDrainMethodCall(in EmergencyDrainInput) ([]byte, error)
 	EncodeExecuteEpochWithdrawMethodCall(in ExecuteEpochWithdrawInput) ([]byte, error)
 	EncodeExecuteRebalanceMethodCall(in ExecuteRebalanceInput) ([]byte, error)
+	EncodeExecuteRecoveryMethodCall() ([]byte, error)
 	EncodeGetActiveProtocolAdapterMethodCall() ([]byte, error)
 	DecodeGetActiveProtocolAdapterMethodOutput(data []byte) (common.Address, error)
 	EncodeGetAdapterRegistryMethodCall() ([]byte, error)
 	DecodeGetAdapterRegistryMethodOutput(data []byte) (common.Address, error)
+	EncodeGetAssetMethodCall() ([]byte, error)
+	DecodeGetAssetMethodOutput(data []byte) (common.Address, error)
+	EncodeGetAssetPrecisionMethodCall() ([]byte, error)
+	DecodeGetAssetPrecisionMethodOutput(data []byte) (*big.Int, error)
 	EncodeGetCCVsAndFinalityConfigMethodCall(in GetCCVsAndFinalityConfigInput) ([]byte, error)
 	DecodeGetCCVsAndFinalityConfigMethodOutput(data []byte) (GetCCVsAndFinalityConfigOutput, error)
 	EncodeGetCcipGasLimitMethodCall(in GetCcipGasLimitInput) ([]byte, error)
 	DecodeGetCcipGasLimitMethodOutput(data []byte) (*big.Int, error)
+	EncodeGetCcipSendRecoveryMethodCall() ([]byte, error)
+	DecodeGetCcipSendRecoveryMethodOutput(data []byte) (TypesCcipSendRecovery, error)
 	EncodeGetCrosschainVaultMethodCall(in GetCrosschainVaultInput) ([]byte, error)
 	DecodeGetCrosschainVaultMethodOutput(data []byte) (common.Address, error)
 	EncodeGetDefaultCcipGasLimitMethodCall() ([]byte, error)
 	DecodeGetDefaultCcipGasLimitMethodOutput(data []byte) (*big.Int, error)
-	EncodeGetEpochDepositRecoveryMethodCall(in GetEpochDepositRecoveryInput) ([]byte, error)
-	DecodeGetEpochDepositRecoveryMethodOutput(data []byte) (TypesAmountRecovery, error)
-	EncodeGetEpochWithdrawRecoveryMethodCall(in GetEpochWithdrawRecoveryInput) ([]byte, error)
-	DecodeGetEpochWithdrawRecoveryMethodOutput(data []byte) (TypesAmountRecovery, error)
+	EncodeGetEmergencyReceiverMethodCall() ([]byte, error)
+	DecodeGetEmergencyReceiverMethodOutput(data []byte) (common.Address, error)
+	EncodeGetEpochDepositRecoveryMethodCall() ([]byte, error)
+	DecodeGetEpochDepositRecoveryMethodOutput(data []byte) (TypesEpochRecovery, error)
+	EncodeGetEpochWithdrawRecoveryMethodCall() ([]byte, error)
+	DecodeGetEpochWithdrawRecoveryMethodOutput(data []byte) (TypesEpochRecovery, error)
 	EncodeGetLinkMethodCall() ([]byte, error)
 	DecodeGetLinkMethodOutput(data []byte) (common.Address, error)
 	EncodeGetParentChainSelectorMethodCall() ([]byte, error)
 	DecodeGetParentChainSelectorMethodOutput(data []byte) (uint64, error)
 	EncodeGetPausedAtMethodCall() ([]byte, error)
 	DecodeGetPausedAtMethodOutput(data []byte) (*big.Int, error)
-	EncodeGetRebalanceDepositRecoveryMethodCall(in GetRebalanceDepositRecoveryInput) ([]byte, error)
-	DecodeGetRebalanceDepositRecoveryMethodOutput(data []byte) (TypesAmountRecovery, error)
-	EncodeGetRebalanceWithdrawRecoveryMethodCall(in GetRebalanceWithdrawRecoveryInput) ([]byte, error)
+	EncodeGetRebalanceDepositRecoveryMethodCall() ([]byte, error)
+	DecodeGetRebalanceDepositRecoveryMethodOutput(data []byte) (TypesRebalanceDepositRecovery, error)
+	EncodeGetRebalanceWithdrawRecoveryMethodCall() ([]byte, error)
 	DecodeGetRebalanceWithdrawRecoveryMethodOutput(data []byte) (TypesRebalanceWithdrawRecovery, error)
+	EncodeGetRecoveryModeMethodCall() ([]byte, error)
+	DecodeGetRecoveryModeMethodOutput(data []byte) (uint8, error)
 	EncodeGetRoleAdminMethodCall(in GetRoleAdminInput) ([]byte, error)
 	DecodeGetRoleAdminMethodOutput(data []byte) ([32]byte, error)
 	EncodeGetRouterMethodCall() ([]byte, error)
@@ -683,11 +912,10 @@ type ChildVaultCodec interface {
 	DecodeGetTVLMethodOutput(data []byte) (*big.Int, error)
 	EncodeGetThisChainSelectorMethodCall() ([]byte, error)
 	DecodeGetThisChainSelectorMethodOutput(data []byte) (uint64, error)
-	EncodeGetUsdcMethodCall() ([]byte, error)
-	DecodeGetUsdcMethodOutput(data []byte) (common.Address, error)
 	EncodeGrantRoleMethodCall(in GrantRoleInput) ([]byte, error)
 	EncodeHasRoleMethodCall(in HasRoleInput) ([]byte, error)
 	DecodeHasRoleMethodOutput(data []byte) (bool, error)
+	EncodeInitializeMethodCall(in InitializeInput) ([]byte, error)
 	EncodeOwnerMethodCall() ([]byte, error)
 	DecodeOwnerMethodOutput(data []byte) (common.Address, error)
 	EncodePauseMethodCall() ([]byte, error)
@@ -697,36 +925,64 @@ type ChildVaultCodec interface {
 	DecodePendingDefaultAdminMethodOutput(data []byte) (PendingDefaultAdminOutput, error)
 	EncodePendingDefaultAdminDelayMethodCall() ([]byte, error)
 	DecodePendingDefaultAdminDelayMethodOutput(data []byte) (PendingDefaultAdminDelayOutput, error)
-	EncodeRecoverFailedEpochDepositMethodCall(in RecoverFailedEpochDepositInput) ([]byte, error)
-	EncodeRecoverFailedEpochWithdrawMethodCall(in RecoverFailedEpochWithdrawInput) ([]byte, error)
-	EncodeRecoverFailedRebalanceDepositMethodCall(in RecoverFailedRebalanceDepositInput) ([]byte, error)
-	EncodeRecoverFailedRebalanceWithdrawMethodCall(in RecoverFailedRebalanceWithdrawInput) ([]byte, error)
+	EncodeProxiableUUIDMethodCall() ([]byte, error)
+	DecodeProxiableUUIDMethodOutput(data []byte) ([32]byte, error)
 	EncodeRenounceRoleMethodCall(in RenounceRoleInput) ([]byte, error)
 	EncodeRevokeRoleMethodCall(in RevokeRoleInput) ([]byte, error)
 	EncodeRollbackDefaultAdminDelayMethodCall() ([]byte, error)
 	EncodeSetCcipGasLimitMethodCall(in SetCcipGasLimitInput) ([]byte, error)
 	EncodeSetCrosschainVaultsMethodCall(in SetCrosschainVaultsInput) ([]byte, error)
 	EncodeSetDefaultCcipGasLimitMethodCall(in SetDefaultCcipGasLimitInput) ([]byte, error)
+	EncodeSetEmergencyReceiverMethodCall(in SetEmergencyReceiverInput) ([]byte, error)
 	EncodeSupportsInterfaceMethodCall(in SupportsInterfaceInput) ([]byte, error)
 	DecodeSupportsInterfaceMethodOutput(data []byte) (bool, error)
+	EncodeTryCcipSendMethodCall(in TryCcipSendInput) ([]byte, error)
 	EncodeTryDepositToAdapterMethodCall(in TryDepositToAdapterInput) ([]byte, error)
 	EncodeUnpauseMethodCall() ([]byte, error)
+	EncodeUpgradeToAndCallMethodCall(in UpgradeToAndCallInput) ([]byte, error)
 	EncodeWithdrawLinkMethodCall(in WithdrawLinkInput) ([]byte, error)
 	EncodeBaseVaultConstructorParamsStruct(in BaseVaultConstructorParams) ([]byte, error)
+	EncodeBaseVaultInitParamsStruct(in BaseVaultInitParams) ([]byte, error)
 	EncodeClientAny2EVMMessageStruct(in ClientAny2EVMMessage) ([]byte, error)
 	EncodeClientEVMTokenAmountStruct(in ClientEVMTokenAmount) ([]byte, error)
-	EncodeTypesAmountRecoveryStruct(in TypesAmountRecovery) ([]byte, error)
+	EncodeTypesCcipSendRecoveryStruct(in TypesCcipSendRecovery) ([]byte, error)
+	EncodeTypesEpochRecoveryStruct(in TypesEpochRecovery) ([]byte, error)
+	EncodeTypesRebalanceDepositRecoveryStruct(in TypesRebalanceDepositRecovery) ([]byte, error)
 	EncodeTypesRebalanceWithdrawRecoveryStruct(in TypesRebalanceWithdrawRecovery) ([]byte, error)
 	EncodeTypesStrategyStruct(in TypesStrategy) ([]byte, error)
+	ActiveProtocolAdapterClearedLogHash() []byte
+	EncodeActiveProtocolAdapterClearedTopics(evt abi.Event, values []ActiveProtocolAdapterClearedTopics) ([]*evm.TopicValues, error)
+	DecodeActiveProtocolAdapterCleared(log *evm.Log) (*ActiveProtocolAdapterClearedDecoded, error)
+	ActiveProtocolAdapterSetLogHash() []byte
+	EncodeActiveProtocolAdapterSetTopics(evt abi.Event, values []ActiveProtocolAdapterSetTopics) ([]*evm.TopicValues, error)
+	DecodeActiveProtocolAdapterSet(log *evm.Log) (*ActiveProtocolAdapterSetDecoded, error)
+	ActiveProtocolAdapterSet0LogHash() []byte
+	EncodeActiveProtocolAdapterSet0Topics(evt abi.Event, values []ActiveProtocolAdapterSet0Topics) ([]*evm.TopicValues, error)
+	DecodeActiveProtocolAdapterSet0(log *evm.Log) (*ActiveProtocolAdapterSet0Decoded, error)
 	CCIPBridgedLogHash() []byte
 	EncodeCCIPBridgedTopics(evt abi.Event, values []CCIPBridgedTopics) ([]*evm.TopicValues, error)
 	DecodeCCIPBridged(log *evm.Log) (*CCIPBridgedDecoded, error)
+	CCIPBridged0LogHash() []byte
+	EncodeCCIPBridged0Topics(evt abi.Event, values []CCIPBridged0Topics) ([]*evm.TopicValues, error)
+	DecodeCCIPBridged0(log *evm.Log) (*CCIPBridged0Decoded, error)
 	CcipGasLimitSetLogHash() []byte
 	EncodeCcipGasLimitSetTopics(evt abi.Event, values []CcipGasLimitSetTopics) ([]*evm.TopicValues, error)
 	DecodeCcipGasLimitSet(log *evm.Log) (*CcipGasLimitSetDecoded, error)
+	CcipGasLimitSet0LogHash() []byte
+	EncodeCcipGasLimitSet0Topics(evt abi.Event, values []CcipGasLimitSet0Topics) ([]*evm.TopicValues, error)
+	DecodeCcipGasLimitSet0(log *evm.Log) (*CcipGasLimitSet0Decoded, error)
+	CcipSendRecoveryClearedLogHash() []byte
+	EncodeCcipSendRecoveryClearedTopics(evt abi.Event, values []CcipSendRecoveryClearedTopics) ([]*evm.TopicValues, error)
+	DecodeCcipSendRecoveryCleared(log *evm.Log) (*CcipSendRecoveryClearedDecoded, error)
+	CcipSendRecoveryStoredLogHash() []byte
+	EncodeCcipSendRecoveryStoredTopics(evt abi.Event, values []CcipSendRecoveryStoredTopics) ([]*evm.TopicValues, error)
+	DecodeCcipSendRecoveryStored(log *evm.Log) (*CcipSendRecoveryStoredDecoded, error)
 	CrosschainVaultSetLogHash() []byte
 	EncodeCrosschainVaultSetTopics(evt abi.Event, values []CrosschainVaultSetTopics) ([]*evm.TopicValues, error)
 	DecodeCrosschainVaultSet(log *evm.Log) (*CrosschainVaultSetDecoded, error)
+	CrosschainVaultSet0LogHash() []byte
+	EncodeCrosschainVaultSet0Topics(evt abi.Event, values []CrosschainVaultSet0Topics) ([]*evm.TopicValues, error)
+	DecodeCrosschainVaultSet0(log *evm.Log) (*CrosschainVaultSet0Decoded, error)
 	DefaultAdminDelayChangeCanceledLogHash() []byte
 	EncodeDefaultAdminDelayChangeCanceledTopics(evt abi.Event, values []DefaultAdminDelayChangeCanceledTopics) ([]*evm.TopicValues, error)
 	DecodeDefaultAdminDelayChangeCanceled(log *evm.Log) (*DefaultAdminDelayChangeCanceledDecoded, error)
@@ -742,15 +998,27 @@ type ChildVaultCodec interface {
 	DefaultCcipGasLimitSetLogHash() []byte
 	EncodeDefaultCcipGasLimitSetTopics(evt abi.Event, values []DefaultCcipGasLimitSetTopics) ([]*evm.TopicValues, error)
 	DecodeDefaultCcipGasLimitSet(log *evm.Log) (*DefaultCcipGasLimitSetDecoded, error)
+	DefaultCcipGasLimitSet0LogHash() []byte
+	EncodeDefaultCcipGasLimitSet0Topics(evt abi.Event, values []DefaultCcipGasLimitSet0Topics) ([]*evm.TopicValues, error)
+	DecodeDefaultCcipGasLimitSet0(log *evm.Log) (*DefaultCcipGasLimitSet0Decoded, error)
 	DepositToStrategyFailureLogHash() []byte
 	EncodeDepositToStrategyFailureTopics(evt abi.Event, values []DepositToStrategyFailureTopics) ([]*evm.TopicValues, error)
 	DecodeDepositToStrategyFailure(log *evm.Log) (*DepositToStrategyFailureDecoded, error)
 	DepositToStrategySuccessLogHash() []byte
 	EncodeDepositToStrategySuccessTopics(evt abi.Event, values []DepositToStrategySuccessTopics) ([]*evm.TopicValues, error)
 	DecodeDepositToStrategySuccess(log *evm.Log) (*DepositToStrategySuccessDecoded, error)
+	DonationLogHash() []byte
+	EncodeDonationTopics(evt abi.Event, values []DonationTopics) ([]*evm.TopicValues, error)
+	DecodeDonation(log *evm.Log) (*DonationDecoded, error)
 	EmergencyDrainExecutedLogHash() []byte
 	EncodeEmergencyDrainExecutedTopics(evt abi.Event, values []EmergencyDrainExecutedTopics) ([]*evm.TopicValues, error)
 	DecodeEmergencyDrainExecuted(log *evm.Log) (*EmergencyDrainExecutedDecoded, error)
+	EmergencyReceiverSetLogHash() []byte
+	EncodeEmergencyReceiverSetTopics(evt abi.Event, values []EmergencyReceiverSetTopics) ([]*evm.TopicValues, error)
+	DecodeEmergencyReceiverSet(log *evm.Log) (*EmergencyReceiverSetDecoded, error)
+	EmergencyReceiverSet0LogHash() []byte
+	EncodeEmergencyReceiverSet0Topics(evt abi.Event, values []EmergencyReceiverSet0Topics) ([]*evm.TopicValues, error)
+	DecodeEmergencyReceiverSet0(log *evm.Log) (*EmergencyReceiverSet0Decoded, error)
 	EpochDepositRecoveryClearedLogHash() []byte
 	EncodeEpochDepositRecoveryClearedTopics(evt abi.Event, values []EpochDepositRecoveryClearedTopics) ([]*evm.TopicValues, error)
 	DecodeEpochDepositRecoveryCleared(log *evm.Log) (*EpochDepositRecoveryClearedDecoded, error)
@@ -763,6 +1031,9 @@ type ChildVaultCodec interface {
 	EpochWithdrawRecoveryStoredLogHash() []byte
 	EncodeEpochWithdrawRecoveryStoredTopics(evt abi.Event, values []EpochWithdrawRecoveryStoredTopics) ([]*evm.TopicValues, error)
 	DecodeEpochWithdrawRecoveryStored(log *evm.Log) (*EpochWithdrawRecoveryStoredDecoded, error)
+	InitializedLogHash() []byte
+	EncodeInitializedTopics(evt abi.Event, values []InitializedTopics) ([]*evm.TopicValues, error)
+	DecodeInitialized(log *evm.Log) (*InitializedDecoded, error)
 	LinkWithdrawnLogHash() []byte
 	EncodeLinkWithdrawnTopics(evt abi.Event, values []LinkWithdrawnTopics) ([]*evm.TopicValues, error)
 	DecodeLinkWithdrawn(log *evm.Log) (*LinkWithdrawnDecoded, error)
@@ -805,6 +1076,9 @@ type ChildVaultCodec interface {
 	UnpausedLogHash() []byte
 	EncodeUnpausedTopics(evt abi.Event, values []UnpausedTopics) ([]*evm.TopicValues, error)
 	DecodeUnpaused(log *evm.Log) (*UnpausedDecoded, error)
+	UpgradedLogHash() []byte
+	EncodeUpgradedTopics(evt abi.Event, values []UpgradedTopics) ([]*evm.TopicValues, error)
+	DecodeUpgraded(log *evm.Log) (*UpgradedDecoded, error)
 	WithdrawFromStrategyFailureLogHash() []byte
 	EncodeWithdrawFromStrategyFailureTopics(evt abi.Event, values []WithdrawFromStrategyFailureTopics) ([]*evm.TopicValues, error)
 	DecodeWithdrawFromStrategyFailure(log *evm.Log) (*WithdrawFromStrategyFailureDecoded, error)
@@ -864,6 +1138,28 @@ func (c *Codec) DecodeDEFAULTADMINROLEMethodOutput(data []byte) ([32]byte, error
 	var result [32]byte
 	if err := json.Unmarshal(jsonData, &result); err != nil {
 		return *new([32]byte), fmt.Errorf("failed to unmarshal to [32]byte: %w", err)
+	}
+
+	return result, nil
+}
+
+func (c *Codec) EncodeUPGRADEINTERFACEVERSIONMethodCall() ([]byte, error) {
+	return c.abi.Pack("UPGRADE_INTERFACE_VERSION")
+}
+
+func (c *Codec) DecodeUPGRADEINTERFACEVERSIONMethodOutput(data []byte) (string, error) {
+	vals, err := c.abi.Methods["UPGRADE_INTERFACE_VERSION"].Outputs.Unpack(data)
+	if err != nil {
+		return *new(string), err
+	}
+	jsonData, err := json.Marshal(vals[0])
+	if err != nil {
+		return *new(string), fmt.Errorf("failed to marshal ABI result: %w", err)
+	}
+
+	var result string
+	if err := json.Unmarshal(jsonData, &result); err != nil {
+		return *new(string), fmt.Errorf("failed to unmarshal to string: %w", err)
 	}
 
 	return result, nil
@@ -955,6 +1251,10 @@ func (c *Codec) DecodeDefaultAdminDelayIncreaseWaitMethodOutput(data []byte) (*b
 	return result, nil
 }
 
+func (c *Codec) EncodeDonateMethodCall(in DonateInput) ([]byte, error) {
+	return c.abi.Pack("donate", in.Amount)
+}
+
 func (c *Codec) EncodeEmergencyDrainMethodCall(in EmergencyDrainInput) ([]byte, error) {
 	return c.abi.Pack("emergencyDrain", in.RevertOnFailure)
 }
@@ -965,6 +1265,10 @@ func (c *Codec) EncodeExecuteEpochWithdrawMethodCall(in ExecuteEpochWithdrawInpu
 
 func (c *Codec) EncodeExecuteRebalanceMethodCall(in ExecuteRebalanceInput) ([]byte, error) {
 	return c.abi.Pack("executeRebalance", in.RebalanceNonce, in.NewStrategy)
+}
+
+func (c *Codec) EncodeExecuteRecoveryMethodCall() ([]byte, error) {
+	return c.abi.Pack("executeRecovery")
 }
 
 func (c *Codec) EncodeGetActiveProtocolAdapterMethodCall() ([]byte, error) {
@@ -1006,6 +1310,50 @@ func (c *Codec) DecodeGetAdapterRegistryMethodOutput(data []byte) (common.Addres
 	var result common.Address
 	if err := json.Unmarshal(jsonData, &result); err != nil {
 		return *new(common.Address), fmt.Errorf("failed to unmarshal to common.Address: %w", err)
+	}
+
+	return result, nil
+}
+
+func (c *Codec) EncodeGetAssetMethodCall() ([]byte, error) {
+	return c.abi.Pack("getAsset")
+}
+
+func (c *Codec) DecodeGetAssetMethodOutput(data []byte) (common.Address, error) {
+	vals, err := c.abi.Methods["getAsset"].Outputs.Unpack(data)
+	if err != nil {
+		return *new(common.Address), err
+	}
+	jsonData, err := json.Marshal(vals[0])
+	if err != nil {
+		return *new(common.Address), fmt.Errorf("failed to marshal ABI result: %w", err)
+	}
+
+	var result common.Address
+	if err := json.Unmarshal(jsonData, &result); err != nil {
+		return *new(common.Address), fmt.Errorf("failed to unmarshal to common.Address: %w", err)
+	}
+
+	return result, nil
+}
+
+func (c *Codec) EncodeGetAssetPrecisionMethodCall() ([]byte, error) {
+	return c.abi.Pack("getAssetPrecision")
+}
+
+func (c *Codec) DecodeGetAssetPrecisionMethodOutput(data []byte) (*big.Int, error) {
+	vals, err := c.abi.Methods["getAssetPrecision"].Outputs.Unpack(data)
+	if err != nil {
+		return *new(*big.Int), err
+	}
+	jsonData, err := json.Marshal(vals[0])
+	if err != nil {
+		return *new(*big.Int), fmt.Errorf("failed to marshal ABI result: %w", err)
+	}
+
+	var result *big.Int
+	if err := json.Unmarshal(jsonData, &result); err != nil {
+		return *new(*big.Int), fmt.Errorf("failed to unmarshal to *big.Int: %w", err)
 	}
 
 	return result, nil
@@ -1090,6 +1438,28 @@ func (c *Codec) DecodeGetCcipGasLimitMethodOutput(data []byte) (*big.Int, error)
 	return result, nil
 }
 
+func (c *Codec) EncodeGetCcipSendRecoveryMethodCall() ([]byte, error) {
+	return c.abi.Pack("getCcipSendRecovery")
+}
+
+func (c *Codec) DecodeGetCcipSendRecoveryMethodOutput(data []byte) (TypesCcipSendRecovery, error) {
+	vals, err := c.abi.Methods["getCcipSendRecovery"].Outputs.Unpack(data)
+	if err != nil {
+		return *new(TypesCcipSendRecovery), err
+	}
+	jsonData, err := json.Marshal(vals[0])
+	if err != nil {
+		return *new(TypesCcipSendRecovery), fmt.Errorf("failed to marshal ABI result: %w", err)
+	}
+
+	var result TypesCcipSendRecovery
+	if err := json.Unmarshal(jsonData, &result); err != nil {
+		return *new(TypesCcipSendRecovery), fmt.Errorf("failed to unmarshal to TypesCcipSendRecovery: %w", err)
+	}
+
+	return result, nil
+}
+
 func (c *Codec) EncodeGetCrosschainVaultMethodCall(in GetCrosschainVaultInput) ([]byte, error) {
 	return c.abi.Pack("getCrosschainVault", in.ChainSelector)
 }
@@ -1134,45 +1504,67 @@ func (c *Codec) DecodeGetDefaultCcipGasLimitMethodOutput(data []byte) (*big.Int,
 	return result, nil
 }
 
-func (c *Codec) EncodeGetEpochDepositRecoveryMethodCall(in GetEpochDepositRecoveryInput) ([]byte, error) {
-	return c.abi.Pack("getEpochDepositRecovery", in.EpochNonce)
+func (c *Codec) EncodeGetEmergencyReceiverMethodCall() ([]byte, error) {
+	return c.abi.Pack("getEmergencyReceiver")
 }
 
-func (c *Codec) DecodeGetEpochDepositRecoveryMethodOutput(data []byte) (TypesAmountRecovery, error) {
-	vals, err := c.abi.Methods["getEpochDepositRecovery"].Outputs.Unpack(data)
+func (c *Codec) DecodeGetEmergencyReceiverMethodOutput(data []byte) (common.Address, error) {
+	vals, err := c.abi.Methods["getEmergencyReceiver"].Outputs.Unpack(data)
 	if err != nil {
-		return *new(TypesAmountRecovery), err
+		return *new(common.Address), err
 	}
 	jsonData, err := json.Marshal(vals[0])
 	if err != nil {
-		return *new(TypesAmountRecovery), fmt.Errorf("failed to marshal ABI result: %w", err)
+		return *new(common.Address), fmt.Errorf("failed to marshal ABI result: %w", err)
 	}
 
-	var result TypesAmountRecovery
+	var result common.Address
 	if err := json.Unmarshal(jsonData, &result); err != nil {
-		return *new(TypesAmountRecovery), fmt.Errorf("failed to unmarshal to TypesAmountRecovery: %w", err)
+		return *new(common.Address), fmt.Errorf("failed to unmarshal to common.Address: %w", err)
 	}
 
 	return result, nil
 }
 
-func (c *Codec) EncodeGetEpochWithdrawRecoveryMethodCall(in GetEpochWithdrawRecoveryInput) ([]byte, error) {
-	return c.abi.Pack("getEpochWithdrawRecovery", in.EpochNonce)
+func (c *Codec) EncodeGetEpochDepositRecoveryMethodCall() ([]byte, error) {
+	return c.abi.Pack("getEpochDepositRecovery")
 }
 
-func (c *Codec) DecodeGetEpochWithdrawRecoveryMethodOutput(data []byte) (TypesAmountRecovery, error) {
-	vals, err := c.abi.Methods["getEpochWithdrawRecovery"].Outputs.Unpack(data)
+func (c *Codec) DecodeGetEpochDepositRecoveryMethodOutput(data []byte) (TypesEpochRecovery, error) {
+	vals, err := c.abi.Methods["getEpochDepositRecovery"].Outputs.Unpack(data)
 	if err != nil {
-		return *new(TypesAmountRecovery), err
+		return *new(TypesEpochRecovery), err
 	}
 	jsonData, err := json.Marshal(vals[0])
 	if err != nil {
-		return *new(TypesAmountRecovery), fmt.Errorf("failed to marshal ABI result: %w", err)
+		return *new(TypesEpochRecovery), fmt.Errorf("failed to marshal ABI result: %w", err)
 	}
 
-	var result TypesAmountRecovery
+	var result TypesEpochRecovery
 	if err := json.Unmarshal(jsonData, &result); err != nil {
-		return *new(TypesAmountRecovery), fmt.Errorf("failed to unmarshal to TypesAmountRecovery: %w", err)
+		return *new(TypesEpochRecovery), fmt.Errorf("failed to unmarshal to TypesEpochRecovery: %w", err)
+	}
+
+	return result, nil
+}
+
+func (c *Codec) EncodeGetEpochWithdrawRecoveryMethodCall() ([]byte, error) {
+	return c.abi.Pack("getEpochWithdrawRecovery")
+}
+
+func (c *Codec) DecodeGetEpochWithdrawRecoveryMethodOutput(data []byte) (TypesEpochRecovery, error) {
+	vals, err := c.abi.Methods["getEpochWithdrawRecovery"].Outputs.Unpack(data)
+	if err != nil {
+		return *new(TypesEpochRecovery), err
+	}
+	jsonData, err := json.Marshal(vals[0])
+	if err != nil {
+		return *new(TypesEpochRecovery), fmt.Errorf("failed to marshal ABI result: %w", err)
+	}
+
+	var result TypesEpochRecovery
+	if err := json.Unmarshal(jsonData, &result); err != nil {
+		return *new(TypesEpochRecovery), fmt.Errorf("failed to unmarshal to TypesEpochRecovery: %w", err)
 	}
 
 	return result, nil
@@ -1244,30 +1636,30 @@ func (c *Codec) DecodeGetPausedAtMethodOutput(data []byte) (*big.Int, error) {
 	return result, nil
 }
 
-func (c *Codec) EncodeGetRebalanceDepositRecoveryMethodCall(in GetRebalanceDepositRecoveryInput) ([]byte, error) {
-	return c.abi.Pack("getRebalanceDepositRecovery", in.RebalanceNonce)
+func (c *Codec) EncodeGetRebalanceDepositRecoveryMethodCall() ([]byte, error) {
+	return c.abi.Pack("getRebalanceDepositRecovery")
 }
 
-func (c *Codec) DecodeGetRebalanceDepositRecoveryMethodOutput(data []byte) (TypesAmountRecovery, error) {
+func (c *Codec) DecodeGetRebalanceDepositRecoveryMethodOutput(data []byte) (TypesRebalanceDepositRecovery, error) {
 	vals, err := c.abi.Methods["getRebalanceDepositRecovery"].Outputs.Unpack(data)
 	if err != nil {
-		return *new(TypesAmountRecovery), err
+		return *new(TypesRebalanceDepositRecovery), err
 	}
 	jsonData, err := json.Marshal(vals[0])
 	if err != nil {
-		return *new(TypesAmountRecovery), fmt.Errorf("failed to marshal ABI result: %w", err)
+		return *new(TypesRebalanceDepositRecovery), fmt.Errorf("failed to marshal ABI result: %w", err)
 	}
 
-	var result TypesAmountRecovery
+	var result TypesRebalanceDepositRecovery
 	if err := json.Unmarshal(jsonData, &result); err != nil {
-		return *new(TypesAmountRecovery), fmt.Errorf("failed to unmarshal to TypesAmountRecovery: %w", err)
+		return *new(TypesRebalanceDepositRecovery), fmt.Errorf("failed to unmarshal to TypesRebalanceDepositRecovery: %w", err)
 	}
 
 	return result, nil
 }
 
-func (c *Codec) EncodeGetRebalanceWithdrawRecoveryMethodCall(in GetRebalanceWithdrawRecoveryInput) ([]byte, error) {
-	return c.abi.Pack("getRebalanceWithdrawRecovery", in.RebalanceNonce)
+func (c *Codec) EncodeGetRebalanceWithdrawRecoveryMethodCall() ([]byte, error) {
+	return c.abi.Pack("getRebalanceWithdrawRecovery")
 }
 
 func (c *Codec) DecodeGetRebalanceWithdrawRecoveryMethodOutput(data []byte) (TypesRebalanceWithdrawRecovery, error) {
@@ -1283,6 +1675,28 @@ func (c *Codec) DecodeGetRebalanceWithdrawRecoveryMethodOutput(data []byte) (Typ
 	var result TypesRebalanceWithdrawRecovery
 	if err := json.Unmarshal(jsonData, &result); err != nil {
 		return *new(TypesRebalanceWithdrawRecovery), fmt.Errorf("failed to unmarshal to TypesRebalanceWithdrawRecovery: %w", err)
+	}
+
+	return result, nil
+}
+
+func (c *Codec) EncodeGetRecoveryModeMethodCall() ([]byte, error) {
+	return c.abi.Pack("getRecoveryMode")
+}
+
+func (c *Codec) DecodeGetRecoveryModeMethodOutput(data []byte) (uint8, error) {
+	vals, err := c.abi.Methods["getRecoveryMode"].Outputs.Unpack(data)
+	if err != nil {
+		return *new(uint8), err
+	}
+	jsonData, err := json.Marshal(vals[0])
+	if err != nil {
+		return *new(uint8), fmt.Errorf("failed to marshal ABI result: %w", err)
+	}
+
+	var result uint8
+	if err := json.Unmarshal(jsonData, &result); err != nil {
+		return *new(uint8), fmt.Errorf("failed to unmarshal to uint8: %w", err)
 	}
 
 	return result, nil
@@ -1376,28 +1790,6 @@ func (c *Codec) DecodeGetThisChainSelectorMethodOutput(data []byte) (uint64, err
 	return result, nil
 }
 
-func (c *Codec) EncodeGetUsdcMethodCall() ([]byte, error) {
-	return c.abi.Pack("getUsdc")
-}
-
-func (c *Codec) DecodeGetUsdcMethodOutput(data []byte) (common.Address, error) {
-	vals, err := c.abi.Methods["getUsdc"].Outputs.Unpack(data)
-	if err != nil {
-		return *new(common.Address), err
-	}
-	jsonData, err := json.Marshal(vals[0])
-	if err != nil {
-		return *new(common.Address), fmt.Errorf("failed to marshal ABI result: %w", err)
-	}
-
-	var result common.Address
-	if err := json.Unmarshal(jsonData, &result); err != nil {
-		return *new(common.Address), fmt.Errorf("failed to unmarshal to common.Address: %w", err)
-	}
-
-	return result, nil
-}
-
 func (c *Codec) EncodeGrantRoleMethodCall(in GrantRoleInput) ([]byte, error) {
 	return c.abi.Pack("grantRole", in.Role, in.Account)
 }
@@ -1422,6 +1814,10 @@ func (c *Codec) DecodeHasRoleMethodOutput(data []byte) (bool, error) {
 	}
 
 	return result, nil
+}
+
+func (c *Codec) EncodeInitializeMethodCall(in InitializeInput) ([]byte, error) {
+	return c.abi.Pack("initialize", in.Params)
 }
 
 func (c *Codec) EncodeOwnerMethodCall() ([]byte, error) {
@@ -1546,20 +1942,26 @@ func (c *Codec) DecodePendingDefaultAdminDelayMethodOutput(data []byte) (Pending
 	}, nil
 }
 
-func (c *Codec) EncodeRecoverFailedEpochDepositMethodCall(in RecoverFailedEpochDepositInput) ([]byte, error) {
-	return c.abi.Pack("recoverFailedEpochDeposit", in.EpochNonce)
+func (c *Codec) EncodeProxiableUUIDMethodCall() ([]byte, error) {
+	return c.abi.Pack("proxiableUUID")
 }
 
-func (c *Codec) EncodeRecoverFailedEpochWithdrawMethodCall(in RecoverFailedEpochWithdrawInput) ([]byte, error) {
-	return c.abi.Pack("recoverFailedEpochWithdraw", in.EpochNonce)
-}
+func (c *Codec) DecodeProxiableUUIDMethodOutput(data []byte) ([32]byte, error) {
+	vals, err := c.abi.Methods["proxiableUUID"].Outputs.Unpack(data)
+	if err != nil {
+		return *new([32]byte), err
+	}
+	jsonData, err := json.Marshal(vals[0])
+	if err != nil {
+		return *new([32]byte), fmt.Errorf("failed to marshal ABI result: %w", err)
+	}
 
-func (c *Codec) EncodeRecoverFailedRebalanceDepositMethodCall(in RecoverFailedRebalanceDepositInput) ([]byte, error) {
-	return c.abi.Pack("recoverFailedRebalanceDeposit", in.RebalanceNonce)
-}
+	var result [32]byte
+	if err := json.Unmarshal(jsonData, &result); err != nil {
+		return *new([32]byte), fmt.Errorf("failed to unmarshal to [32]byte: %w", err)
+	}
 
-func (c *Codec) EncodeRecoverFailedRebalanceWithdrawMethodCall(in RecoverFailedRebalanceWithdrawInput) ([]byte, error) {
-	return c.abi.Pack("recoverFailedRebalanceWithdraw", in.RebalanceNonce)
+	return result, nil
 }
 
 func (c *Codec) EncodeRenounceRoleMethodCall(in RenounceRoleInput) ([]byte, error) {
@@ -1586,6 +1988,10 @@ func (c *Codec) EncodeSetDefaultCcipGasLimitMethodCall(in SetDefaultCcipGasLimit
 	return c.abi.Pack("setDefaultCcipGasLimit", in.GasLimit)
 }
 
+func (c *Codec) EncodeSetEmergencyReceiverMethodCall(in SetEmergencyReceiverInput) ([]byte, error) {
+	return c.abi.Pack("setEmergencyReceiver", in.EmergencyReceiver)
+}
+
 func (c *Codec) EncodeSupportsInterfaceMethodCall(in SupportsInterfaceInput) ([]byte, error) {
 	return c.abi.Pack("supportsInterface", in.InterfaceId)
 }
@@ -1608,12 +2014,20 @@ func (c *Codec) DecodeSupportsInterfaceMethodOutput(data []byte) (bool, error) {
 	return result, nil
 }
 
+func (c *Codec) EncodeTryCcipSendMethodCall(in TryCcipSendInput) ([]byte, error) {
+	return c.abi.Pack("tryCcipSend", in.BridgeAmount, in.DestinationChainSelector, in.CcipTxType, in.Nonce, in.ProtocolId)
+}
+
 func (c *Codec) EncodeTryDepositToAdapterMethodCall(in TryDepositToAdapterInput) ([]byte, error) {
 	return c.abi.Pack("tryDepositToAdapter", in.Adapter, in.Amount)
 }
 
 func (c *Codec) EncodeUnpauseMethodCall() ([]byte, error) {
 	return c.abi.Pack("unpause")
+}
+
+func (c *Codec) EncodeUpgradeToAndCallMethodCall(in UpgradeToAndCallInput) ([]byte, error) {
+	return c.abi.Pack("upgradeToAndCall", in.NewImplementation, in.Data)
 }
 
 func (c *Codec) EncodeWithdrawLinkMethodCall(in WithdrawLinkInput) ([]byte, error) {
@@ -1625,12 +2039,8 @@ func (c *Codec) EncodeBaseVaultConstructorParamsStruct(in BaseVaultConstructorPa
 		"tuple", "",
 		[]abi.ArgumentMarshaling{
 			{Name: "link", Type: "address"},
-			{Name: "usdc", Type: "address"},
+			{Name: "asset", Type: "address"},
 			{Name: "ccipRouter", Type: "address"},
-			{Name: "defaultAdmin", Type: "address"},
-			{Name: "pauser", Type: "address"},
-			{Name: "unpauser", Type: "address"},
-			{Name: "configOperator", Type: "address"},
 			{Name: "adapterRegistry", Type: "address"},
 			{Name: "thisChainSelector", Type: "uint64"},
 		},
@@ -1640,6 +2050,28 @@ func (c *Codec) EncodeBaseVaultConstructorParamsStruct(in BaseVaultConstructorPa
 	}
 	args := abi.Arguments{
 		{Name: "baseVaultConstructorParams", Type: tupleType},
+	}
+
+	return args.Pack(in)
+}
+func (c *Codec) EncodeBaseVaultInitParamsStruct(in BaseVaultInitParams) ([]byte, error) {
+	tupleType, err := abi.NewType(
+		"tuple", "",
+		[]abi.ArgumentMarshaling{
+			{Name: "defaultAdmin", Type: "address"},
+			{Name: "pauser", Type: "address"},
+			{Name: "unpauser", Type: "address"},
+			{Name: "configOperator", Type: "address"},
+			{Name: "emergencyReceiver", Type: "address"},
+			{Name: "initialDefaultCcipGasLimit", Type: "uint256"},
+			{Name: "upgrader", Type: "address"},
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create tuple type for BaseVaultInitParams: %w", err)
+	}
+	args := abi.Arguments{
+		{Name: "baseVaultInitParams", Type: tupleType},
 	}
 
 	return args.Pack(in)
@@ -1681,19 +2113,56 @@ func (c *Codec) EncodeClientEVMTokenAmountStruct(in ClientEVMTokenAmount) ([]byt
 
 	return args.Pack(in)
 }
-func (c *Codec) EncodeTypesAmountRecoveryStruct(in TypesAmountRecovery) ([]byte, error) {
+func (c *Codec) EncodeTypesCcipSendRecoveryStruct(in TypesCcipSendRecovery) ([]byte, error) {
 	tupleType, err := abi.NewType(
 		"tuple", "",
 		[]abi.ArgumentMarshaling{
+			{Name: "ccipTxType", Type: "uint8"},
 			{Name: "amount", Type: "uint256"},
-			{Name: "createdAt", Type: "uint256"},
+			{Name: "destinationChainSelector", Type: "uint64"},
+			{Name: "nonce", Type: "uint256"},
+			{Name: "protocolId", Type: "bytes32"},
 		},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create tuple type for TypesAmountRecovery: %w", err)
+		return nil, fmt.Errorf("failed to create tuple type for TypesCcipSendRecovery: %w", err)
 	}
 	args := abi.Arguments{
-		{Name: "typesAmountRecovery", Type: tupleType},
+		{Name: "typesCcipSendRecovery", Type: tupleType},
+	}
+
+	return args.Pack(in)
+}
+func (c *Codec) EncodeTypesEpochRecoveryStruct(in TypesEpochRecovery) ([]byte, error) {
+	tupleType, err := abi.NewType(
+		"tuple", "",
+		[]abi.ArgumentMarshaling{
+			{Name: "epochNonce", Type: "uint256"},
+			{Name: "amount", Type: "uint256"},
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create tuple type for TypesEpochRecovery: %w", err)
+	}
+	args := abi.Arguments{
+		{Name: "typesEpochRecovery", Type: tupleType},
+	}
+
+	return args.Pack(in)
+}
+func (c *Codec) EncodeTypesRebalanceDepositRecoveryStruct(in TypesRebalanceDepositRecovery) ([]byte, error) {
+	tupleType, err := abi.NewType(
+		"tuple", "",
+		[]abi.ArgumentMarshaling{
+			{Name: "rebalanceNonce", Type: "uint256"},
+			{Name: "amount", Type: "uint256"},
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create tuple type for TypesRebalanceDepositRecovery: %w", err)
+	}
+	args := abi.Arguments{
+		{Name: "typesRebalanceDepositRecovery", Type: tupleType},
 	}
 
 	return args.Pack(in)
@@ -1702,8 +2171,8 @@ func (c *Codec) EncodeTypesRebalanceWithdrawRecoveryStruct(in TypesRebalanceWith
 	tupleType, err := abi.NewType(
 		"tuple", "",
 		[]abi.ArgumentMarshaling{
+			{Name: "rebalanceNonce", Type: "uint256"},
 			{Name: "strategy", Type: "(bytes32,uint64)"},
-			{Name: "createdAt", Type: "uint256"},
 		},
 	)
 	if err != nil {
@@ -1731,6 +2200,212 @@ func (c *Codec) EncodeTypesStrategyStruct(in TypesStrategy) ([]byte, error) {
 	}
 
 	return args.Pack(in)
+}
+
+func (c *Codec) ActiveProtocolAdapterClearedLogHash() []byte {
+	return c.abi.Events["ActiveProtocolAdapterCleared"].ID.Bytes()
+}
+
+func (c *Codec) EncodeActiveProtocolAdapterClearedTopics(
+	evt abi.Event,
+	values []ActiveProtocolAdapterClearedTopics,
+) ([]*evm.TopicValues, error) {
+	var adapterRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.Adapter).IsZero() {
+			adapterRule = append(adapterRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.Adapter)
+		if err != nil {
+			return nil, err
+		}
+		adapterRule = append(adapterRule, fieldVal)
+	}
+
+	rawTopics, err := abi.MakeTopics(
+		adapterRule,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
+}
+
+// DecodeActiveProtocolAdapterCleared decodes a log into a ActiveProtocolAdapterCleared struct.
+func (c *Codec) DecodeActiveProtocolAdapterCleared(log *evm.Log) (*ActiveProtocolAdapterClearedDecoded, error) {
+	event := new(ActiveProtocolAdapterClearedDecoded)
+	if err := c.abi.UnpackIntoInterface(event, "ActiveProtocolAdapterCleared", log.Data); err != nil {
+		return nil, err
+	}
+	var indexed abi.Arguments
+	for _, arg := range c.abi.Events["ActiveProtocolAdapterCleared"].Inputs {
+		if arg.Indexed {
+			if arg.Type.T == abi.TupleTy {
+				// abigen throws on tuple, so converting to bytes to
+				// receive back the common.Hash as is instead of error
+				arg.Type.T = abi.BytesTy
+			}
+			indexed = append(indexed, arg)
+		}
+	}
+	// Convert [][]byte → []common.Hash
+	topics := make([]common.Hash, len(log.Topics))
+	for i, t := range log.Topics {
+		topics[i] = common.BytesToHash(t)
+	}
+
+	if err := abi.ParseTopics(event, indexed, topics[1:]); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+func (c *Codec) ActiveProtocolAdapterSetLogHash() []byte {
+	return c.abi.Events["ActiveProtocolAdapterSet"].ID.Bytes()
+}
+
+func (c *Codec) EncodeActiveProtocolAdapterSetTopics(
+	evt abi.Event,
+	values []ActiveProtocolAdapterSetTopics,
+) ([]*evm.TopicValues, error) {
+	var protocolIdRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.ProtocolId).IsZero() {
+			protocolIdRule = append(protocolIdRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.ProtocolId)
+		if err != nil {
+			return nil, err
+		}
+		protocolIdRule = append(protocolIdRule, fieldVal)
+	}
+	var adapterRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.Adapter).IsZero() {
+			adapterRule = append(adapterRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[1], v.Adapter)
+		if err != nil {
+			return nil, err
+		}
+		adapterRule = append(adapterRule, fieldVal)
+	}
+
+	rawTopics, err := abi.MakeTopics(
+		protocolIdRule,
+		adapterRule,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
+}
+
+// DecodeActiveProtocolAdapterSet decodes a log into a ActiveProtocolAdapterSet struct.
+func (c *Codec) DecodeActiveProtocolAdapterSet(log *evm.Log) (*ActiveProtocolAdapterSetDecoded, error) {
+	event := new(ActiveProtocolAdapterSetDecoded)
+	if err := c.abi.UnpackIntoInterface(event, "ActiveProtocolAdapterSet", log.Data); err != nil {
+		return nil, err
+	}
+	var indexed abi.Arguments
+	for _, arg := range c.abi.Events["ActiveProtocolAdapterSet"].Inputs {
+		if arg.Indexed {
+			if arg.Type.T == abi.TupleTy {
+				// abigen throws on tuple, so converting to bytes to
+				// receive back the common.Hash as is instead of error
+				arg.Type.T = abi.BytesTy
+			}
+			indexed = append(indexed, arg)
+		}
+	}
+	// Convert [][]byte → []common.Hash
+	topics := make([]common.Hash, len(log.Topics))
+	for i, t := range log.Topics {
+		topics[i] = common.BytesToHash(t)
+	}
+
+	if err := abi.ParseTopics(event, indexed, topics[1:]); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+func (c *Codec) ActiveProtocolAdapterSet0LogHash() []byte {
+	return c.abi.Events["ActiveProtocolAdapterSet0"].ID.Bytes()
+}
+
+func (c *Codec) EncodeActiveProtocolAdapterSet0Topics(
+	evt abi.Event,
+	values []ActiveProtocolAdapterSet0Topics,
+) ([]*evm.TopicValues, error) {
+	var protocolIdRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.ProtocolId).IsZero() {
+			protocolIdRule = append(protocolIdRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.ProtocolId)
+		if err != nil {
+			return nil, err
+		}
+		protocolIdRule = append(protocolIdRule, fieldVal)
+	}
+	var adapterRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.Adapter).IsZero() {
+			adapterRule = append(adapterRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[1], v.Adapter)
+		if err != nil {
+			return nil, err
+		}
+		adapterRule = append(adapterRule, fieldVal)
+	}
+
+	rawTopics, err := abi.MakeTopics(
+		protocolIdRule,
+		adapterRule,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
+}
+
+// DecodeActiveProtocolAdapterSet0 decodes a log into a ActiveProtocolAdapterSet0 struct.
+func (c *Codec) DecodeActiveProtocolAdapterSet0(log *evm.Log) (*ActiveProtocolAdapterSet0Decoded, error) {
+	event := new(ActiveProtocolAdapterSet0Decoded)
+	if err := c.abi.UnpackIntoInterface(event, "ActiveProtocolAdapterSet0", log.Data); err != nil {
+		return nil, err
+	}
+	var indexed abi.Arguments
+	for _, arg := range c.abi.Events["ActiveProtocolAdapterSet0"].Inputs {
+		if arg.Indexed {
+			if arg.Type.T == abi.TupleTy {
+				// abigen throws on tuple, so converting to bytes to
+				// receive back the common.Hash as is instead of error
+				arg.Type.T = abi.BytesTy
+			}
+			indexed = append(indexed, arg)
+		}
+	}
+	// Convert [][]byte → []common.Hash
+	topics := make([]common.Hash, len(log.Topics))
+	for i, t := range log.Topics {
+		topics[i] = common.BytesToHash(t)
+	}
+
+	if err := abi.ParseTopics(event, indexed, topics[1:]); err != nil {
+		return nil, err
+	}
+	return event, nil
 }
 
 func (c *Codec) CCIPBridgedLogHash() []byte {
@@ -1798,6 +2473,92 @@ func (c *Codec) DecodeCCIPBridged(log *evm.Log) (*CCIPBridgedDecoded, error) {
 	}
 	var indexed abi.Arguments
 	for _, arg := range c.abi.Events["CCIPBridged"].Inputs {
+		if arg.Indexed {
+			if arg.Type.T == abi.TupleTy {
+				// abigen throws on tuple, so converting to bytes to
+				// receive back the common.Hash as is instead of error
+				arg.Type.T = abi.BytesTy
+			}
+			indexed = append(indexed, arg)
+		}
+	}
+	// Convert [][]byte → []common.Hash
+	topics := make([]common.Hash, len(log.Topics))
+	for i, t := range log.Topics {
+		topics[i] = common.BytesToHash(t)
+	}
+
+	if err := abi.ParseTopics(event, indexed, topics[1:]); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+func (c *Codec) CCIPBridged0LogHash() []byte {
+	return c.abi.Events["CCIPBridged0"].ID.Bytes()
+}
+
+func (c *Codec) EncodeCCIPBridged0Topics(
+	evt abi.Event,
+	values []CCIPBridged0Topics,
+) ([]*evm.TopicValues, error) {
+	var ccipMessageIdRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.CcipMessageId).IsZero() {
+			ccipMessageIdRule = append(ccipMessageIdRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.CcipMessageId)
+		if err != nil {
+			return nil, err
+		}
+		ccipMessageIdRule = append(ccipMessageIdRule, fieldVal)
+	}
+	var amountRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.Amount).IsZero() {
+			amountRule = append(amountRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[1], v.Amount)
+		if err != nil {
+			return nil, err
+		}
+		amountRule = append(amountRule, fieldVal)
+	}
+	var ccipTxTypeRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.CcipTxType).IsZero() {
+			ccipTxTypeRule = append(ccipTxTypeRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[2], v.CcipTxType)
+		if err != nil {
+			return nil, err
+		}
+		ccipTxTypeRule = append(ccipTxTypeRule, fieldVal)
+	}
+
+	rawTopics, err := abi.MakeTopics(
+		ccipMessageIdRule,
+		amountRule,
+		ccipTxTypeRule,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
+}
+
+// DecodeCCIPBridged0 decodes a log into a CCIPBridged0 struct.
+func (c *Codec) DecodeCCIPBridged0(log *evm.Log) (*CCIPBridged0Decoded, error) {
+	event := new(CCIPBridged0Decoded)
+	if err := c.abi.UnpackIntoInterface(event, "CCIPBridged0", log.Data); err != nil {
+		return nil, err
+	}
+	var indexed abi.Arguments
+	for _, arg := range c.abi.Events["CCIPBridged0"].Inputs {
 		if arg.Indexed {
 			if arg.Type.T == abi.TupleTy {
 				// abigen throws on tuple, so converting to bytes to
@@ -1892,6 +2653,251 @@ func (c *Codec) DecodeCcipGasLimitSet(log *evm.Log) (*CcipGasLimitSetDecoded, er
 	return event, nil
 }
 
+func (c *Codec) CcipGasLimitSet0LogHash() []byte {
+	return c.abi.Events["CcipGasLimitSet0"].ID.Bytes()
+}
+
+func (c *Codec) EncodeCcipGasLimitSet0Topics(
+	evt abi.Event,
+	values []CcipGasLimitSet0Topics,
+) ([]*evm.TopicValues, error) {
+	var chainSelectorRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.ChainSelector).IsZero() {
+			chainSelectorRule = append(chainSelectorRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.ChainSelector)
+		if err != nil {
+			return nil, err
+		}
+		chainSelectorRule = append(chainSelectorRule, fieldVal)
+	}
+	var gasLimitRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.GasLimit).IsZero() {
+			gasLimitRule = append(gasLimitRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[1], v.GasLimit)
+		if err != nil {
+			return nil, err
+		}
+		gasLimitRule = append(gasLimitRule, fieldVal)
+	}
+
+	rawTopics, err := abi.MakeTopics(
+		chainSelectorRule,
+		gasLimitRule,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
+}
+
+// DecodeCcipGasLimitSet0 decodes a log into a CcipGasLimitSet0 struct.
+func (c *Codec) DecodeCcipGasLimitSet0(log *evm.Log) (*CcipGasLimitSet0Decoded, error) {
+	event := new(CcipGasLimitSet0Decoded)
+	if err := c.abi.UnpackIntoInterface(event, "CcipGasLimitSet0", log.Data); err != nil {
+		return nil, err
+	}
+	var indexed abi.Arguments
+	for _, arg := range c.abi.Events["CcipGasLimitSet0"].Inputs {
+		if arg.Indexed {
+			if arg.Type.T == abi.TupleTy {
+				// abigen throws on tuple, so converting to bytes to
+				// receive back the common.Hash as is instead of error
+				arg.Type.T = abi.BytesTy
+			}
+			indexed = append(indexed, arg)
+		}
+	}
+	// Convert [][]byte → []common.Hash
+	topics := make([]common.Hash, len(log.Topics))
+	for i, t := range log.Topics {
+		topics[i] = common.BytesToHash(t)
+	}
+
+	if err := abi.ParseTopics(event, indexed, topics[1:]); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+func (c *Codec) CcipSendRecoveryClearedLogHash() []byte {
+	return c.abi.Events["CcipSendRecoveryCleared"].ID.Bytes()
+}
+
+func (c *Codec) EncodeCcipSendRecoveryClearedTopics(
+	evt abi.Event,
+	values []CcipSendRecoveryClearedTopics,
+) ([]*evm.TopicValues, error) {
+	var ccipTxTypeRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.CcipTxType).IsZero() {
+			ccipTxTypeRule = append(ccipTxTypeRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.CcipTxType)
+		if err != nil {
+			return nil, err
+		}
+		ccipTxTypeRule = append(ccipTxTypeRule, fieldVal)
+	}
+	var destinationChainSelectorRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.DestinationChainSelector).IsZero() {
+			destinationChainSelectorRule = append(destinationChainSelectorRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[1], v.DestinationChainSelector)
+		if err != nil {
+			return nil, err
+		}
+		destinationChainSelectorRule = append(destinationChainSelectorRule, fieldVal)
+	}
+	var amountRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.Amount).IsZero() {
+			amountRule = append(amountRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[2], v.Amount)
+		if err != nil {
+			return nil, err
+		}
+		amountRule = append(amountRule, fieldVal)
+	}
+
+	rawTopics, err := abi.MakeTopics(
+		ccipTxTypeRule,
+		destinationChainSelectorRule,
+		amountRule,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
+}
+
+// DecodeCcipSendRecoveryCleared decodes a log into a CcipSendRecoveryCleared struct.
+func (c *Codec) DecodeCcipSendRecoveryCleared(log *evm.Log) (*CcipSendRecoveryClearedDecoded, error) {
+	event := new(CcipSendRecoveryClearedDecoded)
+	if err := c.abi.UnpackIntoInterface(event, "CcipSendRecoveryCleared", log.Data); err != nil {
+		return nil, err
+	}
+	var indexed abi.Arguments
+	for _, arg := range c.abi.Events["CcipSendRecoveryCleared"].Inputs {
+		if arg.Indexed {
+			if arg.Type.T == abi.TupleTy {
+				// abigen throws on tuple, so converting to bytes to
+				// receive back the common.Hash as is instead of error
+				arg.Type.T = abi.BytesTy
+			}
+			indexed = append(indexed, arg)
+		}
+	}
+	// Convert [][]byte → []common.Hash
+	topics := make([]common.Hash, len(log.Topics))
+	for i, t := range log.Topics {
+		topics[i] = common.BytesToHash(t)
+	}
+
+	if err := abi.ParseTopics(event, indexed, topics[1:]); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+func (c *Codec) CcipSendRecoveryStoredLogHash() []byte {
+	return c.abi.Events["CcipSendRecoveryStored"].ID.Bytes()
+}
+
+func (c *Codec) EncodeCcipSendRecoveryStoredTopics(
+	evt abi.Event,
+	values []CcipSendRecoveryStoredTopics,
+) ([]*evm.TopicValues, error) {
+	var ccipTxTypeRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.CcipTxType).IsZero() {
+			ccipTxTypeRule = append(ccipTxTypeRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.CcipTxType)
+		if err != nil {
+			return nil, err
+		}
+		ccipTxTypeRule = append(ccipTxTypeRule, fieldVal)
+	}
+	var destinationChainSelectorRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.DestinationChainSelector).IsZero() {
+			destinationChainSelectorRule = append(destinationChainSelectorRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[1], v.DestinationChainSelector)
+		if err != nil {
+			return nil, err
+		}
+		destinationChainSelectorRule = append(destinationChainSelectorRule, fieldVal)
+	}
+	var amountRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.Amount).IsZero() {
+			amountRule = append(amountRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[2], v.Amount)
+		if err != nil {
+			return nil, err
+		}
+		amountRule = append(amountRule, fieldVal)
+	}
+
+	rawTopics, err := abi.MakeTopics(
+		ccipTxTypeRule,
+		destinationChainSelectorRule,
+		amountRule,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
+}
+
+// DecodeCcipSendRecoveryStored decodes a log into a CcipSendRecoveryStored struct.
+func (c *Codec) DecodeCcipSendRecoveryStored(log *evm.Log) (*CcipSendRecoveryStoredDecoded, error) {
+	event := new(CcipSendRecoveryStoredDecoded)
+	if err := c.abi.UnpackIntoInterface(event, "CcipSendRecoveryStored", log.Data); err != nil {
+		return nil, err
+	}
+	var indexed abi.Arguments
+	for _, arg := range c.abi.Events["CcipSendRecoveryStored"].Inputs {
+		if arg.Indexed {
+			if arg.Type.T == abi.TupleTy {
+				// abigen throws on tuple, so converting to bytes to
+				// receive back the common.Hash as is instead of error
+				arg.Type.T = abi.BytesTy
+			}
+			indexed = append(indexed, arg)
+		}
+	}
+	// Convert [][]byte → []common.Hash
+	topics := make([]common.Hash, len(log.Topics))
+	for i, t := range log.Topics {
+		topics[i] = common.BytesToHash(t)
+	}
+
+	if err := abi.ParseTopics(event, indexed, topics[1:]); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
 func (c *Codec) CrosschainVaultSetLogHash() []byte {
 	return c.abi.Events["CrosschainVaultSet"].ID.Bytes()
 }
@@ -1944,6 +2950,79 @@ func (c *Codec) DecodeCrosschainVaultSet(log *evm.Log) (*CrosschainVaultSetDecod
 	}
 	var indexed abi.Arguments
 	for _, arg := range c.abi.Events["CrosschainVaultSet"].Inputs {
+		if arg.Indexed {
+			if arg.Type.T == abi.TupleTy {
+				// abigen throws on tuple, so converting to bytes to
+				// receive back the common.Hash as is instead of error
+				arg.Type.T = abi.BytesTy
+			}
+			indexed = append(indexed, arg)
+		}
+	}
+	// Convert [][]byte → []common.Hash
+	topics := make([]common.Hash, len(log.Topics))
+	for i, t := range log.Topics {
+		topics[i] = common.BytesToHash(t)
+	}
+
+	if err := abi.ParseTopics(event, indexed, topics[1:]); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+func (c *Codec) CrosschainVaultSet0LogHash() []byte {
+	return c.abi.Events["CrosschainVaultSet0"].ID.Bytes()
+}
+
+func (c *Codec) EncodeCrosschainVaultSet0Topics(
+	evt abi.Event,
+	values []CrosschainVaultSet0Topics,
+) ([]*evm.TopicValues, error) {
+	var chainSelectorRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.ChainSelector).IsZero() {
+			chainSelectorRule = append(chainSelectorRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.ChainSelector)
+		if err != nil {
+			return nil, err
+		}
+		chainSelectorRule = append(chainSelectorRule, fieldVal)
+	}
+	var vaultRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.Vault).IsZero() {
+			vaultRule = append(vaultRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[1], v.Vault)
+		if err != nil {
+			return nil, err
+		}
+		vaultRule = append(vaultRule, fieldVal)
+	}
+
+	rawTopics, err := abi.MakeTopics(
+		chainSelectorRule,
+		vaultRule,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
+}
+
+// DecodeCrosschainVaultSet0 decodes a log into a CrosschainVaultSet0 struct.
+func (c *Codec) DecodeCrosschainVaultSet0(log *evm.Log) (*CrosschainVaultSet0Decoded, error) {
+	event := new(CrosschainVaultSet0Decoded)
+	if err := c.abi.UnpackIntoInterface(event, "CrosschainVaultSet0", log.Data); err != nil {
+		return nil, err
+	}
+	var indexed abi.Arguments
+	for _, arg := range c.abi.Events["CrosschainVaultSet0"].Inputs {
 		if arg.Indexed {
 			if arg.Type.T == abi.TupleTy {
 				// abigen throws on tuple, so converting to bytes to
@@ -2223,6 +3302,66 @@ func (c *Codec) DecodeDefaultCcipGasLimitSet(log *evm.Log) (*DefaultCcipGasLimit
 	return event, nil
 }
 
+func (c *Codec) DefaultCcipGasLimitSet0LogHash() []byte {
+	return c.abi.Events["DefaultCcipGasLimitSet0"].ID.Bytes()
+}
+
+func (c *Codec) EncodeDefaultCcipGasLimitSet0Topics(
+	evt abi.Event,
+	values []DefaultCcipGasLimitSet0Topics,
+) ([]*evm.TopicValues, error) {
+	var gasLimitRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.GasLimit).IsZero() {
+			gasLimitRule = append(gasLimitRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.GasLimit)
+		if err != nil {
+			return nil, err
+		}
+		gasLimitRule = append(gasLimitRule, fieldVal)
+	}
+
+	rawTopics, err := abi.MakeTopics(
+		gasLimitRule,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
+}
+
+// DecodeDefaultCcipGasLimitSet0 decodes a log into a DefaultCcipGasLimitSet0 struct.
+func (c *Codec) DecodeDefaultCcipGasLimitSet0(log *evm.Log) (*DefaultCcipGasLimitSet0Decoded, error) {
+	event := new(DefaultCcipGasLimitSet0Decoded)
+	if err := c.abi.UnpackIntoInterface(event, "DefaultCcipGasLimitSet0", log.Data); err != nil {
+		return nil, err
+	}
+	var indexed abi.Arguments
+	for _, arg := range c.abi.Events["DefaultCcipGasLimitSet0"].Inputs {
+		if arg.Indexed {
+			if arg.Type.T == abi.TupleTy {
+				// abigen throws on tuple, so converting to bytes to
+				// receive back the common.Hash as is instead of error
+				arg.Type.T = abi.BytesTy
+			}
+			indexed = append(indexed, arg)
+		}
+	}
+	// Convert [][]byte → []common.Hash
+	topics := make([]common.Hash, len(log.Topics))
+	for i, t := range log.Topics {
+		topics[i] = common.BytesToHash(t)
+	}
+
+	if err := abi.ParseTopics(event, indexed, topics[1:]); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
 func (c *Codec) DepositToStrategyFailureLogHash() []byte {
 	return c.abi.Events["DepositToStrategyFailure"].ID.Bytes()
 }
@@ -2369,25 +3508,25 @@ func (c *Codec) DecodeDepositToStrategySuccess(log *evm.Log) (*DepositToStrategy
 	return event, nil
 }
 
-func (c *Codec) EmergencyDrainExecutedLogHash() []byte {
-	return c.abi.Events["EmergencyDrainExecuted"].ID.Bytes()
+func (c *Codec) DonationLogHash() []byte {
+	return c.abi.Events["Donation"].ID.Bytes()
 }
 
-func (c *Codec) EncodeEmergencyDrainExecutedTopics(
+func (c *Codec) EncodeDonationTopics(
 	evt abi.Event,
-	values []EmergencyDrainExecutedTopics,
+	values []DonationTopics,
 ) ([]*evm.TopicValues, error) {
-	var drainerRule []interface{}
+	var donorRule []interface{}
 	for _, v := range values {
-		if reflect.ValueOf(v.Drainer).IsZero() {
-			drainerRule = append(drainerRule, common.Hash{})
+		if reflect.ValueOf(v.Donor).IsZero() {
+			donorRule = append(donorRule, common.Hash{})
 			continue
 		}
-		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.Drainer)
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.Donor)
 		if err != nil {
 			return nil, err
 		}
-		drainerRule = append(drainerRule, fieldVal)
+		donorRule = append(donorRule, fieldVal)
 	}
 	var amountRule []interface{}
 	for _, v := range values {
@@ -2403,7 +3542,80 @@ func (c *Codec) EncodeEmergencyDrainExecutedTopics(
 	}
 
 	rawTopics, err := abi.MakeTopics(
-		drainerRule,
+		donorRule,
+		amountRule,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
+}
+
+// DecodeDonation decodes a log into a Donation struct.
+func (c *Codec) DecodeDonation(log *evm.Log) (*DonationDecoded, error) {
+	event := new(DonationDecoded)
+	if err := c.abi.UnpackIntoInterface(event, "Donation", log.Data); err != nil {
+		return nil, err
+	}
+	var indexed abi.Arguments
+	for _, arg := range c.abi.Events["Donation"].Inputs {
+		if arg.Indexed {
+			if arg.Type.T == abi.TupleTy {
+				// abigen throws on tuple, so converting to bytes to
+				// receive back the common.Hash as is instead of error
+				arg.Type.T = abi.BytesTy
+			}
+			indexed = append(indexed, arg)
+		}
+	}
+	// Convert [][]byte → []common.Hash
+	topics := make([]common.Hash, len(log.Topics))
+	for i, t := range log.Topics {
+		topics[i] = common.BytesToHash(t)
+	}
+
+	if err := abi.ParseTopics(event, indexed, topics[1:]); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+func (c *Codec) EmergencyDrainExecutedLogHash() []byte {
+	return c.abi.Events["EmergencyDrainExecuted"].ID.Bytes()
+}
+
+func (c *Codec) EncodeEmergencyDrainExecutedTopics(
+	evt abi.Event,
+	values []EmergencyDrainExecutedTopics,
+) ([]*evm.TopicValues, error) {
+	var emergencyReceiverRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.EmergencyReceiver).IsZero() {
+			emergencyReceiverRule = append(emergencyReceiverRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.EmergencyReceiver)
+		if err != nil {
+			return nil, err
+		}
+		emergencyReceiverRule = append(emergencyReceiverRule, fieldVal)
+	}
+	var amountRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.Amount).IsZero() {
+			amountRule = append(amountRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[1], v.Amount)
+		if err != nil {
+			return nil, err
+		}
+		amountRule = append(amountRule, fieldVal)
+	}
+
+	rawTopics, err := abi.MakeTopics(
+		emergencyReceiverRule,
 		amountRule,
 	)
 	if err != nil {
@@ -2421,6 +3633,126 @@ func (c *Codec) DecodeEmergencyDrainExecuted(log *evm.Log) (*EmergencyDrainExecu
 	}
 	var indexed abi.Arguments
 	for _, arg := range c.abi.Events["EmergencyDrainExecuted"].Inputs {
+		if arg.Indexed {
+			if arg.Type.T == abi.TupleTy {
+				// abigen throws on tuple, so converting to bytes to
+				// receive back the common.Hash as is instead of error
+				arg.Type.T = abi.BytesTy
+			}
+			indexed = append(indexed, arg)
+		}
+	}
+	// Convert [][]byte → []common.Hash
+	topics := make([]common.Hash, len(log.Topics))
+	for i, t := range log.Topics {
+		topics[i] = common.BytesToHash(t)
+	}
+
+	if err := abi.ParseTopics(event, indexed, topics[1:]); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+func (c *Codec) EmergencyReceiverSetLogHash() []byte {
+	return c.abi.Events["EmergencyReceiverSet"].ID.Bytes()
+}
+
+func (c *Codec) EncodeEmergencyReceiverSetTopics(
+	evt abi.Event,
+	values []EmergencyReceiverSetTopics,
+) ([]*evm.TopicValues, error) {
+	var emergencyReceiverRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.EmergencyReceiver).IsZero() {
+			emergencyReceiverRule = append(emergencyReceiverRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.EmergencyReceiver)
+		if err != nil {
+			return nil, err
+		}
+		emergencyReceiverRule = append(emergencyReceiverRule, fieldVal)
+	}
+
+	rawTopics, err := abi.MakeTopics(
+		emergencyReceiverRule,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
+}
+
+// DecodeEmergencyReceiverSet decodes a log into a EmergencyReceiverSet struct.
+func (c *Codec) DecodeEmergencyReceiverSet(log *evm.Log) (*EmergencyReceiverSetDecoded, error) {
+	event := new(EmergencyReceiverSetDecoded)
+	if err := c.abi.UnpackIntoInterface(event, "EmergencyReceiverSet", log.Data); err != nil {
+		return nil, err
+	}
+	var indexed abi.Arguments
+	for _, arg := range c.abi.Events["EmergencyReceiverSet"].Inputs {
+		if arg.Indexed {
+			if arg.Type.T == abi.TupleTy {
+				// abigen throws on tuple, so converting to bytes to
+				// receive back the common.Hash as is instead of error
+				arg.Type.T = abi.BytesTy
+			}
+			indexed = append(indexed, arg)
+		}
+	}
+	// Convert [][]byte → []common.Hash
+	topics := make([]common.Hash, len(log.Topics))
+	for i, t := range log.Topics {
+		topics[i] = common.BytesToHash(t)
+	}
+
+	if err := abi.ParseTopics(event, indexed, topics[1:]); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+func (c *Codec) EmergencyReceiverSet0LogHash() []byte {
+	return c.abi.Events["EmergencyReceiverSet0"].ID.Bytes()
+}
+
+func (c *Codec) EncodeEmergencyReceiverSet0Topics(
+	evt abi.Event,
+	values []EmergencyReceiverSet0Topics,
+) ([]*evm.TopicValues, error) {
+	var emergencyReceiverRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.EmergencyReceiver).IsZero() {
+			emergencyReceiverRule = append(emergencyReceiverRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.EmergencyReceiver)
+		if err != nil {
+			return nil, err
+		}
+		emergencyReceiverRule = append(emergencyReceiverRule, fieldVal)
+	}
+
+	rawTopics, err := abi.MakeTopics(
+		emergencyReceiverRule,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
+}
+
+// DecodeEmergencyReceiverSet0 decodes a log into a EmergencyReceiverSet0 struct.
+func (c *Codec) DecodeEmergencyReceiverSet0(log *evm.Log) (*EmergencyReceiverSet0Decoded, error) {
+	event := new(EmergencyReceiverSet0Decoded)
+	if err := c.abi.UnpackIntoInterface(event, "EmergencyReceiverSet0", log.Data); err != nil {
+		return nil, err
+	}
+	var indexed abi.Arguments
+	for _, arg := range c.abi.Events["EmergencyReceiverSet0"].Inputs {
 		if arg.Indexed {
 			if arg.Type.T == abi.TupleTy {
 				// abigen throws on tuple, so converting to bytes to
@@ -2687,6 +4019,52 @@ func (c *Codec) DecodeEpochWithdrawRecoveryStored(log *evm.Log) (*EpochWithdrawR
 	}
 	var indexed abi.Arguments
 	for _, arg := range c.abi.Events["EpochWithdrawRecoveryStored"].Inputs {
+		if arg.Indexed {
+			if arg.Type.T == abi.TupleTy {
+				// abigen throws on tuple, so converting to bytes to
+				// receive back the common.Hash as is instead of error
+				arg.Type.T = abi.BytesTy
+			}
+			indexed = append(indexed, arg)
+		}
+	}
+	// Convert [][]byte → []common.Hash
+	topics := make([]common.Hash, len(log.Topics))
+	for i, t := range log.Topics {
+		topics[i] = common.BytesToHash(t)
+	}
+
+	if err := abi.ParseTopics(event, indexed, topics[1:]); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+func (c *Codec) InitializedLogHash() []byte {
+	return c.abi.Events["Initialized"].ID.Bytes()
+}
+
+func (c *Codec) EncodeInitializedTopics(
+	evt abi.Event,
+	values []InitializedTopics,
+) ([]*evm.TopicValues, error) {
+
+	rawTopics, err := abi.MakeTopics()
+	if err != nil {
+		return nil, err
+	}
+
+	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
+}
+
+// DecodeInitialized decodes a log into a Initialized struct.
+func (c *Codec) DecodeInitialized(log *evm.Log) (*InitializedDecoded, error) {
+	event := new(InitializedDecoded)
+	if err := c.abi.UnpackIntoInterface(event, "Initialized", log.Data); err != nil {
+		return nil, err
+	}
+	var indexed abi.Arguments
+	for _, arg := range c.abi.Events["Initialized"].Inputs {
 		if arg.Indexed {
 			if arg.Type.T == abi.TupleTy {
 				// abigen throws on tuple, so converting to bytes to
@@ -3689,6 +5067,66 @@ func (c *Codec) DecodeUnpaused(log *evm.Log) (*UnpausedDecoded, error) {
 	return event, nil
 }
 
+func (c *Codec) UpgradedLogHash() []byte {
+	return c.abi.Events["Upgraded"].ID.Bytes()
+}
+
+func (c *Codec) EncodeUpgradedTopics(
+	evt abi.Event,
+	values []UpgradedTopics,
+) ([]*evm.TopicValues, error) {
+	var implementationRule []interface{}
+	for _, v := range values {
+		if reflect.ValueOf(v.Implementation).IsZero() {
+			implementationRule = append(implementationRule, common.Hash{})
+			continue
+		}
+		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.Implementation)
+		if err != nil {
+			return nil, err
+		}
+		implementationRule = append(implementationRule, fieldVal)
+	}
+
+	rawTopics, err := abi.MakeTopics(
+		implementationRule,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
+}
+
+// DecodeUpgraded decodes a log into a Upgraded struct.
+func (c *Codec) DecodeUpgraded(log *evm.Log) (*UpgradedDecoded, error) {
+	event := new(UpgradedDecoded)
+	if err := c.abi.UnpackIntoInterface(event, "Upgraded", log.Data); err != nil {
+		return nil, err
+	}
+	var indexed abi.Arguments
+	for _, arg := range c.abi.Events["Upgraded"].Inputs {
+		if arg.Indexed {
+			if arg.Type.T == abi.TupleTy {
+				// abigen throws on tuple, so converting to bytes to
+				// receive back the common.Hash as is instead of error
+				arg.Type.T = abi.BytesTy
+			}
+			indexed = append(indexed, arg)
+		}
+	}
+	// Convert [][]byte → []common.Hash
+	topics := make([]common.Hash, len(log.Topics))
+	for i, t := range log.Topics {
+		topics[i] = common.BytesToHash(t)
+	}
+
+	if err := abi.ParseTopics(event, indexed, topics[1:]); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
 func (c *Codec) WithdrawFromStrategyFailureLogHash() []byte {
 	return c.abi.Events["WithdrawFromStrategyFailure"].ID.Bytes()
 }
@@ -3868,6 +5306,43 @@ func (c ChildVault) DEFAULTADMINROLE(
 	})
 	return cre.Then(promise, func(response *evm.CallContractReply) ([32]byte, error) {
 		return c.Codec.DecodeDEFAULTADMINROLEMethodOutput(response.Data)
+	})
+
+}
+
+func (c ChildVault) UPGRADEINTERFACEVERSION(
+	runtime cre.Runtime,
+	blockNumber *big.Int,
+) cre.Promise[string] {
+	calldata, err := c.Codec.EncodeUPGRADEINTERFACEVERSIONMethodCall()
+	if err != nil {
+		return cre.PromiseFromResult[string](*new(string), err)
+	}
+
+	var bn cre.Promise[*pb.BigInt]
+	if blockNumber == nil {
+		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
+			BlockNumber: bindings.FinalizedBlockNumber,
+		})
+
+		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
+			if finalizedBlock == nil || finalizedBlock.Header == nil {
+				return nil, errors.New("failed to get finalized block header")
+			}
+			return finalizedBlock.Header.BlockNumber, nil
+		})
+	} else {
+		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	}
+
+	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+		return c.client.CallContract(runtime, &evm.CallContractRequest{
+			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
+			BlockNumber: bn,
+		})
+	})
+	return cre.Then(promise, func(response *evm.CallContractReply) (string, error) {
+		return c.Codec.DecodeUPGRADEINTERFACEVERSIONMethodOutput(response.Data)
 	})
 
 }
@@ -4057,6 +5532,80 @@ func (c ChildVault) GetAdapterRegistry(
 
 }
 
+func (c ChildVault) GetAsset(
+	runtime cre.Runtime,
+	blockNumber *big.Int,
+) cre.Promise[common.Address] {
+	calldata, err := c.Codec.EncodeGetAssetMethodCall()
+	if err != nil {
+		return cre.PromiseFromResult[common.Address](*new(common.Address), err)
+	}
+
+	var bn cre.Promise[*pb.BigInt]
+	if blockNumber == nil {
+		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
+			BlockNumber: bindings.FinalizedBlockNumber,
+		})
+
+		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
+			if finalizedBlock == nil || finalizedBlock.Header == nil {
+				return nil, errors.New("failed to get finalized block header")
+			}
+			return finalizedBlock.Header.BlockNumber, nil
+		})
+	} else {
+		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	}
+
+	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+		return c.client.CallContract(runtime, &evm.CallContractRequest{
+			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
+			BlockNumber: bn,
+		})
+	})
+	return cre.Then(promise, func(response *evm.CallContractReply) (common.Address, error) {
+		return c.Codec.DecodeGetAssetMethodOutput(response.Data)
+	})
+
+}
+
+func (c ChildVault) GetAssetPrecision(
+	runtime cre.Runtime,
+	blockNumber *big.Int,
+) cre.Promise[*big.Int] {
+	calldata, err := c.Codec.EncodeGetAssetPrecisionMethodCall()
+	if err != nil {
+		return cre.PromiseFromResult[*big.Int](*new(*big.Int), err)
+	}
+
+	var bn cre.Promise[*pb.BigInt]
+	if blockNumber == nil {
+		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
+			BlockNumber: bindings.FinalizedBlockNumber,
+		})
+
+		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
+			if finalizedBlock == nil || finalizedBlock.Header == nil {
+				return nil, errors.New("failed to get finalized block header")
+			}
+			return finalizedBlock.Header.BlockNumber, nil
+		})
+	} else {
+		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	}
+
+	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+		return c.client.CallContract(runtime, &evm.CallContractRequest{
+			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
+			BlockNumber: bn,
+		})
+	})
+	return cre.Then(promise, func(response *evm.CallContractReply) (*big.Int, error) {
+		return c.Codec.DecodeGetAssetPrecisionMethodOutput(response.Data)
+	})
+
+}
+
 func (c ChildVault) GetCCVsAndFinalityConfig(
 	runtime cre.Runtime,
 	args GetCCVsAndFinalityConfigInput,
@@ -4129,6 +5678,43 @@ func (c ChildVault) GetCcipGasLimit(
 	})
 	return cre.Then(promise, func(response *evm.CallContractReply) (*big.Int, error) {
 		return c.Codec.DecodeGetCcipGasLimitMethodOutput(response.Data)
+	})
+
+}
+
+func (c ChildVault) GetCcipSendRecovery(
+	runtime cre.Runtime,
+	blockNumber *big.Int,
+) cre.Promise[TypesCcipSendRecovery] {
+	calldata, err := c.Codec.EncodeGetCcipSendRecoveryMethodCall()
+	if err != nil {
+		return cre.PromiseFromResult[TypesCcipSendRecovery](*new(TypesCcipSendRecovery), err)
+	}
+
+	var bn cre.Promise[*pb.BigInt]
+	if blockNumber == nil {
+		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
+			BlockNumber: bindings.FinalizedBlockNumber,
+		})
+
+		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
+			if finalizedBlock == nil || finalizedBlock.Header == nil {
+				return nil, errors.New("failed to get finalized block header")
+			}
+			return finalizedBlock.Header.BlockNumber, nil
+		})
+	} else {
+		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	}
+
+	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+		return c.client.CallContract(runtime, &evm.CallContractRequest{
+			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
+			BlockNumber: bn,
+		})
+	})
+	return cre.Then(promise, func(response *evm.CallContractReply) (TypesCcipSendRecovery, error) {
+		return c.Codec.DecodeGetCcipSendRecoveryMethodOutput(response.Data)
 	})
 
 }
@@ -4208,14 +5794,13 @@ func (c ChildVault) GetDefaultCcipGasLimit(
 
 }
 
-func (c ChildVault) GetEpochDepositRecovery(
+func (c ChildVault) GetEmergencyReceiver(
 	runtime cre.Runtime,
-	args GetEpochDepositRecoveryInput,
 	blockNumber *big.Int,
-) cre.Promise[TypesAmountRecovery] {
-	calldata, err := c.Codec.EncodeGetEpochDepositRecoveryMethodCall(args)
+) cre.Promise[common.Address] {
+	calldata, err := c.Codec.EncodeGetEmergencyReceiverMethodCall()
 	if err != nil {
-		return cre.PromiseFromResult[TypesAmountRecovery](*new(TypesAmountRecovery), err)
+		return cre.PromiseFromResult[common.Address](*new(common.Address), err)
 	}
 
 	var bn cre.Promise[*pb.BigInt]
@@ -4240,7 +5825,44 @@ func (c ChildVault) GetEpochDepositRecovery(
 			BlockNumber: bn,
 		})
 	})
-	return cre.Then(promise, func(response *evm.CallContractReply) (TypesAmountRecovery, error) {
+	return cre.Then(promise, func(response *evm.CallContractReply) (common.Address, error) {
+		return c.Codec.DecodeGetEmergencyReceiverMethodOutput(response.Data)
+	})
+
+}
+
+func (c ChildVault) GetEpochDepositRecovery(
+	runtime cre.Runtime,
+	blockNumber *big.Int,
+) cre.Promise[TypesEpochRecovery] {
+	calldata, err := c.Codec.EncodeGetEpochDepositRecoveryMethodCall()
+	if err != nil {
+		return cre.PromiseFromResult[TypesEpochRecovery](*new(TypesEpochRecovery), err)
+	}
+
+	var bn cre.Promise[*pb.BigInt]
+	if blockNumber == nil {
+		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
+			BlockNumber: bindings.FinalizedBlockNumber,
+		})
+
+		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
+			if finalizedBlock == nil || finalizedBlock.Header == nil {
+				return nil, errors.New("failed to get finalized block header")
+			}
+			return finalizedBlock.Header.BlockNumber, nil
+		})
+	} else {
+		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	}
+
+	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+		return c.client.CallContract(runtime, &evm.CallContractRequest{
+			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
+			BlockNumber: bn,
+		})
+	})
+	return cre.Then(promise, func(response *evm.CallContractReply) (TypesEpochRecovery, error) {
 		return c.Codec.DecodeGetEpochDepositRecoveryMethodOutput(response.Data)
 	})
 
@@ -4248,12 +5870,11 @@ func (c ChildVault) GetEpochDepositRecovery(
 
 func (c ChildVault) GetEpochWithdrawRecovery(
 	runtime cre.Runtime,
-	args GetEpochWithdrawRecoveryInput,
 	blockNumber *big.Int,
-) cre.Promise[TypesAmountRecovery] {
-	calldata, err := c.Codec.EncodeGetEpochWithdrawRecoveryMethodCall(args)
+) cre.Promise[TypesEpochRecovery] {
+	calldata, err := c.Codec.EncodeGetEpochWithdrawRecoveryMethodCall()
 	if err != nil {
-		return cre.PromiseFromResult[TypesAmountRecovery](*new(TypesAmountRecovery), err)
+		return cre.PromiseFromResult[TypesEpochRecovery](*new(TypesEpochRecovery), err)
 	}
 
 	var bn cre.Promise[*pb.BigInt]
@@ -4278,7 +5899,7 @@ func (c ChildVault) GetEpochWithdrawRecovery(
 			BlockNumber: bn,
 		})
 	})
-	return cre.Then(promise, func(response *evm.CallContractReply) (TypesAmountRecovery, error) {
+	return cre.Then(promise, func(response *evm.CallContractReply) (TypesEpochRecovery, error) {
 		return c.Codec.DecodeGetEpochWithdrawRecoveryMethodOutput(response.Data)
 	})
 
@@ -4397,12 +6018,11 @@ func (c ChildVault) GetPausedAt(
 
 func (c ChildVault) GetRebalanceDepositRecovery(
 	runtime cre.Runtime,
-	args GetRebalanceDepositRecoveryInput,
 	blockNumber *big.Int,
-) cre.Promise[TypesAmountRecovery] {
-	calldata, err := c.Codec.EncodeGetRebalanceDepositRecoveryMethodCall(args)
+) cre.Promise[TypesRebalanceDepositRecovery] {
+	calldata, err := c.Codec.EncodeGetRebalanceDepositRecoveryMethodCall()
 	if err != nil {
-		return cre.PromiseFromResult[TypesAmountRecovery](*new(TypesAmountRecovery), err)
+		return cre.PromiseFromResult[TypesRebalanceDepositRecovery](*new(TypesRebalanceDepositRecovery), err)
 	}
 
 	var bn cre.Promise[*pb.BigInt]
@@ -4427,7 +6047,7 @@ func (c ChildVault) GetRebalanceDepositRecovery(
 			BlockNumber: bn,
 		})
 	})
-	return cre.Then(promise, func(response *evm.CallContractReply) (TypesAmountRecovery, error) {
+	return cre.Then(promise, func(response *evm.CallContractReply) (TypesRebalanceDepositRecovery, error) {
 		return c.Codec.DecodeGetRebalanceDepositRecoveryMethodOutput(response.Data)
 	})
 
@@ -4435,10 +6055,9 @@ func (c ChildVault) GetRebalanceDepositRecovery(
 
 func (c ChildVault) GetRebalanceWithdrawRecovery(
 	runtime cre.Runtime,
-	args GetRebalanceWithdrawRecoveryInput,
 	blockNumber *big.Int,
 ) cre.Promise[TypesRebalanceWithdrawRecovery] {
-	calldata, err := c.Codec.EncodeGetRebalanceWithdrawRecoveryMethodCall(args)
+	calldata, err := c.Codec.EncodeGetRebalanceWithdrawRecoveryMethodCall()
 	if err != nil {
 		return cre.PromiseFromResult[TypesRebalanceWithdrawRecovery](*new(TypesRebalanceWithdrawRecovery), err)
 	}
@@ -4467,6 +6086,43 @@ func (c ChildVault) GetRebalanceWithdrawRecovery(
 	})
 	return cre.Then(promise, func(response *evm.CallContractReply) (TypesRebalanceWithdrawRecovery, error) {
 		return c.Codec.DecodeGetRebalanceWithdrawRecoveryMethodOutput(response.Data)
+	})
+
+}
+
+func (c ChildVault) GetRecoveryMode(
+	runtime cre.Runtime,
+	blockNumber *big.Int,
+) cre.Promise[uint8] {
+	calldata, err := c.Codec.EncodeGetRecoveryModeMethodCall()
+	if err != nil {
+		return cre.PromiseFromResult[uint8](*new(uint8), err)
+	}
+
+	var bn cre.Promise[*pb.BigInt]
+	if blockNumber == nil {
+		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
+			BlockNumber: bindings.FinalizedBlockNumber,
+		})
+
+		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
+			if finalizedBlock == nil || finalizedBlock.Header == nil {
+				return nil, errors.New("failed to get finalized block header")
+			}
+			return finalizedBlock.Header.BlockNumber, nil
+		})
+	} else {
+		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	}
+
+	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+		return c.client.CallContract(runtime, &evm.CallContractRequest{
+			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
+			BlockNumber: bn,
+		})
+	})
+	return cre.Then(promise, func(response *evm.CallContractReply) (uint8, error) {
+		return c.Codec.DecodeGetRecoveryModeMethodOutput(response.Data)
 	})
 
 }
@@ -4616,43 +6272,6 @@ func (c ChildVault) GetThisChainSelector(
 	})
 	return cre.Then(promise, func(response *evm.CallContractReply) (uint64, error) {
 		return c.Codec.DecodeGetThisChainSelectorMethodOutput(response.Data)
-	})
-
-}
-
-func (c ChildVault) GetUsdc(
-	runtime cre.Runtime,
-	blockNumber *big.Int,
-) cre.Promise[common.Address] {
-	calldata, err := c.Codec.EncodeGetUsdcMethodCall()
-	if err != nil {
-		return cre.PromiseFromResult[common.Address](*new(common.Address), err)
-	}
-
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
-	}
-
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
-		return c.client.CallContract(runtime, &evm.CallContractRequest{
-			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
-			BlockNumber: bn,
-		})
-	})
-	return cre.Then(promise, func(response *evm.CallContractReply) (common.Address, error) {
-		return c.Codec.DecodeGetUsdcMethodOutput(response.Data)
 	})
 
 }
@@ -4843,12 +6462,74 @@ func (c ChildVault) PendingDefaultAdminDelay(
 
 }
 
+func (c ChildVault) ProxiableUUID(
+	runtime cre.Runtime,
+	blockNumber *big.Int,
+) cre.Promise[[32]byte] {
+	calldata, err := c.Codec.EncodeProxiableUUIDMethodCall()
+	if err != nil {
+		return cre.PromiseFromResult[[32]byte](*new([32]byte), err)
+	}
+
+	var bn cre.Promise[*pb.BigInt]
+	if blockNumber == nil {
+		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
+			BlockNumber: bindings.FinalizedBlockNumber,
+		})
+
+		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
+			if finalizedBlock == nil || finalizedBlock.Header == nil {
+				return nil, errors.New("failed to get finalized block header")
+			}
+			return finalizedBlock.Header.BlockNumber, nil
+		})
+	} else {
+		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	}
+
+	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+		return c.client.CallContract(runtime, &evm.CallContractRequest{
+			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
+			BlockNumber: bn,
+		})
+	})
+	return cre.Then(promise, func(response *evm.CallContractReply) ([32]byte, error) {
+		return c.Codec.DecodeProxiableUUIDMethodOutput(response.Data)
+	})
+
+}
+
 func (c ChildVault) WriteReportFromBaseVaultConstructorParams(
 	runtime cre.Runtime,
 	input BaseVaultConstructorParams,
 	gasConfig *evm.GasConfig,
 ) cre.Promise[*evm.WriteReportReply] {
 	encoded, err := c.Codec.EncodeBaseVaultConstructorParamsStruct(input)
+	if err != nil {
+		return cre.PromiseFromResult[*evm.WriteReportReply](nil, err)
+	}
+	promise := runtime.GenerateReport(&pb2.ReportRequest{
+		EncodedPayload: encoded,
+		EncoderName:    "evm",
+		SigningAlgo:    "ecdsa",
+		HashingAlgo:    "keccak256",
+	})
+
+	return cre.ThenPromise(promise, func(report *cre.Report) cre.Promise[*evm.WriteReportReply] {
+		return c.client.WriteReport(runtime, &evm.WriteCreReportRequest{
+			Receiver:  c.Address.Bytes(),
+			Report:    report,
+			GasConfig: gasConfig,
+		})
+	})
+}
+
+func (c ChildVault) WriteReportFromBaseVaultInitParams(
+	runtime cre.Runtime,
+	input BaseVaultInitParams,
+	gasConfig *evm.GasConfig,
+) cre.Promise[*evm.WriteReportReply] {
+	encoded, err := c.Codec.EncodeBaseVaultInitParamsStruct(input)
 	if err != nil {
 		return cre.PromiseFromResult[*evm.WriteReportReply](nil, err)
 	}
@@ -4918,12 +6599,62 @@ func (c ChildVault) WriteReportFromClientEVMTokenAmount(
 	})
 }
 
-func (c ChildVault) WriteReportFromTypesAmountRecovery(
+func (c ChildVault) WriteReportFromTypesCcipSendRecovery(
 	runtime cre.Runtime,
-	input TypesAmountRecovery,
+	input TypesCcipSendRecovery,
 	gasConfig *evm.GasConfig,
 ) cre.Promise[*evm.WriteReportReply] {
-	encoded, err := c.Codec.EncodeTypesAmountRecoveryStruct(input)
+	encoded, err := c.Codec.EncodeTypesCcipSendRecoveryStruct(input)
+	if err != nil {
+		return cre.PromiseFromResult[*evm.WriteReportReply](nil, err)
+	}
+	promise := runtime.GenerateReport(&pb2.ReportRequest{
+		EncodedPayload: encoded,
+		EncoderName:    "evm",
+		SigningAlgo:    "ecdsa",
+		HashingAlgo:    "keccak256",
+	})
+
+	return cre.ThenPromise(promise, func(report *cre.Report) cre.Promise[*evm.WriteReportReply] {
+		return c.client.WriteReport(runtime, &evm.WriteCreReportRequest{
+			Receiver:  c.Address.Bytes(),
+			Report:    report,
+			GasConfig: gasConfig,
+		})
+	})
+}
+
+func (c ChildVault) WriteReportFromTypesEpochRecovery(
+	runtime cre.Runtime,
+	input TypesEpochRecovery,
+	gasConfig *evm.GasConfig,
+) cre.Promise[*evm.WriteReportReply] {
+	encoded, err := c.Codec.EncodeTypesEpochRecoveryStruct(input)
+	if err != nil {
+		return cre.PromiseFromResult[*evm.WriteReportReply](nil, err)
+	}
+	promise := runtime.GenerateReport(&pb2.ReportRequest{
+		EncodedPayload: encoded,
+		EncoderName:    "evm",
+		SigningAlgo:    "ecdsa",
+		HashingAlgo:    "keccak256",
+	})
+
+	return cre.ThenPromise(promise, func(report *cre.Report) cre.Promise[*evm.WriteReportReply] {
+		return c.client.WriteReport(runtime, &evm.WriteCreReportRequest{
+			Receiver:  c.Address.Bytes(),
+			Report:    report,
+			GasConfig: gasConfig,
+		})
+	})
+}
+
+func (c ChildVault) WriteReportFromTypesRebalanceDepositRecovery(
+	runtime cre.Runtime,
+	input TypesRebalanceDepositRecovery,
+	gasConfig *evm.GasConfig,
+) cre.Promise[*evm.WriteReportReply] {
+	encoded, err := c.Codec.EncodeTypesRebalanceDepositRecoveryStruct(input)
 	if err != nil {
 		return cre.PromiseFromResult[*evm.WriteReportReply](nil, err)
 	}
@@ -5127,6 +6858,32 @@ func (e *AccessControlUnauthorizedAccount) Error() string {
 	return fmt.Sprintf("AccessControlUnauthorizedAccount error: account=%v; neededRole=%v;", e.Account, e.NeededRole)
 }
 
+// DecodeAddressEmptyCodeError decodes a AddressEmptyCode error from revert data.
+func (c *ChildVault) DecodeAddressEmptyCodeError(data []byte) (*AddressEmptyCode, error) {
+	args := c.ABI.Errors["AddressEmptyCode"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 1 {
+		return nil, fmt.Errorf("expected 1 values, got %d", len(values))
+	}
+
+	target, ok0 := values[0].(common.Address)
+	if !ok0 {
+		return nil, fmt.Errorf("unexpected type for target in AddressEmptyCode error")
+	}
+
+	return &AddressEmptyCode{
+		Target: target,
+	}, nil
+}
+
+// Error implements the error interface for AddressEmptyCode.
+func (e *AddressEmptyCode) Error() string {
+	return fmt.Sprintf("AddressEmptyCode error: target=%v;", e.Target)
+}
+
 // DecodeBaseVaultDepositFailedError decodes a BaseVault__DepositFailed error from revert data.
 func (c *ChildVault) DecodeBaseVaultDepositFailedError(data []byte) (*BaseVaultDepositFailed, error) {
 	args := c.ABI.Errors["BaseVault__DepositFailed"].Inputs
@@ -5153,6 +6910,32 @@ func (e *BaseVaultDepositFailed) Error() string {
 	return fmt.Sprintf("BaseVaultDepositFailed error: amount=%v;", e.Amount)
 }
 
+// DecodeBaseVaultDestinationVaultNotSetError decodes a BaseVault__DestinationVaultNotSet error from revert data.
+func (c *ChildVault) DecodeBaseVaultDestinationVaultNotSetError(data []byte) (*BaseVaultDestinationVaultNotSet, error) {
+	args := c.ABI.Errors["BaseVault__DestinationVaultNotSet"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 1 {
+		return nil, fmt.Errorf("expected 1 values, got %d", len(values))
+	}
+
+	destinationChainSelector, ok0 := values[0].(uint64)
+	if !ok0 {
+		return nil, fmt.Errorf("unexpected type for destinationChainSelector in BaseVaultDestinationVaultNotSet error")
+	}
+
+	return &BaseVaultDestinationVaultNotSet{
+		DestinationChainSelector: destinationChainSelector,
+	}, nil
+}
+
+// Error implements the error interface for BaseVaultDestinationVaultNotSet.
+func (e *BaseVaultDestinationVaultNotSet) Error() string {
+	return fmt.Sprintf("BaseVaultDestinationVaultNotSet error: destinationChainSelector=%v;", e.DestinationChainSelector)
+}
+
 // DecodeBaseVaultEmergencyDrainDelayNotMetError decodes a BaseVault__EmergencyDrainDelayNotMet error from revert data.
 func (c *ChildVault) DecodeBaseVaultEmergencyDrainDelayNotMetError(data []byte) (*BaseVaultEmergencyDrainDelayNotMet, error) {
 	args := c.ABI.Errors["BaseVault__EmergencyDrainDelayNotMet"].Inputs
@@ -5172,6 +6955,89 @@ func (e *BaseVaultEmergencyDrainDelayNotMet) Error() string {
 	return fmt.Sprintf("BaseVaultEmergencyDrainDelayNotMet error:")
 }
 
+// DecodeBaseVaultEmptyInputError decodes a BaseVault__EmptyInput error from revert data.
+func (c *ChildVault) DecodeBaseVaultEmptyInputError(data []byte) (*BaseVaultEmptyInput, error) {
+	args := c.ABI.Errors["BaseVault__EmptyInput"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 0 {
+		return nil, fmt.Errorf("expected 0 values, got %d", len(values))
+	}
+
+	return &BaseVaultEmptyInput{}, nil
+}
+
+// Error implements the error interface for BaseVaultEmptyInput.
+func (e *BaseVaultEmptyInput) Error() string {
+	return fmt.Sprintf("BaseVaultEmptyInput error:")
+}
+
+// DecodeBaseVaultInvalidAdapterVaultError decodes a BaseVault__InvalidAdapterVault error from revert data.
+func (c *ChildVault) DecodeBaseVaultInvalidAdapterVaultError(data []byte) (*BaseVaultInvalidAdapterVault, error) {
+	args := c.ABI.Errors["BaseVault__InvalidAdapterVault"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 3 {
+		return nil, fmt.Errorf("expected 3 values, got %d", len(values))
+	}
+
+	adapter, ok0 := values[0].(common.Address)
+	if !ok0 {
+		return nil, fmt.Errorf("unexpected type for adapter in BaseVaultInvalidAdapterVault error")
+	}
+
+	actualVault, ok1 := values[1].(common.Address)
+	if !ok1 {
+		return nil, fmt.Errorf("unexpected type for actualVault in BaseVaultInvalidAdapterVault error")
+	}
+
+	expectedVault, ok2 := values[2].(common.Address)
+	if !ok2 {
+		return nil, fmt.Errorf("unexpected type for expectedVault in BaseVaultInvalidAdapterVault error")
+	}
+
+	return &BaseVaultInvalidAdapterVault{
+		Adapter:       adapter,
+		ActualVault:   actualVault,
+		ExpectedVault: expectedVault,
+	}, nil
+}
+
+// Error implements the error interface for BaseVaultInvalidAdapterVault.
+func (e *BaseVaultInvalidAdapterVault) Error() string {
+	return fmt.Sprintf("BaseVaultInvalidAdapterVault error: adapter=%v; actualVault=%v; expectedVault=%v;", e.Adapter, e.ActualVault, e.ExpectedVault)
+}
+
+// DecodeBaseVaultInvalidDestinationChainSelectorError decodes a BaseVault__InvalidDestinationChainSelector error from revert data.
+func (c *ChildVault) DecodeBaseVaultInvalidDestinationChainSelectorError(data []byte) (*BaseVaultInvalidDestinationChainSelector, error) {
+	args := c.ABI.Errors["BaseVault__InvalidDestinationChainSelector"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 1 {
+		return nil, fmt.Errorf("expected 1 values, got %d", len(values))
+	}
+
+	destinationChainSelector, ok0 := values[0].(uint64)
+	if !ok0 {
+		return nil, fmt.Errorf("unexpected type for destinationChainSelector in BaseVaultInvalidDestinationChainSelector error")
+	}
+
+	return &BaseVaultInvalidDestinationChainSelector{
+		DestinationChainSelector: destinationChainSelector,
+	}, nil
+}
+
+// Error implements the error interface for BaseVaultInvalidDestinationChainSelector.
+func (e *BaseVaultInvalidDestinationChainSelector) Error() string {
+	return fmt.Sprintf("BaseVaultInvalidDestinationChainSelector error: destinationChainSelector=%v;", e.DestinationChainSelector)
+}
+
 // DecodeBaseVaultInvalidInputLengthsError decodes a BaseVault__InvalidInputLengths error from revert data.
 func (c *ChildVault) DecodeBaseVaultInvalidInputLengthsError(data []byte) (*BaseVaultInvalidInputLengths, error) {
 	args := c.ABI.Errors["BaseVault__InvalidInputLengths"].Inputs
@@ -5189,6 +7055,38 @@ func (c *ChildVault) DecodeBaseVaultInvalidInputLengthsError(data []byte) (*Base
 // Error implements the error interface for BaseVaultInvalidInputLengths.
 func (e *BaseVaultInvalidInputLengths) Error() string {
 	return fmt.Sprintf("BaseVaultInvalidInputLengths error:")
+}
+
+// DecodeBaseVaultInvalidReceivedTokenError decodes a BaseVault__InvalidReceivedToken error from revert data.
+func (c *ChildVault) DecodeBaseVaultInvalidReceivedTokenError(data []byte) (*BaseVaultInvalidReceivedToken, error) {
+	args := c.ABI.Errors["BaseVault__InvalidReceivedToken"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 2 {
+		return nil, fmt.Errorf("expected 2 values, got %d", len(values))
+	}
+
+	receivedToken, ok0 := values[0].(common.Address)
+	if !ok0 {
+		return nil, fmt.Errorf("unexpected type for receivedToken in BaseVaultInvalidReceivedToken error")
+	}
+
+	expectedToken, ok1 := values[1].(common.Address)
+	if !ok1 {
+		return nil, fmt.Errorf("unexpected type for expectedToken in BaseVaultInvalidReceivedToken error")
+	}
+
+	return &BaseVaultInvalidReceivedToken{
+		ReceivedToken: receivedToken,
+		ExpectedToken: expectedToken,
+	}, nil
+}
+
+// Error implements the error interface for BaseVaultInvalidReceivedToken.
+func (e *BaseVaultInvalidReceivedToken) Error() string {
+	return fmt.Sprintf("BaseVaultInvalidReceivedToken error: receivedToken=%v; expectedToken=%v;", e.ReceivedToken, e.ExpectedToken)
 }
 
 // DecodeBaseVaultInvalidSenderError decodes a BaseVault__InvalidSender error from revert data.
@@ -5221,6 +7119,64 @@ func (c *ChildVault) DecodeBaseVaultInvalidSenderError(data []byte) (*BaseVaultI
 // Error implements the error interface for BaseVaultInvalidSender.
 func (e *BaseVaultInvalidSender) Error() string {
 	return fmt.Sprintf("BaseVaultInvalidSender error: sender=%v; srcChainSelector=%v;", e.Sender, e.SrcChainSelector)
+}
+
+// DecodeBaseVaultInvalidTokenAmountsLengthError decodes a BaseVault__InvalidTokenAmountsLength error from revert data.
+func (c *ChildVault) DecodeBaseVaultInvalidTokenAmountsLengthError(data []byte) (*BaseVaultInvalidTokenAmountsLength, error) {
+	args := c.ABI.Errors["BaseVault__InvalidTokenAmountsLength"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 2 {
+		return nil, fmt.Errorf("expected 2 values, got %d", len(values))
+	}
+
+	receivedLength, ok0 := values[0].(*big.Int)
+	if !ok0 {
+		return nil, fmt.Errorf("unexpected type for receivedLength in BaseVaultInvalidTokenAmountsLength error")
+	}
+
+	expectedLength, ok1 := values[1].(*big.Int)
+	if !ok1 {
+		return nil, fmt.Errorf("unexpected type for expectedLength in BaseVaultInvalidTokenAmountsLength error")
+	}
+
+	return &BaseVaultInvalidTokenAmountsLength{
+		ReceivedLength: receivedLength,
+		ExpectedLength: expectedLength,
+	}, nil
+}
+
+// Error implements the error interface for BaseVaultInvalidTokenAmountsLength.
+func (e *BaseVaultInvalidTokenAmountsLength) Error() string {
+	return fmt.Sprintf("BaseVaultInvalidTokenAmountsLength error: receivedLength=%v; expectedLength=%v;", e.ReceivedLength, e.ExpectedLength)
+}
+
+// DecodeBaseVaultInvalidTxTypeError decodes a BaseVault__InvalidTxType error from revert data.
+func (c *ChildVault) DecodeBaseVaultInvalidTxTypeError(data []byte) (*BaseVaultInvalidTxType, error) {
+	args := c.ABI.Errors["BaseVault__InvalidTxType"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 1 {
+		return nil, fmt.Errorf("expected 1 values, got %d", len(values))
+	}
+
+	ccipTxType, ok0 := values[0].(uint8)
+	if !ok0 {
+		return nil, fmt.Errorf("unexpected type for ccipTxType in BaseVaultInvalidTxType error")
+	}
+
+	return &BaseVaultInvalidTxType{
+		CcipTxType: ccipTxType,
+	}, nil
+}
+
+// Error implements the error interface for BaseVaultInvalidTxType.
+func (e *BaseVaultInvalidTxType) Error() string {
+	return fmt.Sprintf("BaseVaultInvalidTxType error: ccipTxType=%v;", e.CcipTxType)
 }
 
 // DecodeBaseVaultNoActiveAdapterError decodes a BaseVault__NoActiveAdapter error from revert data.
@@ -5287,6 +7243,25 @@ func (e *BaseVaultNoPendingRecovery) Error() string {
 	return fmt.Sprintf("BaseVaultNoPendingRecovery error:")
 }
 
+// DecodeBaseVaultNoZeroAddressError decodes a BaseVault__NoZeroAddress error from revert data.
+func (c *ChildVault) DecodeBaseVaultNoZeroAddressError(data []byte) (*BaseVaultNoZeroAddress, error) {
+	args := c.ABI.Errors["BaseVault__NoZeroAddress"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 0 {
+		return nil, fmt.Errorf("expected 0 values, got %d", len(values))
+	}
+
+	return &BaseVaultNoZeroAddress{}, nil
+}
+
+// Error implements the error interface for BaseVaultNoZeroAddress.
+func (e *BaseVaultNoZeroAddress) Error() string {
+	return fmt.Sprintf("BaseVaultNoZeroAddress error:")
+}
+
 // DecodeBaseVaultNoZeroAmountError decodes a BaseVault__NoZeroAmount error from revert data.
 func (c *ChildVault) DecodeBaseVaultNoZeroAmountError(data []byte) (*BaseVaultNoZeroAmount, error) {
 	args := c.ABI.Errors["BaseVault__NoZeroAmount"].Inputs
@@ -5304,6 +7279,25 @@ func (c *ChildVault) DecodeBaseVaultNoZeroAmountError(data []byte) (*BaseVaultNo
 // Error implements the error interface for BaseVaultNoZeroAmount.
 func (e *BaseVaultNoZeroAmount) Error() string {
 	return fmt.Sprintf("BaseVaultNoZeroAmount error:")
+}
+
+// DecodeBaseVaultNoZeroChainSelectorError decodes a BaseVault__NoZeroChainSelector error from revert data.
+func (c *ChildVault) DecodeBaseVaultNoZeroChainSelectorError(data []byte) (*BaseVaultNoZeroChainSelector, error) {
+	args := c.ABI.Errors["BaseVault__NoZeroChainSelector"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 0 {
+		return nil, fmt.Errorf("expected 0 values, got %d", len(values))
+	}
+
+	return &BaseVaultNoZeroChainSelector{}, nil
+}
+
+// Error implements the error interface for BaseVaultNoZeroChainSelector.
+func (e *BaseVaultNoZeroChainSelector) Error() string {
+	return fmt.Sprintf("BaseVaultNoZeroChainSelector error:")
 }
 
 // DecodeBaseVaultOnlySelfError decodes a BaseVault__OnlySelf error from revert data.
@@ -5389,6 +7383,25 @@ func (e *BaseVaultZeroRecoveryAmount) Error() string {
 	return fmt.Sprintf("BaseVaultZeroRecoveryAmount error:")
 }
 
+// DecodeChildVaultInvalidParentChainSelectorError decodes a ChildVault__InvalidParentChainSelector error from revert data.
+func (c *ChildVault) DecodeChildVaultInvalidParentChainSelectorError(data []byte) (*ChildVaultInvalidParentChainSelector, error) {
+	args := c.ABI.Errors["ChildVault__InvalidParentChainSelector"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 0 {
+		return nil, fmt.Errorf("expected 0 values, got %d", len(values))
+	}
+
+	return &ChildVaultInvalidParentChainSelector{}, nil
+}
+
+// Error implements the error interface for ChildVaultInvalidParentChainSelector.
+func (e *ChildVaultInvalidParentChainSelector) Error() string {
+	return fmt.Sprintf("ChildVaultInvalidParentChainSelector error:")
+}
+
 // DecodeChildVaultInvalidRecoveryStrategyError decodes a ChildVault__InvalidRecoveryStrategy error from revert data.
 func (c *ChildVault) DecodeChildVaultInvalidRecoveryStrategyError(data []byte) (*ChildVaultInvalidRecoveryStrategy, error) {
 	args := c.ABI.Errors["ChildVault__InvalidRecoveryStrategy"].Inputs
@@ -5406,6 +7419,70 @@ func (c *ChildVault) DecodeChildVaultInvalidRecoveryStrategyError(data []byte) (
 // Error implements the error interface for ChildVaultInvalidRecoveryStrategy.
 func (e *ChildVaultInvalidRecoveryStrategy) Error() string {
 	return fmt.Sprintf("ChildVaultInvalidRecoveryStrategy error:")
+}
+
+// DecodeChildVaultOnlySelfError decodes a ChildVault__OnlySelf error from revert data.
+func (c *ChildVault) DecodeChildVaultOnlySelfError(data []byte) (*ChildVaultOnlySelf, error) {
+	args := c.ABI.Errors["ChildVault__OnlySelf"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 0 {
+		return nil, fmt.Errorf("expected 0 values, got %d", len(values))
+	}
+
+	return &ChildVaultOnlySelf{}, nil
+}
+
+// Error implements the error interface for ChildVaultOnlySelf.
+func (e *ChildVaultOnlySelf) Error() string {
+	return fmt.Sprintf("ChildVaultOnlySelf error:")
+}
+
+// DecodeERC1967InvalidImplementationError decodes a ERC1967InvalidImplementation error from revert data.
+func (c *ChildVault) DecodeERC1967InvalidImplementationError(data []byte) (*ERC1967InvalidImplementation, error) {
+	args := c.ABI.Errors["ERC1967InvalidImplementation"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 1 {
+		return nil, fmt.Errorf("expected 1 values, got %d", len(values))
+	}
+
+	implementation, ok0 := values[0].(common.Address)
+	if !ok0 {
+		return nil, fmt.Errorf("unexpected type for implementation in ERC1967InvalidImplementation error")
+	}
+
+	return &ERC1967InvalidImplementation{
+		Implementation: implementation,
+	}, nil
+}
+
+// Error implements the error interface for ERC1967InvalidImplementation.
+func (e *ERC1967InvalidImplementation) Error() string {
+	return fmt.Sprintf("ERC1967InvalidImplementation error: implementation=%v;", e.Implementation)
+}
+
+// DecodeERC1967NonPayableError decodes a ERC1967NonPayable error from revert data.
+func (c *ChildVault) DecodeERC1967NonPayableError(data []byte) (*ERC1967NonPayable, error) {
+	args := c.ABI.Errors["ERC1967NonPayable"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 0 {
+		return nil, fmt.Errorf("expected 0 values, got %d", len(values))
+	}
+
+	return &ERC1967NonPayable{}, nil
+}
+
+// Error implements the error interface for ERC1967NonPayable.
+func (e *ERC1967NonPayable) Error() string {
+	return fmt.Sprintf("ERC1967NonPayable error:")
 }
 
 // DecodeEnforcedPauseError decodes a EnforcedPause error from revert data.
@@ -5446,6 +7523,44 @@ func (e *ExpectedPause) Error() string {
 	return fmt.Sprintf("ExpectedPause error:")
 }
 
+// DecodeFailedCallError decodes a FailedCall error from revert data.
+func (c *ChildVault) DecodeFailedCallError(data []byte) (*FailedCall, error) {
+	args := c.ABI.Errors["FailedCall"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 0 {
+		return nil, fmt.Errorf("expected 0 values, got %d", len(values))
+	}
+
+	return &FailedCall{}, nil
+}
+
+// Error implements the error interface for FailedCall.
+func (e *FailedCall) Error() string {
+	return fmt.Sprintf("FailedCall error:")
+}
+
+// DecodeInvalidInitializationError decodes a InvalidInitialization error from revert data.
+func (c *ChildVault) DecodeInvalidInitializationError(data []byte) (*InvalidInitialization, error) {
+	args := c.ABI.Errors["InvalidInitialization"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 0 {
+		return nil, fmt.Errorf("expected 0 values, got %d", len(values))
+	}
+
+	return &InvalidInitialization{}, nil
+}
+
+// Error implements the error interface for InvalidInitialization.
+func (e *InvalidInitialization) Error() string {
+	return fmt.Sprintf("InvalidInitialization error:")
+}
+
 // DecodeInvalidRouterError decodes a InvalidRouter error from revert data.
 func (c *ChildVault) DecodeInvalidRouterError(data []byte) (*InvalidRouter, error) {
 	args := c.ABI.Errors["InvalidRouter"].Inputs
@@ -5470,6 +7585,25 @@ func (c *ChildVault) DecodeInvalidRouterError(data []byte) (*InvalidRouter, erro
 // Error implements the error interface for InvalidRouter.
 func (e *InvalidRouter) Error() string {
 	return fmt.Sprintf("InvalidRouter error: router=%v;", e.Router)
+}
+
+// DecodeNotInitializingError decodes a NotInitializing error from revert data.
+func (c *ChildVault) DecodeNotInitializingError(data []byte) (*NotInitializing, error) {
+	args := c.ABI.Errors["NotInitializing"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 0 {
+		return nil, fmt.Errorf("expected 0 values, got %d", len(values))
+	}
+
+	return &NotInitializing{}, nil
+}
+
+// Error implements the error interface for NotInitializing.
+func (e *NotInitializing) Error() string {
+	return fmt.Sprintf("NotInitializing error:")
 }
 
 // DecodeReentrancyGuardReentrantCallError decodes a ReentrancyGuardReentrantCall error from revert data.
@@ -5549,6 +7683,51 @@ func (e *SafeERC20FailedOperation) Error() string {
 	return fmt.Sprintf("SafeERC20FailedOperation error: token=%v;", e.Token)
 }
 
+// DecodeUUPSUnauthorizedCallContextError decodes a UUPSUnauthorizedCallContext error from revert data.
+func (c *ChildVault) DecodeUUPSUnauthorizedCallContextError(data []byte) (*UUPSUnauthorizedCallContext, error) {
+	args := c.ABI.Errors["UUPSUnauthorizedCallContext"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 0 {
+		return nil, fmt.Errorf("expected 0 values, got %d", len(values))
+	}
+
+	return &UUPSUnauthorizedCallContext{}, nil
+}
+
+// Error implements the error interface for UUPSUnauthorizedCallContext.
+func (e *UUPSUnauthorizedCallContext) Error() string {
+	return fmt.Sprintf("UUPSUnauthorizedCallContext error:")
+}
+
+// DecodeUUPSUnsupportedProxiableUUIDError decodes a UUPSUnsupportedProxiableUUID error from revert data.
+func (c *ChildVault) DecodeUUPSUnsupportedProxiableUUIDError(data []byte) (*UUPSUnsupportedProxiableUUID, error) {
+	args := c.ABI.Errors["UUPSUnsupportedProxiableUUID"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 1 {
+		return nil, fmt.Errorf("expected 1 values, got %d", len(values))
+	}
+
+	slot, ok0 := values[0].([32]byte)
+	if !ok0 {
+		return nil, fmt.Errorf("unexpected type for slot in UUPSUnsupportedProxiableUUID error")
+	}
+
+	return &UUPSUnsupportedProxiableUUID{
+		Slot: slot,
+	}, nil
+}
+
+// Error implements the error interface for UUPSUnsupportedProxiableUUID.
+func (e *UUPSUnsupportedProxiableUUID) Error() string {
+	return fmt.Sprintf("UUPSUnsupportedProxiableUUID error: slot=%v;", e.Slot)
+}
+
 func (c *ChildVault) UnpackError(data []byte) (any, error) {
 	switch common.Bytes2Hex(data[:4]) {
 	case common.Bytes2Hex(c.ABI.Errors["AccessControlBadConfirmation"].ID.Bytes()[:4]):
@@ -5561,22 +7740,42 @@ func (c *ChildVault) UnpackError(data []byte) (any, error) {
 		return c.DecodeAccessControlInvalidDefaultAdminError(data)
 	case common.Bytes2Hex(c.ABI.Errors["AccessControlUnauthorizedAccount"].ID.Bytes()[:4]):
 		return c.DecodeAccessControlUnauthorizedAccountError(data)
+	case common.Bytes2Hex(c.ABI.Errors["AddressEmptyCode"].ID.Bytes()[:4]):
+		return c.DecodeAddressEmptyCodeError(data)
 	case common.Bytes2Hex(c.ABI.Errors["BaseVault__DepositFailed"].ID.Bytes()[:4]):
 		return c.DecodeBaseVaultDepositFailedError(data)
+	case common.Bytes2Hex(c.ABI.Errors["BaseVault__DestinationVaultNotSet"].ID.Bytes()[:4]):
+		return c.DecodeBaseVaultDestinationVaultNotSetError(data)
 	case common.Bytes2Hex(c.ABI.Errors["BaseVault__EmergencyDrainDelayNotMet"].ID.Bytes()[:4]):
 		return c.DecodeBaseVaultEmergencyDrainDelayNotMetError(data)
+	case common.Bytes2Hex(c.ABI.Errors["BaseVault__EmptyInput"].ID.Bytes()[:4]):
+		return c.DecodeBaseVaultEmptyInputError(data)
+	case common.Bytes2Hex(c.ABI.Errors["BaseVault__InvalidAdapterVault"].ID.Bytes()[:4]):
+		return c.DecodeBaseVaultInvalidAdapterVaultError(data)
+	case common.Bytes2Hex(c.ABI.Errors["BaseVault__InvalidDestinationChainSelector"].ID.Bytes()[:4]):
+		return c.DecodeBaseVaultInvalidDestinationChainSelectorError(data)
 	case common.Bytes2Hex(c.ABI.Errors["BaseVault__InvalidInputLengths"].ID.Bytes()[:4]):
 		return c.DecodeBaseVaultInvalidInputLengthsError(data)
+	case common.Bytes2Hex(c.ABI.Errors["BaseVault__InvalidReceivedToken"].ID.Bytes()[:4]):
+		return c.DecodeBaseVaultInvalidReceivedTokenError(data)
 	case common.Bytes2Hex(c.ABI.Errors["BaseVault__InvalidSender"].ID.Bytes()[:4]):
 		return c.DecodeBaseVaultInvalidSenderError(data)
+	case common.Bytes2Hex(c.ABI.Errors["BaseVault__InvalidTokenAmountsLength"].ID.Bytes()[:4]):
+		return c.DecodeBaseVaultInvalidTokenAmountsLengthError(data)
+	case common.Bytes2Hex(c.ABI.Errors["BaseVault__InvalidTxType"].ID.Bytes()[:4]):
+		return c.DecodeBaseVaultInvalidTxTypeError(data)
 	case common.Bytes2Hex(c.ABI.Errors["BaseVault__NoActiveAdapter"].ID.Bytes()[:4]):
 		return c.DecodeBaseVaultNoActiveAdapterError(data)
 	case common.Bytes2Hex(c.ABI.Errors["BaseVault__NoAdapterRegistered"].ID.Bytes()[:4]):
 		return c.DecodeBaseVaultNoAdapterRegisteredError(data)
 	case common.Bytes2Hex(c.ABI.Errors["BaseVault__NoPendingRecovery"].ID.Bytes()[:4]):
 		return c.DecodeBaseVaultNoPendingRecoveryError(data)
+	case common.Bytes2Hex(c.ABI.Errors["BaseVault__NoZeroAddress"].ID.Bytes()[:4]):
+		return c.DecodeBaseVaultNoZeroAddressError(data)
 	case common.Bytes2Hex(c.ABI.Errors["BaseVault__NoZeroAmount"].ID.Bytes()[:4]):
 		return c.DecodeBaseVaultNoZeroAmountError(data)
+	case common.Bytes2Hex(c.ABI.Errors["BaseVault__NoZeroChainSelector"].ID.Bytes()[:4]):
+		return c.DecodeBaseVaultNoZeroChainSelectorError(data)
 	case common.Bytes2Hex(c.ABI.Errors["BaseVault__OnlySelf"].ID.Bytes()[:4]):
 		return c.DecodeBaseVaultOnlySelfError(data)
 	case common.Bytes2Hex(c.ABI.Errors["BaseVault__RecoveryAlreadyPending"].ID.Bytes()[:4]):
@@ -5585,23 +7784,209 @@ func (c *ChildVault) UnpackError(data []byte) (any, error) {
 		return c.DecodeBaseVaultWithdrawFailedError(data)
 	case common.Bytes2Hex(c.ABI.Errors["BaseVault__ZeroRecoveryAmount"].ID.Bytes()[:4]):
 		return c.DecodeBaseVaultZeroRecoveryAmountError(data)
+	case common.Bytes2Hex(c.ABI.Errors["ChildVault__InvalidParentChainSelector"].ID.Bytes()[:4]):
+		return c.DecodeChildVaultInvalidParentChainSelectorError(data)
 	case common.Bytes2Hex(c.ABI.Errors["ChildVault__InvalidRecoveryStrategy"].ID.Bytes()[:4]):
 		return c.DecodeChildVaultInvalidRecoveryStrategyError(data)
+	case common.Bytes2Hex(c.ABI.Errors["ChildVault__OnlySelf"].ID.Bytes()[:4]):
+		return c.DecodeChildVaultOnlySelfError(data)
+	case common.Bytes2Hex(c.ABI.Errors["ERC1967InvalidImplementation"].ID.Bytes()[:4]):
+		return c.DecodeERC1967InvalidImplementationError(data)
+	case common.Bytes2Hex(c.ABI.Errors["ERC1967NonPayable"].ID.Bytes()[:4]):
+		return c.DecodeERC1967NonPayableError(data)
 	case common.Bytes2Hex(c.ABI.Errors["EnforcedPause"].ID.Bytes()[:4]):
 		return c.DecodeEnforcedPauseError(data)
 	case common.Bytes2Hex(c.ABI.Errors["ExpectedPause"].ID.Bytes()[:4]):
 		return c.DecodeExpectedPauseError(data)
+	case common.Bytes2Hex(c.ABI.Errors["FailedCall"].ID.Bytes()[:4]):
+		return c.DecodeFailedCallError(data)
+	case common.Bytes2Hex(c.ABI.Errors["InvalidInitialization"].ID.Bytes()[:4]):
+		return c.DecodeInvalidInitializationError(data)
 	case common.Bytes2Hex(c.ABI.Errors["InvalidRouter"].ID.Bytes()[:4]):
 		return c.DecodeInvalidRouterError(data)
+	case common.Bytes2Hex(c.ABI.Errors["NotInitializing"].ID.Bytes()[:4]):
+		return c.DecodeNotInitializingError(data)
 	case common.Bytes2Hex(c.ABI.Errors["ReentrancyGuardReentrantCall"].ID.Bytes()[:4]):
 		return c.DecodeReentrancyGuardReentrantCallError(data)
 	case common.Bytes2Hex(c.ABI.Errors["SafeCastOverflowedUintDowncast"].ID.Bytes()[:4]):
 		return c.DecodeSafeCastOverflowedUintDowncastError(data)
 	case common.Bytes2Hex(c.ABI.Errors["SafeERC20FailedOperation"].ID.Bytes()[:4]):
 		return c.DecodeSafeERC20FailedOperationError(data)
+	case common.Bytes2Hex(c.ABI.Errors["UUPSUnauthorizedCallContext"].ID.Bytes()[:4]):
+		return c.DecodeUUPSUnauthorizedCallContextError(data)
+	case common.Bytes2Hex(c.ABI.Errors["UUPSUnsupportedProxiableUUID"].ID.Bytes()[:4]):
+		return c.DecodeUUPSUnsupportedProxiableUUIDError(data)
 	default:
 		return nil, errors.New("unknown error selector")
 	}
+}
+
+// ActiveProtocolAdapterClearedTrigger wraps the raw log trigger and provides decoded ActiveProtocolAdapterClearedDecoded data
+type ActiveProtocolAdapterClearedTrigger struct {
+	cre.Trigger[*evm.Log, *evm.Log]             // Embed the raw trigger
+	contract                        *ChildVault // Keep reference for decoding
+}
+
+// Adapt method that decodes the log into ActiveProtocolAdapterCleared data
+func (t *ActiveProtocolAdapterClearedTrigger) Adapt(l *evm.Log) (*bindings.DecodedLog[ActiveProtocolAdapterClearedDecoded], error) {
+	// Decode the log using the contract's codec
+	decoded, err := t.contract.Codec.DecodeActiveProtocolAdapterCleared(l)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode ActiveProtocolAdapterCleared log: %w", err)
+	}
+
+	return &bindings.DecodedLog[ActiveProtocolAdapterClearedDecoded]{
+		Log:  l,        // Original log
+		Data: *decoded, // Decoded data
+	}, nil
+}
+
+func (c *ChildVault) LogTriggerActiveProtocolAdapterClearedLog(chainSelector uint64, confidence evm.ConfidenceLevel, filters []ActiveProtocolAdapterClearedTopics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[ActiveProtocolAdapterClearedDecoded]], error) {
+	event := c.ABI.Events["ActiveProtocolAdapterCleared"]
+	topics, err := c.Codec.EncodeActiveProtocolAdapterClearedTopics(event, filters)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode topics for ActiveProtocolAdapterCleared: %w", err)
+	}
+
+	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
+		Addresses:  [][]byte{c.Address.Bytes()},
+		Topics:     topics,
+		Confidence: confidence,
+	})
+
+	return &ActiveProtocolAdapterClearedTrigger{
+		Trigger:  rawTrigger,
+		contract: c,
+	}, nil
+}
+
+func (c *ChildVault) FilterLogsActiveProtocolAdapterCleared(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
+	if options == nil {
+		return nil, errors.New("FilterLogs options are required.")
+	}
+	return c.client.FilterLogs(runtime, &evm.FilterLogsRequest{
+		FilterQuery: &evm.FilterQuery{
+			Addresses: [][]byte{c.Address.Bytes()},
+			Topics: []*evm.Topics{
+				{Topic: [][]byte{c.Codec.ActiveProtocolAdapterClearedLogHash()}},
+			},
+			BlockHash: options.BlockHash,
+			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
+			ToBlock:   pb.NewBigIntFromInt(options.ToBlock),
+		},
+	}), nil
+}
+
+// ActiveProtocolAdapterSetTrigger wraps the raw log trigger and provides decoded ActiveProtocolAdapterSetDecoded data
+type ActiveProtocolAdapterSetTrigger struct {
+	cre.Trigger[*evm.Log, *evm.Log]             // Embed the raw trigger
+	contract                        *ChildVault // Keep reference for decoding
+}
+
+// Adapt method that decodes the log into ActiveProtocolAdapterSet data
+func (t *ActiveProtocolAdapterSetTrigger) Adapt(l *evm.Log) (*bindings.DecodedLog[ActiveProtocolAdapterSetDecoded], error) {
+	// Decode the log using the contract's codec
+	decoded, err := t.contract.Codec.DecodeActiveProtocolAdapterSet(l)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode ActiveProtocolAdapterSet log: %w", err)
+	}
+
+	return &bindings.DecodedLog[ActiveProtocolAdapterSetDecoded]{
+		Log:  l,        // Original log
+		Data: *decoded, // Decoded data
+	}, nil
+}
+
+func (c *ChildVault) LogTriggerActiveProtocolAdapterSetLog(chainSelector uint64, confidence evm.ConfidenceLevel, filters []ActiveProtocolAdapterSetTopics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[ActiveProtocolAdapterSetDecoded]], error) {
+	event := c.ABI.Events["ActiveProtocolAdapterSet"]
+	topics, err := c.Codec.EncodeActiveProtocolAdapterSetTopics(event, filters)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode topics for ActiveProtocolAdapterSet: %w", err)
+	}
+
+	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
+		Addresses:  [][]byte{c.Address.Bytes()},
+		Topics:     topics,
+		Confidence: confidence,
+	})
+
+	return &ActiveProtocolAdapterSetTrigger{
+		Trigger:  rawTrigger,
+		contract: c,
+	}, nil
+}
+
+func (c *ChildVault) FilterLogsActiveProtocolAdapterSet(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
+	if options == nil {
+		return nil, errors.New("FilterLogs options are required.")
+	}
+	return c.client.FilterLogs(runtime, &evm.FilterLogsRequest{
+		FilterQuery: &evm.FilterQuery{
+			Addresses: [][]byte{c.Address.Bytes()},
+			Topics: []*evm.Topics{
+				{Topic: [][]byte{c.Codec.ActiveProtocolAdapterSetLogHash()}},
+			},
+			BlockHash: options.BlockHash,
+			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
+			ToBlock:   pb.NewBigIntFromInt(options.ToBlock),
+		},
+	}), nil
+}
+
+// ActiveProtocolAdapterSet0Trigger wraps the raw log trigger and provides decoded ActiveProtocolAdapterSet0Decoded data
+type ActiveProtocolAdapterSet0Trigger struct {
+	cre.Trigger[*evm.Log, *evm.Log]             // Embed the raw trigger
+	contract                        *ChildVault // Keep reference for decoding
+}
+
+// Adapt method that decodes the log into ActiveProtocolAdapterSet0 data
+func (t *ActiveProtocolAdapterSet0Trigger) Adapt(l *evm.Log) (*bindings.DecodedLog[ActiveProtocolAdapterSet0Decoded], error) {
+	// Decode the log using the contract's codec
+	decoded, err := t.contract.Codec.DecodeActiveProtocolAdapterSet0(l)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode ActiveProtocolAdapterSet0 log: %w", err)
+	}
+
+	return &bindings.DecodedLog[ActiveProtocolAdapterSet0Decoded]{
+		Log:  l,        // Original log
+		Data: *decoded, // Decoded data
+	}, nil
+}
+
+func (c *ChildVault) LogTriggerActiveProtocolAdapterSet0Log(chainSelector uint64, confidence evm.ConfidenceLevel, filters []ActiveProtocolAdapterSet0Topics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[ActiveProtocolAdapterSet0Decoded]], error) {
+	event := c.ABI.Events["ActiveProtocolAdapterSet0"]
+	topics, err := c.Codec.EncodeActiveProtocolAdapterSet0Topics(event, filters)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode topics for ActiveProtocolAdapterSet0: %w", err)
+	}
+
+	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
+		Addresses:  [][]byte{c.Address.Bytes()},
+		Topics:     topics,
+		Confidence: confidence,
+	})
+
+	return &ActiveProtocolAdapterSet0Trigger{
+		Trigger:  rawTrigger,
+		contract: c,
+	}, nil
+}
+
+func (c *ChildVault) FilterLogsActiveProtocolAdapterSet0(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
+	if options == nil {
+		return nil, errors.New("FilterLogs options are required.")
+	}
+	return c.client.FilterLogs(runtime, &evm.FilterLogsRequest{
+		FilterQuery: &evm.FilterQuery{
+			Addresses: [][]byte{c.Address.Bytes()},
+			Topics: []*evm.Topics{
+				{Topic: [][]byte{c.Codec.ActiveProtocolAdapterSet0LogHash()}},
+			},
+			BlockHash: options.BlockHash,
+			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
+			ToBlock:   pb.NewBigIntFromInt(options.ToBlock),
+		},
+	}), nil
 }
 
 // CCIPBridgedTrigger wraps the raw log trigger and provides decoded CCIPBridgedDecoded data
@@ -5652,6 +8037,62 @@ func (c *ChildVault) FilterLogsCCIPBridged(runtime cre.Runtime, options *binding
 			Addresses: [][]byte{c.Address.Bytes()},
 			Topics: []*evm.Topics{
 				{Topic: [][]byte{c.Codec.CCIPBridgedLogHash()}},
+			},
+			BlockHash: options.BlockHash,
+			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
+			ToBlock:   pb.NewBigIntFromInt(options.ToBlock),
+		},
+	}), nil
+}
+
+// CCIPBridged0Trigger wraps the raw log trigger and provides decoded CCIPBridged0Decoded data
+type CCIPBridged0Trigger struct {
+	cre.Trigger[*evm.Log, *evm.Log]             // Embed the raw trigger
+	contract                        *ChildVault // Keep reference for decoding
+}
+
+// Adapt method that decodes the log into CCIPBridged0 data
+func (t *CCIPBridged0Trigger) Adapt(l *evm.Log) (*bindings.DecodedLog[CCIPBridged0Decoded], error) {
+	// Decode the log using the contract's codec
+	decoded, err := t.contract.Codec.DecodeCCIPBridged0(l)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode CCIPBridged0 log: %w", err)
+	}
+
+	return &bindings.DecodedLog[CCIPBridged0Decoded]{
+		Log:  l,        // Original log
+		Data: *decoded, // Decoded data
+	}, nil
+}
+
+func (c *ChildVault) LogTriggerCCIPBridged0Log(chainSelector uint64, confidence evm.ConfidenceLevel, filters []CCIPBridged0Topics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[CCIPBridged0Decoded]], error) {
+	event := c.ABI.Events["CCIPBridged0"]
+	topics, err := c.Codec.EncodeCCIPBridged0Topics(event, filters)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode topics for CCIPBridged0: %w", err)
+	}
+
+	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
+		Addresses:  [][]byte{c.Address.Bytes()},
+		Topics:     topics,
+		Confidence: confidence,
+	})
+
+	return &CCIPBridged0Trigger{
+		Trigger:  rawTrigger,
+		contract: c,
+	}, nil
+}
+
+func (c *ChildVault) FilterLogsCCIPBridged0(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
+	if options == nil {
+		return nil, errors.New("FilterLogs options are required.")
+	}
+	return c.client.FilterLogs(runtime, &evm.FilterLogsRequest{
+		FilterQuery: &evm.FilterQuery{
+			Addresses: [][]byte{c.Address.Bytes()},
+			Topics: []*evm.Topics{
+				{Topic: [][]byte{c.Codec.CCIPBridged0LogHash()}},
 			},
 			BlockHash: options.BlockHash,
 			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
@@ -5716,6 +8157,174 @@ func (c *ChildVault) FilterLogsCcipGasLimitSet(runtime cre.Runtime, options *bin
 	}), nil
 }
 
+// CcipGasLimitSet0Trigger wraps the raw log trigger and provides decoded CcipGasLimitSet0Decoded data
+type CcipGasLimitSet0Trigger struct {
+	cre.Trigger[*evm.Log, *evm.Log]             // Embed the raw trigger
+	contract                        *ChildVault // Keep reference for decoding
+}
+
+// Adapt method that decodes the log into CcipGasLimitSet0 data
+func (t *CcipGasLimitSet0Trigger) Adapt(l *evm.Log) (*bindings.DecodedLog[CcipGasLimitSet0Decoded], error) {
+	// Decode the log using the contract's codec
+	decoded, err := t.contract.Codec.DecodeCcipGasLimitSet0(l)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode CcipGasLimitSet0 log: %w", err)
+	}
+
+	return &bindings.DecodedLog[CcipGasLimitSet0Decoded]{
+		Log:  l,        // Original log
+		Data: *decoded, // Decoded data
+	}, nil
+}
+
+func (c *ChildVault) LogTriggerCcipGasLimitSet0Log(chainSelector uint64, confidence evm.ConfidenceLevel, filters []CcipGasLimitSet0Topics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[CcipGasLimitSet0Decoded]], error) {
+	event := c.ABI.Events["CcipGasLimitSet0"]
+	topics, err := c.Codec.EncodeCcipGasLimitSet0Topics(event, filters)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode topics for CcipGasLimitSet0: %w", err)
+	}
+
+	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
+		Addresses:  [][]byte{c.Address.Bytes()},
+		Topics:     topics,
+		Confidence: confidence,
+	})
+
+	return &CcipGasLimitSet0Trigger{
+		Trigger:  rawTrigger,
+		contract: c,
+	}, nil
+}
+
+func (c *ChildVault) FilterLogsCcipGasLimitSet0(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
+	if options == nil {
+		return nil, errors.New("FilterLogs options are required.")
+	}
+	return c.client.FilterLogs(runtime, &evm.FilterLogsRequest{
+		FilterQuery: &evm.FilterQuery{
+			Addresses: [][]byte{c.Address.Bytes()},
+			Topics: []*evm.Topics{
+				{Topic: [][]byte{c.Codec.CcipGasLimitSet0LogHash()}},
+			},
+			BlockHash: options.BlockHash,
+			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
+			ToBlock:   pb.NewBigIntFromInt(options.ToBlock),
+		},
+	}), nil
+}
+
+// CcipSendRecoveryClearedTrigger wraps the raw log trigger and provides decoded CcipSendRecoveryClearedDecoded data
+type CcipSendRecoveryClearedTrigger struct {
+	cre.Trigger[*evm.Log, *evm.Log]             // Embed the raw trigger
+	contract                        *ChildVault // Keep reference for decoding
+}
+
+// Adapt method that decodes the log into CcipSendRecoveryCleared data
+func (t *CcipSendRecoveryClearedTrigger) Adapt(l *evm.Log) (*bindings.DecodedLog[CcipSendRecoveryClearedDecoded], error) {
+	// Decode the log using the contract's codec
+	decoded, err := t.contract.Codec.DecodeCcipSendRecoveryCleared(l)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode CcipSendRecoveryCleared log: %w", err)
+	}
+
+	return &bindings.DecodedLog[CcipSendRecoveryClearedDecoded]{
+		Log:  l,        // Original log
+		Data: *decoded, // Decoded data
+	}, nil
+}
+
+func (c *ChildVault) LogTriggerCcipSendRecoveryClearedLog(chainSelector uint64, confidence evm.ConfidenceLevel, filters []CcipSendRecoveryClearedTopics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[CcipSendRecoveryClearedDecoded]], error) {
+	event := c.ABI.Events["CcipSendRecoveryCleared"]
+	topics, err := c.Codec.EncodeCcipSendRecoveryClearedTopics(event, filters)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode topics for CcipSendRecoveryCleared: %w", err)
+	}
+
+	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
+		Addresses:  [][]byte{c.Address.Bytes()},
+		Topics:     topics,
+		Confidence: confidence,
+	})
+
+	return &CcipSendRecoveryClearedTrigger{
+		Trigger:  rawTrigger,
+		contract: c,
+	}, nil
+}
+
+func (c *ChildVault) FilterLogsCcipSendRecoveryCleared(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
+	if options == nil {
+		return nil, errors.New("FilterLogs options are required.")
+	}
+	return c.client.FilterLogs(runtime, &evm.FilterLogsRequest{
+		FilterQuery: &evm.FilterQuery{
+			Addresses: [][]byte{c.Address.Bytes()},
+			Topics: []*evm.Topics{
+				{Topic: [][]byte{c.Codec.CcipSendRecoveryClearedLogHash()}},
+			},
+			BlockHash: options.BlockHash,
+			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
+			ToBlock:   pb.NewBigIntFromInt(options.ToBlock),
+		},
+	}), nil
+}
+
+// CcipSendRecoveryStoredTrigger wraps the raw log trigger and provides decoded CcipSendRecoveryStoredDecoded data
+type CcipSendRecoveryStoredTrigger struct {
+	cre.Trigger[*evm.Log, *evm.Log]             // Embed the raw trigger
+	contract                        *ChildVault // Keep reference for decoding
+}
+
+// Adapt method that decodes the log into CcipSendRecoveryStored data
+func (t *CcipSendRecoveryStoredTrigger) Adapt(l *evm.Log) (*bindings.DecodedLog[CcipSendRecoveryStoredDecoded], error) {
+	// Decode the log using the contract's codec
+	decoded, err := t.contract.Codec.DecodeCcipSendRecoveryStored(l)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode CcipSendRecoveryStored log: %w", err)
+	}
+
+	return &bindings.DecodedLog[CcipSendRecoveryStoredDecoded]{
+		Log:  l,        // Original log
+		Data: *decoded, // Decoded data
+	}, nil
+}
+
+func (c *ChildVault) LogTriggerCcipSendRecoveryStoredLog(chainSelector uint64, confidence evm.ConfidenceLevel, filters []CcipSendRecoveryStoredTopics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[CcipSendRecoveryStoredDecoded]], error) {
+	event := c.ABI.Events["CcipSendRecoveryStored"]
+	topics, err := c.Codec.EncodeCcipSendRecoveryStoredTopics(event, filters)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode topics for CcipSendRecoveryStored: %w", err)
+	}
+
+	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
+		Addresses:  [][]byte{c.Address.Bytes()},
+		Topics:     topics,
+		Confidence: confidence,
+	})
+
+	return &CcipSendRecoveryStoredTrigger{
+		Trigger:  rawTrigger,
+		contract: c,
+	}, nil
+}
+
+func (c *ChildVault) FilterLogsCcipSendRecoveryStored(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
+	if options == nil {
+		return nil, errors.New("FilterLogs options are required.")
+	}
+	return c.client.FilterLogs(runtime, &evm.FilterLogsRequest{
+		FilterQuery: &evm.FilterQuery{
+			Addresses: [][]byte{c.Address.Bytes()},
+			Topics: []*evm.Topics{
+				{Topic: [][]byte{c.Codec.CcipSendRecoveryStoredLogHash()}},
+			},
+			BlockHash: options.BlockHash,
+			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
+			ToBlock:   pb.NewBigIntFromInt(options.ToBlock),
+		},
+	}), nil
+}
+
 // CrosschainVaultSetTrigger wraps the raw log trigger and provides decoded CrosschainVaultSetDecoded data
 type CrosschainVaultSetTrigger struct {
 	cre.Trigger[*evm.Log, *evm.Log]             // Embed the raw trigger
@@ -5764,6 +8373,62 @@ func (c *ChildVault) FilterLogsCrosschainVaultSet(runtime cre.Runtime, options *
 			Addresses: [][]byte{c.Address.Bytes()},
 			Topics: []*evm.Topics{
 				{Topic: [][]byte{c.Codec.CrosschainVaultSetLogHash()}},
+			},
+			BlockHash: options.BlockHash,
+			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
+			ToBlock:   pb.NewBigIntFromInt(options.ToBlock),
+		},
+	}), nil
+}
+
+// CrosschainVaultSet0Trigger wraps the raw log trigger and provides decoded CrosschainVaultSet0Decoded data
+type CrosschainVaultSet0Trigger struct {
+	cre.Trigger[*evm.Log, *evm.Log]             // Embed the raw trigger
+	contract                        *ChildVault // Keep reference for decoding
+}
+
+// Adapt method that decodes the log into CrosschainVaultSet0 data
+func (t *CrosschainVaultSet0Trigger) Adapt(l *evm.Log) (*bindings.DecodedLog[CrosschainVaultSet0Decoded], error) {
+	// Decode the log using the contract's codec
+	decoded, err := t.contract.Codec.DecodeCrosschainVaultSet0(l)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode CrosschainVaultSet0 log: %w", err)
+	}
+
+	return &bindings.DecodedLog[CrosschainVaultSet0Decoded]{
+		Log:  l,        // Original log
+		Data: *decoded, // Decoded data
+	}, nil
+}
+
+func (c *ChildVault) LogTriggerCrosschainVaultSet0Log(chainSelector uint64, confidence evm.ConfidenceLevel, filters []CrosschainVaultSet0Topics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[CrosschainVaultSet0Decoded]], error) {
+	event := c.ABI.Events["CrosschainVaultSet0"]
+	topics, err := c.Codec.EncodeCrosschainVaultSet0Topics(event, filters)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode topics for CrosschainVaultSet0: %w", err)
+	}
+
+	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
+		Addresses:  [][]byte{c.Address.Bytes()},
+		Topics:     topics,
+		Confidence: confidence,
+	})
+
+	return &CrosschainVaultSet0Trigger{
+		Trigger:  rawTrigger,
+		contract: c,
+	}, nil
+}
+
+func (c *ChildVault) FilterLogsCrosschainVaultSet0(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
+	if options == nil {
+		return nil, errors.New("FilterLogs options are required.")
+	}
+	return c.client.FilterLogs(runtime, &evm.FilterLogsRequest{
+		FilterQuery: &evm.FilterQuery{
+			Addresses: [][]byte{c.Address.Bytes()},
+			Topics: []*evm.Topics{
+				{Topic: [][]byte{c.Codec.CrosschainVaultSet0LogHash()}},
 			},
 			BlockHash: options.BlockHash,
 			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
@@ -6052,6 +8717,62 @@ func (c *ChildVault) FilterLogsDefaultCcipGasLimitSet(runtime cre.Runtime, optio
 	}), nil
 }
 
+// DefaultCcipGasLimitSet0Trigger wraps the raw log trigger and provides decoded DefaultCcipGasLimitSet0Decoded data
+type DefaultCcipGasLimitSet0Trigger struct {
+	cre.Trigger[*evm.Log, *evm.Log]             // Embed the raw trigger
+	contract                        *ChildVault // Keep reference for decoding
+}
+
+// Adapt method that decodes the log into DefaultCcipGasLimitSet0 data
+func (t *DefaultCcipGasLimitSet0Trigger) Adapt(l *evm.Log) (*bindings.DecodedLog[DefaultCcipGasLimitSet0Decoded], error) {
+	// Decode the log using the contract's codec
+	decoded, err := t.contract.Codec.DecodeDefaultCcipGasLimitSet0(l)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode DefaultCcipGasLimitSet0 log: %w", err)
+	}
+
+	return &bindings.DecodedLog[DefaultCcipGasLimitSet0Decoded]{
+		Log:  l,        // Original log
+		Data: *decoded, // Decoded data
+	}, nil
+}
+
+func (c *ChildVault) LogTriggerDefaultCcipGasLimitSet0Log(chainSelector uint64, confidence evm.ConfidenceLevel, filters []DefaultCcipGasLimitSet0Topics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[DefaultCcipGasLimitSet0Decoded]], error) {
+	event := c.ABI.Events["DefaultCcipGasLimitSet0"]
+	topics, err := c.Codec.EncodeDefaultCcipGasLimitSet0Topics(event, filters)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode topics for DefaultCcipGasLimitSet0: %w", err)
+	}
+
+	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
+		Addresses:  [][]byte{c.Address.Bytes()},
+		Topics:     topics,
+		Confidence: confidence,
+	})
+
+	return &DefaultCcipGasLimitSet0Trigger{
+		Trigger:  rawTrigger,
+		contract: c,
+	}, nil
+}
+
+func (c *ChildVault) FilterLogsDefaultCcipGasLimitSet0(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
+	if options == nil {
+		return nil, errors.New("FilterLogs options are required.")
+	}
+	return c.client.FilterLogs(runtime, &evm.FilterLogsRequest{
+		FilterQuery: &evm.FilterQuery{
+			Addresses: [][]byte{c.Address.Bytes()},
+			Topics: []*evm.Topics{
+				{Topic: [][]byte{c.Codec.DefaultCcipGasLimitSet0LogHash()}},
+			},
+			BlockHash: options.BlockHash,
+			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
+			ToBlock:   pb.NewBigIntFromInt(options.ToBlock),
+		},
+	}), nil
+}
+
 // DepositToStrategyFailureTrigger wraps the raw log trigger and provides decoded DepositToStrategyFailureDecoded data
 type DepositToStrategyFailureTrigger struct {
 	cre.Trigger[*evm.Log, *evm.Log]             // Embed the raw trigger
@@ -6164,6 +8885,62 @@ func (c *ChildVault) FilterLogsDepositToStrategySuccess(runtime cre.Runtime, opt
 	}), nil
 }
 
+// DonationTrigger wraps the raw log trigger and provides decoded DonationDecoded data
+type DonationTrigger struct {
+	cre.Trigger[*evm.Log, *evm.Log]             // Embed the raw trigger
+	contract                        *ChildVault // Keep reference for decoding
+}
+
+// Adapt method that decodes the log into Donation data
+func (t *DonationTrigger) Adapt(l *evm.Log) (*bindings.DecodedLog[DonationDecoded], error) {
+	// Decode the log using the contract's codec
+	decoded, err := t.contract.Codec.DecodeDonation(l)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode Donation log: %w", err)
+	}
+
+	return &bindings.DecodedLog[DonationDecoded]{
+		Log:  l,        // Original log
+		Data: *decoded, // Decoded data
+	}, nil
+}
+
+func (c *ChildVault) LogTriggerDonationLog(chainSelector uint64, confidence evm.ConfidenceLevel, filters []DonationTopics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[DonationDecoded]], error) {
+	event := c.ABI.Events["Donation"]
+	topics, err := c.Codec.EncodeDonationTopics(event, filters)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode topics for Donation: %w", err)
+	}
+
+	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
+		Addresses:  [][]byte{c.Address.Bytes()},
+		Topics:     topics,
+		Confidence: confidence,
+	})
+
+	return &DonationTrigger{
+		Trigger:  rawTrigger,
+		contract: c,
+	}, nil
+}
+
+func (c *ChildVault) FilterLogsDonation(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
+	if options == nil {
+		return nil, errors.New("FilterLogs options are required.")
+	}
+	return c.client.FilterLogs(runtime, &evm.FilterLogsRequest{
+		FilterQuery: &evm.FilterQuery{
+			Addresses: [][]byte{c.Address.Bytes()},
+			Topics: []*evm.Topics{
+				{Topic: [][]byte{c.Codec.DonationLogHash()}},
+			},
+			BlockHash: options.BlockHash,
+			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
+			ToBlock:   pb.NewBigIntFromInt(options.ToBlock),
+		},
+	}), nil
+}
+
 // EmergencyDrainExecutedTrigger wraps the raw log trigger and provides decoded EmergencyDrainExecutedDecoded data
 type EmergencyDrainExecutedTrigger struct {
 	cre.Trigger[*evm.Log, *evm.Log]             // Embed the raw trigger
@@ -6212,6 +8989,118 @@ func (c *ChildVault) FilterLogsEmergencyDrainExecuted(runtime cre.Runtime, optio
 			Addresses: [][]byte{c.Address.Bytes()},
 			Topics: []*evm.Topics{
 				{Topic: [][]byte{c.Codec.EmergencyDrainExecutedLogHash()}},
+			},
+			BlockHash: options.BlockHash,
+			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
+			ToBlock:   pb.NewBigIntFromInt(options.ToBlock),
+		},
+	}), nil
+}
+
+// EmergencyReceiverSetTrigger wraps the raw log trigger and provides decoded EmergencyReceiverSetDecoded data
+type EmergencyReceiverSetTrigger struct {
+	cre.Trigger[*evm.Log, *evm.Log]             // Embed the raw trigger
+	contract                        *ChildVault // Keep reference for decoding
+}
+
+// Adapt method that decodes the log into EmergencyReceiverSet data
+func (t *EmergencyReceiverSetTrigger) Adapt(l *evm.Log) (*bindings.DecodedLog[EmergencyReceiverSetDecoded], error) {
+	// Decode the log using the contract's codec
+	decoded, err := t.contract.Codec.DecodeEmergencyReceiverSet(l)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode EmergencyReceiverSet log: %w", err)
+	}
+
+	return &bindings.DecodedLog[EmergencyReceiverSetDecoded]{
+		Log:  l,        // Original log
+		Data: *decoded, // Decoded data
+	}, nil
+}
+
+func (c *ChildVault) LogTriggerEmergencyReceiverSetLog(chainSelector uint64, confidence evm.ConfidenceLevel, filters []EmergencyReceiverSetTopics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[EmergencyReceiverSetDecoded]], error) {
+	event := c.ABI.Events["EmergencyReceiverSet"]
+	topics, err := c.Codec.EncodeEmergencyReceiverSetTopics(event, filters)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode topics for EmergencyReceiverSet: %w", err)
+	}
+
+	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
+		Addresses:  [][]byte{c.Address.Bytes()},
+		Topics:     topics,
+		Confidence: confidence,
+	})
+
+	return &EmergencyReceiverSetTrigger{
+		Trigger:  rawTrigger,
+		contract: c,
+	}, nil
+}
+
+func (c *ChildVault) FilterLogsEmergencyReceiverSet(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
+	if options == nil {
+		return nil, errors.New("FilterLogs options are required.")
+	}
+	return c.client.FilterLogs(runtime, &evm.FilterLogsRequest{
+		FilterQuery: &evm.FilterQuery{
+			Addresses: [][]byte{c.Address.Bytes()},
+			Topics: []*evm.Topics{
+				{Topic: [][]byte{c.Codec.EmergencyReceiverSetLogHash()}},
+			},
+			BlockHash: options.BlockHash,
+			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
+			ToBlock:   pb.NewBigIntFromInt(options.ToBlock),
+		},
+	}), nil
+}
+
+// EmergencyReceiverSet0Trigger wraps the raw log trigger and provides decoded EmergencyReceiverSet0Decoded data
+type EmergencyReceiverSet0Trigger struct {
+	cre.Trigger[*evm.Log, *evm.Log]             // Embed the raw trigger
+	contract                        *ChildVault // Keep reference for decoding
+}
+
+// Adapt method that decodes the log into EmergencyReceiverSet0 data
+func (t *EmergencyReceiverSet0Trigger) Adapt(l *evm.Log) (*bindings.DecodedLog[EmergencyReceiverSet0Decoded], error) {
+	// Decode the log using the contract's codec
+	decoded, err := t.contract.Codec.DecodeEmergencyReceiverSet0(l)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode EmergencyReceiverSet0 log: %w", err)
+	}
+
+	return &bindings.DecodedLog[EmergencyReceiverSet0Decoded]{
+		Log:  l,        // Original log
+		Data: *decoded, // Decoded data
+	}, nil
+}
+
+func (c *ChildVault) LogTriggerEmergencyReceiverSet0Log(chainSelector uint64, confidence evm.ConfidenceLevel, filters []EmergencyReceiverSet0Topics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[EmergencyReceiverSet0Decoded]], error) {
+	event := c.ABI.Events["EmergencyReceiverSet0"]
+	topics, err := c.Codec.EncodeEmergencyReceiverSet0Topics(event, filters)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode topics for EmergencyReceiverSet0: %w", err)
+	}
+
+	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
+		Addresses:  [][]byte{c.Address.Bytes()},
+		Topics:     topics,
+		Confidence: confidence,
+	})
+
+	return &EmergencyReceiverSet0Trigger{
+		Trigger:  rawTrigger,
+		contract: c,
+	}, nil
+}
+
+func (c *ChildVault) FilterLogsEmergencyReceiverSet0(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
+	if options == nil {
+		return nil, errors.New("FilterLogs options are required.")
+	}
+	return c.client.FilterLogs(runtime, &evm.FilterLogsRequest{
+		FilterQuery: &evm.FilterQuery{
+			Addresses: [][]byte{c.Address.Bytes()},
+			Topics: []*evm.Topics{
+				{Topic: [][]byte{c.Codec.EmergencyReceiverSet0LogHash()}},
 			},
 			BlockHash: options.BlockHash,
 			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
@@ -6436,6 +9325,62 @@ func (c *ChildVault) FilterLogsEpochWithdrawRecoveryStored(runtime cre.Runtime, 
 			Addresses: [][]byte{c.Address.Bytes()},
 			Topics: []*evm.Topics{
 				{Topic: [][]byte{c.Codec.EpochWithdrawRecoveryStoredLogHash()}},
+			},
+			BlockHash: options.BlockHash,
+			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
+			ToBlock:   pb.NewBigIntFromInt(options.ToBlock),
+		},
+	}), nil
+}
+
+// InitializedTrigger wraps the raw log trigger and provides decoded InitializedDecoded data
+type InitializedTrigger struct {
+	cre.Trigger[*evm.Log, *evm.Log]             // Embed the raw trigger
+	contract                        *ChildVault // Keep reference for decoding
+}
+
+// Adapt method that decodes the log into Initialized data
+func (t *InitializedTrigger) Adapt(l *evm.Log) (*bindings.DecodedLog[InitializedDecoded], error) {
+	// Decode the log using the contract's codec
+	decoded, err := t.contract.Codec.DecodeInitialized(l)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode Initialized log: %w", err)
+	}
+
+	return &bindings.DecodedLog[InitializedDecoded]{
+		Log:  l,        // Original log
+		Data: *decoded, // Decoded data
+	}, nil
+}
+
+func (c *ChildVault) LogTriggerInitializedLog(chainSelector uint64, confidence evm.ConfidenceLevel, filters []InitializedTopics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[InitializedDecoded]], error) {
+	event := c.ABI.Events["Initialized"]
+	topics, err := c.Codec.EncodeInitializedTopics(event, filters)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode topics for Initialized: %w", err)
+	}
+
+	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
+		Addresses:  [][]byte{c.Address.Bytes()},
+		Topics:     topics,
+		Confidence: confidence,
+	})
+
+	return &InitializedTrigger{
+		Trigger:  rawTrigger,
+		contract: c,
+	}, nil
+}
+
+func (c *ChildVault) FilterLogsInitialized(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
+	if options == nil {
+		return nil, errors.New("FilterLogs options are required.")
+	}
+	return c.client.FilterLogs(runtime, &evm.FilterLogsRequest{
+		FilterQuery: &evm.FilterQuery{
+			Addresses: [][]byte{c.Address.Bytes()},
+			Topics: []*evm.Topics{
+				{Topic: [][]byte{c.Codec.InitializedLogHash()}},
 			},
 			BlockHash: options.BlockHash,
 			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
@@ -7220,6 +10165,62 @@ func (c *ChildVault) FilterLogsUnpaused(runtime cre.Runtime, options *bindings.F
 			Addresses: [][]byte{c.Address.Bytes()},
 			Topics: []*evm.Topics{
 				{Topic: [][]byte{c.Codec.UnpausedLogHash()}},
+			},
+			BlockHash: options.BlockHash,
+			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
+			ToBlock:   pb.NewBigIntFromInt(options.ToBlock),
+		},
+	}), nil
+}
+
+// UpgradedTrigger wraps the raw log trigger and provides decoded UpgradedDecoded data
+type UpgradedTrigger struct {
+	cre.Trigger[*evm.Log, *evm.Log]             // Embed the raw trigger
+	contract                        *ChildVault // Keep reference for decoding
+}
+
+// Adapt method that decodes the log into Upgraded data
+func (t *UpgradedTrigger) Adapt(l *evm.Log) (*bindings.DecodedLog[UpgradedDecoded], error) {
+	// Decode the log using the contract's codec
+	decoded, err := t.contract.Codec.DecodeUpgraded(l)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode Upgraded log: %w", err)
+	}
+
+	return &bindings.DecodedLog[UpgradedDecoded]{
+		Log:  l,        // Original log
+		Data: *decoded, // Decoded data
+	}, nil
+}
+
+func (c *ChildVault) LogTriggerUpgradedLog(chainSelector uint64, confidence evm.ConfidenceLevel, filters []UpgradedTopics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[UpgradedDecoded]], error) {
+	event := c.ABI.Events["Upgraded"]
+	topics, err := c.Codec.EncodeUpgradedTopics(event, filters)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode topics for Upgraded: %w", err)
+	}
+
+	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
+		Addresses:  [][]byte{c.Address.Bytes()},
+		Topics:     topics,
+		Confidence: confidence,
+	})
+
+	return &UpgradedTrigger{
+		Trigger:  rawTrigger,
+		contract: c,
+	}, nil
+}
+
+func (c *ChildVault) FilterLogsUpgraded(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
+	if options == nil {
+		return nil, errors.New("FilterLogs options are required.")
+	}
+	return c.client.FilterLogs(runtime, &evm.FilterLogsRequest{
+		FilterQuery: &evm.FilterQuery{
+			Addresses: [][]byte{c.Address.Bytes()},
+			Topics: []*evm.Topics{
+				{Topic: [][]byte{c.Codec.UpgradedLogHash()}},
 			},
 			BlockHash: options.BlockHash,
 			FromBlock: pb.NewBigIntFromInt(options.FromBlock),

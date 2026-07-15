@@ -209,7 +209,7 @@
       {
         "name": "metadata",
         "type": "tuple",
-        "internalType": "struct WorkflowRouter.WorkflowMetadata",
+        "internalType": "struct IWorkflowRouter.WorkflowMetadata",
         "components": [
           {
             "name": "owner",
@@ -665,7 +665,7 @@
       {
         "name": "isAllowlisted",
         "type": "bool",
-        "indexed": false,
+        "indexed": true,
         "internalType": "bool"
       }
     ],
@@ -797,6 +797,16 @@
         "internalType": "address"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "WorkflowRouter__NoZeroAddress",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "WorkflowRouter__NoZeroWorkflowId",
+    "inputs": []
   },
   {
     "type": "error",

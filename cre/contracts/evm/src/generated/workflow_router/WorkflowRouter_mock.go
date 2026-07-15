@@ -29,7 +29,7 @@ type WorkflowRouterMock struct {
 	GetAllowlistedWorkflowSelector func(GetAllowlistedWorkflowSelectorInput) (bool, error)
 	GetRoleAdmin                   func(GetRoleAdminInput) ([32]byte, error)
 	GetVault                       func() (common.Address, error)
-	GetWorkflowMetadata            func(GetWorkflowMetadataInput) (WorkflowMetadata, error)
+	GetWorkflowMetadata            func(GetWorkflowMetadataInput) (IWorkflowRouterWorkflowMetadata, error)
 	HasRole                        func(HasRoleInput) (bool, error)
 	Owner                          func() (common.Address, error)
 	Paused                         func() (bool, error)
