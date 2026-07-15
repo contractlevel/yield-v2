@@ -26,20 +26,22 @@ library ParentVaultFeesLib {
     //////////////////////////////////////////////////////////////*/
     /// @dev Solidity requires locally declared events for emits; these must match IParentVault and emit from the vault via DELEGATECALL.
     event ManagementFeeCollected(uint256 indexed rebalanceNonce, uint256 indexed feeShares);
-    event PerformanceFeeCollected(uint256 indexed epochNonce, uint256 indexed feeShares, uint256 indexed highWaterMark);
+    event PerformanceFeeCollected(
+        uint256 indexed epochNonce, uint256 indexed feeShares, uint256 indexed settlementPricePerShare
+    );
 
     /*//////////////////////////////////////////////////////////////
                                   FEES
     //////////////////////////////////////////////////////////////*/
     /// @notice Calculates the asset value of a Yieldcoin share token.
+    /// @dev Bootstrap pricing: when totalShares == 0, pricePerShare is always sharePrecision (par),
+    ///      regardless of tvl. Any residual tvl at that point (e.g. dust left behind after a full
+    ///      exit) is captured by the next depositor's shares rather than the prior shareholders.
+    ///      See KI-010 in docs/KNOWN_ISSUES.md.
     /// @param $ ParentVault namespaced storage
     /// @param tvl The Total Value Locked in the active strategy of the Yieldcoin v2 system
     /// @param sharePrecision The share precision factor
     /// @return pricePerShare Asset value of a Yieldcoin share token
-    /// @notice Bootstrap pricing: when totalShares == 0, pricePerShare is always sharePrecision (par),
-    ///         regardless of tvl. Any residual tvl at that point (e.g. dust left behind after a full
-    ///         exit) is captured by the next depositor's shares rather than the prior shareholders.
-    ///         See KI-010 in docs/KNOWN_ISSUES.md.
     function calculatePricePerShare(ParentVaultStore.ParentVaultStorage storage $, uint256 tvl, uint256 sharePrecision)
         public
         view
@@ -67,11 +69,11 @@ library ParentVaultFeesLib {
     }
 
     /// @notice Calculates and collects the management fee based on time elapsed since the last rebalance completed.
+    /// @dev Elapsed time is capped at 365 days
     /// @param $ ParentVault namespaced storage
     /// @param rebalanceNonce The nonce of the rebalance collecting the fee
     /// @param lastRebalanceCompletedTimestamp The timestamp when the rebalance last completed
     /// @param share The Yieldcoin share token
-    /// @notice Elapsed time is capped at 365 days
     function collectManagementFee(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 rebalanceNonce,

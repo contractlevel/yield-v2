@@ -43,6 +43,7 @@ library ParentVaultUserEpochLib {
     /// @return epochNonce The epoch nonce of the deposit
     /// @dev Precondition: amount must meet the minimum deposit amount requirement
     /// @dev Precondition: the current epoch must be open
+    /// @dev Precondition: user must approve address(this) to transfer their amount
     function deposit(
         ParentVaultStore.ParentVaultStorage storage $,
         address asset,

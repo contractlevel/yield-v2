@@ -151,6 +151,7 @@ interface IBaseVault is IPauseable {
     /// @notice Donates the underlying asset to the active strategy without minting shares or creating a claim
     /// @param amount The amount of asset to donate
     /// @dev Precondition: Caller must have the DONATE_OPERATOR_ROLE
+    /// @dev Precondition: amount must not be zero
     /// @dev Precondition: This vault must be on the active strategy chain
     /// @dev Precondition: Deposit into the active strategy must succeed
     function donate(uint256 amount) external;
@@ -158,11 +159,11 @@ interface IBaseVault is IPauseable {
     /*//////////////////////////////////////////////////////////////
                                RECOVERY
     //////////////////////////////////////////////////////////////*/
+    /// @notice Withdraws all underlying asset from the vault to the emergency receiver
+    /// @notice If the vault has the TVL, it will be withdrawn from the strategy and transferred to the emergency receiver
+    /// @param revertOnFailure Whether to revert if the withdraw from strategy fails
     /// @dev Precondition: Caller must have the EMERGENCY_DRAINER_ROLE
     /// @dev Precondition: Vault must have been paused for at least EMERGENCY_DRAIN_DELAY
-    /// @dev Withdraws all underlying asset from the vault to the emergency receiver
-    /// @param revertOnFailure Whether to revert if the withdraw from strategy fails
-    /// @notice If the vault has the TVL, it will be withdrawn from the strategy and transferred to the emergency receiver
     function emergencyDrain(bool revertOnFailure) external;
 
     /// @notice Executes the active recovery mode, reverting if no recovery is pending

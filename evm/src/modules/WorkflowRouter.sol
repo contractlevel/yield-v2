@@ -52,7 +52,8 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
     }
 
     /// @param params Constructor parameters
-    /// @dev Precondition: required address params must not be the zero address
+    /// @dev Precondition: pauser, unpauser, configOperator, keystoneForwarder, and vault must not be the zero address
+    ///      (defaultAdmin validity is enforced by AccessControlDefaultAdminRules)
     constructor(ConstructorParams memory params)
         AccessControlDefaultAdminRules(params.initialDelay, params.defaultAdmin)
     {
@@ -79,8 +80,7 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
                                ON REPORT
     //////////////////////////////////////////////////////////////*/
     /// @notice Handles incoming keystone reports.
-    /// @dev If this function call reverts, it can be retried with a higher gas
-    /// limit. The receiver is responsible for discarding stale reports.
+    /// @dev If this function call reverts, it can be retried with a higher gas limit.
     /// @param metadata Report's metadata.
     /// @param report Workflow report.
     /// @dev Precondition: Caller must have the KEYSTONE_FORWARDER_ROLE
@@ -115,11 +115,10 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
     }
 
     /// @notice Decodes metadata fields from the Keystone Forwarder's onReport call
-    /// @dev Metadata is abi.encodePacked by the Forwarder:
-    ///      - Offset  0, size 32: length prefix (standard dynamic bytes)
-    ///      - Offset 32, size 32: workflowId    (bytes32)
-    ///      - Offset 64, size 10: workflowName  (bytes10)
-    ///      - Offset 74, size 20: workflowOwner (address)
+    /// @dev Metadata is abi.encodePacked by the Forwarder (no length prefix):
+    ///      - Offset  0, size 32: workflowId    (bytes32)
+    ///      - Offset 32, size 10: workflowName  (bytes10)
+    ///      - Offset 42, size 20: workflowOwner (address)
     /// @param metadata The raw metadata bytes from onReport
     /// @return workflowId The unique workflow identifier
     /// @return workflowName The hash-encoded workflow name (bytes10)

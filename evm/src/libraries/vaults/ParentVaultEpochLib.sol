@@ -21,14 +21,20 @@ library ParentVaultEpochLib {
     /*//////////////////////////////////////////////////////////////
                            TYPE DECLARATIONS
     //////////////////////////////////////////////////////////////*/
+    /// @notice The action ParentVault must take after closeEpoch settles net flow
     enum ExternalAction {
-        NONE,
-        DEPOSIT_TO_LOCAL_STRATEGY,
-        SEND_DEPOSIT_TO_REMOTE_STRATEGY,
-        WITHDRAW_FROM_LOCAL_STRATEGY,
-        WAIT_FOR_REMOTE_WITHDRAW
+        NONE, // 0: no net flow to execute (deposits and withdraws netted to zero)
+        DEPOSIT_TO_LOCAL_STRATEGY, // 1: net deposit, active strategy is on this chain
+        SEND_DEPOSIT_TO_REMOTE_STRATEGY, // 2: net deposit, active strategy is on a remote chain
+        WITHDRAW_FROM_LOCAL_STRATEGY, // 3: net withdraw, active strategy is on this chain
+        WAIT_FOR_REMOTE_WITHDRAW // 4: net withdraw, active strategy is on a remote chain
     }
 
+    /// @notice The external action ParentVault should execute after closeEpoch settlement
+    /// @param epochNonce The nonce of the epoch that was just closed
+    /// @param action The action ParentVault must take
+    /// @param amount The net deposit or withdraw amount to act on
+    /// @param totalDepositAmount The epoch's total deposit amount, needed by ParentVault to finalize a local net withdraw
     struct CloseEpochExternalAction {
         uint256 epochNonce;
         ExternalAction action;
@@ -54,7 +60,8 @@ library ParentVaultEpochLib {
     /// @param sharePrecision The share precision factor
     /// @param minDepositAmount The minimum deposit amount
     /// @param isLocalStrategy Whether this chain currently has the active strategy adapter
-    /// @return externalAction The external action ParentVault should execute after settlement
+    /// @return externalAction The external action, epoch nonce, net amount, and total deposit amount ParentVault
+    ///         needs to execute the action and finalize the epoch after settlement
     function closeEpoch(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 tvl,

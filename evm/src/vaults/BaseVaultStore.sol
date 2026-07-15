@@ -20,7 +20,7 @@ abstract contract BaseVaultStore {
         //slither-disable-next-line uninitialized-state
         address s_activeProtocolAdapter;
         /// @dev Timestamp when the vault was paused. Deleted when the vault is unpaused.
-        /// @notice This is used for emergency recovery modes.
+        /// @notice Used to gate the EMERGENCY_DRAIN_DELAY check in emergencyDrain().
         uint96 s_pausedAt;
         /// @dev Address that receives the underlying asset during emergency drain.
         address s_emergencyReceiver;

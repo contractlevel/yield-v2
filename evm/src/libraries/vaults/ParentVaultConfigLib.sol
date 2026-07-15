@@ -23,6 +23,7 @@ library ParentVaultConfigLib {
     /// @notice Sets the treasury address.
     /// @param $ ParentVault namespaced storage
     /// @param treasury The address of the treasury
+    /// @dev Precondition: treasury must not be the zero address
     function setTreasury(ParentVaultStore.ParentVaultStorage storage $, address treasury) public {
         _setTreasury($, treasury);
     }
@@ -31,6 +32,8 @@ library ParentVaultConfigLib {
     /// @param $ ParentVault namespaced storage
     /// @param protocolId The protocol identifier of the protocol
     /// @param isSupported Whether the protocol is supported
+    /// @dev Precondition: protocolId must not be zero
+    /// @dev Precondition: if isSupported is false, protocolId must not be the active or pending strategy's protocol ID
     function setSupportedProtocol(ParentVaultStore.ParentVaultStorage storage $, bytes32 protocolId, bool isSupported)
         public
     {

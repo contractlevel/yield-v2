@@ -267,6 +267,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     //////////////////////////////////////////////////////////////*/
     /// @notice Receives CCIP messages
     /// @param message Any2EVMMessage.
+    /// @dev Precondition: the call must not be reentered
     /// @dev Precondition: the message must be sent by an allowed sender (a crosschain vault mapped to an allowed source chain selector)
     /// @dev Precondition: the received token must be i_asset
     /// @dev Precondition: there must not be an existent recovery mode
@@ -387,7 +388,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @dev Precondition: the caller must have the REBALANCE_OPERATOR_ROLE
     /// @dev Precondition: the contract must not be paused
     /// @dev Precondition: A rebalance must not already be in progress
-    /// @dev Precondiiton: newStrategy must not be the same as the current active strategy
+    /// @dev Precondition: newStrategy must not be the same as the current active strategy
     /// @dev Precondition: An epoch must not be EXECUTING
     /// @dev Precondition: If current/active/previous strategy is on this chain, withdrawing tvl from the old strategy must succeed
     /// @dev Precondition: If current/active/previous strategy and newStrategy is on this chain, depositing tvl into the new strategy must succeed
@@ -575,7 +576,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         sharePrecision = i_sharePrecision;
     }
 
-    /// @notice Gets the minimum deposit amount (100 * i_assetPrecision)
+    /// @notice Gets the minimum deposit amount (1 * i_assetPrecision)
     /// @return minDepositAmount The minimum deposit amount
     function getMinDepositAmount() external view returns (uint256 minDepositAmount) {
         minDepositAmount = i_minDepositAmount;
@@ -624,7 +625,8 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @notice Gets the Yieldcoin TVL if this chain is the active strategy chain
     ///         Returns 0 if this chain is not the active strategy chain
     /// @return tvl The Yieldcoin TVL
-    /// @notice The Child Vault implementation includes s_epochDepositRecovery.amount
+    /// @notice Unlike the Child Vault implementation, which also includes s_epochDepositRecovery.amount and
+    ///         s_ccipSendRecovery.amount, the Parent Vault implementation only includes s_rebalanceDepositRecovery.amount
     /// @notice Returns 0 if the TVL is in transit over CCIP. This should not be read onchain when Parent state is REBALANCING
     function _getTVL() internal view override returns (uint256 tvl) {
         BaseVaultStorage storage $ = _baseVaultStorage();

@@ -54,6 +54,7 @@ contract CompoundV3Adapter is ProtocolAdapter, ICompoundV3Adapter {
     /// @notice Deposits the underlying asset to the Compound V3 pool
     /// @param amount The amount of asset to deposit
     /// @dev Deposits the asset to the Compound V3 pool
+    /// @dev Precondition: caller must be the Yieldcoin v2 Vault
     function deposit(uint256 amount) external nonReentrant onlyVault {
         emit Deposit(amount);
 
@@ -68,8 +69,8 @@ contract CompoundV3Adapter is ProtocolAdapter, ICompoundV3Adapter {
     /// @notice Withdraws the underlying asset from the Compound V3 pool
     /// @param amount The amount of asset to withdraw (use type(uint256).max to withdraw all)
     /// @return actualWithdrawnAmount The actual withdrawn amount
-    /// @dev Transfers the actual withdrawn amount to the yield peer
-    /// @dev Prevents borrowing by ensuring amount <= balance when not using MAX sentinel
+    /// @dev Transfers the actual withdrawn amount to the Yieldcoin v2 Vault
+    /// @dev Prevents borrowing by ensuring amount <= TVL when not using MAX sentinel
     /// @dev Precondition: caller must be the Yieldcoin v2 Vault
     /// @notice We handle 2 withdraw scenarios:
     /// 1. Epoch Withdraw - when the amount is a specific amount

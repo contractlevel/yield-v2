@@ -33,6 +33,7 @@ contract AaveV4Adapter is ProtocolAdapter, IAaveV4Adapter {
     /// @param vault The address of the Yieldcoin v2 Vault
     /// @param spoke The address of the Aave v4 Spoke
     /// @dev Precondition: spoke must not be the zero address
+    /// @dev Precondition: the vault's asset must be a listed reserve on the Aave v4 Spoke
     constructor(address vault, address spoke) ProtocolAdapter(vault) {
         _revertIfZeroAddress(spoke);
         i_spoke = spoke;
@@ -103,6 +104,8 @@ contract AaveV4Adapter is ProtocolAdapter, IAaveV4Adapter {
     /// @param spoke The address of the Aave v4 Spoke
     /// @param underlying The address of the underlying token
     /// @return reserveId The Aave v4 reserve id
+    /// @dev Reverts with AaveV4Adapter__DuplicateReserveFound if underlying is listed as more than one reserve
+    /// @dev Reverts with ProtocolAdapter__AssetMismatch if underlying is not found as a reserve
     function _getReserveId(address spoke, address underlying) internal view returns (uint256 reserveId) {
         IAaveV4Spoke aaveV4Spoke = IAaveV4Spoke(spoke);
         uint256 reserveCount = aaveV4Spoke.getReserveCount();

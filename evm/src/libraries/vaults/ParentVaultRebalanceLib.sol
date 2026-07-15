@@ -14,12 +14,16 @@ library ParentVaultRebalanceLib {
     /*//////////////////////////////////////////////////////////////
                            TYPE DECLARATIONS
     //////////////////////////////////////////////////////////////*/
+    /// @notice The action ParentVault must take after initiateRebalance updates state
     enum ExternalAction {
-        NONE,
-        WITHDRAW_LOCAL_TO_LOCAL,
-        WITHDRAW_LOCAL_TO_REMOTE
+        NONE, // 0: the previously active strategy is not on this chain, nothing to withdraw here
+        WITHDRAW_LOCAL_TO_LOCAL, // 1: withdraw from the local active strategy and deposit into the local new strategy
+        WITHDRAW_LOCAL_TO_REMOTE // 2: withdraw from the local active strategy and CCIP-send to the new strategy's chain
     }
 
+    /// @notice The external action ParentVault should execute after initiateRebalance state is updated
+    /// @param rebalanceNonce The nonce of the rebalance that was just initiated
+    /// @param action The action ParentVault must take
     struct InitiateRebalanceResult {
         uint256 rebalanceNonce;
         ExternalAction action;

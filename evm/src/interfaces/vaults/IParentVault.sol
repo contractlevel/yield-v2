@@ -142,8 +142,12 @@ interface IParentVault is IBaseVault {
     /// @notice Emitted when performance fees are collected
     /// @param epochNonce The epoch nonce that collected the fee
     /// @param feeShares The number of shares minted to the treasury
-    /// @param highWaterMark The new performance fee high water mark
-    event PerformanceFeeCollected(uint256 indexed epochNonce, uint256 indexed feeShares, uint256 indexed highWaterMark);
+    /// @param settlementPricePerShare The price per share after fee-share dilution. This raises the high water
+    ///        mark, except when rounding causes it to land a dust amount below the existing high water mark -
+    ///        the high water mark is only ever raised, never lowered, so it may not equal this value
+    event PerformanceFeeCollected(
+        uint256 indexed epochNonce, uint256 indexed feeShares, uint256 indexed settlementPricePerShare
+    );
     /// @notice Emitted when a deposit is cancelled
     /// @param epochNonce The epoch nonce of the deposit
     /// @param depositor The address of the depositor
@@ -192,6 +196,8 @@ interface IParentVault is IBaseVault {
     /// @param protocolId The protocol ID to configure
     /// @param isSupported Whether the protocol is supported
     /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
+    /// @dev Precondition: protocolId must not be zero
+    /// @dev Precondition: if isSupported is false, protocolId must not be the active or pending strategy's protocol ID
     function setSupportedProtocol(bytes32 protocolId, bool isSupported) external;
 
     /// @notice Force-cancels a user's deposit in the current open epoch, refunding their exact deposited amount
@@ -267,6 +273,11 @@ interface IParentVault is IBaseVault {
     /// @dev Precondition: there must not be a stored recovery mode
     /// @dev Precondition: the epoch must be open
     /// @dev Precondition: the contract must not be paused
+    /// @dev Precondition: the epoch must have been open for at least MIN_EPOCH_PERIOD
+    /// @dev Precondition: the epoch must not have zero deposits and zero withdrawals
+    /// @dev Precondition: tvl must not be zero while shares are outstanding
+    /// @dev Precondition: the resulting price per share must not round down to zero
+    /// @dev Precondition: settlement must not mint zero shares for a minimum-size depositor
     function closeEpoch(uint256 tvl) external;
 
     /// @notice Initiates a rebalance from the current strategy to a new strategy
@@ -275,11 +286,17 @@ interface IParentVault is IBaseVault {
     /// @dev Precondition: the contract must not be paused
     /// @dev Precondition: a rebalance must not already be in progress
     /// @dev Precondition: there must not be a stored recovery mode
+    /// @dev Precondition: at least one epoch must have completed
+    /// @dev Precondition: newStrategy must differ from the current active strategy
+    /// @dev Precondition: no prior epoch may still be executing
+    /// @dev Precondition: newStrategy's chain selector must be supported
+    /// @dev Precondition: newStrategy's protocol ID must be supported
     function initiateRebalance(Types.Strategy memory newStrategy) external;
 
     /// @notice Completes a rebalance
     /// @dev Precondition: caller must have the REBALANCE_OPERATOR_ROLE
     /// @dev Precondition: there must not be a stored recovery mode
+    /// @dev Precondition: a rebalance must be in progress
     function completeRebalance() external;
 
     /*//////////////////////////////////////////////////////////////
@@ -297,7 +314,7 @@ interface IParentVault is IBaseVault {
     /// @return sharePrecision The share precision factor
     function getSharePrecision() external view returns (uint256 sharePrecision);
 
-    /// @notice Returns the minimum deposit amount (100 * i_assetPrecision)
+    /// @notice Returns the minimum deposit amount (1 * i_assetPrecision)
     /// @return minDepositAmount The minimum deposit amount
     function getMinDepositAmount() external view returns (uint256 minDepositAmount);
 
@@ -312,7 +329,7 @@ interface IParentVault is IBaseVault {
 
     /// @notice Returns the epoch data for a given epoch nonce
     /// @param epochNonce The epoch nonce to query
-    /// @return epoch The epoch data including status, deposit/withdraw totals, price per share, and timestamps
+    /// @return epoch The epoch data including status, deposit/withdraw totals, price per share, and opened timestamp
     function getEpoch(uint256 epochNonce) external view returns (Types.Epoch memory epoch);
 
     /// @notice Returns the current epoch nonce

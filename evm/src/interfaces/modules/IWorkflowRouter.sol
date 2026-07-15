@@ -54,6 +54,7 @@ interface IWorkflowRouter is IReceiver, IPauseable {
     /// @param owner The address that deployed the workflow
     /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
     /// @dev Precondition: workflowId must not be zero
+    /// @dev Precondition: name and owner must both be nonzero when setting metadata, or both zero when removing metadata
     /// @notice Set `name` and `owner` to zero to remove metadata for `workflowId`
     function setWorkflowMetadata(bytes32 workflowId, bytes10 name, address owner) external;
 

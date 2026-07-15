@@ -229,6 +229,7 @@ abstract contract BaseVault is
     /// @param rebalanceNonce The nonce of the rebalance
     /// @param protocolId The protocol ID of the new strategy on this chain
     /// @param amount The amount of USDC to rebalance(deposit) into the new strategy on this chain
+    /// @return success Whether the deposit into the new strategy succeeded or not
     function _handleCCIPRebalance(uint256 rebalanceNonce, bytes32 protocolId, uint256 amount)
         internal
         returns (bool success)
@@ -241,6 +242,7 @@ abstract contract BaseVault is
     /// @param rebalanceNonce The nonce of the rebalance
     /// @param amount The amount of USDC to rebalance(deposit) into the active strategy
     /// @param adapter The active strategy adapter, already known from _setActiveAdapter
+    /// @return success Whether the deposit into the active strategy succeeded or not
     function _handleCCIPRebalanceDeposit(uint256 rebalanceNonce, uint256 amount, address adapter)
         internal
         returns (bool success)
@@ -360,6 +362,8 @@ abstract contract BaseVault is
         emit RebalanceDepositRecoveryStored(rebalanceNonce, amount);
     }
 
+    /// @notice Retries a previously failed rebalance deposit into the active strategy
+    /// @param $ BaseVault namespaced storage
     /// @dev Precondition: rebalance deposit recovery state must exist
     /// @dev Precondition: active strategy adapter must be set
     /// @dev Precondition: the deposit into the strategy must be successful
@@ -380,6 +384,7 @@ abstract contract BaseVault is
     }
 
     /// @notice Clears recovery state for a failed rebalance deposit
+    /// @param $ BaseVault namespaced storage
     /// @param rebalanceNonce The nonce of the rebalance deposit recovery being cleared, already known by the caller
     function _clearRebalanceDepositRecovery(BaseVaultStorage storage $, uint256 rebalanceNonce) internal {
         delete $.s_rebalanceDepositRecovery;

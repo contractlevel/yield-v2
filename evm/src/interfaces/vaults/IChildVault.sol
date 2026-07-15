@@ -98,6 +98,8 @@ interface IChildVault is IBaseVault {
     /// @param newStrategy The new strategy to rebalance to
     /// @dev Precondition: caller must have the REBALANCE_OPERATOR_ROLE
     /// @dev Precondition: there must be no existent recovery mode
+    /// @dev Precondition: if the withdraw from the active strategy fails, newStrategy's chain selector must not be zero
+    ///      (enforced when storing rebalance withdraw recovery state, so it can be retried later)
     function executeRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy) external;
 
     /*//////////////////////////////////////////////////////////////

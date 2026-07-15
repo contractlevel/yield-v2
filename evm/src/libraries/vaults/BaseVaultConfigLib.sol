@@ -25,6 +25,9 @@ library BaseVaultConfigLib {
     /// @param $ BaseVault namespaced storage
     /// @param chainSelectors The CCIP selectors of the chains
     /// @param vaults The addresses of the crosschain vaults
+    /// @dev Precondition: chainSelectors must not be empty
+    /// @dev Precondition: chainSelectors and vaults must be the same length
+    /// @dev Precondition: each chainSelector must not be zero
     function setCrosschainVaults(
         BaseVaultStore.BaseVaultStorage storage $,
         uint64[] calldata chainSelectors,
@@ -37,6 +40,7 @@ library BaseVaultConfigLib {
     /// @param $ BaseVault namespaced storage
     /// @param chainSelector The CCIP selector of the chain
     /// @param gasLimit The CCIP gas limit
+    /// @dev Precondition: chainSelector must not be zero
     function setCcipGasLimit(BaseVaultStore.BaseVaultStorage storage $, uint64 chainSelector, uint256 gasLimit) public {
         _setCcipGasLimit($, chainSelector, gasLimit);
     }
@@ -44,6 +48,7 @@ library BaseVaultConfigLib {
     /// @notice Sets the default CCIP gas limit.
     /// @param $ BaseVault namespaced storage
     /// @param gasLimit The default CCIP gas limit
+    /// @dev Precondition: gasLimit must not be zero
     function setDefaultCcipGasLimit(BaseVaultStore.BaseVaultStorage storage $, uint256 gasLimit) public {
         _setDefaultCcipGasLimit($, gasLimit);
     }
@@ -51,6 +56,7 @@ library BaseVaultConfigLib {
     /// @notice Sets the emergency receiver.
     /// @param $ BaseVault namespaced storage
     /// @param emergencyReceiver The address that receives the underlying asset during emergency drain
+    /// @dev Precondition: emergencyReceiver must not be the zero address
     function setEmergencyReceiver(BaseVaultStore.BaseVaultStorage storage $, address emergencyReceiver) public {
         _setEmergencyReceiver($, emergencyReceiver);
     }

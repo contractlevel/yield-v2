@@ -76,7 +76,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         _requireNoRecovery($_baseVault);
         uint256 receivedAmount = BaseVaultCcipLib._validateReceivedTokenAndGetAmount(message, i_asset);
 
-        /// @dev data decodes to a uint256 epochNonce for epoch net deposits/withdraws and a (uint256 rebalanceNonce, bytes32 protocolId) for rebalances
+        /// @dev data decodes to a uint256 epochNonce for epoch net deposits and a (uint256 rebalanceNonce, bytes32 protocolId) for rebalances
         (Types.CcipTx ccipTxType, bytes memory data) = abi.decode(message.data, (Types.CcipTx, bytes));
 
         if (ccipTxType == Types.CcipTx.EPOCH_NET_DEPOSIT) {
@@ -105,6 +105,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     ///         The ParentVault sends a CCIP deposit to the active strategy chain when an epoch's net flow is positive. (more deposits than withdraws)
     /// @param epochNonce The nonce of the epoch
     /// @param amount The amount of asset that was bridged to deposit into the active strategy on this child chain
+    /// @param $_baseVault BaseVaultStorage for the active strategy adapter and recovery state
     function _handleCCIPDeposit(uint256 epochNonce, uint256 amount, BaseVaultStorage storage $_baseVault) internal {
         bool success = _executeDeposit(amount, false, $_baseVault.s_activeProtocolAdapter);
         if (success) {
@@ -180,7 +181,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @notice Executes the epoch withdraw from a strategy
     /// @notice This is called by the WorkflowRouter when net flow is negative (more withdraws than deposits)
     /// @param epochNonce The nonce of the epoch
-    /// @param amount The amount of asset that was withdrawn from the active strategy
+    /// @param amount The amount of asset to withdraw from the active strategy
     /// @dev Precondition: Caller must have the EPOCH_OPERATOR_ROLE
     function executeEpochWithdraw(uint256 epochNonce, uint256 amount)
         external
@@ -349,6 +350,8 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     }
 
     /// @notice Clears recovery state for a failed epoch deposit
+    /// @param $ ChildVaultStorage for the epoch deposit recovery state
+    /// @param $_baseVault BaseVaultStorage for recovery mode
     /// @param epochNonce The epoch nonce of the recovery being cleared, already known by the caller
     function _clearEpochDepositRecovery(
         ChildVaultStorage storage $,
@@ -395,6 +398,8 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     }
 
     /// @notice Clears recovery state for a failed epoch withdraw
+    /// @param $ ChildVaultStorage for the epoch withdraw recovery state
+    /// @param $_baseVault BaseVaultStorage for recovery mode
     /// @param epochNonce The epoch nonce of the recovery being cleared, already known by the caller
     function _clearEpochWithdrawRecovery(
         ChildVaultStorage storage $,
@@ -448,6 +453,8 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     }
 
     /// @notice Clears recovery state for a failed rebalance withdraw
+    /// @param $ ChildVaultStorage for the rebalance withdraw recovery state
+    /// @param $_baseVault BaseVaultStorage for recovery mode
     /// @param rebalanceNonce The rebalance nonce of the recovery being cleared, already known by the caller
     function _clearRebalanceWithdrawRecovery(
         ChildVaultStorage storage $,
@@ -603,7 +610,8 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @notice Gets the Yieldcoin TVL if this chain is the active strategy chain
     ///         Returns 0 if this chain is not the active strategy chain
     /// @return tvl The Yieldcoin TVL
-    /// @notice The Child Vault implementation includes s_epochDepositRecovery.amount
+    /// @notice Unlike the Parent Vault implementation, which only includes s_rebalanceDepositRecovery.amount, the
+    ///         Child Vault implementation also includes s_epochDepositRecovery.amount and s_ccipSendRecovery.amount
     /// @notice Returns 0 if the TVL is in transit over CCIP. This should not be read onchain when Parent state is REBALANCING
     function _getTVL() internal view override returns (uint256 tvl) {
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
