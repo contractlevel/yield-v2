@@ -19,4 +19,4 @@ ChildVault_executeEpochWithdraw
 │   └── when epoch withdraw recovery already exists
 │       └── it should revert with BaseVault__RecoveryAlreadyPending
 └── when withdraw adapter returns zero
-    └── it should revert with BaseVault__ZeroAmountOut
+    └── it should revert with BaseVault__NoZeroAmount

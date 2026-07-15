@@ -170,7 +170,7 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
     function test_ChildVault_executeRebalance_RevertWhen_WithdrawAdapterReturnsZero() public {
         s_mockProtocolAdapter.setWithdrawReturnAmount(0);
 
-        vm.expectRevert(IBaseVault.BaseVault__ZeroAmountOut.selector);
+        vm.expectRevert(IBaseVault.BaseVault__NoZeroAmount.selector);
         s_childVault.executeRebalance(REBALANCE_NONCE, _remoteChildStrategy());
     }
 
