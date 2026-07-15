@@ -535,7 +535,7 @@ abstract contract BaseVault is
     /// @dev Precondition: Amount must be greater than 0
     /// @dev Withdraws LINK from the vault to the caller
     function withdrawLink(uint256 amount) external onlyRole(Roles.LINK_OPERATOR_ROLE) {
-        if (amount == 0) revert BaseVault__NoZeroAmount();
+        _revertIfZeroAmount(amount);
         IERC20(i_link).safeTransfer(msg.sender, amount);
         emit LinkWithdrawn(msg.sender, amount);
     }
