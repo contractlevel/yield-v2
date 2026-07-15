@@ -4,7 +4,6 @@ pragma solidity 0.8.34;
 import {BaseUnitTest, Vm} from "../../BaseUnitTest.t.sol";
 
 import {IBaseVault} from "../../../../src/interfaces/vaults/IBaseVault.sol";
-import {IChildVault} from "../../../../src/interfaces/vaults/IChildVault.sol";
 import {MockProtocolAdapter} from "../../../mocks/MockProtocolAdapter.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
 
@@ -171,7 +170,7 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
     function test_ChildVault_executeRebalance_RevertWhen_WithdrawAdapterReturnsZero() public {
         s_mockProtocolAdapter.setWithdrawReturnAmount(0);
 
-        vm.expectRevert(IChildVault.ChildVault__ZeroAmountOut.selector);
+        vm.expectRevert(IBaseVault.BaseVault__ZeroAmountOut.selector);
         s_childVault.executeRebalance(REBALANCE_NONCE, _remoteChildStrategy());
     }
 

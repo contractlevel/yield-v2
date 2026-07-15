@@ -194,7 +194,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
 
         (bool success, uint256 amountOut) = _executeWithdraw(amount, false, $_baseVault.s_activeProtocolAdapter);
         if (success) {
-            if (amountOut == 0) revert ChildVault__ZeroAmountOut();
+            _revertIfZeroAmount(amountOut);
             emit WithdrawFromStrategySuccess(epochNonce, amountOut);
             _ccipSend(amountOut, i_parentChainSelector, Types.CcipTx.EPOCH_NET_WITHDRAW, epochNonce, bytes32(0));
         } else {
@@ -240,7 +240,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         address activeAdapter = _baseVaultStorage().s_activeProtocolAdapter;
         (success, amountRebalanced) = _executeWithdraw(type(uint256).max, false, activeAdapter);
         if (success) {
-            if (amountRebalanced == 0) revert ChildVault__ZeroAmountOut();
+            _revertIfZeroAmount(amountRebalanced);
             emit RebalanceWithdrawSuccess(rebalanceNonce, amountRebalanced);
             _rebalanceToNewStrategy(rebalanceNonce, amountRebalanced, newStrategy, activeAdapter);
         } else {

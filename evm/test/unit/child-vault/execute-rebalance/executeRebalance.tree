@@ -13,7 +13,7 @@ ChildVault_executeRebalance
   │   │       └── when recovery state already exists
   │   │           └── it should revert with BaseVault__RecoveryAlreadyPending
   │   └── when adapter returns zero
-  │       └── it should revert with ChildVault__ZeroAmountOut
+  │       └── it should revert with BaseVault__ZeroAmountOut
   ├── when rebalance is to the same child
   │   ├── when the target protocol adapter is not registered
   │   │   └── it should revert with BaseVault__NoAdapterRegistered

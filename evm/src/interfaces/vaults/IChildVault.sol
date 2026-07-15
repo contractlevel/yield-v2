@@ -17,8 +17,6 @@ interface IChildVault is IBaseVault {
     error ChildVault__InvalidParentChainSelector();
     /// @dev Thrown when an external self-call helper is called by any address other than this contract
     error ChildVault__OnlySelf();
-    /// @dev Thrown when a successful strategy withdraw returns zero asset
-    error ChildVault__ZeroAmountOut();
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
