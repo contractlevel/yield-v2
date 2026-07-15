@@ -433,7 +433,7 @@ abstract contract BaseVault is
     ///         Donations should not be made before the first deposit.
     /// @notice This is an operator emergency function that should not be used improperly (would require capital to do so).
     function donate(uint256 amount) external nonReentrant onlyRole(Roles.DONATE_OPERATOR_ROLE) {
-        if (amount == 0) revert BaseVault__NoZeroAmount();
+        _revertIfZeroAmount(amount);
 
         IERC20(i_asset).safeTransferFrom(msg.sender, address(this), amount);
         _executeDeposit(amount, true, _baseVaultStorage().s_activeProtocolAdapter);
