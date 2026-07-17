@@ -3,7 +3,12 @@ use futures_util::{
     pin_mut, StreamExt,
 };
 use serde::{Deserialize, Serialize};
-use std::{cmp::Ordering, collections::BTreeMap, time::Duration};
+use std::{
+    cmp::Ordering,
+    collections::BTreeMap,
+    sync::atomic::{AtomicUsize, Ordering as AtomicOrdering},
+    time::Duration,
+};
 use worker::{
     event, AbortController, Delay, Env, Fetch, Headers, Method, Request, Response, Result,
 };
@@ -36,6 +41,14 @@ const MAX_UPSTREAM_BYTES: usize = 12 * 1024 * 1024;
 /// from slowly streaming bytes forever.
 const UPSTREAM_READ_TIMEOUT_SECS: u64 = 30;
 
+/// Maximum number of upstream fetch+read operations allowed in flight at once
+/// per isolate.
+///
+/// Bounds aggregate buffered memory to roughly
+/// `MAX_CONCURRENT_UPSTREAM_FETCHES * MAX_UPSTREAM_BYTES`, so concurrent
+/// requests cannot multiply the per-request byte cap unboundedly.
+const MAX_CONCURRENT_UPSTREAM_FETCHES: usize = 4;
+
 /// Maximum number of compact pool entries returned to CRE.
 const MAX_RELAY_POOLS: usize = 32;
 
@@ -64,7 +77,23 @@ const MAX_SYMBOL_BYTES: usize = 64;
 /// The bearer token is short and fixed by deployment policy. Rejecting oversized
 /// headers before comparison prevents unauthenticated clients from making auth
 /// cost scale with attacker-controlled input size.
+///
+/// This cap is a comparison-cost guard, not a pre-allocation guard:
+/// `Headers::get` returns an owned string after the Worker runtime has already
+/// accepted and materialized the request headers. Pre-allocation protection
+/// depends on Cloudflare's platform request-header limits.
 const MAX_AUTH_HEADER_BYTES: usize = 1024;
+
+/// Checks whether a configured bearer token is usable as an auth secret.
+///
+/// Empty or whitespace-only values are treated as unconfigured: without this
+/// check, `constant_time_eq` would accept an empty client-supplied token
+/// against an empty configured secret, silently bypassing authentication.
+/// Only the configured value is checked here — the client-supplied token is
+/// still compared byte-exact, untrimmed, in `authorize_header`.
+fn is_valid_configured_token(token: &str) -> bool {
+    !token.trim().is_empty()
+}
 
 /// Pool shape read from DefiLlama's `/pools` response.
 #[derive(Debug, Deserialize)]
@@ -106,6 +135,47 @@ struct Allowlists {
     pools: Vec<String>,
 }
 
+/// Count of upstream fetch+read operations currently in flight for this isolate.
+static IN_FLIGHT_UPSTREAM_FETCHES: AtomicUsize = AtomicUsize::new(0);
+
+/// RAII guard reserving one upstream-fetch slot for the lifetime of `handle_pools`.
+///
+/// Releases its slot on drop, covering every return path (success, upstream
+/// error, parse error, timeout) without manual bookkeeping at each site.
+///
+/// Ordering is `Relaxed` throughout: this counter only needs to stay
+/// internally correct, it does not need to establish a happens-before
+/// relationship with any other memory, since nothing else is read or written
+/// under its cap.
+struct UpstreamFetchSlot;
+
+impl UpstreamFetchSlot {
+    fn try_acquire() -> Option<Self> {
+        let mut current = IN_FLIGHT_UPSTREAM_FETCHES.load(AtomicOrdering::Relaxed);
+        loop {
+            if current >= MAX_CONCURRENT_UPSTREAM_FETCHES {
+                return None;
+            }
+            match IN_FLIGHT_UPSTREAM_FETCHES.compare_exchange_weak(
+                current,
+                current + 1,
+                AtomicOrdering::Relaxed,
+                AtomicOrdering::Relaxed,
+            ) {
+                Ok(_) => return Some(Self),
+                Err(observed) => current = observed,
+            }
+        }
+    }
+}
+
+impl Drop for UpstreamFetchSlot {
+    fn drop(&mut self) {
+        let previous = IN_FLIGHT_UPSTREAM_FETCHES.fetch_sub(1, AtomicOrdering::Relaxed);
+        debug_assert!(previous > 0);
+    }
+}
+
 /// Cloudflare Worker entrypoint.
 ///
 /// The relay exposes a single data endpoint and rejects every other route.
@@ -122,11 +192,22 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
 /// The request must include the configured bearer token. On success, the worker
 /// fetches DefiLlama's full pool response, filters it to approved pools, and
 /// returns a compact JSON payload that fits within CRE's HTTP response quota.
+///
+/// Concurrent upstream fetches are capped at `MAX_CONCURRENT_UPSTREAM_FETCHES`
+/// per isolate, so many simultaneous authenticated requests cannot multiply
+/// buffered memory unboundedly.
 async fn handle_pools(req: Request, env: Env) -> Result<Response> {
     let token = env.secret("RELAY_BEARER_TOKEN")?.to_string();
+    if !is_valid_configured_token(&token) {
+        return response_with_status("server misconfigured", 500);
+    }
     if !is_authorized(&req, &token) {
         return response_with_status("unauthorized", 401);
     }
+
+    let Some(_upstream_slot) = UpstreamFetchSlot::try_acquire() else {
+        return response_with_status("too many concurrent requests", 429);
+    };
 
     let upstream_url = upstream_url(optional_var(&env, "DEFILLAMA_UPSTREAM_URL")?.as_deref());
     let allowlists = allowlists_from_env(&env)?;
@@ -790,6 +871,14 @@ mod tests {
     }
 
     #[test]
+    fn is_valid_configured_token_rejects_empty_and_whitespace_only_values() {
+        assert!(!is_valid_configured_token(""));
+        assert!(!is_valid_configured_token("   "));
+        assert!(!is_valid_configured_token("\n\t"));
+        assert!(is_valid_configured_token("real-secret"));
+    }
+
+    #[test]
     fn authorize_header_rejects_oversized_headers_before_comparison() {
         let oversized = format!("Bearer {}", "a".repeat(MAX_AUTH_HEADER_BYTES));
 
@@ -1021,6 +1110,24 @@ mod tests {
         assert_eq!(parse_content_length("not-a-number"), None);
         assert_eq!(parse_content_length("9999999999999999999999999999"), None);
         assert_eq!(parse_content_length(" 42 "), Some(42));
+    }
+
+    #[test]
+    fn upstream_fetch_slot_bounds_concurrent_acquisitions() {
+        let mut held: Vec<_> = (0..MAX_CONCURRENT_UPSTREAM_FETCHES)
+            .map(|_| UpstreamFetchSlot::try_acquire().expect("slot available under cap"))
+            .collect();
+
+        assert!(
+            UpstreamFetchSlot::try_acquire().is_none(),
+            "acquisition past the cap must fail"
+        );
+
+        held.pop(); // drop exactly one held slot
+        assert!(
+            UpstreamFetchSlot::try_acquire().is_some(),
+            "dropping a slot must free exactly one acquisition"
+        );
     }
 
     #[test]
