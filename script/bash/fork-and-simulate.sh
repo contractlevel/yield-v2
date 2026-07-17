@@ -254,6 +254,40 @@ read_address() {
   echo "$address"
 }
 
+# ParentVault and ChildVault are deployed as an implementation contract
+# immediately followed by its ERC1967Proxy (DeployParent.s.sol / DeployChild.s.sol
+# always emit `new X()` then `new ERC1967Proxy(address(x), ...)` back to back).
+# The broadcast artifact records the proxy's CREATE under contractName
+# "ERC1967Proxy", not the vault's name, so read_address() would otherwise return
+# the unproxied implementation address instead of the live, stateful contract.
+read_proxy_address() {
+  local deploy_file="$1"
+  local contract_name="$2"
+  local address
+
+  if [[ ! -f "$deploy_file" ]]; then
+    echo "ERROR: missing deploy artifact: $deploy_file" >&2
+    exit 1
+  fi
+
+  address="$(jq -er --arg name "$contract_name" '
+    (.transactions | to_entries) as $entries
+    | ($entries | map(select(.value.contractName == $name)) | last) as $impl
+    | if $impl == null then empty
+      else $entries[$impl.key + 1].value
+        | select(.contractName == "ERC1967Proxy" and .contractAddress != null)
+        | .contractAddress
+      end
+  ' "$deploy_file" || true)"
+
+  if [[ -z "$address" || "$address" == "null" || "$address" == "0x0000000000000000000000000000000000000000" ]]; then
+    echo "ERROR: could not read $contract_name proxy address from $deploy_file" >&2
+    exit 1
+  fi
+
+  echo "$address"
+}
+
 restore_exact_chain_selectors() {
   local config_file="$1"
   local tmp_file="${config_file}.selectors.tmp"
@@ -405,15 +439,15 @@ ETHEREUM_DEPLOY_FILE="$EVM_DIR/broadcast/DeployChild.s.sol/1/run-latest.json"
 BASE_DEPLOY_FILE="$EVM_DIR/broadcast/DeployChild.s.sol/8453/run-latest.json"
 OPTIMISM_DEPLOY_FILE="$EVM_DIR/broadcast/DeployChild.s.sol/10/run-latest.json"
 
-PARENT_VAULT_ADDRESS="$(read_address "$ARBITRUM_DEPLOY_FILE" "ParentVault")"
+PARENT_VAULT_ADDRESS="$(read_proxy_address "$ARBITRUM_DEPLOY_FILE" "ParentVault")"
 PARENT_ROUTER_ADDRESS="$(read_address "$ARBITRUM_DEPLOY_FILE" "WorkflowRouter")"
-CHILD_VAULT_AVALANCHE_ADDRESS="$(read_address "$AVALANCHE_DEPLOY_FILE" "ChildVault")"
+CHILD_VAULT_AVALANCHE_ADDRESS="$(read_proxy_address "$AVALANCHE_DEPLOY_FILE" "ChildVault")"
 CHILD_ROUTER_AVALANCHE_ADDRESS="$(read_address "$AVALANCHE_DEPLOY_FILE" "WorkflowRouter")"
-CHILD_VAULT_ETHEREUM_ADDRESS="$(read_address "$ETHEREUM_DEPLOY_FILE" "ChildVault")"
+CHILD_VAULT_ETHEREUM_ADDRESS="$(read_proxy_address "$ETHEREUM_DEPLOY_FILE" "ChildVault")"
 CHILD_ROUTER_ETHEREUM_ADDRESS="$(read_address "$ETHEREUM_DEPLOY_FILE" "WorkflowRouter")"
-CHILD_VAULT_BASE_ADDRESS="$(read_address "$BASE_DEPLOY_FILE" "ChildVault")"
+CHILD_VAULT_BASE_ADDRESS="$(read_proxy_address "$BASE_DEPLOY_FILE" "ChildVault")"
 CHILD_ROUTER_BASE_ADDRESS="$(read_address "$BASE_DEPLOY_FILE" "WorkflowRouter")"
-CHILD_VAULT_OPTIMISM_ADDRESS="$(read_address "$OPTIMISM_DEPLOY_FILE" "ChildVault")"
+CHILD_VAULT_OPTIMISM_ADDRESS="$(read_proxy_address "$OPTIMISM_DEPLOY_FILE" "ChildVault")"
 CHILD_ROUTER_OPTIMISM_ADDRESS="$(read_address "$OPTIMISM_DEPLOY_FILE" "WorkflowRouter")"
 
 write_local_cre_config \
