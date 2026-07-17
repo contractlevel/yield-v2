@@ -444,3 +444,14 @@ func (zeroReader) Read(p []byte) (int, error) {
 	}
 	return len(p), nil
 }
+
+type errReader struct{ err error }
+
+func (r errReader) Read([]byte) (int, error) {
+	return 0, r.err
+}
+
+func Test_ReadLimited_readError(t *testing.T) {
+	_, err := readLimited(errReader{err: errors.New("disk failed")}, defiLlamaMaxResponseBytes, "relay response body")
+	require.ErrorContains(t, err, "read relay response body: disk failed")
+}

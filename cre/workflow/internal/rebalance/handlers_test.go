@@ -41,7 +41,6 @@ type fakeParentCodec struct {
 	decodeDepositErr   error
 	completeErr        error
 	completeCalldata   []byte
-	completeInput      parent_vault.CompleteRebalanceInput
 }
 
 func (f *fakeParentCodec) EncodeInitiateRebalanceMethodCall(in parent_vault.InitiateRebalanceInput) ([]byte, error) {
@@ -66,8 +65,7 @@ func (f *fakeParentCodec) DecodeRebalanceDepositSuccess(*evm.Log) (*parent_vault
 	return f.depositSuccess, nil
 }
 
-func (f *fakeParentCodec) EncodeCompleteRebalanceMethodCall(in parent_vault.CompleteRebalanceInput) ([]byte, error) {
-	f.completeInput = in
+func (f *fakeParentCodec) EncodeCompleteRebalanceMethodCall() ([]byte, error) {
 	if f.completeErr != nil {
 		return nil, f.completeErr
 	}

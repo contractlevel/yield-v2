@@ -169,7 +169,7 @@ func onEpochCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, _ *c
 	}
 
 	calldata, err := pvCodec.EncodeCloseEpochMethodCall(
-		parent_vault.CloseEpochInput{EpochNonce: epochNonce, Tvl: tvl},
+		parent_vault.CloseEpochInput{Tvl: tvl},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("encode closeEpoch: %w", err)

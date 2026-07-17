@@ -22,7 +22,7 @@ type parentCodec interface {
 	EncodeInitiateRebalanceMethodCall(parent_vault.InitiateRebalanceInput) ([]byte, error)
 	DecodeRebalanceInitiated(*evm.Log) (*parent_vault.RebalanceInitiatedDecoded, error)
 	DecodeRebalanceDepositSuccess(*evm.Log) (*parent_vault.RebalanceDepositSuccessDecoded, error)
-	EncodeCompleteRebalanceMethodCall(parent_vault.CompleteRebalanceInput) ([]byte, error)
+	EncodeCompleteRebalanceMethodCall() ([]byte, error)
 }
 
 type childCodec interface {
@@ -320,9 +320,7 @@ func onRebalanceDepositSuccessWithDeps(config *helper.Config, runtime cre.Runtim
 	}
 
 	// Encode and submit completeRebalance to ParentVault.
-	calldata, err := pvCodec.EncodeCompleteRebalanceMethodCall(
-		parent_vault.CompleteRebalanceInput{RebalanceNonce: evt.RebalanceNonce},
-	)
+	calldata, err := pvCodec.EncodeCompleteRebalanceMethodCall()
 	if err != nil {
 		return nil, fmt.Errorf("encode completeRebalance: %w", err)
 	}
