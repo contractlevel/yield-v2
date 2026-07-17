@@ -584,3 +584,42 @@ The current design keeps the data feed read-only and constrains the executable a
 - Product requirements change to require independently verified yield data.
 - A practical multi-source or cryptographically verifiable yield-data source becomes available.
 - Operators remove monitoring or manual review around rebalance decisions.
+
+---
+
+## KI-012 — DON node operators can observe the DefiLlama relay bearer token in plaintext
+
+**Status:** Accepted — standard non-Confidential CRE HTTP cannot hide request auth material from the DON nodes executing the HTTP callback; impact is accepted because the token only gates read-only relay access to public-derived data.
+
+**Last reviewed:** 2026-07-17
+
+**Component:** `cre/workflow/internal/offchain/defillama.go` (`FetchAndSelectPools`, `fetchAndParse`), CRE `networking/http` capability.
+
+### Summary
+
+`FetchAndSelectPools` resolves `DEFILLAMA_RELAY_BEARER_TOKEN` via `runtime.GetSecret()`, places it in `fetchParams.BearerToken`, and passes that into `crehttp.SendRequest` (`defillama.go:96,104,111`). `crehttp.SendRequest` wraps `cre.RunInNodeMode`, so the callback that builds the `Authorization: Bearer <token>` header (`defillama.go:144`) executes in node mode — independently, on every DON node.
+
+The exposure mechanism, traced against `cre-sdk-go v1.11.0`:
+
+- `fetchParams` itself is **not** serialized to reach the node-mode callback — `cre.RunInNodeMode`'s generic wrapper invokes it as a direct, synchronous, in-process Go closure call (`internal/sdkimpl/runtime.go:178`, `observation := fn(nrt)`).
+- The actual host-boundary crossing happens one layer deeper: once the callback builds the `*crehttp.Request` (headers included), `Client.SendRequest` protobuf-marshals it (`anypb.MarshalFrom`) and passes it to `runtime.CallCapability(...)` (`capabilities/networking/http@v1.3.0/client_sdk_gen.go:44-51`). That is where the token leaves the WASM sandbox and reaches the node's local host-side `http-actions` capability implementation, in cleartext, so the outbound HTTP call can actually be made.
+- This happens once per DON node, independently — each node resolves its own copy of the secret via its own `GetSecret()` call and crosses its own host boundary with it. There is no peer-to-peer transmission of the secret between nodes.
+
+Separately, per the CRE architecture ("Each node in the DON executes the workflow independently"; "DON Mode (Default): Code runs on all nodes simultaneously"), the earlier `runtime.GetSecret()` call — made in DON mode, before `SendRequest` — already executes identically on every node. So no DON node is being handed a secret it wouldn't otherwise have resolved itself.
+
+### Why this is accepted, not mitigated
+
+- `cre-sdk-go`'s own test suite (`standard_tests/secrets_fail_in_node_mode`) confirms `runtime.GetSecret()` is hard-disallowed *inside* a node-mode callback (`NodeRuntime` does not implement `SecretsProvider`; calling it sets `modeErr = DonModeCallInNodeMode()`). Resolving the secret in DON mode and passing it into node-mode params is the straightforward SDK-supported pattern for attaching a secret-derived auth header to a node-executed HTTP request — but it is not the *only* possible design. Alternatives not adopted include an unauthenticated relay, a static non-secret shared value, or Chainlink's **Confidential HTTP** capability (Vault DON secrets resolved via `{{.SECRET_NAME}}` templating inside an enclave, which never places the plaintext value in node WASM/host memory). The bearer-token design was a deliberate choice, not a forced default — this entry accepts that choice's consequence rather than treating it as unavoidable.
+- The token's blast radius is narrow: it only gates read access to `services/defillama-relay`, a read-only proxy in front of DefiLlama's public pools API (see [KI-011](#ki-011--compromised-defillama-api-or-relay-can-skew-rebalance-inputs)). The relay holds no funds, signs no transactions, and writes no on-chain state. Worst case, a node operator who extracts the token calls the relay directly instead of through the workflow.
+- DON node operators already hold substantially greater trust in this system: they execute the APY comparison logic and produce the consensus report that drives `ParentVault.initiateRebalance()`. A node operator misusing this token is a strictly smaller concern than that operator's existing role in the rebalance decision path.
+- Adopting Confidential HTTP purely to hide this token would add Vault DON provisioning and enclave-based request construction — complexity disproportionate to a token whose worst-case misuse is querying a public-data proxy.
+
+### Residual risk
+
+A DON node operator (or anyone able to read that node's process memory during workflow execution) can extract the bearer token and call `services/defillama-relay` directly, outside the workflow. Given the relay is read-only and non-privileged, this does not create fund risk, write access, or a path to influence on-chain state beyond what a compromised node operator can already do through the workflow itself.
+
+### Conditions that would warrant revisiting
+
+- The relay or the token gains write authority, rate-limit-bypass value, or access to non-public data.
+- CRE's Confidential HTTP path becomes cheap enough (in provisioning/operational terms) to justify closing this residual for a low-sensitivity token.
+- The trust model changes such that DON node operators are less trusted than the current design assumes (e.g., a permissionless/open node set).
