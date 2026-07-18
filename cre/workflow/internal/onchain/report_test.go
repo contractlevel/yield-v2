@@ -30,6 +30,15 @@ type mockRuntime struct {
 	logger            *slog.Logger
 }
 
+type nilResponseReportWriter struct{}
+
+func (nilResponseReportWriter) WriteReport(
+	cre.Runtime,
+	*evm.WriteCreReportRequest,
+) cre.Promise[*evm.WriteReportReply] {
+	return cre.PromiseFromResult[*evm.WriteReportReply](nil, nil)
+}
+
 func newMockRuntime(t *testing.T) *mockRuntime {
 	t.Helper()
 
@@ -157,6 +166,14 @@ func Test_SubmitReport_writeReportError(t *testing.T) {
 	err := SubmitReport(runtime, &evm.Client{}, common.Address{}, nil, 1)
 	require.Error(t, err, "expected write report error")
 	require.ErrorContains(t, err, "write report: write failed")
+}
+
+func Test_SubmitReport_nilWriteReportResponse(t *testing.T) {
+	runtime := newMockRuntime(t)
+
+	err := submitReport(runtime, nilResponseReportWriter{}, common.Address{}, nil, 1)
+	require.Error(t, err, "expected error when write report response is nil")
+	require.ErrorContains(t, err, "write report: nil response")
 }
 
 func Test_SubmitReport_txNotSuccessWithErrorMessage(t *testing.T) {

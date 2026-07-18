@@ -9,6 +9,10 @@ import (
 	"github.com/smartcontractkit/cre-sdk-go/cre"
 )
 
+type reportWriter interface {
+	WriteReport(cre.Runtime, *evm.WriteCreReportRequest) cre.Promise[*evm.WriteReportReply]
+}
+
 func SubmitReport(
 	runtime cre.Runtime,
 	evmClient *evm.Client,
@@ -16,6 +20,20 @@ func SubmitReport(
 	calldata []byte,
 	gasLimit uint64,
 ) error {
+	return submitReport(runtime, evmClient, workflowRouter, calldata, gasLimit)
+}
+
+func submitReport(
+	runtime cre.Runtime,
+	evmClient reportWriter,
+	workflowRouter common.Address,
+	calldata []byte,
+	gasLimit uint64,
+) error {
+	// Await() blocks on a host call, not a real goroutine; the DON host enforces
+	// capability/workflow timeouts. Do not wrap these in a goroutine+context.Context
+	// timeout - CRE workflows are single-threaded and goroutines break DON consensus
+	// determinism.
 	report, err := runtime.GenerateReport(&cre.ReportRequest{
 		EncodedPayload: calldata,
 		EncoderName:    "evm",
@@ -36,6 +54,9 @@ func SubmitReport(
 	}).Await()
 	if err != nil {
 		return fmt.Errorf("write report: %w", err)
+	}
+	if resp == nil {
+		return fmt.Errorf("write report: nil response")
 	}
 
 	if resp.TxStatus != evm.TxStatus_TX_STATUS_SUCCESS {
