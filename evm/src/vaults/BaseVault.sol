@@ -335,6 +335,7 @@ abstract contract BaseVault is
     /// @dev Inherited and implemented by ParentVault and ChildVault
     /// @dev Precondition: a recovery mode must be active (not NONE)
     /// @notice Deliberately permissionless to allow anyone to advance recovery state when conditions allow
+    /// @dev Intentionally omits whenNotPaused. See DD-004 in docs/protocol/DECISIONS.md.
     function executeRecovery() external virtual;
 
     /// @notice Reverts if any recovery state is pending

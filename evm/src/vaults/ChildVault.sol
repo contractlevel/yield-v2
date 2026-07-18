@@ -301,6 +301,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @notice Executes the active recovery mode, reverting if no recovery is pending
     /// @dev Precondition: a recovery mode must be active (not NONE)
     /// @dev Precondition: function must not be reentered
+    /// @dev Intentionally omits whenNotPaused. See DD-004 in docs/protocol/DECISIONS.md.
     function executeRecovery() external override(BaseVault, IBaseVault) nonReentrant {
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
         Types.RecoveryMode mode = $_baseVault.s_recoveryMode;

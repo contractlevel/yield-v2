@@ -477,6 +477,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @dev Precondition: a recovery mode must be active (not NONE)
     /// @dev Precondition: function must not be reentered
     /// @dev Finalizes the rebalance in the same atomic tx
+    /// @dev Intentionally omits whenNotPaused. See DD-004 in docs/protocol/DECISIONS.md.
     function executeRecovery() external override(BaseVault, IBaseVault) nonReentrant {
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
         if ($_baseVault.s_recoveryMode != Types.RecoveryMode.REBALANCE_DEPOSIT) revert BaseVault__NoPendingRecovery();
