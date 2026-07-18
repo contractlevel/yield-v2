@@ -83,6 +83,10 @@ import {YieldcoinShareFrozenAccountPolicy} from "../../src/modules/policies/Yiel
 /// @notice WorkflowRouter is deployed directly with networkConfig.roles.defaultAdmin and an initial 3-day default admin delay.
 contract DeployParent is Script {
     bytes4 private constant RBAC_GRANT_ROLE_SELECTOR = bytes4(keccak256("grantRole(bytes32,address)"));
+    /// @dev YieldcoinShare.initialize is overloaded with ComplianceTokenERC3643's own initializer,
+    ///      so `YieldcoinShare.initialize.selector` is ambiguous and must be computed explicitly.
+    bytes4 private constant YIELDCOIN_SHARE_INITIALIZE_SELECTOR =
+        bytes4(keccak256("initialize(address,address,address)"));
     bytes4 private constant AUTHORIZE_SENDER_SELECTOR = OnlyAuthorizedSenderPolicy.authorizeSender.selector;
     bytes4 private constant UNAUTHORIZE_SENDER_SELECTOR = OnlyAuthorizedSenderPolicy.unauthorizeSender.selector;
     bytes32 private constant KYC_CREDENTIAL = keccak256("common.kyc");
@@ -166,7 +170,7 @@ contract DeployParent is Script {
         ERC1967Proxy yieldcoinProxy = new ERC1967Proxy(
             address(yieldcoinImpl),
             abi.encodeWithSelector(
-                YieldcoinShare.initialize.selector,
+                YIELDCOIN_SHARE_INITIALIZE_SELECTOR,
                 address(deploy.policyEngine),
                 networkConfig.roles.configOperator,
                 networkConfig.roles.upgrader

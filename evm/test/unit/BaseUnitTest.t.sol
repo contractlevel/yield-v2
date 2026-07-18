@@ -25,6 +25,11 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 abstract contract BaseUnitTest is BaseTest {
     using stdStorage for StdStorage;
 
+    /// @dev YieldcoinShare.initialize is overloaded with ComplianceTokenERC3643's own initializer,
+    ///      so `YieldcoinShare.initialize.selector` is ambiguous and must be computed explicitly.
+    bytes4 internal constant YIELDCOIN_SHARE_INITIALIZE_SELECTOR =
+        bytes4(keccak256("initialize(address,address,address)"));
+
     MockLink internal s_mockLink;
     MockPolicyEngine internal s_mockPolicyEngine;
     MockProtocolAdapter internal s_mockProtocolAdapter;
@@ -48,7 +53,7 @@ abstract contract BaseUnitTest is BaseTest {
         ERC1967Proxy yieldcoinProxy = new ERC1967Proxy(
             address(yieldcoinImpl),
             abi.encodeWithSelector(
-                YieldcoinShare.initialize.selector, address(s_mockPolicyEngine), i_configOperator, i_upgrader
+                YIELDCOIN_SHARE_INITIALIZE_SELECTOR, address(s_mockPolicyEngine), i_configOperator, i_upgrader
             )
         );
         s_yieldcoin = YieldcoinShare(address(yieldcoinProxy));

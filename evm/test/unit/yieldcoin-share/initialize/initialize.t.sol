@@ -34,7 +34,7 @@ contract YieldcoinShare_InitializeUnitTest is BaseUnitTest {
         ERC1967Proxy yieldcoinProxy = new ERC1967Proxy(
             address(yieldcoinImpl),
             abi.encodeWithSelector(
-                YieldcoinShare.initialize.selector, address(s_mockPolicyEngine), i_configOperator, i_upgrader
+                YIELDCOIN_SHARE_INITIALIZE_SELECTOR, address(s_mockPolicyEngine), i_configOperator, i_upgrader
             )
         );
 
@@ -51,7 +51,7 @@ contract YieldcoinShare_InitializeUnitTest is BaseUnitTest {
         new ERC1967Proxy(
             address(yieldcoinImpl),
             abi.encodeWithSelector(
-                YieldcoinShare.initialize.selector, address(s_mockPolicyEngine), i_configOperator, address(0)
+                YIELDCOIN_SHARE_INITIALIZE_SELECTOR, address(s_mockPolicyEngine), i_configOperator, address(0)
             )
         );
     }
@@ -63,7 +63,7 @@ contract YieldcoinShare_InitializeUnitTest is BaseUnitTest {
         new ERC1967Proxy(
             address(yieldcoinImpl),
             abi.encodeWithSelector(
-                YieldcoinShare.initialize.selector, address(s_mockPolicyEngine), address(0), i_upgrader
+                YIELDCOIN_SHARE_INITIALIZE_SELECTOR, address(s_mockPolicyEngine), address(0), i_upgrader
             )
         );
     }
@@ -78,5 +78,10 @@ contract YieldcoinShare_InitializeUnitTest is BaseUnitTest {
 
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         yieldcoinImpl.initialize(address(s_mockPolicyEngine), i_configOperator, i_upgrader);
+    }
+
+    function test_YieldcoinShare_initialize_RevertWhen_CalledViaInheritedComplianceTokenInitializer() external {
+        vm.expectRevert(YieldcoinShare.YieldcoinShare__InvalidInitialize.selector);
+        s_yieldcoin.initialize("Yieldcoin", "YIELD", 18, address(s_mockPolicyEngine));
     }
 }

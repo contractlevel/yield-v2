@@ -118,7 +118,7 @@ contract ChildVault_ExecuteEpochWithdrawUnitTest is BaseUnitTest {
     function test_ChildVault_executeEpochWithdraw_RevertWhen_AdapterReturnsZero() public {
         s_mockProtocolAdapter.setWithdrawReturnAmount(0);
 
-        vm.expectRevert(IBaseVault.BaseVault__ZeroRecoveryAmount.selector);
+        vm.expectRevert(IBaseVault.BaseVault__NoZeroAmount.selector);
         s_childVault.executeEpochWithdraw(EPOCH_NONCE, WITHDRAW_AMOUNT);
     }
 

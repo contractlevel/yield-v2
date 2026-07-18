@@ -21,6 +21,9 @@ contract YieldcoinShare is ComplianceTokenERC3643, YieldcoinShareStore, Reentran
     error YieldcoinShare__NoZeroAddress();
     /// @dev Thrown to permanently prevent renouncing ownership, which would irrecoverably disable UUPS upgrades
     error YieldcoinShare__CannotRenounceOwnership();
+    /// @dev Thrown when the inherited ComplianceTokenERC3643 initializer is called; YieldcoinShare
+    ///      must only be initialized through its own initialize(address,address,address)
+    error YieldcoinShare__InvalidInitialize();
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
@@ -107,5 +110,12 @@ contract YieldcoinShare is ComplianceTokenERC3643, YieldcoinShareStore, Reentran
     ///      permanently removes upgrade capability with no recovery path. Rotate keys with extreme care.
     function renounceOwnership() public pure override {
         revert YieldcoinShare__CannotRenounceOwnership();
+    }
+
+    /// @dev Disabled: ComplianceTokenERC3643 declares this initializer as public virtual, so it
+    ///      remains an independently-callable selector unless overridden. YieldcoinShare must only
+    ///      be initialized through initialize(address,address,address) above.
+    function initialize(string calldata, string calldata, uint8, address) public pure override {
+        revert YieldcoinShare__InvalidInitialize();
     }
 }

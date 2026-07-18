@@ -11,5 +11,7 @@ YieldcoinShare_initialize
   │   └── it should revert with YieldcoinShare__NoZeroAddress
   ├── when already initialized
   │   └── it should revert with InvalidInitialization
-  └── when called on the implementation directly
-      └── it should revert with InvalidInitialization
+  ├── when called on the implementation directly
+  │   └── it should revert with InvalidInitialization
+  └── when called via the inherited ComplianceTokenERC3643 initializer selector
+      └── it should revert with YieldcoinShare__InvalidInitialize

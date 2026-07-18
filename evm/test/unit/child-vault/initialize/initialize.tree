@@ -1,0 +1,3 @@
+ChildVault_initialize
+  └── when initialization succeeds
+      └── it should set child vault state
