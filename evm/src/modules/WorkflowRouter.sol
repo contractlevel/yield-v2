@@ -51,6 +51,7 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
         address vault;
     }
 
+    /// @notice Initializes the WorkflowRouter and grants initial roles.
     /// @param params Constructor parameters
     /// @dev Precondition: pauser, unpauser, configOperator, keystoneForwarder, and vault must not be the zero address
     ///      (defaultAdmin validity is enforced by AccessControlDefaultAdminRules)
@@ -146,7 +147,7 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
     /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
     /// @dev Precondition: workflowId must not be zero
     /// @dev Precondition: name and owner must both be nonzero when setting metadata, or both zero when removing metadata
-    /// @notice Set `name` and `owner` to zero to remove metadata for `workflowId`
+    /// @dev Set `name` and `owner` to zero to remove metadata for `workflowId`.
     //slither-disable-next-line missing-zero-address-check
     function setWorkflowMetadata(bytes32 workflowId, bytes10 name, address owner)
         external
@@ -169,7 +170,7 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
     /// @param isAllowlisted Whether the selectors are allowlisted
     /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
     /// @dev Precondition: workflowId must not be zero
-    /// @notice Set `isAllowlisted` to false to remove selectors from the workflow allowlist
+    /// @dev Set `isAllowlisted` to false to remove selectors from the workflow allowlist.
     function setWorkflowSelectors(bytes32 workflowId, bytes4[] calldata selectors, bool isAllowlisted)
         external
         onlyRole(Roles.CONFIG_OPERATOR_ROLE)
@@ -231,16 +232,11 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
     /*//////////////////////////////////////////////////////////////
                                 OVERRIDE
     //////////////////////////////////////////////////////////////*/
-    /// @inheritdoc IERC165
-    /**
-     * @dev Returns true if this contract implements the interface defined by
-     * `interfaceId`. See the corresponding
-     * https://eips.ethereum.org/EIPS/eip-165#how-interfaces-are-identified[ERC section]
-     * to learn more about how these ids are created.
-     *
-     * This function call must use less than 30 000 gas.
-     */
-    /// @dev Overrides AccessControlDefaultAdminRules and IERC165
+    /// @notice Returns whether this contract implements the given interface ID
+    /// @param interfaceId The interface identifier, as specified in ERC-165
+    /// @return True if this contract implements `interfaceId`, false otherwise
+    /// @dev Overrides AccessControlDefaultAdminRules and IERC165. Additionally supports IReceiver by checking
+    ///      `type(IReceiver).interfaceId` before falling back to `super.supportsInterface`.
     function supportsInterface(bytes4 interfaceId)
         public
         view

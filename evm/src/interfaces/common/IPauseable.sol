@@ -3,6 +3,7 @@ pragma solidity 0.8.34;
 
 /// @title Yieldcoin v2 Pauseable Interface
 /// @author @contractlevel
+/// @notice Interface for role-gated emergency pause/unpause of a Yieldcoin v2 contract
 interface IPauseable {
     /// @notice Pauses the contract
     /// @dev Precondition: Caller must have the PAUSER_ROLE

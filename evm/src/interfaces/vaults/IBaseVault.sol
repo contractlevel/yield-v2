@@ -30,6 +30,7 @@ interface IBaseVault is IPauseable {
     error BaseVault__InvalidTokenAmountsLength(uint256 receivedLength, uint256 expectedLength);
 
     /// @dev Thrown when CCIP receive in Parent and Child Vault receives an invalid tx type
+    /// @param ccipTxType The unrecognized CCIP transaction type decoded from the message
     error BaseVault__InvalidTxType(Types.CcipTx ccipTxType);
 
     /// @dev Thrown when the active protocol adapter is the zero address
@@ -160,7 +161,7 @@ interface IBaseVault is IPauseable {
                                RECOVERY
     //////////////////////////////////////////////////////////////*/
     /// @notice Withdraws all underlying asset from the vault to the emergency receiver
-    /// @notice If the vault has the TVL, it will be withdrawn from the strategy and transferred to the emergency receiver
+    /// @dev If the vault has the TVL, it will be withdrawn from the strategy and transferred to the emergency receiver
     /// @param revertOnFailure Whether to revert if the withdraw from strategy fails
     /// @dev Precondition: Caller must have the EMERGENCY_DRAINER_ROLE
     /// @dev Precondition: Vault must have been paused for at least EMERGENCY_DRAIN_DELAY
@@ -190,7 +191,7 @@ interface IBaseVault is IPauseable {
     /// @dev Emits the CcipGasLimitSet event
     function setCcipGasLimit(uint64 chainSelector, uint256 gasLimit) external;
     /// @notice Sets the default CCIP gas limit
-    /// @notice If a chain doesn't have a specific CCIP gas limit set, the default CCIP gas limit will be used.
+    /// @dev If a chain doesn't have a specific CCIP gas limit set, the default CCIP gas limit will be used.
     /// @param gasLimit The CCIP gas limit
     /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
     /// @dev Sets the default CCIP gas limit

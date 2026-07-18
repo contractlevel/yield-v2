@@ -8,29 +8,42 @@ import {Types} from "../libraries/Types.sol";
 /// @notice ERC-7201 storage for ParentVault mutable state.
 abstract contract ParentVaultStore {
     /// @custom:storage-location erc7201:yieldcoin.storage.ParentVault
+    /// @notice Namespaced storage for ParentVault mutable state: the active/pending rebalance, share
+    /// accounting, epoch deposit/withdraw bookkeeping, the cross-chain protocol allow-list, and
+    /// one-time initialization flags.
+    /// @param s_rebalance Current rebalance nonce, state (NONE/REBALANCING), active and pending
+    /// strategy, and the timestamp the last rebalance completed.
+    /// @param s_totalShares Authoritative running total of Yieldcoin shares - NOT i_share.totalSupply().
+    /// Includes already-circulating (minted, unburned) shares plus fee shares, and is updated for an
+    /// epoch's pending deposit/withdraw deltas at closeEpoch time, before the corresponding mint/burn
+    /// actually happens at claim time. Between closeEpoch and the last claimAsset call for an epoch,
+    /// s_totalShares can already be decremented for pending burns while the corresponding share tokens
+    /// have not yet been burned, so totalSupply() would read higher than the true count during that window.
+    /// @param s_performanceFeeHighWaterMark Highest price-per-share ever recorded; performance fees
+    /// are only charged on price-per-share growth above this mark.
+    /// @param s_epochNonce Nonce of the currently open epoch. Starts at 1 in initialize(), so a
+    /// previous epoch nonce of 0 means no prior epoch exists.
+    /// @param s_epochs Per-epoch-nonce accounting: total deposit/withdraw amounts, price per share,
+    /// remaining claimable amounts, open timestamp, and status.
+    /// @param s_deposits Per-depositor, per-epoch asset amount deposited and pending share allocation.
+    /// @param s_withdraws Per-withdrawer, per-epoch share amount queued for burn and pending asset claim.
+    /// @param s_supportedProtocol Protocol IDs Yieldcoin v2 supports across all chains. This CAN include
+    /// protocols not deployed on this specific chain - e.g. if Parent is on Arbitrum and AaveV4 only
+    /// exists on Ethereum but is still a supported protocol, initiateRebalance must not gate this check
+    /// on the local chain's AdapterRegistry.
+    /// @param s_treasury Address that receives protocol fees; should be the protocol operator's multisig.
+    /// @param s_initialActiveProtocolAdapterSet Whether the first active protocol adapter has been set.
+    /// Guards the one-time initial adapter setup from being repeated.
     struct ParentVaultStorage {
-        /// @dev Current rebalance state.
         Types.Rebalance s_rebalance;
-        /// @dev Total number of Yieldcoin shares minted and available to claim
-        /// @notice One subtlety: between closeEpoch and the last claimAsset call for an epoch, s_totalShares could be decremented but the actual Yieldcoin share tokens haven't been burned yet.
-        /// The i_share.totalSupply() will be higher than s_totalShares during this window. Therefore we never use i_share.totalSupply() as an authoritative share count — always use s_totalShares.
         uint256 s_totalShares;
-        /// @dev Highest price per share ever recorded for performance fee purposes
         uint256 s_performanceFeeHighWaterMark;
-        /// @dev Current epoch nonce
         uint256 s_epochNonce;
-        /// @dev Epochs
         mapping(uint256 epochNonce => Types.Epoch) s_epochs;
-        /// @dev Mapping of depositors to their deposits for each epoch
         mapping(address depositor => mapping(uint256 epochId => uint256 assetAmount)) s_deposits;
-        /// @dev Mapping of withdrawers to their withdraw intents for each epoch
         mapping(address withdrawer => mapping(uint256 epochId => uint256 shareBurnAmount)) s_withdraws;
-        /// @dev Mapping of protocolIds supported by Yieldcoin v2 across chains
-        /// @notice This CAN include protocols that are NOT supported on this chain. Ie if Parent is on Arb, and AaveV4 is only on Ethereum, but we support it, we don't want a check in initiateRebalance to be based on the local AdapterRegistry
         mapping(bytes32 protocolId => bool isSupported) s_supportedProtocol;
-        /// @dev Treasury address for collecting fees. This should be the protocol operator's multisig.
         address s_treasury;
-        /// @dev Whether the initial active protocol adapter has been set
         bool s_initialActiveProtocolAdapterSet;
     }
 

@@ -4,7 +4,7 @@ This runbook covers normal public operator responsibilities for Yieldcoin v2. Us
 
 // @review mention launch requirements including chainlink-ace BSL license grant somewhere
 // @review add a roadmap for morpho adapter and utilization workflow calculator
-// @review seal 911/usmans msig series
+// @review seal 911/usmans msig series - https://x.com/0xusmanf/status/2078584503350776182
 
 ## Routine Monitoring
 

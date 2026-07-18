@@ -28,7 +28,7 @@ interface IAdapterRegistry {
     /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
     /// @dev Precondition: protocolId must not be zero
     /// @dev Explicitly no zero address check on adapter
-    /// @notice Set `adapter` to address(0) to remove the adapter for `protocolId`
+    /// @dev Set `adapter` to address(0) to remove the adapter for `protocolId`
     function setAdapter(bytes32 protocolId, address adapter) external;
     /// @notice Gets the adapter for a given protocol ID
     /// @param protocolId The ID of the protocol - keccak256("aave-v3") for Aave v3, keccak256("compound-v3") for Compound v3, etc.

@@ -8,25 +8,38 @@ import {Types} from "../libraries/Types.sol";
 /// @notice ERC-7201 storage for BaseVault mutable state.
 abstract contract BaseVaultStore {
     /// @custom:storage-location erc7201:yieldcoin.storage.BaseVault
+    /// @notice Namespaced storage shared by ParentVault and ChildVault for the state common to both:
+    /// CCIP gas/routing config, the locally active strategy adapter, emergency drain bookkeeping,
+    /// and the singleton recovery discriminator plus rebalance-deposit recovery data.
+    /// @param s_defaultCcipGasLimit Fallback CCIP gas limit used for a destination chain when no
+    /// per-chain override is set in s_ccipGasLimits.
+    /// @param s_ccipGasLimits Per-chain-selector CCIP gas limit override. A value of 0 means "unset",
+    /// in which case s_defaultCcipGasLimit is used instead.
+    /// @param s_crosschainVaults Maps a chain selector to the Yieldcoin vault address on that chain.
+    /// Doubles as the trusted CCIP sender allow-list: only messages from the registered vault address
+    /// on a given chain selector are accepted. The Parent chain must include itself (its own vault
+    /// address under its own chain selector) since this is checked in initiateRebalance.
+    /// @param s_activeProtocolAdapter Protocol adapter currently holding deposited funds on this chain.
+    /// address(0) means this chain is not the active strategy chain.
+    /// @param s_pausedAt Timestamp the vault was paused at; cleared (deleted) on unpause. Gates the
+    /// EMERGENCY_DRAIN_DELAY cooldown check in emergencyDrain() so funds can't be drained immediately
+    /// after pausing.
+    /// @param s_emergencyReceiver Address that receives the underlying asset when emergencyDrain() is executed.
+    /// @param s_recoveryMode Discriminator for which recovery struct (if any) currently holds pending
+    /// recovery data. The singleton invariant (at most one recovery pending at a time) is enforced by
+    /// `_requireNoRecovery`, which every recovery-creating call path checks before writing this field -
+    /// not by storage itself.
+    /// @param s_rebalanceDepositRecovery Recovery data for a rebalance deposit that failed after funds
+    /// left the source chain. Populated on Parent (same-chain rebalance) or Child (cross-chain rebalance).
     struct BaseVaultStorage {
-        /// @dev Default CCIP gas limit
         uint256 s_defaultCcipGasLimit;
-        /// @dev Mapping of chain selectors to CCIP gas limits
         mapping(uint64 chainSelector => uint256 gasLimit) s_ccipGasLimits;
-        /// @dev Mapping of chain selectors to crosschain vault addresses - also trusted CCIP senders allow list
-        /// @notice The Parent chain should include itself as a trusted CCIP sender and set its own vault address because it is checked in initiateRebalance
         mapping(uint64 chainSelector => address vault) s_crosschainVaults;
-        /// @dev Active strategy protocol adapter for this chain. If this is address(0), this chain is NOT the active strategy chain
         //slither-disable-next-line uninitialized-state
         address s_activeProtocolAdapter;
-        /// @dev Timestamp when the vault was paused. Deleted when the vault is unpaused.
-        /// @notice Used to gate the EMERGENCY_DRAIN_DELAY check in emergencyDrain().
         uint96 s_pausedAt;
-        /// @dev Address that receives the underlying asset during emergency drain.
         address s_emergencyReceiver;
-        /// @dev Active recovery discriminator. Enforces the singleton invariant at the store layer.
         Types.RecoveryMode s_recoveryMode;
-        /// @dev Recovery state for failed rebalance deposit operations. This can exist on Parent or Child.
         Types.RebalanceDepositRecovery s_rebalanceDepositRecovery;
     }
 

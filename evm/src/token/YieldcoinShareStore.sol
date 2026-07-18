@@ -6,6 +6,9 @@ pragma solidity 0.8.34;
 /// @notice YieldcoinShareStore is the storage for the YieldcoinShare contract.
 contract YieldcoinShareStore {
     /// @custom:storage-location erc7201:yieldcoin.storage.YieldcoinShare
+    /// @notice Namespaced storage for the YieldcoinShare token's Chainlink CCIP admin identity.
+    /// @param ccipAdmin Address registered with the CCIP TokenAdminRegistry as the admin for this
+    /// token. Set via setCCIPAdmin() (gated to CONFIG_OPERATOR_ROLE) and read by getCCIPAdmin().
     struct YieldcoinShareStorage {
         address ccipAdmin;
     }

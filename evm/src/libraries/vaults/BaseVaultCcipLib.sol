@@ -20,6 +20,10 @@ library BaseVaultCcipLib {
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
     /// @dev Solidity requires locally declared events for emits; these must match IBaseVault and emit from the vault via DELEGATECALL.
+    /// @notice Emitted when a CCIP transfer is sent to a destination chain
+    /// @param ccipMessageId The ID of the CCIP message
+    /// @param amount The amount of asset bridged
+    /// @param ccipTxType The type of CCIP transaction
     event CCIPBridged(bytes32 indexed ccipMessageId, uint256 indexed amount, Types.CcipTx indexed ccipTxType);
 
     /*//////////////////////////////////////////////////////////////
@@ -100,6 +104,10 @@ library BaseVaultCcipLib {
         amount = _validateReceivedTokenAndGetAmount(message, asset);
     }
 
+    /// @notice Reverts unless the CCIP sender matches the configured crosschain vault for the source chain.
+    /// @param $ BaseVault namespaced storage
+    /// @param sender The decoded CCIP sender
+    /// @param srcChainSelector The CCIP selector of the source chain
     function _onlyAllowedSender(BaseVaultStore.BaseVaultStorage storage $, address sender, uint64 srcChainSelector)
         internal
         view
@@ -110,6 +118,17 @@ library BaseVaultCcipLib {
         }
     }
 
+    /// @notice Builds and sends a CCIP message.
+    /// @param $ BaseVault namespaced storage
+    /// @param bridgeAmount The amount of asset to bridge
+    /// @param destinationChainSelector The CCIP selector of the destination chain
+    /// @param ccipTxType The type of CCIP transaction
+    /// @param nonce The epoch nonce (EPOCH_NET_DEPOSIT/EPOCH_NET_WITHDRAW) or rebalance nonce (REBALANCE)
+    /// @param protocolId The target strategy protocol id; only meaningful when ccipTxType is REBALANCE
+    /// @param asset The underlying asset managed by the vault
+    /// @param link The LINK token used to pay CCIP fees
+    /// @param ccipRouter The CCIP router
+    /// @param thisChainSelector The CCIP selector of this chain
     function _send(
         BaseVaultStore.BaseVaultStorage storage $,
         uint256 bridgeAmount,
@@ -147,6 +166,10 @@ library BaseVaultCcipLib {
         emit CCIPBridged(ccipMessageId, bridgeAmount, ccipTxType);
     }
 
+    /// @notice Validates that a CCIP message delivered the vault's configured asset token and returns the delivered amount.
+    /// @param message The CCIP message received from the router
+    /// @param asset The vault's configured asset token
+    /// @return amount The amount of asset delivered by CCIP
     function _validateReceivedTokenAndGetAmount(Client.Any2EVMMessage memory message, address asset)
         internal
         pure
@@ -163,6 +186,12 @@ library BaseVaultCcipLib {
         if (amount == 0) revert IBaseVault.BaseVault__NoZeroAmount();
     }
 
+    /// @notice Validates CCIP send parameters and returns the registered destination vault.
+    /// @param $ BaseVault namespaced storage
+    /// @param bridgeAmount The amount of asset to bridge
+    /// @param destinationChainSelector The CCIP selector of the destination chain
+    /// @param thisChainSelector The CCIP selector of this chain
+    /// @return vault The registered vault for the destination chain
     function _validateCcipSend(
         BaseVaultStore.BaseVaultStorage storage $,
         uint256 bridgeAmount,
@@ -178,6 +207,10 @@ library BaseVaultCcipLib {
         if (vault == address(0)) revert IBaseVault.BaseVault__DestinationVaultNotSet(destinationChainSelector);
     }
 
+    /// @notice Returns the CCIP gas limit for a destination chain, falling back to the default gas limit if none is set.
+    /// @param $ BaseVault namespaced storage
+    /// @param chainSelector The CCIP selector of the destination chain
+    /// @return gasLimit The CCIP gas limit to use for the destination chain
     function _getCcipGasLimit(BaseVaultStore.BaseVaultStorage storage $, uint64 chainSelector)
         internal
         view

@@ -22,6 +22,9 @@ contract TerminalAllowPolicy is Policy {
     ///      validation itself; validation belongs in earlier policies. Returning `Allowed` here
     ///      prevents successful `Continue`-only policy chains from falling through to the
     ///      PolicyEngine default rule.
+    /// @dev The unnamed `IPolicy.run` parameters (caller, subject, selector, context) are unused; only
+    ///      `parameters` is checked.
+    /// @param parameters The extracted policy parameters; must be empty, since this policy performs no validation
     /// @return allowed The `Allowed` policy result.
     function run(address, address, bytes4, bytes[] calldata parameters, bytes calldata)
         public

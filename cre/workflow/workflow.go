@@ -101,3 +101,6 @@ func InitWorkflow(config *Config, logger *slog.Logger, _ cre.SecretsProvider) (c
 
 	return cre.Workflow[*Config](handlers), nil
 }
+
+// @review if recovery mode exists; cancel workflow?
+// expose GetRecoveryMode to CRE, require NONE before reading/submitting TVL, test every nonzero recovery mode, and take recovery/TVL reads at the same finalized block reference.

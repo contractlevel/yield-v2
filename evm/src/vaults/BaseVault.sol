@@ -159,10 +159,8 @@ abstract contract BaseVault is
 
     /// @notice Initializes BaseVault mutable proxy state.
     /// @param params Initializer parameters for roles and mutable vault configuration
-    /// @notice Grants PAUSER_ROLE to params.pauser.
-    /// @notice Grants UNPAUSER_ROLE to params.unpauser.
-    /// @notice Grants CONFIG_OPERATOR_ROLE to params.configOperator.
-    /// @notice Grants UPGRADER_ROLE to params.upgrader.
+    /// @dev Grants PAUSER_ROLE to params.pauser, UNPAUSER_ROLE to params.unpauser, CONFIG_OPERATOR_ROLE to
+    ///      params.configOperator, and UPGRADER_ROLE to params.upgrader.
     /// @dev Precondition: required address params must not be the zero address
     /// @dev Precondition: params.initialDefaultCcipGasLimit must not be zero
     //slither-disable-next-line naming-convention
@@ -224,12 +222,12 @@ abstract contract BaseVault is
     }
 
     /// @notice Handles the CCIP rebalance message
-    /// @notice This will be implemented by all vaults.
-    ///         The previous strategy chain sends a CCIP rebalance to this new strategy chain.
     /// @param rebalanceNonce The nonce of the rebalance
     /// @param protocolId The protocol ID of the new strategy on this chain
     /// @param amount The amount of USDC to rebalance(deposit) into the new strategy on this chain
     /// @return success Whether the deposit into the new strategy succeeded or not
+    /// @dev Called from both ParentVault and ChildVault's `_ccipReceive` when the previous strategy chain
+    ///      sends a CCIP rebalance to this new strategy chain.
     function _handleCCIPRebalance(uint256 rebalanceNonce, bytes32 protocolId, uint256 amount)
         internal
         returns (bool success)
@@ -264,7 +262,7 @@ abstract contract BaseVault is
     /// @param revertOnFailure Indicates whether the call should revert if the deposit to strategy fails or not
     /// @param activeAdapter The active strategy adapter
     /// @return success Whether the deposit succeeded or not
-    /// @notice This function uses a trycatch to handle cases where the deposit to strategy fails
+    /// @dev This function uses a trycatch to handle cases where the deposit to strategy fails.
     function _executeDeposit(uint256 amount, bool revertOnFailure, address activeAdapter)
         internal
         returns (bool success)
@@ -295,7 +293,7 @@ abstract contract BaseVault is
     /// @param activeAdapter The active strategy adapter
     /// @return success Whether the withdraw succeeded or not
     /// @return amountOut The amount withdrawn. This will be 0 if revertOnFailure is false and the withdraw failed
-    /// @notice This function uses a trycatch to handle cases where the withdraw from strategy fails
+    /// @dev This function uses a trycatch to handle cases where the withdraw from strategy fails.
     function _executeWithdraw(uint256 amount, bool revertOnFailure, address activeAdapter)
         internal
         returns (bool success, uint256 amountOut)
@@ -334,7 +332,7 @@ abstract contract BaseVault is
     /// @notice Executes the active recovery mode, reverting if no recovery is pending
     /// @dev Inherited and implemented by ParentVault and ChildVault
     /// @dev Precondition: a recovery mode must be active (not NONE)
-    /// @notice Deliberately permissionless to allow anyone to advance recovery state when conditions allow
+    /// @dev Deliberately permissionless to allow anyone to advance recovery state when conditions allow.
     /// @dev Intentionally omits whenNotPaused. See DD-004 in docs/protocol/DECISIONS.md.
     function executeRecovery() external virtual;
 
@@ -347,10 +345,10 @@ abstract contract BaseVault is
     // --- REBALANCE DEPOSIT RECOVERY --- //
 
     /// @notice Stores recovery state for a failed rebalance deposit
-    /// @notice This is called when a rebalance attempts to deposit into a new strategy and fails
     /// @param $ BaseVaultStorage
     /// @param rebalanceNonce The nonce of the rebalance
     /// @param amount The amount that should have been rebalanced into the new strategy
+    /// @dev This is called when a rebalance attempts to deposit into a new strategy and fails.
     /// @dev amount is already checked non-zero upstream - by `_validateReceivedTokenAndGetAmount` (CCIP callers)
     ///      or by `BaseVault__ZeroRecoveryAmount` (`_rebalanceToNewStrategy` callers)
     /// @dev No recovery state must currently exist - already enforced upstream by every caller (`_ccipReceive`
@@ -396,13 +394,12 @@ abstract contract BaseVault is
     /*//////////////////////////////////////////////////////////////
                                EMERGENCY
     //////////////////////////////////////////////////////////////*/
+    /// @notice If the vault has TVL, it is withdrawn from the active strategy and transferred to the emergency receiver
+    /// @param revertOnFailure Whether to revert if the withdraw from strategy fails
     /// @dev Precondition: Caller must have the EMERGENCY_DRAINER_ROLE
     /// @dev Precondition: must be paused
     /// @dev Precondition: Vault must have been paused for at least EMERGENCY_DRAIN_DELAY
     /// @dev Precondition: must not be reentered
-    /// @dev Withdraws all underlying asset from the vault to the emergency receiver
-    /// @param revertOnFailure Whether to revert if the withdraw from strategy fails
-    /// @notice If the vault has the TVL, it will be withdrawn from the strategy and transferred to the emergency receiver
     function emergencyDrain(bool revertOnFailure)
         external
         nonReentrant
@@ -430,9 +427,9 @@ abstract contract BaseVault is
     /// @dev Precondition: amount must be more than 0
     /// @dev Precondition: the strategy deposit operation must succeed
     /// @dev Precondition: the call must not be reentered
-    /// @notice First-depositor captures full donation when `s_totalShares == 0` due to bootstrap pricing ignoring existing TVL
-    ///         Donations should not be made before the first deposit.
-    /// @notice This is an operator emergency function that should not be used improperly (would require capital to do so).
+    /// @dev First-depositor captures full donation when `s_totalShares == 0` due to bootstrap pricing ignoring
+    ///      existing TVL. Donations should not be made before the first deposit.
+    /// @dev This is an operator emergency function that should not be used improperly (would require capital to do so).
     function donate(uint256 amount) external nonReentrant onlyRole(Roles.DONATE_OPERATOR_ROLE) {
         _revertIfZeroAmount(amount);
 
@@ -445,11 +442,11 @@ abstract contract BaseVault is
     /*//////////////////////////////////////////////////////////////
                             INTERNAL GETTER
     //////////////////////////////////////////////////////////////*/
-    /// @notice Gets the Yieldcoin TVL if this chain is the active strategy chain
-    ///         Returns 0 if this chain is not the active strategy chain
+    /// @notice Gets the Yieldcoin TVL if this chain is the active strategy chain, or 0 if not
     /// @return tvl The Yieldcoin TVL
-    /// @notice This needs to be overridden and implemented differently in Parent and Child Vaults to account for epoch netdeposit fails on Child
-    /// @notice Returns 0 if the TVL is in transit over CCIP. This should not be read onchain when Parent state is REBALANCING
+    /// @dev Overridden and implemented differently in Parent and Child Vaults to account for epoch net-deposit
+    ///      recovery amounts on Child.
+    /// @dev Returns 0 if the TVL is in transit over CCIP. This should not be read onchain when Parent state is REBALANCING.
     function _getTVL() internal view virtual returns (uint256 tvl);
 
     /*//////////////////////////////////////////////////////////////
@@ -480,10 +477,10 @@ abstract contract BaseVault is
     /// @dev Precondition: chainSelectors must not be empty
     /// @dev Precondition: chainSelectors and vaults must have the same length
     /// @dev Precondition: each chain selector must not be zero
-    /// @dev Sets the crosschain vaults
     /// @dev Emits the CrosschainVaultSet event
-    /// @notice Set a vault to address(0) to remove the crosschain vault for that chain selector
-    /// @notice This can orphan in-flight CCIP messages. Operator should ensure there are no active crosschain rebalance or epoch operations in progress.
+    /// @dev Set a vault to address(0) to remove the crosschain vault for that chain selector.
+    /// @dev This can orphan in-flight CCIP messages. Operator should ensure there are no active crosschain
+    ///      rebalance or epoch operations in progress before removing or changing a vault mapping.
     function setCrosschainVaults(uint64[] calldata chainSelectors, address[] calldata vaults)
         external
         virtual
@@ -497,7 +494,6 @@ abstract contract BaseVault is
     /// @param gasLimit The CCIP gas limit. Set to 0 to clear the per-chain override and use the default gas limit.
     /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
     /// @dev Precondition: chainSelector must not be zero
-    /// @dev Sets the CCIP gas limit
     /// @dev Emits the CcipGasLimitSet event
     function setCcipGasLimit(uint64 chainSelector, uint256 gasLimit)
         external
@@ -508,11 +504,10 @@ abstract contract BaseVault is
     }
 
     /// @notice Sets the default CCIP gas limit
-    /// @notice If a chain doesn't have a specific CCIP gas limit set, the default CCIP gas limit will be used.
     /// @param gasLimit The CCIP gas limit
+    /// @dev If a chain doesn't have a specific CCIP gas limit set, the default CCIP gas limit will be used.
     /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
     /// @dev Precondition: gasLimit must not be zero
-    /// @dev Sets the default CCIP gas limit
     /// @dev Emits the DefaultCcipGasLimitSet event
     function setDefaultCcipGasLimit(uint256 gasLimit) external virtual onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
         BaseVaultConfigLib.setDefaultCcipGasLimit(_baseVaultStorage(), gasLimit);
@@ -530,11 +525,10 @@ abstract contract BaseVault is
     /*//////////////////////////////////////////////////////////////
                              LINK OPERATOR
     //////////////////////////////////////////////////////////////*/
-    /// @notice Withdraws LINK from the vault
+    /// @notice Withdraws LINK from the vault to the caller
     /// @param amount The amount of LINK to withdraw
     /// @dev Precondition: Caller must have the LINK_OPERATOR_ROLE
     /// @dev Precondition: Amount must be greater than 0
-    /// @dev Withdraws LINK from the vault to the caller
     function withdrawLink(uint256 amount) external onlyRole(Roles.LINK_OPERATOR_ROLE) {
         _revertIfZeroAmount(amount);
         IERC20(i_link).safeTransfer(msg.sender, amount);
@@ -615,8 +609,8 @@ abstract contract BaseVault is
 
     /// @notice Gets the TVL of the vault
     /// @return tvl The TVL of the vault
-    /// @dev Strategy chain will return tvl, non-strategy chain will return 0
-    /// @notice Returns 0 if the TVL is in transit over CCIP. This should not be read onchain when Parent state is REBALANCING
+    /// @dev Strategy chain will return tvl, non-strategy chain will return 0.
+    /// @dev Returns 0 if the TVL is in transit over CCIP. This should not be read onchain when Parent state is REBALANCING.
     function getTVL() external view returns (uint256 tvl) {
         tvl = _getTVL();
     }
@@ -641,16 +635,11 @@ abstract contract BaseVault is
     /// @dev Authorizes UUPS implementation upgrades.
     function _authorizeUpgrade(address) internal override onlyRole(Roles.UPGRADER_ROLE) {}
 
-    /// @inheritdoc IERC165
-    /**
-     * @dev Returns true if this contract implements the interface defined by
-     * `interfaceId`. See the corresponding
-     * https://eips.ethereum.org/EIPS/eip-165#how-interfaces-are-identified[ERC section]
-     * to learn more about how these ids are created.
-     *
-     * This function call must use less than 30 000 gas.
-     */
-    /// @dev Overrides CCIPReceiver and AccessControlDefaultAdminRulesUpgradeable
+    /// @notice Returns whether this contract implements the given interface ID
+    /// @param interfaceId The interface identifier, as specified in ERC-165
+    /// @return Whether this contract implements `interfaceId`
+    /// @dev Overrides CCIPReceiver and AccessControlDefaultAdminRulesUpgradeable. Supports IERC165,
+    ///      IAccessControlDefaultAdminRules, and IAny2EVMMessageReceiver interface IDs.
     function supportsInterface(bytes4 interfaceId)
         public
         pure

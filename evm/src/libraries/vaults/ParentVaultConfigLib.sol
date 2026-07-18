@@ -14,7 +14,12 @@ library ParentVaultConfigLib {
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
     /// @dev Solidity requires locally declared events for emits; these must match IParentVault and emit from the vault via DELEGATECALL.
+    /// @notice Emitted when the treasury address is set
+    /// @param treasury The address of the treasury
     event TreasurySet(address indexed treasury);
+    /// @notice Emitted when a protocol's supported (on any chain) status is set
+    /// @param protocolId The protocol ID of the protocol whose support status has been set
+    /// @param isSupported True if supported on any chain, false if not
     event SupportedProtocolSet(bytes32 indexed protocolId, bool indexed isSupported);
 
     /*//////////////////////////////////////////////////////////////
@@ -40,12 +45,22 @@ library ParentVaultConfigLib {
         _setSupportedProtocol($, protocolId, isSupported);
     }
 
+    /// @notice Sets the treasury address.
+    /// @param $ ParentVault namespaced storage
+    /// @param treasury The address of the treasury
+    /// @dev Precondition: treasury must not be the zero address
     function _setTreasury(ParentVaultStore.ParentVaultStorage storage $, address treasury) internal {
         if (treasury == address(0)) revert IBaseVault.BaseVault__NoZeroAddress();
         $.s_treasury = treasury;
         emit TreasurySet(treasury);
     }
 
+    /// @notice Sets whether a protocol is supported on any chain across the Yieldcoin v2 system.
+    /// @param $ ParentVault namespaced storage
+    /// @param protocolId The protocol identifier of the protocol
+    /// @param isSupported Whether the protocol is supported
+    /// @dev Precondition: protocolId must not be zero
+    /// @dev Precondition: if isSupported is false, protocolId must not be the active or pending strategy's protocol ID
     function _setSupportedProtocol(ParentVaultStore.ParentVaultStorage storage $, bytes32 protocolId, bool isSupported)
         internal
     {

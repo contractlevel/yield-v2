@@ -72,7 +72,7 @@ contract CompoundV3Adapter is ProtocolAdapter, ICompoundV3Adapter {
     /// @dev Transfers the actual withdrawn amount to the Yieldcoin v2 Vault
     /// @dev Prevents borrowing by ensuring amount <= TVL when not using MAX sentinel
     /// @dev Precondition: caller must be the Yieldcoin v2 Vault
-    /// @notice We handle 2 withdraw scenarios:
+    /// @dev Handles 2 withdraw scenarios:
     /// 1. Epoch Withdraw - when the amount is a specific amount
     /// 2. Rebalance Withdraw - when the amount is type(uint256).max
     function withdraw(uint256 amount) external nonReentrant onlyVault returns (uint256 actualWithdrawnAmount) {
@@ -135,7 +135,7 @@ contract CompoundV3Adapter is ProtocolAdapter, ICompoundV3Adapter {
     //////////////////////////////////////////////////////////////*/
     /// @notice Gets the total value of the asset in the Compound V3 pool
     /// @return tvl The total value of the asset in the Compound V3 pool
-    /// @notice This is used for getting the TVL of the Yieldcoin v2 system, if this is the active protocol adapter
+    /// @dev This is used for getting the TVL of the Yieldcoin v2 system, if this is the active protocol adapter
     function getTVL() external view returns (uint256 tvl) {
         tvl = _getTVL();
     }

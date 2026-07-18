@@ -25,7 +25,16 @@ library ParentVaultFeesLib {
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
     /// @dev Solidity requires locally declared events for emits; these must match IParentVault and emit from the vault via DELEGATECALL.
+    /// @notice Emitted when management fees are collected
+    /// @param rebalanceNonce The nonce of the rebalance that collected the fee
+    /// @param feeShares The number of shares minted to the treasury
     event ManagementFeeCollected(uint256 indexed rebalanceNonce, uint256 indexed feeShares);
+    /// @notice Emitted when performance fees are collected
+    /// @param epochNonce The epoch nonce that collected the fee
+    /// @param feeShares The number of shares minted to the treasury
+    /// @param settlementPricePerShare The price per share after fee-share dilution. This raises the high water
+    ///        mark, except when rounding causes it to land a dust amount below the existing high water mark -
+    ///        the high water mark is only ever raised, never lowered, so it may not equal this value
     event PerformanceFeeCollected(
         uint256 indexed epochNonce, uint256 indexed feeShares, uint256 indexed settlementPricePerShare
     );
@@ -50,9 +59,14 @@ library ParentVaultFeesLib {
         pricePerShare = _calculatePricePerShare(tvl, $.s_totalShares, sharePrecision);
     }
 
+    /// @notice Calculates the asset value of a Yieldcoin share token.
     /// @param tvl The Total Value Locked in the active strategy of the Yieldcoin v2 system
     /// @param totalShares The total outstanding Yieldcoin shares (caller-supplied to avoid a redundant SLOAD)
     /// @param sharePrecision The share precision factor
+    /// @return pricePerShare Asset value of a Yieldcoin share token
+    /// @dev Bootstrap pricing: when totalShares == 0, pricePerShare is always sharePrecision (par), regardless
+    ///      of tvl. Any residual tvl at that point (e.g. dust left behind after a full exit) is captured by the
+    ///      next depositor's shares rather than the prior shareholders. See KI-010 in docs/KNOWN_ISSUES.md.
     function _calculatePricePerShare(uint256 tvl, uint256 totalShares, uint256 sharePrecision)
         internal
         pure
@@ -83,6 +97,12 @@ library ParentVaultFeesLib {
         _collectManagementFee($, rebalanceNonce, lastRebalanceCompletedTimestamp, share);
     }
 
+    /// @notice Calculates and collects the management fee based on time elapsed since the last rebalance completed.
+    /// @param $ ParentVault namespaced storage
+    /// @param rebalanceNonce The nonce of the rebalance collecting the fee
+    /// @param lastRebalanceCompletedTimestamp The timestamp when the rebalance last completed
+    /// @param share The Yieldcoin share token
+    /// @dev Elapsed time is capped at 365 days
     function _collectManagementFee(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 rebalanceNonce,
@@ -123,7 +143,14 @@ library ParentVaultFeesLib {
         );
     }
 
+    /// @notice Collects performance fee when the gross price exceeds the high water mark.
+    /// @param $ ParentVault namespaced storage
+    /// @param epochNonce The epoch nonce collecting the fee
+    /// @param tvl The strategy TVL before current epoch deposits and withdrawals settle
+    /// @param grossPricePerShare The epoch price per share before performance fee dilution
     /// @param totalShares The total outstanding Yieldcoin shares (caller-supplied to avoid a redundant SLOAD)
+    /// @param share The Yieldcoin share token
+    /// @param sharePrecision The share precision factor
     /// @return settlementPricePerShare The epoch price per share after performance fee dilution
     /// @return feeShares The number of shares minted as a performance fee (0 if none were minted).
     /// @dev This function mints feeShares but deliberately does NOT write `s_totalShares` - the caller

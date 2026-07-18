@@ -85,7 +85,7 @@ interface IChildVault is IBaseVault {
                                   CRE
     //////////////////////////////////////////////////////////////*/
     /// @notice Executes the epoch withdraw from a strategy
-    /// @notice Called by the WorkflowRouter when net flow is negative
+    /// @dev Called by the WorkflowRouter when net flow is negative
     /// @param epochNonce The nonce of the epoch
     /// @param amount The amount of asset to withdraw from the active strategy
     /// @dev Precondition: caller must have the EPOCH_OPERATOR_ROLE

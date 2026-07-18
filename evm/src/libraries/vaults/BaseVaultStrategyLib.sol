@@ -15,7 +15,12 @@ library BaseVaultStrategyLib {
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
     /// @dev Solidity requires locally declared events for emits; these must match IBaseVault and emit from the vault via DELEGATECALL.
+    /// @notice Emitted when the active protocol adapter is set
+    /// @param protocolId The protocol ID of the active strategy
+    /// @param adapter The active protocol adapter
     event ActiveProtocolAdapterSet(bytes32 indexed protocolId, address indexed adapter);
+    /// @notice Emitted when the active protocol adapter is cleared
+    /// @param adapter The previously active protocol adapter
     event ActiveProtocolAdapterCleared(address indexed adapter);
 
     /*//////////////////////////////////////////////////////////////
@@ -43,6 +48,12 @@ library BaseVaultStrategyLib {
         _clearActiveAdapter($, adapter);
     }
 
+    /// @notice Sets the active strategy protocol adapter.
+    /// @param $ BaseVault namespaced storage
+    /// @param protocolId The protocol ID of the strategy
+    /// @param adapterRegistry The adapter registry
+    /// @param vault The vault address expected by the registered adapter
+    /// @return adapter The active strategy protocol adapter
     function _setActiveAdapter(
         BaseVaultStore.BaseVaultStorage storage $,
         bytes32 protocolId,
@@ -59,6 +70,9 @@ library BaseVaultStrategyLib {
         emit ActiveProtocolAdapterSet(protocolId, adapter);
     }
 
+    /// @notice Clears the active strategy protocol adapter for this chain, given a known adapter.
+    /// @param $ BaseVault namespaced storage
+    /// @param adapter The active strategy adapter being cleared, already known by the caller
     function _clearActiveAdapter(BaseVaultStore.BaseVaultStorage storage $, address adapter) internal {
         $.s_activeProtocolAdapter = address(0);
         emit ActiveProtocolAdapterCleared(adapter);

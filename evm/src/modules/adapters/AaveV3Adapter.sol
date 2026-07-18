@@ -69,7 +69,7 @@ contract AaveV3Adapter is ProtocolAdapter, IAaveV3Adapter {
     /// @return actualWithdrawnAmount The actual withdrawn amount
     /// @dev Transfers the actual withdrawn amount to the Yieldcoin v2 Vault
     /// @dev Precondition: caller must be the Yieldcoin v2 Vault
-    /// @notice We handle 2 withdraw scenarios:
+    /// @dev Handles 2 withdraw scenarios:
     /// 1. Epoch Withdraw - when the amount is a specific amount
     /// 2. Rebalance Withdraw - when the amount is type(uint256).max
     function withdraw(uint256 amount) external nonReentrant onlyVault returns (uint256 actualWithdrawnAmount) {
@@ -108,7 +108,7 @@ contract AaveV3Adapter is ProtocolAdapter, IAaveV3Adapter {
     /// @notice Gets the TVL in the Aave V3 pool
     /// @param pool The Aave V3 pool address. Fetched from _getAavePool()
     /// @return tvl The TVL of the Aave V3 pool
-    /// @notice Reading aToken balance can slightly overstate available value. Bounded by Aave treasury fee rate (approximately 2-4 bps of TVL).
+    /// @dev Reading aToken balance can slightly overstate available value. Bounded by Aave treasury fee rate (approximately 2-4 bps of TVL).
     function _getTVL(address pool) internal view returns (uint256 tvl) {
         DataTypes.ReserveDataLegacy memory reserveData = IPool(pool).getReserveData(i_asset);
         address aTokenAddress = reserveData.aTokenAddress;
@@ -120,7 +120,7 @@ contract AaveV3Adapter is ProtocolAdapter, IAaveV3Adapter {
     //////////////////////////////////////////////////////////////*/
     /// @notice Gets the TVL in the Aave V3 pool
     /// @return tvl The TVL of the Aave V3 pool
-    /// @notice This is used for getting the TVL of the Yieldcoin v2 system, if this is the active protocol adapter
+    /// @dev This is used for getting the TVL of the Yieldcoin v2 system, if this is the active protocol adapter
     function getTVL() external view returns (uint256 tvl) {
         address pool = _getAavePool();
         tvl = _getTVL(pool);

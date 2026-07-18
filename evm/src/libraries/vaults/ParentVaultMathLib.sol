@@ -10,11 +10,21 @@ import {FixedPointMathLib} from "@solady/utils/FixedPointMathLib.sol";
 /// @author @contractlevel
 /// @notice Shared full-precision math helpers for ParentVault accounting.
 library ParentVaultMathLib {
+    /// @notice Computes `x * y / denominator`, rounding down, with full-precision intermediate multiplication.
+    /// @param x The multiplicand
+    /// @param y The multiplier
+    /// @param denominator The divisor
+    /// @return result `x * y / denominator`, rounded down
     function _mulDivDown(uint256 x, uint256 y, uint256 denominator) internal pure returns (uint256 result) {
         result = FixedPointMathLib.fullMulDiv(x, y, denominator);
         // OZ equivalent: result = Math.mulDiv(x, y, denominator);
     }
 
+    /// @notice Computes `x * y / denominator`, rounding up, with full-precision intermediate multiplication.
+    /// @param x The multiplicand
+    /// @param y The multiplier
+    /// @param denominator The divisor
+    /// @return result `x * y / denominator`, rounded up
     function _mulDivUp(uint256 x, uint256 y, uint256 denominator) internal pure returns (uint256 result) {
         result = FixedPointMathLib.fullMulDivUp(x, y, denominator);
         // OZ equivalent: result = Math.mulDiv(x, y, denominator, Math.Rounding.Ceil);

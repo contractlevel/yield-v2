@@ -33,7 +33,15 @@ library ParentVaultRebalanceLib {
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
     /// @dev Solidity requires locally declared events for emits; these must match IParentVault and emit from the vault via DELEGATECALL.
+    /// @notice Emitted when a rebalance is initiated
+    /// @param rebalanceNonce The nonce of the rebalance
+    /// @param chainSelector The target strategy chain selector
+    /// @param protocolId The target strategy protocol ID
     event RebalanceInitiated(uint256 indexed rebalanceNonce, uint64 indexed chainSelector, bytes32 indexed protocolId);
+    /// @notice Emitted when a rebalance is completed
+    /// @param rebalanceNonce The nonce of the completed rebalance
+    /// @param newProtocolId The protocol ID for the new strategy
+    /// @param newChainSelector The chain selector for the new strategy
     event RebalanceCompleted(
         uint256 indexed rebalanceNonce, bytes32 indexed newProtocolId, uint64 indexed newChainSelector
     );
@@ -56,6 +64,12 @@ library ParentVaultRebalanceLib {
         result = _initiateRebalance($, newStrategy, thisChainSelector, isSupportedChain);
     }
 
+    /// @notice Starts a rebalance and returns the external strategy/CCIP action ParentVault must execute.
+    /// @param $ ParentVault namespaced storage
+    /// @param newStrategy The new strategy to rebalance to
+    /// @param thisChainSelector The chain selector for the ParentVault chain
+    /// @param isSupportedChain Whether the target strategy chain is registered in BaseVault storage
+    /// @return result The external action ParentVault should execute after state is updated
     function _initiateRebalance(
         ParentVaultStore.ParentVaultStorage storage $,
         Types.Strategy memory newStrategy,
@@ -122,6 +136,11 @@ library ParentVaultRebalanceLib {
         _finalizeRebalance($, share, rebalanceNonce, newStrategy, isLocalToLocalRebalance);
     }
 
+    /// @notice Finalizes an in-progress rebalance and collects management fees.
+    /// @param $ ParentVault namespaced storage
+    /// @param share The Yieldcoin share token
+    /// @param rebalanceNonce The current `s_rebalance.nonce`
+    /// @param newStrategy The current `s_rebalance.pendingStrategy`
     /// @param isLocalToLocalRebalance True when finalizing a rebalance that stayed on this chain and
     ///        resolved synchronously within the same initiateRebalance() call - state/pendingStrategy
     ///        were never written to storage (see _initiateRebalance), so there is nothing to validate

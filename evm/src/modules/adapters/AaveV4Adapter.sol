@@ -64,7 +64,7 @@ contract AaveV4Adapter is ProtocolAdapter, IAaveV4Adapter {
     /// @return actualWithdrawnAmount The actual withdrawn amount
     /// @dev Transfers the actual withdrawn amount to the Yieldcoin v2 Vault
     /// @dev Precondition: caller must be the Yieldcoin v2 Vault
-    /// @notice We handle 2 withdraw scenarios:
+    /// @dev Handles 2 withdraw scenarios:
     /// 1. Epoch Withdraw - when the amount is a specific amount
     /// 2. Rebalance Withdraw - when the amount is type(uint256).max
     function withdraw(uint256 amount) external nonReentrant onlyVault returns (uint256 actualWithdrawnAmount) {
@@ -128,7 +128,7 @@ contract AaveV4Adapter is ProtocolAdapter, IAaveV4Adapter {
     //////////////////////////////////////////////////////////////*/
     /// @notice Gets the TVL in the Aave v4 Spoke
     /// @return tvl The TVL of the Aave v4 position
-    /// @notice This is used for getting the TVL of the Yieldcoin v2 system, if this is the active protocol adapter
+    /// @dev This is used for getting the TVL of the Yieldcoin v2 system, if this is the active protocol adapter
     function getTVL() external view returns (uint256 tvl) {
         tvl = _getTVL();
     }

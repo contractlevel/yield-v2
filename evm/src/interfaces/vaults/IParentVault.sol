@@ -229,7 +229,7 @@ interface IParentVault is IBaseVault {
     function withdraw(uint256 shareBurnAmount) external returns (uint256 epochNonce);
 
     /// @notice Claim Yieldcoin shares after a deposit
-    /// @notice Finalizes an individual deposit
+    /// @dev Finalizes an individual deposit
     /// @param epochNonce The epoch nonce of the deposit
     /// @return shareMintAmount The amount of Yieldcoin shares minted for the deposit
     /// @dev Precondition: the contract must not be paused
@@ -239,7 +239,7 @@ interface IParentVault is IBaseVault {
     function claimShares(uint256 epochNonce) external returns (uint256 shareMintAmount);
 
     /// @notice Claims the underlying asset for a completed epoch withdrawal
-    /// @notice Finalizes an individual withdraw
+    /// @dev Finalizes an individual withdraw
     /// @param epochNonce The nonce of the epoch to claim from
     /// @return withdrawAmount The amount of asset transferred to the withdrawer
     /// @dev Precondition: the contract must not be paused
@@ -266,7 +266,7 @@ interface IParentVault is IBaseVault {
                               OPERATIONS
     //////////////////////////////////////////////////////////////*/
     /// @notice Closes an epoch and handles the net flow
-    /// @notice Opens the next epoch
+    /// @dev Opens the next epoch
     /// @param tvl The Total Value Locked in the active strategy of the Yieldcoin v2 system
     /// @dev Precondition: caller must have the EPOCH_OPERATOR_ROLE
     /// @dev Precondition: there must not be an active rebalance

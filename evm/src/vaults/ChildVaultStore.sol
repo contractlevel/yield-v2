@@ -8,14 +8,26 @@ import {Types} from "../libraries/Types.sol";
 /// @notice ERC-7201 storage for ChildVault mutable state.
 abstract contract ChildVaultStore {
     /// @custom:storage-location erc7201:yieldcoin.storage.ChildVault
+    /// @notice Namespaced storage for ChildVault mutable state: recovery data for the four
+    /// ChildVault-specific operations that can fail and need to be retried. Only one of these
+    /// (as selected by BaseVaultStorage.s_recoveryMode) is ever populated at a time.
+    /// @param s_rebalanceWithdrawRecovery Recovery data for a failed rebalance withdraw from the
+    /// active protocol adapter - the rebalance nonce and the target strategy to continue the
+    /// rebalance into once the withdraw is retried and succeeds.
+    /// @param s_epochDepositRecovery Recovery data for a failed deposit into the active strategy adapter,
+    /// after Parent CCIP-sends epoch net-deposit funds to this chain - the epoch nonce and asset amount
+    /// to retry depositing.
+    /// @param s_epochWithdrawRecovery Recovery data for a failed withdrawal from the active strategy
+    /// adapter when executeEpochWithdraw is called for a net-withdraw epoch - the epoch nonce and asset
+    /// amount to retry withdrawing. A successful retry proceeds to CCIP-send the withdrawn amount back
+    /// to Parent; a failure of that send is tracked separately by s_ccipSendRecovery.
+    /// @param s_ccipSendRecovery Recovery data for a failed outbound CCIP send (of any type - epoch
+    /// net-deposit/withdraw or rebalance) - the CCIP tx type to replay, amount, destination chain
+    /// selector, epoch/rebalance nonce, and (for rebalance sends) the target protocol ID.
     struct ChildVaultStorage {
-        /// @dev Recovery state for failed rebalance withdraw operations
         Types.RebalanceWithdrawRecovery s_rebalanceWithdrawRecovery;
-        /// @dev Recovery state for failed epoch deposit operations
         Types.EpochRecovery s_epochDepositRecovery;
-        /// @dev Recovery state for failed epoch withdraw operations
         Types.EpochRecovery s_epochWithdrawRecovery;
-        /// @dev Recovery state for failed CCIP send operations
         Types.CcipSendRecovery s_ccipSendRecovery;
     }
 

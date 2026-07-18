@@ -11,7 +11,7 @@ import {
 /// @title YieldcoinShare
 /// @author @contractlevel
 /// @notice YieldcoinShare is the compliance-ready share token of the Yieldcoin v2 system.
-/// @notice The YieldcoinShare token does not inherit IShare because Chainlink ACE's ComplianceTokenERC3643 functions are not virtual.
+/// @dev Does not inherit IShare because Chainlink ACE's ComplianceTokenERC3643 functions are not virtual.
 //slither-disable-next-line missing-inheritance
 contract YieldcoinShare is ComplianceTokenERC3643, YieldcoinShareStore, ReentrancyGuardTransientUpgradeable {
     /*//////////////////////////////////////////////////////////////
@@ -36,6 +36,7 @@ contract YieldcoinShare is ComplianceTokenERC3643, YieldcoinShareStore, Reentran
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
+    /// @notice Disables initializers on the implementation contract so it can only be initialized via a proxy.
     constructor() {
         _disableInitializers();
     }
@@ -43,9 +44,11 @@ contract YieldcoinShare is ComplianceTokenERC3643, YieldcoinShareStore, Reentran
     /*//////////////////////////////////////////////////////////////
                                INITIALIZE
     //////////////////////////////////////////////////////////////*/
+    /// @notice Initializes the YieldcoinShare token and sets the initial CCIP admin and UUPS upgrader
     /// @param policyEngine Chainlink ACE PolicyEngine component
     /// @param initialCcipAdmin Initial address for CCIP admin
     /// @param upgrader Address authorized to upgrade this contract via UUPS (set as OZ owner)
+    /// @dev Precondition: policyEngine must not be the zero address
     /// @dev Precondition: initialCcipAdmin must not be the zero address
     /// @dev Precondition: upgrader must not be the zero address
     function initialize(address policyEngine, address initialCcipAdmin, address upgrader)
@@ -72,6 +75,9 @@ contract YieldcoinShare is ComplianceTokenERC3643, YieldcoinShareStore, Reentran
         _setCCIPAdmin(newAdmin);
     }
 
+    /// @notice Sets the stored CCIP admin and emits CCIPAdminTransferred
+    /// @param newAdmin The new CCIP admin
+    /// @dev Precondition: newAdmin must not be the zero address
     function _setCCIPAdmin(address newAdmin) internal {
         if (newAdmin == address(0)) revert YieldcoinShare__NoZeroAddress();
 
@@ -85,6 +91,7 @@ contract YieldcoinShare is ComplianceTokenERC3643, YieldcoinShareStore, Reentran
     /// @param policyEngine The new policy engine
     /// @dev This function is protected by Chainlink ACE RoleBasedAccessControlPolicy authorization
     ///      The deploy script should gate access to this function to the POLICY_ENGINE_MANAGER_ROLE.
+    /// @dev Precondition: policyEngine must not be the zero address
     function attachPolicyEngine(address policyEngine) external override runPolicy {
         _validatePolicyEngine(policyEngine);
         _attachPolicyEngine(policyEngine);

@@ -101,11 +101,11 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     }
 
     /// @notice Handles the CCIP EPOCH_NET_DEPOSIT deposit message
-    /// @notice This will only be implemented in the ChildVault.
-    ///         The ParentVault sends a CCIP deposit to the active strategy chain when an epoch's net flow is positive. (more deposits than withdraws)
     /// @param epochNonce The nonce of the epoch
     /// @param amount The amount of asset that was bridged to deposit into the active strategy on this child chain
     /// @param $_baseVault BaseVaultStorage for the active strategy adapter and recovery state
+    /// @dev Only reachable on a ChildVault: the ParentVault sends a CCIP deposit to the active strategy chain
+    ///      when an epoch's net flow is positive (more deposits than withdraws).
     function _handleCCIPDeposit(uint256 epochNonce, uint256 amount, BaseVaultStorage storage $_baseVault) internal {
         bool success = _executeDeposit(amount, false, $_baseVault.s_activeProtocolAdapter);
         if (success) {
@@ -117,12 +117,12 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     }
 
     /// @notice Sends a ChildVault CCIP message and stores recovery state on failure
-    /// @notice Overrides BaseVault::_ccipSend to use a try/catch. (Parent failures use atomic revert)
     /// @param bridgeAmount The amount of asset to bridge
     /// @param destinationChainSelector The CCIP selector of the destination chain
     /// @param ccipTxType The type of CCIP transaction
     /// @param nonce The epoch nonce (EPOCH_NET_DEPOSIT/EPOCH_NET_WITHDRAW) or rebalance nonce (REBALANCE)
     /// @param protocolId The target strategy protocol id; only meaningful when ccipTxType is REBALANCE
+    /// @dev Overrides BaseVault::_ccipSend to use a try/catch. (Parent failures use atomic revert)
     /// @dev Precondition: no recovery state must currently exist
     function _ccipSend(
         uint256 bridgeAmount,
@@ -179,9 +179,9 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
                                   CRE
     //////////////////////////////////////////////////////////////*/
     /// @notice Executes the epoch withdraw from a strategy
-    /// @notice This is called by the WorkflowRouter when net flow is negative (more withdraws than deposits)
     /// @param epochNonce The nonce of the epoch
     /// @param amount The amount of asset to withdraw from the active strategy
+    /// @dev This is called by the WorkflowRouter when net flow is negative (more withdraws than deposits).
     /// @dev Precondition: Caller must have the EPOCH_OPERATOR_ROLE
     function executeEpochWithdraw(uint256 epochNonce, uint256 amount)
         external
@@ -203,13 +203,14 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         }
     }
 
-    /// @notice This is called by the WorkflowRouter
     /// @notice Withdraws the entire tvl from the active strategy protocol adapter and sends it to the new strategy
-    /// @notice This function shouldn't be in BaseVault because if a rebalance needs to be executed on the parent, this is what happens:
-    /// - CRE workflow writes to parent
-    /// - if parent == strategy: _executeWithdraw and _rebalanceToNewStrategy
     /// @param rebalanceNonce The nonce of the rebalance
     /// @param newStrategy The new strategy to rebalance to
+    /// @dev This is called by the WorkflowRouter.
+    /// @dev This function shouldn't be in BaseVault because if a rebalance needs to be executed on the parent, this
+    ///      is what happens: CRE workflow writes to parent; if parent == strategy, ParentVault.initiateRebalance
+    ///      performs the equivalent withdraw-then-rebalance steps synchronously in the same call instead of via
+    ///      this CRE-triggered function.
     /// @dev Precondition: caller must have the REBALANCE_OPERATOR_ROLE
     /// @dev Precondition: call must not be reentered
     /// @dev Precondition: there must be no existent recovery mode
@@ -232,7 +233,8 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @param newStrategy The new strategy to rebalance to
     /// @return success Whether the withdraw from the old strategy succeeded or not
     /// @return amountRebalanced The amount rebalanced
-    /// @notice This function uses a trycatch to handle cases where the withdraw from the old strategy failed
+    /// @dev The try/catch that handles a failed withdraw from the old strategy lives inside _executeWithdraw;
+    ///      this function branches on its returned `success` flag rather than catching directly.
     function _executeRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy)
         internal
         returns (bool success, uint256 amountRebalanced)
@@ -253,7 +255,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @param tvlToRebalance The TVL amount to rebalance
     /// @param newStrategy The new strategy to rebalance to
     /// @param oldAdapter The previously-active strategy adapter, already known by the caller
-    /// @notice Handles a local rebalance on this chain or a crosschain rebalance to the new strategy chain
+    /// @dev Handles a local rebalance on this chain or a crosschain rebalance to the new strategy chain.
     function _rebalanceToNewStrategy(
         uint256 rebalanceNonce,
         uint256 tvlToRebalance,
@@ -608,12 +610,11 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /*//////////////////////////////////////////////////////////////
                                 OVERRIDE
     //////////////////////////////////////////////////////////////*/
-    /// @notice Gets the Yieldcoin TVL if this chain is the active strategy chain
-    ///         Returns 0 if this chain is not the active strategy chain
+    /// @notice Gets the Yieldcoin TVL if this chain is the active strategy chain, or 0 if not
     /// @return tvl The Yieldcoin TVL
-    /// @notice Unlike the Parent Vault implementation, which only includes s_rebalanceDepositRecovery.amount, the
-    ///         Child Vault implementation also includes s_epochDepositRecovery.amount and s_ccipSendRecovery.amount
-    /// @notice Returns 0 if the TVL is in transit over CCIP. This should not be read onchain when Parent state is REBALANCING
+    /// @dev Unlike the Parent Vault implementation, which only includes s_rebalanceDepositRecovery.amount, the
+    ///      Child Vault implementation also includes s_epochDepositRecovery.amount and s_ccipSendRecovery.amount.
+    /// @dev Returns 0 if the TVL is in transit over CCIP. This should not be read onchain when Parent state is REBALANCING.
     function _getTVL() internal view override returns (uint256 tvl) {
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
         ChildVaultStorage storage $ = _childVaultStorage();

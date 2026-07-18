@@ -6,15 +6,17 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 /// @title Yieldcoin v2 Share Interface
 /// @author @contractlevel
 /// @notice Interface for the Yieldcoin v2 Share contract
-/// @notice The YieldcoinShare token does not inherit this because Chainlink ACE's ComplianceTokenERC3643 functions are not virtual.
+/// @dev The YieldcoinShare token does not inherit this because Chainlink ACE's ComplianceTokenERC3643 functions are not virtual.
 interface IShare is IERC20 {
     /// @notice Mints shares to an address
     /// @param to The address to mint shares to
     /// @param amount The amount of shares to mint
+    /// @dev This function is protected by Chainlink ACE RoleBasedAccessControlPolicy authorization
     function mint(address to, uint256 amount) external;
     /// @notice Burns shares from an address
     /// @param user The address to burn shares from
     /// @param amount The amount of shares to burn
+    /// @dev This function is protected by Chainlink ACE RoleBasedAccessControlPolicy authorization
     function burn(address user, uint256 amount) external;
     /// @notice Returns whether an address is frozen under ERC-3643 compliance controls
     /// @param user The address to check

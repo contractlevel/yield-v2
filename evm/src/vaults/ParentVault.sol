@@ -30,8 +30,8 @@ import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 /// @title Yieldcoin v2 ParentVault
 /// @author @contractlevel
-/// @notice Only one ParentVault is deployed on a single chain in the entire Yieldcoin v2 system.
-/// @notice This contract acts as the entry/exit point for users to deposit and withdraw in the Yieldcoin v2 system.
+/// @notice The entry/exit point for users to deposit and withdraw in the Yieldcoin v2 system.
+/// @dev Only one ParentVault is deployed on a single chain in the entire Yieldcoin v2 system.
 contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtectedUpgradeable {
     /*//////////////////////////////////////////////////////////////
                                CONSTANTS
@@ -111,7 +111,6 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /*//////////////////////////////////////////////////////////////
                                 SETTERS
     //////////////////////////////////////////////////////////////*/
-    /// @inheritdoc IParentVault
     /// @notice Sets the initial active protocol adapter after deployment
     /// @param protocolId The protocol ID of the initial active strategy
     /// @dev This is called once after the adapter is deployed and registered inside the *same deploy script*, before operational use.
@@ -184,9 +183,9 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     }
 
     /// @notice Claim Yieldcoin shares after a deposit
-    /// @notice Finalizes an individual deposit
     /// @param epochNonce The epoch nonce of the deposit
     /// @return shareMintAmount The amount of Yieldcoin shares minted for the deposit
+    /// @dev Finalizes an individual deposit.
     /// @dev Precondition: the function must not be reentered
     /// @dev Precondition: the contract must not be paused
     /// @dev Precondition: tx must be compliant with the policy
@@ -204,9 +203,9 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     }
 
     /// @notice Claim underlying asset after a withdraw
-    /// @notice Finalizes an individual withdraw
     /// @param epochNonce The epoch nonce of the withdraw
     /// @return withdrawAmount The amount of asset withdrawn
+    /// @dev Finalizes an individual withdraw.
     /// @dev Precondition: the function must not be reentered
     /// @dev Precondition: the contract must not be paused
     /// @dev Precondition: tx must be compliant with the policy
@@ -305,16 +304,15 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /*//////////////////////////////////////////////////////////////
                                  EPOCH
     //////////////////////////////////////////////////////////////*/
-    /// @notice Closes an epoch and handles the net flow
-    /// @notice Called by WorkflowRouter
-    /// @notice The `netFlow` is `total asset deposit amount` minus `calculated total asset withdraw amount` for the given epoch
-    ///         When `netFlow >= 0`: the epoch is CLAIMABLE
-    ///         When `netFlow > 0` and the active strategy is local to this chain: the netFlow is deposited straight into the strategy
-    ///         When `netFlow > 0` and the active strategy is remote to this chain: the netFlow is sent via CCIP to the strategy
-    ///         When `netFlow < 0` and the active strategy is local to this chain: the netFlow is withdrawn from the strategy and the epoch is CLAIMABLE
-    ///         When `netFlow < 0` and the active strategy is remote to this chain: EpochExecuting() event triggers CRE to write to strategy chain and the epoch is EXECUTING
-    /// @notice Opens the next epoch
+    /// @notice Closes an epoch and handles the net flow, then opens the next epoch
     /// @param tvl The Total Value Locked in the active strategy of the Yieldcoin v2 system
+    /// @dev Called by WorkflowRouter.
+    /// @dev The `netFlow` is `total asset deposit amount` minus `calculated total asset withdraw amount` for the given epoch.
+    ///      When `netFlow >= 0`: the epoch is CLAIMABLE
+    ///      When `netFlow > 0` and the active strategy is local to this chain: the netFlow is deposited straight into the strategy
+    ///      When `netFlow > 0` and the active strategy is remote to this chain: the netFlow is sent via CCIP to the strategy
+    ///      When `netFlow < 0` and the active strategy is local to this chain: the netFlow is withdrawn from the strategy and the epoch is CLAIMABLE
+    ///      When `netFlow < 0` and the active strategy is remote to this chain: EpochExecuting() event triggers CRE to write to strategy chain and the epoch is EXECUTING
     /// @dev Precondition: the caller must have the EPOCH_OPERATOR_ROLE
     /// @dev Precondition: there must not be an active rebalance
     /// @dev Precondition: there must not be a stored recovery mode
@@ -336,16 +334,16 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     ///      covered by netting/settlement, and depositors can claim shares minted at
     ///      epoch close. The remaining issue is yield drag from idle USDC on the Child,
     ///      so singleton child recovery plus workflow retry discipline is sufficient.
-    /// @dev previousEpochNonce == 0 means no prior epoch exists (constructor sets s_epochNonce = 1).
-    /// @notice The tvl parameter is provided by the CRE workflow via WorkflowRouter and is trusted
-    ///         to accurately reflect the active strategy chain's TVL. The CRE workflow is audited to
-    ///         the same standard as this contract. No onchain validation of this value is performed;
-    ///         an incorrect value will corrupt epoch share accounting irrecoverably once any user
-    ///         claims against the affected epoch.
+    /// @dev previousEpochNonce == 0 means no prior epoch exists (initialize() sets s_epochNonce = 1).
+    /// @dev The tvl parameter is provided by the CRE workflow via WorkflowRouter and is trusted
+    ///      to accurately reflect the active strategy chain's TVL. The CRE workflow is audited to
+    ///      the same standard as this contract. No onchain validation of this value is performed;
+    ///      an incorrect value will corrupt epoch share accounting irrecoverably once any user
+    ///      claims against the affected epoch.
     /// @dev Precondition: `tvl == 0 && s_totalShares > 0` will cause a revert
     /// @dev Precondition: If deposits exist, aggregate minted shares must cover at least one share per minimum deposit amount.
-    /// @notice If TVL goes to zero with shares outstanding, closeEpoch will revert.
-    ///         A DONATE_OPERATOR_ROLE holder can call donate() to restore TVL; the next close will price shares against the donated amount.
+    /// @dev If TVL goes to zero with shares outstanding, closeEpoch will revert.
+    ///      A DONATE_OPERATOR_ROLE holder can call donate() to restore TVL; the next close will price shares against the donated amount.
     function closeEpoch(uint256 tvl) external nonReentrant whenNotPaused onlyRole(Roles.EPOCH_OPERATOR_ROLE) {
         ParentVaultStorage storage $ = _parentVaultStorage();
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
@@ -384,7 +382,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     //////////////////////////////////////////////////////////////*/
     /// @notice Initiates a rebalance from the current strategy to a new strategy
     /// @param newStrategy The new strategy to rebalance to
-    /// @notice This is called by the WorkflowRouter
+    /// @dev This is called by the WorkflowRouter.
     /// @dev Precondition: the caller must have the REBALANCE_OPERATOR_ROLE
     /// @dev Precondition: the contract must not be paused
     /// @dev Precondition: A rebalance must not already be in progress
@@ -435,7 +433,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     }
 
     /// @notice Completes a rebalance
-    /// @notice The WorkflowRouter calls this
+    /// @dev The WorkflowRouter calls this.
     /// @dev Precondition: caller must have REBALANCE_OPERATOR_ROLE
     /// @dev Precondition: there must not be a stored recovery mode
     /// @dev Precondition: function must not be reentered
@@ -473,7 +471,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
                                 RECOVERY
     //////////////////////////////////////////////////////////////*/
     /// @notice Executes the active recovery mode, reverting if no recovery is pending
-    /// @notice The only recovery mode that can be active on Parent is REBALANCE_DEPOSIT
+    /// @dev The only recovery mode that can be active on Parent is REBALANCE_DEPOSIT.
     /// @dev Precondition: a recovery mode must be active (not NONE)
     /// @dev Precondition: function must not be reentered
     /// @dev Finalizes the rebalance in the same atomic tx
@@ -584,6 +582,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     }
 
     /// @notice Gets whether a protocolId is supported on any chain across the Yieldcoin v2 system.
+    /// @param protocolId The protocol identifier to check, ie keccak256("aave-v3")
     /// @return isSupported true if supported on any chain, false if not supported on any chain
     function getSupportedProtocol(bytes32 protocolId) external view returns (bool isSupported) {
         isSupported = _parentVaultStorage().s_supportedProtocol[protocolId];
@@ -611,6 +610,12 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         _attachPolicyEngine(policyEngine);
     }
 
+    /// @notice Returns whether this contract implements the given interface ID
+    /// @param interfaceId The interface identifier, as specified in ERC-165
+    /// @return Whether this contract implements `interfaceId`
+    /// @dev Overrides BaseVault and PolicyProtectedUpgradeable. Re-implements the full interface ID check directly
+    ///      (rather than calling both supers) so it can additionally support IPolicyProtected: IERC165,
+    ///      IAccessControlDefaultAdminRules, and IAny2EVMMessageReceiver (from BaseVault), plus IPolicyProtected.
     function supportsInterface(bytes4 interfaceId)
         public
         pure
@@ -623,12 +628,11 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
             || interfaceId == type(IPolicyProtected).interfaceId;
     }
 
-    /// @notice Gets the Yieldcoin TVL if this chain is the active strategy chain
-    ///         Returns 0 if this chain is not the active strategy chain
+    /// @notice Gets the Yieldcoin TVL if this chain is the active strategy chain, or 0 if not
     /// @return tvl The Yieldcoin TVL
-    /// @notice Unlike the Child Vault implementation, which also includes s_epochDepositRecovery.amount and
-    ///         s_ccipSendRecovery.amount, the Parent Vault implementation only includes s_rebalanceDepositRecovery.amount
-    /// @notice Returns 0 if the TVL is in transit over CCIP. This should not be read onchain when Parent state is REBALANCING
+    /// @dev Unlike the Child Vault implementation, which also includes s_epochDepositRecovery.amount and
+    ///      s_ccipSendRecovery.amount, the Parent Vault implementation only includes s_rebalanceDepositRecovery.amount.
+    /// @dev Returns 0 if the TVL is in transit over CCIP. This should not be read onchain when Parent state is REBALANCING.
     function _getTVL() internal view override returns (uint256 tvl) {
         BaseVaultStorage storage $ = _baseVaultStorage();
         address activeAdapter = $.s_activeProtocolAdapter;

@@ -46,8 +46,15 @@ library ParentVaultEpochLib {
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
     /// @dev Solidity requires locally declared events for emits; these must match IParentVault and emit from the vault via DELEGATECALL.
+    /// @notice Emitted when an epoch is open
+    /// @param epochNonce The nonce of the open epoch
     event EpochOpen(uint256 indexed epochNonce);
+    /// @notice Emitted when an epoch is executing
+    /// @param epochNonce The nonce of the executing epoch
+    /// @param amount The amount of asset that needs to be withdrawn
     event EpochExecuting(uint256 indexed epochNonce, uint256 indexed amount);
+    /// @notice Emitted when an epoch is claimable
+    /// @param epochNonce The nonce of the claimable epoch
     event EpochClaimable(uint256 indexed epochNonce);
 
     /*//////////////////////////////////////////////////////////////
@@ -73,6 +80,21 @@ library ParentVaultEpochLib {
         externalAction = _closeEpoch($, tvl, share, sharePrecision, minDepositAmount, isLocalStrategy);
     }
 
+    /// @notice Settles the current epoch and returns the external action ParentVault must execute.
+    /// @param $ ParentVault namespaced storage
+    /// @param tvl The Total Value Locked in the active strategy of the Yieldcoin v2 system
+    /// @param share The Yieldcoin share token
+    /// @param sharePrecision The share precision factor
+    /// @param minDepositAmount The minimum deposit amount
+    /// @param isLocalStrategy Whether this chain currently has the active strategy adapter
+    /// @return externalAction The external action, epoch nonce, net amount, and total deposit amount ParentVault
+    ///         needs to execute the action and finalize the epoch after settlement
+    /// @dev Precondition: no rebalance may be in progress
+    /// @dev Precondition: the previous epoch (if one exists) must be CLAIMABLE
+    /// @dev Precondition: the current epoch must be OPEN and have been open for at least MIN_EPOCH_PERIOD
+    /// @dev Precondition: the epoch must have nonzero deposits or withdrawals
+    /// @dev Collects the performance fee and computes the settlement price per share before computing net flow
+    /// @dev Precondition: settlement must not mint zero shares for a minimum-size depositor
     function _closeEpoch(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 tvl,
@@ -181,6 +203,11 @@ library ParentVaultEpochLib {
         _finalizeLocalNetWithdraw($, epochNonce, totalDepositAmount, amountOut);
     }
 
+    /// @notice Finalizes a local net-withdraw epoch after ParentVault receives actual adapter output.
+    /// @param $ ParentVault namespaced storage
+    /// @param epochNonce The epoch nonce being finalized
+    /// @param totalDepositAmount The epoch's total deposit amount, as already settled by `closeEpoch`
+    /// @param amountOut The actual amount withdrawn from the local strategy
     function _finalizeLocalNetWithdraw(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 epochNonce,
@@ -202,6 +229,9 @@ library ParentVaultEpochLib {
         _openNextEpoch($, epochNonce);
     }
 
+    /// @notice Opens the next epoch.
+    /// @param $ ParentVault namespaced storage
+    /// @param epochNonce The epoch nonce just closed by `closeEpoch`, as the next nonce is `epochNonce + 1`
     function _openNextEpoch(ParentVaultStore.ParentVaultStorage storage $, uint256 epochNonce) internal {
         uint256 nextNonce = epochNonce + 1;
         $.s_epochNonce = nextNonce;
