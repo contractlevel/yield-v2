@@ -6,12 +6,20 @@ import {
 } from "@chainlink/cross-chain-identity/CredentialRegistryIdentityValidator.sol";
 import {ICredentialRequirements} from "@chainlink/cross-chain-identity/interfaces/ICredentialRequirements.sol";
 import {IPolicyEngine} from "@chainlink/policy-management/interfaces/IPolicyEngine.sol";
+import {IPolicy} from "@chainlink/policy-management/interfaces/IPolicy.sol";
 import {Policy} from "@chainlink/policy-management/core/Policy.sol";
+import {
+    ICredentialRegistryAccountListValidatorPolicy
+} from "../../interfaces/policies/ICredentialRegistryAccountListValidatorPolicy.sol";
 
 /// @title CredentialRegistryAccountListValidatorPolicy
 /// @author @contractlevel
 /// @notice Validates that every account in an extracted account list has the required credentials.
-contract CredentialRegistryAccountListValidatorPolicy is Policy, CredentialRegistryIdentityValidator {
+contract CredentialRegistryAccountListValidatorPolicy is
+    Policy,
+    CredentialRegistryIdentityValidator,
+    ICredentialRegistryAccountListValidatorPolicy
+{
     /// @notice The type and version of the policy
     string public constant override typeAndVersion = "CredentialRegistryAccountListValidatorPolicy 1.0.0";
 
@@ -38,19 +46,33 @@ contract CredentialRegistryAccountListValidatorPolicy is Policy, CredentialRegis
     }
 
     /// @notice Validates all accounts passed as the single encoded address array parameter.
+    /// @dev Reverts if no credential requirements are configured, whether the policy was
+    ///      deployed/initialized without any (see `configure`) or all requirements were later
+    ///      removed via the inherited `removeCredentialRequirement`. Without this check, the
+    ///      inherited `validate()` would iterate zero requirements and vacuously return true,
+    ///      silently approving every account instead of failing closed.
+    /// @dev To intentionally disable KYC enforcement, detach this policy via
+    ///      `IPolicyEngine.removePolicy(target, selector, address(this))` rather than removing
+    ///      all of its credential requirements while it remains attached. Draining requirements
+    ///      while still attached now causes every gated call to revert until a requirement is
+    ///      restored or the policy is removed — the intended fail-closed behavior, not a bug.
     /// @param parameters Policy parameters; expects exactly one `abi.encode(address[])` item
     /// @param context Additional policy context passed to the credential validator
     /// @return The policy result, `Continue` when every account validates
     function run(address, address, bytes4, bytes[] calldata parameters, bytes calldata context)
         public
         view
-        override
+        override(Policy, IPolicy)
         returns (IPolicyEngine.PolicyResult)
     {
         if (parameters.length != 1) revert InvalidParameters("expected kyc account list");
 
         address[] memory accounts = abi.decode(parameters[0], (address[]));
         if (accounts.length == 0) revert InvalidParameters("expected at least 1 kyc account");
+
+        if (getCredentialRequirementIds().length == 0) {
+            revert CredentialRegistryAccountListValidatorPolicy__NoCredentialRequirementsConfigured();
+        }
 
         for (uint256 i; i < accounts.length; ++i) {
             if (!validate(accounts[i], context)) {

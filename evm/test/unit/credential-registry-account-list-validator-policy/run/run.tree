@@ -7,5 +7,9 @@ CredentialRegistryAccountListValidatorPolicy_run
 │   └── it should revert
 ├── when parameters have multiple items
 │   └── it should revert
-└── when account list is empty
+├── when account list is empty
+│   └── it should revert
+├── when no credential requirements are configured
+│   └── it should revert
+└── when the last credential requirement is removed
     └── it should revert

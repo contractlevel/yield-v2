@@ -10,6 +10,9 @@ import {ICredentialRequirements} from "@chainlink/cross-chain-identity/interface
 import {IPolicyEngine} from "@chainlink/policy-management/interfaces/IPolicyEngine.sol";
 import {Policy} from "@chainlink/policy-management/core/Policy.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {
+    ICredentialRegistryAccountListValidatorPolicy
+} from "../../../../src/interfaces/policies/ICredentialRegistryAccountListValidatorPolicy.sol";
 
 import {MockCredentialRegistry} from "../../../mocks/MockCredentialRegistry.sol";
 import {MockIdentityRegistry} from "../../../mocks/MockIdentityRegistry.sol";
@@ -71,6 +74,37 @@ contract CredentialRegistryAccountListValidatorPolicy_RunUnitTest is BaseUnitTes
         address[] memory accounts = new address[](0);
 
         vm.expectRevert(abi.encodeWithSelector(Policy.InvalidParameters.selector, "expected at least 1 kyc account"));
+        s_policy.run(address(0), address(0), bytes4(0), _parameters(accounts), bytes(""));
+    }
+
+    function test_CredentialRegistryAccountListValidatorPolicy_run_RevertWhen_NoRequirementsConfigured() external {
+        CredentialRegistryAccountListValidatorPolicy impl = new CredentialRegistryAccountListValidatorPolicy();
+        ERC1967Proxy proxy = new ERC1967Proxy(
+            address(impl),
+            abi.encodeWithSelector(Policy.initialize.selector, i_policyEngine, i_policyOwner, new bytes(0))
+        );
+        CredentialRegistryAccountListValidatorPolicy unconfiguredPolicy =
+            CredentialRegistryAccountListValidatorPolicy(address(proxy));
+
+        address[] memory accounts = _accounts(i_accountOne, i_accountTwo);
+
+        vm.expectRevert(
+            ICredentialRegistryAccountListValidatorPolicy.CredentialRegistryAccountListValidatorPolicy__NoCredentialRequirementsConfigured
+                .selector
+        );
+        unconfiguredPolicy.run(address(0), address(0), bytes4(0), _parameters(accounts), bytes(""));
+    }
+
+    function test_CredentialRegistryAccountListValidatorPolicy_run_RevertWhen_LastRequirementRemoved() external {
+        _changePrank(i_policyOwner);
+        s_policy.removeCredentialRequirement(KYC_REQUIREMENT);
+
+        address[] memory accounts = _accounts(i_accountOne, i_accountTwo);
+
+        vm.expectRevert(
+            ICredentialRegistryAccountListValidatorPolicy.CredentialRegistryAccountListValidatorPolicy__NoCredentialRequirementsConfigured
+                .selector
+        );
         s_policy.run(address(0), address(0), bytes4(0), _parameters(accounts), bytes(""));
     }
 
