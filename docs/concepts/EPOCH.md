@@ -14,48 +14,32 @@ After settlement:
 
 If the active strategy is local to the parent chain, settlement can complete synchronously. If the active strategy is on a child chain and the epoch has a net withdrawal, the epoch enters an executing state until the child chain withdrawal and CCIP return path complete.
 
+## Epoch Status
+
+An epoch moves through up to three statuses after it opens:
+
+- `OPEN` — the epoch accepts deposits and withdraw intents.
+- `EXECUTING` — settlement has priced the epoch, but the underlying asset is still moving cross-chain. This only happens when the active strategy is on a child chain and the epoch has a net withdrawal; the epoch stays `EXECUTING` until the child chain withdrawal and CCIP return path complete.
+- `CLAIMABLE` — settlement is finalized. Depositors and withdrawers can claim.
+
+`NONE` is the zero value for a nonce that has never been opened, not a state an opened epoch passes through.
+
+## Reading Epoch State
+
+Epoch state is read from `ParentVault.getEpoch(epochNonce)`.
+
+The returned `Epoch` value includes:
+
+- `totalDepositAmount` / `totalShareBurnAmount` — the epoch's total inflow and outflow, fixed at settlement.
+- `totalWithdrawClaimAmount` — the total underlying asset available for withdraw claims, fixed at settlement.
+- `pricePerShare` — the settlement price used to convert between asset and shares for this epoch.
+- `remainingDepositClaimAmount` / `remainingShareMintAmount` — the unclaimed portion of deposit-side settlement; both reach zero once every depositor has claimed.
+- `remainingShareBurnAmount` / `remainingWithdrawClaimAmount` — the unclaimed portion of withdraw-side settlement; both reach zero once every withdrawer has claimed.
+- `openedAtTimestamp` — when the epoch opened; used to enforce the minimum epoch period before it can close.
+- `status` — `NONE` (`0`), `OPEN` (`1`), `EXECUTING` (`2`), or `CLAIMABLE` (`3`).
+
+The claimant who exhausts a side's remaining pool last receives that side's rounding remainder, bounded to at most N − 1 smallest output units, where N is the number of claimants on that side.
+
+## Further Reading
+
 For exact execution paths, see [`PATHS`](../protocol/PATHS.md). For epoch safety properties, see [`INVARIANTS`](../security/INVARIANTS.md#epoch-lifecycle).
-
-// @review discuss epoch status and struct
-
-<!--
-/// @notice Status of an epoch
-    /// @param NONE The epoch has not been opened
-    /// @param OPEN The epoch is open for deposits and withdraws
-    /// @param EXECUTING The epoch is executing
-    /// @param CLAIMABLE The epoch is claimable
-    enum EpochStatus {
-        NONE, // 0
-        OPEN, // 1
-        EXECUTING, // 2
-        CLAIMABLE // 3
-    }
-
-    /// @notice Data for an epoch
-    /// @param totalDepositAmount The total amount of asset deposited during the epoch
-    /// @param totalShareBurnAmount The total amount of shares submitted to be burned during the epoch
-    /// @param totalWithdrawClaimAmount The total amount of asset available for withdraw claims during the epoch
-    /// @param pricePerShare The price per share of the epoch
-    /// @param remainingDepositClaimAmount The unclaimed asset deposit amount used for shrinking-pool share claims
-    /// @param remainingShareMintAmount The unclaimed shares to mint for deposit claims
-    /// @param remainingShareBurnAmount The unclaimed shares submitted for withdraw claims
-    /// @param remainingWithdrawClaimAmount The unclaimed asset available for withdraw claims
-    /// @param openedAtTimestamp The timestamp when the epoch was opened
-    /// @param status The status of the epoch
-    /// @dev Remaining counter pairs are mutable claim-settlement state. Existing totals remain historical settlement state.
-    ///      The claimant who exhausts a side's input pool receives that side's rounding remainder, bounded per side per epoch
-    ///      by at most N - 1 smallest output units where N is the number of claimants on that side.
-    ///      Deposit-side counters should reach zero together. Withdraw-side counters should reach zero together.
-    struct Epoch {
-        uint256 totalDepositAmount;
-        uint256 totalShareBurnAmount;
-        uint256 totalWithdrawClaimAmount;
-        uint256 pricePerShare;
-        uint256 remainingDepositClaimAmount;
-        uint256 remainingShareMintAmount;
-        uint256 remainingShareBurnAmount;
-        uint256 remainingWithdrawClaimAmount;
-        uint256 openedAtTimestamp;
-        EpochStatus status;
-    }
- -->
