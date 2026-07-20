@@ -38,6 +38,27 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
         s_childVault.ccipReceive(message);
     }
 
+    function test_ChildVault_ccipReceive_Deposit_RevertWhen_SourceChainIsNotParentChain() public {
+        _setChildCrosschainVault(REMOTE_CHILD_CHAIN_SELECTOR, address(s_parentVault));
+        _changePrank(address(s_mockCcipRouter));
+        Client.Any2EVMMessage memory message = _message(
+            REMOTE_CHILD_CHAIN_SELECTOR,
+            address(s_parentVault),
+            Types.CcipTx.EPOCH_NET_DEPOSIT,
+            abi.encode(EPOCH_NONCE),
+            BRIDGED_AMOUNT
+        );
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IBaseVault.BaseVault__InvalidSourceChainSelector.selector,
+                REMOTE_CHILD_CHAIN_SELECTOR,
+                PARENT_CHAIN_SELECTOR
+            )
+        );
+        s_childVault.ccipReceive(message);
+    }
+
     function test_ChildVault_ccipReceive_RevertWhen_SenderAndRegisteredVaultAreZero() public {
         Client.Any2EVMMessage memory message = _depositMessage(EPOCH_NONCE);
         message.sourceChainSelector = REMOTE_CHILD_CHAIN_SELECTOR;
@@ -201,6 +222,24 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
 
     function test_ChildVault_ccipReceive_Rebalance_Success_DepositsIntoTargetAdapter() public {
         s_childVault.ccipReceive(_rebalanceMessage(REBALANCE_NONCE, AAVE_V3_PROTOCOL_ID));
+
+        assertEq(s_mockProtocolAdapter.getDepositCalls(), 1);
+        assertEq(s_mockProtocolAdapter.getLastDepositAmount(), BRIDGED_AMOUNT);
+    }
+
+    function test_ChildVault_ccipReceive_Rebalance_Success_WhenSourceIsRegisteredChildChain() public {
+        _setChildCrosschainVault(REMOTE_CHILD_CHAIN_SELECTOR, address(s_parentVault));
+        _changePrank(address(s_mockCcipRouter));
+
+        s_childVault.ccipReceive(
+            _rebalanceMessage(
+                REMOTE_CHILD_CHAIN_SELECTOR,
+                address(s_parentVault),
+                REBALANCE_NONCE,
+                AAVE_V3_PROTOCOL_ID,
+                BRIDGED_AMOUNT
+            )
+        );
 
         assertEq(s_mockProtocolAdapter.getDepositCalls(), 1);
         assertEq(s_mockProtocolAdapter.getLastDepositAmount(), BRIDGED_AMOUNT);

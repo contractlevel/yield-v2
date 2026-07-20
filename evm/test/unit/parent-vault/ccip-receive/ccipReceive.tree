@@ -5,6 +5,8 @@ ParentVault_ccipReceive
 │   └── it should revert with BaseVault__InvalidSender
 ├── when no vault is registered for the source chain selector
 │   └── it should revert with BaseVault__InvalidSender
+├── when source chain is not the active strategy chain
+│   └── it should revert with BaseVault__InvalidSourceChainSelector before token validation
 ├── when received token is not USDC
 │   └── it should revert with BaseVault__InvalidReceivedToken
 ├── when token amounts length is zero

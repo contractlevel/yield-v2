@@ -268,6 +268,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @param message Any2EVMMessage.
     /// @dev Precondition: the call must not be reentered
     /// @dev Precondition: the message must be sent by an allowed sender (a crosschain vault mapped to an allowed source chain selector)
+    /// @dev Precondition: the message must originate from the active strategy chain
     /// @dev Precondition: the received token must be i_asset
     /// @dev Precondition: there must not be an existent recovery mode
     /// @dev Precondition: if epoch tx: the decoded nonce must match the previous
@@ -280,12 +281,17 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         nonReentrant
         onlyAllowedSender(abi.decode(message.sender, (address)), message.sourceChainSelector)
     {
+        ParentVaultStorage storage $ = _parentVaultStorage();
+        uint64 activeStrategyChainSelector = $.s_rebalance.activeStrategy.chainSelector;
+        if (message.sourceChainSelector != activeStrategyChainSelector) {
+            revert BaseVault__InvalidSourceChainSelector(message.sourceChainSelector, activeStrategyChainSelector);
+        }
+
         _requireNoRecovery(_baseVaultStorage());
         uint256 receivedAmount = BaseVaultCcipLib.validateReceivedTokenAndGetAmount(message, i_asset);
 
         /// @dev data decodes to a uint256 epochNonce for epoch net withdraws and a (uint256 rebalanceNonce, bytes32 protocolId) for rebalances
         (Types.CcipTx ccipTxType, bytes memory data) = abi.decode(message.data, (Types.CcipTx, bytes));
-        ParentVaultStorage storage $ = _parentVaultStorage();
         (uint256 rebalanceNonce, bytes32 protocolId) =
             ParentVaultCcipLib.receiveCcip($, ccipTxType, data, receivedAmount);
         if (rebalanceNonce != 0) {

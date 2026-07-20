@@ -56,6 +56,10 @@ interface IBaseVault is IPauseable {
     /// @param sender The address of the sender
     /// @param srcChainSelector The CCIP selector of the chain
     error BaseVault__InvalidSender(address sender, uint64 srcChainSelector);
+    /// @dev Thrown when a CCIP message originates from an unexpected source chain
+    /// @param sourceChainSelector The source chain selector supplied by CCIP
+    /// @param expectedSourceChainSelector The source chain selector expected by the receiving vault
+    error BaseVault__InvalidSourceChainSelector(uint64 sourceChainSelector, uint64 expectedSourceChainSelector);
     /// @dev Thrown when the destination chain selector is zero or equals the current chain selector
     /// @param destinationChainSelector The invalid destination chain selector
     error BaseVault__InvalidDestinationChainSelector(uint64 destinationChainSelector);

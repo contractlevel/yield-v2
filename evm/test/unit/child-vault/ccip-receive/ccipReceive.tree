@@ -18,6 +18,8 @@ ChildVault_ccipReceive
 ├── when tx type is invalid
 │   └── it should revert with BaseVault__InvalidTxType
 ├── when message is a deposit
+│   ├── when source chain is not the parent chain
+│   │   └── it should revert with BaseVault__InvalidSourceChainSelector
 │   ├── when there is no active adapter
 │   │   └── it should revert with BaseVault__NoActiveAdapter
 │   ├── when active adapter deposit succeeds

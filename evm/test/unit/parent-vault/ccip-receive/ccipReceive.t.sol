@@ -25,6 +25,7 @@ contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
 
     function setUp() public {
         _setParentCrosschainVault(CHILD_CHAIN_SELECTOR, address(s_childVault));
+        _setParentActiveStrategy(AAVE_V3_PROTOCOL_ID, CHILD_CHAIN_SELECTOR);
         _setParentEpochNonce(EPOCH_NONCE + 1);
         deal(address(s_mockUsdc), address(s_parentVault), BRIDGED_AMOUNT);
         _changePrank(address(s_mockCcipRouter));
@@ -54,6 +55,30 @@ contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
         vm.expectRevert(
             abi.encodeWithSelector(
                 IBaseVault.BaseVault__InvalidSender.selector, address(0), REMOTE_CHILD_CHAIN_SELECTOR
+            )
+        );
+        s_parentVault.ccipReceive(message);
+    }
+
+    function test_ParentVault_ccipReceive_RevertWhen_SourceChainIsNotActiveStrategyChain_BeforeTokenValidation()
+        public
+    {
+        _setParentCrosschainVault(REMOTE_CHILD_CHAIN_SELECTOR, address(s_parentVault));
+        _changePrank(address(s_mockCcipRouter));
+        Client.Any2EVMMessage memory message = _message(
+            REMOTE_CHILD_CHAIN_SELECTOR,
+            address(s_parentVault),
+            Types.CcipTx.EPOCH_NET_WITHDRAW,
+            abi.encode(EPOCH_NONCE),
+            EXPECTED_WITHDRAW_USDC
+        );
+        message.destTokenAmounts[0].token = address(s_mockLink);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IBaseVault.BaseVault__InvalidSourceChainSelector.selector,
+                REMOTE_CHILD_CHAIN_SELECTOR,
+                CHILD_CHAIN_SELECTOR
             )
         );
         s_parentVault.ccipReceive(message);

@@ -34,6 +34,7 @@ contract ParentVault_ExecuteRecovery_RebalanceDeposit_UnitTest is BaseUnitTest {
 
     function setUp() public {
         _setParentCrosschainVault(CHILD_CHAIN_SELECTOR, address(s_childVault));
+        _setParentActiveStrategy(AAVE_V3_PROTOCOL_ID, CHILD_CHAIN_SELECTOR);
         _setParentPendingRebalance(AAVE_V3_PROTOCOL_ID, PARENT_CHAIN_SELECTOR);
         _storeRebalanceDepositRecovery();
         _changePrank(i_nonOwner);

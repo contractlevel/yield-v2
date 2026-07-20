@@ -66,6 +66,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @dev Precondition: there should only be 1 token sent
     /// @dev Precondition: the amount of token receive must be more than 0
     /// @dev Precondition: the received tx type must be supported: EPOCH_NET_DEPOSIT or REBALANCE
+    /// @dev Precondition: EPOCH_NET_DEPOSIT messages must originate from the parent chain
     function _ccipReceive(Client.Any2EVMMessage memory message)
         internal
         override
@@ -80,6 +81,9 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         (Types.CcipTx ccipTxType, bytes memory data) = abi.decode(message.data, (Types.CcipTx, bytes));
 
         if (ccipTxType == Types.CcipTx.EPOCH_NET_DEPOSIT) {
+            if (message.sourceChainSelector != i_parentChainSelector) {
+                revert BaseVault__InvalidSourceChainSelector(message.sourceChainSelector, i_parentChainSelector);
+            }
             uint256 epochNonce = abi.decode(data, (uint256));
             _handleCCIPDeposit(epochNonce, receivedAmount, $_baseVault);
         }
