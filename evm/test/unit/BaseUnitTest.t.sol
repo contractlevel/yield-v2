@@ -83,7 +83,6 @@ abstract contract BaseUnitTest is BaseTest {
         s_parentVault.setSupportedProtocol(AAVE_V3_PROTOCOL_ID, true);
         s_parentVault.setSupportedProtocol(AAVE_V4_PROTOCOL_ID, true);
         s_parentVault.setSupportedProtocol(COMPOUND_V3_PROTOCOL_ID, true);
-        _setParentCrosschainVault(PARENT_CHAIN_SELECTOR, address(s_parentVault));
         _changePrank(i_owner);
         s_parentVault.setInitialActiveProtocolAdapter(AAVE_V3_PROTOCOL_ID);
 

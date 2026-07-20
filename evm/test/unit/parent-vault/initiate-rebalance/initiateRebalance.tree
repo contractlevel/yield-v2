@@ -17,7 +17,7 @@ ParentVault_initiateRebalance
 │   └── it should revert with ParentVault__NoCompletedEpoch
 ├── when prior epoch is executing
 │   └── it should revert with ParentVault__EpochExecuting
-├── when parent rebalances local to local
+├── when parent rebalances local to local without a crosschain vault self-registration
 │   ├── it should withdraw from the old adapter
 │   ├── it should deposit into the new adapter
 │   ├── it should emit ActiveProtocolAdapterSet

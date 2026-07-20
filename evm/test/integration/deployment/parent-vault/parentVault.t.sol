@@ -126,8 +126,8 @@ contract ParentVault_DeploymentIntegrationTest is BaseIntegrationTest {
         assertEq(parent.vault.getDefaultCcipGasLimit(), networkConfig.ccip.initialDefaultCcipGasLimit);
     }
 
-    function test_ParentVault_deployment_SetsParentCrosschainVault() external view {
-        assertEq(parent.vault.getCrosschainVault(networkConfig.ccip.parentChainSelector), address(parent.vault));
+    function test_ParentVault_deployment_DoesNotSetParentAsCrosschainVault() external view {
+        assertEq(parent.vault.getCrosschainVault(networkConfig.ccip.parentChainSelector), address(0));
     }
 
     function test_ParentVault_deployment_SetsInitialActiveAdapter() external view {

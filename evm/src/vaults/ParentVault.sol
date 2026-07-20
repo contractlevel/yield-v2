@@ -407,7 +407,9 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
         _requireNoRecovery($_baseVault);
 
-        bool isSupportedChain = $_baseVault.s_crosschainVaults[newStrategy.chainSelector] != address(0);
+        bool isSupportedChain = newStrategy.chainSelector == i_thisChainSelector
+            || $_baseVault.s_crosschainVaults[newStrategy.chainSelector] != address(0);
+
         ParentVaultRebalanceLib.InitiateRebalanceResult memory result =
             ParentVaultRebalanceLib.initiateRebalance($, newStrategy, i_thisChainSelector, isSupportedChain);
 

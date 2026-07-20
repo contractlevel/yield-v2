@@ -53,7 +53,7 @@ library ParentVaultRebalanceLib {
     /// @param $ ParentVault namespaced storage
     /// @param newStrategy The new strategy to rebalance to
     /// @param thisChainSelector The chain selector for the ParentVault chain
-    /// @param isSupportedChain Whether the target strategy chain is registered in BaseVault storage
+    /// @param isSupportedChain Whether the target strategy chain is local or registered in BaseVault storage
     /// @return result The external action ParentVault should execute after state is updated
     function initiateRebalance(
         ParentVaultStore.ParentVaultStorage storage $,
@@ -68,7 +68,7 @@ library ParentVaultRebalanceLib {
     /// @param $ ParentVault namespaced storage
     /// @param newStrategy The new strategy to rebalance to
     /// @param thisChainSelector The chain selector for the ParentVault chain
-    /// @param isSupportedChain Whether the target strategy chain is registered in BaseVault storage
+    /// @param isSupportedChain Whether the target strategy chain is local or registered in BaseVault storage
     /// @return result The external action ParentVault should execute after state is updated
     function _initiateRebalance(
         ParentVaultStore.ParentVaultStorage storage $,

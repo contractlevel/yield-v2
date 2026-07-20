@@ -248,12 +248,6 @@ contract DeployParent is Script {
         deploy.parentVaultProxy.setSupportedProtocol(aaveV4ProtocolId, true);
         deploy.parentVaultProxy.setSupportedProtocol(compoundV3ProtocolId, true);
 
-        uint64[] memory parentChainSelectors = new uint64[](1);
-        address[] memory parentCrosschainVaults = new address[](1);
-        parentChainSelectors[0] = networkConfig.ccip.parentChainSelector;
-        parentCrosschainVaults[0] = address(deploy.parentVaultProxy);
-        deploy.parentVaultProxy.setCrosschainVaults(parentChainSelectors, parentCrosschainVaults);
-
         /// @dev Deploy the WorkflowRouter
         uint48 initialDelay = 259200; // 3 days
         WorkflowRouter.ConstructorParams memory workflowRouterParams = WorkflowRouter.ConstructorParams({

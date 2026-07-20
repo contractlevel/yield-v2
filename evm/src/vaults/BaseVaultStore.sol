@@ -15,10 +15,9 @@ abstract contract BaseVaultStore {
     /// per-chain override is set in s_ccipGasLimits.
     /// @param s_ccipGasLimits Per-chain-selector CCIP gas limit override. A value of 0 means "unset",
     /// in which case s_defaultCcipGasLimit is used instead.
-    /// @param s_crosschainVaults Maps a chain selector to the Yieldcoin vault address on that chain.
+    /// @param s_crosschainVaults Maps a remote chain selector to the Yieldcoin vault address on that chain.
     /// Doubles as the trusted CCIP sender allow-list: only messages from the registered vault address
-    /// on a given chain selector are accepted. The Parent chain must include itself (its own vault
-    /// address under its own chain selector) since this is checked in initiateRebalance.
+    /// on a given chain selector are accepted.
     /// @param s_activeProtocolAdapter Protocol adapter currently holding deposited funds on this chain.
     /// address(0) means this chain is not the active strategy chain.
     /// @param s_pausedAt Timestamp the vault was paused at; cleared (deleted) on unpause. Gates the

@@ -6,5 +6,5 @@ GIVEN the five-chain fork topology is deployed
     AND the parent vault is deployed as a UUPS proxy with the upgrader role granted
     AND the share owner is initialized to the upgrader address
     AND the parent vault supports the known Yieldcoin protocol IDs
-    AND the parent vault trusts itself by parent chain selector
+    AND the parent vault leaves its own chain selector unregistered
     AND the parent vault trusts each child vault by chain selector

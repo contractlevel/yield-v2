@@ -42,7 +42,7 @@ abstract contract BaseForkDeploymentTest is BaseForkTest {
         assertEq(parent.vault.getLink(), parent.link);
         assertEq(parent.vault.getThisChainSelector(), arbitrumConfig.ccip.parentChainSelector);
         assertEq(parent.vault.getDefaultCcipGasLimit(), arbitrumConfig.ccip.initialDefaultCcipGasLimit);
-        assertEq(parent.vault.getCrosschainVault(arbitrumConfig.ccip.parentChainSelector), address(parent.vault));
+        assertEq(parent.vault.getCrosschainVault(arbitrumConfig.ccip.parentChainSelector), address(0));
         assertEq(parent.workflowRouter.getVault(), address(parent.vault));
         assertTrue(parent.vault.getSupportedProtocol(AAVE_V3_PROTOCOL_ID));
         assertTrue(parent.vault.getSupportedProtocol(AAVE_V4_PROTOCOL_ID));
