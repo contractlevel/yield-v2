@@ -23,6 +23,17 @@ contract ChildVault_ExecuteEpochWithdrawUnitTest is BaseUnitTest {
         s_childVault.executeEpochWithdraw(EPOCH_NONCE, WITHDRAW_AMOUNT);
     }
 
+    function test_ChildVault_executeEpochWithdraw_RevertWhen_Paused()
+        public
+        givenContractIsPaused(address(s_childVault))
+    {
+        vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
+        s_childVault.executeEpochWithdraw(EPOCH_NONCE, WITHDRAW_AMOUNT);
+
+        assertEq(s_mockProtocolAdapter.getWithdrawCalls(), 0);
+        assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.NONE);
+    }
+
     function test_ChildVault_executeEpochWithdraw_RevertWhen_NoActiveAdapter() public {
         _clearChildActiveAdapter();
 

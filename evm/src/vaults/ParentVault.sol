@@ -275,10 +275,12 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @dev Precondition: if rebalance tx: the state must be REBALANCING
     /// @dev Precondition: if rebalance tx: the decoded nonce must match the current
     /// @dev Precondition: if rebalance tx: the decoded protocolId must match the pending protocolId
+    /// @dev Precondition: the contract must not be paused
     function _ccipReceive(Client.Any2EVMMessage memory message)
         internal
         override
         nonReentrant
+        whenNotPaused
         onlyAllowedSender(abi.decode(message.sender, (address)), message.sourceChainSelector)
     {
         ParentVaultStorage storage $ = _parentVaultStorage();
@@ -483,9 +485,8 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @dev Precondition: a recovery mode must be active (not NONE)
     /// @dev Precondition: function must not be reentered
     /// @dev Finalizes the rebalance in the same atomic tx
-    // @review omitting whenNotPaused - still not sure about this. Should be uniform with ChildVault.executeRecovery
-    /// @dev Intentionally omits whenNotPaused. See DD-004 in docs/protocol/DECISIONS.md.
-    function executeRecovery() external override(BaseVault, IBaseVault) nonReentrant {
+    /// @dev Precondition: the contract must not be paused
+    function executeRecovery() external override(BaseVault, IBaseVault) nonReentrant whenNotPaused {
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
         if ($_baseVault.s_recoveryMode != Types.RecoveryMode.REBALANCE_DEPOSIT) revert BaseVault__NoPendingRecovery();
         _recoverFailedRebalanceDeposit($_baseVault);

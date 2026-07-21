@@ -43,4 +43,34 @@ Recovery callers must not choose arbitrary amounts, destinations, strategies, re
 
 Use pause controls according to role assignments in [`ACCESS_CONTROL_MATRIX`](../security/ACCESS_CONTROL_MATRIX.md). Escalate unusual states, external protocol failures, compromised keys, incorrect TVL, CCIP disruption, or ACE policy issues through [`INCIDENT_RESPONSE`](./INCIDENT_RESPONSE.md).
 
+## Paused Cross-Chain Execution
+
+Pausing a vault blocks recovery, child epoch withdrawals, child rebalances, and inbound CCIP processing. An epoch or rebalance may therefore remain in progress across chains until operators deliberately resume it.
+
+Before temporarily unpausing a vault, pause the normal `WorkflowRouter` or revoke its operational role on that vault. Record the relevant transactions, events, recovery modes, adapter state, balances, and CCIP message IDs. Determine whether execution stopped before the source-chain call, during stored recovery, after a CCIP send, or during destination execution. Never repeat a source-chain action unless its transaction and CCIP message status show that it was not successfully executed.
+
+### Child Paused Before Rebalance Execution
+
+1. Read `ParentVault.getRebalance()` and require `state == REBALANCING`.
+2. Confirm `activeStrategy.chainSelector` identifies the paused child and verify the pending strategy, adapters, destination vault, and CCIP route are safe.
+3. Use the exact `nonce` and `pendingStrategy` returned by the parent. The child cannot validate these arguments against parent state, so the calldata must be independently reviewed.
+4. Grant `REBALANCE_OPERATOR_ROLE` temporarily to the approved break-glass executor while the normal router remains paused or unauthorized.
+5. Unpause only the affected child and call `executeRebalance(nonce, pendingStrategy)`.
+6. Record whether execution succeeded or stored rebalance-withdraw, rebalance-deposit, or CCIP-send recovery. Track any emitted CCIP message before taking another action.
+7. Re-pause the child if containment remains necessary, revoke the temporary role, and restore automation only after state reconciliation and approval.
+
+### Child Paused Before Epoch Withdraw Execution
+
+1. Identify the canonical `EpochExecuting(epochNonce, amount)` event emitted by the parent.
+2. Confirm the parent epoch is still `EXECUTING`, the paused child holds the active strategy, and the child execution or resulting CCIP message has not already succeeded.
+3. Use the exact `epochNonce` and `amount` from the event; do not recalculate the amount manually.
+4. Grant `EPOCH_OPERATOR_ROLE` temporarily to the approved break-glass executor while the normal router remains paused or unauthorized.
+5. Unpause only the affected child and call `executeEpochWithdraw(epochNonce, amount)`.
+6. Record whether execution succeeded or stored epoch-withdraw or CCIP-send recovery, and track any emitted CCIP message until the parent settles the epoch.
+7. Re-pause the child if necessary, revoke the temporary role, and restore automation only after state reconciliation and approval.
+
+### Destination Paused During CCIP Delivery
+
+When destination execution reverts because the vault is paused, validate and manually execute the CCIP message after the destination is unpaused. Verify its source chain, sender, token, amount, transaction type, nonce, and protocol ID. Do not repeat the originating withdrawal or rebalance call. Confirm the destination vault and recovery state before restoring automation.
+
 For exact protocol flows, see [`PATHS`](../protocol/PATHS.md). For accepted risks and liveness dependencies, see [`KNOWN_ISSUES`](../security/KNOWN_ISSUES.md).

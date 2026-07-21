@@ -37,13 +37,13 @@ The libraries contain accounting and validation logic. The vault contracts retai
 
 This split is an implementation boundary, not a trust boundary: linked libraries execute in the vault context.
 
-## DD-004 - In-Progress Rebalance Completion Can Run While Paused
+## DD-004 - Pause Contains External Execution
 
-`completeRebalance` and rebalance-deposit recovery intentionally omit `whenNotPaused`.
+While a vault is paused, it does not execute recovery, child epoch withdrawals, child rebalances, or inbound CCIP messages. These paths call strategy adapters, send CCIP messages, or process cross-chain state and must stop during incident containment.
 
-A pause should stop new user activity and new privileged operations where appropriate, but it should not necessarily freeze an already-started rebalance in an intermediate state. Allowing completion while paused can restore a coherent active strategy and clear recovery state.
+`completeRebalance` intentionally remains callable while paused because it performs only local finalization and does not call an adapter or CCIP router. The privileged `donate` and `emergencyDrain` functions remain explicit emergency exceptions.
 
-Emergency behavior and pause-related residual risks are tracked in [INVARIANTS - Pause And Emergency Behavior](../security/INVARIANTS.md#pause-and-emergency-behavior) and [KNOWN_ISSUES](../security/KNOWN_ISSUES.md).
+This containment boundary can leave an epoch or rebalance in an intermediate cross-chain state. Operators must inspect the parent, child, recovery, and CCIP message states before resuming the affected operation. The break-glass procedure is documented in [OPERATIONS](../operator/OPERATIONS.md#paused-cross-chain-execution).
 
 ## DD-005 - CRE Is The Automation And TVL Reporting Layer
 

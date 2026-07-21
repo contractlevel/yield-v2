@@ -1,4 +1,6 @@
 ParentVault_executeRecovery
+├── when the contract is paused
+│   └── it should revert
 ├── NONE
 │   └── RevertWhen_NoRecoveryPending
 └── REBALANCE_DEPOSIT

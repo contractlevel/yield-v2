@@ -40,6 +40,19 @@ contract ParentVault_ExecuteRecovery_RebalanceDeposit_UnitTest is BaseUnitTest {
         _changePrank(i_nonOwner);
     }
 
+    function test_ParentVault_executeRecovery_REBALANCE_DEPOSIT_RevertWhen_Paused()
+        public
+        givenContractIsPaused(address(s_parentVault))
+    {
+        uint256 depositCallsBefore = s_mockProtocolAdapter.getDepositCalls();
+
+        vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
+        s_parentVault.executeRecovery();
+
+        assertTrue(s_parentVault.getRecoveryMode() == Types.RecoveryMode.REBALANCE_DEPOSIT);
+        assertEq(s_mockProtocolAdapter.getDepositCalls(), depositCallsBefore);
+    }
+
     function test_ParentVault_executeRecovery_REBALANCE_DEPOSIT_RevertWhen_NoActiveAdapter() public {
         _clearParentActiveAdapter();
 

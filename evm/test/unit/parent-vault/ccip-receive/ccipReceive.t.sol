@@ -37,6 +37,33 @@ contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
         s_parentVault.ccipReceive(_withdrawMessage(EPOCH_NONCE, EXPECTED_WITHDRAW_USDC));
     }
 
+    function test_ParentVault_ccipReceive_Withdraw_RevertWhen_Paused()
+        public
+        givenContractIsPaused(address(s_parentVault))
+    {
+        _setParentEpochStatus(EPOCH_NONCE, Types.EpochStatus.EXECUTING);
+        _setParentEpochWithdrawAccounting(EPOCH_NONCE);
+
+        vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
+        s_parentVault.ccipReceive(_withdrawMessage(EPOCH_NONCE, EXPECTED_WITHDRAW_USDC));
+
+        assertTrue(s_parentVault.getEpoch(EPOCH_NONCE).status == Types.EpochStatus.EXECUTING);
+    }
+
+    function test_ParentVault_ccipReceive_Rebalance_RevertWhen_Paused()
+        public
+        givenContractIsPaused(address(s_parentVault))
+    {
+        _setParentPendingRebalance(AAVE_V3_PROTOCOL_ID, PARENT_CHAIN_SELECTOR);
+
+        vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
+        s_parentVault.ccipReceive(_rebalanceMessage(REBALANCE_NONCE, AAVE_V3_PROTOCOL_ID, BRIDGED_AMOUNT));
+
+        assertTrue(s_parentVault.getRebalance().state == Types.RebalanceState.REBALANCING);
+        assertEq(s_mockProtocolAdapter.getDepositCalls(), 0);
+        assertTrue(s_parentVault.getRecoveryMode() == Types.RecoveryMode.NONE);
+    }
+
     function test_ParentVault_ccipReceive_RevertWhen_SenderIsNotAllowedSender() public {
         Client.Any2EVMMessage memory message = _withdrawMessage(EPOCH_NONCE, EXPECTED_WITHDRAW_USDC);
         message.sender = abi.encode(i_nonOwner);

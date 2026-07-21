@@ -31,6 +31,14 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
         s_childVault.executeRebalance(REBALANCE_NONCE, _sameChildStrategy());
     }
 
+    function test_ChildVault_executeRebalance_RevertWhen_Paused() public givenContractIsPaused(address(s_childVault)) {
+        vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
+        s_childVault.executeRebalance(REBALANCE_NONCE, _sameChildStrategy());
+
+        assertEq(s_mockProtocolAdapter.getWithdrawCalls(), 0);
+        assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.NONE);
+    }
+
     function test_ChildVault_executeRebalance_RevertWhen_RecoveryExists() public {
         s_mockProtocolAdapter.setWithdrawReverts(true);
         s_childVault.executeRebalance(REBALANCE_NONCE, _remoteChildStrategy());

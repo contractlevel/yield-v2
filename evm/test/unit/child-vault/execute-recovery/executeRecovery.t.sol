@@ -37,6 +37,17 @@ contract ChildVault_ExecuteRecovery_EpochDeposit_UnitTest is BaseUnitTest {
         _changePrank(i_nonOwner);
     }
 
+    function test_ChildVault_executeRecovery_EPOCH_DEPOSIT_RevertWhen_Paused()
+        public
+        givenContractIsPaused(address(s_childVault))
+    {
+        vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
+        s_childVault.executeRecovery();
+
+        assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.EPOCH_DEPOSIT);
+        assertEq(s_mockProtocolAdapter.getDepositCalls(), 0);
+    }
+
     function test_ChildVault_executeRecovery_EPOCH_DEPOSIT_RevertWhen_NoActiveAdapter() public {
         _clearChildActiveAdapter();
 

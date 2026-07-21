@@ -67,10 +67,12 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @dev Precondition: the amount of token receive must be more than 0
     /// @dev Precondition: the received tx type must be supported: EPOCH_NET_DEPOSIT or REBALANCE
     /// @dev Precondition: EPOCH_NET_DEPOSIT messages must originate from the parent chain
+    /// @dev Precondition: the contract must not be paused
     function _ccipReceive(Client.Any2EVMMessage memory message)
         internal
         override
         nonReentrant
+        whenNotPaused
         onlyAllowedSender(abi.decode(message.sender, (address)), message.sourceChainSelector)
     {
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
@@ -187,9 +189,11 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @param amount The amount of asset to withdraw from the active strategy
     /// @dev This is called by the WorkflowRouter when net flow is negative (more withdraws than deposits).
     /// @dev Precondition: Caller must have the EPOCH_OPERATOR_ROLE
+    /// @dev Precondition: the contract must not be paused
     function executeEpochWithdraw(uint256 epochNonce, uint256 amount)
         external
         nonReentrant
+        whenNotPaused
         onlyRole(Roles.EPOCH_OPERATOR_ROLE)
     {
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
@@ -218,9 +222,11 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @dev Precondition: caller must have the REBALANCE_OPERATOR_ROLE
     /// @dev Precondition: call must not be reentered
     /// @dev Precondition: there must be no existent recovery mode
+    /// @dev Precondition: the contract must not be paused
     function executeRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy)
         external
         nonReentrant
+        whenNotPaused
         onlyRole(Roles.REBALANCE_OPERATOR_ROLE)
     {
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
@@ -307,8 +313,8 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @notice Executes the active recovery mode, reverting if no recovery is pending
     /// @dev Precondition: a recovery mode must be active (not NONE)
     /// @dev Precondition: function must not be reentered
-    /// @dev Intentionally omits whenNotPaused. See DD-004 in docs/protocol/DECISIONS.md.
-    function executeRecovery() external override(BaseVault, IBaseVault) nonReentrant {
+    /// @dev Precondition: the contract must not be paused
+    function executeRecovery() external override(BaseVault, IBaseVault) nonReentrant whenNotPaused {
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
         Types.RecoveryMode mode = $_baseVault.s_recoveryMode;
         if (mode == Types.RecoveryMode.NONE) revert BaseVault__NoPendingRecovery();

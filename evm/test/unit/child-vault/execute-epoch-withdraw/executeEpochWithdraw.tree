@@ -1,4 +1,6 @@
 ChildVault_executeEpochWithdraw
+├── when the contract is paused
+│   └── it should revert
 ├── when caller does not have EPOCH_OPERATOR_ROLE
 │   └── it should revert
 ├── when there is no active adapter

@@ -28,6 +28,31 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
         s_childVault.ccipReceive(_depositMessage(EPOCH_NONCE));
     }
 
+    function test_ChildVault_ccipReceive_Deposit_RevertWhen_Paused()
+        public
+        givenContractIsPaused(address(s_childVault))
+    {
+        _setChildActiveAdapter(address(s_mockProtocolAdapter));
+
+        vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
+        s_childVault.ccipReceive(_depositMessage(EPOCH_NONCE));
+
+        assertEq(s_mockProtocolAdapter.getDepositCalls(), 0);
+        assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.NONE);
+    }
+
+    function test_ChildVault_ccipReceive_Rebalance_RevertWhen_Paused()
+        public
+        givenContractIsPaused(address(s_childVault))
+    {
+        vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
+        s_childVault.ccipReceive(_rebalanceMessage(REBALANCE_NONCE, AAVE_V3_PROTOCOL_ID));
+
+        assertEq(s_mockProtocolAdapter.getDepositCalls(), 0);
+        assertEq(s_childVault.getActiveProtocolAdapter(), address(0));
+        assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.NONE);
+    }
+
     function test_ChildVault_ccipReceive_RevertWhen_SenderIsNotAllowedSender() public {
         Client.Any2EVMMessage memory message = _depositMessage(EPOCH_NONCE);
         message.sender = abi.encode(i_nonOwner);
