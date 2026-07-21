@@ -609,7 +609,7 @@ Separately, per the CRE architecture ("Each node in the DON executes the workflo
 
 ### Why this is accepted, not mitigated
 
-- `cre-sdk-go`'s own test suite (`standard_tests/secrets_fail_in_node_mode`) confirms `runtime.GetSecret()` is hard-disallowed *inside* a node-mode callback (`NodeRuntime` does not implement `SecretsProvider`; calling it sets `modeErr = DonModeCallInNodeMode()`). Resolving the secret in DON mode and passing it into node-mode params is the straightforward SDK-supported pattern for attaching a secret-derived auth header to a node-executed HTTP request — but it is not the *only* possible design. Alternatives not adopted include an unauthenticated relay, a static non-secret shared value, or Chainlink's **Confidential HTTP** capability (Vault DON secrets resolved via `{{.SECRET_NAME}}` templating inside an enclave, which never places the plaintext value in node WASM/host memory). The bearer-token design was a deliberate choice, not a forced default — this entry accepts that choice's consequence rather than treating it as unavoidable.
+- `cre-sdk-go`'s own test suite (`standard_tests/secrets_fail_in_node_mode`) confirms `runtime.GetSecret()` is hard-disallowed _inside_ a node-mode callback (`NodeRuntime` does not implement `SecretsProvider`; calling it sets `modeErr = DonModeCallInNodeMode()`). Resolving the secret in DON mode and passing it into node-mode params is the straightforward SDK-supported pattern for attaching a secret-derived auth header to a node-executed HTTP request — but it is not the _only_ possible design. Alternatives not adopted include an unauthenticated relay, a static non-secret shared value, or Chainlink's **Confidential HTTP** capability (Vault DON secrets resolved via `{{.SECRET_NAME}}` templating inside an enclave, which never places the plaintext value in node WASM/host memory). The bearer-token design was a deliberate choice, not a forced default — this entry accepts that choice's consequence rather than treating it as unavoidable.
 - The token's blast radius is narrow: it only gates read access to `services/defillama-relay`, a read-only proxy in front of DefiLlama's public pools API (see [KI-011](#ki-011--compromised-defillama-api-or-relay-can-skew-rebalance-inputs)). The relay holds no funds, signs no transactions, and writes no on-chain state. Worst case, a node operator who extracts the token calls the relay directly instead of through the workflow.
 - DON node operators already hold substantially greater trust in this system: they execute the APY comparison logic and produce the consensus report that drives `ParentVault.initiateRebalance()`. A node operator misusing this token is a strictly smaller concern than that operator's existing role in the rebalance decision path.
 - Adopting Confidential HTTP purely to hide this token would add Vault DON provisioning and enclave-based request construction — complexity disproportionate to a token whose worst-case misuse is querying a public-data proxy.
@@ -623,3 +623,55 @@ A DON node operator (or anyone able to read that node's process memory during wo
 - The relay or the token gains write authority, rate-limit-bypass value, or access to non-public data.
 - CRE's Confidential HTTP path becomes cheap enough (in provisioning/operational terms) to justify closing this residual for a low-sensitivity token.
 - The trust model changes such that DON node operators are less trusted than the current design assumes (e.g., a permissionless/open node set).
+
+---
+
+## KI-013 — Paused child vault can leave a parent epoch or rebalance in progress
+
+**Status:** Accepted — intentional pause containment with an operator break-glass procedure.
+
+**Last reviewed:** 2026-07-21
+
+**Component:** `ParentVault`, `ChildVault.executeEpochWithdraw`, `ChildVault.executeRebalance`, CRE epoch and rebalance workflows, and `WorkflowRouter`.
+
+### Summary
+
+For a remote-strategy net-withdraw epoch, `ParentVault.closeEpoch` records the epoch as `EXECUTING` and emits `EpochExecuting`. For a rebalance whose active strategy is on a child chain, `ParentVault.initiateRebalance` records the rebalance as `REBALANCING` and emits `RebalanceInitiated`. CRE observes the relevant event and submits the corresponding child-chain call through `WorkflowRouter`.
+
+If the affected `ChildVault` is paused before CRE calls `executeEpochWithdraw` or `executeRebalance`, the call reverts at `whenNotPaused`. The pause check occurs before the child attempts the strategy operation, sends a CCIP message, or stores typed recovery state. The parent has already entered its intermediate state, so it cannot advance until the child operation is deliberately resumed.
+
+Repeated CRE execution cannot resolve the condition while the child remains paused. In particular:
+
+- The parent epoch remains `EXECUTING`, so its withdraw claims cannot become claimable and the previous-epoch guard prevents a later epoch from closing.
+- The parent rebalance remains `REBALANCING`, so another rebalance cannot begin and epoch close is blocked.
+- The child has no recovery state for the reverted call because execution stopped at the pause guard.
+
+### Why this is accepted, not mitigated on-chain
+
+Pause is an incident-containment boundary. While paused, a vault must not call strategy adapters, send CCIP messages, process inbound CCIP messages, or execute recovery. Allowing child epoch withdrawals or rebalances to bypass the pause guard would undermine that boundary precisely when operators are attempting to contain an incident.
+
+The parent cannot safely infer or reconcile the child operation on-chain. It cannot know whether the child is paused, whether a prior child transaction succeeded, or whether a CCIP message is already in flight without introducing additional cross-chain coordination and state. Automatically rolling back the parent is also unsafe because the parent transaction has already completed and a delayed or manually executed child action may still occur.
+
+The design therefore favors explicit containment and operator reconciliation over automatic liveness while a child is paused. This is consistent with [DD-004](../protocol/DECISIONS.md#dd-004---pause-contains-external-execution).
+
+### Operational mitigation
+
+- Monitor failed CRE reports and `WorkflowRouter` calls for pause-related reverts after `EpochExecuting` or `RebalanceInitiated` events.
+- Alert when a parent epoch remains `EXECUTING` or a rebalance remains `REBALANCING` beyond its expected completion window.
+- Before retrying, reconcile the parent state, child state, recovery mode, transaction history, and CCIP message status so a source-chain action is not executed twice.
+- Follow the [Paused Cross-Chain Execution](../operator/OPERATIONS.md#paused-cross-chain-execution) playbook. Keep the normal router paused or unauthorized, temporarily unpause only the affected child, execute the exact event- or parent-state-derived calldata through an approved break-glass operator, and revoke temporary authority after reconciliation.
+
+### Residual risk
+
+An affected epoch or rebalance can remain in progress indefinitely while the child remains paused or if operators do not complete the break-glass procedure. During that interval, epoch settlement and new rebalances are unavailable, and the previous-epoch guard may also prevent subsequent epoch closes.
+
+The failure mode is availability and operational delay. The pause-triggered revert occurs before strategy or CCIP side effects and does not itself corrupt accounting or cause a direct loss of funds. Operational error during manual reconciliation remains part of the privileged-operator trust assumption documented in [KI-001](#ki-001--centralized-trust-in-privileged-operatoradmin-roles).
+
+### Conditions that would warrant revisiting
+
+- Product requirements no longer permit an in-progress epoch or rebalance to wait for operator intervention during a child-vault pause.
+- A safe on-chain acknowledgement or cancellation protocol is added between parent and child vaults.
+- Pause semantics change to permit narrowly scoped continuation of operations that began before the pause.
+- CRE or operator monitoring can no longer reliably detect and reconcile paused cross-chain execution.
+
+---
