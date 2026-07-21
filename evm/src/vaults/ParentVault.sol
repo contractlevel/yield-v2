@@ -409,6 +409,8 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
         _requireNoRecovery($_baseVault);
 
+        // @review revert if lastCompletedRebalance timestamp is less than an hour?
+
         bool isSupportedChain = newStrategy.chainSelector == i_thisChainSelector
             || $_baseVault.s_crosschainVaults[newStrategy.chainSelector] != address(0);
 
