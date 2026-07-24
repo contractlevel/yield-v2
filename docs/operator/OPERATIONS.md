@@ -21,6 +21,19 @@ Operators should monitor:
 - adapter registration and active strategy TVL;
 - ACE policy wiring and provider availability.
 
+## CRE Service Quotas
+
+The workflow registers EVM log triggers for the parent vault and every configured child vault. Under the standard [CRE service quota of five EVM log-trigger contracts](https://docs.chain.link/cre/service-quotas#evm-log-trigger), the protocol can therefore monitor at most five vaults across five networks.
+
+Before adding a network, the commercial operator must:
+
+1. Count every parent and child vault registered as an EVM log source.
+2. Confirm that the resulting workflow remains within the current CRE service quota.
+3. If necessary, arrange a limit increase with Chainlink Labs before updating or deploying the workflow.
+4. Simulate and verify the updated workflow configuration before production activation.
+
+The technical trigger mapping is documented in [`WORKFLOW`](../protocol/WORKFLOW.md#triggers-and-handlers).
+
 ## Epoch Operations
 
 Epoch close is executed through Chainlink CRE and `WorkflowRouter`. Operators should verify the workflow is live, uses the intended configuration, and submits TVL only after checking relevant recovery and strategy state.

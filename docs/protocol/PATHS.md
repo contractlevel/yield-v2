@@ -95,7 +95,7 @@ More deposits than withdrawals. Active strategy is on a Child chain.
 
 - Parent **\_ccipSend**(netFlow, strategyChain, DEPOSIT, epochNonce).
 
-- Child \_handleCCIPDeposit() → \_executeDeposit(amount, false). Emits DepositToStrategySuccess on success. On failure, stores epoch deposit recovery and emits DepositToStrategyFailure; recovery calls recoverFailedEpochDeposit().
+- Child \_handleCCIPDeposit() → \_executeDeposit(amount, false). Emits DepositToStrategySuccess on success. On failure, stores epoch deposit recovery and emits DepositToStrategyFailure; `executeRecovery()` retries the stored deposit.
 
 - Depositors call claimShares() on Parent. Yieldcoin minted.
 
@@ -123,11 +123,11 @@ More withdrawals than deposits. Active strategy is on a Child chain.
 
 - **CRE log trigger** (EpochExecuting) → child.executeEpochWithdraw(epochNonce, netWithdrawAmount).
 
-- Child \_executeWithdraw(amount, false). Emits WithdrawFromStrategySuccess on success. On failure, stores epoch withdraw recovery and emits WithdrawFromStrategyFailure; recovery calls recoverFailedEpochWithdraw().
+- Child \_executeWithdraw(amount, false). Emits WithdrawFromStrategySuccess on success. On failure, stores epoch withdraw recovery and emits WithdrawFromStrategyFailure; `executeRecovery()` retries the stored withdrawal.
 
 - On success: child **\_ccipSend**(amountOut, parentChain, WITHDRAW, epochNonce).
 
-- If Child CCIP send fails, stores CCIP send recovery; recovery calls recoverFailedCcipSend().
+- If the Child CCIP send fails, it stores CCIP send recovery; `executeRecovery()` retries the stored send.
 
 - Parent receives EPOCH_NET_WITHDRAW, updates withdraw claim amount from actual received asset, emits EpochWithdrawAmountShort if under expected amount, then \_finalizeEpoch(epochNonce) → epoch → CLAIMABLE.
 
@@ -143,7 +143,7 @@ More withdrawals than deposits. Active strategy is on a Child chain.
 
 # **Rebalance Flows**
 
-Rebalance migrates the protocol's position from the current active strategy to a new one. It only initiates when s_rebalance.state == NONE, no recovery is pending, no prior epoch is EXECUTING, and the requested strategy is not the active strategy. All paths complete by calling \_finalizeRebalance(), which updates activeStrategy, resets state to NONE, increments the rebalance nonce, records lastRebalanceTimestamp, and mints any management fee.
+Rebalance migrates the protocol's position from the current active strategy to a new one. It only initiates when s_rebalance.state == NONE, no recovery is pending, no prior epoch is EXECUTING, and the requested strategy is not the active strategy. All paths complete by calling \_finalizeRebalance(), which updates activeStrategy, resets state to NONE, increments the rebalance nonce, records lastRebalanceCompletedTimestamp, and mints any management fee.
 
 CRE monitors RebalanceDepositSuccess events on the receiving chain and calls completeRebalance() on Parent to finalize — except for the local-to-local path (synchronous) and the remote-Child-to-Parent success path (finalized inside Parent ccipReceive).
 
@@ -167,7 +167,7 @@ Both old and new strategy are on Parent chain. Different protocols.
 
 - Emits RebalanceDepositSuccess.
 
-- \_finalizeRebalance() → activeStrategy = newStrategy, s_rebalance.nonce++, state → NONE, lastRebalanceTimestamp updated, management fee minted. Emits RebalanceCompleted.
+- \_finalizeRebalance() → activeStrategy = newStrategy, s_rebalance.nonce++, state → NONE, lastRebalanceCompletedTimestamp updated, management fee minted. Emits RebalanceCompleted.
 
 **CCIP sends: 0**
 
@@ -185,7 +185,7 @@ Old strategy on Parent, new strategy on a Child chain.
 
 - state → REBALANCING. Emits RebalanceInitiated.
 
-- \_executeWithdraw(max, true) from local Aave adapter. Reverts on failure.
+- \_executeWithdraw(max, true) from the local active adapter. Reverts on failure.
 
 - Emits RebalanceWithdrawSuccess.
 
@@ -193,11 +193,11 @@ Old strategy on Parent, new strategy on a Child chain.
 
 - **\_ccipSend**(amountOut, newStrategy.chainSelector, REBALANCE, rebalanceNonce, newStrategy.protocolId).
 
-- Child \_handleCCIPRebalance() → \_setActiveAdapter(protocolId) → \_executeDeposit(amount, false). Emits RebalanceDepositSuccess on success. On failure, stores rebalance deposit recovery and emits RebalanceDepositFailure; recovery calls recoverFailedRebalanceDeposit().
+- Child \_handleCCIPRebalance() → \_setActiveAdapter(protocolId) → \_executeDeposit(amount, false). Emits RebalanceDepositSuccess on success. On failure, stores rebalance deposit recovery and emits RebalanceDepositFailure; `executeRecovery()` retries the stored deposit.
 
 - **CRE log trigger** (RebalanceDepositSuccess) → parent.completeRebalance().
 
-- \_finalizeRebalance() → activeStrategy = pendingStrategy, state → NONE, s_rebalance.nonce++, lastRebalanceTimestamp updated, management fee minted. Emits RebalanceCompleted.
+- \_finalizeRebalance() → activeStrategy = pendingStrategy, state → NONE, s_rebalance.nonce++, lastRebalanceCompletedTimestamp updated, management fee minted. Emits RebalanceCompleted.
 
 **CCIP sends: 1**
 
@@ -219,17 +219,17 @@ Old strategy on a Child chain, new strategy on Parent chain.
 
 - **CRE log trigger** (RebalanceInitiated) → child.executeRebalance(rebalanceNonce, newStrategy) on old strategy Child.
 
-- \_executeWithdraw(max, false). Emits RebalanceWithdrawSuccess on success. On failure, stores rebalance withdraw recovery and emits RebalanceWithdrawFailure; recovery calls recoverFailedRebalanceWithdraw().
+- \_executeWithdraw(max, false). Emits RebalanceWithdrawSuccess on success. On failure, stores rebalance withdraw recovery and emits RebalanceWithdrawFailure; `executeRecovery()` retries the stored withdrawal.
 
 - s_activeProtocolAdapter = address(0) on old Child.
 
 - **\_ccipSend**(amountOut, parentChain, REBALANCE, rebalanceNonce, newStrategy.protocolId).
 
-- If Child CCIP send fails, stores CCIP send recovery; recovery calls recoverFailedCcipSend().
+- If the Child CCIP send fails, it stores CCIP send recovery; `executeRecovery()` retries the stored send.
 
-- Parent \_handleCCIPRebalance() → \_setActiveAdapter(protocolId) → \_executeDeposit(amount, false). Emits RebalanceDepositSuccess on success. On failure, stores rebalance deposit recovery and emits RebalanceDepositFailure; recovery calls recoverFailedRebalanceDeposit(), which finalizes the rebalance after a successful retry.
+- Parent \_handleCCIPRebalance() → \_setActiveAdapter(protocolId) → \_executeDeposit(amount, false). Emits RebalanceDepositSuccess on success. On failure, stores rebalance deposit recovery and emits RebalanceDepositFailure; `executeRecovery()` retries the stored deposit and finalizes the rebalance after success.
 
-- On immediate deposit success, Parent ccipReceive calls \_finalizeRebalance() → activeStrategy = pendingStrategy, state → NONE, lastRebalanceTimestamp updated, s_rebalance.nonce++, management fee minted. Emits RebalanceCompleted.
+- On immediate deposit success, Parent ccipReceive calls \_finalizeRebalance() → activeStrategy = pendingStrategy, state → NONE, lastRebalanceCompletedTimestamp updated, s_rebalance.nonce++, management fee minted. Emits RebalanceCompleted.
 
 **CCIP sends: 1**
 
@@ -251,17 +251,17 @@ Old and new strategy are both locally on the same Child chain. Different protoco
 
 - **CRE log trigger** (RebalanceInitiated) → child.executeRebalance(rebalanceNonce, newStrategy) on Child.
 
-- \_executeWithdraw(max, false). Emits RebalanceWithdrawSuccess on success. On failure, stores rebalance withdraw recovery and emits RebalanceWithdrawFailure; recovery calls recoverFailedRebalanceWithdraw().
+- \_executeWithdraw(max, false). Emits RebalanceWithdrawSuccess on success. On failure, stores rebalance withdraw recovery and emits RebalanceWithdrawFailure; `executeRecovery()` retries the stored withdrawal.
 
 - newStrategy.chainSelector == i_thisChainSelector → local deposit on same Child.
 
 - \_setActiveAdapter(newStrategy.protocolId).
 
-- \_executeDeposit(amountOut, false). Emits RebalanceDepositSuccess on success. On failure, stores rebalance deposit recovery and emits RebalanceDepositFailure; recovery calls recoverFailedRebalanceDeposit().
+- \_executeDeposit(amountOut, false). Emits RebalanceDepositSuccess on success. On failure, stores rebalance deposit recovery and emits RebalanceDepositFailure; `executeRecovery()` retries the stored deposit.
 
 - **CRE log trigger** (RebalanceDepositSuccess) → parent.completeRebalance().
 
-- \_finalizeRebalance() → activeStrategy = pendingStrategy, state → NONE, s_rebalance.nonce++, lastRebalanceTimestamp updated, management fee minted. Emits RebalanceCompleted.
+- \_finalizeRebalance() → activeStrategy = pendingStrategy, state → NONE, s_rebalance.nonce++, lastRebalanceCompletedTimestamp updated, management fee minted. Emits RebalanceCompleted.
 
 **CCIP sends: 0**
 
@@ -283,17 +283,17 @@ Old strategy on one Child A chain, new strategy on a different Child B chain.
 
 - **CRE log trigger** (RebalanceInitiated) → childA.executeRebalance(rebalanceNonce, newStrategy) on old strategy Child A.
 
-- \_executeWithdraw(max, false). Emits RebalanceWithdrawSuccess on success. On failure, stores rebalance withdraw recovery and emits RebalanceWithdrawFailure; recovery calls recoverFailedRebalanceWithdraw().
+- \_executeWithdraw(max, false). Emits RebalanceWithdrawSuccess on success. On failure, stores rebalance withdraw recovery and emits RebalanceWithdrawFailure; `executeRecovery()` retries the stored withdrawal.
 
 - s_activeProtocolAdapter = address(0) on old Child A.
 
-- **\_ccipSend**(amountOut, newStrategy.chainSelector, REBALANCE, rebalanceNonce, newStrategy.protocolId). Old Child A sends directly to new Child B. If Child CCIP send fails, stores CCIP send recovery; recovery calls recoverFailedCcipSend().
+- **\_ccipSend**(amountOut, newStrategy.chainSelector, REBALANCE, rebalanceNonce, newStrategy.protocolId). Old Child A sends directly to new Child B. If the CCIP send fails, Child A stores CCIP send recovery; `executeRecovery()` retries the stored send.
 
-- New Child B \_handleCCIPRebalance() → \_setActiveAdapter(protocolId) → \_executeDeposit(amount, false). Emits RebalanceDepositSuccess on success. On failure, stores rebalance deposit recovery and emits RebalanceDepositFailure; recovery calls recoverFailedRebalanceDeposit().
+- New Child B \_handleCCIPRebalance() → \_setActiveAdapter(protocolId) → \_executeDeposit(amount, false). Emits RebalanceDepositSuccess on success. On failure, stores rebalance deposit recovery and emits RebalanceDepositFailure; `executeRecovery()` retries the stored deposit.
 
 - **CRE log trigger** (RebalanceDepositSuccess) → parent.completeRebalance().
 
-- \_finalizeRebalance() → activeStrategy = pendingStrategy, state → NONE, s_rebalance.nonce++, lastRebalanceTimestamp updated, management fee minted. Emits RebalanceCompleted.
+- \_finalizeRebalance() → activeStrategy = pendingStrategy, state → NONE, s_rebalance.nonce++, lastRebalanceCompletedTimestamp updated, management fee minted. Emits RebalanceCompleted.
 
 **CCIP sends: 1**
 

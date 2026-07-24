@@ -19,7 +19,7 @@ The workflow has two flows:
 | Epoch cron                                    | `epoch.OnEpochCronTrigger`            | Read the active strategy's TVL and call `ParentVault.closeEpoch`.                                                                         |
 | `ParentVault.EpochExecuting`                  | `epoch.OnEpochExecuting`              | For a remote net withdrawal, call `ChildVault.executeEpochWithdraw` on the active strategy chain.                                         |
 
-All EVM log triggers wait for finalized logs. A separate `RebalanceDepositSuccess` handler is registered for every configured child chain, so the concrete handler count grows with the number of child vaults. CRE Workflows can [only be EVM Log-triggered by 5 contracts](https://docs.chain.link/cre/service-quotas#evm-log-trigger). This means Yieldcoin v2 can only support 5 networks. The commercial operator of the protocol should discuss limit increases with Chainlink Labs if required. See // @review insert reference to operator playbooks.
+All EVM log triggers wait for finalized logs. A separate `RebalanceDepositSuccess` handler is registered for every configured child chain, so the concrete handler count grows with the number of child vaults. The standard CRE service quota allows [EVM log triggers from up to five contracts](https://docs.chain.link/cre/service-quotas#evm-log-trigger), which limits the standard configuration to five monitored vaults and therefore five networks. Before adding another network, the commercial operator must arrange an appropriate limit increase with Chainlink Labs and update the workflow configuration. See [CRE Service Quotas](../operator/OPERATIONS.md#cre-service-quotas).
 
 ## Rebalance flow
 

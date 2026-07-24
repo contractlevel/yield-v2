@@ -33,7 +33,7 @@ Rebalance state is read from `ParentVault.getRebalance()`.
 
 The returned `Rebalance` value includes:
 
-- `nonce` — the rebalance ID. It increments as rebalances are initiated.
+- `nonce` — the ID of the current or next rebalance. It advances when a rebalance completes.
 - `state` — `NONE` (`0`) when no rebalance is active, or `REBALANCING` (`1`) while a rebalance is in progress.
 - `activeStrategy` — the strategy where capital is currently allocated.
 - `pendingStrategy` — the strategy where capital is being moved during an active rebalance.
