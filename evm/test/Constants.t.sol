@@ -37,7 +37,7 @@ abstract contract Constants {
     uint256 internal constant ARBITRUM_FORK_BLOCK = 463545353;
     uint256 internal constant BASE_FORK_BLOCK = 46087200;
     uint256 internal constant ETHEREUM_FORK_BLOCK = 25110160;
-    uint256 internal constant AVALANCHE_FORK_BLOCK = 85608699;
+    uint256 internal constant AVALANCHE_FORK_BLOCK = 91000000;
     uint256 internal constant OPTIMISM_FORK_BLOCK = 151682527;
 
     uint256 internal constant PROTOCOL_FORK_TOLERANCE = 50;
