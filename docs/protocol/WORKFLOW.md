@@ -19,7 +19,7 @@ The workflow has two flows:
 | Epoch cron                                    | `epoch.OnEpochCronTrigger`            | Read the active strategy's TVL and call `ParentVault.closeEpoch`.                                                                         |
 | `ParentVault.EpochExecuting`                  | `epoch.OnEpochExecuting`              | For a remote net withdrawal, call `ChildVault.executeEpochWithdraw` on the active strategy chain.                                         |
 
-All EVM log triggers wait for finalized logs. A separate `RebalanceDepositSuccess` handler is registered for every configured child chain, so the concrete handler count grows with the number of child vaults. The standard CRE service quota allows [EVM log triggers from up to five contracts](https://docs.chain.link/cre/service-quotas#evm-log-trigger), which limits the standard configuration to five monitored vaults and therefore five networks. Before adding another network, the commercial operator must arrange an appropriate limit increase with Chainlink Labs and update the workflow configuration. See [CRE Service Quotas](../operator/OPERATIONS.md#cre-service-quotas).
+All EVM log triggers wait for finalized logs. A separate `RebalanceDepositSuccess` handler is registered for every configured child chain, so the concrete handler count grows with the number of child vaults. The standard CRE service quota allows [EVM log triggers from up to five contracts](https://docs.chain.link/cre/service-quotas#evm-log-trigger), which limits the standard configuration to five monitored vaults and therefore five networks. <!-- @review `config.staging.json` currently configures six vault networks, which already exceeds this standard quota. --> Before adding another network, the commercial operator must arrange an appropriate limit increase with Chainlink Labs and update the workflow configuration. See [CRE Service Quotas](../operator/OPERATIONS.md#cre-service-quotas).
 
 ## Rebalance flow
 
@@ -91,5 +91,7 @@ The router then calls its immutable vault with the report payload. The vault's r
 ## Configuration
 
 Runtime configuration supplies the two cron schedules, the EVM read block reference, the approved DefiLlama universe, and per-chain vault, router, selector, and gas settings. Exactly one configured chain must contain the `ParentVault`; every other entry represents a child chain.
+
+The checked-in `config.staging.json` and `config.production.json` are placeholders, not runnable configurations. Staging sets every `workflowRouterAddress` to the zero address, and production has no `evms` entries at all. `ValidateConfig` rejects both a zero router address and an empty `evms` list, so these files must be populated (or generated) with real values before simulation or deployment.
 
 The workflow is intentionally limited to orchestration. It does not hold funds, calculate vault accounting, bypass contract guards, or replace CCIP recovery. Detailed recovery and execution behavior lives in the vault contracts and is documented in [PATHS.md](PATHS.md).

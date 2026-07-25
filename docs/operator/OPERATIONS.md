@@ -25,6 +25,8 @@ Operators should monitor:
 
 The workflow registers EVM log triggers for the parent vault and every configured child vault. Under the standard [CRE service quota of five EVM log-trigger contracts](https://docs.chain.link/cre/service-quotas#evm-log-trigger), the protocol can therefore monitor at most five vaults across five networks.
 
+The checked-in `config.staging.json` currently configures six vault networks (one parent plus five children), which already exceeds this standard quota. A Chainlink Labs limit increase is required before that configuration can run as checked in.
+
 Before adding a network, the commercial operator must:
 
 1. Count every parent and child vault registered as an EVM log source.
@@ -36,7 +38,9 @@ The technical trigger mapping is documented in [`WORKFLOW`](../protocol/WORKFLOW
 
 ## Epoch Operations
 
-Epoch close is executed through Chainlink CRE and `WorkflowRouter`. Operators should verify the workflow is live, uses the intended configuration, and submits TVL only after checking relevant recovery and strategy state.
+Epoch close is executed through Chainlink CRE and `WorkflowRouter`. Operators should verify the workflow is live and uses the intended configuration.
+
+The epoch cron handler does not currently check recovery state before submitting TVL — see `ENV-001` in [`INVARIANTS`](../security/INVARIANTS.md). Until that check is added to the workflow, operators should manually confirm no recovery is pending on the active strategy's vault before an epoch close is expected to run.
 
 If an epoch remains executing, operators should identify whether it is waiting on child-chain execution, CCIP delivery, or stored recovery state.
 
@@ -86,4 +90,4 @@ Before temporarily unpausing a vault, pause the normal `WorkflowRouter` or revok
 
 When destination execution reverts because the vault is paused, validate and manually execute the CCIP message after the destination is unpaused. Verify its source chain, sender, token, amount, transaction type, nonce, and protocol ID. Do not repeat the originating withdrawal or rebalance call. Confirm the destination vault and recovery state before restoring automation.
 
-For exact protocol flows, see [`PATHS`](../protocol/PATHS.md). For accepted risks and liveness dependencies, see [`KNOWN_ISSUES`](../security/KNOWN_ISSUES.md).
+For exact protocol flows, see [`PATHS`](../protocol/PATHS.md). For accepted risks and liveness dependencies, see [`KNOWN_ISSUES`](../security/KNOWN_ISSUES.md). For pre-launch gating requirements, see [`LAUNCH_REQUIREMENTS`](./LAUNCH_REQUIREMENTS.md).

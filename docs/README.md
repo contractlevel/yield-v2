@@ -37,7 +37,7 @@ Concept docs explain how the protocol works without replacing the canonical exec
 - [`concepts/EPOCH`](./concepts/EPOCH.md) — epoch lifecycle, batched settlement, claims, and user-visible timing.
 - [`concepts/REBALANCE`](./concepts/REBALANCE.md) — strategy migration, active and pending strategies, and CRE-driven rebalancing.
 - [`concepts/RECOVERY`](./concepts/RECOVERY.md) — permissionless stored-state recovery and why there is no recovery operator role.
-- [`concepts/YIELDCOIN_SHARE`](./concepts/YIELDCOIN_SHARE.md) — share accounting, ACE policy checks, RBAC-gated token functions, KYC transfer checks, freezes, forced transfers, and CCIP admin behavior.
+- [`protocol/YIELDCOIN_SHARE`](./protocol/YIELDCOIN_SHARE.md) — share accounting, ACE policy checks, RBAC-gated token functions, KYC transfer checks, freezes, forced transfers, and CCIP admin behavior.
 
 ## Security Reporting
 
