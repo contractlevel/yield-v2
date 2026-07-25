@@ -25,8 +25,6 @@ Operators should monitor:
 
 The workflow registers EVM log triggers for the parent vault and every configured child vault. Under the standard [CRE service quota of five EVM log-trigger contracts](https://docs.chain.link/cre/service-quotas#evm-log-trigger), the protocol can therefore monitor at most five vaults across five networks.
 
-The checked-in `config.staging.json` currently configures six vault networks (one parent plus five children), which already exceeds this standard quota. A Chainlink Labs limit increase is required before that configuration can run as checked in.
-
 Before adding a network, the commercial operator must:
 
 1. Count every parent and child vault registered as an EVM log source.
