@@ -54,7 +54,7 @@ See [`ACCESS_CONTROL_MATRIX`](../security/ACCESS_CONTROL_MATRIX.md) for the role
 1. **Deposit** — user calls `ParentVault.deposit`. ACE check runs. Funds are escrowed; no shares minted yet.
 2. **Epoch close** — CRE triggers `closeEpoch`. The vault snapshots TVL, locks the settlement price-per-share, computes `newShares` for the batch, and updates per-epoch share accounting; shares are not minted at close. Depositors receive their pro-rata shares by calling `claimShares` after the epoch closes.
 3. **Rebalance** — CRE issues rebalance instructions informed by DefiLlama data. Capital moves between adapters and across chains via CCIP.
-4. **Withdraw** — user requests a withdrawal; on the next epoch settlement, shares are burned and the underlying asset is returned.
+4. **Withdraw** — user requests a withdrawal. On the next epoch settlement, the withdrawal becomes claimable and its underlying amount is reserved; shares are burned and the underlying asset is transferred only when the user later calls `claimAsset`.
 
 See [`PATHS`](PATHS.md) for the full step-by-step paths, including failure and recovery modes (recovery is permissionless and uses stored state).
 
