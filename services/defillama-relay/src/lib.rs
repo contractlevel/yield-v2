@@ -20,11 +20,13 @@ const DEFAULT_UPSTREAM_URL: &str = "https://yields.llama.fi/pools";
 const DEFAULT_ALLOWED_POOLS: &str = concat!(
     "aa70268e-4b52-42bf-a116-608b370f9501,",
     "7da72d09-56ca-4ec5-a45f-59114353e487,",
+    "4ac1a968-68ab-4da8-87e3-8f1e15e3dae2,",
     "d9fa8e14-0447-4207-9ae8-7810199dfa1f,",
     "d9c395b9-00d0-4426-a6b3-572a6dd68e54,",
     "7e0661bf-8cf3-45e6-9424-31916d4c7b84,",
     "0c8567f8-ba5b-41ad-80de-00a71895eb19,",
     "c4b05318-88af-4536-a834-f5fc8940d2d3,",
+    "22323e90-bde5-54a1-8686-53b4205b61b7,",
     "0758c3b8-4ffb-4176-b0a9-f446e367db46,",
     "b828f0cb-853d-4b32-aebb-2e20d7fd70a8",
 );
@@ -1036,6 +1038,13 @@ mod tests {
         let pools = parse_csv(DEFAULT_ALLOWED_POOLS);
         assert!(pools.contains(&"0758c3b8-4ffb-4176-b0a9-f446e367db46".to_string()));
         assert!(pools.contains(&"b828f0cb-853d-4b32-aebb-2e20d7fd70a8".to_string()));
+    }
+
+    #[test]
+    fn default_allowed_pools_include_aave_v4_usdc_markets() {
+        let pools = parse_csv(DEFAULT_ALLOWED_POOLS);
+        assert!(pools.contains(&"4ac1a968-68ab-4da8-87e3-8f1e15e3dae2".to_string()));
+        assert!(pools.contains(&"22323e90-bde5-54a1-8686-53b4205b61b7".to_string()));
     }
 
     #[test]
