@@ -36,16 +36,14 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /*//////////////////////////////////////////////////////////////
                                CONSTANTS
     //////////////////////////////////////////////////////////////*/
-    /// @dev WAD precision
-    uint256 internal constant WAD_PRECISION = 1e18;
+    /// @dev Fixed precision for share pricing
+    uint256 internal constant SHARE_PRECISION = 1e12;
 
     /*//////////////////////////////////////////////////////////////
                                IMMUTABLE
     //////////////////////////////////////////////////////////////*/
     /// @dev Yieldcoin (YIELD) share token
     address internal immutable i_share;
-    /// @dev Initial Yieldcoin share mint precision: WAD_PRECISION / i_assetPrecision
-    uint256 internal immutable i_sharePrecision;
     /// @dev Minimum deposit amount: 1 * i_assetPrecision
     uint256 internal immutable i_minDepositAmount;
 
@@ -60,7 +58,6 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         _revertIfZeroAddress(share);
 
         i_share = share;
-        i_sharePrecision = WAD_PRECISION / i_assetPrecision;
         i_minDepositAmount = 1 * i_assetPrecision;
 
         _disableInitializers();
@@ -97,7 +94,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         __PolicyProtected_init(params.defaultAdmin, policyEngine);
 
         ParentVaultStorage storage $ = _parentVaultStorage();
-        $.s_performanceFeeHighWaterMark = i_sharePrecision;
+        $.s_performanceFeeHighWaterMark = SHARE_PRECISION;
         $.s_epochNonce = 1;
         $.s_epochs[1].status = Types.EpochStatus.OPEN;
         $.s_epochs[1].openedAtTimestamp = block.timestamp;
@@ -360,7 +357,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         address activeAdapter = $_baseVault.s_activeProtocolAdapter;
         bool isLocalStrategy = activeAdapter != address(0);
         ParentVaultEpochLib.CloseEpochExternalAction memory externalAction =
-            ParentVaultEpochLib.closeEpoch($, tvl, i_share, i_sharePrecision, i_minDepositAmount, isLocalStrategy);
+            ParentVaultEpochLib.closeEpoch($, tvl, i_share, SHARE_PRECISION, i_minDepositAmount, isLocalStrategy);
 
         if (externalAction.action == ParentVaultEpochLib.ExternalAction.DEPOSIT_TO_LOCAL_STRATEGY) {
             _executeDeposit(externalAction.amount, true, activeAdapter);
@@ -580,10 +577,10 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         share = i_share;
     }
 
-    /// @notice Gets the share precision (WAD_PRECISION / i_assetPrecision)
+    /// @notice Gets the share precision
     /// @return sharePrecision The share precision
     function getSharePrecision() external view returns (uint256 sharePrecision) {
-        sharePrecision = i_sharePrecision;
+        sharePrecision = SHARE_PRECISION;
     }
 
     /// @notice Gets the minimum deposit amount (1 * i_assetPrecision)

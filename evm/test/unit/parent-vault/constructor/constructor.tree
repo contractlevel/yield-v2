@@ -3,7 +3,6 @@ ParentVault_constructor
   ├── it should set i_link
   ├── it should set i_asset
   ├── it should set i_assetPrecision
-  ├── it should set i_sharePrecision
   ├── it should set i_minDepositAmount
   ├── it should set i_share
   ├── it should set the CCIP router

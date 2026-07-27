@@ -313,7 +313,7 @@ interface IParentVault is IBaseVault {
     /// @return highWaterMark The highest price per share recorded for performance fee purposes
     function getPerformanceFeeHighWaterMark() external view returns (uint256 highWaterMark);
 
-    /// @notice Returns the share precision factor (WAD_PRECISION / i_assetPrecision)
+    /// @notice Returns the share precision factor (fixed at SHARE_PRECISION)
     /// @return sharePrecision The share precision factor
     function getSharePrecision() external view returns (uint256 sharePrecision);
 

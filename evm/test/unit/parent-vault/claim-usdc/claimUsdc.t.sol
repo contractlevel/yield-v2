@@ -12,7 +12,7 @@ import {ParentVault} from "../../../../src/vaults/ParentVault.sol";
 contract ParentVault_ClaimAssetUnitTest is BaseUnitTest {
     using stdStorage for StdStorage;
 
-    // At bootstrap (pricePerShare = i_sharePrecision), assetOut = shareBurnAmount
+    // At bootstrap (pricePerShare = SHARE_PRECISION), assetOut = shareBurnAmount
     uint256 internal constant SHARE_BURN_AMOUNT = 100 * 1e6;
     uint256 internal constant LARGE_DEPOSIT_AMOUNT = 1000 * 1e6;
     uint256 internal constant EXPECTED_ASSET = SHARE_BURN_AMOUNT; // 100e6 asset
@@ -37,7 +37,7 @@ contract ParentVault_ClaimAssetUnitTest is BaseUnitTest {
         vm.warp(block.timestamp + MIN_EPOCH_PERIOD + 1);
         _changePrank(i_epochOperator);
         s_parentVault.closeEpoch(0);
-        // pricePerShare = i_sharePrecision (bootstrap, totalShares was 0)
+        // pricePerShare = SHARE_PRECISION (bootstrap, totalShares was 0)
         // netFlow = LARGE_DEPOSIT_AMOUNT - SHARE_BURN_AMOUNT > 0 → CLAIMABLE, epoch 2 opened
 
         _changePrank(i_withdrawer);

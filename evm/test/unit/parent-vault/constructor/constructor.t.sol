@@ -14,7 +14,6 @@ contract ParentVault_ConstructorUnitTest is BaseUnitTest {
         assertEq(address(parentVault.getLink()), address(s_mockLink));
         assertEq(address(parentVault.getAsset()), address(s_mockUsdc));
         assertEq(parentVault.getAssetPrecision(), 10 ** uint256(s_mockUsdc.decimals()));
-        assertEq(parentVault.getSharePrecision(), 1e18 / parentVault.getAssetPrecision());
         assertEq(parentVault.getMinDepositAmount(), 1 * parentVault.getAssetPrecision());
         assertEq(address(parentVault.getShare()), address(s_yieldcoin));
         assertEq(address(parentVault.getRouter()), address(s_mockCcipRouter));

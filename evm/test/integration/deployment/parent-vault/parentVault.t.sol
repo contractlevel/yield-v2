@@ -49,7 +49,8 @@ contract ParentVault_DeploymentIntegrationTest is BaseIntegrationTest {
         assertEq(parent.vault.getTreasury(), networkConfig.treasury);
         assertEq(parent.vault.getAsset(), parent.asset);
         assertEq(parent.vault.getAssetPrecision(), 10 ** 6);
-        assertEq(parent.vault.getSharePrecision(), 1e18 / parent.vault.getAssetPrecision());
+        // SHARE_PRECISION is a fixed constant, independent of asset decimals
+        assertEq(parent.vault.getSharePrecision(), 1e12);
         assertEq(parent.vault.getMinDepositAmount(), 1 * parent.vault.getAssetPrecision());
         assertEq(parent.vault.getLink(), parent.link);
         assertEq(parent.vault.getThisChainSelector(), networkConfig.ccip.parentChainSelector);
