@@ -3,6 +3,7 @@ pragma solidity 0.8.34;
 
 import {Script} from "forge-std/Script.sol";
 import {HelperConfig} from "../HelperConfig.s.sol";
+import {TestnetProtocolConfigurator} from "./TestnetProtocolConfigurator.sol";
 
 import {ParentVault, BaseVault} from "../../src/vaults/ParentVault.sol";
 import {AdapterRegistry} from "../../src/modules/AdapterRegistry.sol";
@@ -239,6 +240,13 @@ contract DeployParent is Script {
             deploy.adapterRegistry.setAdapter(compoundV3ProtocolId, address(deploy.compoundV3Adapter));
             if (initialActiveProtocolId == bytes32(0)) initialActiveProtocolId = compoundV3ProtocolId;
         }
+
+        TestnetProtocolConfigurator.authorizeAdapters(
+            networkConfig.protocols,
+            address(deploy.aaveV3Adapter),
+            address(deploy.aaveV4Adapter),
+            address(deploy.compoundV3Adapter)
+        );
 
         if (initialActiveProtocolId != bytes32(0)) {
             deploy.parentVaultProxy.setInitialActiveProtocolAdapter(initialActiveProtocolId);

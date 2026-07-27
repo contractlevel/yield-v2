@@ -3,6 +3,7 @@ pragma solidity 0.8.34;
 
 import {Script} from "forge-std/Script.sol";
 import {HelperConfig} from "../HelperConfig.s.sol";
+import {TestnetProtocolConfigurator} from "./TestnetProtocolConfigurator.sol";
 
 import {ChildVault, BaseVault} from "../../src/vaults/ChildVault.sol";
 import {AdapterRegistry} from "../../src/modules/AdapterRegistry.sol";
@@ -111,6 +112,13 @@ contract DeployChild is Script {
             );
             deploy.adapterRegistry.setAdapter(compoundV3ProtocolId, address(deploy.compoundV3Adapter));
         }
+
+        TestnetProtocolConfigurator.authorizeAdapters(
+            networkConfig.protocols,
+            address(deploy.aaveV3Adapter),
+            address(deploy.aaveV4Adapter),
+            address(deploy.compoundV3Adapter)
+        );
 
         /// @dev Deploy the WorkflowRouter
         uint48 initialDelay = 259200; // 3 days
