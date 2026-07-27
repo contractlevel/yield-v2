@@ -98,3 +98,5 @@ Secondary protocol rewards are outside this accounting model. For Compound V3, C
 The protocol does not currently decide whether claimed COMP is retained, sold, manually distributed, or routed into a future rewards distributor. Handling that on-chain would require additional reward-token accounting, distribution policy, and operational controls. The current design avoids that complexity and keeps user-facing yield calculations underlying-only.
 
 See [ACCESS_CONTROL_MATRIX - Protocol rewards claiming](../security/ACCESS_CONTROL_MATRIX.md#authority-matrix). If product requirements change to include secondary reward tokens in user yield, this design decision and related accounting invariants should be revisited.
+
+<!-- @review funds received from emergency drain are intended to be put back. add a known issue about bricking the recovery-->

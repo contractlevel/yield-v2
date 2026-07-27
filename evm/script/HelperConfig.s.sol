@@ -375,10 +375,10 @@ contract HelperConfig is Script {
                 link: 0x779877A7B0D9E8603169DdbD7836e478b4624789, usdc: 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238
             }),
             protocols: ProtocolsConfig({
-                aaveV3PoolAddressesProvider: address(0), // @review deploy mock
-                aaveV4Spoke: address(0), // @review deploy mock
-                compoundV3Comet: address(0), // @review deploy mock
-                compoundV3CometRewards: address(0) // @review deploy mock
+                aaveV3PoolAddressesProvider: 0x09AddfA88e49bDf33021971e38b0BFae8715Af7A,
+                aaveV4Spoke: 0x5d1079dae90f23bbe64fAf3adC08554669D9f938,
+                compoundV3Comet: 0x8383A982dc0B844cA9200FbedEeBBE50ae4bb157,
+                compoundV3CometRewards: 0x079A90B7761FF10F455BC2188392b2ae765F8DAd
             }),
             ccip: CCIPConfig({
                 router: 0x0BF3dE8c5D3e8A2B34D2BEeB17ABfCeBaf363A59,
@@ -414,10 +414,10 @@ contract HelperConfig is Script {
                 link: 0xE4aB69C077896252FAFBD49EFD26B5D171A32410, usdc: 0x036CbD53842c5426634e7929541eC2318f3dCF7e
             }),
             protocols: ProtocolsConfig({
-                aaveV3PoolAddressesProvider: address(0), // @review deploy mock
+                aaveV3PoolAddressesProvider: 0x90e10d38F75ce1A871A1fDeA9bab39e8ddA4531f,
                 aaveV4Spoke: address(0),
-                compoundV3Comet: address(0), // @review deploy mock
-                compoundV3CometRewards: address(0) // @review deploy mock
+                compoundV3Comet: 0xCacEf2972a46D3Ad67072c9BFc6C1157bEaf1651,
+                compoundV3CometRewards: 0xad024A165c3c973aD74F8B038D386686Ec534006
             }),
             ccip: CCIPConfig({
                 router: 0xD3b06cEbF099CE7DA4AcCf578aaebFDBd6e88a93,
@@ -453,10 +453,10 @@ contract HelperConfig is Script {
                 link: 0xE4aB69C077896252FAFBD49EFD26B5D171A32410, usdc: 0x5fd84259d66Cd46123540766Be93DFE6D43130D7
             }),
             protocols: ProtocolsConfig({
-                aaveV3PoolAddressesProvider: address(0), // @review deploy mock
+                aaveV3PoolAddressesProvider: 0x90e10d38F75ce1A871A1fDeA9bab39e8ddA4531f,
                 aaveV4Spoke: address(0),
-                compoundV3Comet: address(0), // @review deploy mock
-                compoundV3CometRewards: address(0) // @review deploy mock
+                compoundV3Comet: 0xCacEf2972a46D3Ad67072c9BFc6C1157bEaf1651,
+                compoundV3CometRewards: 0xad024A165c3c973aD74F8B038D386686Ec534006
             }),
             ccip: CCIPConfig({
                 router: 0x114A20A10b43D4115e5aeef7345a1A71d2a60C57,
@@ -492,8 +492,8 @@ contract HelperConfig is Script {
                 link: 0x0b9d5D9136855f6FEc3c0993feE6E9CE8a297846, usdc: 0x5425890298aed601595a70AB815c96711a31Bc65
             }),
             protocols: ProtocolsConfig({
-                aaveV3PoolAddressesProvider: address(0), // @review deploy mock
-                aaveV4Spoke: address(0), // @review deploy mock
+                aaveV3PoolAddressesProvider: 0x90e10d38F75ce1A871A1fDeA9bab39e8ddA4531f,
+                aaveV4Spoke: 0xCacEf2972a46D3Ad67072c9BFc6C1157bEaf1651,
                 compoundV3Comet: address(0),
                 compoundV3CometRewards: address(0)
             }),

@@ -44,12 +44,27 @@ aaveV4:
 
 ```
 forge script script/deploy/DeployTestnetProtocols.s.sol:DeployTestnetProtocols \
-    --rpc-url arbitrum_sepolia \
+    --rpc-url optimism_sepolia \
     --account testnet-deployer \
     --sender 0x7664C538C80870824738A8ADCcd92AcA244D7e69 \
     --broadcast \
     --verify \
     --verifier etherscan \
+    --retries 15 \
+    --delay 10 \
+    --slow \
+    -vvvv
+```
+
+```
+forge script script/deploy/DeployTestnetProtocols.s.sol:DeployTestnetProtocols \
+    --rpc-url avalanche_fuji \
+    --account testnet-deployer \
+    --sender 0x7664C538C80870824738A8ADCcd92AcA244D7e69 \
+    --broadcast \
+    --verify \
+    --verifier etherscan \
+    --verifier-url "https://api.routescan.io/v2/network/testnet/evm/43113/etherscan/api" \
     --retries 15 \
     --delay 10 \
     --slow \

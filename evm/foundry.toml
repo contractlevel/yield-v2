@@ -36,6 +36,5 @@ arbitrum_sepolia = { key = "${ETHERSCAN_API_KEY}", chain = 421614 }
 base_sepolia = { key = "${ETHERSCAN_API_KEY}", chain = 84532 }
 ethereum_sepolia = { key = "${ETHERSCAN_API_KEY}", chain = 11155111 }
 optimism_sepolia = { key = "${ETHERSCAN_API_KEY}", chain = 11155420 }
-avalanche_fuji = { key = "${ETHERSCAN_API_KEY}", chain = 43113 }
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
