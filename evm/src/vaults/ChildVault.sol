@@ -624,7 +624,9 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @return tvl The Yieldcoin TVL
     /// @dev Unlike the Parent Vault implementation, which only includes s_rebalanceDepositRecovery.amount, the
     ///      Child Vault implementation also includes s_epochDepositRecovery.amount and s_ccipSendRecovery.amount.
-    /// @dev Returns 0 if the TVL is in transit over CCIP. This should not be read onchain when Parent state is REBALANCING.
+    /// @dev Returns 0 if the TVL has been bridged away with no adapter set; if a rebalance-away CCIP send
+    ///      failed, the stranded funds are still counted via s_ccipSendRecovery.amount. This should not be
+    ///      read onchain when Parent state is REBALANCING.
     function _getTVL() internal view override returns (uint256 tvl) {
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
         ChildVaultStorage storage $ = _childVaultStorage();
@@ -634,7 +636,9 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
             tvl = IProtocolAdapter(activeAdapter).getTVL() + $.s_epochDepositRecovery.amount
                 + $_baseVault.s_rebalanceDepositRecovery.amount + $.s_ccipSendRecovery.amount;
         } else {
-            tvl = 0;
+            /// @dev The adapter is cleared before a rebalance-away CCIP send; if that send fails, the funds
+            ///      are still held locally and tracked by s_ccipSendRecovery.amount (0 if no recovery is pending).
+            tvl = $.s_ccipSendRecovery.amount;
         }
     }
 }

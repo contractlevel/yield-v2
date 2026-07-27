@@ -90,7 +90,25 @@ contract ChildVault_GetTVLUnitTest is BaseVault_GetTVLUnitTest {
         assertEq(s_vault.getTVL(), RECOVERY_AMOUNT);
     }
 
+    function test_ChildVault_getTVL_ReturnsCcipSendRecovery_WhenNoActiveAdapter() external {
+        _setCcipSendRecoveryAmount(RECOVERY_AMOUNT);
+
+        assertEq(s_vault.getTVL(), RECOVERY_AMOUNT);
+    }
+
+    function test_ChildVault_getTVL_ReturnsAdapterTVLPlusCcipSendRecovery_WhenActiveAdapterExists() external {
+        _setActiveAdapter();
+        s_mockProtocolAdapter.setTVL(TVL);
+        _setCcipSendRecoveryAmount(RECOVERY_AMOUNT);
+
+        assertEq(s_vault.getTVL(), TVL + RECOVERY_AMOUNT);
+    }
+
     function _setEpochDepositRecoveryAmount(uint256 amount) internal {
         stdstore.target(address(s_childVault)).sig("getEpochDepositRecovery()").depth(1).checked_write(amount);
+    }
+
+    function _setCcipSendRecoveryAmount(uint256 amount) internal {
+        stdstore.target(address(s_childVault)).sig("getCcipSendRecovery()").depth(1).checked_write(amount);
     }
 }
