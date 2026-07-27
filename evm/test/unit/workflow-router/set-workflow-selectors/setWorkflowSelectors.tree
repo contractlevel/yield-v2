@@ -3,6 +3,11 @@ setWorkflowSelectors
   │   └── it should revert
   ├── when workflowId is zero
   │   └── it should revert with WorkflowRouter__NoZeroWorkflowId
+  ├── when workflowId has no registered metadata
+  │   ├── when the workflow was never registered
+  │   │   └── it should revert with WorkflowRouter__WorkflowNotRegistered
+  │   └── when the workflow was registered and then removed
+  │       └── it should revert with WorkflowRouter__WorkflowNotRegistered
   ├── when called with a single selector
   │   ├── when isAllowlisted is true
   │   │   ├── it should set the selector as allowlisted
@@ -10,5 +15,7 @@ setWorkflowSelectors
   │   └── when isAllowlisted is false
   │       ├── it should remove the selector from the allowlist
   │       └── it should emit a WorkflowSelectorSet event
-  └── when called with multiple selectors
-      └── it should set all selectors
+  ├── when called with multiple selectors
+  │   └── it should set all selectors
+  └── when setWorkflowMetadata is called after selectors were set
+      └── it should no longer report the previously set selectors as allowlisted

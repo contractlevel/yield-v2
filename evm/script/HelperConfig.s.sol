@@ -16,7 +16,7 @@ contract HelperConfig is Script {
     /*//////////////////////////////////////////////////////////////
                                CONSTANTS
     //////////////////////////////////////////////////////////////*/
-    address internal constant BURNER_EOA = 0x07b788B6f616D93434Ce20665cCDbbeDAf446B41;
+    address internal constant BURNER_EOA = 0x7664C538C80870824738A8ADCcd92AcA244D7e69;
     uint64 internal constant ARBITRUM_CHAIN_SELECTOR = 4949039107694359620;
     uint256 internal constant INITIAL_DEFAULT_CCIP_GAS_LIMIT = 500_000;
 

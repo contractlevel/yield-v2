@@ -113,4 +113,51 @@ contract WorkflowRouter_OnReportUnitTest is BaseWorkflowRouterUnitTest {
         s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, s_workflowName, i_owner), abi.encodePacked(SELECTOR));
         _assertEmittedBy(keccak256("TargetDepositSuccess()"), address(s_target));
     }
+
+    function test_WorkflowRouter_onReport_RevertWhen_StaleSelectorAfterRemoveAndReregister() external {
+        _changePrank(i_configOperator);
+        s_workflowRouter.setWorkflowMetadata(WORKFLOW_ID, bytes10(0), address(0)); // remove
+        bytes10 newName = _createWorkflowName("workflow-2");
+        s_workflowRouter.setWorkflowMetadata(WORKFLOW_ID, newName, i_nonOwner); // re-register, different name/owner
+        // selectors intentionally NOT re-added for the new registration
+
+        _changePrank(i_keystoneForwarder);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IWorkflowRouter.WorkflowRouter__SelectorNotAllowlisted.selector, WORKFLOW_ID, SELECTOR
+            )
+        );
+        s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, newName, i_nonOwner), abi.encodePacked(SELECTOR));
+    }
+
+    function test_WorkflowRouter_onReport_Success_AfterReregisterAndSelectorsReAdded() external {
+        _changePrank(i_configOperator);
+        s_workflowRouter.setWorkflowMetadata(WORKFLOW_ID, bytes10(0), address(0)); // remove
+        bytes10 newName = _createWorkflowName("workflow-2");
+        s_workflowRouter.setWorkflowMetadata(WORKFLOW_ID, newName, i_nonOwner); // re-register, different name/owner
+
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = SELECTOR;
+        s_workflowRouter.setWorkflowSelectors(WORKFLOW_ID, selectors, true);
+
+        _changePrank(i_keystoneForwarder);
+        vm.recordLogs();
+        s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, newName, i_nonOwner), abi.encodePacked(SELECTOR));
+        _assertEmittedBy(keccak256("TargetDepositSuccess()"), address(s_target));
+    }
+
+    function test_WorkflowRouter_onReport_RevertWhen_StaleSelectorAfterRenameWhileActive() external {
+        _changePrank(i_configOperator);
+        bytes10 newName = _createWorkflowName("workflow-2");
+        s_workflowRouter.setWorkflowMetadata(WORKFLOW_ID, newName, i_nonOwner); // rename, no removal step
+        // selectors intentionally NOT re-added for the new registration
+
+        _changePrank(i_keystoneForwarder);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IWorkflowRouter.WorkflowRouter__SelectorNotAllowlisted.selector, WORKFLOW_ID, SELECTOR
+            )
+        );
+        s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, newName, i_nonOwner), abi.encodePacked(SELECTOR));
+    }
 }

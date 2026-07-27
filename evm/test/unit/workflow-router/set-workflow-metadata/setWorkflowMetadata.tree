@@ -7,9 +7,20 @@ setWorkflowMetadata
   │   └── it should revert with WorkflowRouter__MetadataZero
   ├── when workflow owner is zero and name is nonzero
   │   └── it should revert with WorkflowRouter__MetadataZero
+  ├── when name and owner match the currently registered metadata
+  │   ├── when re-submitting the same already-registered identity
+  │   │   └── it should revert with WorkflowRouter__MetadataUnchanged
+  │   ├── when removing a workflow that is already unregistered
+  │   │   └── it should revert with WorkflowRouter__MetadataUnchanged
+  │   └── when removing a workflow that was already removed
+  │       └── it should revert with WorkflowRouter__MetadataUnchanged
   └── when all conditions are met
       ├── it should set the workflow metadata
       ├── it should emit a WorkflowMetadataSet event
-      └── when metadata values are zero
-          ├── it should remove the workflow metadata
-          └── it should emit a WorkflowMetadataSet event
+      ├── it should increment the workflow's selector-allowlist generation
+      ├── when metadata values are zero
+      │   ├── it should remove the workflow metadata
+      │   ├── it should emit a WorkflowMetadataSet event
+      │   └── it should increment the workflow's selector-allowlist generation
+      └── when the workflow is already registered and is renamed without going through removal
+          └── it should increment the workflow's selector-allowlist generation

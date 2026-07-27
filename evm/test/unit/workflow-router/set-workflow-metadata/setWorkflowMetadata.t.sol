@@ -80,4 +80,71 @@ contract WorkflowRouter_SetWorkflowMetadataUnitTest is BaseWorkflowRouterUnitTes
         assertEq(log.topics[2], bytes32(0));
         assertEq(log.topics[3], bytes32(0));
     }
+
+    function test_WorkflowRouter_setWorkflowMetadata_Success_IncrementsGenerationOnRegistration() external {
+        assertEq(s_workflowRouter.getWorkflowGeneration(WORKFLOW_ID), 0);
+
+        s_workflowRouter.setWorkflowMetadata(WORKFLOW_ID, s_workflowName, i_owner);
+
+        assertEq(s_workflowRouter.getWorkflowGeneration(WORKFLOW_ID), 1);
+    }
+
+    function test_WorkflowRouter_setWorkflowMetadata_Success_IncrementsGenerationOnRemoval() external {
+        s_workflowRouter.setWorkflowMetadata(WORKFLOW_ID, s_workflowName, i_owner);
+        assertEq(s_workflowRouter.getWorkflowGeneration(WORKFLOW_ID), 1);
+
+        s_workflowRouter.setWorkflowMetadata(WORKFLOW_ID, bytes10(0), address(0));
+
+        assertEq(s_workflowRouter.getWorkflowGeneration(WORKFLOW_ID), 2);
+    }
+
+    function test_WorkflowRouter_setWorkflowMetadata_Success_IncrementsGenerationOnRenameWhileActive() external {
+        s_workflowRouter.setWorkflowMetadata(WORKFLOW_ID, s_workflowName, i_owner);
+        assertEq(s_workflowRouter.getWorkflowGeneration(WORKFLOW_ID), 1);
+
+        bytes10 newName = _createWorkflowName("workflow-2");
+        s_workflowRouter.setWorkflowMetadata(WORKFLOW_ID, newName, i_nonOwner);
+
+        assertEq(s_workflowRouter.getWorkflowGeneration(WORKFLOW_ID), 2);
+    }
+
+    function test_WorkflowRouter_setWorkflowMetadata_RevertWhen_ResubmittingSameRegisteredIdentity() external {
+        s_workflowRouter.setWorkflowMetadata(WORKFLOW_ID, s_workflowName, i_owner);
+        uint256 generationBefore = s_workflowRouter.getWorkflowGeneration(WORKFLOW_ID);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IWorkflowRouter.WorkflowRouter__MetadataUnchanged.selector, WORKFLOW_ID, s_workflowName, i_owner
+            )
+        );
+        s_workflowRouter.setWorkflowMetadata(WORKFLOW_ID, s_workflowName, i_owner);
+
+        assertEq(s_workflowRouter.getWorkflowGeneration(WORKFLOW_ID), generationBefore);
+    }
+
+    function test_WorkflowRouter_setWorkflowMetadata_RevertWhen_RemovingAlreadyUnregisteredWorkflow() external {
+        assertEq(s_workflowRouter.getWorkflowGeneration(WORKFLOW_ID), 0);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IWorkflowRouter.WorkflowRouter__MetadataUnchanged.selector, WORKFLOW_ID, bytes10(0), address(0)
+            )
+        );
+        s_workflowRouter.setWorkflowMetadata(WORKFLOW_ID, bytes10(0), address(0));
+    }
+
+    function test_WorkflowRouter_setWorkflowMetadata_RevertWhen_RemovedTwice() external {
+        s_workflowRouter.setWorkflowMetadata(WORKFLOW_ID, s_workflowName, i_owner);
+        s_workflowRouter.setWorkflowMetadata(WORKFLOW_ID, bytes10(0), address(0));
+        uint256 generationBefore = s_workflowRouter.getWorkflowGeneration(WORKFLOW_ID);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IWorkflowRouter.WorkflowRouter__MetadataUnchanged.selector, WORKFLOW_ID, bytes10(0), address(0)
+            )
+        );
+        s_workflowRouter.setWorkflowMetadata(WORKFLOW_ID, bytes10(0), address(0));
+
+        assertEq(s_workflowRouter.getWorkflowGeneration(WORKFLOW_ID), generationBefore);
+    }
 }

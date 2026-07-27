@@ -38,6 +38,16 @@ interface IWorkflowRouter is IReceiver, IPauseable {
     /// @param workflowName The decoded workflow name that failed to match
     /// @param workflowOwner The decoded workflow owner that failed to match
     error WorkflowRouter__MetadataMismatch(bytes32 workflowId, bytes10 workflowName, address workflowOwner);
+    /// @dev Thrown when setWorkflowMetadata is called with a name and owner that already match the
+    ///      currently registered metadata for the workflow ID (including removing an already-removed,
+    ///      i.e. unregistered, workflow ID)
+    /// @param workflowId The workflow ID whose metadata was not changed
+    /// @param name The unchanged workflow name
+    /// @param owner The unchanged workflow owner
+    error WorkflowRouter__MetadataUnchanged(bytes32 workflowId, bytes10 name, address owner);
+    /// @dev Thrown when setWorkflowSelectors is called for a workflow ID with no registered metadata
+    /// @param workflowId The unregistered workflow ID
+    error WorkflowRouter__WorkflowNotRegistered(bytes32 workflowId);
     /// @dev Thrown when the report is shorter than the 4-byte function selector
     /// @param reportLength The length of the report received
     error WorkflowRouter__ReportTooShort(uint256 reportLength);
@@ -73,7 +83,18 @@ interface IWorkflowRouter is IReceiver, IPauseable {
     /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
     /// @dev Precondition: workflowId must not be zero
     /// @dev Precondition: name and owner must both be nonzero when setting metadata, or both zero when removing metadata
+    /// @dev Precondition: the `(name, owner)` pair must differ from the currently registered metadata
+    ///      for `workflowId` - changing either field is sufficient (reverts with
+    ///      `WorkflowRouter__MetadataUnchanged` otherwise, including when removing an already-removed,
+    ///      i.e. unregistered, workflow ID)
     /// @dev Set `name` and `owner` to zero to remove metadata for `workflowId`
+    /// @dev Every successful call advances the workflow's selector-allowlist generation by one,
+    ///      starting a fresh, empty selector set: selectors from every prior generation become
+    ///      unreachable. Registering a workflow ID, or updating the metadata of an already-registered
+    ///      workflow ID, requires selectors to be re-added via `setWorkflowSelectors` afterward.
+    ///      Removing a workflow ID also invalidates its selectors, but additionally leaves it unable to
+    ///      receive new selectors until it is registered again, since `setWorkflowSelectors` requires
+    ///      registered metadata.
     function setWorkflowMetadata(bytes32 workflowId, bytes10 name, address owner) external;
 
     /// @notice Sets the workflow selectors
@@ -82,7 +103,9 @@ interface IWorkflowRouter is IReceiver, IPauseable {
     /// @param isAllowlisted Whether the selectors are allowlisted
     /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
     /// @dev Precondition: workflowId must not be zero
+    /// @dev Precondition: workflowId must have registered metadata (see `getWorkflowMetadata`)
     /// @dev Set `isAllowlisted` to false to remove selectors from the workflow allowlist
+    /// @dev Writes into the workflow's current selector-allowlist generation (see `getWorkflowGeneration`)
     function setWorkflowSelectors(bytes32 workflowId, bytes4[] calldata selectors, bool isAllowlisted) external;
 
     /*//////////////////////////////////////////////////////////////
@@ -94,10 +117,20 @@ interface IWorkflowRouter is IReceiver, IPauseable {
     /// @return metadata The registered owner and name
     function getWorkflowMetadata(bytes32 workflowId) external view returns (WorkflowMetadata memory metadata);
 
+    /// @notice Returns the current selector-allowlist generation for a workflow ID
+    /// @dev Bumped by every successful `setWorkflowMetadata` call for this workflow ID. A generation of
+    ///      0 means the workflow ID has never been configured. A nonzero generation does not by itself
+    ///      mean the workflow ID is currently registered, since removal also advances it - check
+    ///      `getWorkflowMetadata` for current registration status.
+    /// @param workflowId The workflow ID to query
+    /// @return generation The current generation of the workflow's selector allowlist
+    function getWorkflowGeneration(bytes32 workflowId) external view returns (uint256 generation);
+
     /// @notice Gets whether a selector is allowlisted for a workflow
     /// @param workflowId The ID of the workflow
     /// @param selector The selector to check
     /// @return isAllowlisted Whether the selector is allowlisted for the workflow
+    /// @dev Checks against the workflow's current generation (see `getWorkflowGeneration`)
     function getAllowlistedWorkflowSelector(bytes32 workflowId, bytes4 selector)
         external
         view

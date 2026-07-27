@@ -71,9 +71,13 @@ Before changing the emergency receiver or treasury, verify the address is contro
 | Function                                                     | Role                   | Purpose                                                                                                            |
 | ------------------------------------------------------------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `setWorkflowMetadata(workflowId, name, owner)`               | `CONFIG_OPERATOR_ROLE` | Registers or removes the expected workflow identity. Use zero `name` and zero `owner` together to remove metadata. |
-| `setWorkflowSelectors(workflowId, selectors, isAllowlisted)` | `CONFIG_OPERATOR_ROLE` | Allows or removes specific vault function selectors for a workflow.                                                |
+| `setWorkflowSelectors(workflowId, selectors, isAllowlisted)` | `CONFIG_OPERATOR_ROLE` | Allows or removes specific vault function selectors for a workflow. Requires the workflow ID to already have registered metadata. |
 
 Workflow selector configuration is security-critical. The operator should allowlist only the selectors needed by the specific workflow, such as epoch or rebalance execution selectors, and should verify selector values before applying changes.
+
+Every successful `setWorkflowMetadata` call starts a fresh, empty selector-allowlist generation for that workflow ID - registration, removal, or updating the metadata of an already-registered workflow ID (changing either the name or the owner, or both). This applies even when reusing a workflow ID that was previously removed and registering it under a different name or owner: the router will never let a new registration inherit selectors that were allowlisted for a prior one. `setWorkflowMetadata` reverts with `WorkflowRouter__MetadataUnchanged` if the submitted name and owner already match the currently registered metadata for the workflow ID - including calling removal on a workflow ID that is already unregistered - so every successful call is guaranteed to be a real identity change.
+
+Registering a workflow ID, or updating the metadata of one that is still registered, requires selectors to be re-added with `setWorkflowSelectors` afterward. Removing a workflow ID also invalidates its selectors, but additionally leaves it unable to receive new selectors until it is registered again, since `setWorkflowSelectors` reverts with `WorkflowRouter__WorkflowNotRegistered` for any workflow ID with no registered metadata. Always call `setWorkflowMetadata` before `setWorkflowSelectors` when configuring a new workflow.
 
 ## Pause Controls
 

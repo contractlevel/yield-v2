@@ -15,5 +15,13 @@ WorkflowRouter_onReport
   │   └── it should revert
   ├── when the selector is not allowlisted
   │   └── it should revert
-  └── when all conditions are met
-      └── it should succeed
+  ├── when all conditions are met
+  │   └── it should succeed
+  ├── when the workflow is removed and re-registered with a different name and owner
+  │   ├── when the selector is not re-added for the new registration
+  │   │   └── it should revert with WorkflowRouter__SelectorNotAllowlisted
+  │   └── when the selector is re-added for the new registration
+  │       └── it should succeed
+  └── when the workflow is renamed to a different name and owner without going through removal
+      └── when the selector is not re-added for the new registration
+          └── it should revert with WorkflowRouter__SelectorNotAllowlisted

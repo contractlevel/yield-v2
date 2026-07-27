@@ -242,8 +242,9 @@ These are desired configuration properties.
 | `ROUTER-001` | Only `KEYSTONE_FORWARDER_ROLE` can call `onReport`.                           | `unit`   | implemented: Certora |
 | `ROUTER-002` | Router must be unpaused for `onReport`.                                       | `unit`   | implemented: Certora |
 | `ROUTER-003` | Workflow ID, name, and owner must match configured metadata.                  | `unit`   | implemented: Certora |
-| `ROUTER-004` | Report selector must be allowlisted for that workflow ID.                     | `unit`   | implemented: Certora |
+| `ROUTER-004` | Report selector must be allowlisted for that workflow ID's current selector-allowlist generation. | `unit`   | candidate |
 | `ROUTER-005` | Router dispatches only to its immutable vault and contains no business logic. | `manual` | candidate            |
+| `ROUTER-006` | Changing or removing workflow metadata advances its selector generation, making selectors from every prior generation unreachable. | `unit`   | implemented: Foundry |
 
 ## Adapters
 

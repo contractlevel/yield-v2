@@ -10,11 +10,13 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 
 contract WorkflowRouter_SetWorkflowSelectorsUnitTest is BaseWorkflowRouterUnitTest {
     bytes32 internal constant WORKFLOW_ID = keccak256("workflow-1");
+    bytes32 internal constant UNREGISTERED_WORKFLOW_ID = keccak256("unregistered-workflow");
     bytes4 internal constant SELECTOR_1 = bytes4(keccak256("deposit(uint256)"));
     bytes4 internal constant SELECTOR_2 = bytes4(keccak256("withdraw(uint256)"));
 
     function setUp() public {
         _changePrank(i_configOperator);
+        s_workflowRouter.setWorkflowMetadata(WORKFLOW_ID, s_workflowName, i_owner);
     }
 
     function test_WorkflowRouter_setWorkflowSelectors_RevertWhen_CallerDoesNotHaveConfigOperatorRole() external {
@@ -35,6 +37,29 @@ contract WorkflowRouter_SetWorkflowSelectorsUnitTest is BaseWorkflowRouterUnitTe
 
         vm.expectRevert(IWorkflowRouter.WorkflowRouter__NoZeroWorkflowId.selector);
         s_workflowRouter.setWorkflowSelectors(bytes32(0), selectors, true);
+    }
+
+    function test_WorkflowRouter_setWorkflowSelectors_RevertWhen_WorkflowIsNotRegistered() external {
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = SELECTOR_1;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IWorkflowRouter.WorkflowRouter__WorkflowNotRegistered.selector, UNREGISTERED_WORKFLOW_ID
+            )
+        );
+        s_workflowRouter.setWorkflowSelectors(UNREGISTERED_WORKFLOW_ID, selectors, true);
+    }
+
+    function test_WorkflowRouter_setWorkflowSelectors_RevertWhen_WorkflowWasRemoved() external {
+        s_workflowRouter.setWorkflowMetadata(WORKFLOW_ID, bytes10(0), address(0));
+
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = SELECTOR_1;
+        vm.expectRevert(
+            abi.encodeWithSelector(IWorkflowRouter.WorkflowRouter__WorkflowNotRegistered.selector, WORKFLOW_ID)
+        );
+        s_workflowRouter.setWorkflowSelectors(WORKFLOW_ID, selectors, true);
     }
 
     function test_WorkflowRouter_setWorkflowSelectors_Success_AllowlistsSelector() external {
@@ -79,5 +104,20 @@ contract WorkflowRouter_SetWorkflowSelectorsUnitTest is BaseWorkflowRouterUnitTe
 
         assertEq(s_workflowRouter.getAllowlistedWorkflowSelector(WORKFLOW_ID, SELECTOR_1), true);
         assertEq(s_workflowRouter.getAllowlistedWorkflowSelector(WORKFLOW_ID, SELECTOR_2), true);
+    }
+
+    function test_WorkflowRouter_setWorkflowSelectors_Success_SelectorsScopedToGeneration() external {
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = SELECTOR_1;
+        s_workflowRouter.setWorkflowSelectors(WORKFLOW_ID, selectors, true);
+        assertEq(s_workflowRouter.getAllowlistedWorkflowSelector(WORKFLOW_ID, SELECTOR_1), true);
+
+        // Any setWorkflowMetadata call that changes the registered identity advances the generation,
+        // so a selector allowlisted under the previous generation must no longer be allowlisted
+        // afterward - with no explicit removal step.
+        bytes10 newName = _createWorkflowName("workflow-2");
+        s_workflowRouter.setWorkflowMetadata(WORKFLOW_ID, newName, i_nonOwner);
+
+        assertEq(s_workflowRouter.getAllowlistedWorkflowSelector(WORKFLOW_ID, SELECTOR_1), false);
     }
 }
