@@ -62,6 +62,9 @@ interface IParentVault is IBaseVault {
     error ParentVault__InvalidPendingProtocolId(bytes32 protocolId);
     /// @dev Thrown when initiateRebalance is called before any epoch has completed
     error ParentVault__NoCompletedEpoch();
+    /// @dev Thrown when initiateRebalance is called before MIN_REBALANCE_PERIOD has elapsed since the last rebalance completed
+    /// @param rebalanceNonce The nonce of the rebalance that was attempted too soon
+    error ParentVault__RebalanceTooSoon(uint256 rebalanceNonce);
     /// @dev Thrown when the new strategy matches the active strategy
     error ParentVault__SameStrategy();
     /// @dev Thrown when a prior epoch is still executing

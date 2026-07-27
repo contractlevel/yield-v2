@@ -12,6 +12,12 @@ import {Types} from "../Types.sol";
 /// @dev Public library functions are linked by Solidity and execute by DELEGATECALL in the ParentVault context.
 library ParentVaultRebalanceLib {
     /*//////////////////////////////////////////////////////////////
+                               CONSTANTS
+    //////////////////////////////////////////////////////////////*/
+    /// @dev Minimum time that must elapse since the last rebalance completed before another can be initiated
+    uint256 internal constant MIN_REBALANCE_PERIOD = 1 hours;
+
+    /*//////////////////////////////////////////////////////////////
                            TYPE DECLARATIONS
     //////////////////////////////////////////////////////////////*/
     /// @notice The action ParentVault must take after initiateRebalance updates state
@@ -79,6 +85,9 @@ library ParentVaultRebalanceLib {
         Types.Rebalance storage s_rebalance = $.s_rebalance;
         if (s_rebalance.state != Types.RebalanceState.NONE) {
             revert IParentVault.ParentVault__RebalanceInProgress();
+        }
+        if (block.timestamp < s_rebalance.lastRebalanceCompletedTimestamp + MIN_REBALANCE_PERIOD) {
+            revert IParentVault.ParentVault__RebalanceTooSoon(s_rebalance.nonce);
         }
 
         Types.Strategy memory activeStrategy = s_rebalance.activeStrategy;

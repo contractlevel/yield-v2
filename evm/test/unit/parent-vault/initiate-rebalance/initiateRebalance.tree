@@ -5,6 +5,8 @@ ParentVault_initiateRebalance
 │   └── it should revert with EnforcedPause
 ├── when rebalance is already in progress
 │   └── it should revert with ParentVault__RebalanceInProgress
+├── when MIN_REBALANCE_PERIOD has not elapsed since the last rebalance completed
+│   └── it should revert with ParentVault__RebalanceTooSoon
 ├── when recovery exists
 │   └── it should revert with BaseVault__RecoveryAlreadyPending
 ├── when new strategy is the active strategy

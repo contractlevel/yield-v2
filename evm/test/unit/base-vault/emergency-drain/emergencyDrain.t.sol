@@ -148,4 +148,21 @@ contract ChildVault_EmergencyDrainUnitTest is BaseVault_EmergencyDrainUnitTest {
     function _setActiveAdapter() internal override {
         _setChildActiveAdapter(address(s_mockProtocolAdapter));
     }
+
+    function test_ChildVault_emergencyDrain_Success_WhenTVLIsGreaterThanZeroButNoActiveAdapter() external {
+        _changePrank(i_pauser);
+        s_vault.pause();
+
+        vm.warp(block.timestamp + 1 days);
+
+        _setChildCcipSendRecoveryAmount(TVL);
+        deal(address(s_mockUsdc), address(s_vault), USDC_AMOUNT);
+
+        _changePrank(i_emergencyDrainer);
+        s_vault.emergencyDrain(true);
+
+        assertEq(s_mockProtocolAdapter.getWithdrawCalls(), 0);
+        assertEq(s_mockUsdc.balanceOf(i_emergencyReceiver), USDC_AMOUNT);
+        assertEq(s_mockUsdc.balanceOf(address(s_vault)), 0);
+    }
 }

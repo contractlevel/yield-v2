@@ -195,6 +195,10 @@ abstract contract BaseUnitTest is BaseTest {
         _setActiveAdapter(s_childVault, address(0));
     }
 
+    function _setChildCcipSendRecoveryAmount(uint256 amount) internal {
+        stdstore.target(address(s_childVault)).sig("getCcipSendRecovery()").depth(1).checked_write(amount);
+    }
+
     function _clearParentActiveAdapter() internal {
         _setActiveAdapter(s_parentVault, address(0));
     }
@@ -234,6 +238,10 @@ abstract contract BaseUnitTest is BaseTest {
 
     function _setParentRebalanceState(Types.RebalanceState state) internal {
         stdstore.target(address(s_parentVault)).sig("getRebalance()").depth(1).checked_write(uint256(state));
+    }
+
+    function _setParentLastRebalanceCompletedTimestamp(uint256 timestamp) internal {
+        stdstore.target(address(s_parentVault)).sig("getRebalance()").depth(6).checked_write(timestamp);
     }
 
     function _setParentRecoveryMode(Types.RecoveryMode mode) internal {

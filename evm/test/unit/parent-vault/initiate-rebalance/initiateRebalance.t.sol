@@ -22,6 +22,7 @@ contract ParentVault_InitiateRebalanceUnitTest is BaseUnitTest {
         deal(address(s_mockUsdc), address(s_parentVault), REBALANCE_AMOUNT);
         s_mockProtocolAdapter.setWithdrawReturnAmount(REBALANCE_AMOUNT);
         _setParentEpochNonce(2);
+        _warpPastMinRebalance();
 
         _changePrank(i_rebalanceOperator);
     }
@@ -52,6 +53,13 @@ contract ParentVault_InitiateRebalanceUnitTest is BaseUnitTest {
         _setParentRecoveryMode(Types.RecoveryMode.REBALANCE_DEPOSIT);
 
         vm.expectRevert(IBaseVault.BaseVault__RecoveryAlreadyPending.selector);
+        s_parentVault.initiateRebalance(_localStrategy(AAVE_V4_PROTOCOL_ID));
+    }
+
+    function test_ParentVault_initiateRebalance_RevertWhen_RebalanceTooSoon() public {
+        _setParentLastRebalanceCompletedTimestamp(block.timestamp);
+
+        vm.expectRevert(abi.encodeWithSelector(IParentVault.ParentVault__RebalanceTooSoon.selector, 1));
         s_parentVault.initiateRebalance(_localStrategy(AAVE_V4_PROTOCOL_ID));
     }
 
@@ -265,5 +273,9 @@ contract ParentVault_InitiateRebalanceUnitTest is BaseUnitTest {
 
     function _remoteChildStrategy(bytes32 protocolId) internal pure returns (Types.Strategy memory) {
         return _strategy(protocolId, REMOTE_CHILD_CHAIN_SELECTOR);
+    }
+
+    function _warpPastMinRebalance() internal {
+        vm.warp(block.timestamp + MIN_REBALANCE_PERIOD + 1);
     }
 }

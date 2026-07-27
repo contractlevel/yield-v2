@@ -20,6 +20,7 @@ abstract contract Constants {
     uint256 internal constant DEPOSIT_AMOUNT = MIN_DEPOSIT_AMOUNT;
     uint256 internal constant SHARE_PRECISION = 1e12;
     uint256 internal constant MIN_EPOCH_PERIOD = 1 hours;
+    uint256 internal constant MIN_REBALANCE_PERIOD = 1 hours;
 
     bytes32 internal constant KYC_CREDENTIAL = keccak256("common.kyc");
     bytes32 internal constant KYC_REQUIREMENT = keccak256("KYC");

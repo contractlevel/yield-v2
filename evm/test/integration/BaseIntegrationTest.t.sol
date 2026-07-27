@@ -394,6 +394,7 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
         address workflowOwner,
         Types.Strategy memory newStrategy
     ) internal {
+        _markParentRebalanceCooldownElapsed();
         _callWorkflowRouter(
             router,
             workflowId,
@@ -401,6 +402,12 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
             workflowOwner,
             abi.encodeWithSelector(ParentVault.initiateRebalance.selector, newStrategy)
         );
+    }
+
+    /// @dev Ensures MIN_REBALANCE_PERIOD has elapsed since the last rebalance completed, regardless of
+    ///      how much wall-clock time the preceding test actions actually advanced.
+    function _markParentRebalanceCooldownElapsed() internal {
+        stdstore.target(address(parent.vault)).sig("getRebalance()").depth(6).checked_write(uint256(0));
     }
 
     function _completeRebalanceThroughWorkflow(

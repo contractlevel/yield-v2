@@ -396,6 +396,8 @@ abstract contract BaseVault is
     //////////////////////////////////////////////////////////////*/
     /// @notice If the vault has TVL, it is withdrawn from the active strategy and transferred to the emergency receiver
     /// @param revertOnFailure Whether to revert if the withdraw from strategy fails
+    /// @dev If there is no active adapter, any TVL is already local balance (e.g. stranded by a pending
+    ///      recovery) and is swept below without an adapter withdraw.
     /// @dev Precondition: Caller must have the EMERGENCY_DRAINER_ROLE
     /// @dev Precondition: must be paused
     /// @dev Precondition: Vault must have been paused for at least EMERGENCY_DRAIN_DELAY
@@ -412,7 +414,12 @@ abstract contract BaseVault is
             revert BaseVault__EmergencyDrainDelayNotMet();
         }
 
-        if (_getTVL() > 0) _executeWithdraw(type(uint256).max, revertOnFailure, $.s_activeProtocolAdapter);
+        address activeAdapter = $.s_activeProtocolAdapter;
+        /// @dev TVL can be nonzero with no active adapter (e.g. ChildVault funds stranded locally by a
+        ///      pending recovery) - that balance is already local and gets swept below, nothing to withdraw.
+        if (activeAdapter != address(0) && _getTVL() > 0) {
+            _executeWithdraw(type(uint256).max, revertOnFailure, activeAdapter);
+        }
 
         uint256 balance = IERC20(i_asset).balanceOf(address(this));
         address emergencyReceiver = $.s_emergencyReceiver;

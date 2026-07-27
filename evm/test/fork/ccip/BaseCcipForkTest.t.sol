@@ -240,6 +240,7 @@ abstract contract BaseCcipForkTest is BaseForkTest {
     function _initiateRebalanceThroughWorkflow(bytes32 workflowId, Types.Strategy memory newStrategy) internal {
         _selectArbitrumFork();
         _markParentFirstEpochCompleted();
+        _markParentRebalanceCooldownElapsed();
         _callWorkflowRouter(
             parent.workflowRouter,
             workflowId,
@@ -253,6 +254,12 @@ abstract contract BaseCcipForkTest is BaseForkTest {
         if (parent.vault.getEpochNonce() == 1) {
             stdstore.target(address(parent.vault)).sig("getEpochNonce()").checked_write(2);
         }
+    }
+
+    /// @dev Ensures MIN_REBALANCE_PERIOD has elapsed since the last rebalance completed, regardless of
+    ///      how much wall-clock time the preceding test actions actually advanced.
+    function _markParentRebalanceCooldownElapsed() internal {
+        stdstore.target(address(parent.vault)).sig("getRebalance()").depth(6).checked_write(uint256(0));
     }
 
     function _completeRebalanceThroughWorkflow(bytes32 workflowId) internal {

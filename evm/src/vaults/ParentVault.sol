@@ -394,6 +394,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @dev Precondition: the caller must have the REBALANCE_OPERATOR_ROLE
     /// @dev Precondition: the contract must not be paused
     /// @dev Precondition: A rebalance must not already be in progress
+    /// @dev Precondition: MIN_REBALANCE_PERIOD must have elapsed since the last rebalance completed
     /// @dev Precondition: newStrategy must not be the same as the current active strategy
     /// @dev Precondition: An epoch must not be EXECUTING
     /// @dev Precondition: If current/active/previous strategy is on this chain, withdrawing tvl from the old strategy must succeed
@@ -408,8 +409,6 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         ParentVaultStorage storage $ = _parentVaultStorage();
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
         _requireNoRecovery($_baseVault);
-
-        // @review revert if lastCompletedRebalance timestamp is less than an hour?
 
         bool isSupportedChain = newStrategy.chainSelector == i_thisChainSelector
             || $_baseVault.s_crosschainVaults[newStrategy.chainSelector] != address(0);
