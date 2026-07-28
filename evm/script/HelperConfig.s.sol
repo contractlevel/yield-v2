@@ -33,6 +33,7 @@ contract HelperConfig is Script {
         ProtocolsConfig protocols;
         CCIPConfig ccip;
         CREConfig cre;
+        DeployedConfig deployed;
     }
 
     struct RolesConfig {
@@ -75,6 +76,10 @@ contract HelperConfig is Script {
 
     struct CREConfig {
         address keystoneForwarder;
+    }
+
+    struct DeployedConfig {
+        address vaultProxy;
     }
 
     NetworkConfig public activeNetworkConfig;
@@ -142,7 +147,8 @@ contract HelperConfig is Script {
                 parentChainSelector: ARBITRUM_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
-            cre: CREConfig({keystoneForwarder: 0xF8344CFd5c43616a4366C34E3EEE75af79a74482})
+            cre: CREConfig({keystoneForwarder: 0xF8344CFd5c43616a4366C34E3EEE75af79a74482}),
+            deployed: DeployedConfig({vaultProxy: address(0)})
         });
     }
 
@@ -179,7 +185,8 @@ contract HelperConfig is Script {
                 parentChainSelector: ARBITRUM_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
-            cre: CREConfig({keystoneForwarder: 0xF8344CFd5c43616a4366C34E3EEE75af79a74482})
+            cre: CREConfig({keystoneForwarder: 0xF8344CFd5c43616a4366C34E3EEE75af79a74482}),
+            deployed: DeployedConfig({vaultProxy: address(0)})
         });
     }
 
@@ -215,7 +222,8 @@ contract HelperConfig is Script {
                 parentChainSelector: ARBITRUM_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
-            cre: CREConfig({keystoneForwarder: 0x0b93082D9b3C7C97fAcd250082899BAcf3af3885})
+            cre: CREConfig({keystoneForwarder: 0x0b93082D9b3C7C97fAcd250082899BAcf3af3885}),
+            deployed: DeployedConfig({vaultProxy: address(0)})
         });
     }
 
@@ -251,7 +259,8 @@ contract HelperConfig is Script {
                 parentChainSelector: ARBITRUM_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
-            cre: CREConfig({keystoneForwarder: 0x76c9cf548b4179F8901cda1f8623568b58215E62})
+            cre: CREConfig({keystoneForwarder: 0x76c9cf548b4179F8901cda1f8623568b58215E62}),
+            deployed: DeployedConfig({vaultProxy: address(0)})
         });
     }
 
@@ -287,7 +296,8 @@ contract HelperConfig is Script {
                 parentChainSelector: ARBITRUM_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
-            cre: CREConfig({keystoneForwarder: 0xF8344CFd5c43616a4366C34E3EEE75af79a74482})
+            cre: CREConfig({keystoneForwarder: 0xF8344CFd5c43616a4366C34E3EEE75af79a74482}),
+            deployed: DeployedConfig({vaultProxy: address(0)})
         });
     }
 
@@ -326,7 +336,8 @@ contract HelperConfig is Script {
                 parentChainSelector: ARBITRUM_SEPOLIA_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
-            cre: CREConfig({keystoneForwarder: 0x76c9cf548b4179F8901cda1f8623568b58215E62})
+            cre: CREConfig({keystoneForwarder: 0x76c9cf548b4179F8901cda1f8623568b58215E62}),
+            deployed: DeployedConfig({vaultProxy: 0x584099C5200b8a63536230017F718797026E5915})
         });
     }
 
@@ -362,7 +373,8 @@ contract HelperConfig is Script {
                 parentChainSelector: ARBITRUM_SEPOLIA_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
-            cre: CREConfig({keystoneForwarder: 0xF8344CFd5c43616a4366C34E3EEE75af79a74482})
+            cre: CREConfig({keystoneForwarder: 0xF8344CFd5c43616a4366C34E3EEE75af79a74482}),
+            deployed: DeployedConfig({vaultProxy: 0x809a7Bf022841e3bCDa0d3cf64B780Aabf898C64})
         });
     }
 
@@ -398,7 +410,8 @@ contract HelperConfig is Script {
                 parentChainSelector: ARBITRUM_SEPOLIA_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
-            cre: CREConfig({keystoneForwarder: 0xF8344CFd5c43616a4366C34E3EEE75af79a74482})
+            cre: CREConfig({keystoneForwarder: 0xF8344CFd5c43616a4366C34E3EEE75af79a74482}),
+            deployed: DeployedConfig({vaultProxy: 0x221736594f42A10CE61A0f66Dc4e6B04786ff8a3})
         });
     }
 
@@ -434,7 +447,8 @@ contract HelperConfig is Script {
                 parentChainSelector: ARBITRUM_SEPOLIA_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
-            cre: CREConfig({keystoneForwarder: 0x76c9cf548b4179F8901cda1f8623568b58215E62})
+            cre: CREConfig({keystoneForwarder: 0x76c9cf548b4179F8901cda1f8623568b58215E62}),
+            deployed: DeployedConfig({vaultProxy: 0x221736594f42A10CE61A0f66Dc4e6B04786ff8a3})
         });
     }
 
@@ -470,7 +484,8 @@ contract HelperConfig is Script {
                 parentChainSelector: ARBITRUM_SEPOLIA_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
-            cre: CREConfig({keystoneForwarder: 0x76c9cf548b4179F8901cda1f8623568b58215E62})
+            cre: CREConfig({keystoneForwarder: 0x76c9cf548b4179F8901cda1f8623568b58215E62}),
+            deployed: DeployedConfig({vaultProxy: 0x781d5338EB60Ed6C0129F28cE56872Cc239aC3c2})
         });
     }
 
@@ -491,7 +506,8 @@ contract HelperConfig is Script {
             tokens: tokens,
             protocols: protocols,
             ccip: ccip,
-            cre: cre
+            cre: cre,
+            deployed: DeployedConfig({vaultProxy: address(0)})
         });
     }
 
