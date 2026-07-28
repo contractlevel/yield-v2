@@ -57,7 +57,7 @@ This means a user must be KYC-approved and not frozen before using the vault's d
 
 `withdraw` and `cancelWithdraw` move `YieldcoinShare` tokens after the ParentVault policy check. Those share-token transfers also enforce KYC and frozen-account restrictions through `YieldcoinShare` / ERC-3643 transfer policy. The overlap is intentional: ParentVault keeps a uniform fail-closed policy stack for all direct user entry points, while the share token remains the final enforcement boundary for token movement. The extra policy calls are accepted as defense-in-depth despite the additional gas cost.
 
-This is also tracked as an accepted gas tradeoff in [GAS - GAS-006](../protocol/GAS.md#gas-006---deliberate-overlap-between-parentvault-policy-checks-and-share-token-transfer-checks).
+This is also tracked as an accepted gas tradeoff in [GAS - GAS-005](../protocol/GAS.md#gas-005---deliberate-overlap-between-parentvault-policy-checks-and-share-token-transfer-checks).
 
 ### YieldcoinShare Transfers And Approvals
 
