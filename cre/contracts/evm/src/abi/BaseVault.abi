@@ -158,32 +158,6 @@
   },
   {
     "type": "function",
-    "name": "donate",
-    "inputs": [
-      {
-        "name": "amount",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "emergencyDrain",
-    "inputs": [
-      {
-        "name": "revertOnFailure",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "executeRecovery",
     "inputs": [],
     "outputs": [],
@@ -333,19 +307,6 @@
   },
   {
     "type": "function",
-    "name": "getEmergencyReceiver",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "emergencyReceiver",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "getLink",
     "inputs": [],
     "outputs": [
@@ -353,19 +314,6 @@
         "name": "link",
         "type": "address",
         "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getPausedAt",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "pausedAt",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -684,19 +632,6 @@
   },
   {
     "type": "function",
-    "name": "setEmergencyReceiver",
-    "inputs": [
-      {
-        "name": "emergencyReceiver",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "supportsInterface",
     "inputs": [
       {
@@ -943,57 +878,6 @@
         "type": "uint256",
         "indexed": true,
         "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "Donation",
-    "inputs": [
-      {
-        "name": "donor",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "EmergencyDrainExecuted",
-    "inputs": [
-      {
-        "name": "emergencyReceiver",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "EmergencyReceiverSet",
-    "inputs": [
-      {
-        "name": "emergencyReceiver",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
       }
     ],
     "anonymous": false
@@ -1335,11 +1219,6 @@
   },
   {
     "type": "error",
-    "name": "BaseVault__EmergencyDrainDelayNotMet",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "BaseVault__EmptyInput",
     "inputs": []
   },
@@ -1407,6 +1286,22 @@
       },
       {
         "name": "srcChainSelector",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "BaseVault__InvalidSourceChainSelector",
+    "inputs": [
+      {
+        "name": "sourceChainSelector",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "expectedSourceChainSelector",
         "type": "uint64",
         "internalType": "uint64"
       }

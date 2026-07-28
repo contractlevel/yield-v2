@@ -51,7 +51,7 @@ var (
 )
 
 var ChildVaultMetaData = &bind.MetaData{
-	ABI: "[{\"type\":\"constructor\",\"inputs\":[{\"name\":\"params\",\"type\":\"tuple\",\"internalType\":\"structBaseVault.ConstructorParams\",\"components\":[{\"name\":\"link\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"asset\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"ccipRouter\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"adapterRegistry\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"thisChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]},{\"name\":\"parentChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"DEFAULT_ADMIN_ROLE\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"UPGRADE_INTERFACE_VERSION\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"string\",\"internalType\":\"string\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"acceptDefaultAdminTransfer\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"beginDefaultAdminTransfer\",\"inputs\":[{\"name\":\"newAdmin\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"cancelDefaultAdminTransfer\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"ccipReceive\",\"inputs\":[{\"name\":\"message\",\"type\":\"tuple\",\"internalType\":\"structClient.Any2EVMMessage\",\"components\":[{\"name\":\"messageId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"sourceChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"sender\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"destTokenAmounts\",\"type\":\"tuple[]\",\"internalType\":\"structClient.EVMTokenAmount[]\",\"components\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}]}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"changeDefaultAdminDelay\",\"inputs\":[{\"name\":\"newDelay\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"defaultAdmin\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"defaultAdminDelay\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"defaultAdminDelayIncreaseWait\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"donate\",\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"emergencyDrain\",\"inputs\":[{\"name\":\"revertOnFailure\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"executeEpochWithdraw\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"executeRebalance\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"newStrategy\",\"type\":\"tuple\",\"internalType\":\"structTypes.Strategy\",\"components\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"executeRecovery\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"getActiveProtocolAdapter\",\"inputs\":[],\"outputs\":[{\"name\":\"activeProtocolAdapter\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getAdapterRegistry\",\"inputs\":[],\"outputs\":[{\"name\":\"adapterRegistry\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getAsset\",\"inputs\":[],\"outputs\":[{\"name\":\"asset\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getAssetPrecision\",\"inputs\":[],\"outputs\":[{\"name\":\"assetPrecision\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getCCVsAndFinalityConfig\",\"inputs\":[{\"name\":\"\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[{\"name\":\"requiredCCVs\",\"type\":\"address[]\",\"internalType\":\"address[]\"},{\"name\":\"optionalCCVs\",\"type\":\"address[]\",\"internalType\":\"address[]\"},{\"name\":\"optionalThreshold\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"allowedFinalityConfig\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getCcipGasLimit\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"outputs\":[{\"name\":\"gasLimit\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getCcipSendRecovery\",\"inputs\":[],\"outputs\":[{\"name\":\"recovery\",\"type\":\"tuple\",\"internalType\":\"structTypes.CcipSendRecovery\",\"components\":[{\"name\":\"ccipTxType\",\"type\":\"uint8\",\"internalType\":\"enumTypes.CcipTx\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"destinationChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"nonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getCrosschainVault\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"outputs\":[{\"name\":\"vault\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getDefaultCcipGasLimit\",\"inputs\":[],\"outputs\":[{\"name\":\"defaultCcipGasLimit\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getEmergencyReceiver\",\"inputs\":[],\"outputs\":[{\"name\":\"emergencyReceiver\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getEpochDepositRecovery\",\"inputs\":[],\"outputs\":[{\"name\":\"recovery\",\"type\":\"tuple\",\"internalType\":\"structTypes.EpochRecovery\",\"components\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getEpochWithdrawRecovery\",\"inputs\":[],\"outputs\":[{\"name\":\"recovery\",\"type\":\"tuple\",\"internalType\":\"structTypes.EpochRecovery\",\"components\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getLink\",\"inputs\":[],\"outputs\":[{\"name\":\"link\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getParentChainSelector\",\"inputs\":[],\"outputs\":[{\"name\":\"parentChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getPausedAt\",\"inputs\":[],\"outputs\":[{\"name\":\"pausedAt\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRebalanceDepositRecovery\",\"inputs\":[],\"outputs\":[{\"name\":\"recovery\",\"type\":\"tuple\",\"internalType\":\"structTypes.RebalanceDepositRecovery\",\"components\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRebalanceWithdrawRecovery\",\"inputs\":[],\"outputs\":[{\"name\":\"recovery\",\"type\":\"tuple\",\"internalType\":\"structTypes.RebalanceWithdrawRecovery\",\"components\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"strategy\",\"type\":\"tuple\",\"internalType\":\"structTypes.Strategy\",\"components\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRecoveryMode\",\"inputs\":[],\"outputs\":[{\"name\":\"recoveryMode\",\"type\":\"uint8\",\"internalType\":\"enumTypes.RecoveryMode\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRoleAdmin\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRouter\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getTVL\",\"inputs\":[],\"outputs\":[{\"name\":\"tvl\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getThisChainSelector\",\"inputs\":[],\"outputs\":[{\"name\":\"thisChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"grantRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"hasRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"initialize\",\"inputs\":[{\"name\":\"params\",\"type\":\"tuple\",\"internalType\":\"structBaseVault.InitParams\",\"components\":[{\"name\":\"defaultAdmin\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"pauser\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"unpauser\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"configOperator\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"emergencyReceiver\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"initialDefaultCcipGasLimit\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"upgrader\",\"type\":\"address\",\"internalType\":\"address\"}]}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"owner\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"pause\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"paused\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"pendingDefaultAdmin\",\"inputs\":[],\"outputs\":[{\"name\":\"newAdmin\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"schedule\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"pendingDefaultAdminDelay\",\"inputs\":[],\"outputs\":[{\"name\":\"newDelay\",\"type\":\"uint48\",\"internalType\":\"uint48\"},{\"name\":\"schedule\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"proxiableUUID\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"renounceRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"revokeRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"rollbackDefaultAdminDelay\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setCcipGasLimit\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"gasLimit\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setCrosschainVaults\",\"inputs\":[{\"name\":\"chainSelectors\",\"type\":\"uint64[]\",\"internalType\":\"uint64[]\"},{\"name\":\"vaults\",\"type\":\"address[]\",\"internalType\":\"address[]\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setDefaultCcipGasLimit\",\"inputs\":[{\"name\":\"gasLimit\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setEmergencyReceiver\",\"inputs\":[{\"name\":\"emergencyReceiver\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"supportsInterface\",\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"pure\"},{\"type\":\"function\",\"name\":\"tryCcipSend\",\"inputs\":[{\"name\":\"bridgeAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"destinationChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"ccipTxType\",\"type\":\"uint8\",\"internalType\":\"enumTypes.CcipTx\"},{\"name\":\"nonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"tryDepositToAdapter\",\"inputs\":[{\"name\":\"adapter\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"unpause\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"upgradeToAndCall\",\"inputs\":[{\"name\":\"newImplementation\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"withdrawLink\",\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"ActiveProtocolAdapterCleared\",\"inputs\":[{\"name\":\"adapter\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ActiveProtocolAdapterSet\",\"inputs\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"adapter\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ActiveProtocolAdapterSet\",\"inputs\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"adapter\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CCIPBridged\",\"inputs\":[{\"name\":\"ccipMessageId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"ccipTxType\",\"type\":\"uint8\",\"indexed\":true,\"internalType\":\"enumTypes.CcipTx\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CCIPBridged\",\"inputs\":[{\"name\":\"ccipMessageId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"ccipTxType\",\"type\":\"uint8\",\"indexed\":true,\"internalType\":\"enumTypes.CcipTx\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CcipGasLimitSet\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"},{\"name\":\"gasLimit\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CcipGasLimitSet\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"},{\"name\":\"gasLimit\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CcipSendRecoveryCleared\",\"inputs\":[{\"name\":\"ccipTxType\",\"type\":\"uint8\",\"indexed\":true,\"internalType\":\"enumTypes.CcipTx\"},{\"name\":\"destinationChainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CcipSendRecoveryStored\",\"inputs\":[{\"name\":\"ccipTxType\",\"type\":\"uint8\",\"indexed\":true,\"internalType\":\"enumTypes.CcipTx\"},{\"name\":\"destinationChainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CrosschainVaultSet\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"},{\"name\":\"vault\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CrosschainVaultSet\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"},{\"name\":\"vault\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminDelayChangeCanceled\",\"inputs\":[],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminDelayChangeScheduled\",\"inputs\":[{\"name\":\"newDelay\",\"type\":\"uint48\",\"indexed\":false,\"internalType\":\"uint48\"},{\"name\":\"effectSchedule\",\"type\":\"uint48\",\"indexed\":false,\"internalType\":\"uint48\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminTransferCanceled\",\"inputs\":[],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminTransferScheduled\",\"inputs\":[{\"name\":\"newAdmin\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"acceptSchedule\",\"type\":\"uint48\",\"indexed\":false,\"internalType\":\"uint48\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultCcipGasLimitSet\",\"inputs\":[{\"name\":\"gasLimit\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultCcipGasLimitSet\",\"inputs\":[{\"name\":\"gasLimit\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DepositToStrategyFailure\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DepositToStrategySuccess\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Donation\",\"inputs\":[{\"name\":\"donor\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EmergencyDrainExecuted\",\"inputs\":[{\"name\":\"emergencyReceiver\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EmergencyReceiverSet\",\"inputs\":[{\"name\":\"emergencyReceiver\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EmergencyReceiverSet\",\"inputs\":[{\"name\":\"emergencyReceiver\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EpochDepositRecoveryCleared\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EpochDepositRecoveryStored\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EpochWithdrawRecoveryCleared\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EpochWithdrawRecoveryStored\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Initialized\",\"inputs\":[{\"name\":\"version\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"LinkWithdrawn\",\"inputs\":[{\"name\":\"operator\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Paused\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceDepositFailure\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceDepositRecoveryCleared\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceDepositRecoveryStored\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceDepositSuccess\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceWithdrawFailure\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceWithdrawRecoveryCleared\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceWithdrawRecoveryStored\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"protocolId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"chainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceWithdrawSuccess\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleAdminChanged\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"previousAdminRole\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"newAdminRole\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleGranted\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleRevoked\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Unpaused\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Upgraded\",\"inputs\":[{\"name\":\"implementation\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"WithdrawFromStrategyFailure\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"WithdrawFromStrategySuccess\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"AccessControlBadConfirmation\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"AccessControlEnforcedDefaultAdminDelay\",\"inputs\":[{\"name\":\"schedule\",\"type\":\"uint48\",\"internalType\":\"uint48\"}]},{\"type\":\"error\",\"name\":\"AccessControlEnforcedDefaultAdminRules\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"AccessControlInvalidDefaultAdmin\",\"inputs\":[{\"name\":\"defaultAdmin\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"AccessControlUnauthorizedAccount\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"neededRole\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"type\":\"error\",\"name\":\"AddressEmptyCode\",\"inputs\":[{\"name\":\"target\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"BaseVault__DepositFailed\",\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"BaseVault__DestinationVaultNotSet\",\"inputs\":[{\"name\":\"destinationChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]},{\"type\":\"error\",\"name\":\"BaseVault__EmergencyDrainDelayNotMet\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__EmptyInput\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidAdapterVault\",\"inputs\":[{\"name\":\"adapter\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"actualVault\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"expectedVault\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidDestinationChainSelector\",\"inputs\":[{\"name\":\"destinationChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidInputLengths\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidReceivedToken\",\"inputs\":[{\"name\":\"receivedToken\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"expectedToken\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidSender\",\"inputs\":[{\"name\":\"sender\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"srcChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidTokenAmountsLength\",\"inputs\":[{\"name\":\"receivedLength\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"expectedLength\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidTxType\",\"inputs\":[{\"name\":\"ccipTxType\",\"type\":\"uint8\",\"internalType\":\"enumTypes.CcipTx\"}]},{\"type\":\"error\",\"name\":\"BaseVault__NoActiveAdapter\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__NoAdapterRegistered\",\"inputs\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"type\":\"error\",\"name\":\"BaseVault__NoPendingRecovery\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__NoZeroAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__NoZeroAmount\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__NoZeroChainSelector\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__OnlySelf\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__RecoveryAlreadyPending\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__WithdrawFailed\",\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"BaseVault__ZeroRecoveryAmount\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ChildVault__InvalidParentChainSelector\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ChildVault__InvalidRecoveryStrategy\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ChildVault__OnlySelf\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ERC1967InvalidImplementation\",\"inputs\":[{\"name\":\"implementation\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"ERC1967NonPayable\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EnforcedPause\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ExpectedPause\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"FailedCall\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidInitialization\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidRouter\",\"inputs\":[{\"name\":\"router\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"NotInitializing\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ReentrancyGuardReentrantCall\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"SafeCastOverflowedUintDowncast\",\"inputs\":[{\"name\":\"bits\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"value\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"SafeERC20FailedOperation\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"UUPSUnauthorizedCallContext\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"UUPSUnsupportedProxiableUUID\",\"inputs\":[{\"name\":\"slot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]}]",
+	ABI: "[{\"type\":\"constructor\",\"inputs\":[{\"name\":\"params\",\"type\":\"tuple\",\"internalType\":\"structBaseVault.ConstructorParams\",\"components\":[{\"name\":\"link\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"asset\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"ccipRouter\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"adapterRegistry\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"thisChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]},{\"name\":\"parentChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"DEFAULT_ADMIN_ROLE\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"UPGRADE_INTERFACE_VERSION\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"string\",\"internalType\":\"string\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"acceptDefaultAdminTransfer\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"beginDefaultAdminTransfer\",\"inputs\":[{\"name\":\"newAdmin\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"cancelDefaultAdminTransfer\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"ccipReceive\",\"inputs\":[{\"name\":\"message\",\"type\":\"tuple\",\"internalType\":\"structClient.Any2EVMMessage\",\"components\":[{\"name\":\"messageId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"sourceChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"sender\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"destTokenAmounts\",\"type\":\"tuple[]\",\"internalType\":\"structClient.EVMTokenAmount[]\",\"components\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}]}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"changeDefaultAdminDelay\",\"inputs\":[{\"name\":\"newDelay\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"defaultAdmin\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"defaultAdminDelay\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"defaultAdminDelayIncreaseWait\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"executeEpochWithdraw\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"executeRebalance\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"newStrategy\",\"type\":\"tuple\",\"internalType\":\"structTypes.Strategy\",\"components\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"executeRecovery\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"getActiveProtocolAdapter\",\"inputs\":[],\"outputs\":[{\"name\":\"activeProtocolAdapter\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getAdapterRegistry\",\"inputs\":[],\"outputs\":[{\"name\":\"adapterRegistry\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getAsset\",\"inputs\":[],\"outputs\":[{\"name\":\"asset\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getAssetPrecision\",\"inputs\":[],\"outputs\":[{\"name\":\"assetPrecision\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getCCVsAndFinalityConfig\",\"inputs\":[{\"name\":\"\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[{\"name\":\"requiredCCVs\",\"type\":\"address[]\",\"internalType\":\"address[]\"},{\"name\":\"optionalCCVs\",\"type\":\"address[]\",\"internalType\":\"address[]\"},{\"name\":\"optionalThreshold\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"allowedFinalityConfig\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getCcipGasLimit\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"outputs\":[{\"name\":\"gasLimit\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getCcipSendRecovery\",\"inputs\":[],\"outputs\":[{\"name\":\"recovery\",\"type\":\"tuple\",\"internalType\":\"structTypes.CcipSendRecovery\",\"components\":[{\"name\":\"ccipTxType\",\"type\":\"uint8\",\"internalType\":\"enumTypes.CcipTx\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"destinationChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"nonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getCrosschainVault\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"outputs\":[{\"name\":\"vault\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getDefaultCcipGasLimit\",\"inputs\":[],\"outputs\":[{\"name\":\"defaultCcipGasLimit\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getEpochDepositRecovery\",\"inputs\":[],\"outputs\":[{\"name\":\"recovery\",\"type\":\"tuple\",\"internalType\":\"structTypes.EpochRecovery\",\"components\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getEpochWithdrawRecovery\",\"inputs\":[],\"outputs\":[{\"name\":\"recovery\",\"type\":\"tuple\",\"internalType\":\"structTypes.EpochRecovery\",\"components\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getLink\",\"inputs\":[],\"outputs\":[{\"name\":\"link\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getParentChainSelector\",\"inputs\":[],\"outputs\":[{\"name\":\"parentChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRebalanceDepositRecovery\",\"inputs\":[],\"outputs\":[{\"name\":\"recovery\",\"type\":\"tuple\",\"internalType\":\"structTypes.RebalanceDepositRecovery\",\"components\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRebalanceWithdrawRecovery\",\"inputs\":[],\"outputs\":[{\"name\":\"recovery\",\"type\":\"tuple\",\"internalType\":\"structTypes.RebalanceWithdrawRecovery\",\"components\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"strategy\",\"type\":\"tuple\",\"internalType\":\"structTypes.Strategy\",\"components\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRecoveryMode\",\"inputs\":[],\"outputs\":[{\"name\":\"recoveryMode\",\"type\":\"uint8\",\"internalType\":\"enumTypes.RecoveryMode\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRoleAdmin\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRouter\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getTVL\",\"inputs\":[],\"outputs\":[{\"name\":\"tvl\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getThisChainSelector\",\"inputs\":[],\"outputs\":[{\"name\":\"thisChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"grantRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"hasRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"initialize\",\"inputs\":[{\"name\":\"params\",\"type\":\"tuple\",\"internalType\":\"structBaseVault.InitParams\",\"components\":[{\"name\":\"defaultAdmin\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"pauser\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"unpauser\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"configOperator\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"initialDefaultCcipGasLimit\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"upgrader\",\"type\":\"address\",\"internalType\":\"address\"}]}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"owner\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"pause\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"paused\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"pendingDefaultAdmin\",\"inputs\":[],\"outputs\":[{\"name\":\"newAdmin\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"schedule\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"pendingDefaultAdminDelay\",\"inputs\":[],\"outputs\":[{\"name\":\"newDelay\",\"type\":\"uint48\",\"internalType\":\"uint48\"},{\"name\":\"schedule\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"proxiableUUID\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"renounceRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"revokeRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"rollbackDefaultAdminDelay\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setCcipGasLimit\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"gasLimit\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setCrosschainVaults\",\"inputs\":[{\"name\":\"chainSelectors\",\"type\":\"uint64[]\",\"internalType\":\"uint64[]\"},{\"name\":\"vaults\",\"type\":\"address[]\",\"internalType\":\"address[]\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setDefaultCcipGasLimit\",\"inputs\":[{\"name\":\"gasLimit\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"supportsInterface\",\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"pure\"},{\"type\":\"function\",\"name\":\"tryCcipSend\",\"inputs\":[{\"name\":\"bridgeAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"destinationChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"ccipTxType\",\"type\":\"uint8\",\"internalType\":\"enumTypes.CcipTx\"},{\"name\":\"nonce\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"tryDepositToAdapter\",\"inputs\":[{\"name\":\"adapter\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"unpause\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"upgradeToAndCall\",\"inputs\":[{\"name\":\"newImplementation\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"withdrawLink\",\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"ActiveProtocolAdapterCleared\",\"inputs\":[{\"name\":\"adapter\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ActiveProtocolAdapterSet\",\"inputs\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"adapter\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ActiveProtocolAdapterSet\",\"inputs\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"adapter\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CCIPBridged\",\"inputs\":[{\"name\":\"ccipMessageId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"ccipTxType\",\"type\":\"uint8\",\"indexed\":true,\"internalType\":\"enumTypes.CcipTx\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CCIPBridged\",\"inputs\":[{\"name\":\"ccipMessageId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"ccipTxType\",\"type\":\"uint8\",\"indexed\":true,\"internalType\":\"enumTypes.CcipTx\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CcipGasLimitSet\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"},{\"name\":\"gasLimit\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CcipGasLimitSet\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"},{\"name\":\"gasLimit\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CcipSendRecoveryCleared\",\"inputs\":[{\"name\":\"ccipTxType\",\"type\":\"uint8\",\"indexed\":true,\"internalType\":\"enumTypes.CcipTx\"},{\"name\":\"destinationChainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CcipSendRecoveryStored\",\"inputs\":[{\"name\":\"ccipTxType\",\"type\":\"uint8\",\"indexed\":true,\"internalType\":\"enumTypes.CcipTx\"},{\"name\":\"destinationChainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CrosschainVaultSet\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"},{\"name\":\"vault\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CrosschainVaultSet\",\"inputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"},{\"name\":\"vault\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminDelayChangeCanceled\",\"inputs\":[],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminDelayChangeScheduled\",\"inputs\":[{\"name\":\"newDelay\",\"type\":\"uint48\",\"indexed\":false,\"internalType\":\"uint48\"},{\"name\":\"effectSchedule\",\"type\":\"uint48\",\"indexed\":false,\"internalType\":\"uint48\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminTransferCanceled\",\"inputs\":[],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminTransferScheduled\",\"inputs\":[{\"name\":\"newAdmin\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"acceptSchedule\",\"type\":\"uint48\",\"indexed\":false,\"internalType\":\"uint48\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultCcipGasLimitSet\",\"inputs\":[{\"name\":\"gasLimit\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultCcipGasLimitSet\",\"inputs\":[{\"name\":\"gasLimit\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DepositToStrategyFailure\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DepositToStrategySuccess\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EpochDepositRecoveryCleared\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EpochDepositRecoveryStored\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EpochWithdrawRecoveryCleared\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EpochWithdrawRecoveryStored\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Initialized\",\"inputs\":[{\"name\":\"version\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"LinkWithdrawn\",\"inputs\":[{\"name\":\"operator\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Paused\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceDepositFailure\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceDepositRecoveryCleared\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceDepositRecoveryStored\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceDepositSuccess\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceWithdrawFailure\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceWithdrawRecoveryCleared\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceWithdrawRecoveryStored\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"protocolId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"chainSelector\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RebalanceWithdrawSuccess\",\"inputs\":[{\"name\":\"rebalanceNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleAdminChanged\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"previousAdminRole\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"newAdminRole\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleGranted\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleRevoked\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Unpaused\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Upgraded\",\"inputs\":[{\"name\":\"implementation\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"WithdrawFromStrategyFailure\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"WithdrawFromStrategySuccess\",\"inputs\":[{\"name\":\"epochNonce\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"AccessControlBadConfirmation\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"AccessControlEnforcedDefaultAdminDelay\",\"inputs\":[{\"name\":\"schedule\",\"type\":\"uint48\",\"internalType\":\"uint48\"}]},{\"type\":\"error\",\"name\":\"AccessControlEnforcedDefaultAdminRules\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"AccessControlInvalidDefaultAdmin\",\"inputs\":[{\"name\":\"defaultAdmin\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"AccessControlUnauthorizedAccount\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"neededRole\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"type\":\"error\",\"name\":\"AddressEmptyCode\",\"inputs\":[{\"name\":\"target\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"BaseVault__DepositFailed\",\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"BaseVault__DestinationVaultNotSet\",\"inputs\":[{\"name\":\"destinationChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]},{\"type\":\"error\",\"name\":\"BaseVault__EmptyInput\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidAdapterVault\",\"inputs\":[{\"name\":\"adapter\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"actualVault\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"expectedVault\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidDestinationChainSelector\",\"inputs\":[{\"name\":\"destinationChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidInputLengths\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidReceivedToken\",\"inputs\":[{\"name\":\"receivedToken\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"expectedToken\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidSender\",\"inputs\":[{\"name\":\"sender\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"srcChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidSourceChainSelector\",\"inputs\":[{\"name\":\"sourceChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"expectedSourceChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidTokenAmountsLength\",\"inputs\":[{\"name\":\"receivedLength\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"expectedLength\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"BaseVault__InvalidTxType\",\"inputs\":[{\"name\":\"ccipTxType\",\"type\":\"uint8\",\"internalType\":\"enumTypes.CcipTx\"}]},{\"type\":\"error\",\"name\":\"BaseVault__NoActiveAdapter\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__NoAdapterRegistered\",\"inputs\":[{\"name\":\"protocolId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"type\":\"error\",\"name\":\"BaseVault__NoPendingRecovery\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__NoZeroAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__NoZeroAmount\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__NoZeroChainSelector\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__OnlySelf\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__RecoveryAlreadyPending\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BaseVault__WithdrawFailed\",\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"BaseVault__ZeroRecoveryAmount\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ChildVault__InvalidParentChainSelector\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ChildVault__InvalidRecoveryStrategy\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ChildVault__OnlySelf\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ERC1967InvalidImplementation\",\"inputs\":[{\"name\":\"implementation\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"ERC1967NonPayable\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EnforcedPause\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ExpectedPause\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"FailedCall\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidInitialization\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidRouter\",\"inputs\":[{\"name\":\"router\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"NotInitializing\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ReentrancyGuardReentrantCall\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"SafeCastOverflowedUintDowncast\",\"inputs\":[{\"name\":\"bits\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"value\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"SafeERC20FailedOperation\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"UUPSUnauthorizedCallContext\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"UUPSUnsupportedProxiableUUID\",\"inputs\":[{\"name\":\"slot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]}]",
 }
 
 // Structs
@@ -68,7 +68,6 @@ type BaseVaultInitParams struct {
 	Pauser                     common.Address
 	Unpauser                   common.Address
 	ConfigOperator             common.Address
-	EmergencyReceiver          common.Address
 	InitialDefaultCcipGasLimit *big.Int
 	Upgrader                   common.Address
 }
@@ -125,14 +124,6 @@ type CcipReceiveInput struct {
 
 type ChangeDefaultAdminDelayInput struct {
 	NewDelay *big.Int
-}
-
-type DonateInput struct {
-	Amount *big.Int
-}
-
-type EmergencyDrainInput struct {
-	RevertOnFailure bool
 }
 
 type ExecuteEpochWithdrawInput struct {
@@ -198,10 +189,6 @@ type SetCrosschainVaultsInput struct {
 
 type SetDefaultCcipGasLimitInput struct {
 	GasLimit *big.Int
-}
-
-type SetEmergencyReceiverInput struct {
-	EmergencyReceiver common.Address
 }
 
 type SupportsInterfaceInput struct {
@@ -280,9 +267,6 @@ type BaseVaultDestinationVaultNotSet struct {
 	DestinationChainSelector uint64
 }
 
-type BaseVaultEmergencyDrainDelayNotMet struct {
-}
-
 type BaseVaultEmptyInput struct {
 }
 
@@ -307,6 +291,11 @@ type BaseVaultInvalidReceivedToken struct {
 type BaseVaultInvalidSender struct {
 	Sender           common.Address
 	SrcChainSelector uint64
+}
+
+type BaseVaultInvalidSourceChainSelector struct {
+	SourceChainSelector         uint64
+	ExpectedSourceChainSelector uint64
 }
 
 type BaseVaultInvalidTokenAmountsLength struct {
@@ -595,42 +584,6 @@ type DepositToStrategySuccessDecoded struct {
 	Amount     *big.Int
 }
 
-type DonationTopics struct {
-	Donor  common.Address
-	Amount *big.Int
-}
-
-type DonationDecoded struct {
-	Donor  common.Address
-	Amount *big.Int
-}
-
-type EmergencyDrainExecutedTopics struct {
-	EmergencyReceiver common.Address
-	Amount            *big.Int
-}
-
-type EmergencyDrainExecutedDecoded struct {
-	EmergencyReceiver common.Address
-	Amount            *big.Int
-}
-
-type EmergencyReceiverSetTopics struct {
-	EmergencyReceiver common.Address
-}
-
-type EmergencyReceiverSetDecoded struct {
-	EmergencyReceiver common.Address
-}
-
-type EmergencyReceiverSet0Topics struct {
-	EmergencyReceiver common.Address
-}
-
-type EmergencyReceiverSet0Decoded struct {
-	EmergencyReceiver common.Address
-}
-
 type EpochDepositRecoveryClearedTopics struct {
 	EpochNonce *big.Int
 }
@@ -863,8 +816,6 @@ type ChildVaultCodec interface {
 	DecodeDefaultAdminDelayMethodOutput(data []byte) (*big.Int, error)
 	EncodeDefaultAdminDelayIncreaseWaitMethodCall() ([]byte, error)
 	DecodeDefaultAdminDelayIncreaseWaitMethodOutput(data []byte) (*big.Int, error)
-	EncodeDonateMethodCall(in DonateInput) ([]byte, error)
-	EncodeEmergencyDrainMethodCall(in EmergencyDrainInput) ([]byte, error)
 	EncodeExecuteEpochWithdrawMethodCall(in ExecuteEpochWithdrawInput) ([]byte, error)
 	EncodeExecuteRebalanceMethodCall(in ExecuteRebalanceInput) ([]byte, error)
 	EncodeExecuteRecoveryMethodCall() ([]byte, error)
@@ -886,8 +837,6 @@ type ChildVaultCodec interface {
 	DecodeGetCrosschainVaultMethodOutput(data []byte) (common.Address, error)
 	EncodeGetDefaultCcipGasLimitMethodCall() ([]byte, error)
 	DecodeGetDefaultCcipGasLimitMethodOutput(data []byte) (*big.Int, error)
-	EncodeGetEmergencyReceiverMethodCall() ([]byte, error)
-	DecodeGetEmergencyReceiverMethodOutput(data []byte) (common.Address, error)
 	EncodeGetEpochDepositRecoveryMethodCall() ([]byte, error)
 	DecodeGetEpochDepositRecoveryMethodOutput(data []byte) (TypesEpochRecovery, error)
 	EncodeGetEpochWithdrawRecoveryMethodCall() ([]byte, error)
@@ -896,8 +845,6 @@ type ChildVaultCodec interface {
 	DecodeGetLinkMethodOutput(data []byte) (common.Address, error)
 	EncodeGetParentChainSelectorMethodCall() ([]byte, error)
 	DecodeGetParentChainSelectorMethodOutput(data []byte) (uint64, error)
-	EncodeGetPausedAtMethodCall() ([]byte, error)
-	DecodeGetPausedAtMethodOutput(data []byte) (*big.Int, error)
 	EncodeGetRebalanceDepositRecoveryMethodCall() ([]byte, error)
 	DecodeGetRebalanceDepositRecoveryMethodOutput(data []byte) (TypesRebalanceDepositRecovery, error)
 	EncodeGetRebalanceWithdrawRecoveryMethodCall() ([]byte, error)
@@ -933,7 +880,6 @@ type ChildVaultCodec interface {
 	EncodeSetCcipGasLimitMethodCall(in SetCcipGasLimitInput) ([]byte, error)
 	EncodeSetCrosschainVaultsMethodCall(in SetCrosschainVaultsInput) ([]byte, error)
 	EncodeSetDefaultCcipGasLimitMethodCall(in SetDefaultCcipGasLimitInput) ([]byte, error)
-	EncodeSetEmergencyReceiverMethodCall(in SetEmergencyReceiverInput) ([]byte, error)
 	EncodeSupportsInterfaceMethodCall(in SupportsInterfaceInput) ([]byte, error)
 	DecodeSupportsInterfaceMethodOutput(data []byte) (bool, error)
 	EncodeTryCcipSendMethodCall(in TryCcipSendInput) ([]byte, error)
@@ -1007,18 +953,6 @@ type ChildVaultCodec interface {
 	DepositToStrategySuccessLogHash() []byte
 	EncodeDepositToStrategySuccessTopics(evt abi.Event, values []DepositToStrategySuccessTopics) ([]*evm.TopicValues, error)
 	DecodeDepositToStrategySuccess(log *evm.Log) (*DepositToStrategySuccessDecoded, error)
-	DonationLogHash() []byte
-	EncodeDonationTopics(evt abi.Event, values []DonationTopics) ([]*evm.TopicValues, error)
-	DecodeDonation(log *evm.Log) (*DonationDecoded, error)
-	EmergencyDrainExecutedLogHash() []byte
-	EncodeEmergencyDrainExecutedTopics(evt abi.Event, values []EmergencyDrainExecutedTopics) ([]*evm.TopicValues, error)
-	DecodeEmergencyDrainExecuted(log *evm.Log) (*EmergencyDrainExecutedDecoded, error)
-	EmergencyReceiverSetLogHash() []byte
-	EncodeEmergencyReceiverSetTopics(evt abi.Event, values []EmergencyReceiverSetTopics) ([]*evm.TopicValues, error)
-	DecodeEmergencyReceiverSet(log *evm.Log) (*EmergencyReceiverSetDecoded, error)
-	EmergencyReceiverSet0LogHash() []byte
-	EncodeEmergencyReceiverSet0Topics(evt abi.Event, values []EmergencyReceiverSet0Topics) ([]*evm.TopicValues, error)
-	DecodeEmergencyReceiverSet0(log *evm.Log) (*EmergencyReceiverSet0Decoded, error)
 	EpochDepositRecoveryClearedLogHash() []byte
 	EncodeEpochDepositRecoveryClearedTopics(evt abi.Event, values []EpochDepositRecoveryClearedTopics) ([]*evm.TopicValues, error)
 	DecodeEpochDepositRecoveryCleared(log *evm.Log) (*EpochDepositRecoveryClearedDecoded, error)
@@ -1249,14 +1183,6 @@ func (c *Codec) DecodeDefaultAdminDelayIncreaseWaitMethodOutput(data []byte) (*b
 	}
 
 	return result, nil
-}
-
-func (c *Codec) EncodeDonateMethodCall(in DonateInput) ([]byte, error) {
-	return c.abi.Pack("donate", in.Amount)
-}
-
-func (c *Codec) EncodeEmergencyDrainMethodCall(in EmergencyDrainInput) ([]byte, error) {
-	return c.abi.Pack("emergencyDrain", in.RevertOnFailure)
 }
 
 func (c *Codec) EncodeExecuteEpochWithdrawMethodCall(in ExecuteEpochWithdrawInput) ([]byte, error) {
@@ -1504,28 +1430,6 @@ func (c *Codec) DecodeGetDefaultCcipGasLimitMethodOutput(data []byte) (*big.Int,
 	return result, nil
 }
 
-func (c *Codec) EncodeGetEmergencyReceiverMethodCall() ([]byte, error) {
-	return c.abi.Pack("getEmergencyReceiver")
-}
-
-func (c *Codec) DecodeGetEmergencyReceiverMethodOutput(data []byte) (common.Address, error) {
-	vals, err := c.abi.Methods["getEmergencyReceiver"].Outputs.Unpack(data)
-	if err != nil {
-		return *new(common.Address), err
-	}
-	jsonData, err := json.Marshal(vals[0])
-	if err != nil {
-		return *new(common.Address), fmt.Errorf("failed to marshal ABI result: %w", err)
-	}
-
-	var result common.Address
-	if err := json.Unmarshal(jsonData, &result); err != nil {
-		return *new(common.Address), fmt.Errorf("failed to unmarshal to common.Address: %w", err)
-	}
-
-	return result, nil
-}
-
 func (c *Codec) EncodeGetEpochDepositRecoveryMethodCall() ([]byte, error) {
 	return c.abi.Pack("getEpochDepositRecovery")
 }
@@ -1609,28 +1513,6 @@ func (c *Codec) DecodeGetParentChainSelectorMethodOutput(data []byte) (uint64, e
 	var result uint64
 	if err := json.Unmarshal(jsonData, &result); err != nil {
 		return *new(uint64), fmt.Errorf("failed to unmarshal to uint64: %w", err)
-	}
-
-	return result, nil
-}
-
-func (c *Codec) EncodeGetPausedAtMethodCall() ([]byte, error) {
-	return c.abi.Pack("getPausedAt")
-}
-
-func (c *Codec) DecodeGetPausedAtMethodOutput(data []byte) (*big.Int, error) {
-	vals, err := c.abi.Methods["getPausedAt"].Outputs.Unpack(data)
-	if err != nil {
-		return *new(*big.Int), err
-	}
-	jsonData, err := json.Marshal(vals[0])
-	if err != nil {
-		return *new(*big.Int), fmt.Errorf("failed to marshal ABI result: %w", err)
-	}
-
-	var result *big.Int
-	if err := json.Unmarshal(jsonData, &result); err != nil {
-		return *new(*big.Int), fmt.Errorf("failed to unmarshal to *big.Int: %w", err)
 	}
 
 	return result, nil
@@ -1988,10 +1870,6 @@ func (c *Codec) EncodeSetDefaultCcipGasLimitMethodCall(in SetDefaultCcipGasLimit
 	return c.abi.Pack("setDefaultCcipGasLimit", in.GasLimit)
 }
 
-func (c *Codec) EncodeSetEmergencyReceiverMethodCall(in SetEmergencyReceiverInput) ([]byte, error) {
-	return c.abi.Pack("setEmergencyReceiver", in.EmergencyReceiver)
-}
-
 func (c *Codec) EncodeSupportsInterfaceMethodCall(in SupportsInterfaceInput) ([]byte, error) {
 	return c.abi.Pack("supportsInterface", in.InterfaceId)
 }
@@ -2062,7 +1940,6 @@ func (c *Codec) EncodeBaseVaultInitParamsStruct(in BaseVaultInitParams) ([]byte,
 			{Name: "pauser", Type: "address"},
 			{Name: "unpauser", Type: "address"},
 			{Name: "configOperator", Type: "address"},
-			{Name: "emergencyReceiver", Type: "address"},
 			{Name: "initialDefaultCcipGasLimit", Type: "uint256"},
 			{Name: "upgrader", Type: "address"},
 		},
@@ -3487,272 +3364,6 @@ func (c *Codec) DecodeDepositToStrategySuccess(log *evm.Log) (*DepositToStrategy
 	}
 	var indexed abi.Arguments
 	for _, arg := range c.abi.Events["DepositToStrategySuccess"].Inputs {
-		if arg.Indexed {
-			if arg.Type.T == abi.TupleTy {
-				// abigen throws on tuple, so converting to bytes to
-				// receive back the common.Hash as is instead of error
-				arg.Type.T = abi.BytesTy
-			}
-			indexed = append(indexed, arg)
-		}
-	}
-	// Convert [][]byte → []common.Hash
-	topics := make([]common.Hash, len(log.Topics))
-	for i, t := range log.Topics {
-		topics[i] = common.BytesToHash(t)
-	}
-
-	if err := abi.ParseTopics(event, indexed, topics[1:]); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
-func (c *Codec) DonationLogHash() []byte {
-	return c.abi.Events["Donation"].ID.Bytes()
-}
-
-func (c *Codec) EncodeDonationTopics(
-	evt abi.Event,
-	values []DonationTopics,
-) ([]*evm.TopicValues, error) {
-	var donorRule []interface{}
-	for _, v := range values {
-		if reflect.ValueOf(v.Donor).IsZero() {
-			donorRule = append(donorRule, common.Hash{})
-			continue
-		}
-		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.Donor)
-		if err != nil {
-			return nil, err
-		}
-		donorRule = append(donorRule, fieldVal)
-	}
-	var amountRule []interface{}
-	for _, v := range values {
-		if reflect.ValueOf(v.Amount).IsZero() {
-			amountRule = append(amountRule, common.Hash{})
-			continue
-		}
-		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[1], v.Amount)
-		if err != nil {
-			return nil, err
-		}
-		amountRule = append(amountRule, fieldVal)
-	}
-
-	rawTopics, err := abi.MakeTopics(
-		donorRule,
-		amountRule,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
-}
-
-// DecodeDonation decodes a log into a Donation struct.
-func (c *Codec) DecodeDonation(log *evm.Log) (*DonationDecoded, error) {
-	event := new(DonationDecoded)
-	if err := c.abi.UnpackIntoInterface(event, "Donation", log.Data); err != nil {
-		return nil, err
-	}
-	var indexed abi.Arguments
-	for _, arg := range c.abi.Events["Donation"].Inputs {
-		if arg.Indexed {
-			if arg.Type.T == abi.TupleTy {
-				// abigen throws on tuple, so converting to bytes to
-				// receive back the common.Hash as is instead of error
-				arg.Type.T = abi.BytesTy
-			}
-			indexed = append(indexed, arg)
-		}
-	}
-	// Convert [][]byte → []common.Hash
-	topics := make([]common.Hash, len(log.Topics))
-	for i, t := range log.Topics {
-		topics[i] = common.BytesToHash(t)
-	}
-
-	if err := abi.ParseTopics(event, indexed, topics[1:]); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
-func (c *Codec) EmergencyDrainExecutedLogHash() []byte {
-	return c.abi.Events["EmergencyDrainExecuted"].ID.Bytes()
-}
-
-func (c *Codec) EncodeEmergencyDrainExecutedTopics(
-	evt abi.Event,
-	values []EmergencyDrainExecutedTopics,
-) ([]*evm.TopicValues, error) {
-	var emergencyReceiverRule []interface{}
-	for _, v := range values {
-		if reflect.ValueOf(v.EmergencyReceiver).IsZero() {
-			emergencyReceiverRule = append(emergencyReceiverRule, common.Hash{})
-			continue
-		}
-		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.EmergencyReceiver)
-		if err != nil {
-			return nil, err
-		}
-		emergencyReceiverRule = append(emergencyReceiverRule, fieldVal)
-	}
-	var amountRule []interface{}
-	for _, v := range values {
-		if reflect.ValueOf(v.Amount).IsZero() {
-			amountRule = append(amountRule, common.Hash{})
-			continue
-		}
-		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[1], v.Amount)
-		if err != nil {
-			return nil, err
-		}
-		amountRule = append(amountRule, fieldVal)
-	}
-
-	rawTopics, err := abi.MakeTopics(
-		emergencyReceiverRule,
-		amountRule,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
-}
-
-// DecodeEmergencyDrainExecuted decodes a log into a EmergencyDrainExecuted struct.
-func (c *Codec) DecodeEmergencyDrainExecuted(log *evm.Log) (*EmergencyDrainExecutedDecoded, error) {
-	event := new(EmergencyDrainExecutedDecoded)
-	if err := c.abi.UnpackIntoInterface(event, "EmergencyDrainExecuted", log.Data); err != nil {
-		return nil, err
-	}
-	var indexed abi.Arguments
-	for _, arg := range c.abi.Events["EmergencyDrainExecuted"].Inputs {
-		if arg.Indexed {
-			if arg.Type.T == abi.TupleTy {
-				// abigen throws on tuple, so converting to bytes to
-				// receive back the common.Hash as is instead of error
-				arg.Type.T = abi.BytesTy
-			}
-			indexed = append(indexed, arg)
-		}
-	}
-	// Convert [][]byte → []common.Hash
-	topics := make([]common.Hash, len(log.Topics))
-	for i, t := range log.Topics {
-		topics[i] = common.BytesToHash(t)
-	}
-
-	if err := abi.ParseTopics(event, indexed, topics[1:]); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
-func (c *Codec) EmergencyReceiverSetLogHash() []byte {
-	return c.abi.Events["EmergencyReceiverSet"].ID.Bytes()
-}
-
-func (c *Codec) EncodeEmergencyReceiverSetTopics(
-	evt abi.Event,
-	values []EmergencyReceiverSetTopics,
-) ([]*evm.TopicValues, error) {
-	var emergencyReceiverRule []interface{}
-	for _, v := range values {
-		if reflect.ValueOf(v.EmergencyReceiver).IsZero() {
-			emergencyReceiverRule = append(emergencyReceiverRule, common.Hash{})
-			continue
-		}
-		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.EmergencyReceiver)
-		if err != nil {
-			return nil, err
-		}
-		emergencyReceiverRule = append(emergencyReceiverRule, fieldVal)
-	}
-
-	rawTopics, err := abi.MakeTopics(
-		emergencyReceiverRule,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
-}
-
-// DecodeEmergencyReceiverSet decodes a log into a EmergencyReceiverSet struct.
-func (c *Codec) DecodeEmergencyReceiverSet(log *evm.Log) (*EmergencyReceiverSetDecoded, error) {
-	event := new(EmergencyReceiverSetDecoded)
-	if err := c.abi.UnpackIntoInterface(event, "EmergencyReceiverSet", log.Data); err != nil {
-		return nil, err
-	}
-	var indexed abi.Arguments
-	for _, arg := range c.abi.Events["EmergencyReceiverSet"].Inputs {
-		if arg.Indexed {
-			if arg.Type.T == abi.TupleTy {
-				// abigen throws on tuple, so converting to bytes to
-				// receive back the common.Hash as is instead of error
-				arg.Type.T = abi.BytesTy
-			}
-			indexed = append(indexed, arg)
-		}
-	}
-	// Convert [][]byte → []common.Hash
-	topics := make([]common.Hash, len(log.Topics))
-	for i, t := range log.Topics {
-		topics[i] = common.BytesToHash(t)
-	}
-
-	if err := abi.ParseTopics(event, indexed, topics[1:]); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
-func (c *Codec) EmergencyReceiverSet0LogHash() []byte {
-	return c.abi.Events["EmergencyReceiverSet0"].ID.Bytes()
-}
-
-func (c *Codec) EncodeEmergencyReceiverSet0Topics(
-	evt abi.Event,
-	values []EmergencyReceiverSet0Topics,
-) ([]*evm.TopicValues, error) {
-	var emergencyReceiverRule []interface{}
-	for _, v := range values {
-		if reflect.ValueOf(v.EmergencyReceiver).IsZero() {
-			emergencyReceiverRule = append(emergencyReceiverRule, common.Hash{})
-			continue
-		}
-		fieldVal, err := bindings.PrepareTopicArg(evt.Inputs[0], v.EmergencyReceiver)
-		if err != nil {
-			return nil, err
-		}
-		emergencyReceiverRule = append(emergencyReceiverRule, fieldVal)
-	}
-
-	rawTopics, err := abi.MakeTopics(
-		emergencyReceiverRule,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return bindings.PrepareTopics(rawTopics, evt.ID.Bytes()), nil
-}
-
-// DecodeEmergencyReceiverSet0 decodes a log into a EmergencyReceiverSet0 struct.
-func (c *Codec) DecodeEmergencyReceiverSet0(log *evm.Log) (*EmergencyReceiverSet0Decoded, error) {
-	event := new(EmergencyReceiverSet0Decoded)
-	if err := c.abi.UnpackIntoInterface(event, "EmergencyReceiverSet0", log.Data); err != nil {
-		return nil, err
-	}
-	var indexed abi.Arguments
-	for _, arg := range c.abi.Events["EmergencyReceiverSet0"].Inputs {
 		if arg.Indexed {
 			if arg.Type.T == abi.TupleTy {
 				// abigen throws on tuple, so converting to bytes to
@@ -5282,23 +4893,12 @@ func (c ChildVault) DEFAULTADMINROLE(
 		return cre.PromiseFromResult[[32]byte](*new([32]byte), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -5319,23 +4919,12 @@ func (c ChildVault) UPGRADEINTERFACEVERSION(
 		return cre.PromiseFromResult[string](*new(string), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -5356,23 +4945,12 @@ func (c ChildVault) DefaultAdmin(
 		return cre.PromiseFromResult[common.Address](*new(common.Address), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -5393,23 +4971,12 @@ func (c ChildVault) DefaultAdminDelay(
 		return cre.PromiseFromResult[*big.Int](*new(*big.Int), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -5430,23 +4997,12 @@ func (c ChildVault) DefaultAdminDelayIncreaseWait(
 		return cre.PromiseFromResult[*big.Int](*new(*big.Int), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -5467,23 +5023,12 @@ func (c ChildVault) GetActiveProtocolAdapter(
 		return cre.PromiseFromResult[common.Address](*new(common.Address), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -5504,23 +5049,12 @@ func (c ChildVault) GetAdapterRegistry(
 		return cre.PromiseFromResult[common.Address](*new(common.Address), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -5541,23 +5075,12 @@ func (c ChildVault) GetAsset(
 		return cre.PromiseFromResult[common.Address](*new(common.Address), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -5578,23 +5101,12 @@ func (c ChildVault) GetAssetPrecision(
 		return cre.PromiseFromResult[*big.Int](*new(*big.Int), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -5616,23 +5128,12 @@ func (c ChildVault) GetCCVsAndFinalityConfig(
 		return cre.PromiseFromResult[GetCCVsAndFinalityConfigOutput](GetCCVsAndFinalityConfigOutput{}, err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -5654,23 +5155,12 @@ func (c ChildVault) GetCcipGasLimit(
 		return cre.PromiseFromResult[*big.Int](*new(*big.Int), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -5691,23 +5181,12 @@ func (c ChildVault) GetCcipSendRecovery(
 		return cre.PromiseFromResult[TypesCcipSendRecovery](*new(TypesCcipSendRecovery), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -5729,23 +5208,12 @@ func (c ChildVault) GetCrosschainVault(
 		return cre.PromiseFromResult[common.Address](*new(common.Address), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -5766,23 +5234,12 @@ func (c ChildVault) GetDefaultCcipGasLimit(
 		return cre.PromiseFromResult[*big.Int](*new(*big.Int), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -5790,43 +5247,6 @@ func (c ChildVault) GetDefaultCcipGasLimit(
 	})
 	return cre.Then(promise, func(response *evm.CallContractReply) (*big.Int, error) {
 		return c.Codec.DecodeGetDefaultCcipGasLimitMethodOutput(response.Data)
-	})
-
-}
-
-func (c ChildVault) GetEmergencyReceiver(
-	runtime cre.Runtime,
-	blockNumber *big.Int,
-) cre.Promise[common.Address] {
-	calldata, err := c.Codec.EncodeGetEmergencyReceiverMethodCall()
-	if err != nil {
-		return cre.PromiseFromResult[common.Address](*new(common.Address), err)
-	}
-
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
-	}
-
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
-		return c.client.CallContract(runtime, &evm.CallContractRequest{
-			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
-			BlockNumber: bn,
-		})
-	})
-	return cre.Then(promise, func(response *evm.CallContractReply) (common.Address, error) {
-		return c.Codec.DecodeGetEmergencyReceiverMethodOutput(response.Data)
 	})
 
 }
@@ -5840,23 +5260,12 @@ func (c ChildVault) GetEpochDepositRecovery(
 		return cre.PromiseFromResult[TypesEpochRecovery](*new(TypesEpochRecovery), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -5877,23 +5286,12 @@ func (c ChildVault) GetEpochWithdrawRecovery(
 		return cre.PromiseFromResult[TypesEpochRecovery](*new(TypesEpochRecovery), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -5914,23 +5312,12 @@ func (c ChildVault) GetLink(
 		return cre.PromiseFromResult[common.Address](*new(common.Address), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -5951,23 +5338,12 @@ func (c ChildVault) GetParentChainSelector(
 		return cre.PromiseFromResult[uint64](*new(uint64), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -5975,43 +5351,6 @@ func (c ChildVault) GetParentChainSelector(
 	})
 	return cre.Then(promise, func(response *evm.CallContractReply) (uint64, error) {
 		return c.Codec.DecodeGetParentChainSelectorMethodOutput(response.Data)
-	})
-
-}
-
-func (c ChildVault) GetPausedAt(
-	runtime cre.Runtime,
-	blockNumber *big.Int,
-) cre.Promise[*big.Int] {
-	calldata, err := c.Codec.EncodeGetPausedAtMethodCall()
-	if err != nil {
-		return cre.PromiseFromResult[*big.Int](*new(*big.Int), err)
-	}
-
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
-	}
-
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
-		return c.client.CallContract(runtime, &evm.CallContractRequest{
-			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
-			BlockNumber: bn,
-		})
-	})
-	return cre.Then(promise, func(response *evm.CallContractReply) (*big.Int, error) {
-		return c.Codec.DecodeGetPausedAtMethodOutput(response.Data)
 	})
 
 }
@@ -6025,23 +5364,12 @@ func (c ChildVault) GetRebalanceDepositRecovery(
 		return cre.PromiseFromResult[TypesRebalanceDepositRecovery](*new(TypesRebalanceDepositRecovery), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -6062,23 +5390,12 @@ func (c ChildVault) GetRebalanceWithdrawRecovery(
 		return cre.PromiseFromResult[TypesRebalanceWithdrawRecovery](*new(TypesRebalanceWithdrawRecovery), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -6099,23 +5416,12 @@ func (c ChildVault) GetRecoveryMode(
 		return cre.PromiseFromResult[uint8](*new(uint8), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -6137,23 +5443,12 @@ func (c ChildVault) GetRoleAdmin(
 		return cre.PromiseFromResult[[32]byte](*new([32]byte), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -6174,23 +5469,12 @@ func (c ChildVault) GetRouter(
 		return cre.PromiseFromResult[common.Address](*new(common.Address), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -6211,23 +5495,12 @@ func (c ChildVault) GetTVL(
 		return cre.PromiseFromResult[*big.Int](*new(*big.Int), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -6248,23 +5521,12 @@ func (c ChildVault) GetThisChainSelector(
 		return cre.PromiseFromResult[uint64](*new(uint64), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -6286,23 +5548,12 @@ func (c ChildVault) HasRole(
 		return cre.PromiseFromResult[bool](*new(bool), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -6323,23 +5574,12 @@ func (c ChildVault) Owner(
 		return cre.PromiseFromResult[common.Address](*new(common.Address), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -6360,23 +5600,12 @@ func (c ChildVault) Paused(
 		return cre.PromiseFromResult[bool](*new(bool), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -6397,23 +5626,12 @@ func (c ChildVault) PendingDefaultAdmin(
 		return cre.PromiseFromResult[PendingDefaultAdminOutput](PendingDefaultAdminOutput{}, err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -6434,23 +5652,12 @@ func (c ChildVault) PendingDefaultAdminDelay(
 		return cre.PromiseFromResult[PendingDefaultAdminDelayOutput](PendingDefaultAdminDelayOutput{}, err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -6471,23 +5678,12 @@ func (c ChildVault) ProxiableUUID(
 		return cre.PromiseFromResult[[32]byte](*new([32]byte), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -6936,25 +6132,6 @@ func (e *BaseVaultDestinationVaultNotSet) Error() string {
 	return fmt.Sprintf("BaseVaultDestinationVaultNotSet error: destinationChainSelector=%v;", e.DestinationChainSelector)
 }
 
-// DecodeBaseVaultEmergencyDrainDelayNotMetError decodes a BaseVault__EmergencyDrainDelayNotMet error from revert data.
-func (c *ChildVault) DecodeBaseVaultEmergencyDrainDelayNotMetError(data []byte) (*BaseVaultEmergencyDrainDelayNotMet, error) {
-	args := c.ABI.Errors["BaseVault__EmergencyDrainDelayNotMet"].Inputs
-	values, err := args.Unpack(data[4:])
-	if err != nil {
-		return nil, fmt.Errorf("failed to unpack error: %w", err)
-	}
-	if len(values) != 0 {
-		return nil, fmt.Errorf("expected 0 values, got %d", len(values))
-	}
-
-	return &BaseVaultEmergencyDrainDelayNotMet{}, nil
-}
-
-// Error implements the error interface for BaseVaultEmergencyDrainDelayNotMet.
-func (e *BaseVaultEmergencyDrainDelayNotMet) Error() string {
-	return fmt.Sprintf("BaseVaultEmergencyDrainDelayNotMet error:")
-}
-
 // DecodeBaseVaultEmptyInputError decodes a BaseVault__EmptyInput error from revert data.
 func (c *ChildVault) DecodeBaseVaultEmptyInputError(data []byte) (*BaseVaultEmptyInput, error) {
 	args := c.ABI.Errors["BaseVault__EmptyInput"].Inputs
@@ -7119,6 +6296,38 @@ func (c *ChildVault) DecodeBaseVaultInvalidSenderError(data []byte) (*BaseVaultI
 // Error implements the error interface for BaseVaultInvalidSender.
 func (e *BaseVaultInvalidSender) Error() string {
 	return fmt.Sprintf("BaseVaultInvalidSender error: sender=%v; srcChainSelector=%v;", e.Sender, e.SrcChainSelector)
+}
+
+// DecodeBaseVaultInvalidSourceChainSelectorError decodes a BaseVault__InvalidSourceChainSelector error from revert data.
+func (c *ChildVault) DecodeBaseVaultInvalidSourceChainSelectorError(data []byte) (*BaseVaultInvalidSourceChainSelector, error) {
+	args := c.ABI.Errors["BaseVault__InvalidSourceChainSelector"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 2 {
+		return nil, fmt.Errorf("expected 2 values, got %d", len(values))
+	}
+
+	sourceChainSelector, ok0 := values[0].(uint64)
+	if !ok0 {
+		return nil, fmt.Errorf("unexpected type for sourceChainSelector in BaseVaultInvalidSourceChainSelector error")
+	}
+
+	expectedSourceChainSelector, ok1 := values[1].(uint64)
+	if !ok1 {
+		return nil, fmt.Errorf("unexpected type for expectedSourceChainSelector in BaseVaultInvalidSourceChainSelector error")
+	}
+
+	return &BaseVaultInvalidSourceChainSelector{
+		SourceChainSelector:         sourceChainSelector,
+		ExpectedSourceChainSelector: expectedSourceChainSelector,
+	}, nil
+}
+
+// Error implements the error interface for BaseVaultInvalidSourceChainSelector.
+func (e *BaseVaultInvalidSourceChainSelector) Error() string {
+	return fmt.Sprintf("BaseVaultInvalidSourceChainSelector error: sourceChainSelector=%v; expectedSourceChainSelector=%v;", e.SourceChainSelector, e.ExpectedSourceChainSelector)
 }
 
 // DecodeBaseVaultInvalidTokenAmountsLengthError decodes a BaseVault__InvalidTokenAmountsLength error from revert data.
@@ -7746,8 +6955,6 @@ func (c *ChildVault) UnpackError(data []byte) (any, error) {
 		return c.DecodeBaseVaultDepositFailedError(data)
 	case common.Bytes2Hex(c.ABI.Errors["BaseVault__DestinationVaultNotSet"].ID.Bytes()[:4]):
 		return c.DecodeBaseVaultDestinationVaultNotSetError(data)
-	case common.Bytes2Hex(c.ABI.Errors["BaseVault__EmergencyDrainDelayNotMet"].ID.Bytes()[:4]):
-		return c.DecodeBaseVaultEmergencyDrainDelayNotMetError(data)
 	case common.Bytes2Hex(c.ABI.Errors["BaseVault__EmptyInput"].ID.Bytes()[:4]):
 		return c.DecodeBaseVaultEmptyInputError(data)
 	case common.Bytes2Hex(c.ABI.Errors["BaseVault__InvalidAdapterVault"].ID.Bytes()[:4]):
@@ -7760,6 +6967,8 @@ func (c *ChildVault) UnpackError(data []byte) (any, error) {
 		return c.DecodeBaseVaultInvalidReceivedTokenError(data)
 	case common.Bytes2Hex(c.ABI.Errors["BaseVault__InvalidSender"].ID.Bytes()[:4]):
 		return c.DecodeBaseVaultInvalidSenderError(data)
+	case common.Bytes2Hex(c.ABI.Errors["BaseVault__InvalidSourceChainSelector"].ID.Bytes()[:4]):
+		return c.DecodeBaseVaultInvalidSourceChainSelectorError(data)
 	case common.Bytes2Hex(c.ABI.Errors["BaseVault__InvalidTokenAmountsLength"].ID.Bytes()[:4]):
 		return c.DecodeBaseVaultInvalidTokenAmountsLengthError(data)
 	case common.Bytes2Hex(c.ABI.Errors["BaseVault__InvalidTxType"].ID.Bytes()[:4]):
@@ -8877,230 +8086,6 @@ func (c *ChildVault) FilterLogsDepositToStrategySuccess(runtime cre.Runtime, opt
 			Addresses: [][]byte{c.Address.Bytes()},
 			Topics: []*evm.Topics{
 				{Topic: [][]byte{c.Codec.DepositToStrategySuccessLogHash()}},
-			},
-			BlockHash: options.BlockHash,
-			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
-			ToBlock:   pb.NewBigIntFromInt(options.ToBlock),
-		},
-	}), nil
-}
-
-// DonationTrigger wraps the raw log trigger and provides decoded DonationDecoded data
-type DonationTrigger struct {
-	cre.Trigger[*evm.Log, *evm.Log]             // Embed the raw trigger
-	contract                        *ChildVault // Keep reference for decoding
-}
-
-// Adapt method that decodes the log into Donation data
-func (t *DonationTrigger) Adapt(l *evm.Log) (*bindings.DecodedLog[DonationDecoded], error) {
-	// Decode the log using the contract's codec
-	decoded, err := t.contract.Codec.DecodeDonation(l)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode Donation log: %w", err)
-	}
-
-	return &bindings.DecodedLog[DonationDecoded]{
-		Log:  l,        // Original log
-		Data: *decoded, // Decoded data
-	}, nil
-}
-
-func (c *ChildVault) LogTriggerDonationLog(chainSelector uint64, confidence evm.ConfidenceLevel, filters []DonationTopics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[DonationDecoded]], error) {
-	event := c.ABI.Events["Donation"]
-	topics, err := c.Codec.EncodeDonationTopics(event, filters)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode topics for Donation: %w", err)
-	}
-
-	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
-		Addresses:  [][]byte{c.Address.Bytes()},
-		Topics:     topics,
-		Confidence: confidence,
-	})
-
-	return &DonationTrigger{
-		Trigger:  rawTrigger,
-		contract: c,
-	}, nil
-}
-
-func (c *ChildVault) FilterLogsDonation(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
-	if options == nil {
-		return nil, errors.New("FilterLogs options are required.")
-	}
-	return c.client.FilterLogs(runtime, &evm.FilterLogsRequest{
-		FilterQuery: &evm.FilterQuery{
-			Addresses: [][]byte{c.Address.Bytes()},
-			Topics: []*evm.Topics{
-				{Topic: [][]byte{c.Codec.DonationLogHash()}},
-			},
-			BlockHash: options.BlockHash,
-			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
-			ToBlock:   pb.NewBigIntFromInt(options.ToBlock),
-		},
-	}), nil
-}
-
-// EmergencyDrainExecutedTrigger wraps the raw log trigger and provides decoded EmergencyDrainExecutedDecoded data
-type EmergencyDrainExecutedTrigger struct {
-	cre.Trigger[*evm.Log, *evm.Log]             // Embed the raw trigger
-	contract                        *ChildVault // Keep reference for decoding
-}
-
-// Adapt method that decodes the log into EmergencyDrainExecuted data
-func (t *EmergencyDrainExecutedTrigger) Adapt(l *evm.Log) (*bindings.DecodedLog[EmergencyDrainExecutedDecoded], error) {
-	// Decode the log using the contract's codec
-	decoded, err := t.contract.Codec.DecodeEmergencyDrainExecuted(l)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode EmergencyDrainExecuted log: %w", err)
-	}
-
-	return &bindings.DecodedLog[EmergencyDrainExecutedDecoded]{
-		Log:  l,        // Original log
-		Data: *decoded, // Decoded data
-	}, nil
-}
-
-func (c *ChildVault) LogTriggerEmergencyDrainExecutedLog(chainSelector uint64, confidence evm.ConfidenceLevel, filters []EmergencyDrainExecutedTopics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[EmergencyDrainExecutedDecoded]], error) {
-	event := c.ABI.Events["EmergencyDrainExecuted"]
-	topics, err := c.Codec.EncodeEmergencyDrainExecutedTopics(event, filters)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode topics for EmergencyDrainExecuted: %w", err)
-	}
-
-	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
-		Addresses:  [][]byte{c.Address.Bytes()},
-		Topics:     topics,
-		Confidence: confidence,
-	})
-
-	return &EmergencyDrainExecutedTrigger{
-		Trigger:  rawTrigger,
-		contract: c,
-	}, nil
-}
-
-func (c *ChildVault) FilterLogsEmergencyDrainExecuted(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
-	if options == nil {
-		return nil, errors.New("FilterLogs options are required.")
-	}
-	return c.client.FilterLogs(runtime, &evm.FilterLogsRequest{
-		FilterQuery: &evm.FilterQuery{
-			Addresses: [][]byte{c.Address.Bytes()},
-			Topics: []*evm.Topics{
-				{Topic: [][]byte{c.Codec.EmergencyDrainExecutedLogHash()}},
-			},
-			BlockHash: options.BlockHash,
-			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
-			ToBlock:   pb.NewBigIntFromInt(options.ToBlock),
-		},
-	}), nil
-}
-
-// EmergencyReceiverSetTrigger wraps the raw log trigger and provides decoded EmergencyReceiverSetDecoded data
-type EmergencyReceiverSetTrigger struct {
-	cre.Trigger[*evm.Log, *evm.Log]             // Embed the raw trigger
-	contract                        *ChildVault // Keep reference for decoding
-}
-
-// Adapt method that decodes the log into EmergencyReceiverSet data
-func (t *EmergencyReceiverSetTrigger) Adapt(l *evm.Log) (*bindings.DecodedLog[EmergencyReceiverSetDecoded], error) {
-	// Decode the log using the contract's codec
-	decoded, err := t.contract.Codec.DecodeEmergencyReceiverSet(l)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode EmergencyReceiverSet log: %w", err)
-	}
-
-	return &bindings.DecodedLog[EmergencyReceiverSetDecoded]{
-		Log:  l,        // Original log
-		Data: *decoded, // Decoded data
-	}, nil
-}
-
-func (c *ChildVault) LogTriggerEmergencyReceiverSetLog(chainSelector uint64, confidence evm.ConfidenceLevel, filters []EmergencyReceiverSetTopics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[EmergencyReceiverSetDecoded]], error) {
-	event := c.ABI.Events["EmergencyReceiverSet"]
-	topics, err := c.Codec.EncodeEmergencyReceiverSetTopics(event, filters)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode topics for EmergencyReceiverSet: %w", err)
-	}
-
-	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
-		Addresses:  [][]byte{c.Address.Bytes()},
-		Topics:     topics,
-		Confidence: confidence,
-	})
-
-	return &EmergencyReceiverSetTrigger{
-		Trigger:  rawTrigger,
-		contract: c,
-	}, nil
-}
-
-func (c *ChildVault) FilterLogsEmergencyReceiverSet(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
-	if options == nil {
-		return nil, errors.New("FilterLogs options are required.")
-	}
-	return c.client.FilterLogs(runtime, &evm.FilterLogsRequest{
-		FilterQuery: &evm.FilterQuery{
-			Addresses: [][]byte{c.Address.Bytes()},
-			Topics: []*evm.Topics{
-				{Topic: [][]byte{c.Codec.EmergencyReceiverSetLogHash()}},
-			},
-			BlockHash: options.BlockHash,
-			FromBlock: pb.NewBigIntFromInt(options.FromBlock),
-			ToBlock:   pb.NewBigIntFromInt(options.ToBlock),
-		},
-	}), nil
-}
-
-// EmergencyReceiverSet0Trigger wraps the raw log trigger and provides decoded EmergencyReceiverSet0Decoded data
-type EmergencyReceiverSet0Trigger struct {
-	cre.Trigger[*evm.Log, *evm.Log]             // Embed the raw trigger
-	contract                        *ChildVault // Keep reference for decoding
-}
-
-// Adapt method that decodes the log into EmergencyReceiverSet0 data
-func (t *EmergencyReceiverSet0Trigger) Adapt(l *evm.Log) (*bindings.DecodedLog[EmergencyReceiverSet0Decoded], error) {
-	// Decode the log using the contract's codec
-	decoded, err := t.contract.Codec.DecodeEmergencyReceiverSet0(l)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode EmergencyReceiverSet0 log: %w", err)
-	}
-
-	return &bindings.DecodedLog[EmergencyReceiverSet0Decoded]{
-		Log:  l,        // Original log
-		Data: *decoded, // Decoded data
-	}, nil
-}
-
-func (c *ChildVault) LogTriggerEmergencyReceiverSet0Log(chainSelector uint64, confidence evm.ConfidenceLevel, filters []EmergencyReceiverSet0Topics) (cre.Trigger[*evm.Log, *bindings.DecodedLog[EmergencyReceiverSet0Decoded]], error) {
-	event := c.ABI.Events["EmergencyReceiverSet0"]
-	topics, err := c.Codec.EncodeEmergencyReceiverSet0Topics(event, filters)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode topics for EmergencyReceiverSet0: %w", err)
-	}
-
-	rawTrigger := evm.LogTrigger(chainSelector, &evm.FilterLogTriggerRequest{
-		Addresses:  [][]byte{c.Address.Bytes()},
-		Topics:     topics,
-		Confidence: confidence,
-	})
-
-	return &EmergencyReceiverSet0Trigger{
-		Trigger:  rawTrigger,
-		contract: c,
-	}, nil
-}
-
-func (c *ChildVault) FilterLogsEmergencyReceiverSet0(runtime cre.Runtime, options *bindings.FilterOptions) (cre.Promise[*evm.FilterLogsReply], error) {
-	if options == nil {
-		return nil, errors.New("FilterLogs options are required.")
-	}
-	return c.client.FilterLogs(runtime, &evm.FilterLogsRequest{
-		FilterQuery: &evm.FilterQuery{
-			Addresses: [][]byte{c.Address.Bytes()},
-			Topics: []*evm.Topics{
-				{Topic: [][]byte{c.Codec.EmergencyReceiverSet0LogHash()}},
 			},
 			BlockHash: options.BlockHash,
 			FromBlock: pb.NewBigIntFromInt(options.FromBlock),

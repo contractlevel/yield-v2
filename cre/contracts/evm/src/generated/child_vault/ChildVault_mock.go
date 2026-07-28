@@ -36,12 +36,10 @@ type ChildVaultMock struct {
 	GetCcipSendRecovery           func() (TypesCcipSendRecovery, error)
 	GetCrosschainVault            func(GetCrosschainVaultInput) (common.Address, error)
 	GetDefaultCcipGasLimit        func() (*big.Int, error)
-	GetEmergencyReceiver          func() (common.Address, error)
 	GetEpochDepositRecovery       func() (TypesEpochRecovery, error)
 	GetEpochWithdrawRecovery      func() (TypesEpochRecovery, error)
 	GetLink                       func() (common.Address, error)
 	GetParentChainSelector        func() (uint64, error)
-	GetPausedAt                   func() (*big.Int, error)
 	GetRebalanceDepositRecovery   func() (TypesRebalanceDepositRecovery, error)
 	GetRebalanceWithdrawRecovery  func() (TypesRebalanceWithdrawRecovery, error)
 	GetRecoveryMode               func() (uint8, error)
@@ -258,16 +256,6 @@ func NewChildVaultMock(address common.Address, clientMock *evmmock.ClientCapabil
 			}
 			return abi.Methods["getDefaultCcipGasLimit"].Outputs.Pack(result)
 		},
-		string(abi.Methods["getEmergencyReceiver"].ID[:4]): func(payload []byte) ([]byte, error) {
-			if mock.GetEmergencyReceiver == nil {
-				return nil, errors.New("getEmergencyReceiver method not mocked")
-			}
-			result, err := mock.GetEmergencyReceiver()
-			if err != nil {
-				return nil, err
-			}
-			return abi.Methods["getEmergencyReceiver"].Outputs.Pack(result)
-		},
 		string(abi.Methods["getEpochDepositRecovery"].ID[:4]): func(payload []byte) ([]byte, error) {
 			if mock.GetEpochDepositRecovery == nil {
 				return nil, errors.New("getEpochDepositRecovery method not mocked")
@@ -307,16 +295,6 @@ func NewChildVaultMock(address common.Address, clientMock *evmmock.ClientCapabil
 				return nil, err
 			}
 			return abi.Methods["getParentChainSelector"].Outputs.Pack(result)
-		},
-		string(abi.Methods["getPausedAt"].ID[:4]): func(payload []byte) ([]byte, error) {
-			if mock.GetPausedAt == nil {
-				return nil, errors.New("getPausedAt method not mocked")
-			}
-			result, err := mock.GetPausedAt()
-			if err != nil {
-				return nil, err
-			}
-			return abi.Methods["getPausedAt"].Outputs.Pack(result)
 		},
 		string(abi.Methods["getRebalanceDepositRecovery"].ID[:4]): func(payload []byte) ([]byte, error) {
 			if mock.GetRebalanceDepositRecovery == nil {

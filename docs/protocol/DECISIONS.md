@@ -45,6 +45,8 @@ While a vault is paused, it does not execute recovery, child epoch withdrawals, 
 
 This containment boundary can leave an epoch or rebalance in an intermediate cross-chain state. Operators must inspect the parent, child, recovery, and CCIP message states before resuming the affected operation. The break-glass procedure is documented in [OPERATIONS](../operator/OPERATIONS.md#paused-cross-chain-execution).
 
+Stored recovery handles accepted operations that failed transiently after protocol state had already advanced. Exceptional failures such as a strategy exploit, permanent insolvency, or a protocol-specific migration require operators to pause the affected paths, inspect the exact cross-chain and recovery state, and deploy a purpose-built UUPS upgrade if the existing recovery flow is insufficient. The vaults intentionally expose no generic asset-drain or recapitalization function because moving funds outside normal accounting cannot generically reconcile shares, epochs, rebalances, recovery, and in-flight CCIP state.
+
 ## DD-005 - CRE Is The Automation And TVL Reporting Layer
 
 Epoch close and rebalance execution are intentionally driven through Chainlink CRE and `WorkflowRouter`.

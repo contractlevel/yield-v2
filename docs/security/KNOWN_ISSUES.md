@@ -36,7 +36,7 @@ _Note: `DEFAULT_ADMIN_ROLE` for ACE components does not have the same `AccessCon
 
 ### Threat model
 
-A compromised or malicious signer controlling a privileged role can take adverse actions within that role's authorized scope (for example, misconfiguration, service interruption, policy rewiring, compliance actions, or emergency operations).
+A compromised or malicious signer controlling a privileged role can take adverse actions within that role's authorized scope (for example, misconfiguration, service interruption, policy rewiring, compliance actions, pausing, temporary break-glass role grants, or upgrades).
 
 ### Mitigations
 
@@ -406,7 +406,7 @@ A third party can still use real capital to inflate the active adapter's raw pro
 - shares minted to pending depositors,
 - assets allocated to pending withdrawers,
 - performance-fee and high-water-mark accounting, and
-- rebalance or emergency paths that withdraw the adapter's full raw position.
+- rebalances that withdraw the adapter's full raw position.
 
 An attacker with a pending withdrawal may recover a pro-rata portion of their own unsolicited supply through that epoch's withdrawal settlement. Any unrecovered amount is absorbed by other participants, remaining shareholders, or protocol fees. The attacker cannot atomically recover the full supplied amount unless they also control privileged workflow or vault execution paths, which is outside the permissionless threat model.
 

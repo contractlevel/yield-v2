@@ -254,6 +254,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @dev Precondition: the current epoch must be open
     /// @dev Precondition: the user must have a deposit for the epoch nonce
     /// @dev ParentVaultUserEpochLib is linked by Solidity and executes by DELEGATECALL in the vault context.
+    /// @dev Intentionally does not include whenNotPaused and runPolicy
     function forceCancelDeposit(address user) external nonReentrant onlyRole(Roles.CANCEL_DEPOSIT_OPERATOR_ROLE) {
         ParentVaultUserEpochLib.forceCancelDeposit(_parentVaultStorage(), i_asset, user);
     }

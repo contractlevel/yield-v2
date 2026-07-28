@@ -11,12 +11,12 @@ Primary assets at risk:
 - Underlying asset held transiently in vaults or deployed through adapters.
 - Yieldcoin share accounting in `ParentVault`.
 - User ability to deposit, withdraw, claim, cancel, and transfer shares.
-- Privileged control over workflow routing, adapters, pauses, upgrades, emergency actions, and compliance configuration.
+- Privileged control over workflow routing, adapters, pauses, upgrades, temporary break-glass role grants, and compliance configuration.
 
 ## 2. Trust boundaries
 
 - **External strategy protocols.** Active adapters place funds into third-party lending protocols. The protocol can validate adapter behavior, but cannot make an external market solvent or withdrawable.
-- **Commercial operator roles.** Privileged roles configure protocol components and operate emergency controls. See [KI-001](./KNOWN_ISSUES.md#ki-001--centralized-trust-in-privileged-operatoradmin-roles).
+- **Commercial operator roles.** Privileged roles configure protocol components and operate pause, recovery-escalation, and break-glass controls. See [KI-001](./KNOWN_ISSUES.md#ki-001--centralized-trust-in-privileged-operatoradmin-roles).
 - **Underlying asset issuer.** The initial underlying asset is USDC, whose issuer can blacklist addresses or pause transfers. See [KI-002](./KNOWN_ISSUES.md#ki-002--underlying-asset-issuer-can-blacklist-or-pause-the-protocol).
 - **CRE and WorkflowRouter.** CRE supplies trusted TVL inputs and workflow-triggered actions. `WorkflowRouter` is the on-chain ingress for Keystone Forwarder reports and validates workflow metadata and selector allowlists before dispatching to the vault.
 - **CCIP.** CCIP transports messages and tokens between parent and child vaults. Vaults validate the decoded sender against the configured crosschain vault for the source chain selector.
@@ -40,7 +40,7 @@ Residual risk remains inherent to the product: Yieldcoin v2 cannot guarantee sol
 
 ### 3.2 Privileged operator/admin compromise
 
-A compromised privileged signer can misconfigure roles, workflow metadata/selectors, adapter mappings, supported protocols, pause controls, emergency actions, policy wiring, or upgrade authority within that role's scope. See [KI-001](./KNOWN_ISSUES.md#ki-001--centralized-trust-in-privileged-operatoradmin-roles).
+A compromised privileged signer can misconfigure roles, workflow metadata/selectors, adapter mappings, supported protocols, pause controls, temporary break-glass authority, policy wiring, or upgrade authority within that role's scope. See [KI-001](./KNOWN_ISSUES.md#ki-001--centralized-trust-in-privileged-operatoradmin-roles).
 
 Code-level mitigations include role separation, explicit role checks, `AccessControlDefaultAdminRules` on native components, narrow workflow ingress through `WorkflowRouter`, and adapter/vault binding checks.
 

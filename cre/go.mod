@@ -4,9 +4,9 @@ go 1.25.5
 
 require (
 	github.com/ethereum/go-ethereum v1.17.2
-	github.com/smartcontractkit/chainlink-protos/cre/go v0.0.0-20260521152427-d3f6dc93de42
-	github.com/smartcontractkit/cre-sdk-go v1.11.0
-	github.com/smartcontractkit/cre-sdk-go/capabilities/blockchain/evm v1.0.0-beta.12
+	github.com/smartcontractkit/chainlink-protos/cre/go v0.0.0-20260707203317-661b54b51a33
+	github.com/smartcontractkit/cre-sdk-go v1.15.0
+	github.com/smartcontractkit/cre-sdk-go/capabilities/blockchain/evm v1.0.0-beta.15
 	github.com/smartcontractkit/cre-sdk-go/capabilities/networking/http v1.3.0
 	github.com/smartcontractkit/cre-sdk-go/capabilities/scheduler/cron v1.3.0
 	github.com/stretchr/testify v1.11.1
@@ -40,10 +40,10 @@ require (
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/otel v1.43.0 // indirect
-	go.opentelemetry.io/otel/metric v1.43.0 // indirect
+	go.opentelemetry.io/otel v1.44.0 // indirect
+	go.opentelemetry.io/otel/metric v1.44.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.43.0 // indirect
-	go.opentelemetry.io/otel/trace v1.43.0 // indirect
+	go.opentelemetry.io/otel/trace v1.44.0 // indirect
 	golang.org/x/crypto v0.48.0 // indirect
 	golang.org/x/sync v0.18.0 // indirect
 	golang.org/x/sys v0.42.0 // indirect

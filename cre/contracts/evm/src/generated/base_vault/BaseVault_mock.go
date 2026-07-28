@@ -35,9 +35,7 @@ type BaseVaultMock struct {
 	GetCcipGasLimit               func(GetCcipGasLimitInput) (*big.Int, error)
 	GetCrosschainVault            func(GetCrosschainVaultInput) (common.Address, error)
 	GetDefaultCcipGasLimit        func() (*big.Int, error)
-	GetEmergencyReceiver          func() (common.Address, error)
 	GetLink                       func() (common.Address, error)
-	GetPausedAt                   func() (*big.Int, error)
 	GetRebalanceDepositRecovery   func() (TypesRebalanceDepositRecovery, error)
 	GetRecoveryMode               func() (uint8, error)
 	GetRoleAdmin                  func(GetRoleAdminInput) ([32]byte, error)
@@ -243,16 +241,6 @@ func NewBaseVaultMock(address common.Address, clientMock *evmmock.ClientCapabili
 			}
 			return abi.Methods["getDefaultCcipGasLimit"].Outputs.Pack(result)
 		},
-		string(abi.Methods["getEmergencyReceiver"].ID[:4]): func(payload []byte) ([]byte, error) {
-			if mock.GetEmergencyReceiver == nil {
-				return nil, errors.New("getEmergencyReceiver method not mocked")
-			}
-			result, err := mock.GetEmergencyReceiver()
-			if err != nil {
-				return nil, err
-			}
-			return abi.Methods["getEmergencyReceiver"].Outputs.Pack(result)
-		},
 		string(abi.Methods["getLink"].ID[:4]): func(payload []byte) ([]byte, error) {
 			if mock.GetLink == nil {
 				return nil, errors.New("getLink method not mocked")
@@ -262,16 +250,6 @@ func NewBaseVaultMock(address common.Address, clientMock *evmmock.ClientCapabili
 				return nil, err
 			}
 			return abi.Methods["getLink"].Outputs.Pack(result)
-		},
-		string(abi.Methods["getPausedAt"].ID[:4]): func(payload []byte) ([]byte, error) {
-			if mock.GetPausedAt == nil {
-				return nil, errors.New("getPausedAt method not mocked")
-			}
-			result, err := mock.GetPausedAt()
-			if err != nil {
-				return nil, err
-			}
-			return abi.Methods["getPausedAt"].Outputs.Pack(result)
 		},
 		string(abi.Methods["getRebalanceDepositRecovery"].ID[:4]): func(payload []byte) ([]byte, error) {
 			if mock.GetRebalanceDepositRecovery == nil {

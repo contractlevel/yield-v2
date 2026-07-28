@@ -1600,23 +1600,12 @@ func (c WorkflowRouter) DEFAULTADMINROLE(
 		return cre.PromiseFromResult[[32]byte](*new([32]byte), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -1637,23 +1626,12 @@ func (c WorkflowRouter) DefaultAdmin(
 		return cre.PromiseFromResult[common.Address](*new(common.Address), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -1674,23 +1652,12 @@ func (c WorkflowRouter) DefaultAdminDelay(
 		return cre.PromiseFromResult[*big.Int](*new(*big.Int), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -1711,23 +1678,12 @@ func (c WorkflowRouter) DefaultAdminDelayIncreaseWait(
 		return cre.PromiseFromResult[*big.Int](*new(*big.Int), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -1749,23 +1705,12 @@ func (c WorkflowRouter) GetAllowlistedWorkflowSelector(
 		return cre.PromiseFromResult[bool](*new(bool), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -1787,23 +1732,12 @@ func (c WorkflowRouter) GetRoleAdmin(
 		return cre.PromiseFromResult[[32]byte](*new([32]byte), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -1824,23 +1758,12 @@ func (c WorkflowRouter) GetVault(
 		return cre.PromiseFromResult[common.Address](*new(common.Address), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -1862,23 +1785,12 @@ func (c WorkflowRouter) GetWorkflowMetadata(
 		return cre.PromiseFromResult[IWorkflowRouterWorkflowMetadata](*new(IWorkflowRouterWorkflowMetadata), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -1900,23 +1812,12 @@ func (c WorkflowRouter) HasRole(
 		return cre.PromiseFromResult[bool](*new(bool), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -1937,23 +1838,12 @@ func (c WorkflowRouter) Owner(
 		return cre.PromiseFromResult[common.Address](*new(common.Address), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -1974,23 +1864,12 @@ func (c WorkflowRouter) Paused(
 		return cre.PromiseFromResult[bool](*new(bool), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -2011,23 +1890,12 @@ func (c WorkflowRouter) PendingDefaultAdmin(
 		return cre.PromiseFromResult[PendingDefaultAdminOutput](PendingDefaultAdminOutput{}, err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -2048,23 +1916,12 @@ func (c WorkflowRouter) PendingDefaultAdminDelay(
 		return cre.PromiseFromResult[PendingDefaultAdminDelayOutput](PendingDefaultAdminDelayOutput{}, err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,
@@ -2086,23 +1943,12 @@ func (c WorkflowRouter) SupportsInterface(
 		return cre.PromiseFromResult[bool](*new(bool), err)
 	}
 
-	var bn cre.Promise[*pb.BigInt]
-	if blockNumber == nil {
-		promise := c.client.HeaderByNumber(runtime, &evm.HeaderByNumberRequest{
-			BlockNumber: bindings.FinalizedBlockNumber,
-		})
-
-		bn = cre.Then(promise, func(finalizedBlock *evm.HeaderByNumberReply) (*pb.BigInt, error) {
-			if finalizedBlock == nil || finalizedBlock.Header == nil {
-				return nil, errors.New("failed to get finalized block header")
-			}
-			return finalizedBlock.Header.BlockNumber, nil
-		})
-	} else {
-		bn = cre.PromiseFromResult(pb.NewBigIntFromInt(blockNumber), nil)
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
 	}
 
-	promise := cre.ThenPromise(bn, func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
 		return c.client.CallContract(runtime, &evm.CallContractRequest{
 			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
 			BlockNumber: bn,

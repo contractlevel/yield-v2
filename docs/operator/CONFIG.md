@@ -2,7 +2,7 @@
 
 This document is an operator-focused API guide for Yieldcoin v2 configuration and operational setter functions. It lists which functions an operator may need to call, which role is required, and why each function exists.
 
-For the full authority model, use [`ACCESS_CONTROL_MATRIX`](../security/ACCESS_CONTROL_MATRIX.md) as the source of truth. This guide is the operator-facing companion for day-to-day configuration and emergency operations.
+For the full authority model, use [`ACCESS_CONTROL_MATRIX`](../security/ACCESS_CONTROL_MATRIX.md) as the source of truth. This guide is the operator-facing companion for day-to-day configuration and incident-response operations.
 
 ## Contents
 
@@ -144,6 +144,6 @@ Beyond this ability to claim, COMP rewards handling is not explicitly part of th
 
 UUPS vault upgrades are authorized by `UPGRADER_ROLE`. `YieldcoinShare` upgrade authority is its inherited `owner()`, which should be treated as the token upgrader authority and not as general token administration.
 
-Local `DEFAULT_ADMIN_ROLE` holders grant and revoke local roles with inherited `grantRole(...)` and `revokeRole(...)`. They should not be routine operators for vault, router, registry, or emergency actions. Use the access matrix to verify the intended holder and scope before changing any role.
+Local `DEFAULT_ADMIN_ROLE` holders grant and revoke local roles with inherited `grantRole(...)` and `revokeRole(...)`. They should not be routine operators for vault, router, registry, or incident-response actions. Use the access matrix to verify the intended holder and scope before changing any role.
 
 See [`UPGRADES`](./UPGRADES.md) for upgrade procedure notes and [`ACCESS_CONTROL_MATRIX`](../security/ACCESS_CONTROL_MATRIX.md#summary) for the authority summary.
