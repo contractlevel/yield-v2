@@ -351,6 +351,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @dev If TVL goes to zero with shares outstanding, closeEpoch reverts until TVL is restored via
     ///      an on-behalf-of supply to the active protocol; the permanent admin seed deposit means this
     ///      requires a full loss of the active strategy, not a partial one. See KI-008, KI-010 in docs/KNOWN_ISSUES.md.
+    /// @dev Remote net-deposit epochs are marked CLAIMABLE — and their shares minted — before the CCIP-bridged capital lands
     function closeEpoch(uint256 tvl) external nonReentrant whenNotPaused onlyRole(Roles.EPOCH_OPERATOR_ROLE) {
         ParentVaultStorage storage $ = _parentVaultStorage();
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
