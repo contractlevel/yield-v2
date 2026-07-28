@@ -25,7 +25,6 @@ abstract contract BaseVault_PauseUnitTest is BaseUnitTest {
         s_vault.pause();
 
         assertEq(s_vault.paused(), true);
-        assertEq(s_vault.getPausedAt(), block.timestamp);
 
         Vm.Log memory log = _assertEmittedBy(keccak256("Paused(address)"), address(s_vault));
         assertEq(abi.decode(log.data, (address)), i_pauser);

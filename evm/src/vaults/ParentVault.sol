@@ -347,8 +347,9 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     ///      claims against the affected epoch.
     /// @dev Precondition: `tvl == 0 && s_totalShares > 0` will cause a revert
     /// @dev Precondition: If deposits exist, aggregate minted shares must cover at least one share per minimum deposit amount.
-    /// @dev If TVL goes to zero with shares outstanding, closeEpoch will revert.
-    ///      A DONATE_OPERATOR_ROLE holder can call donate() to restore TVL; the next close will price shares against the donated amount.
+    /// @dev If TVL goes to zero with shares outstanding, closeEpoch reverts until TVL is restored via
+    ///      an on-behalf-of supply to the active protocol; the permanent admin seed deposit means this
+    ///      requires a full loss of the active strategy, not a partial one. See KI-008, KI-010 in docs/KNOWN_ISSUES.md.
     function closeEpoch(uint256 tvl) external nonReentrant whenNotPaused onlyRole(Roles.EPOCH_OPERATOR_ROLE) {
         ParentVaultStorage storage $ = _parentVaultStorage();
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();

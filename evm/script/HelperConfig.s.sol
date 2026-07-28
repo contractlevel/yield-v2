@@ -27,7 +27,6 @@ contract HelperConfig is Script {
     struct NetworkConfig {
         address initialOwner;
         address treasury;
-        address emergencyReceiver;
         address kycProvider;
         RolesConfig roles;
         TokensConfig tokens;
@@ -43,9 +42,7 @@ contract HelperConfig is Script {
         address configOperator;
         address complianceOperator;
         PolicyRolesConfig policy;
-        address emergencyDrainer;
         address linkOperator;
-        address donateOperator;
         address rewardsOperator;
         address upgrader;
         address cancelDepositOperator;
@@ -116,7 +113,6 @@ contract HelperConfig is Script {
         networkConfig = NetworkConfig({
             initialOwner: BURNER_EOA,
             treasury: BURNER_EOA,
-            emergencyReceiver: BURNER_EOA,
             kycProvider: BURNER_EOA,
             roles: RolesConfig({
                 defaultAdmin: BURNER_EOA,
@@ -125,9 +121,7 @@ contract HelperConfig is Script {
                 configOperator: BURNER_EOA,
                 complianceOperator: BURNER_EOA,
                 policy: PolicyRolesConfig({admin: BURNER_EOA, configAdmin: BURNER_EOA, engineManager: BURNER_EOA}),
-                emergencyDrainer: BURNER_EOA,
                 linkOperator: BURNER_EOA,
-                donateOperator: BURNER_EOA,
                 rewardsOperator: BURNER_EOA,
                 upgrader: BURNER_EOA,
                 cancelDepositOperator: BURNER_EOA
@@ -156,7 +150,6 @@ contract HelperConfig is Script {
         networkConfig = NetworkConfig({
             initialOwner: BURNER_EOA,
             treasury: BURNER_EOA,
-            emergencyReceiver: BURNER_EOA,
             kycProvider: BURNER_EOA,
             roles: RolesConfig({
                 defaultAdmin: BURNER_EOA,
@@ -165,9 +158,7 @@ contract HelperConfig is Script {
                 configOperator: BURNER_EOA,
                 complianceOperator: BURNER_EOA,
                 policy: PolicyRolesConfig({admin: BURNER_EOA, configAdmin: BURNER_EOA, engineManager: BURNER_EOA}),
-                emergencyDrainer: BURNER_EOA,
                 linkOperator: BURNER_EOA,
-                donateOperator: BURNER_EOA,
                 rewardsOperator: BURNER_EOA,
                 upgrader: BURNER_EOA,
                 cancelDepositOperator: BURNER_EOA
@@ -196,7 +187,6 @@ contract HelperConfig is Script {
         networkConfig = NetworkConfig({
             initialOwner: BURNER_EOA,
             treasury: BURNER_EOA,
-            emergencyReceiver: BURNER_EOA,
             kycProvider: BURNER_EOA,
             roles: RolesConfig({
                 defaultAdmin: BURNER_EOA,
@@ -205,9 +195,7 @@ contract HelperConfig is Script {
                 configOperator: BURNER_EOA,
                 complianceOperator: BURNER_EOA,
                 policy: PolicyRolesConfig({admin: BURNER_EOA, configAdmin: BURNER_EOA, engineManager: BURNER_EOA}),
-                emergencyDrainer: BURNER_EOA,
                 linkOperator: BURNER_EOA,
-                donateOperator: BURNER_EOA,
                 rewardsOperator: BURNER_EOA,
                 upgrader: BURNER_EOA,
                 cancelDepositOperator: BURNER_EOA
@@ -235,7 +223,6 @@ contract HelperConfig is Script {
         networkConfig = NetworkConfig({
             initialOwner: BURNER_EOA,
             treasury: BURNER_EOA,
-            emergencyReceiver: BURNER_EOA,
             kycProvider: BURNER_EOA,
             roles: RolesConfig({
                 defaultAdmin: BURNER_EOA,
@@ -244,9 +231,7 @@ contract HelperConfig is Script {
                 configOperator: BURNER_EOA,
                 complianceOperator: BURNER_EOA,
                 policy: PolicyRolesConfig({admin: BURNER_EOA, configAdmin: BURNER_EOA, engineManager: BURNER_EOA}),
-                emergencyDrainer: BURNER_EOA,
                 linkOperator: BURNER_EOA,
-                donateOperator: BURNER_EOA,
                 rewardsOperator: BURNER_EOA,
                 upgrader: BURNER_EOA,
                 cancelDepositOperator: BURNER_EOA
@@ -274,7 +259,6 @@ contract HelperConfig is Script {
         networkConfig = NetworkConfig({
             initialOwner: BURNER_EOA,
             treasury: BURNER_EOA,
-            emergencyReceiver: BURNER_EOA,
             kycProvider: BURNER_EOA,
             roles: RolesConfig({
                 defaultAdmin: BURNER_EOA,
@@ -283,9 +267,7 @@ contract HelperConfig is Script {
                 configOperator: BURNER_EOA,
                 complianceOperator: BURNER_EOA,
                 policy: PolicyRolesConfig({admin: BURNER_EOA, configAdmin: BURNER_EOA, engineManager: BURNER_EOA}),
-                emergencyDrainer: BURNER_EOA,
                 linkOperator: BURNER_EOA,
-                donateOperator: BURNER_EOA,
                 rewardsOperator: BURNER_EOA,
                 upgrader: BURNER_EOA,
                 cancelDepositOperator: BURNER_EOA
@@ -316,7 +298,6 @@ contract HelperConfig is Script {
         networkConfig = NetworkConfig({
             initialOwner: BURNER_EOA,
             treasury: BURNER_EOA,
-            emergencyReceiver: BURNER_EOA,
             kycProvider: BURNER_EOA,
             roles: RolesConfig({
                 defaultAdmin: BURNER_EOA,
@@ -325,9 +306,7 @@ contract HelperConfig is Script {
                 configOperator: BURNER_EOA,
                 complianceOperator: BURNER_EOA,
                 policy: PolicyRolesConfig({admin: BURNER_EOA, configAdmin: BURNER_EOA, engineManager: BURNER_EOA}),
-                emergencyDrainer: BURNER_EOA,
                 linkOperator: BURNER_EOA,
-                donateOperator: BURNER_EOA,
                 rewardsOperator: BURNER_EOA,
                 upgrader: BURNER_EOA,
                 cancelDepositOperator: BURNER_EOA
@@ -355,7 +334,6 @@ contract HelperConfig is Script {
         networkConfig = NetworkConfig({
             initialOwner: BURNER_EOA,
             treasury: BURNER_EOA,
-            emergencyReceiver: BURNER_EOA,
             kycProvider: BURNER_EOA,
             roles: RolesConfig({
                 defaultAdmin: BURNER_EOA,
@@ -364,9 +342,7 @@ contract HelperConfig is Script {
                 configOperator: BURNER_EOA,
                 complianceOperator: BURNER_EOA,
                 policy: PolicyRolesConfig({admin: BURNER_EOA, configAdmin: BURNER_EOA, engineManager: BURNER_EOA}),
-                emergencyDrainer: BURNER_EOA,
                 linkOperator: BURNER_EOA,
-                donateOperator: BURNER_EOA,
                 rewardsOperator: BURNER_EOA,
                 upgrader: BURNER_EOA,
                 cancelDepositOperator: BURNER_EOA
@@ -394,7 +370,6 @@ contract HelperConfig is Script {
         networkConfig = NetworkConfig({
             initialOwner: BURNER_EOA,
             treasury: BURNER_EOA,
-            emergencyReceiver: BURNER_EOA,
             kycProvider: BURNER_EOA,
             roles: RolesConfig({
                 defaultAdmin: BURNER_EOA,
@@ -403,9 +378,7 @@ contract HelperConfig is Script {
                 configOperator: BURNER_EOA,
                 complianceOperator: BURNER_EOA,
                 policy: PolicyRolesConfig({admin: BURNER_EOA, configAdmin: BURNER_EOA, engineManager: BURNER_EOA}),
-                emergencyDrainer: BURNER_EOA,
                 linkOperator: BURNER_EOA,
-                donateOperator: BURNER_EOA,
                 rewardsOperator: BURNER_EOA,
                 upgrader: BURNER_EOA,
                 cancelDepositOperator: BURNER_EOA
@@ -433,7 +406,6 @@ contract HelperConfig is Script {
         networkConfig = NetworkConfig({
             initialOwner: BURNER_EOA,
             treasury: BURNER_EOA,
-            emergencyReceiver: BURNER_EOA,
             kycProvider: BURNER_EOA,
             roles: RolesConfig({
                 defaultAdmin: BURNER_EOA,
@@ -442,9 +414,7 @@ contract HelperConfig is Script {
                 configOperator: BURNER_EOA,
                 complianceOperator: BURNER_EOA,
                 policy: PolicyRolesConfig({admin: BURNER_EOA, configAdmin: BURNER_EOA, engineManager: BURNER_EOA}),
-                emergencyDrainer: BURNER_EOA,
                 linkOperator: BURNER_EOA,
-                donateOperator: BURNER_EOA,
                 rewardsOperator: BURNER_EOA,
                 upgrader: BURNER_EOA,
                 cancelDepositOperator: BURNER_EOA
@@ -472,7 +442,6 @@ contract HelperConfig is Script {
         networkConfig = NetworkConfig({
             initialOwner: BURNER_EOA,
             treasury: BURNER_EOA,
-            emergencyReceiver: BURNER_EOA,
             kycProvider: BURNER_EOA,
             roles: RolesConfig({
                 defaultAdmin: BURNER_EOA,
@@ -481,9 +450,7 @@ contract HelperConfig is Script {
                 configOperator: BURNER_EOA,
                 complianceOperator: BURNER_EOA,
                 policy: PolicyRolesConfig({admin: BURNER_EOA, configAdmin: BURNER_EOA, engineManager: BURNER_EOA}),
-                emergencyDrainer: BURNER_EOA,
                 linkOperator: BURNER_EOA,
-                donateOperator: BURNER_EOA,
                 rewardsOperator: BURNER_EOA,
                 upgrader: BURNER_EOA,
                 cancelDepositOperator: BURNER_EOA
@@ -519,7 +486,6 @@ contract HelperConfig is Script {
         networkConfig = NetworkConfig({
             initialOwner: address(1),
             treasury: makeAddr("treasury"),
-            emergencyReceiver: makeAddr("emergencyReceiver"),
             kycProvider: makeAddr("kycProvider"),
             roles: _getMockRolesConfig(),
             tokens: tokens,
@@ -541,9 +507,7 @@ contract HelperConfig is Script {
                 configAdmin: makeAddr("policyConfigAdmin"),
                 engineManager: makeAddr("policyEngineManager")
             }),
-            emergencyDrainer: makeAddr("emergencyDrainer"),
             linkOperator: makeAddr("linkOperator"),
-            donateOperator: makeAddr("donateOperator"),
             rewardsOperator: makeAddr("rewardsOperator"),
             upgrader: makeAddr("upgrader"),
             cancelDepositOperator: makeAddr("cancelDepositOperator")

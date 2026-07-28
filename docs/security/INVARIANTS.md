@@ -42,7 +42,7 @@ Use these ID prefixes:
 | `SOLV-*`    | Solvency and asset backing.                                        |
 | `CFG-*`     | Configuration safety.                                              |
 | `AC-*`      | Access control.                                                    |
-| `PAUSE-*`   | Pause and emergency behavior.                                      |
+| `PAUSE-*`   | Pause behavior.                                                    |
 | `EPOCH-*`   | Epoch lifecycle, accounting, and solvency.                         |
 | `SHARE-*`   | Share and fee accounting.                                          |
 | `FEE-*`     | Fee-specific accounting.                                           |
@@ -51,7 +51,6 @@ Use these ID prefixes:
 | `REC-*`     | Recovery behavior.                                                 |
 | `ROUTER-*`  | WorkflowRouter behavior.                                           |
 | `ADAPTER-*` | Adapter registry and protocol adapter behavior.                    |
-| `DONATE-*`  | Role-gated donation behavior.                                      |
 | `MIG-*`     | Reserved for future migration, upgrade, or state handoff behavior. |
 
 ## Solvency
@@ -88,8 +87,7 @@ These refine the invariant statements. They are not invariant violations.
 | `DEV-002` | `YieldcoinShare.totalSupply()` may temporarily differ from `ParentVault.s_totalShares` because claim minting and burning are lazy.                                         |
 | `DEV-003` | During cross-chain `REBALANCING`, when funds are in transit on CCIP, `s_activeProtocolAdapter == address(0)` is permitted.                                                 |
 | `DEV-004` | RESOLVED: `s_treasury != address(0)` is a hard invariant. Enforced at construction and on every call to `setTreasury`.                                                     |
-| `DEV-005` | Emergency drain is a break-glass action. If `EMERGENCY_DRAINER_ROLE` drains the vault, `remainingWithdrawClaimAmount` and recovery slots are not automatically reconciled. |
-| `DEV-006` | Dust withdraw claims may round down to zero USDC. The withdraw intent is still consumed and the escrowed shares are burned, but no zero-value asset transfer is required.  |
+| `DEV-005` | Dust withdraw claims may round down to zero USDC. The withdraw intent is still consumed and the escrowed shares are burned, but no zero-value asset transfer is required.  |
 
 ## Out-of-Scope Failures
 
@@ -99,7 +97,6 @@ These refine the invariant statements. They are not invariant violations.
 | CCIP delivery failure or message loss            | See `ENV-002`.                 |
 | Misconfigured ACE policy stacks                  | See `ENV-003`.                 |
 | Malicious or incorrect protocol adapters         | See `ENV-004`.                 |
-| Emergency drainer role held by an unsafe account | See `PAUSE-005` and `DEV-005`. |
 
 ## Non-Invariants
 
@@ -127,18 +124,15 @@ These are desired configuration properties.
 | `AC-002` | Config setters require `CONFIG_OPERATOR_ROLE`.                                                          | `unit`          | implemented: Certora (per-function rules)     |
 | `AC-003` | Epoch and rebalance execution require the WorkflowRouter-held operator roles.                           | `unit`          | implemented: Certora (per-function rules)     |
 | `AC-004` | Parent user functions and share token privileged functions rely on ACE policy checks where implemented. | `manual + unit` | candidate                                     |
-| `AC-005` | Vault donations require `DONATE_OPERATOR_ROLE`, which is distinct from `CONFIG_OPERATOR_ROLE`.          | `unit`          | implemented: Certora (via `DONATE_005_` rule) |
-| `AC-006` | Force-cancelling a deposit requires `CANCEL_DEPOSIT_OPERATOR_ROLE`, which is distinct from `CONFIG_OPERATOR_ROLE` and `DONATE_OPERATOR_ROLE`. | `unit`          | candidate                                     |
+| `AC-005` | Force-cancelling a deposit requires `CANCEL_DEPOSIT_OPERATOR_ROLE`, which is distinct from `CONFIG_OPERATOR_ROLE`. | `unit` | candidate |
 
-## Pause And Emergency Behavior
+## Pause Behavior
 
 | ID          | Statement                                                                                                                                                                   | Type                     | Status                                    |
 | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ | ----------------------------------------- |
-| `PAUSE-001` | Vault `pause` requires `PAUSER_ROLE` and records `s_pausedAt`.                                                                                                              | `unit`                   | implemented: Certora                      |
-| `PAUSE-002` | Vault `unpause` requires `UNPAUSER_ROLE` and clears `s_pausedAt`.                                                                                                           | `unit`                   | implemented: Certora                      |
-| `PAUSE-003` | WorkflowRouter `pause` and `unpause` require their respective roles.                                                                                                        | `unit`                   | implemented: Certora                      |
-| `PAUSE-004` | `emergencyDrain` requires `EMERGENCY_DRAINER_ROLE` and can execute only after the emergency drain delay has elapsed.                                                        | `unit`                   | implemented: Certora                      |
-| `PAUSE-005` | Emergency drain is allowed to break normal accounting expectations; after drain, recovery slots and withdraw claim amounts are not automatically reconciled. See `DEV-005`. | `postcondition + manual` | implemented: Certora (per-function rules) |
+| `PAUSE-001` | Vault `pause` requires `PAUSER_ROLE`.                                       | `unit` | implemented: Certora |
+| `PAUSE-002` | Vault `unpause` requires `UNPAUSER_ROLE`.                                   | `unit` | implemented: Certora |
+| `PAUSE-003` | WorkflowRouter `pause` and `unpause` require their respective roles.        | `unit` | implemented: Certora |
 
 ## Epoch Lifecycle
 
@@ -182,16 +176,6 @@ These are desired configuration properties.
 | `FEE-001` | Performance fee is collected only when gross price per share is greater than the high-water mark. This is also covered by `SHARE-003`.                              | `unit`      | candidate                                    |
 | `FEE-002` | Fee shares mint to treasury, not to caller or vault. This property depends on `CFG-001` because a zero treasury is operationally invalid.                           | `unit`      | candidate                                    |
 | `FEE-003` | The performance fee high-water mark is monotonically non-decreasing, except that it remains unchanged when fee collection is intentionally skipped under `DEV-001`. | `invariant` | implemented: Foundry + Medusa + Recon-fuzzer |
-
-## Donations
-
-| ID           | Statement                                                                         | Type            | Status                                                                      |
-| ------------ | --------------------------------------------------------------------------------- | --------------- | --------------------------------------------------------------------------- |
-| `DONATE-001` | A successful donation increases active strategy TVL by the donated amount.        | `postcondition` | implemented: Foundry + Medusa + Recon-fuzzer + Certora (per-function rules) |
-| `DONATE-002` | A successful donation does not mint shares or change `ParentVault.s_totalShares`. | `postcondition` | implemented: Foundry + Medusa + Recon-fuzzer                                |
-| `DONATE-003` | A successful donation does not change the current epoch.                          | `postcondition` | implemented: Foundry + Medusa + Recon-fuzzer                                |
-| `DONATE-004` | Donation can only succeed on the vault that owns the active strategy.             | `postcondition` | implemented: Foundry + Medusa + Recon-fuzzer + Certora (per-function rules) |
-| `DONATE-005` | Donation requires `DONATE_OPERATOR_ROLE`.                                         | `unit`          | implemented: Certora                                                        |
 
 ## Rebalance Lifecycle
 

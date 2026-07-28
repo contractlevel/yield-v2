@@ -29,7 +29,6 @@ abstract contract BaseVault_UnpauseUnitTest is BaseUnitTest {
         s_vault.unpause();
 
         assertEq(s_vault.paused(), false);
-        assertEq(s_vault.getPausedAt(), 0);
 
         Vm.Log memory log = _assertEmittedBy(keccak256("Unpaused(address)"), address(s_vault));
         assertEq(abi.decode(log.data, (address)), i_unpauser);

@@ -21,12 +21,8 @@ library Roles {
     bytes32 internal constant EPOCH_OPERATOR_ROLE = keccak256("EPOCH_OPERATOR_ROLE");
     /// @notice Link operator role for withdrawing LINK from the Yieldcoin v2 vaults
     bytes32 internal constant LINK_OPERATOR_ROLE = keccak256("LINK_OPERATOR_ROLE");
-    /// @notice Donate operator role for privileged vault recapitalization donations
-    bytes32 internal constant DONATE_OPERATOR_ROLE = keccak256("DONATE_OPERATOR_ROLE");
     /// @notice Compliance operator role for compliance actions: forced transfers, freeze/unfreeze, pause/unpause through ACE RBAC
     bytes32 internal constant COMPLIANCE_OPERATOR_ROLE = keccak256("COMPLIANCE_OPERATOR_ROLE");
-    /// @notice Emergency drainer roles for withdrawing all underlying asset from the Yieldcoin v2 vaults
-    bytes32 internal constant EMERGENCY_DRAINER_ROLE = keccak256("EMERGENCY_DRAINER_ROLE");
     /// @notice ChainlinkCRE Keystone Forwarder calls WorkflowRouter::onReport
     bytes32 internal constant KEYSTONE_FORWARDER_ROLE = keccak256("KEYSTONE_FORWARDER_ROLE");
     /// @notice Policy engine manager role for replacing attached policy engines

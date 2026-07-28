@@ -9,8 +9,8 @@ import {Types} from "../libraries/Types.sol";
 abstract contract BaseVaultStore {
     /// @custom:storage-location erc7201:yieldcoin.storage.BaseVault
     /// @notice Namespaced storage shared by ParentVault and ChildVault for the state common to both:
-    /// CCIP gas/routing config, the locally active strategy adapter, emergency drain bookkeeping,
-    /// and the singleton recovery discriminator plus rebalance-deposit recovery data.
+    /// CCIP gas/routing config, the locally active strategy adapter, and the singleton recovery
+    /// discriminator plus rebalance-deposit recovery data.
     /// @param s_defaultCcipGasLimit Fallback CCIP gas limit used for a destination chain when no
     /// per-chain override is set in s_ccipGasLimits.
     /// @param s_ccipGasLimits Per-chain-selector CCIP gas limit override. A value of 0 means "unset",
@@ -20,10 +20,6 @@ abstract contract BaseVaultStore {
     /// on a given chain selector are accepted.
     /// @param s_activeProtocolAdapter Protocol adapter currently holding deposited funds on this chain.
     /// address(0) means this chain is not the active strategy chain.
-    /// @param s_pausedAt Timestamp the vault was paused at; cleared (deleted) on unpause. Gates the
-    /// EMERGENCY_DRAIN_DELAY cooldown check in emergencyDrain() so funds can't be drained immediately
-    /// after pausing.
-    /// @param s_emergencyReceiver Address that receives the underlying asset when emergencyDrain() is executed.
     /// @param s_recoveryMode Discriminator for which recovery struct (if any) currently holds pending
     /// recovery data. The singleton invariant (at most one recovery pending at a time) is enforced by
     /// `_requireNoRecovery`, which every recovery-creating call path checks before writing this field -
@@ -36,8 +32,6 @@ abstract contract BaseVaultStore {
         mapping(uint64 chainSelector => address vault) s_crosschainVaults;
         //slither-disable-next-line uninitialized-state
         address s_activeProtocolAdapter;
-        uint96 s_pausedAt;
-        address s_emergencyReceiver;
         Types.RecoveryMode s_recoveryMode;
         Types.RebalanceDepositRecovery s_rebalanceDepositRecovery;
     }

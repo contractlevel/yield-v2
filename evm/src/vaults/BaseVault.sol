@@ -49,8 +49,6 @@ abstract contract BaseVault is
     /// @dev Initial default admin role transfer delay. Deploy scripts use the deployer as a temporary admin
     ///      and immediately begin handoff to the configured default admin.
     uint48 internal constant INITIAL_DEFAULT_ADMIN_ROLE_TRANSFER_DELAY = 0;
-    /// @dev Delay for emergency draining
-    uint256 internal constant EMERGENCY_DRAIN_DELAY = 1 days;
 
     /*//////////////////////////////////////////////////////////////
                                IMMUTABLE
@@ -125,7 +123,6 @@ abstract contract BaseVault is
     /// @param pauser The address of the pauser for pausing the vault - trusted actor in the system
     /// @param unpauser The address of the unpauser for unpausing the vault - trusted actor in the system
     /// @param configOperator The address of the config operator for setters - trusted actor in the system
-    /// @param emergencyReceiver The address that receives the underlying asset during emergency drain
     /// @param initialDefaultCcipGasLimit The initial s_defaultCcipGasLimit
     /// @param upgrader The address authorized to upgrade the vault implementation through UUPS
     struct InitParams {
@@ -133,7 +130,6 @@ abstract contract BaseVault is
         address pauser;
         address unpauser;
         address configOperator;
-        address emergencyReceiver;
         uint256 initialDefaultCcipGasLimit;
         address upgrader;
     }
@@ -169,7 +165,6 @@ abstract contract BaseVault is
         _revertIfZeroAddress(params.pauser);
         _revertIfZeroAddress(params.unpauser);
         _revertIfZeroAddress(params.configOperator);
-        _revertIfZeroAddress(params.emergencyReceiver);
         _revertIfZeroAddress(params.upgrader);
         _revertIfZeroAmount(params.initialDefaultCcipGasLimit);
 
@@ -178,9 +173,7 @@ abstract contract BaseVault is
         __ReentrancyGuardTransient_init();
         __UUPSUpgradeable_init();
 
-        BaseVaultStorage storage $ = _baseVaultStorage();
-        $.s_emergencyReceiver = params.emergencyReceiver;
-        $.s_defaultCcipGasLimit = params.initialDefaultCcipGasLimit;
+        _baseVaultStorage().s_defaultCcipGasLimit = params.initialDefaultCcipGasLimit;
         _grantRole(Roles.PAUSER_ROLE, params.pauser);
         _grantRole(Roles.UNPAUSER_ROLE, params.unpauser);
         _grantRole(Roles.CONFIG_OPERATOR_ROLE, params.configOperator);
@@ -392,61 +385,6 @@ abstract contract BaseVault is
     }
 
     /*//////////////////////////////////////////////////////////////
-                               EMERGENCY
-    //////////////////////////////////////////////////////////////*/
-    /// @notice If the vault has TVL, it is withdrawn from the active strategy and transferred to the emergency receiver
-    /// @param revertOnFailure Whether to revert if the withdraw from strategy fails
-    /// @dev If there is no active adapter, any TVL is already local balance (e.g. stranded by a pending
-    ///      recovery) and is swept below without an adapter withdraw.
-    /// @dev Precondition: Caller must have the EMERGENCY_DRAINER_ROLE
-    /// @dev Precondition: must be paused
-    /// @dev Precondition: Vault must have been paused for at least EMERGENCY_DRAIN_DELAY
-    /// @dev Precondition: must not be reentered
-    function emergencyDrain(bool revertOnFailure)
-        external
-        nonReentrant
-        onlyRole(Roles.EMERGENCY_DRAINER_ROLE)
-        whenPaused
-    {
-        BaseVaultStorage storage $ = _baseVaultStorage();
-        //slither-disable-next-line timestamp
-        if (block.timestamp - $.s_pausedAt < EMERGENCY_DRAIN_DELAY) {
-            revert BaseVault__EmergencyDrainDelayNotMet();
-        }
-
-        address activeAdapter = $.s_activeProtocolAdapter;
-        /// @dev TVL can be nonzero with no active adapter (e.g. ChildVault funds stranded locally by a
-        ///      pending recovery) - that balance is already local and gets swept below, nothing to withdraw.
-        if (activeAdapter != address(0) && _getTVL() > 0) {
-            _executeWithdraw(type(uint256).max, revertOnFailure, activeAdapter);
-        }
-
-        uint256 balance = IERC20(i_asset).balanceOf(address(this));
-        address emergencyReceiver = $.s_emergencyReceiver;
-        IERC20(i_asset).safeTransfer(emergencyReceiver, balance);
-        emit EmergencyDrainExecuted(emergencyReceiver, balance);
-    }
-
-    /// @notice Donates the underlying asset to the active strategy without minting shares or creating a claim
-    /// @param amount The amount of USDC to donate
-    /// @dev This is a privileged recovery/recapitalization operation and intentionally allowed while paused.
-    /// @dev Precondition: Caller must have the DONATE_OPERATOR_ROLE
-    /// @dev Precondition: amount must be more than 0
-    /// @dev Precondition: the strategy deposit operation must succeed
-    /// @dev Precondition: the call must not be reentered
-    /// @dev First-depositor captures full donation when `s_totalShares == 0` due to bootstrap pricing ignoring
-    ///      existing TVL. Donations should not be made before the first deposit.
-    /// @dev This is an operator emergency function that should not be used improperly (would require capital to do so).
-    function donate(uint256 amount) external nonReentrant onlyRole(Roles.DONATE_OPERATOR_ROLE) {
-        _revertIfZeroAmount(amount);
-
-        IERC20(i_asset).safeTransferFrom(msg.sender, address(this), amount);
-        _executeDeposit(amount, true, _baseVaultStorage().s_activeProtocolAdapter);
-
-        emit Donation(msg.sender, amount);
-    }
-
-    /*//////////////////////////////////////////////////////////////
                             INTERNAL GETTER
     //////////////////////////////////////////////////////////////*/
     /// @notice Gets the Yieldcoin TVL if this chain is the active strategy chain, or 0 if not
@@ -462,19 +400,15 @@ abstract contract BaseVault is
     /// @notice Pauses the vault
     /// @dev Precondition: Caller must have the PAUSER_ROLE
     /// @dev Precondition: Vault must not be paused
-    /// @dev Sets the timestamp when the vault was paused
     function pause() external onlyRole(Roles.PAUSER_ROLE) {
         _pause();
-        _baseVaultStorage().s_pausedAt = uint96(block.timestamp);
     }
 
     /// @notice Unpauses the vault
     /// @dev Precondition: Caller must have the UNPAUSER_ROLE
     /// @dev Precondition: Vault must be paused
-    /// @dev Deletes the timestamp when the vault was paused
     function unpause() external onlyRole(Roles.UNPAUSER_ROLE) {
         _unpause();
-        delete _baseVaultStorage().s_pausedAt;
     }
 
     /// @notice Sets the crosschain vaults
@@ -518,15 +452,6 @@ abstract contract BaseVault is
     /// @dev Emits the DefaultCcipGasLimitSet event
     function setDefaultCcipGasLimit(uint256 gasLimit) external virtual onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
         BaseVaultConfigLib.setDefaultCcipGasLimit(_baseVaultStorage(), gasLimit);
-    }
-
-    /// @notice Sets the emergency receiver
-    /// @param emergencyReceiver The address that receives USDC during emergency drain
-    /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
-    /// @dev Precondition: emergencyReceiver must not be the zero address
-    /// @dev Emits the EmergencyReceiverSet event
-    function setEmergencyReceiver(address emergencyReceiver) external virtual onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
-        BaseVaultConfigLib.setEmergencyReceiver(_baseVaultStorage(), emergencyReceiver);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -593,19 +518,6 @@ abstract contract BaseVault is
     /// @return defaultCcipGasLimit The default CCIP gas limit
     function getDefaultCcipGasLimit() external view returns (uint256 defaultCcipGasLimit) {
         defaultCcipGasLimit = _baseVaultStorage().s_defaultCcipGasLimit;
-    }
-
-    /// @notice Gets the emergency receiver
-    /// @return emergencyReceiver The address that receives the underlying asset during emergency drain
-    function getEmergencyReceiver() external view returns (address emergencyReceiver) {
-        emergencyReceiver = _baseVaultStorage().s_emergencyReceiver;
-    }
-
-    /// @notice Gets the timestamp when the vault was paused
-    /// @return pausedAt The timestamp when the vault was paused
-    /// @dev Returns 0 if the vault is not paused
-    function getPausedAt() external view returns (uint256 pausedAt) {
-        pausedAt = _baseVaultStorage().s_pausedAt;
     }
 
     /// @notice Returns the active strategy protocol adapter

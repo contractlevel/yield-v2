@@ -11,8 +11,6 @@ BaseVault_initialize
   │   │   └── it should revert with BaseVault__NoZeroAddress
   │   ├── when config operator is the zero address
   │   │   └── it should revert with BaseVault__NoZeroAddress
-  │   ├── when emergency receiver is the zero address
-  │   │   └── it should revert with BaseVault__NoZeroAddress
   │   ├── when upgrader is the zero address
   │   │   └── it should revert with BaseVault__NoZeroAddress
   │   ├── when initial default CCIP gas limit is zero
@@ -32,8 +30,6 @@ BaseVault_initialize
       ├── when unpauser is the zero address
       │   └── it should revert with BaseVault__NoZeroAddress
       ├── when config operator is the zero address
-      │   └── it should revert with BaseVault__NoZeroAddress
-      ├── when emergency receiver is the zero address
       │   └── it should revert with BaseVault__NoZeroAddress
       ├── when upgrader is the zero address
       │   └── it should revert with BaseVault__NoZeroAddress

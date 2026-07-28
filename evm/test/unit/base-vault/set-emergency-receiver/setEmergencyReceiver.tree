@@ -1,8 +1,0 @@
-BaseVault_setEmergencyReceiver
-├── when the caller does not have the CONFIG_OPERATOR_ROLE
-│   └── it should revert
-└── when the caller has the CONFIG_OPERATOR_ROLE
-    ├── when the emergency receiver is the zero address
-    │   └── it should revert with BaseVault__NoZeroAddress
-    └── when the emergency receiver is not the zero address
-        └── it should set the emergency receiver and emit EmergencyReceiverSet

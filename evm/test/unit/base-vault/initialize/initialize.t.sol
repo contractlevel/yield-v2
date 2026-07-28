@@ -30,7 +30,6 @@ abstract contract BaseVault_InitializeUnitTest is BaseUnitTest {
     function test_BaseVault_initialize_Success_SetsMutableState() external {
         BaseVault vault = _deployVault(_baseVaultInitParams());
 
-        assertEq(vault.getEmergencyReceiver(), i_emergencyReceiver);
         assertEq(vault.getDefaultCcipGasLimit(), DEFAULT_CCIP_GAS_LIMIT);
         assertEq(uint256(vault.getRecoveryMode()), uint256(Types.RecoveryMode.NONE));
         assertEq(vault.paused(), false);
@@ -76,15 +75,6 @@ abstract contract BaseVault_InitializeUnitTest is BaseUnitTest {
     function test_BaseVault_initialize_RevertWhen_ConfigOperatorIsZeroAddress() external {
         BaseVault.InitParams memory params = _baseVaultInitParams();
         params.configOperator = address(0);
-        address implementation = _deployImplementation();
-
-        vm.expectRevert(IBaseVault.BaseVault__NoZeroAddress.selector);
-        _deployProxy(implementation, params);
-    }
-
-    function test_BaseVault_initialize_RevertWhen_EmergencyReceiverIsZeroAddress() external {
-        BaseVault.InitParams memory params = _baseVaultInitParams();
-        params.emergencyReceiver = address(0);
         address implementation = _deployImplementation();
 
         vm.expectRevert(IBaseVault.BaseVault__NoZeroAddress.selector);

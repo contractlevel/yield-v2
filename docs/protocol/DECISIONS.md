@@ -41,7 +41,7 @@ This split is an implementation boundary, not a trust boundary: linked libraries
 
 While a vault is paused, it does not execute recovery, child epoch withdrawals, child rebalances, or inbound CCIP messages. These paths call strategy adapters, send CCIP messages, or process cross-chain state and must stop during incident containment.
 
-`completeRebalance` intentionally remains callable while paused because it performs only local finalization and does not call an adapter or CCIP router. The privileged `donate` and `emergencyDrain` functions remain explicit emergency exceptions.
+`completeRebalance` intentionally remains callable while paused because it performs only local finalization and does not call an adapter or CCIP router.
 
 This containment boundary can leave an epoch or rebalance in an intermediate cross-chain state. Operators must inspect the parent, child, recovery, and CCIP message states before resuming the affected operation. The break-glass procedure is documented in [OPERATIONS](../operator/OPERATIONS.md#paused-cross-chain-execution).
 
@@ -91,12 +91,10 @@ This design means liveness depends on CRE, CCIP, and operator monitoring. Accept
 
 Vault accounting is denominated in the configured underlying asset.
 
-Share price, TVL, epoch settlement, withdraw claims, fees, donations, and emergency drain behavior are all expressed in the underlying asset. Strategy adapters report underlying TVL through `getTVL()`, and `claimAsset` pays only the underlying asset.
+Share price, TVL, epoch settlement, withdraw claims, and fees are all expressed in the underlying asset. Strategy adapters report underlying TVL through `getTVL()`, and `claimAsset` pays only the underlying asset.
 
 Secondary protocol rewards are outside this accounting model. For Compound V3, COMP rewards may accrue to the `CompoundV3Adapter`, and a vault `REWARDS_OPERATOR_ROLE` holder can call `claimRewards(to)` to claim those rewards to a nonzero recipient. That hook is an operator custody/recovery mechanism, not a user distribution mechanism.
 
 The protocol does not currently decide whether claimed COMP is retained, sold, manually distributed, or routed into a future rewards distributor. Handling that on-chain would require additional reward-token accounting, distribution policy, and operational controls. The current design avoids that complexity and keeps user-facing yield calculations underlying-only.
 
 See [ACCESS_CONTROL_MATRIX - Protocol rewards claiming](../security/ACCESS_CONTROL_MATRIX.md#authority-matrix). If product requirements change to include secondary reward tokens in user yield, this design decision and related accounting invariants should be revisited.
-
-<!-- @review funds received from emergency drain are intended to be put back. add a known issue about bricking the recovery-->

@@ -23,9 +23,8 @@ IDs are stable. Once assigned, a KI-XXX identifier is never reused or renumbered
 Yieldcoin v2 relies on multiple privileged roles for protocol operation. Human-held privileged roles include:
 
 - **`DEFAULT_ADMIN_ROLE`** for local role administration (grant/revoke and admin-transfer acceptance via `AccessControlDefaultAdminRules`).
-- **`CONFIG_OPERATOR_ROLE`** for protocol configuration (vault/router/registry settings, adapter registration, treasury/emergency receiver, workflow metadata/selectors, token metadata/CCIP admin wiring).
+- **`CONFIG_OPERATOR_ROLE`** for protocol configuration (vault/router/registry settings, adapter registration, treasury, workflow metadata/selectors, token metadata/CCIP admin wiring).
 - **`PAUSER_ROLE` / `UNPAUSER_ROLE`** for pause controls across vaults, WorkflowRouter, and YieldcoinShare.
-- **`EMERGENCY_DRAINER_ROLE`** for paused-mode emergency asset drain (subject to delay guards).
 - **`LINK_OPERATOR_ROLE`** for LINK withdrawal from vaults.
 - **`POLICY_ENGINE_MANAGER_ROLE`** for replacing attached policy engines on policy-protected contracts.
 - **`COMPLIANCE_OPERATOR_ROLE`** for forced transfer and freeze/unfreeze functions on YieldcoinShare.
@@ -274,7 +273,7 @@ This means a pause interval can contribute to the next management fee collection
 
 The management fee is treated as an AUM-style calendar-time fee, not purely as a fee for uninterrupted user-facing availability. During a pause, capital may still remain deployed in a strategy and continue earning yield.
 
-The `ParentVault` can only observe its own pause state. It cannot reliably determine whether the full system was operational across ChildVaults, WorkflowRouters, underlying token transferability, strategy protocols, adapters, and cross-chain settlement. Subtracting only `ParentVault.s_pausedAt` intervals would create incomplete liveness accounting and could undercharge management fees while funds remain deployed and yield-bearing.
+The `ParentVault` can only observe its own pause state. It cannot reliably determine whether the full system was operational across ChildVaults, WorkflowRouters, underlying token transferability, strategy protocols, adapters, and cross-chain settlement. Subtracting only locally observed pause intervals would create incomplete liveness accounting and could undercharge management fees while funds remain deployed and yield-bearing.
 
 ### Mitigation
 
@@ -368,7 +367,7 @@ The strategy adapters report TVL from the active lending-market position:
 - `AaveV3Adapter` reads the adapter's aToken balance.
 - `AaveV4Adapter` reads the adapter's supplied assets from the Aave v4 Spoke.
 
-The supported lending protocols allow assets to be supplied on behalf of another account. A third party can therefore supply underlying asset directly into the market on behalf of the adapter, increasing the adapter's reported strategy balance without calling the vault's `donate()` function.
+The supported lending protocols allow assets to be supplied on behalf of another account. A third party can therefore supply underlying asset directly into the market on behalf of the adapter, increasing the adapter's reported strategy balance without interacting with the vault.
 
 Because the CRE epoch workflow reads TVL from the active strategy chain's `getTVL()` and submits that value to `ParentVault.closeEpoch(tvl)`, unsolicited on-behalf-of supplies can be included in the epoch settlement TVL.
 
@@ -395,7 +394,7 @@ The CRE/operator process should monitor active strategy TVL for unexpected jumps
 - expected strategy yield,
 - completed rebalances,
 - recovery state, or
-- authorized `donate()` operations.
+- known operator-funded supplies on behalf of the adapter.
 
 Unexpected TVL changes should be investigated before epoch close where operationally feasible.
 
@@ -418,7 +417,7 @@ The accepted failure mode is settlement distortion funded by the attacker's own 
 - Evidence appears that unsolicited on-behalf-of supplies can be profitably extracted without privileged role compromise.
 - CRE TVL monitoring is removed or becomes unable to detect abnormal strategy-balance jumps.
 - A new adapter is registered whose `getTVL()` can be inflated and later deflated by the same third party.
-- Rebalance or emergency-drain behavior changes such that unsolicited strategy balances are routinely swept into canonical accounting.
+- Rebalance behavior changes such that unsolicited strategy balances are routinely swept into canonical accounting.
 - Adapter-accounted protocol units become simple enough to implement and test without materially increasing strategy accounting risk.
 
 ---
@@ -478,7 +477,7 @@ The failure mode is an accepted fee-timing effect of epoch-batched withdrawal se
 
 ## KI-010 — Bootstrap price-per-share ignores residual TVL when total shares return to zero
 
-**Status:** Accepted — bounded to dust-level amounts, consistent with the existing `donate()` bootstrap-pricing tradeoff, and further mitigated operationally by a permanent admin seed deposit.
+**Status:** Accepted — bounded to dust-level amounts and further mitigated operationally by a permanent admin seed deposit.
 
 **Last reviewed:** 2026-07-10
 
@@ -503,7 +502,7 @@ At the epoch closing a full exit, the withdraw amount pulled from the strategy i
 
 The next epoch's depositor then mints shares at par against `_calculatePricePerShare`, which ignores that residual. Their shares end up backed by `residual + their own deposit`, so they receive the residual for free instead of it going to the exited shareholders.
 
-This is the same root-cause pattern already called out on `donate()` (`BaseVault.sol`): _"First-depositor captures full donation when `s_totalShares == 0` due to bootstrap pricing ignoring existing TVL."_ This entry extends that acknowledgment to the organic (non-`donate()`) case.
+The root cause is bootstrap pricing ignoring existing TVL when `s_totalShares == 0`, allowing the first depositor after a full reset to capture residual value.
 
 ### Why this is accepted, not mitigated
 

@@ -378,56 +378,6 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         eq(_after.actorUsdcBalance, _before.actorUsdcBalance + usdcWithdrawAmount, "claimAsset did not transfer USDC");
     }
 
-    /// @notice The donate() function is intended as an emergency recovery/recapitalization operation.
-    ///         The below handling demonstrates intended operational behavior.
-    ///         Malicious operator/admin control is acknowledged in ../docs/KNOWN_ISSUES.md and ../docs/THREAT_MODEL.md
-    function handler_emergencyDrainAndDonate() public {
-        BaseVault activeVault = _activeVault();
-        IERC20 usdc = IERC20(parent.vault.getAsset());
-        s_currentActor = i_donateOperator;
-
-        __before();
-
-        _setActiveStrategyWithdrawReturn(_before.tvl);
-
-        _changePrank(i_pauser);
-        activeVault.pause();
-
-        vm.warp(block.timestamp + 1 days);
-
-        uint256 receiverBalanceBefore = usdc.balanceOf(i_emergencyReceiver);
-
-        _changePrank(i_emergencyDrainer);
-        activeVault.emergencyDrain(true);
-
-        uint256 drainedAmount = usdc.balanceOf(i_emergencyReceiver) - receiverBalanceBefore;
-        lte(_before.vaultBalance, drainedAmount, "emergency drain did not recover vault balance");
-        uint256 donationAmount = drainedAmount - _before.vaultBalance;
-
-        if (_before.vaultBalance != 0) {
-            _changePrank(i_emergencyReceiver);
-            usdc.transfer(address(activeVault), _before.vaultBalance);
-        }
-
-        if (donationAmount != 0) {
-            _changePrank(i_emergencyReceiver);
-            usdc.transfer(i_donateOperator, donationAmount);
-
-            _changePrank(i_donateOperator);
-            activeVault.donate(donationAmount);
-        }
-
-        _changePrank(i_unpauser);
-        activeVault.unpause();
-
-        __after();
-
-        eq(_after.tvl, _before.tvl, "DONATE-001: emergency donation did not restore active strategy TVL");
-        eq(_after.totalShares, _before.totalShares, "DONATE-002: emergency donation minted shares");
-        eq(_after.epochNonce, _before.epochNonce, "DONATE-003: emergency donation changed epoch nonce");
-        eq(_after.vaultBalance, _before.vaultBalance, "emergency donation changed vault balance");
-    }
-
     /*//////////////////////////////////////////////////////////////
                              RECOVERY MODES
     //////////////////////////////////////////////////////////////*/

@@ -37,11 +37,9 @@ It is the source of truth for how authority should be named, assigned, implement
 | Epoch execution             | Vaults                                  | `WorkflowRouter` holding `EPOCH_OPERATOR_ROLE`                                    | Epoch execution (`closeEpoch`, `executeEpochWithdraw`)                                                  | Keep operational vault roles local; only user-facing functions should move through ACE           |
 | Rebalance execution         | Vaults                                  | `WorkflowRouter` holding `REBALANCE_OPERATOR_ROLE`                                | Rebalance execution (`initiateRebalance`, `completeRebalance`, `executeRebalance`)                      | Keep operational vault roles local; only user-facing functions should move through ACE           |
 | Vault recovery              | Vaults                                  | Public stored-state retry                                                         | Execute recovery from previously stored recovery state                                                  | Caller must not choose amount, strategy, destination, or recipient                               |
-| Vault recapitalization      | Vaults                                  | `DONATE_OPERATOR_ROLE`                                                            | Donate underlying asset into the active strategy without minting shares or creating claims              | Privileged recovery/recapitalization authority; distinct from `CONFIG_OPERATOR_ROLE`             |
 | Deposit dust cancellation   | `ParentVault`                           | `CANCEL_DEPOSIT_OPERATOR_ROLE`                                                     | Force-cancel a user's current-epoch deposit with `forceCancelDeposit(user)`                             | Narrow liveness authority for clearing dust deposits that could block `closeEpoch`               |
 | Protocol rewards claiming   | `CompoundV3Adapter`                     | `REWARDS_OPERATOR_ROLE` on the vault, checked via `IAccessControl(vault).hasRole` | Call `claimRewards(to)` to forward protocol rewards from the adapter to a recipient                     | Role is granted on the vault; adapter delegates the check rather than inheriting `AccessControl` |
-| Protocol config             | Vaults, routers, registry               | `CONFIG_OPERATOR_ROLE`                                                            | Set vault/router config, adapters, workflow metadata/selectors, supported protocols, emergency receiver | Explicit and narrow                                                                              |
-| Emergency receiver          | Vaults                                  | Configured receiver address                                                       | Receives underlying asset from `emergencyDrain`                                                         | Fund destination only; does not grant execution or configuration authority                       |
+| Protocol config             | Vaults, routers, registry               | `CONFIG_OPERATOR_ROLE`                                                            | Set vault/router config, adapters, workflow metadata/selectors, and supported protocols                 | Explicit and narrow                                                                              |
 | CCIP token admin            | `YieldcoinShare`                        | `CONFIG_OPERATOR_ROLE` actor through ACE RBAC                                     | Set Chainlink CCIP token admin identity                                                                 | `getCCIPAdmin()` returns stored CCIP admin state, never token `owner()`                          |
 | Upgrades                    | Vaults (UUPS)                           | `UPGRADER_ROLE`                                                                   | Upgrade implementation contracts via `_authorizeUpgrade`                                                | Granted at initialization; `YieldcoinShare` instead uses its OZ `owner()` as upgrade authority, see below |
 
@@ -58,10 +56,8 @@ It is the source of truth for how authority should be named, assigned, implement
 | Epoch (`closeEpoch`)                                 | `EPOCH_OPERATOR_ROLE` granted to `WorkflowRouter`                       |
 | Rebalance (`initiateRebalance`, `completeRebalance`) | `REBALANCE_OPERATOR_ROLE` granted to `WorkflowRouter`                   |
 | Recovery                                             | Public stored-state retry                                               |
-| `donate()`                                           | `DONATE_OPERATOR_ROLE`                                                  |
 | `forceCancelDeposit(user)`                           | `CANCEL_DEPOSIT_OPERATOR_ROLE`                                          |
 | `claimRewards()` (CompoundV3Adapter)                 | `REWARDS_OPERATOR_ROLE`                                                 |
-| Emergency drain                                      | `EMERGENCY_DRAINER_ROLE` executes; `CONFIG_OPERATOR_ROLE` sets receiver |
 | LINK withdrawal                                      | `LINK_OPERATOR_ROLE`                                                    |
 | `attachPolicyEngine`                                 | `POLICY_ENGINE_MANAGER_ROLE`                                            |
 | User deposit/withdraw/claim/cancel                   | ACE policy stack                                                        |
@@ -76,9 +72,7 @@ It is the source of truth for how authority should be named, assigned, implement
 | Epoch (`executeEpochWithdraw`)       | `EPOCH_OPERATOR_ROLE` granted to `WorkflowRouter`                       |
 | Rebalance (`executeRebalance`)       | `REBALANCE_OPERATOR_ROLE` granted to `WorkflowRouter`                   |
 | Recovery                             | Public stored-state retry                                               |
-| `donate()`                           | `DONATE_OPERATOR_ROLE`                                                  |
 | `claimRewards()` (CompoundV3Adapter) | `REWARDS_OPERATOR_ROLE`                                                 |
-| Emergency drain                      | `EMERGENCY_DRAINER_ROLE` executes; `CONFIG_OPERATOR_ROLE` sets receiver |
 | LINK withdrawal                      | `LINK_OPERATOR_ROLE`                                                    |
 
 ### WorkflowRouter

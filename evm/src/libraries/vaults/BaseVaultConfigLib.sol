@@ -24,9 +24,6 @@ library BaseVaultConfigLib {
     /// @notice Emitted when the default CCIP gas limit is set by a CONFIG_OPERATOR
     /// @param gasLimit The gas limit for the default CCIP send
     event DefaultCcipGasLimitSet(uint256 indexed gasLimit);
-    /// @notice Emitted when the emergency receiver is set by a CONFIG_OPERATOR
-    /// @param emergencyReceiver The address of the emergency receiver
-    event EmergencyReceiverSet(address indexed emergencyReceiver);
 
     /*//////////////////////////////////////////////////////////////
                                   CONFIG
@@ -61,14 +58,6 @@ library BaseVaultConfigLib {
     /// @dev Precondition: gasLimit must not be zero
     function setDefaultCcipGasLimit(BaseVaultStore.BaseVaultStorage storage $, uint256 gasLimit) public {
         _setDefaultCcipGasLimit($, gasLimit);
-    }
-
-    /// @notice Sets the emergency receiver.
-    /// @param $ BaseVault namespaced storage
-    /// @param emergencyReceiver The address that receives the underlying asset during emergency drain
-    /// @dev Precondition: emergencyReceiver must not be the zero address
-    function setEmergencyReceiver(BaseVaultStore.BaseVaultStorage storage $, address emergencyReceiver) public {
-        _setEmergencyReceiver($, emergencyReceiver);
     }
 
     /// @notice Sets the crosschain vaults.
@@ -114,15 +103,5 @@ library BaseVaultConfigLib {
         if (gasLimit == 0) revert IBaseVault.BaseVault__NoZeroAmount();
         $.s_defaultCcipGasLimit = gasLimit;
         emit DefaultCcipGasLimitSet(gasLimit);
-    }
-
-    /// @notice Sets the emergency receiver.
-    /// @param $ BaseVault namespaced storage
-    /// @param emergencyReceiver The address that receives the underlying asset during emergency drain
-    /// @dev Precondition: emergencyReceiver must not be the zero address
-    function _setEmergencyReceiver(BaseVaultStore.BaseVaultStorage storage $, address emergencyReceiver) internal {
-        if (emergencyReceiver == address(0)) revert IBaseVault.BaseVault__NoZeroAddress();
-        $.s_emergencyReceiver = emergencyReceiver;
-        emit EmergencyReceiverSet(emergencyReceiver);
     }
 }

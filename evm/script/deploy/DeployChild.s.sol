@@ -79,7 +79,6 @@ contract DeployChild is Script {
             pauser: networkConfig.roles.pauser,
             unpauser: networkConfig.roles.unpauser,
             configOperator: deployer,
-            emergencyReceiver: networkConfig.emergencyReceiver,
             initialDefaultCcipGasLimit: networkConfig.ccip.initialDefaultCcipGasLimit,
             upgrader: networkConfig.roles.upgrader
         });
@@ -137,9 +136,7 @@ contract DeployChild is Script {
         deploy.adapterRegistry.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
         deploy.childVaultProxy.grantRole(Roles.EPOCH_OPERATOR_ROLE, address(deploy.workflowRouter));
         deploy.childVaultProxy.grantRole(Roles.REBALANCE_OPERATOR_ROLE, address(deploy.workflowRouter));
-        deploy.childVaultProxy.grantRole(Roles.EMERGENCY_DRAINER_ROLE, networkConfig.roles.emergencyDrainer);
         deploy.childVaultProxy.grantRole(Roles.LINK_OPERATOR_ROLE, networkConfig.roles.linkOperator);
-        deploy.childVaultProxy.grantRole(Roles.DONATE_OPERATOR_ROLE, networkConfig.roles.donateOperator);
         deploy.childVaultProxy.grantRole(Roles.REWARDS_OPERATOR_ROLE, networkConfig.roles.rewardsOperator);
 
         deploy.childVaultProxy.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);

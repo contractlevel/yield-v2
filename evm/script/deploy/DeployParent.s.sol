@@ -54,10 +54,7 @@ import {YieldcoinShareFrozenAccountPolicy} from "../../src/modules/policies/Yiel
 ///      ParentVault.CONFIG_OPERATOR_ROLE: networkConfig.roles.configOperator
 ///      ParentVault.EPOCH_OPERATOR_ROLE: address(workflowRouter)
 ///      ParentVault.REBALANCE_OPERATOR_ROLE: address(workflowRouter)
-///      ParentVault.EMERGENCY_DRAINER_ROLE: networkConfig.roles.emergencyDrainer
-///      ParentVault emergency receiver: networkConfig.emergencyReceiver
 ///      ParentVault.LINK_OPERATOR_ROLE: networkConfig.roles.linkOperator
-///      ParentVault.DONATE_OPERATOR_ROLE: networkConfig.roles.donateOperator
 ///      ParentVault.REWARDS_OPERATOR_ROLE: networkConfig.roles.rewardsOperator
 ///      ParentVault.CANCEL_DEPOSIT_OPERATOR_ROLE: networkConfig.roles.cancelDepositOperator (granted directly in initialize)
 ///      ParentVault.POLICY_ENGINE_MANAGER_ROLE: networkConfig.roles.policy.engineManager
@@ -192,7 +189,6 @@ contract DeployParent is Script {
             pauser: networkConfig.roles.pauser,
             unpauser: networkConfig.roles.unpauser,
             configOperator: deployer,
-            emergencyReceiver: networkConfig.emergencyReceiver,
             initialDefaultCcipGasLimit: networkConfig.ccip.initialDefaultCcipGasLimit,
             upgrader: networkConfig.roles.upgrader
         });
@@ -321,9 +317,7 @@ contract DeployParent is Script {
         deploy.adapterRegistry.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
         deploy.parentVaultProxy.grantRole(Roles.EPOCH_OPERATOR_ROLE, address(deploy.workflowRouter));
         deploy.parentVaultProxy.grantRole(Roles.REBALANCE_OPERATOR_ROLE, address(deploy.workflowRouter));
-        deploy.parentVaultProxy.grantRole(Roles.EMERGENCY_DRAINER_ROLE, networkConfig.roles.emergencyDrainer);
         deploy.parentVaultProxy.grantRole(Roles.LINK_OPERATOR_ROLE, networkConfig.roles.linkOperator);
-        deploy.parentVaultProxy.grantRole(Roles.DONATE_OPERATOR_ROLE, networkConfig.roles.donateOperator);
         deploy.parentVaultProxy.grantRole(Roles.REWARDS_OPERATOR_ROLE, networkConfig.roles.rewardsOperator);
 
         deploy.parentVaultProxy.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);

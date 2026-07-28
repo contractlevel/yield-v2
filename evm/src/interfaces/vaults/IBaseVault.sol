@@ -17,9 +17,6 @@ interface IBaseVault is IPauseable {
     error BaseVault__NoZeroAddress();
     /// @dev Thrown when the zero chain selector is provided
     error BaseVault__NoZeroChainSelector();
-    /// @dev Thrown when the emergency drain delay has not been met
-    error BaseVault__EmergencyDrainDelayNotMet();
-
     /// @dev Thrown when an input array is empty
     error BaseVault__EmptyInput();
     /// @dev Thrown when the input array lengths do not match
@@ -131,13 +128,6 @@ interface IBaseVault is IPauseable {
     /// @param operator The address of the LINK operator
     /// @param amount The amount of LINK withdrawn
     event LinkWithdrawn(address indexed operator, uint256 indexed amount);
-    /// @notice Emitted when an emergency drain transfers the underlying asset to the emergency receiver
-    /// @param emergencyReceiver The address of the emergency receiver
-    /// @param amount The amount of asset drained
-    event EmergencyDrainExecuted(address indexed emergencyReceiver, uint256 indexed amount);
-    /// @notice Emitted when the emergency receiver is set by a CONFIG_OPERATOR
-    /// @param emergencyReceiver The address of the emergency receiver
-    event EmergencyReceiverSet(address indexed emergencyReceiver);
     /// @notice Emitted when failed rebalance deposit recovery state is stored
     /// @param rebalanceNonce The nonce of the failed rebalance deposit
     /// @param amount The amount of asset to retry depositing
@@ -145,32 +135,9 @@ interface IBaseVault is IPauseable {
     /// @notice Emitted when failed rebalance deposit recovery state is cleared
     /// @param rebalanceNonce The nonce of the recovered rebalance deposit
     event RebalanceDepositRecoveryCleared(uint256 indexed rebalanceNonce);
-    /// @notice Emitted when the underlying asset is donated to the active strategy without minting shares
-    /// @param donor The address that donated the underlying asset
-    /// @param amount The amount of asset donated
-    event Donation(address indexed donor, uint256 indexed amount);
-
-    /*//////////////////////////////////////////////////////////////
-                               DONATION
-    //////////////////////////////////////////////////////////////*/
-    /// @notice Donates the underlying asset to the active strategy without minting shares or creating a claim
-    /// @param amount The amount of asset to donate
-    /// @dev Precondition: Caller must have the DONATE_OPERATOR_ROLE
-    /// @dev Precondition: amount must not be zero
-    /// @dev Precondition: This vault must be on the active strategy chain
-    /// @dev Precondition: Deposit into the active strategy must succeed
-    function donate(uint256 amount) external;
-
     /*//////////////////////////////////////////////////////////////
                                RECOVERY
     //////////////////////////////////////////////////////////////*/
-    /// @notice Withdraws all underlying asset from the vault to the emergency receiver
-    /// @dev If the vault has the TVL, it will be withdrawn from the strategy and transferred to the emergency receiver
-    /// @param revertOnFailure Whether to revert if the withdraw from strategy fails
-    /// @dev Precondition: Caller must have the EMERGENCY_DRAINER_ROLE
-    /// @dev Precondition: Vault must have been paused for at least EMERGENCY_DRAIN_DELAY
-    function emergencyDrain(bool revertOnFailure) external;
-
     /// @notice Executes the active recovery mode, reverting if no recovery is pending
     /// @dev Precondition: a recovery mode must be active (not NONE)
     function executeRecovery() external;
@@ -201,13 +168,6 @@ interface IBaseVault is IPauseable {
     /// @dev Sets the default CCIP gas limit
     /// @dev Emits the DefaultCcipGasLimitSet event
     function setDefaultCcipGasLimit(uint256 gasLimit) external;
-    /// @notice Sets the emergency receiver
-    /// @param emergencyReceiver The address that receives the underlying asset during emergency drain
-    /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
-    /// @dev Precondition: emergencyReceiver must not be the zero address
-    /// @dev Emits the EmergencyReceiverSet event
-    function setEmergencyReceiver(address emergencyReceiver) external;
-
     /*//////////////////////////////////////////////////////////////
                             LINK OPERATOR
     //////////////////////////////////////////////////////////////*/
@@ -247,13 +207,6 @@ interface IBaseVault is IPauseable {
     /// @notice Gets the default CCIP gas limit
     /// @return defaultCcipGasLimit The default CCIP gas limit
     function getDefaultCcipGasLimit() external view returns (uint256 defaultCcipGasLimit);
-    /// @notice Gets the emergency receiver
-    /// @return emergencyReceiver The address that receives the underlying asset during emergency drain
-    function getEmergencyReceiver() external view returns (address emergencyReceiver);
-    /// @notice Gets the timestamp when the vault was paused
-    /// @return pausedAt The timestamp when the vault was paused
-    /// @dev Returns 0 if the vault is not paused
-    function getPausedAt() external view returns (uint256 pausedAt);
     /// @notice Returns the active strategy protocol adapter
     /// @return activeProtocolAdapter The address of the active strategy protocol adapter
     function getActiveProtocolAdapter() external view returns (address activeProtocolAdapter);

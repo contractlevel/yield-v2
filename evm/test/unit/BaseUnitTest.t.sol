@@ -97,8 +97,6 @@ abstract contract BaseUnitTest is BaseTest {
         s_childVault.grantRole(Roles.EPOCH_OPERATOR_ROLE, i_epochOperator);
         s_parentVault.grantRole(Roles.REBALANCE_OPERATOR_ROLE, i_rebalanceOperator);
         s_childVault.grantRole(Roles.REBALANCE_OPERATOR_ROLE, i_rebalanceOperator);
-        s_parentVault.grantRole(Roles.DONATE_OPERATOR_ROLE, i_donateOperator);
-        s_childVault.grantRole(Roles.DONATE_OPERATOR_ROLE, i_donateOperator);
 
         vm.label(address(s_parentVault), "ParentVault");
         vm.label(address(s_childVault), "ChildVault");
@@ -144,7 +142,6 @@ abstract contract BaseUnitTest is BaseTest {
             pauser: address(i_pauser),
             unpauser: address(i_unpauser),
             configOperator: address(i_configOperator),
-            emergencyReceiver: address(i_emergencyReceiver),
             initialDefaultCcipGasLimit: DEFAULT_CCIP_GAS_LIMIT,
             upgrader: address(i_upgrader)
         });
@@ -204,8 +201,10 @@ abstract contract BaseUnitTest is BaseTest {
     }
 
     function _setActiveAdapter(BaseVault vault, address adapter) internal {
+        Types.RecoveryMode recoveryModeBefore = vault.getRecoveryMode();
         stdstore.enable_packed_slots().target(address(vault)).sig("getActiveProtocolAdapter()").checked_write(adapter);
         assertEq(vault.getActiveProtocolAdapter(), adapter);
+        assertEq(uint256(vault.getRecoveryMode()), uint256(recoveryModeBefore));
     }
 
     function _setParentTotalShares(uint256 totalShares) internal {
@@ -245,9 +244,11 @@ abstract contract BaseUnitTest is BaseTest {
     }
 
     function _setParentRecoveryMode(Types.RecoveryMode mode) internal {
+        address activeAdapterBefore = s_parentVault.getActiveProtocolAdapter();
         stdstore.enable_packed_slots().target(address(s_parentVault)).sig("getRecoveryMode()")
             .checked_write(uint256(mode));
         assertEq(uint256(s_parentVault.getRecoveryMode()), uint256(mode));
+        assertEq(s_parentVault.getActiveProtocolAdapter(), activeAdapterBefore);
     }
 
     function _submitParentWithdraw(uint256 shareAmount) internal {

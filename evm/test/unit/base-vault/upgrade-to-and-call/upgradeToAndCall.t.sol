@@ -28,7 +28,6 @@ abstract contract BaseVault_UpgradeToAndCallUnitTest is BaseUnitTest {
 
     function test_BaseVault_upgradeToAndCall_Success_PreservesState() external {
         BaseVault proxy = _getProxy();
-        address emergencyReceiverBefore = proxy.getEmergencyReceiver();
         uint256 defaultCcipGasLimitBefore = proxy.getDefaultCcipGasLimit();
         bool hasPauserRole = proxy.hasRole(Roles.PAUSER_ROLE, i_pauser);
         bool hasUpgraderRole = proxy.hasRole(Roles.UPGRADER_ROLE, i_upgrader);
@@ -38,7 +37,6 @@ abstract contract BaseVault_UpgradeToAndCallUnitTest is BaseUnitTest {
         _changePrank(i_upgrader);
         proxy.upgradeToAndCall(newImpl, "");
 
-        assertEq(proxy.getEmergencyReceiver(), emergencyReceiverBefore);
         assertEq(proxy.getDefaultCcipGasLimit(), defaultCcipGasLimitBefore);
         assertEq(proxy.hasRole(Roles.PAUSER_ROLE, i_pauser), hasPauserRole);
         assertEq(proxy.hasRole(Roles.UPGRADER_ROLE, i_upgrader), hasUpgraderRole);

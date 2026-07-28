@@ -12,14 +12,7 @@ abstract contract BaseForkDeploymentTest is BaseForkTest {
         assertFalse(parent.vault.hasRole(Roles.CONFIG_OPERATOR_ROLE, parentForkDeployer));
         assertTrue(parent.vault.hasRole(Roles.EPOCH_OPERATOR_ROLE, address(parent.workflowRouter)));
         assertTrue(parent.vault.hasRole(Roles.REBALANCE_OPERATOR_ROLE, address(parent.workflowRouter)));
-        assertTrue(parent.vault.hasRole(Roles.EMERGENCY_DRAINER_ROLE, arbitrumConfig.roles.emergencyDrainer));
         assertTrue(parent.vault.hasRole(Roles.LINK_OPERATOR_ROLE, arbitrumConfig.roles.linkOperator));
-        assertTrue(parent.vault.hasRole(Roles.DONATE_OPERATOR_ROLE, arbitrumConfig.roles.donateOperator));
-        assertEq(
-            parent.vault.hasRole(Roles.DONATE_OPERATOR_ROLE, parentForkDeployer),
-            parentForkDeployer == arbitrumConfig.roles.donateOperator
-        );
-        assertEq(parent.vault.getEmergencyReceiver(), arbitrumConfig.emergencyReceiver);
         assertTrue(parent.vault.hasRole(Roles.PAUSER_ROLE, arbitrumConfig.roles.pauser));
         assertTrue(parent.vault.hasRole(Roles.UNPAUSER_ROLE, arbitrumConfig.roles.unpauser));
         assertTrue(parent.vault.hasRole(Roles.POLICY_ENGINE_MANAGER_ROLE, arbitrumConfig.roles.policy.engineManager));
@@ -90,14 +83,7 @@ abstract contract BaseForkDeploymentTest is BaseForkTest {
         assertFalse(forkChild.vault.hasRole(Roles.CONFIG_OPERATOR_ROLE, forkDeployer));
         assertTrue(forkChild.vault.hasRole(Roles.EPOCH_OPERATOR_ROLE, address(forkChild.workflowRouter)));
         assertTrue(forkChild.vault.hasRole(Roles.REBALANCE_OPERATOR_ROLE, address(forkChild.workflowRouter)));
-        assertTrue(forkChild.vault.hasRole(Roles.EMERGENCY_DRAINER_ROLE, config.roles.emergencyDrainer));
         assertTrue(forkChild.vault.hasRole(Roles.LINK_OPERATOR_ROLE, config.roles.linkOperator));
-        assertTrue(forkChild.vault.hasRole(Roles.DONATE_OPERATOR_ROLE, config.roles.donateOperator));
-        assertEq(
-            forkChild.vault.hasRole(Roles.DONATE_OPERATOR_ROLE, forkDeployer),
-            forkDeployer == config.roles.donateOperator
-        );
-        assertEq(forkChild.vault.getEmergencyReceiver(), config.emergencyReceiver);
         assertTrue(forkChild.vault.hasRole(Roles.PAUSER_ROLE, config.roles.pauser));
         assertTrue(forkChild.vault.hasRole(Roles.UNPAUSER_ROLE, config.roles.unpauser));
         assertTrue(forkChild.vault.hasRole(Roles.UPGRADER_ROLE, config.roles.upgrader));

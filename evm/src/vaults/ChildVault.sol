@@ -608,15 +608,6 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         BaseVaultConfigLib._setDefaultCcipGasLimit(_baseVaultStorage(), gasLimit);
     }
 
-    /// @inheritdoc IBaseVault
-    function setEmergencyReceiver(address emergencyReceiver)
-        external
-        override(BaseVault, IBaseVault)
-        onlyRole(Roles.CONFIG_OPERATOR_ROLE)
-    {
-        BaseVaultConfigLib._setEmergencyReceiver(_baseVaultStorage(), emergencyReceiver);
-    }
-
     /*//////////////////////////////////////////////////////////////
                                 OVERRIDE
     //////////////////////////////////////////////////////////////*/

@@ -19,10 +19,7 @@ contract BaseTest is Constants, Test {
     address internal immutable i_recipient2 = makeAddr("recipient2");
     address internal immutable i_configOperator = makeAddr("configOperator");
     address internal immutable i_rebalanceOperator = makeAddr("rebalanceOperator");
-    address internal immutable i_emergencyDrainer = makeAddr("emergencyDrainer");
-    address internal immutable i_emergencyReceiver = makeAddr("emergencyReceiver");
     address internal immutable i_linkOperator = makeAddr("linkOperator");
-    address internal immutable i_donateOperator = makeAddr("donateOperator");
     address internal immutable i_complianceOperator = makeAddr("complianceOperator");
     address internal immutable i_policyEngineManager = makeAddr("policyEngineManager");
     address internal immutable i_epochOperator = makeAddr("epochOperator");
@@ -64,10 +61,7 @@ contract BaseTest is Constants, Test {
         vm.label(i_recipient2, "Recipient2");
         vm.label(i_configOperator, "ConfigOperator");
         vm.label(i_rebalanceOperator, "RebalanceOperator");
-        vm.label(i_emergencyDrainer, "EmergencyDrainer");
-        vm.label(i_emergencyReceiver, "EmergencyReceiver");
         vm.label(i_linkOperator, "LinkOperator");
-        vm.label(i_donateOperator, "DonateOperator");
         vm.label(i_complianceOperator, "ComplianceOperator");
         vm.label(i_policyEngineManager, "PolicyEngineManager");
         vm.label(i_epochOperator, "EpochOperator");

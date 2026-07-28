@@ -14,7 +14,7 @@ For the full authority model, use [`ACCESS_CONTROL_MATRIX`](../security/ACCESS_C
   - [Workflow Router Configuration](#workflow-router-configuration)
   - [Pause Controls](#pause-controls)
   - [Adapter Registry Configuration](#adapter-registry-configuration)
-  - [Recapitalization and Emergency Functions](#recapitalization-and-emergency-functions)
+  - [Operational Functions](#operational-functions)
   - [Token and Policy Configuration](#token-and-policy-configuration)
   - [Policy Engine Replacement](#policy-engine-replacement)
   - [Rewards](#rewards)
@@ -31,11 +31,9 @@ For the full authority model, use [`ACCESS_CONTROL_MATRIX`](../security/ACCESS_C
 | Role or authority                 | Main responsibility                                                                                                                                    |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `DEFAULT_ADMIN_ROLE`              | Grant and revoke local roles. It should not be used for routine protocol operation.                                                                    |
-| `CONFIG_OPERATOR_ROLE`            | Maintain vault, router, registry, token metadata, CCIP, treasury, supported protocol, and emergency receiver configuration.                            |
+| `CONFIG_OPERATOR_ROLE`            | Maintain vault, router, registry, token metadata, CCIP, treasury, and supported protocol configuration.                                                |
 | `PAUSER_ROLE` / `UNPAUSER_ROLE`   | Pause and unpause vaults, router, and token where configured.                                                                                          |
 | `POLICY_ENGINE_MANAGER_ROLE`      | Replace the policy engine attached to policy-protected contracts.                                                                                      |
-| `DONATE_OPERATOR_ROLE`            | Recapitalize the active strategy by donating underlying asset without minting shares.                                                                  |
-| `EMERGENCY_DRAINER_ROLE`          | Drain underlying asset to the configured emergency receiver after pause delay conditions are met.                                                      |
 | `LINK_OPERATOR_ROLE`              | Withdraw unused LINK from vault contracts.                                                                                                             |
 | `REWARDS_OPERATOR_ROLE`           | Claim protocol rewards from supported adapters, currently Compound V3.                                                                                 |
 | `CANCEL_DEPOSIT_OPERATOR_ROLE`    | Force-cancel a stuck current-epoch deposit to preserve liveness.                                                                                       |
@@ -55,14 +53,13 @@ Vault configuration exists on both [`ParentVault`](../../evm/src/vaults/ParentVa
 | `setCrosschainVaults(chainSelectors, vaults)`   | `CONFIG_OPERATOR_ROLE` | Parent and child vaults | Registers the trusted vault address for each CCIP chain selector. Set a vault to `address(0)` to remove it. |
 | `setCcipGasLimit(chainSelector, gasLimit)`      | `CONFIG_OPERATOR_ROLE` | Parent and child vaults | Sets or clears a per-chain CCIP gas limit override. Use `0` to fall back to the default gas limit.          |
 | `setDefaultCcipGasLimit(gasLimit)`              | `CONFIG_OPERATOR_ROLE` | Parent and child vaults | Sets the default CCIP gas limit used when no per-chain override exists.                                     |
-| `setEmergencyReceiver(emergencyReceiver)`       | `CONFIG_OPERATOR_ROLE` | Parent and child vaults | Sets the address that receives underlying asset during `emergencyDrain`.                                    |
 | `setTreasury(treasury)`                         | `CONFIG_OPERATOR_ROLE` | Parent only             | Sets the treasury address for protocol fees.                                                                |
 | `setSupportedProtocol(protocolId, isSupported)` | `CONFIG_OPERATOR_ROLE` | Parent only             | Marks whether a strategy protocol is supported anywhere in the system.                                      |
 | `setInitialActiveProtocolAdapter(protocolId)`   | `DEFAULT_ADMIN_ROLE`   | Parent only             | One-time deployment action that sets the first active adapter after deployment and adapter registration.    |
 
 Before changing cross-chain vaults or gas limits, confirm there is no active rebalance, no epoch waiting on cross-chain execution, and no stored recovery that depends on the old route. Removing a cross-chain vault can orphan in-flight CCIP messages.
 
-Before changing the emergency receiver or treasury, verify the address is controlled by the intended custody process. The receiver only receives funds; it does not gain permission to execute any actions.
+Before changing the treasury, verify the address is controlled by the intended custody process.
 
 ## Workflow Router Configuration
 
@@ -86,7 +83,7 @@ Registering a workflow ID, or updating the metadata of one that is still registe
 | `pause()`   | `PAUSER_ROLE`   | Parent vault, child vault, WorkflowRouter, YieldcoinShare through ACE RBAC | Stops the protected contract path during incidents or controlled maintenance.    |
 | `unpause()` | `UNPAUSER_ROLE` | Parent vault, child vault, WorkflowRouter, YieldcoinShare through ACE RBAC | Resumes operation after the condition that required the pause has been resolved. |
 
-Vault pause state blocks normal user, epoch, and rebalance flows, but `donate(amount)` remains callable by `DONATE_OPERATOR_ROLE` while paused. `emergencyDrain(revertOnFailure)` requires the target vault to be paused.
+Vault pause state blocks normal user, epoch, rebalance, recovery, and inbound CCIP flows. `completeRebalance` remains callable because it performs only local finalization.
 
 ## Adapter Registry Configuration
 
@@ -98,20 +95,12 @@ Vault pause state blocks normal user, epoch, and rebalance flows, but `donate(am
 
 Before changing an adapter, verify the adapter is deployed for the correct vault and underlying asset. A vault can only activate an adapter that is registered for the requested protocol ID and bound to that vault.
 
-## Recapitalization and Emergency Functions
-
-These functions are high-risk operational tools. Use them only with explicit internal approval and a clear record of why the action is needed.
+## Operational Functions
 
 | Function                          | Role                           | Applies to              | Purpose                                                                                                                                                                                  |
 | --------------------------------- | ------------------------------ | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `donate(amount)`                  | `DONATE_OPERATOR_ROLE`         | Parent and child vaults | Transfers underlying asset from the caller and deposits it into the active strategy without minting shares or creating user claims.                                                      |
-| `emergencyDrain(revertOnFailure)` | `EMERGENCY_DRAINER_ROLE`       | Parent and child vaults | After the vault has been paused for at least one day, withdraws available strategy TVL when possible and transfers all vault-held underlying asset to the configured emergency receiver. |
 | `withdrawLink(amount)`            | `LINK_OPERATOR_ROLE`           | Parent and child vaults | Transfers LINK from the vault to the caller.                                                                                                                                             |
 | `forceCancelDeposit(user)`        | `CANCEL_DEPOSIT_OPERATOR_ROLE` | Parent only             | Cancels a user's current-epoch deposit and refunds the exact deposited asset amount.                                                                                                     |
-
-`donate(amount)` is intended for recapitalization and recovery. It is allowed while paused. Do not donate before the first deposit, because bootstrap pricing can let the first depositor capture the donation.
-
-`emergencyDrain(revertOnFailure)` requires the vault to be paused and the one-day emergency drain delay to have elapsed. The `CONFIG_OPERATOR_ROLE` sets the emergency receiver, while `EMERGENCY_DRAINER_ROLE` executes the drain. These powers should be held separately where practical.
 
 `withdrawLink(amount)` only moves LINK, not the underlying asset. LINK is still operationally important because CCIP sends depend on LINK balances.
 
