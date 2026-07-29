@@ -24,25 +24,33 @@ ChildVault_ccipReceive
 │   │   └── it should revert with BaseVault__InvalidSourceChainSelector
 │   ├── when there is no active adapter
 │   │   └── it should revert with BaseVault__NoActiveAdapter
+│   ├── when epoch nonce is not greater than the last handled nonce
+│   │   └── it should revert with ChildVault__InvalidEpochNonce
 │   ├── when active adapter deposit succeeds
 │   │   ├── it should deposit bridged USDC into the active adapter
+│   │   ├── it should update the last handled epoch nonce
 │   │   └── it should emit DepositToStrategySuccess
 │   └── when active adapter deposit reverts
 │       ├── it should emit DepositToStrategyFailure
 │       ├── it should store epoch deposit recovery
+│       ├── it should retain the handled epoch nonce
 │       ├── it should emit EpochDepositRecoveryStored
 │       └── when epoch deposit recovery already exists
 │           └── it should revert with BaseVault__RecoveryAlreadyPending
 └── when message is a rebalance
     ├── when the target protocol adapter is not registered
     │   └── it should revert with BaseVault__NoAdapterRegistered
+    ├── when rebalance nonce is not greater than the last handled nonce
+    │   └── it should revert with ChildVault__InvalidRebalanceNonce
     ├── when the target adapter deposit succeeds
     │   ├── it should deposit bridged USDC into the target adapter
     │   ├── it should set the active protocol adapter
+    │   ├── it should update the last handled rebalance nonce
     │   └── it should emit RebalanceDepositSuccess
     └── when the target adapter deposit reverts
         ├── it should emit RebalanceDepositFailure
         ├── it should store rebalance deposit recovery
+        ├── it should retain the handled rebalance nonce
         ├── it should emit RebalanceDepositRecoveryStored
         └── when rebalance deposit recovery already exists
             └── it should revert with BaseVault__RecoveryAlreadyPending

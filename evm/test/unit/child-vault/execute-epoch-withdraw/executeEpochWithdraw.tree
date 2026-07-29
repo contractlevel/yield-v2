@@ -9,14 +9,18 @@ ChildVault_executeEpochWithdraw
 │   └── it should revert with BaseVault__RecoveryAlreadyPending
 ├── when amount is zero
 │   └── it should revert with BaseVault__NoZeroAmount
+├── when epoch nonce is not greater than the last handled nonce
+│   └── it should revert with ChildVault__InvalidEpochNonce
 ├── when withdraw succeeds
 │   ├── it should withdraw from the active adapter
+│   ├── it should update the last handled epoch nonce
 │   ├── it should bridge withdrawn USDC to Parent
 │   └── when ccipSend reverts
 │       └── it should store CCIP send recovery
 ├── when withdraw adapter reverts
 │   ├── it should emit failure without bridging
 │   ├── it should store epoch withdraw recovery
+│   ├── it should retain the handled epoch nonce
 │   ├── it should emit EpochWithdrawRecoveryStored
 │   └── when epoch withdraw recovery already exists
 │       └── it should revert with BaseVault__RecoveryAlreadyPending

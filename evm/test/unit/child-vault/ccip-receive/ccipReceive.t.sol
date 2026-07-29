@@ -159,6 +159,47 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
     function test_ChildVault_ccipReceive_Deposit_RevertWhen_NoActiveAdapter() public {
         vm.expectRevert(IBaseVault.BaseVault__NoActiveAdapter.selector);
         s_childVault.ccipReceive(_depositMessage(EPOCH_NONCE));
+
+        assertEq(s_childVault.getLastHandledEpochNonce(), 0);
+    }
+
+    function test_ChildVault_ccipReceive_Deposit_RevertWhen_EpochNonceIsZero() public {
+        _setChildActiveAdapter(address(s_mockProtocolAdapter));
+
+        vm.expectRevert(abi.encodeWithSelector(IChildVault.ChildVault__InvalidEpochNonce.selector, 0, 0));
+        s_childVault.ccipReceive(_depositMessage(0));
+    }
+
+    function test_ChildVault_ccipReceive_Deposit_RevertWhen_EpochNonceWasAlreadyHandled() public {
+        _setChildActiveAdapter(address(s_mockProtocolAdapter));
+        s_childVault.ccipReceive(_depositMessage(EPOCH_NONCE));
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IChildVault.ChildVault__InvalidEpochNonce.selector, EPOCH_NONCE, EPOCH_NONCE)
+        );
+        s_childVault.ccipReceive(_depositMessage(EPOCH_NONCE));
+    }
+
+    function test_ChildVault_ccipReceive_Deposit_RevertWhen_EpochNonceIsOlderThanLastHandled() public {
+        uint256 laterNonce = EPOCH_NONCE + 2;
+        _setChildActiveAdapter(address(s_mockProtocolAdapter));
+        s_childVault.ccipReceive(_depositMessage(laterNonce));
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IChildVault.ChildVault__InvalidEpochNonce.selector, EPOCH_NONCE, laterNonce)
+        );
+        s_childVault.ccipReceive(_depositMessage(EPOCH_NONCE));
+    }
+
+    function test_ChildVault_ccipReceive_Deposit_RevertWhen_NonceWasHandledByCcipThenReplayedByCre() public {
+        _setChildActiveAdapter(address(s_mockProtocolAdapter));
+        s_childVault.ccipReceive(_depositMessage(EPOCH_NONCE));
+
+        _changePrank(i_epochOperator);
+        vm.expectRevert(
+            abi.encodeWithSelector(IChildVault.ChildVault__InvalidEpochNonce.selector, EPOCH_NONCE, EPOCH_NONCE)
+        );
+        s_childVault.executeEpochWithdraw(EPOCH_NONCE, BRIDGED_AMOUNT);
     }
 
     function test_ChildVault_ccipReceive_Deposit_Success_DepositsIntoActiveAdapter() public {
@@ -168,6 +209,7 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
 
         assertEq(s_mockProtocolAdapter.getDepositCalls(), 1);
         assertEq(s_mockProtocolAdapter.getLastDepositAmount(), BRIDGED_AMOUNT);
+        assertEq(s_childVault.getLastHandledEpochNonce(), EPOCH_NONCE);
     }
 
     function test_ChildVault_ccipReceive_Deposit_Success_EmitsDepositToStrategySuccess() public {
@@ -207,6 +249,7 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
         assertEq(recovery.epochNonce, EPOCH_NONCE);
         assertEq(recovery.amount, BRIDGED_AMOUNT);
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.EPOCH_DEPOSIT);
+        assertEq(s_childVault.getLastHandledEpochNonce(), EPOCH_NONCE);
     }
 
     function test_ChildVault_ccipReceive_Deposit_WhenActiveAdapterDepositReverts_EmitsEpochDepositRecoveryStored()
@@ -243,6 +286,46 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
 
         vm.expectRevert(abi.encodeWithSelector(IBaseVault.BaseVault__NoAdapterRegistered.selector, unknownProtocolId));
         s_childVault.ccipReceive(_rebalanceMessage(REBALANCE_NONCE, unknownProtocolId));
+
+        assertEq(s_childVault.getLastHandledRebalanceNonce(), 0);
+    }
+
+    function test_ChildVault_ccipReceive_Rebalance_RevertWhen_RebalanceNonceIsZero() public {
+        vm.expectRevert(abi.encodeWithSelector(IChildVault.ChildVault__InvalidRebalanceNonce.selector, 0, 0));
+        s_childVault.ccipReceive(_rebalanceMessage(0, AAVE_V3_PROTOCOL_ID));
+    }
+
+    function test_ChildVault_ccipReceive_Rebalance_RevertWhen_RebalanceNonceWasAlreadyHandled() public {
+        s_childVault.ccipReceive(_rebalanceMessage(REBALANCE_NONCE, AAVE_V3_PROTOCOL_ID));
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IChildVault.ChildVault__InvalidRebalanceNonce.selector, REBALANCE_NONCE, REBALANCE_NONCE
+            )
+        );
+        s_childVault.ccipReceive(_rebalanceMessage(REBALANCE_NONCE, AAVE_V3_PROTOCOL_ID));
+    }
+
+    function test_ChildVault_ccipReceive_Rebalance_RevertWhen_RebalanceNonceIsOlderThanLastHandled() public {
+        uint256 laterNonce = REBALANCE_NONCE + 2;
+        s_childVault.ccipReceive(_rebalanceMessage(laterNonce, AAVE_V3_PROTOCOL_ID));
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IChildVault.ChildVault__InvalidRebalanceNonce.selector, REBALANCE_NONCE, laterNonce)
+        );
+        s_childVault.ccipReceive(_rebalanceMessage(REBALANCE_NONCE, AAVE_V3_PROTOCOL_ID));
+    }
+
+    function test_ChildVault_ccipReceive_Rebalance_RevertWhen_NonceWasHandledByCcipThenReplayedByCre() public {
+        s_childVault.ccipReceive(_rebalanceMessage(REBALANCE_NONCE, AAVE_V3_PROTOCOL_ID));
+
+        _changePrank(i_rebalanceOperator);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IChildVault.ChildVault__InvalidRebalanceNonce.selector, REBALANCE_NONCE, REBALANCE_NONCE
+            )
+        );
+        s_childVault.executeRebalance(REBALANCE_NONCE, _strategy(AAVE_V3_PROTOCOL_ID, CHILD_CHAIN_SELECTOR));
     }
 
     function test_ChildVault_ccipReceive_Rebalance_Success_DepositsIntoTargetAdapter() public {
@@ -250,6 +333,7 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
 
         assertEq(s_mockProtocolAdapter.getDepositCalls(), 1);
         assertEq(s_mockProtocolAdapter.getLastDepositAmount(), BRIDGED_AMOUNT);
+        assertEq(s_childVault.getLastHandledRebalanceNonce(), REBALANCE_NONCE);
     }
 
     function test_ChildVault_ccipReceive_Rebalance_Success_WhenSourceIsRegisteredChildChain() public {
@@ -311,6 +395,7 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
         assertEq(recovery.rebalanceNonce, REBALANCE_NONCE);
         assertEq(recovery.amount, BRIDGED_AMOUNT);
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.REBALANCE_DEPOSIT);
+        assertEq(s_childVault.getLastHandledRebalanceNonce(), REBALANCE_NONCE);
     }
 
     function test_ChildVault_ccipReceive_Rebalance_WhenTargetAdapterDepositReverts_EmitsRebalanceDepositRecoveryStored()

@@ -67,6 +67,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @dev Precondition: the amount of token receive must be more than 0
     /// @dev Precondition: the received tx type must be supported: EPOCH_NET_DEPOSIT or REBALANCE
     /// @dev Precondition: EPOCH_NET_DEPOSIT messages must originate from the parent chain
+    /// @dev Precondition: the decoded nonce must be greater than the last nonce of its type handled by this child vault
     /// @dev Precondition: the contract must not be paused
     function _ccipReceive(Client.Any2EVMMessage memory message)
         internal
@@ -76,6 +77,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         onlyAllowedSender(abi.decode(message.sender, (address)), message.sourceChainSelector)
     {
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
+        ChildVaultStorage storage $ = _childVaultStorage();
         _requireNoRecovery($_baseVault);
         uint256 receivedAmount = BaseVaultCcipLib._validateReceivedTokenAndGetAmount(message, i_asset);
 
@@ -87,11 +89,13 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
                 revert BaseVault__InvalidSourceChainSelector(message.sourceChainSelector, i_parentChainSelector);
             }
             uint256 epochNonce = abi.decode(data, (uint256));
-            _handleCCIPDeposit(epochNonce, receivedAmount, $_baseVault);
+            _handleEpochNonce($, epochNonce);
+            _handleCCIPDeposit($, $_baseVault, epochNonce, receivedAmount);
         }
         /// @dev see BaseVault::_handleCCIPRebalance
         else if (ccipTxType == Types.CcipTx.REBALANCE) {
             (uint256 rebalanceNonce, bytes32 protocolId) = abi.decode(data, (uint256, bytes32));
+            _handleRebalanceNonce($, rebalanceNonce);
             _handleCCIPRebalance(rebalanceNonce, protocolId, receivedAmount);
         } else {
             revert BaseVault__InvalidTxType(ccipTxType);
@@ -107,17 +111,23 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     }
 
     /// @notice Handles the CCIP EPOCH_NET_DEPOSIT deposit message
+    /// @param $ ChildVaultStorage for nonce and recovery state
+    /// @param $_baseVault BaseVaultStorage for the active strategy adapter and recovery state
     /// @param epochNonce The nonce of the epoch
     /// @param amount The amount of asset that was bridged to deposit into the active strategy on this child chain
-    /// @param $_baseVault BaseVaultStorage for the active strategy adapter and recovery state
     /// @dev Only reachable on a ChildVault: the ParentVault sends a CCIP deposit to the active strategy chain
     ///      when an epoch's net flow is positive (more deposits than withdraws).
-    function _handleCCIPDeposit(uint256 epochNonce, uint256 amount, BaseVaultStorage storage $_baseVault) internal {
+    function _handleCCIPDeposit(
+        ChildVaultStorage storage $,
+        BaseVaultStorage storage $_baseVault,
+        uint256 epochNonce,
+        uint256 amount
+    ) internal {
         bool success = _executeDeposit(amount, false, $_baseVault.s_activeProtocolAdapter);
         if (success) {
             emit DepositToStrategySuccess(epochNonce, amount);
         } else {
-            _storeEpochDepositRecovery($_baseVault, epochNonce, amount);
+            _storeEpochDepositRecovery($, $_baseVault, epochNonce, amount);
             emit DepositToStrategyFailure(epochNonce, amount);
         }
     }
@@ -190,6 +200,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @dev This is called by the WorkflowRouter when net flow is negative (more withdraws than deposits).
     /// @dev Precondition: Caller must have the EPOCH_OPERATOR_ROLE
     /// @dev Precondition: the contract must not be paused
+    /// @dev Precondition: epochNonce must be greater than the last epoch nonce handled by this child vault
     function executeEpochWithdraw(uint256 epochNonce, uint256 amount)
         external
         nonReentrant
@@ -197,8 +208,10 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         onlyRole(Roles.EPOCH_OPERATOR_ROLE)
     {
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
+        ChildVaultStorage storage $ = _childVaultStorage();
         _requireNoRecovery($_baseVault);
         _revertIfZeroAmount(amount);
+        _handleEpochNonce($, epochNonce);
 
         (bool success, uint256 amountOut) = _executeWithdraw(amount, false, $_baseVault.s_activeProtocolAdapter);
         if (success) {
@@ -206,7 +219,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
             emit WithdrawFromStrategySuccess(epochNonce, amountOut);
             _ccipSend(amountOut, i_parentChainSelector, Types.CcipTx.EPOCH_NET_WITHDRAW, epochNonce, bytes32(0));
         } else {
-            _storeEpochWithdrawRecovery($_baseVault, epochNonce, amount);
+            _storeEpochWithdrawRecovery($, $_baseVault, epochNonce, amount);
             emit WithdrawFromStrategyFailure(epochNonce, amount);
         }
     }
@@ -220,6 +233,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     ///      performs the equivalent withdraw-then-rebalance steps synchronously in the same call instead of via
     ///      this CRE-triggered function.
     /// @dev Precondition: caller must have the REBALANCE_OPERATOR_ROLE
+    /// @dev Precondition: rebalanceNonce must be greater than the last rebalance nonce handled by this child vault
     /// @dev Precondition: call must not be reentered
     /// @dev Precondition: there must be no existent recovery mode
     /// @dev Precondition: the contract must not be paused
@@ -230,11 +244,13 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         onlyRole(Roles.REBALANCE_OPERATOR_ROLE)
     {
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
+        ChildVaultStorage storage $ = _childVaultStorage();
         _requireNoRecovery($_baseVault);
+        _handleRebalanceNonce($, rebalanceNonce);
 
         (bool success,) = _executeRebalance(rebalanceNonce, newStrategy);
         if (!success) {
-            _storeRebalanceWithdrawRecovery($_baseVault, rebalanceNonce, newStrategy);
+            _storeRebalanceWithdrawRecovery($, $_baseVault, rebalanceNonce, newStrategy);
         }
     }
 
@@ -335,16 +351,20 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     // --- EPOCH DEPOSIT RECOVERY --- //
 
     /// @notice Stores recovery state for a failed epoch deposit
+    /// @param $ ChildVaultStorage
     /// @param $_baseVault BaseVaultStorage
     /// @param epochNonce The epoch nonce of the failed deposit
     /// @param amount The amount of asset to retry depositing
     /// @dev amount is already checked non-zero upstream, by `_ccipReceive`'s call to `_validateReceivedTokenAndGetAmount`
     /// @dev No recovery state must currently exist - already enforced by the sole caller, `_ccipReceive`,
     ///      which checks `_requireNoRecovery` before this is reached, with no recovery-mutating call in between.
-    function _storeEpochDepositRecovery(BaseVaultStorage storage $_baseVault, uint256 epochNonce, uint256 amount)
-        internal
-    {
-        _childVaultStorage().s_epochDepositRecovery = Types.EpochRecovery({epochNonce: epochNonce, amount: amount});
+    function _storeEpochDepositRecovery(
+        ChildVaultStorage storage $,
+        BaseVaultStorage storage $_baseVault,
+        uint256 epochNonce,
+        uint256 amount
+    ) internal {
+        $.s_epochDepositRecovery = Types.EpochRecovery({epochNonce: epochNonce, amount: amount});
         $_baseVault.s_recoveryMode = Types.RecoveryMode.EPOCH_DEPOSIT;
         emit EpochDepositRecoveryStored(epochNonce, amount);
     }
@@ -379,16 +399,20 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     // --- EPOCH WITHDRAW RECOVERY --- //
 
     /// @notice Stores recovery state for a failed epoch withdraw
+    /// @param $ ChildVaultStorage
     /// @param $_baseVault BaseVaultStorage
     /// @param epochNonce The epoch nonce of the failed withdraw
     /// @param amount The amount of asset to retry withdrawing
     /// @dev amount is already checked non-zero upstream, by `executeEpochWithdraw`'s call to `_revertIfZeroAmount`
     /// @dev No recovery state must currently exist - already enforced by the sole caller, `executeEpochWithdraw`,
     ///      which checks `_requireNoRecovery` before this is reached, with no recovery-mutating call in between.
-    function _storeEpochWithdrawRecovery(BaseVaultStorage storage $_baseVault, uint256 epochNonce, uint256 amount)
-        internal
-    {
-        _childVaultStorage().s_epochWithdrawRecovery = Types.EpochRecovery({epochNonce: epochNonce, amount: amount});
+    function _storeEpochWithdrawRecovery(
+        ChildVaultStorage storage $,
+        BaseVaultStorage storage $_baseVault,
+        uint256 epochNonce,
+        uint256 amount
+    ) internal {
+        $.s_epochWithdrawRecovery = Types.EpochRecovery({epochNonce: epochNonce, amount: amount});
         $_baseVault.s_recoveryMode = Types.RecoveryMode.EPOCH_WITHDRAW;
         emit EpochWithdrawRecoveryStored(epochNonce, amount);
     }
@@ -427,6 +451,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     // --- REBALANCE WITHDRAW RECOVERY --- //
 
     /// @notice Stores recovery state for a failed rebalance withdraw
+    /// @param $ ChildVaultStorage
     /// @param $_baseVault BaseVaultStorage
     /// @param rebalanceNonce The rebalance nonce of the failed withdraw
     /// @param strategy The target strategy to continue the rebalance into after withdraw succeeds
@@ -434,13 +459,14 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @dev No recovery state must currently exist - already enforced by the sole caller, `executeRebalance`,
     ///      which checks `_requireNoRecovery` before this is reached, with no recovery-mutating call in between.
     function _storeRebalanceWithdrawRecovery(
+        ChildVaultStorage storage $,
         BaseVaultStorage storage $_baseVault,
         uint256 rebalanceNonce,
         Types.Strategy memory strategy
     ) internal {
         //slither-disable-next-line incorrect-equality
         if (strategy.chainSelector == 0) revert ChildVault__InvalidRecoveryStrategy();
-        _childVaultStorage().s_rebalanceWithdrawRecovery =
+        $.s_rebalanceWithdrawRecovery =
             Types.RebalanceWithdrawRecovery({rebalanceNonce: rebalanceNonce, strategy: strategy});
         $_baseVault.s_recoveryMode = Types.RecoveryMode.REBALANCE_WITHDRAW;
         emit RebalanceWithdrawRecoveryStored(rebalanceNonce, strategy.protocolId, strategy.chainSelector);
@@ -501,11 +527,11 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         bytes32 protocolId
     ) internal {
         _childVaultStorage().s_ccipSendRecovery = Types.CcipSendRecovery({
-            ccipTxType: ccipTxType,
             amount: bridgeAmount,
-            destinationChainSelector: destinationChainSelector,
             nonce: nonce,
-            protocolId: protocolId
+            protocolId: protocolId,
+            destinationChainSelector: destinationChainSelector,
+            ccipTxType: ccipTxType
         });
         $_baseVault.s_recoveryMode = Types.RecoveryMode.CCIP_SEND;
         emit CcipSendRecoveryStored(ccipTxType, destinationChainSelector, bridgeAmount);
@@ -546,12 +572,51 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     }
 
     /*//////////////////////////////////////////////////////////////
+                            NONCE HANDLING
+    //////////////////////////////////////////////////////////////*/
+    /// @notice Validates and stores an epoch nonce as handled by this child vault
+    /// @param $ ChildVaultStorage for handled nonces
+    /// @param epochNonce The epoch nonce to handle
+    /// @dev Reverts unless epochNonce is greater than the last handled epoch nonce
+    function _handleEpochNonce(ChildVaultStorage storage $, uint256 epochNonce) internal {
+        uint256 lastHandledNonce = $.s_lastHandledEpochNonce;
+        if (epochNonce <= lastHandledNonce) {
+            revert ChildVault__InvalidEpochNonce(epochNonce, lastHandledNonce);
+        }
+        $.s_lastHandledEpochNonce = epochNonce;
+    }
+
+    /// @notice Validates and stores a rebalance nonce as handled by this child vault
+    /// @param $ ChildVaultStorage for handled nonces
+    /// @param rebalanceNonce The rebalance nonce to handle
+    /// @dev Reverts unless rebalanceNonce is greater than the last handled rebalance nonce
+    function _handleRebalanceNonce(ChildVaultStorage storage $, uint256 rebalanceNonce) internal {
+        uint256 lastHandledNonce = $.s_lastHandledRebalanceNonce;
+        if (rebalanceNonce <= lastHandledNonce) {
+            revert ChildVault__InvalidRebalanceNonce(rebalanceNonce, lastHandledNonce);
+        }
+        $.s_lastHandledRebalanceNonce = rebalanceNonce;
+    }
+
+    /*//////////////////////////////////////////////////////////////
                                  GETTER
     //////////////////////////////////////////////////////////////*/
     /// @notice Gets the CCIP selector for the parent chain
     /// @return parentChainSelector The CCIP selector for the parent chain
     function getParentChainSelector() external view returns (uint64 parentChainSelector) {
         parentChainSelector = i_parentChainSelector;
+    }
+
+    /// @notice Gets the highest epoch nonce handled by this child vault
+    /// @return lastHandledEpochNonce The highest handled epoch nonce
+    function getLastHandledEpochNonce() external view returns (uint256 lastHandledEpochNonce) {
+        lastHandledEpochNonce = _childVaultStorage().s_lastHandledEpochNonce;
+    }
+
+    /// @notice Gets the highest rebalance nonce handled by this child vault
+    /// @return lastHandledRebalanceNonce The highest handled rebalance nonce
+    function getLastHandledRebalanceNonce() external view returns (uint256 lastHandledRebalanceNonce) {
+        lastHandledRebalanceNonce = _childVaultStorage().s_lastHandledRebalanceNonce;
     }
 
     /// @notice Gets failed epoch deposit recovery state

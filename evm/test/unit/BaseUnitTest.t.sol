@@ -193,7 +193,8 @@ abstract contract BaseUnitTest is BaseTest {
     }
 
     function _setChildCcipSendRecoveryAmount(uint256 amount) internal {
-        stdstore.target(address(s_childVault)).sig("getCcipSendRecovery()").depth(1).checked_write(amount);
+        stdstore.enable_packed_slots().target(address(s_childVault)).sig("getCcipSendRecovery()").depth(0)
+            .checked_write(amount);
     }
 
     function _clearParentActiveAdapter() internal {

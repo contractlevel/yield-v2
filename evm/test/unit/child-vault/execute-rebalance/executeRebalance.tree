@@ -5,6 +5,8 @@ ChildVault_executeRebalance
   │   └── it should revert
   ├── when recovery exists
   │   └── it should revert with BaseVault__RecoveryAlreadyPending
+  ├── when rebalance nonce is not greater than the last handled nonce
+  │   └── it should revert with ChildVault__InvalidRebalanceNonce
   ├── when withdraw from the active adapter fails
   │   ├── when adapter reverts
   │   │   ├── it should emit failure without bridging
@@ -20,6 +22,7 @@ ChildVault_executeRebalance
   │   ├── when the target protocol adapter is not registered
   │   │   └── it should revert with BaseVault__NoAdapterRegistered
   │   ├── it should emit ActiveProtocolAdapterSet
+  │   ├── it should update the last handled rebalance nonce
   │   ├── when target deposit adapter reverts
   │   │   ├── it should emit RebalanceDepositFailure
   │   │   ├── it should store rebalance deposit recovery

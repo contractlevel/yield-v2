@@ -17,6 +17,7 @@ ChildVault_executeRecovery
 │   ├── WithdrawsFromActiveAdapter ✓
 │   ├── BridgesToParent ✓
 │   ├── ClearsRecoveryState ✓
+│   ├── PreservesHandledNonceAndRejectsOriginalCreActionReplay ✓
 │   ├── EmitsWithdrawFromStrategySuccess ✓
 │   └── EmitsEpochWithdrawRecoveryCleared ✓
 ├── REBALANCE_DEPOSIT
@@ -33,6 +34,7 @@ ChildVault_executeRecovery
 │   ├── WithdrawsFromActiveAdapter ✓
 │   ├── BridgesToTargetChild ✓
 │   ├── ClearsRecoveryState ✓
+│   ├── PreservesHandledNonceAndRejectsOriginalCreActionReplay ✓
 │   ├── EmitsRebalanceWithdrawSuccess ✓
 │   └── EmitsRebalanceWithdrawRecoveryCleared ✓
 └── CCIP_SEND

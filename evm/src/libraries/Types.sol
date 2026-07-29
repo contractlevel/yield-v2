@@ -79,17 +79,17 @@ library Types {
     }
 
     /// @notice Recovery state for failed ChildVault CCIP send operations
-    /// @param ccipTxType The CCIP transaction type to replay
     /// @param amount The amount of asset to bridge
-    /// @param destinationChainSelector The CCIP selector of the destination chain
     /// @param nonce The epoch nonce (EPOCH_NET_DEPOSIT/EPOCH_NET_WITHDRAW) or rebalance nonce (REBALANCE) to replay
     /// @param protocolId The target strategy protocol id to rebalance into; only meaningful when ccipTxType is REBALANCE
+    /// @param destinationChainSelector The CCIP selector of the destination chain
+    /// @param ccipTxType The CCIP transaction type to replay
     struct CcipSendRecovery {
-        CcipTx ccipTxType;
         uint256 amount;
-        uint64 destinationChainSelector;
         uint256 nonce;
         bytes32 protocolId;
+        uint64 destinationChainSelector;
+        CcipTx ccipTxType;
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -8,9 +8,11 @@ import {Types} from "../libraries/Types.sol";
 /// @notice ERC-7201 storage for ChildVault mutable state.
 abstract contract ChildVaultStore {
     /// @custom:storage-location erc7201:yieldcoin.storage.ChildVault
-    /// @notice Namespaced storage for ChildVault mutable state: recovery data for the four
-    /// ChildVault-specific operations that can fail and need to be retried. Only one of these
-    /// (as selected by BaseVaultStorage.s_recoveryMode) is ever populated at a time.
+    /// @notice Namespaced storage for ChildVault mutable state: action replay protection and recovery
+    /// data for the four ChildVault-specific operations that can fail and need to be retried. Only
+    /// one recovery struct (as selected by BaseVaultStorage.s_recoveryMode) is ever populated at a time.
+    /// @param s_lastHandledEpochNonce Highest epoch nonce accepted by this child vault.
+    /// @param s_lastHandledRebalanceNonce Highest rebalance nonce accepted by this child vault.
     /// @param s_rebalanceWithdrawRecovery Recovery data for a failed rebalance withdraw from the
     /// active protocol adapter - the rebalance nonce and the target strategy to continue the
     /// rebalance into once the withdraw is retried and succeeds.
@@ -25,6 +27,8 @@ abstract contract ChildVaultStore {
     /// net-deposit/withdraw or rebalance) - the CCIP tx type to replay, amount, destination chain
     /// selector, epoch/rebalance nonce, and (for rebalance sends) the target protocol ID.
     struct ChildVaultStorage {
+        uint256 s_lastHandledEpochNonce;
+        uint256 s_lastHandledRebalanceNonce;
         Types.RebalanceWithdrawRecovery s_rebalanceWithdrawRecovery;
         Types.EpochRecovery s_epochDepositRecovery;
         Types.EpochRecovery s_epochWithdrawRecovery;

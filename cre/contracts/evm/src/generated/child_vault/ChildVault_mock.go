@@ -38,6 +38,8 @@ type ChildVaultMock struct {
 	GetDefaultCcipGasLimit        func() (*big.Int, error)
 	GetEpochDepositRecovery       func() (TypesEpochRecovery, error)
 	GetEpochWithdrawRecovery      func() (TypesEpochRecovery, error)
+	GetLastHandledEpochNonce      func() (*big.Int, error)
+	GetLastHandledRebalanceNonce  func() (*big.Int, error)
 	GetLink                       func() (common.Address, error)
 	GetParentChainSelector        func() (uint64, error)
 	GetRebalanceDepositRecovery   func() (TypesRebalanceDepositRecovery, error)
@@ -275,6 +277,26 @@ func NewChildVaultMock(address common.Address, clientMock *evmmock.ClientCapabil
 				return nil, err
 			}
 			return abi.Methods["getEpochWithdrawRecovery"].Outputs.Pack(result)
+		},
+		string(abi.Methods["getLastHandledEpochNonce"].ID[:4]): func(payload []byte) ([]byte, error) {
+			if mock.GetLastHandledEpochNonce == nil {
+				return nil, errors.New("getLastHandledEpochNonce method not mocked")
+			}
+			result, err := mock.GetLastHandledEpochNonce()
+			if err != nil {
+				return nil, err
+			}
+			return abi.Methods["getLastHandledEpochNonce"].Outputs.Pack(result)
+		},
+		string(abi.Methods["getLastHandledRebalanceNonce"].ID[:4]): func(payload []byte) ([]byte, error) {
+			if mock.GetLastHandledRebalanceNonce == nil {
+				return nil, errors.New("getLastHandledRebalanceNonce method not mocked")
+			}
+			result, err := mock.GetLastHandledRebalanceNonce()
+			if err != nil {
+				return nil, err
+			}
+			return abi.Methods["getLastHandledRebalanceNonce"].Outputs.Pack(result)
 		},
 		string(abi.Methods["getLink"].ID[:4]): func(payload []byte) ([]byte, error) {
 			if mock.GetLink == nil {

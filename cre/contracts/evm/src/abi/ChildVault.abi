@@ -375,19 +375,9 @@
         "internalType": "struct Types.CcipSendRecovery",
         "components": [
           {
-            "name": "ccipTxType",
-            "type": "uint8",
-            "internalType": "enum Types.CcipTx"
-          },
-          {
             "name": "amount",
             "type": "uint256",
             "internalType": "uint256"
-          },
-          {
-            "name": "destinationChainSelector",
-            "type": "uint64",
-            "internalType": "uint64"
           },
           {
             "name": "nonce",
@@ -398,6 +388,16 @@
             "name": "protocolId",
             "type": "bytes32",
             "internalType": "bytes32"
+          },
+          {
+            "name": "destinationChainSelector",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "ccipTxType",
+            "type": "uint8",
+            "internalType": "enum Types.CcipTx"
           }
         ]
       }
@@ -495,6 +495,32 @@
         "name": "link",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getLastHandledEpochNonce",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "lastHandledEpochNonce",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getLastHandledRebalanceNonce",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "lastHandledRebalanceNonce",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -2005,8 +2031,40 @@
   },
   {
     "type": "error",
+    "name": "ChildVault__InvalidEpochNonce",
+    "inputs": [
+      {
+        "name": "providedNonce",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "lastHandledNonce",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "ChildVault__InvalidParentChainSelector",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ChildVault__InvalidRebalanceNonce",
+    "inputs": [
+      {
+        "name": "providedNonce",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "lastHandledNonce",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
   },
   {
     "type": "error",

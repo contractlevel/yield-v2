@@ -14,7 +14,7 @@ contract ChildVaultRecoveryInternalsHarness is ChildVault {
     {}
 
     function exposed_storeRebalanceWithdrawRecovery(uint256 rebalanceNonce, Types.Strategy memory strategy) external {
-        _storeRebalanceWithdrawRecovery(_baseVaultStorage(), rebalanceNonce, strategy);
+        _storeRebalanceWithdrawRecovery(_childVaultStorage(), _baseVaultStorage(), rebalanceNonce, strategy);
     }
 }
 

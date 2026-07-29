@@ -15,6 +15,14 @@ interface IChildVault is IBaseVault {
     error ChildVault__InvalidRecoveryStrategy();
     /// @dev Thrown when the parent chain selector is invalid for this child vault
     error ChildVault__InvalidParentChainSelector();
+    /// @dev Thrown when an epoch nonce is not greater than the last nonce handled by this child vault
+    /// @param providedNonce The epoch nonce supplied to the child vault
+    /// @param lastHandledNonce The highest epoch nonce previously handled by this child vault
+    error ChildVault__InvalidEpochNonce(uint256 providedNonce, uint256 lastHandledNonce);
+    /// @dev Thrown when a rebalance nonce is not greater than the last nonce handled by this child vault
+    /// @param providedNonce The rebalance nonce supplied to the child vault
+    /// @param lastHandledNonce The highest rebalance nonce previously handled by this child vault
+    error ChildVault__InvalidRebalanceNonce(uint256 providedNonce, uint256 lastHandledNonce);
     /// @dev Thrown when an external self-call helper is called by any address other than this contract
     error ChildVault__OnlySelf();
 
@@ -89,12 +97,14 @@ interface IChildVault is IBaseVault {
     /// @param epochNonce The nonce of the epoch
     /// @param amount The amount of asset to withdraw from the active strategy
     /// @dev Precondition: caller must have the EPOCH_OPERATOR_ROLE
+    /// @dev Precondition: epochNonce must be greater than the last epoch nonce handled by this child vault
     function executeEpochWithdraw(uint256 epochNonce, uint256 amount) external;
 
     /// @notice Withdraws the entire TVL from the active strategy adapter and sends it to the new strategy
     /// @param rebalanceNonce The nonce of the rebalance
     /// @param newStrategy The new strategy to rebalance to
     /// @dev Precondition: caller must have the REBALANCE_OPERATOR_ROLE
+    /// @dev Precondition: rebalanceNonce must be greater than the last rebalance nonce handled by this child vault
     /// @dev Precondition: there must be no existent recovery mode
     /// @dev Precondition: if the withdraw from the active strategy fails, newStrategy's chain selector must not be zero
     ///      (enforced when storing rebalance withdraw recovery state, so it can be retried later)
@@ -106,6 +116,14 @@ interface IChildVault is IBaseVault {
     /// @notice Gets the CCIP selector for the parent chain
     /// @return parentChainSelector The CCIP selector for the parent chain
     function getParentChainSelector() external view returns (uint64 parentChainSelector);
+
+    /// @notice Gets the highest epoch nonce handled by this child vault
+    /// @return lastHandledEpochNonce The highest handled epoch nonce
+    function getLastHandledEpochNonce() external view returns (uint256 lastHandledEpochNonce);
+
+    /// @notice Gets the highest rebalance nonce handled by this child vault
+    /// @return lastHandledRebalanceNonce The highest handled rebalance nonce
+    function getLastHandledRebalanceNonce() external view returns (uint256 lastHandledRebalanceNonce);
 
     /// @notice Gets failed epoch deposit recovery state
     /// @return recovery The stored epoch deposit recovery state

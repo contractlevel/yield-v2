@@ -18,6 +18,8 @@ contract ChildVault_InitializeUnitTest is BaseUnitTest {
         Types.RebalanceWithdrawRecovery memory rebalanceWithdrawRecovery = childVault.getRebalanceWithdrawRecovery();
         Types.CcipSendRecovery memory ccipSendRecovery = childVault.getCcipSendRecovery();
 
+        assertEq(childVault.getLastHandledEpochNonce(), 0);
+        assertEq(childVault.getLastHandledRebalanceNonce(), 0);
         assertEq(epochDepositRecovery.epochNonce, 0);
         assertEq(epochDepositRecovery.amount, 0);
         assertEq(epochWithdrawRecovery.epochNonce, 0);

@@ -4,6 +4,7 @@ pragma solidity 0.8.34;
 import {BaseUnitTest, Vm} from "../../BaseUnitTest.t.sol";
 
 import {IBaseVault} from "../../../../src/interfaces/vaults/IBaseVault.sol";
+import {IChildVault} from "../../../../src/interfaces/vaults/IChildVault.sol";
 import {MockProtocolAdapter} from "../../../mocks/MockProtocolAdapter.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
 
@@ -47,11 +48,56 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
         s_childVault.executeRebalance(REBALANCE_NONCE + 1, _remoteChildStrategy());
     }
 
+    function test_ChildVault_executeRebalance_RevertWhen_RebalanceNonceIsZero() public {
+        vm.expectRevert(abi.encodeWithSelector(IChildVault.ChildVault__InvalidRebalanceNonce.selector, 0, 0));
+        s_childVault.executeRebalance(0, _sameChildStrategy());
+    }
+
+    function test_ChildVault_executeRebalance_RevertWhen_RebalanceNonceWasAlreadyHandled() public {
+        _executeSameChildRebalance();
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IChildVault.ChildVault__InvalidRebalanceNonce.selector, REBALANCE_NONCE, REBALANCE_NONCE
+            )
+        );
+        s_childVault.executeRebalance(REBALANCE_NONCE, _sameChildStrategy());
+    }
+
+    function test_ChildVault_executeRebalance_RevertWhen_RebalanceNonceIsOlderThanLastHandled() public {
+        uint256 laterNonce = REBALANCE_NONCE + 2;
+        s_childVault.executeRebalance(laterNonce, _sameChildStrategy());
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IChildVault.ChildVault__InvalidRebalanceNonce.selector, REBALANCE_NONCE, laterNonce)
+        );
+        s_childVault.executeRebalance(REBALANCE_NONCE, _sameChildStrategy());
+    }
+
+    function test_ChildVault_executeRebalance_RevertWhen_NonceWasHandledByCreThenReplayedByCcip() public {
+        _executeSameChildRebalance();
+        _setChildCrosschainVault(PARENT_CHAIN_SELECTOR, address(s_parentVault));
+
+        _changePrank(address(s_mockCcipRouter));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IChildVault.ChildVault__InvalidRebalanceNonce.selector, REBALANCE_NONCE, REBALANCE_NONCE
+            )
+        );
+        s_childVault.ccipReceive(
+            _rebalanceMessage(
+                PARENT_CHAIN_SELECTOR, address(s_parentVault), REBALANCE_NONCE, AAVE_V3_PROTOCOL_ID, REBALANCE_AMOUNT
+            )
+        );
+    }
+
     function test_ChildVault_executeRebalance_SameChild_RevertWhen_TargetProtocolAdapterIsNotRegistered() public {
         bytes32 unknownProtocolId = keccak256("unknown-protocol");
 
         vm.expectRevert(abi.encodeWithSelector(IBaseVault.BaseVault__NoAdapterRegistered.selector, unknownProtocolId));
         s_childVault.executeRebalance(REBALANCE_NONCE, _strategy(unknownProtocolId, CHILD_CHAIN_SELECTOR));
+
+        assertEq(s_childVault.getLastHandledRebalanceNonce(), 0);
     }
 
     function test_ChildVault_executeRebalance_SameChild_WithdrawsFromAdapter() public {
@@ -59,6 +105,7 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
 
         assertEq(s_mockProtocolAdapter.getWithdrawCalls(), 1);
         assertEq(s_mockProtocolAdapter.getLastWithdrawAmount(), type(uint256).max);
+        assertEq(s_childVault.getLastHandledRebalanceNonce(), REBALANCE_NONCE);
     }
 
     function test_ChildVault_executeRebalance_SameChild_DepositsIntoTargetAdapter() public {
@@ -134,6 +181,7 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
         assertEq(recovery.nonce, REBALANCE_NONCE);
         assertEq(recovery.protocolId, AAVE_V4_PROTOCOL_ID);
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.CCIP_SEND);
+        assertEq(s_childVault.getLastHandledRebalanceNonce(), REBALANCE_NONCE);
     }
 
     function test_ChildVault_executeRebalance_RemoteChild_ClearsActiveProtocolAdapter() public {
@@ -180,6 +228,8 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
 
         vm.expectRevert(IBaseVault.BaseVault__NoZeroAmount.selector);
         s_childVault.executeRebalance(REBALANCE_NONCE, _remoteChildStrategy());
+
+        assertEq(s_childVault.getLastHandledRebalanceNonce(), 0);
     }
 
     function test_ChildVault_executeRebalance_WhenWithdrawReturnsFalse_StoresRebalanceWithdrawRecovery() public {
@@ -192,6 +242,7 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
         assertEq(recovery.strategy.protocolId, AAVE_V4_PROTOCOL_ID);
         assertEq(recovery.strategy.chainSelector, REMOTE_CHILD_CHAIN_SELECTOR);
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.REBALANCE_WITHDRAW);
+        assertEq(s_childVault.getLastHandledRebalanceNonce(), REBALANCE_NONCE);
     }
 
     function test_ChildVault_executeRebalance_WhenRebalanceWithdrawRecoveryAlreadyExists_Reverts() public {
@@ -234,6 +285,7 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
         assertEq(recovery.rebalanceNonce, REBALANCE_NONCE);
         assertEq(recovery.amount, REBALANCE_AMOUNT);
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.REBALANCE_DEPOSIT);
+        assertEq(s_childVault.getLastHandledRebalanceNonce(), REBALANCE_NONCE);
     }
 
     function test_ChildVault_executeRebalance_WhenSameChildDepositAdapterReverts_EmitsRebalanceDepositRecoveryStored()

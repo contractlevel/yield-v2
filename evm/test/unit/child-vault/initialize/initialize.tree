@@ -1,3 +1,4 @@
 ChildVault_initialize
   └── when initialization succeeds
-      └── it should set child vault state
+      ├── it should initialize handled CRE nonces to zero
+      └── it should set child vault recovery state

@@ -4,6 +4,7 @@ pragma solidity 0.8.34;
 import {BaseUnitTest, Vm} from "../../BaseUnitTest.t.sol";
 
 import {IBaseVault} from "../../../../src/interfaces/vaults/IBaseVault.sol";
+import {IChildVault} from "../../../../src/interfaces/vaults/IChildVault.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
 
 import {Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
@@ -181,6 +182,17 @@ contract ChildVault_ExecuteRecovery_EpochWithdraw_UnitTest is BaseUnitTest {
         assertEq(recovery.epochNonce, 0);
         assertEq(recovery.amount, 0);
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.NONE);
+    }
+
+    function test_ChildVault_executeRecovery_EPOCH_WITHDRAW_DoesNotAllowOriginalCreActionToBeReplayed() public {
+        s_childVault.executeRecovery();
+
+        assertEq(s_childVault.getLastHandledEpochNonce(), EPOCH_NONCE);
+        _changePrank(i_epochOperator);
+        vm.expectRevert(
+            abi.encodeWithSelector(IChildVault.ChildVault__InvalidEpochNonce.selector, EPOCH_NONCE, EPOCH_NONCE)
+        );
+        s_childVault.executeEpochWithdraw(EPOCH_NONCE, WITHDRAW_AMOUNT);
     }
 
     function test_ChildVault_executeRecovery_EPOCH_WITHDRAW_EmitsWithdrawFromStrategySuccess() public {
@@ -367,6 +379,19 @@ contract ChildVault_ExecuteRecovery_RebalanceWithdraw_UnitTest is BaseUnitTest {
         assertEq(recovery.strategy.protocolId, bytes32(0));
         assertEq(recovery.strategy.chainSelector, 0);
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.NONE);
+    }
+
+    function test_ChildVault_executeRecovery_REBALANCE_WITHDRAW_DoesNotAllowOriginalCreActionToBeReplayed() public {
+        s_childVault.executeRecovery();
+
+        assertEq(s_childVault.getLastHandledRebalanceNonce(), REBALANCE_NONCE);
+        _changePrank(i_rebalanceOperator);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IChildVault.ChildVault__InvalidRebalanceNonce.selector, REBALANCE_NONCE, REBALANCE_NONCE
+            )
+        );
+        s_childVault.executeRebalance(REBALANCE_NONCE, _remoteChildStrategy());
     }
 
     function test_ChildVault_executeRecovery_REBALANCE_WITHDRAW_EmitsRebalanceWithdrawSuccess() public {

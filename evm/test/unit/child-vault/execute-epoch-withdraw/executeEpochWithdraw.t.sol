@@ -4,6 +4,7 @@ pragma solidity 0.8.34;
 import {BaseUnitTest, Vm} from "../../BaseUnitTest.t.sol";
 
 import {IBaseVault} from "../../../../src/interfaces/vaults/IBaseVault.sol";
+import {IChildVault} from "../../../../src/interfaces/vaults/IChildVault.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
 
 contract ChildVault_ExecuteEpochWithdrawUnitTest is BaseUnitTest {
@@ -39,6 +40,8 @@ contract ChildVault_ExecuteEpochWithdrawUnitTest is BaseUnitTest {
 
         vm.expectRevert(IBaseVault.BaseVault__NoActiveAdapter.selector);
         s_childVault.executeEpochWithdraw(EPOCH_NONCE, WITHDRAW_AMOUNT);
+
+        assertEq(s_childVault.getLastHandledEpochNonce(), 0);
     }
 
     function test_ChildVault_executeEpochWithdraw_RevertWhen_RecoveryExists() public {
@@ -52,6 +55,50 @@ contract ChildVault_ExecuteEpochWithdrawUnitTest is BaseUnitTest {
     function test_ChildVault_executeEpochWithdraw_RevertWhen_AmountIsZero() public {
         vm.expectRevert(IBaseVault.BaseVault__NoZeroAmount.selector);
         s_childVault.executeEpochWithdraw(EPOCH_NONCE, 0);
+
+        assertEq(s_childVault.getLastHandledEpochNonce(), 0);
+    }
+
+    function test_ChildVault_executeEpochWithdraw_RevertWhen_EpochNonceIsZero() public {
+        vm.expectRevert(abi.encodeWithSelector(IChildVault.ChildVault__InvalidEpochNonce.selector, 0, 0));
+        s_childVault.executeEpochWithdraw(0, WITHDRAW_AMOUNT);
+    }
+
+    function test_ChildVault_executeEpochWithdraw_RevertWhen_EpochNonceWasAlreadyHandled() public {
+        s_childVault.executeEpochWithdraw(EPOCH_NONCE, WITHDRAW_AMOUNT);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IChildVault.ChildVault__InvalidEpochNonce.selector, EPOCH_NONCE, EPOCH_NONCE)
+        );
+        s_childVault.executeEpochWithdraw(EPOCH_NONCE, WITHDRAW_AMOUNT);
+    }
+
+    function test_ChildVault_executeEpochWithdraw_RevertWhen_EpochNonceIsOlderThanLastHandled() public {
+        uint256 laterNonce = EPOCH_NONCE + 2;
+        s_childVault.executeEpochWithdraw(laterNonce, WITHDRAW_AMOUNT);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IChildVault.ChildVault__InvalidEpochNonce.selector, EPOCH_NONCE, laterNonce)
+        );
+        s_childVault.executeEpochWithdraw(EPOCH_NONCE, WITHDRAW_AMOUNT);
+    }
+
+    function test_ChildVault_executeEpochWithdraw_RevertWhen_NonceWasHandledByCreThenReplayedByCcip() public {
+        s_childVault.executeEpochWithdraw(EPOCH_NONCE, WITHDRAW_AMOUNT);
+
+        _changePrank(address(s_mockCcipRouter));
+        vm.expectRevert(
+            abi.encodeWithSelector(IChildVault.ChildVault__InvalidEpochNonce.selector, EPOCH_NONCE, EPOCH_NONCE)
+        );
+        s_childVault.ccipReceive(
+            _message(
+                PARENT_CHAIN_SELECTOR,
+                address(s_parentVault),
+                Types.CcipTx.EPOCH_NET_DEPOSIT,
+                abi.encode(EPOCH_NONCE),
+                WITHDRAW_AMOUNT
+            )
+        );
     }
 
     function test_ChildVault_executeEpochWithdraw_Success_WithdrawsFromAdapter() public {
@@ -59,6 +106,7 @@ contract ChildVault_ExecuteEpochWithdrawUnitTest is BaseUnitTest {
 
         assertEq(s_mockProtocolAdapter.getWithdrawCalls(), 1);
         assertEq(s_mockProtocolAdapter.getLastWithdrawAmount(), WITHDRAW_AMOUNT);
+        assertEq(s_childVault.getLastHandledEpochNonce(), EPOCH_NONCE);
     }
 
     function test_ChildVault_executeEpochWithdraw_Success_BridgesToParent() public {
@@ -100,6 +148,7 @@ contract ChildVault_ExecuteEpochWithdrawUnitTest is BaseUnitTest {
         assertEq(recovery.nonce, EPOCH_NONCE);
         assertEq(recovery.protocolId, bytes32(0));
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.CCIP_SEND);
+        assertEq(s_childVault.getLastHandledEpochNonce(), EPOCH_NONCE);
     }
 
     function test_ChildVault_executeEpochWithdraw_WhenAdapterReverts_EmitsFailureWithoutBridging() public {
@@ -142,6 +191,7 @@ contract ChildVault_ExecuteEpochWithdrawUnitTest is BaseUnitTest {
         assertEq(recovery.epochNonce, EPOCH_NONCE);
         assertEq(recovery.amount, WITHDRAW_AMOUNT);
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.EPOCH_WITHDRAW);
+        assertEq(s_childVault.getLastHandledEpochNonce(), EPOCH_NONCE);
     }
 
     function test_ChildVault_executeEpochWithdraw_WhenEpochWithdrawRecoveryAlreadyExists_Reverts() public {
