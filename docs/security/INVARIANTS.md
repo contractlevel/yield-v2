@@ -2,37 +2,45 @@
 
 ## Purpose
 
-This document is the canonical invariant catalogue for the Yieldcoin v2 EVM contracts in `evm/src/`.
+This document is the canonical invariant catalogue for the Yieldcoin v2 EVM
+contracts in `evm/src/`. The contracts are authoritative when other
+documentation is stale.
 
-Each property defines behavior the system must preserve, the boundary where it must hold, and the intended verification method. Future tests should reference these IDs directly in test names, assertion labels, or failure messages.
-
-<!-- Existing path documentation is useful background, but must not override the contracts when it is stale. -->
+Each property states the behavior to preserve, the boundary where it holds, and
+the intended verification method. Tests should reference these IDs in test
+names, assertion labels, or failure messages.
 
 ## Methodology
 
-Invariants must hold at transaction boundaries after successful calls.
+Invariants hold at transaction boundaries after successful top-level calls.
+Failed transactions preserve prior state through EVM atomicity and do not
+violate invariants. A caught downstream failure may return successfully while
+committing typed recovery state and a handled ChildVault nonce; those committed
+states are covered explicitly below.
 
-Failed transactions do not violate invariants. "No user can ever cause a revert" is a liveness or UX property, not a safety invariant for this document.
+Mid-execution state is not asserted. Functions with intentional transient state
+include `closeEpoch`, rebalance lifecycle flows, inbound CCIP handlers, and
+recovery execution.
 
-Mid-execution state is not asserted. Functions known to have transient inconsistency include `closeEpoch`, rebalance lifecycle flows, and inbound CCIP handlers.
+Properties must hold under any sequence of valid external calls, including
+reordering and reentrancy attempts, subject to the documented environmental
+assumptions.
 
-Invariants are evaluated only between top-level handler calls, not between internal calls within a single transaction.
-
-Invariants must hold under any sequence of valid external calls, including reordering and reentrancy attempts.
-
-Use this fixed test type vocabulary:
+Use this verification vocabulary:
 
 | Type            | Meaning                                                                                                  |
 | --------------- | -------------------------------------------------------------------------------------------------------- |
-| `invariant`     | Holds globally and is asserted by Foundry's invariant runner between successful top-level handler calls. |
-| `postcondition` | Holds immediately after a specific function returns and is asserted in that function's handler.          |
-| `unit`          | Crafted deterministic unit test.                                                                         |
-| `fv`            | Formal verification only.                                                                                |
-| `manual`        | Auditor or operator review, not automated.                                                               |
+| `invariant`     | Holds globally between successful top-level calls and should be checked by a stateful invariant runner. |
+| `postcondition` | Holds immediately after a specific function succeeds.                                                   |
+| `unit`          | Deterministic test for an exact branch, authorization rule, or revert.                                  |
+| `integration`   | Multi-contract, cross-chain, workflow, deployment, or upgrade test.                                     |
+| `fv`            | Formal verification.                                                                                    |
+| `manual`        | Auditor, operator, or release-process review.                                                           |
 
-Status values such as `implemented: Foundry + Medusa + Recon-fuzzer` mean the property is encoded in the current Chimera suite and has passed local Foundry and Medusa fuzz campaigns and Recon-fuzzer runs. This is fuzzing evidence, not a proof. `partial: Foundry + Medusa + Recon-fuzzer` means the implemented suite covers the core state transition or accounting effect, but one or more clauses of the catalogue statement remain represented indirectly, deferred to unit tests, or reserved for later formal verification. Properties that require exhaustive reasoning, arithmetic bounds, or larger state-space guarantees may additionally be verified with Certora later.
-
-`implemented: Certora` means one or more dedicated Certora rules/invariants named with the property ID (e.g. `EPOCH_003_closeEpoch_RevertWhen_RebalanceInProgress`) verify the property — grep the specs for the ID to find them. `implemented: Certora (per-function rules)` means the property is covered collectively by per-function unit rules that each serve their own function's verification (e.g. every setter's `*_RevertWhen_CallerDoesNotHaveCONFIG_OPERATOR_ROLE` rule); no single rule carries the property ID because no single rule is dedicated to it.
+Runtime coverage is marked `revalidation pending` throughout this rewrite.
+Foundry, Medusa, and Recon coverage will be remapped during the invariant-suite
+reconciliation phase. Certora is entirely deferred and no current Certora label
+is evidence for this catalogue.
 
 Use these ID prefixes:
 
@@ -43,224 +51,293 @@ Use these ID prefixes:
 | `CFG-*`     | Configuration safety.                                              |
 | `AC-*`      | Access control.                                                    |
 | `PAUSE-*`   | Pause behavior.                                                    |
-| `EPOCH-*`   | Epoch lifecycle, accounting, and solvency.                         |
-| `SHARE-*`   | Share and fee accounting.                                          |
-| `FEE-*`     | Fee-specific accounting.                                           |
-| `REBAL-*`   | Rebalance lifecycle.                                               |
-| `CCIP-*`    | CCIP behavior.                                                     |
-| `REC-*`     | Recovery behavior.                                                 |
+| `EPOCH-*`   | Epoch lifecycle and accounting.                                   |
+| `SHARE-*`   | Share accounting.                                                  |
+| `FEE-*`     | Fee accounting.                                                    |
+| `REBAL-*`   | Rebalance lifecycle and TVL.                                       |
+| `CCIP-*`    | CCIP authentication, payloads, and local retry behavior.           |
+| `REC-*`     | Per-vault recovery behavior.                                       |
+| `NONCE-*`   | ParentVault lifecycle nonces and ChildVault command sequencing.    |
 | `ROUTER-*`  | WorkflowRouter behavior.                                           |
 | `ADAPTER-*` | Adapter registry and protocol adapter behavior.                    |
-| `MIG-*`     | Reserved for future migration, upgrade, or state handoff behavior. |
-
-## Solvency
-
-Solvency properties are the headline safety properties. Other sections may reference them when a local invariant is a special case of asset backing.
-
-| ID         | Statement                                                                                                                                                                                                                                                                                                                                                        | Type                      | Status                                       |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | -------------------------------------------- |
-| `SOLV-001` | Parent withdraw solvency must be explicitly modeled: ParentVault USDC balance plus handler-tracked in-flight CCIP withdraw amounts must cover the sum of `remainingWithdrawClaimAmount` for all `CLAIMABLE` epochs. Current invariant coverage tracks settled claimable withdraw obligations; async in-flight CCIP withdraw modeling remains a future extension. | `invariant + fv`          | partial: Foundry + Medusa + Recon-fuzzer     |
-| `SOLV-002` | Recovery actions must not bypass solvency: executing any recovery must preserve `SOLV-001` and `CCIP-005b`.                                                                                                                                                                                                                                                      | `invariant`               | partial: Foundry + Medusa + Recon-fuzzer     |
-| `SOLV-003` | ParentVault share escrow must be attributable to outstanding withdraw intents or claimable withdraw settlement; the vault may intentionally hold shares before `claimAsset` burns them.                                                                                                                                                                          | `invariant`               | candidate                                    |
-| `SOLV-004` | Child outbound CCIP recovery is fully collateralized by local underlying asset while pending. See `CCIP-005b`.                                                                                                                                                                                                                                                   | `invariant`               | implemented: Foundry + Medusa + Recon-fuzzer |
-| `SOLV-005` | Per-user redemption integrity: each actor's total economic entitlement across wallet shares, open deposits, claimable deposit shares, open withdraw intents, claimable withdraw asset, and already claimed USDC must cover contributed principal net of management/performance fees and documented rounding or dust.                                             | `invariant + integration` | implemented: Foundry + Medusa + Recon-fuzzer |
+| `TOKEN-*`   | YieldcoinShare and local ACE policy-component behavior.            |
+| `UPGRADE-*` | Initialization, upgrades, and storage compatibility.               |
 
 ## External Assumptions
 
-These are environmental assumptions. They should be verified through deployment checks, integration tests, fork tests, monitoring, or manual review, not treated as pure contract invariants.
+These assumptions are verified through workflow tests, integration or fork
+tests, deployment checks, monitoring, or manual review. They are not pure
+contract invariants.
 
-| ID        | Statement                                                                                                                                                                                                                                                      | Type     | Status     |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ---------- |
-| `ENV-001` | CRE-reported TVL is trusted. Incorrect TVL can corrupt epoch accounting once claims begin. Off-chain mitigation: the CRE workflow should verify no active recovery state before submitting TVL. TODO: link the CRE workflow recovery-state checker when added. | `manual` | documented |
-| `ENV-002` | CCIP router delivery, token transfer semantics, and message authenticity guarantees are trusted. Contract recovery covers stored retry state, not global CCIP liveness.                                                                                        | `manual` | documented |
-| `ENV-003` | ACE policy wiring correctly enforces runtime permissions for policy-protected functions.                                                                                                                                                                       | `manual` | documented |
-| `ENV-004` | Registered protocol adapters faithfully implement deposit, withdraw, and TVL semantics for their underlying protocols.                                                                                                                                         | `manual` | documented |
+| ID        | Statement                                                                                                                                                                                                                                      | Type                   | Coverage   |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- | ---------- |
+| `ENV-001` | CRE-reported TVL is trusted. Incorrect TVL can corrupt epoch share accounting once claims begin. The workflow must not submit settlement TVL while a relevant recovery state makes that value incomplete or double-counted.                      | `manual + integration` | documented |
+| `ENV-002` | CCIP provides the authenticated router callback, message uniqueness, ordered-delivery semantics requested by the sender, and the documented token-transfer behavior. Local recovery does not guarantee global CCIP liveness.                    | `manual + integration` | documented |
+| `ENV-003` | ACE policy wiring and policy components correctly enforce the intended runtime permissions for policy-protected selectors.                                                                                                                     | `manual + integration` | documented |
+| `ENV-004` | Beyond the local safeguards in `ADAPTER-006` through `ADAPTER-009`, registered adapters and their underlying protocols faithfully implement the advertised asset, deposit, withdraw, and TVL semantics. Activation does not prove arbitrary adapter or protocol correctness. | `manual + integration` | documented |
+| `ENV-005` | For each ChildVault and nonce domain, CRE and CCIP are coordinated so a legitimate command is never delivered or executed after a higher nonce in that domain has already been accepted by that ChildVault.                                     | `manual + integration` | documented |
+| `ENV-006` | Operators preserve every cross-chain route needed by an active strategy, pending rebalance, in-flight message, or outstanding settlement. Current setters permit unregistering routes and do not enforce this continuity onchain.              | `manual + integration` | documented |
+| `ENV-007` | The rebalance workflow calls `completeRebalance` only after the complete rebalance amount has reached and been deposited into the target strategy, with no source withdrawal, CCIP delivery, target deposit, or relevant ChildVault recovery outstanding. ParentVault does not prove these offchain facts. | `manual + integration` | documented |
+| `ENV-008` | Before a cross-chain rebalance is sent, the destination ChildVault's AdapterRegistry contains an adapter for the target protocol that is bound to that ChildVault. ParentVault can verify only global protocol support and the destination route. | `manual + deployment` | documented |
+| `ENV-009` | The underlying asset implements usable ERC-20 metadata and exact accounting-compatible transfer semantics; `decimals()` is at most 77 so `10 ** decimals()` cannot overflow. Adapter construction additionally assumes the configured vault exposes the intended asset. | `manual + deployment` | documented |
+| `ENV-010` | YieldcoinShare mint and burn policy grants supply-changing authority only to ParentVault, including batch operations because they authorize through the corresponding single-item selectors. Compliance authority never forced-transfers, burns, freezes, or otherwise makes unavailable shares held by ParentVault while they back open intents or closed-epoch settlement. | `manual + deployment` | documented |
+| `ENV-011` | CRE, CCIP execution, and operators coordinate recovery-producing operations across the deployment so no new operation can create recovery on one chain while any ParentVault or ChildVault recovery remains active on another chain. Individual vault contracts enforce only their local recovery singleton. | `manual + integration` | documented |
 
 ## Intentional Deviations
 
-These refine the invariant statements. They are not invariant violations.
+These are intentional behaviors, not invariant violations.
 
-| ID        | Deviation                                                                                                                                                                  |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DEV-001` | Performance fee collection is skipped when the fee would consume all TVL. In that degenerate case, the high-water mark is intentionally not updated.                       |
-|           |
-| `DEV-002` | `YieldcoinShare.totalSupply()` may temporarily differ from `ParentVault.s_totalShares` because claim minting and burning are lazy.                                         |
-| `DEV-003` | During cross-chain `REBALANCING`, when funds are in transit on CCIP, `s_activeProtocolAdapter == address(0)` is permitted.                                                 |
-| `DEV-004` | RESOLVED: `s_treasury != address(0)` is a hard invariant. Enforced at construction and on every call to `setTreasury`.                                                     |
-| `DEV-005` | Dust withdraw claims may round down to zero USDC. The withdraw intent is still consumed and the escrowed shares are burned, but no zero-value asset transfer is required.  |
-
-## Out-of-Scope Failures
-
-| Failure                                          | Handling                       |
-| ------------------------------------------------ | ------------------------------ |
-| Bad CRE TVL input                                | See `ENV-001`.                 |
-| CCIP delivery failure or message loss            | See `ENV-002`.                 |
-| Misconfigured ACE policy stacks                  | See `ENV-003`.                 |
-| Malicious or incorrect protocol adapters         | See `ENV-004`.                 |
+| ID        | Deviation                                                                                                                                                                |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `DEV-001` | Performance fee collection is skipped when the fee would consume all TVL. The high-water mark remains unchanged.                                                        |
+| `DEV-002` | `YieldcoinShare.totalSupply()` may differ temporarily from `ParentVault.s_totalShares` because user claim minting and burning are lazy.                                  |
+| `DEV-003` | During cross-chain `REBALANCING`, funds may be in transit and a vault may have `s_activeProtocolAdapter == address(0)`.                                                   |
+| `DEV-004` | Dust withdraw claims may round down to zero asset. The intent is consumed and escrowed shares are burned without a zero-value asset transfer.                           |
+| `DEV-005` | Remote net-deposit epochs may become claimable before the target ChildVault deposits the bridged asset. A caught target deposit failure is represented by recovery state. |
 
 ## Non-Invariants
 
-These properties may look attractive to test, but are not intended to hold.
+- `s_totalShares` is not monotonic.
+- Epoch price per share is not monotonic.
+- Token `totalSupply()` is not always equal to `ParentVault.s_totalShares`.
+- TVL is not always observable on a single chain during cross-chain execution.
+- The active adapter need not remain equal to the AdapterRegistry's current
+  mapping after activation.
+- User-facing and asynchronous functions are not expected to be revert-free.
+- Strategy principal is not guaranteed; entitlement follows actual settled TVL.
 
-- `s_totalShares` is not monotonic. It can decrease when withdraw shares are accounted and increase through deposits or fees.
-- `pricePerShare` is not monotonic. The high-water mark is the monotonic fee reference except in documented fee-skip cases.
-- Token `totalSupply()` is not always equal to `ParentVault.s_totalShares` because claim minting and burning are lazy.
-- TVL is not always observable on one chain during cross-chain rebalance or bridge-in-flight states.
-- User-facing functions are not expected to be revert-free. Expected reverts are not invariant failures.
+## Solvency
+
+| ID         | Statement                                                                                                                                                                                                                                                                        | Type                      | Coverage             |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | -------------------- |
+| `SOLV-001` | Parent withdraw backing is phase-aware: ParentVault asset balance plus explicitly modeled inbound remote-withdraw funds must cover the sum of `remainingWithdrawClaimAmount` for all `CLAIMABLE` epochs. Funds expected for an `EXECUTING` epoch are not yet claimable backing. | `invariant + integration` | revalidation pending |
+| `SOLV-002` | Creating, retrying, or completing recovery must preserve `SOLV-001`, `SOLV-003`, and `SOLV-004`; recovery changes fund location or execution phase but cannot create unbacked obligations.                                             | `invariant`               | revalidation pending |
+| `SOLV-003` | Subject to `ENV-010`, accounted share escrow equals the current open epoch's outstanding withdraw intents plus `remainingShareBurnAmount` across closed `EXECUTING` and `CLAIMABLE` epochs. ParentVault's actual share-token balance is at least that amount; unsolicited transfers may make it larger. Each accounted settlement share is burned exactly once when its asset claim is consumed. | `invariant` | revalidation pending |
+| `SOLV-004` | While ChildVault CCIP-send recovery is pending, the ChildVault underlying-asset balance covers the stored outbound amount without counting the same funds in an adapter.                                                            | `invariant`               | revalidation pending |
+| `SOLV-005` | Per-user economic entitlement is derived from the user's pro-rata share of actual settled TVL and recorded epoch pools, subject to management and performance fees, strategy gains or losses, and bounded rounding or dust.           | `invariant + integration` | revalidation pending |
 
 ## Configuration Safety
 
-These are desired configuration properties.
+| ID        | Statement                                                                                                                                                                                                                                      | Type                 | Coverage             |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | -------------------- |
+| `CFG-001` | Immutable and initialization-critical addresses reject zero, including asset, LINK, CCIP router, adapter registry, share token, Parent chain selector counterpart, role holders, policy engine, treasury, WorkflowRouter vault and forwarder, adapter protocol endpoints, and the frozen-account policy's share source. | `unit` | revalidation pending |
+| `CFG-002` | Treasury is nonzero after initialization and every successful replacement.                                                                                                                                                                     | `invariant + unit`   | revalidation pending |
+| `CFG-003` | Cross-chain vault and adapter mappings may use zero as an unregister sentinel; every operation consuming a required mapping rejects a missing target.                                                                                         | `unit + integration` | revalidation pending |
+| `CFG-004` | Array configuration rejects empty input and length mismatch where required. A CCIP send rejects a zero destination or this chain's selector. A per-chain CCIP gas limit may be set to zero to clear the override and fall back to the nonzero default; the default CCIP gas limit itself rejects zero. | `unit` | revalidation pending |
+| `CFG-005` | An active or pending strategy protocol cannot be removed from ParentVault supported protocols. Adapter activation requires a nonzero registry entry bound to the activating vault.                                                            | `unit`               | revalidation pending |
 
-| ID        | Statement                                                                                                                                                                                                                                                                                                                                                                                          | Type   | Status                                |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------------------------------------- |
-| `CFG-001` | Critical address configuration should reject `address(0)`, including treasury, crosschain vault addresses, token addresses, share token, router, adapter registry, adapters, policy engine, and WorkflowRouter vault/forwarder addresses. Crosschain vaults and adapters intentionally accept `address(0)` at their setters as an unregister sentinel; zero is rejected at every use site instead. | `unit` | partial: Certora (per-function rules) |
+Route continuity after configuration is the operator assumption in `ENV-006`;
+it is not enforced by `CFG-003`.
 
 ## Access Control
 
-| ID       | Statement                                                                                               | Type            | Status                                        |
-| -------- | ------------------------------------------------------------------------------------------------------- | --------------- | --------------------------------------------- |
-| `AC-001` | `DEFAULT_ADMIN_ROLE` administers roles and is not an operational authority.                             | `manual + unit` | candidate                                     |
-| `AC-002` | Config setters require `CONFIG_OPERATOR_ROLE`.                                                          | `unit`          | implemented: Certora (per-function rules)     |
-| `AC-003` | Epoch and rebalance execution require the WorkflowRouter-held operator roles.                           | `unit`          | implemented: Certora (per-function rules)     |
-| `AC-004` | Parent user functions and share token privileged functions rely on ACE policy checks where implemented. | `manual + unit` | candidate                                     |
-| `AC-005` | Force-cancelling a deposit requires `CANCEL_DEPOSIT_OPERATOR_ROLE`, which is distinct from `CONFIG_OPERATOR_ROLE`. | `unit` | candidate |
+| ID       | Statement                                                                                                                                                                                                                                    | Type            | Coverage             |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | -------------------- |
+| `AC-001` | `DEFAULT_ADMIN_ROLE` administers roles and may perform the documented one-time `setInitialActiveProtocolAdapter`; it has no recurring operational authority unless separately granted an operational role.                                  | `manual + unit` | revalidation pending |
+| `AC-002` | Vault, WorkflowRouter, and AdapterRegistry configuration setters require `CONFIG_OPERATOR_ROLE`, except functions explicitly assigned another authority.                                                                                    | `unit`          | revalidation pending |
+| `AC-003` | Epoch and rebalance entry points require `EPOCH_OPERATOR_ROLE` or `REBALANCE_OPERATOR_ROLE`. The contracts authorize role holders, not WorkflowRouter identity; assigning those roles to WorkflowRouter is deployment configuration.          | `unit + manual` | revalidation pending |
+| `AC-004` | ParentVault `deposit`, `withdraw`, `claimShares`, `claimAsset`, `cancelDeposit`, and `cancelWithdraw` remain protected by the configured ACE policy stack.                                                                                   | `unit`          | revalidation pending |
+| `AC-005` | YieldcoinShare transfers, approvals, minting, burning, compliance operations, pause operations, CCIP-admin configuration, and policy-engine attachment remain protected by their configured ACE policies and selector-specific authorities. | `unit + manual` | revalidation pending |
+| `AC-006` | `forceCancelDeposit` requires `CANCEL_DEPOSIT_OPERATOR_ROLE`, is not authorized by `CONFIG_OPERATOR_ROLE` alone, and intentionally has no ACE policy hook.                                                                                   | `unit`          | revalidation pending |
+| `AC-007` | LINK withdrawal, pausing, unpausing, ParentVault policy attachment, vault upgrades, and ChildVault external self-call helpers each require their distinct configured authority.                                                            | `unit`          | revalidation pending |
+| `AC-008` | `CompoundV3Adapter.claimRewards` requires `REWARDS_OPERATOR_ROLE` on the bound vault, rejects a zero recipient, and permits an authorized operator to direct rewards to any nonzero recipient.                                              | `unit`          | revalidation pending |
 
 ## Pause Behavior
 
-| ID          | Statement                                                                                                                                                                   | Type                     | Status                                    |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ | ----------------------------------------- |
-| `PAUSE-001` | Vault `pause` requires `PAUSER_ROLE`.                                       | `unit` | implemented: Certora |
-| `PAUSE-002` | Vault `unpause` requires `UNPAUSER_ROLE`.                                   | `unit` | implemented: Certora |
-| `PAUSE-003` | WorkflowRouter `pause` and `unpause` require their respective roles.        | `unit` | implemented: Certora |
+| ID          | Statement                                                                                                                                                                                                                                                        | Type   | Coverage             |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | -------------------- |
+| `PAUSE-001` | Vault `pause` requires `PAUSER_ROLE`; vault `unpause` requires `UNPAUSER_ROLE`.                                                                                                                                                                                   | `unit` | revalidation pending |
+| `PAUSE-002` | WorkflowRouter `pause` and `unpause` require their respective roles.                                                                                                                                                                                             | `unit` | revalidation pending |
+| `PAUSE-003` | While ParentVault is paused, deposits, withdraw intents, claims, user cancels, inbound CCIP, epoch close, rebalance initiation, and recovery execution revert.                                                                                                   | `unit` | revalidation pending |
+| `PAUSE-004` | While ChildVault is paused, inbound CCIP, epoch-withdraw execution, rebalance execution, and recovery execution revert.                                                                                                                                          | `unit` | revalidation pending |
+| `PAUSE-005` | While WorkflowRouter is paused, `onReport` reverts; role administration and router configuration remain governed by their normal authorization.                                                                                                                  | `unit` | revalidation pending |
+| `PAUSE-006` | `forceCancelDeposit` and `completeRebalance` remain callable while ParentVault is paused, subject to normal authorization and state preconditions. Vault configuration, LINK withdrawal, policy management, and upgrade authorization are not pause-gated.       | `unit` | revalidation pending |
 
 ## Epoch Lifecycle
 
-| ID          | Statement                                                                                                    | Type            | Status                                                                              |
-| ----------- | ------------------------------------------------------------------------------------------------------------ | --------------- | ----------------------------------------------------------------------------------- |
-| `EPOCH-001` | Exactly one current epoch is `OPEN` at transaction boundaries.                                               | `invariant`     | implemented: Foundry + Medusa + Recon-fuzzer + Certora                              |
-| `EPOCH-002` | Epoch transitions are limited to `OPEN -> CLAIMABLE` or `OPEN -> EXECUTING -> CLAIMABLE`.                    | `invariant`     | implemented: Foundry + Medusa + Recon-fuzzer + Certora                              |
-| `EPOCH-003` | `closeEpoch` cannot run while rebalance is active or the previous epoch is still `EXECUTING`.                | `unit`          | implemented: Certora                                                                |
-| `EPOCH-004` | Closing an epoch always opens the next epoch.                                                                | `postcondition` | implemented: Foundry + Medusa + Recon-fuzzer + Certora (per-function rules)         |
-| `EPOCH-005` | Deposits, withdraw intents, and cancels only affect the current open epoch.                                  | `invariant`     | implemented: Foundry + Medusa + Recon-fuzzer                                        |
-| `EPOCH-006` | Cancel refunds the exact escrowed asset and cannot succeed after the user entry has been claimed or deleted. | `postcondition` | implemented: Certora (per-function rules); partial: Foundry + Medusa + Recon-fuzzer |
+| ID           | Statement                                                                                                                                                                                                                                                           | Type            | Coverage             |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | -------------------- |
+| `EPOCH-001`  | Exactly one current epoch is `OPEN` at every successful transaction boundary.                                                                                                                                                                                       | `invariant`     | revalidation pending |
+| `EPOCH-002`  | Epoch transitions are limited to `OPEN -> CLAIMABLE` or `OPEN -> EXECUTING -> CLAIMABLE`; `CLAIMABLE` is terminal.                                                                                                                                                  | `invariant`     | revalidation pending |
+| `EPOCH-003`  | `closeEpoch` cannot succeed while rebalance is active or the previous epoch remains `EXECUTING`.                                                                                                                                                                    | `unit`          | revalidation pending |
+| `EPOCH-004`  | A successful `closeEpoch` closes the current epoch and opens the next epoch exactly once.                                                                                                                                                                           | `postcondition` | revalidation pending |
+| `EPOCH-005`  | Deposits, withdraw intents, and user or forced cancellation affect only the current `OPEN` epoch.                                                                                                                                                                   | `invariant`     | revalidation pending |
+| `EPOCH-006a` | Deposit cancellation consumes an existing current-epoch deposit, decreases the epoch deposit total by the same amount, and refunds exactly that underlying asset amount.                                                                                            | `postcondition` | revalidation pending |
+| `EPOCH-006b` | Withdraw cancellation consumes an existing current-epoch withdraw intent, decreases the epoch share-burn total by the same amount, and refunds exactly those escrowed shares.                                                                                       | `postcondition` | revalidation pending |
+| `EPOCH-007`  | After close, `remainingDepositClaimAmount` and `remainingShareMintAmount` are monotonically non-increasing.                                                                                                                                                          | `invariant`     | revalidation pending |
+| `EPOCH-008`  | Deposit-side remaining counters never underflow, remain bounded by their initialized pools, and reach zero together.                                                                                                                                                | `invariant`     | revalidation pending |
+| `EPOCH-009`  | Each deposit claim consumes the user's entry once and reduces both deposit-side pools by the same shrinking-pool pro-rata calculation; the final claimant receives the remaining rounding remainder.                                                               | `postcondition` | revalidation pending |
+| `EPOCH-010`  | After close, `remainingShareBurnAmount` and `remainingWithdrawClaimAmount` are monotonically non-increasing.                                                                                                                                                         | `invariant`     | revalidation pending |
+| `EPOCH-011`  | Withdraw-side remaining counters never underflow and remain bounded by their initialized pools.                                                                                                                                                                     | `invariant`     | revalidation pending |
+| `EPOCH-012`  | Each asset claim consumes the user's entry and escrowed shares once, reduces both withdraw-side pools by the shrinking-pool pro-rata calculation, and gives the final claimant the remaining asset remainder. Zero-asset dust claims follow `DEV-004`.             | `postcondition` | revalidation pending |
+| `EPOCH-013`  | Once all withdraw shares for a claimable epoch are processed, no withdraw claim amount remains. The claim amount may reach zero first only through rounding or the documented dust case.                                                                            | `invariant`     | revalidation pending |
+| `EPOCH-014`  | Local net withdrawals finalize synchronously. Remote net withdrawals remain `EXECUTING` until authenticated ParentVault CCIP receipt; child recovery or outbound-send retry alone does not make the Parent epoch claimable. Remote net deposits follow `DEV-005`. | `unit + integration` | revalidation pending |
+| `EPOCH-015`  | A deposit is admitted only when its amount is at least `i_minDepositAmount`; a withdraw intent is admitted only when its share amount is nonzero.                                                                                                                       | `unit`          | revalidation pending |
+| `EPOCH-016`  | The current epoch cannot close before `MIN_EPOCH_PERIOD` has elapsed and cannot close when both aggregate deposits and aggregate withdraw intents are zero.                                                                                                             | `unit`          | revalidation pending |
+| `EPOCH-017`  | Settlement rejects zero TVL while authoritative shares remain outstanding and rejects nonzero TVL whose ratio to nonzero authoritative shares rounds down to a zero price. When authoritative shares are zero, bootstrap price is exactly `SHARE_PRECISION` even if residual TVL exists; that residual-value transfer follows the documented known issue. | `unit` | revalidation pending |
+| `EPOCH-018`  | Epoch settlement rejects an aggregate deposit allocation under which a minimum-sized deposit could mint zero shares.                                                                                                                                                  | `unit`          | revalidation pending |
 
-## Epoch Accounting And Solvency
+## Share Accounting
 
-| ID          | Statement                                                                                                                                                                                                                                                                             | Type                 | Status                                                                              |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | ----------------------------------------------------------------------------------- |
-| `EPOCH-007` | Deposit-side remaining counters are monotonically non-increasing after epoch close: `remainingDepositClaimAmount` and `remainingShareMintAmount` never increase.                                                                                                                      | `invariant`          | implemented: Foundry + Medusa + Recon-fuzzer + Certora                              |
-| `EPOCH-008` | Deposit-side remaining counters cannot underflow and must stay bounded by their settlement totals.                                                                                                                                                                                    | `invariant`          | implemented: Foundry + Medusa + Recon-fuzzer + Certora                              |
-| `EPOCH-009` | Deposit-side remaining counters reach zero together: `remainingDepositClaimAmount == 0` if and only if `remainingShareMintAmount == 0`.                                                                                                                                               | `invariant`          | implemented: Foundry + Medusa + Recon-fuzzer + Certora                              |
-| `EPOCH-010` | Withdraw-side remaining counters are monotonically non-increasing after epoch close: `remainingShareBurnAmount` and `remainingWithdrawClaimAmount` never increase.                                                                                                                    | `invariant`          | implemented: Foundry + Medusa + Recon-fuzzer                                        |
-| `EPOCH-011` | Withdraw-side remaining counters cannot underflow and must stay bounded by their settlement totals.                                                                                                                                                                                   | `invariant`          | implemented: Foundry + Medusa + Recon-fuzzer + Certora                              |
-| `EPOCH-012` | Once all withdraw shares for a claimable epoch have been processed, no withdraw claim amount may remain: `remainingShareBurnAmount == 0` implies `remainingWithdrawClaimAmount == 0`. `remainingWithdrawClaimAmount` may reach zero first when dust claims round down; see `DEV-005`. | `invariant`          | implemented: Foundry + Medusa + Recon-fuzzer                                        |
-| `EPOCH-013` | A user claim or cancel deletes the user's epoch entry and cannot be replayed.                                                                                                                                                                                                         | `postcondition`      | implemented: Certora (per-function rules); partial: Foundry + Medusa + Recon-fuzzer |
-| `EPOCH-014` | Local net withdrawals finalize synchronously; remote net withdrawals enter `EXECUTING` at parent epoch close and become claimable only after authenticated CCIP receipt or successful stored-send recovery.                                                                           | `unit + integration` | implemented: Foundry + Certora (per-function rules)                                 |
-| `EPOCH-015` | Parent withdraw solvency is tracked as `SOLV-001`; epoch handlers should update any model state needed to assert it.                                                                                                                                                                  | `invariant + fv`     | candidate                                                                           |
+| ID          | Statement                                                                                                                                                                                                                                              | Type                 | Coverage             |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------- | -------------------- |
+| `SHARE-001` | `ParentVault.s_totalShares` is the authoritative economic share ledger; token `totalSupply()` is not authoritative during lazy claim settlement.                                                                                                      | `manual + invariant` | revalidation pending |
+| `SHARE-002` | At epoch close, authoritative shares change by performance-fee shares plus newly allocated deposit shares minus submitted withdraw shares.                                                                                                            | `postcondition`      | revalidation pending |
+| `SHARE-003` | Subject to the supply-authority restriction in `ENV-010`, local token supply equals `s_totalShares - sum(remainingShareMintAmount) + sum(remainingShareBurnAmount)` across closed epochs. These remaining pools include remote-withdraw epochs while `EXECUTING`, not only `CLAIMABLE` epochs; each lazy mint or burn reduces the corresponding difference exactly once. | `invariant` | revalidation pending |
 
-## Share And Fee Accounting
+## Fee Accounting
 
-| ID          | Statement                                                                                                                              | Type                 | Status                                       |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | -------------------------------------------- |
-| `SHARE-001` | `ParentVault.s_totalShares` is authoritative, not token `totalSupply()`.                                                               | `manual + invariant` | implemented: Foundry + Medusa + Recon-fuzzer |
-| `SHARE-002` | At epoch close, tracked shares change by new deposit shares minus submitted burn shares, plus any fee shares minted before settlement. | `postcondition`      | implemented: Foundry + Medusa + Recon-fuzzer |
-| `SHARE-003` | Performance fee shares mint only when gross price exceeds the high-water mark and the fee does not consume all TVL.                    | `unit`               | implemented: Certora                         |
-| `SHARE-004` | Management fee shares mint only on rebalance finalization.                                                                             | `postcondition`      | candidate                                    |
-| `SHARE-005` | All fee shares mint to treasury.                                                                                                       | `invariant`          | implemented: Foundry + Medusa + Recon-fuzzer |
+| ID        | Statement                                                                                                                                                                                                                                           | Type            | Coverage             |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | -------------------- |
+| `FEE-001` | Performance-fee shares mint only when gross price per share exceeds the high-water mark and the calculated fee is less than TVL; otherwise no performance fee is minted.                                                                            | `unit`          | revalidation pending |
+| `FEE-002` | Every performance-fee or management-fee share mints to the current nonzero treasury, never to the caller or vault.                                                                                                                                  | `invariant`     | revalidation pending |
+| `FEE-003` | The performance-fee high-water mark is monotonically non-decreasing; it remains unchanged when no fee is due or collection is skipped under `DEV-001`.                                                                                              | `invariant`     | revalidation pending |
+| `FEE-004` | Management-fee shares mint only during successful rebalance finalization, are based on elapsed time capped at 365 days, and increase `s_totalShares` by exactly the minted amount.                                                                  | `postcondition` | revalidation pending |
 
-## Fees
+## Rebalance Lifecycle And TVL
 
-| ID        | Statement                                                                                                                                                           | Type        | Status                                       |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | -------------------------------------------- |
-| `FEE-001` | Performance fee is collected only when gross price per share is greater than the high-water mark. This is also covered by `SHARE-003`.                              | `unit`      | candidate                                    |
-| `FEE-002` | Fee shares mint to treasury, not to caller or vault. This property depends on `CFG-001` because a zero treasury is operationally invalid.                           | `unit`      | candidate                                    |
-| `FEE-003` | The performance fee high-water mark is monotonically non-decreasing, except that it remains unchanged when fee collection is intentionally skipped under `DEV-001`. | `invariant` | implemented: Foundry + Medusa + Recon-fuzzer |
-
-## Rebalance Lifecycle
-
-| ID          | Statement                                                                                                                                                                                                              | Type            | Status                                                                      |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | --------------------------------------------------------------------------- |
-| `REBAL-001` | Rebalance state is only `NONE` or `REBALANCING`.                                                                                                                                                                       | `invariant`     | implemented: Foundry + Medusa + Recon-fuzzer                                |
-| `REBAL-002` | A new rebalance cannot start while another is active.                                                                                                                                                                  | `unit`          | implemented: Certora                                                        |
-| `REBAL-003` | Rebalance cannot target the current active strategy.                                                                                                                                                                   | `unit`          | implemented: Certora                                                        |
-| `REBAL-004` | `pendingStrategy` is set only while rebalancing and cleared on finalization.                                                                                                                                           | `invariant`     | implemented: Foundry + Medusa + Recon-fuzzer                                |
-| `REBAL-005` | Finalization requires the current nonce and increments nonce exactly once.                                                                                                                                             | `postcondition` | implemented: Foundry + Medusa + Recon-fuzzer + Certora (per-function rules) |
-| `REBAL-006` | Active strategy changes to pending strategy only on successful finalization, and the active chain's vault adapter matches the active strategy's registered adapter.                                                    | `invariant`     | implemented: Foundry + Medusa + Recon-fuzzer                                |
-| `REBAL-007` | During cross-chain `REBALANCING`, `s_activeProtocolAdapter == address(0)` is permitted; `_getTVL()` must still return a sane value through active adapter TVL or `s_rebalanceDepositRecovery.amount` where applicable. | `invariant`     | partial: Certora (per-function rules)                                       |
-| `REBAL-008` | At transaction boundaries, `s_rebalance.state` cannot be `REBALANCING` when `s_epochNonce > 1` and `s_epochs[s_epochNonce - 1].status == EXECUTING`.                                                                   | `invariant`     | implemented: Foundry + Medusa + Recon-fuzzer                                |
+| ID          | Statement                                                                                                                                                                                                                                                                                             | Type                 | Coverage             |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | -------------------- |
+| `REBAL-001` | Parent rebalance state is `NONE` or `REBALANCING`.                                                                                                                                                                                                                                                     | `invariant`          | revalidation pending |
+| `REBAL-002` | A new rebalance starts only from `NONE`, after the minimum period, and cannot target the current active strategy.                                                                                                                                                                                       | `unit`               | revalidation pending |
+| `REBAL-003` | A new target uses a supported protocol and a local or registered destination chain.                                                                                                                                                                                                                    | `unit`               | revalidation pending |
+| `REBAL-004` | For persisted asynchronous rebalances, `pendingStrategy` is nonempty exactly while state is `REBALANCING` and is cleared on finalization. Local-to-local rebalances may complete atomically without persisting pending state.                                                                           | `invariant`          | revalidation pending |
+| `REBAL-005` | Finalization requires the current persisted rebalance where applicable, promotes the intended target to active, clears pending state, updates completion time, and increments the nonce exactly once.                                                                                                  | `postcondition`      | revalidation pending |
+| `REBAL-006` | Whenever an adapter is activated, the vault stores the current nonzero AdapterRegistry entry for the requested protocol after verifying that adapter is bound to the vault. Active strategy changes occur only through initialization or successful rebalance finalization.                           | `postcondition`      | revalidation pending |
+| `REBAL-007` | After activation, vault operations use the stored active adapter. Replacing or removing the registry mapping does not retroactively replace or invalidate that stored address.                                                                                                                        | `invariant + unit`   | revalidation pending |
+| `REBAL-008` | TVL equations are exact: Parent with an active adapter reports `adapterTVL + rebalanceDepositRecovery.amount`, otherwise zero. Child with an active adapter reports `adapterTVL + epochDepositRecovery.amount + rebalanceDepositRecovery.amount + ccipSendRecovery.amount`; without one it reports only `ccipSendRecovery.amount`. | `invariant + unit`   | revalidation pending |
+| `REBAL-009` | Parent cannot be `REBALANCING` while its previous epoch is `EXECUTING`. A target child may hold or deposit rebalance funds before Parent promotes the pending strategy, so non-active-chain TVL need not be zero during that phase.                                                                    | `invariant`          | revalidation pending |
+| `REBAL-010` | A rebalance cannot begin before at least one epoch has completed.                                                                                                                                                                                                                               | `unit`               | revalidation pending |
 
 ## CCIP
 
-| ID          | Statement                                                                                                                                                                                             | Type            | Status                                                                      |
-| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | --------------------------------------------------------------------------- |
-| `CCIP-001`  | Incoming CCIP sender must match the configured crosschain vault for the source selector.                                                                                                              | `unit`          | implemented: Certora                                                        |
-| `CCIP-002`  | Incoming CCIP must deliver exactly one token amount, and the token must be the configured underlying asset.                                                                                           | `unit`          | implemented: Certora                                                        |
-| `CCIP-003`  | Zero-amount CCIP receives revert.                                                                                                                                                                     | `unit`          | implemented: Certora                                                        |
-| `CCIP-004`  | Parent accepts only `EPOCH_NET_WITHDRAW` and `REBALANCE`; Child accepts only `EPOCH_NET_DEPOSIT` and `REBALANCE`.                                                                                     | `unit`          | implemented: Certora                                                        |
-| `CCIP-005a` | After a failed Child outbound send, `s_ccipSendRecovery` exactly records the intended tx type, destination chain, amount, tx data, and a nonzero creation timestamp.                                  | `postcondition` | implemented: Foundry + Medusa + Recon-fuzzer + Certora (per-function rules) |
-| `CCIP-005b` | While `s_ccipSendRecovery.amount != 0`, `asset.balanceOf(ChildVault) >= s_ccipSendRecovery.amount`. See `SOLV-004`.                                                                                   | `invariant`     | implemented: Foundry + Medusa + Recon-fuzzer                                |
-| `CCIP-005c` | A successful `recoverFailedCcipSend` replays the stored send and completes the intended parent-side state transition for the stored message.                                                          | `postcondition` | implemented: Foundry + Medusa + Recon-fuzzer                                |
-| `CCIP-006`  | Recovery slot mutual exclusion: at most one of `s_rebalanceDepositRecovery` and `s_ccipSendRecovery` is non-empty at a transaction boundary. This is the CCIP-specific recovery mutex; see `REC-007`. | `invariant`     | implemented: Foundry + Medusa + Recon-fuzzer                                |
+| ID         | Statement                                                                                                                                                                                                                                                                                    | Type                 | Coverage             |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | -------------------- |
+| `CCIP-001` | Inbound messages are accepted only through the configured CCIP router callback and from the nonzero configured cross-chain vault for the source selector. Parent additionally requires the active-strategy source chain; Child epoch deposits require the Parent chain.                  | `unit`               | revalidation pending |
+| `CCIP-002` | Inbound messages contain exactly one received token entry for the configured underlying asset with a nonzero amount.                                                                                                                                                                        | `unit`               | revalidation pending |
+| `CCIP-003` | Parent accepts only `EPOCH_NET_WITHDRAW` and `REBALANCE`; Child accepts only `EPOCH_NET_DEPOSIT` and `REBALANCE`. Each accepted variant decodes the exact nonce and strategy fields required by that variant.                                                                               | `unit`               | revalidation pending |
+| `CCIP-004` | Parent epoch and rebalance payloads match the currently executing epoch or pending rebalance before state advances. Child payload nonces satisfy the shared sequencing rules in `NONCE-*`. Invalid messages do not mutate epoch, rebalance, recovery, or handled-nonce state.              | `unit + integration` | revalidation pending |
+| `CCIP-005` | After a caught Child outbound-send failure, the single stored payload equals the intended `amount`, `nonce`, `protocolId`, `destinationChainSelector`, and `ccipTxType`; `protocolId` is meaningful only for `REBALANCE`.                                                               | `postcondition`      | revalidation pending |
+| `CCIP-006` | While Child outbound-send recovery is pending, local underlying balance covers the stored amount as required by `SOLV-004`.                                                                                                                                                                 | `invariant`          | revalidation pending |
+| `CCIP-007` | Successful outbound-send recovery clears the local payload and submits exactly the stored message. A failed retry preserves it atomically. The original nonce remains consumed under `NONCE-*`.                                                                                            | `postcondition`      | revalidation pending |
+| `CCIP-008` | Parent processing after a successful Child send remains asynchronous and depends on `ENV-002`; local send success or recovery does not synchronously complete Parent epoch or rebalance state.                                                                                               | `integration`        | revalidation pending |
 
 ## Recovery
 
-| ID         | Statement                                                                                                                                                                                                                                       | Type             | Status                                                                      |
-| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- | --------------------------------------------------------------------------- |
-| `REC-001`  | Recovery functions consume stored state; caller cannot choose amount, destination, recipient, strategy, or tx data.                                                                                                                             | `invariant`      | implemented: Certora (per-function rules)                                   |
-| `REC-002`  | Recovery sentinel fields are bidirectional: each recovery slot is pending if and only if its sentinel is non-zero; zero `amount` or zero strategy selector means no pending recovery for that slot.                                             | `invariant`      | implemented: Foundry + Medusa + Recon-fuzzer                                |
-| `REC-003`  | Successful recovery clears state.                                                                                                                                                                                                               | `postcondition`  | implemented: Foundry + Medusa + Recon-fuzzer + Certora (per-function rules) |
-| `REC-004`  | Child epoch deposit and epoch withdraw recovery states are mutually exclusive.                                                                                                                                                                  | `invariant`      | implemented: Foundry + Medusa + Recon-fuzzer                                |
-| `REC-005a` | Rebalance deposit recovery is singleton per vault.                                                                                                                                                                                              | `invariant`      | implemented: Certora                                                        |
-| `REC-005b` | While `s_rebalanceDepositRecovery.amount != 0`, vault asset balance plus recoverable or adapter-held funds must be sufficient to complete or retry the stored deposit, with the exact balance formulation confirmed during test implementation. | `invariant + fv` | candidate                                                                   |
-| `REC-006`  | Child CCIP send recovery is singleton and blocks new failed-send storage until cleared.                                                                                                                                                         | `invariant`      | implemented: Certora                                                        |
-| `REC-007`  | Recovery slot mutex: at most one of `s_rebalanceDepositRecovery` and `s_ccipSendRecovery` is non-empty at a transaction boundary. See `CCIP-006`.                                                                                               | `invariant`      | implemented: Foundry + Medusa + Recon-fuzzer                                |
-| `REC-008`  | Recovery does not bypass solvency: executing recovery consumes stored state and must preserve `SOLV-001` and `CCIP-005b`.                                                                                                                       | `invariant`      | partial: Foundry + Medusa + Recon-fuzzer                                    |
-| `REC-009`  | There can only be one recovery mode stored at a time.                                                                                                                                                                                           | `invariant`      | implemented: Foundry + Medusa + Recon-fuzzer                                |
-| `REC-010`  | Failed recovery retry preserves stored recovery state through EVM atomicity.                                                                                                                                                                    | `postcondition`  | implemented: Certora (per-function rules)                                   |
+Each vault enforces its local recovery singleton. The system-wide exclusivity
+requirement additionally depends on cross-chain coordination under `ENV-011`.
+
+| ID        | Statement                                                                                                                                                                                                                                                                | Type            | Coverage             |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------- | -------------------- |
+| `REC-001` | Recovery execution consumes stored operation parameters only; the caller cannot choose amount, nonce, destination, strategy, protocol, transaction type, or recipient.                                                                                                  | `invariant`     | revalidation pending |
+| `REC-002` | For each vault, `RecoveryMode.NONE` holds iff every recovery payload is empty. Each non-`NONE` mode corresponds to exactly one nonempty matching payload and every nonmatching payload is empty.                                                                          | `invariant`     | revalidation pending |
+| `REC-003` | No operation can overwrite a pending recovery on the same vault.                                                                                                                                                                                                        | `invariant`     | revalidation pending |
+| `REC-004` | A successful recovery clears the complete matching payload and returns the vault mode to `NONE`, except where the recovered operation atomically creates a new typed recovery for a later failed phase.                                                                  | `postcondition` | revalidation pending |
+| `REC-005` | A failed recovery retry preserves the complete payload, recovery mode, handled nonce, and attributable funds through EVM atomicity.                                                                                                                                      | `postcondition` | revalidation pending |
+| `REC-006` | Pending recovery amounts are attributable exactly once to vault-held or adapter-held underlying according to the TVL equations in `REBAL-008`; recovery accounting must neither omit nor double-count funds.                                                           | `invariant`     | revalidation pending |
+| `REC-007` | Recovery creation and execution preserve the solvency properties in `SOLV-*`.                                                                                                                                                                                            | `invariant`     | revalidation pending |
+| `REC-008` | ChildVault recovery execution is permissionless stored-state retry and requires an active mode; ParentVault accepts only its supported rebalance-deposit recovery mode. Recovery execution remains pause-gated.                                                        | `unit`          | revalidation pending |
+| `REC-009` | Only asynchronous paths configured to tolerate a caught adapter or CCIP failure create typed recovery. Parent's synchronous local strategy calls use `revertOnFailure == true`, so a caught adapter failure is rethrown and the transaction reverts. Structural failures before either boundary, including a zero active adapter or failed target-adapter activation, also revert the whole transaction and create no recovery state. | `postcondition` | revalidation pending |
+| `REC-010` | Across ParentVault and every ChildVault in the deployment, at most one vault—and therefore at most one chain—has a non-`NONE` recovery mode at any transaction boundary. This system-wide invariant relies on `ENV-011`; it is not enforced by a cross-chain mutex in any individual contract. | `invariant + integration` | revalidation pending |
+
+## Nonce Sequencing
+
+### ChildVault
+
+Each ChildVault has an epoch domain shared by inbound CCIP epoch deposits and
+CRE-triggered epoch withdrawals, and a rebalance domain shared by inbound CCIP
+rebalance deposits and CRE-triggered rebalance execution. The ordering guarantee
+supporting sparse nonces is `ENV-005`.
+
+| ID          | Statement                                                                                                                                                                                                                                                                                      | Type                 | Coverage             |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | -------------------- |
+| `NONCE-001` | Each ChildVault initializes both high-water marks to zero. Epoch and rebalance domains are independent, and nonce state is independent between ChildVault instances.                                                                                                                          | `unit + invariant`   | revalidation pending |
+| `NONCE-002` | Each ChildVault's epoch and rebalance high-water marks are monotonically non-decreasing across successful transaction boundaries.                                                                                                                                                              | `invariant`          | revalidation pending |
+| `NONCE-003` | All four nonce-bearing Child entry paths accept only a nonce strictly greater than the corresponding high-water mark. Zero, equal, and lower nonces revert; skipped values are permitted subject to `ENV-005`.                                                                                | `unit`               | revalidation pending |
+| `NONCE-004` | Acceptance through CCIP or CRE updates the shared domain high-water mark and makes the same or any lower nonce invalid through both ingress paths. Handling one domain does not change the other.                                                                                            | `invariant + unit`   | revalidation pending |
+| `NONCE-005` | A full transaction revert, including a structural missing-adapter failure, rolls back a temporary nonce update and creates no recovery. A caught external failure that stores recovery and returns successfully commits the accepted nonce, so the original command cannot be submitted again as fresh work. | `postcondition` | revalidation pending |
+| `NONCE-006` | A recovery created by a nonce-bearing operation stores that accepted nonce. While recovery is pending it matches the domain high-water mark; retry does not advance the mark, and success does not make the original nonce valid again.                                                   | `invariant + unit`   | revalidation pending |
+| `NONCE-007` | The no-pending-recovery guard runs before nonce validation. While recovery exists, replay reverts with `BaseVault__RecoveryAlreadyPending`; after recovery clears, replay reverts with the domain-specific stale-nonce error.                                                               | `unit`               | revalidation pending |
+
+### ParentVault
+
+ParentVault nonces identify sequential protocol lifecycle instances. Unlike
+ChildVault high-water marks, they do not accept sparse externally supplied
+values.
+
+| ID          | Statement                                                                                                                                                                                                                                                       | Type               | Coverage             |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | -------------------- |
+| `NONCE-008` | Successful ParentVault initialization sets both the current epoch nonce and the next rebalance nonce to exactly 1.                                                                                                                                              | `postcondition`    | revalidation pending |
+| `NONCE-009` | ParentVault's epoch and rebalance nonces are strictly positive and monotonically non-decreasing across successful transaction boundaries.                                                                                                                       | `invariant`        | revalidation pending |
+| `NONCE-010` | A successful `closeEpoch` advances `s_epochNonce` from the closed epoch nonce to exactly that nonce plus one and opens that next epoch. No other successful operation changes `s_epochNonce`; a reverted close leaves it unchanged.                              | `postcondition`    | revalidation pending |
+| `NONCE-011` | A rebalance uses the current `s_rebalance.nonce` from initiation through every synchronous or asynchronous phase. Initiation does not advance it; successful finalization advances it by exactly one, and no other successful operation does so.                | `invariant`        | revalidation pending |
+| `NONCE-012` | Parent accepts a remote epoch-withdraw completion only for `s_epochNonce - 1`, the most recently closed epoch, and only while that epoch is `EXECUTING`. Older, future, duplicate, or otherwise mistimed epoch payloads revert without changing lifecycle state. | `unit`             | revalidation pending |
+| `NONCE-013` | Parent accepts a remote rebalance callback only when its payload nonce equals the current `s_rebalance.nonce` and its protocol and lifecycle state match the persisted pending rebalance. Successful finalization then makes that nonce unusable again.         | `unit + invariant` | revalidation pending |
 
 ## WorkflowRouter
 
-| ID           | Statement                                                                     | Type     | Status               |
-| ------------ | ----------------------------------------------------------------------------- | -------- | -------------------- |
-| `ROUTER-001` | Only `KEYSTONE_FORWARDER_ROLE` can call `onReport`.                           | `unit`   | implemented: Certora |
-| `ROUTER-002` | Router must be unpaused for `onReport`.                                       | `unit`   | implemented: Certora |
-| `ROUTER-003` | Workflow ID, name, and owner must match configured metadata.                  | `unit`   | implemented: Certora |
-| `ROUTER-004` | Report selector must be allowlisted for that workflow ID's current selector-allowlist generation. | `unit`   | candidate |
-| `ROUTER-005` | Router dispatches only to its immutable vault and contains no business logic. | `manual` | candidate            |
-| `ROUTER-006` | Changing or removing workflow metadata advances its selector generation, making selectors from every prior generation unreachable. | `unit`   | implemented: Foundry |
+| ID           | Statement                                                                                                                                                                                                                                              | Type            | Coverage             |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------- | -------------------- |
+| `ROUTER-001` | `onReport` requires `KEYSTONE_FORWARDER_ROLE`.                                                                                                                                                                                                         | `unit`          | revalidation pending |
+| `ROUTER-002` | `onReport` requires an unpaused router.                                                                                                                                                                                                                 | `unit`          | revalidation pending |
+| `ROUTER-003` | The decoded workflow ID, name, and owner are nonzero and match current configured metadata.                                                                                                                                                            | `unit`          | revalidation pending |
+| `ROUTER-004` | The report selector is allowlisted for the workflow's current selector generation before dispatch.                                                                                                                                                    | `unit`          | revalidation pending |
+| `ROUTER-005` | Every successful metadata set, replacement, or removal advances the workflow generation, making every selector from prior generations unreachable.                                                                                                   | `postcondition` | revalidation pending |
+| `ROUTER-006` | The router forwards the exact report calldata only to immutable `i_vault`; configuration cannot change that target. A downstream revert atomically reverts `onReport`.                                                                                | `unit`          | revalidation pending |
+| `ROUTER-007` | Selector-to-function correctness is a trusted configuration responsibility. WorkflowRouter authenticates and dispatches but contains no vault accounting or lifecycle state transitions of its own.                                                  | `manual`        | revalidation pending |
+| `ROUTER-008` | Workflow metadata configuration requires a nonzero workflow ID, a paired nonzero name and owner when registering, and a `(name, owner)` pair different from the current value. Selector configuration requires the workflow to be currently registered. | `unit` | revalidation pending |
+| `ROUTER-009` | `onReport` rejects reports shorter than four bytes before extracting or authorizing a selector.                                                                                                                                                    | `unit` | revalidation pending |
 
 ## Adapters
 
-| ID            | Statement                                                                               | Type        | Status                                       |
-| ------------- | --------------------------------------------------------------------------------------- | ----------- | -------------------------------------------- |
-| `ADAPTER-001` | Only config role can mutate protocol adapter registry mappings.                         | `unit`      | implemented: Certora                         |
-| `ADAPTER-002` | Vault cannot set or use an unregistered adapter.                                        | `unit`      | implemented: Certora                         |
-| `ADAPTER-003` | Protocol adapters only accept deposit and withdraw calls from their configured vault.   | `unit`      | implemented: Certora                         |
-| `ADAPTER-004` | Non-active strategy chains report zero TVL except documented recovery-state accounting. | `invariant` | implemented: Foundry + Medusa + Recon-fuzzer |
+| ID            | Statement                                                                                                                                                                                                                                                       | Type            | Coverage             |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | -------------------- |
+| `ADAPTER-001` | Only `CONFIG_OPERATOR_ROLE` can mutate AdapterRegistry mappings; zero adapter is an intentional unregister sentinel and zero protocol ID is rejected.                                                                                                          | `unit`          | revalidation pending |
+| `ADAPTER-002` | Adapter activation requires the registry's current nonzero adapter for the protocol and verifies that `adapter.getVault()` equals the activating vault.                                                                                                       | `unit`          | revalidation pending |
+| `ADAPTER-003` | After activation, the vault uses its stored adapter even if the registry mapping is replaced or removed. Registry mutation is not automatic adapter migration.                                                                                                 | `invariant + unit` | revalidation pending |
+| `ADAPTER-004` | Protocol adapter deposit and withdraw entry points accept calls only from their configured vault.                                                                                                                                                              | `unit`          | revalidation pending |
+| `ADAPTER-005` | TVL on a chain is phase-aware under `REBAL-008`: a pending target child or a vault with attributable recovery may report nonzero TVL before becoming the settled active strategy.                                                                               | `invariant`     | revalidation pending |
+| `ADAPTER-006` | Each supported adapter constructor binds its protocol position to the bound vault's asset. Aave V3 rejects a missing reserve, Aave V4 rejects missing or duplicate reserves, and Compound V3 rejects a mismatched base token.                                           | `unit`          | revalidation pending |
+| `ADAPTER-007` | A successful adapter deposit increases reported adapter TVL by at least the requested amount less the explicit 10-wei rounding tolerance; otherwise it reverts atomically.                                                                                         | `postcondition` | revalidation pending |
+| `ADAPTER-008` | An ordinary adapter withdrawal cannot request more than pre-withdraw TVL and cannot succeed with actual output below the requested amount. A max-sentinel rebalance withdrawal cannot succeed with actual output below pre-withdraw TVL.                             | `postcondition` | revalidation pending |
+| `ADAPTER-009` | Every successful adapter withdrawal transfers the entire reported actual output to the bound vault and returns that same amount.                                                                                                                                  | `postcondition` | revalidation pending |
 
-## Migration And Upgrade Placeholder
+## YieldcoinShare And Local Policy Components
 
-`MIG-*` is reserved for future adapter migration, upgrade, or state handoff invariants.
+These properties describe deterministic behavior implemented in this repository.
+Correct attachment and selector wiring remain the deployment assumption in
+`ENV-003`.
 
-No `MIG-*` invariants are required until upgrade or migration behavior is added.
+| ID          | Statement                                                                                                                                                                                                                                                        | Type   | Coverage             |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | -------------------- |
+| `TOKEN-001` | YieldcoinShare initialization and every successful `setCCIPAdmin` call reject a zero CCIP admin, so the stored admin remains nonzero. Every policy-engine attachment validates the replacement engine before storing it.                                        | `unit` | revalidation pending |
+| `TOKEN-002` | The KYC extractor checks caller and recipient for `transfer`; caller, owner, and recipient for `transferFrom`; and caller and spender for approval or allowance increase. Each token `batchTransfer` item runs policy using the ordinary transfer selector, validating the caller and that item's recipient; independently, direct extraction of the batch selector returns the caller plus every recipient. | `unit` | revalidation pending |
+| `TOKEN-003` | Allowance decrease deliberately checks only the caller, allowing allowance revocation after a spender loses KYC status. Unsupported KYC extractor selectors revert rather than return an empty account list.                                                  | `unit` | revalidation pending |
+| `TOKEN-004` | The credential account-list validator requires exactly one nonempty account list, fails closed when no credential requirements are configured, and rejects if any listed account fails validation.                                                          | `unit` | revalidation pending |
+| `TOKEN-005` | The frozen-account policy accepts exactly one encoded account and rejects it when the immutable configured YieldcoinShare reports that account frozen.                                                                                                      | `unit` | revalidation pending |
 
-## Test Plan
+## Initialization And Upgrades
 
-Prioritize invariant and handler work in this order:
+WorkflowRouter and AdapterRegistry are not UUPS upgradeable. The properties
+below apply to ParentVault, ChildVault, and YieldcoinShare as specified.
 
-1. Epoch accounting counters and solvency.
-2. Rebalance state, nonce, and pending strategy lifecycle.
-3. Recovery singleton, exclusivity, and recovery-balance coverage.
-4. CCIP failed-send recovery and authenticated receive behavior.
-5. WorkflowRouter metadata and selector authorization.
+| ID        | Statement                                                                                                                                                                                                                                                                         | Type                   | Coverage             |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- | -------------------- |
+| `UPGRADE-001` | ParentVault and ChildVault UUPS upgrades require `UPGRADER_ROLE`. YieldcoinShare UUPS upgrades require its configured owner/upgrader, and ownership cannot be renounced.                                                                                                          | `unit`                 | revalidation pending |
+| `UPGRADE-002` | ParentVault, ChildVault, and YieldcoinShare implementation contracts cannot be initialized directly; each proxy initializer succeeds only once. YieldcoinShare's inherited alternate initializer remains disabled.                                                               | `unit`                 | revalidation pending |
+| `UPGRADE-003` | Successful ParentVault initialization sets `s_epochNonce == 1`, epoch 1 to `OPEN` with its open timestamp, `s_rebalance.nonce == 1`, rebalance state to `NONE` with its completion timestamp, `s_performanceFeeHighWaterMark == SHARE_PRECISION`, `s_totalShares == 0`, and recovery mode to `NONE`. | `postcondition + unit` | revalidation pending |
+| `UPGRADE-004` | `setInitialActiveProtocolAdapter` succeeds at most once. Its first success stores the current registered vault-bound adapter, sets the active strategy to that protocol on the Parent chain, and permanently marks initial adapter setup complete.                                  | `postcondition + unit` | revalidation pending |
+| `UPGRADE-005` | Each proxy is paired with an implementation whose immutable asset, router, registry, chain-selector, share-token, and Parent-selector configuration matches that deployment. Immutable implementation configuration is not mutable proxy state.                                    | `manual + integration` | revalidation pending |
+| `UPGRADE-006` | ERC-7201 namespaces and storage layouts remain compatible across releases. Layout validation is a release/deployment requirement, not a runtime invariant.                                                                                                                        | `manual + integration` | revalidation pending |
+| `UPGRADE-007` | A successful upgrade preserves roles or ownership, pause state, configuration, epoch and share accounting, rebalance state, recovery mode and payloads, YieldcoinShare state, and ChildVault nonce high-water marks unless an explicitly reviewed migration changes them.             | `integration`          | revalidation pending |
 
-Use deterministic unit or integration tests for exact revert branches. Use invariant handlers for stateful sequences over successful deposits, withdraws, cancels, closes, claims, rebalances, CCIP receives, and recoveries.
+## Coverage Reconciliation Deferred
 
-Treat `ENV-*` entries as assumptions verified through deployment checks, integration or fork tests, monitoring, or manual review.
+The next phase will map each runtime property to current unit, integration, and
+stateful invariant coverage; correct stale Chimera assumptions; add missing
+handlers and assertions; and then restore precise Foundry, Medusa, and Recon
+statuses. Sibling security documents will be reconciled after the suite. Certora
+remains out of scope.
 
-## Implementation Notes
-
-This document does not require Solidity API, interface, storage, or type changes.
-
-`REC-005b` must be verified during test implementation. If the property is false or too broad, update this document with the actual balance model instead of forcing the invariant.
+This document rewrite requires no Solidity API, interface, storage, or type
+changes.
