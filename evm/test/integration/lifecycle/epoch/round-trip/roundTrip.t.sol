@@ -44,7 +44,8 @@ contract RoundTrip_EpochIntegrationTest is BaseIntegrationTest {
         _changePrank(i_depositor);
         uint256 shareAmount = parent.vault.claimShares(1);
 
-        assertEq(shareAmount, depositAmount);
+        uint256 expectedShares = depositAmount * YIELD_PRECISION / ASSET_PRECISION;
+        assertEq(shareAmount, expectedShares);
         assertEq(parent.share.balanceOf(i_depositor), shareAmount);
 
         _initiateRebalanceThroughWorkflow(
@@ -58,8 +59,8 @@ contract RoundTrip_EpochIntegrationTest is BaseIntegrationTest {
         uint256 feeShares = _expectedManagementFeeShares(shareAmount, block.timestamp - initialRebalanceCompletedAt);
         uint256 totalSharesAfterFee = shareAmount + feeShares;
         uint256 tvl = depositAmount;
-        uint256 expectedPricePerShare = tvl * SHARE_PRECISION / totalSharesAfterFee;
-        uint256 expectedUsdcOut = shareAmount * expectedPricePerShare / SHARE_PRECISION;
+        uint256 expectedPricePerShare = tvl * YIELD_PRECISION / totalSharesAfterFee;
+        uint256 expectedUsdcOut = shareAmount * expectedPricePerShare / YIELD_PRECISION;
 
         address aaveV4Spoke = parent.aaveV4Adapter.getProtocolPool();
         MockAaveV4Spoke(aaveV4Spoke).setWithdrawReturn(expectedUsdcOut);

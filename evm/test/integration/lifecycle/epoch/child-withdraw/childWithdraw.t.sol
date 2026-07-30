@@ -43,7 +43,7 @@ contract ChildWithdraw_EpochIntegrationTest is BaseIntegrationTest {
 
         _warpPastMinEpoch();
         _closeEpochThroughWorkflow(
-            parent.workflowRouter, PARENT_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner, s_shareAmount
+            parent.workflowRouter, PARENT_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner, DEPOSIT_AMOUNT
         );
 
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.EXECUTING));
@@ -51,12 +51,12 @@ contract ChildWithdraw_EpochIntegrationTest is BaseIntegrationTest {
         assertEq(uint256(parent.vault.getEpoch(3).status), uint256(Types.EpochStatus.OPEN));
 
         MockAToken(MockAaveV3Pool(s_childAaveV3Pool).getReserveData(parent.asset).aTokenAddress)
-            .mint(address(child.aaveV3Adapter), s_shareAmount);
-        deal(parent.asset, s_childAaveV3Pool, s_shareAmount);
-        MockAaveV3Pool(s_childAaveV3Pool).setWithdrawReturn(s_shareAmount);
+            .mint(address(child.aaveV3Adapter), DEPOSIT_AMOUNT);
+        deal(parent.asset, s_childAaveV3Pool, DEPOSIT_AMOUNT);
+        MockAaveV3Pool(s_childAaveV3Pool).setWithdrawReturn(DEPOSIT_AMOUNT);
 
         _executeEpochWithdrawThroughWorkflow(
-            child.workflowRouter, CHILD_WORKFLOW_ID, EXECUTE_WITHDRAW_WORKFLOW_NAME, i_owner, 2, s_shareAmount
+            child.workflowRouter, CHILD_WORKFLOW_ID, EXECUTE_WITHDRAW_WORKFLOW_NAME, i_owner, 2, DEPOSIT_AMOUNT
         );
 
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.CLAIMABLE));
@@ -66,7 +66,7 @@ contract ChildWithdraw_EpochIntegrationTest is BaseIntegrationTest {
         _changePrank(i_depositor);
         parent.vault.claimAsset(2);
 
-        assertEq(IERC20(parent.asset).balanceOf(i_depositor), depositorUsdcBeforeClaim + s_shareAmount);
+        assertEq(IERC20(parent.asset).balanceOf(i_depositor), depositorUsdcBeforeClaim + DEPOSIT_AMOUNT);
         assertEq(parent.share.balanceOf(i_depositor), 0);
         assertEq(parent.vault.getWithdrawShareBurnAmount(i_depositor, 2), 0);
         assertEq(parent.vault.getTotalShares(), 0);
@@ -84,6 +84,6 @@ contract ChildWithdraw_EpochIntegrationTest is BaseIntegrationTest {
         _changePrank(i_depositor);
         parent.vault.claimShares(1);
 
-        return DEPOSIT_AMOUNT;
+        shareAmount = DEPOSIT_AMOUNT * YIELD_PRECISION / ASSET_PRECISION;
     }
 }

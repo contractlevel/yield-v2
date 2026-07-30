@@ -9,7 +9,6 @@ import {BaseVault} from "../../../../src/vaults/BaseVault.sol";
 import {ParentVault} from "../../../../src/vaults/ParentVault.sol";
 
 contract ParentVault_ClaimSharesUnitTest is BaseUnitTest {
-    // At bootstrap (pricePerShare = SHARE_PRECISION), shares minted = USDC deposited
     uint256 internal s_expectedShares;
 
     function setUp() public {
@@ -25,7 +24,7 @@ contract ParentVault_ClaimSharesUnitTest is BaseUnitTest {
         s_parentVault.closeEpoch(0);
         // Epoch 1 → CLAIMABLE (netFlow = DEPOSIT_AMOUNT > 0), epoch 2 opened
 
-        s_expectedShares = DEPOSIT_AMOUNT;
+        s_expectedShares = DEPOSIT_AMOUNT * YIELD_PRECISION / ASSET_PRECISION;
 
         _changePrank(i_depositor);
     }
@@ -86,9 +85,9 @@ contract ParentVault_ClaimSharesUnitTest is BaseUnitTest {
         uint256 secondDeposit = 100 * 1e6;
         uint256 thirdDeposit = 101 * 1e6;
         uint256 totalDeposit = firstDeposit + secondDeposit + thirdDeposit;
-        uint256 totalShares = 1_000 * 1e6;
+        uint256 totalShares = 1_000 * YIELD_PRECISION;
         uint256 tvl = 2_000 * 1e6;
-        uint256 pricePerShare = 2 * SHARE_PRECISION;
+        uint256 pricePerShare = 2 * ASSET_PRECISION;
         uint256 expectedTotalMinted = totalDeposit * SHARE_PRECISION / pricePerShare;
         uint256 expectedFirstMint = firstDeposit * expectedTotalMinted / totalDeposit;
         uint256 expectedSecondMint =
@@ -120,10 +119,10 @@ contract ParentVault_ClaimSharesUnitTest is BaseUnitTest {
     function test_ParentVault_claimShares_WhenWithdrawOnlyEpoch_DepositSideRemainingCountersAreZero() public {
         _deployFreshParentVault();
 
-        uint256 shareBurnAmount = 100 * 1e6;
-        uint256 tvl = shareBurnAmount;
+        uint256 shareBurnAmount = 100 * YIELD_PRECISION;
+        uint256 tvl = 100 * ASSET_PRECISION;
         _setParentTotalShares(shareBurnAmount);
-        _setParentPerformanceFeeHighWaterMark(SHARE_PRECISION);
+        _setParentPerformanceFeeHighWaterMark(ASSET_PRECISION);
         _submitWithdraw(i_withdrawer, shareBurnAmount);
         _closeEpoch(tvl);
 
@@ -138,9 +137,9 @@ contract ParentVault_ClaimSharesUnitTest is BaseUnitTest {
         uint256 secondDeposit = 100 * 1e6;
         uint256 thirdDeposit = 101 * 1e6;
         uint256 epochOneTotalDeposit = firstDeposit + secondDeposit + thirdDeposit;
-        uint256 totalShares = 1_000 * 1e6;
+        uint256 totalShares = 1_000 * YIELD_PRECISION;
         uint256 tvl = 2_000 * 1e6;
-        uint256 pricePerShare = 2 * SHARE_PRECISION;
+        uint256 pricePerShare = 2 * ASSET_PRECISION;
         uint256 epochOneTotalMinted = epochOneTotalDeposit * SHARE_PRECISION / pricePerShare;
         uint256 firstMint = firstDeposit * epochOneTotalMinted / epochOneTotalDeposit;
         uint256 epochTwoPricePerShare = tvl * SHARE_PRECISION / (totalShares + epochOneTotalMinted);

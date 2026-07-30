@@ -40,6 +40,8 @@ abstract contract Properties is BeforeAfter, Asserts {
             uint256 principal = ghost_totalDepositedByActor[actor];
             uint256 feeBurden = ghost_feeBurdenByActor[actor];
             uint256 requiredValue = principal > feeBurden ? principal - feeBurden : 0;
+            uint256 roundingBurden = _depositRoundingBurden(actor);
+            requiredValue = requiredValue > roundingBurden ? requiredValue - roundingBurden : 0;
 
             lte(
                 requiredValue,

@@ -20,7 +20,7 @@ contract ParentVault_InitializeUnitTest is BaseUnitTest {
 
         assertEq(parentVault.getTreasury(), i_treasury);
         assertEq(parentVault.getPolicyEngine(), address(s_mockPolicyEngine));
-        assertEq(parentVault.getPerformanceFeeHighWaterMark(), parentVault.getSharePrecision());
+        assertEq(parentVault.getPerformanceFeeHighWaterMark(), parentVault.getAssetPrecision());
         assertEq(parentVault.getEpochNonce(), 1);
         assertEq(parentVault.getInitialActiveProtocolAdapterSet(), false);
         assertEq(parentVault.getActiveProtocolAdapter(), address(0));

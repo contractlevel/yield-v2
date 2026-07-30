@@ -357,7 +357,7 @@ abstract contract BaseCcipForkTest is BaseForkTest {
         _changePrank(i_depositor);
         parent.vault.claimShares(1);
 
-        return DEPOSIT_AMOUNT;
+        shareAmount = DEPOSIT_AMOUNT * YIELD_PRECISION / ASSET_PRECISION;
     }
 
     function test_baseCcipForkTest() public virtual {}

@@ -32,14 +32,14 @@ contract ChildWithdraw_CcipForkTest is BaseCcipForkTest {
         parent.vault.withdraw(shareAmount);
 
         _warpPastMinEpoch();
-        _closeEpochThroughWorkflow(CLOSE_WORKFLOW_ID, shareAmount);
+        _closeEpochThroughWorkflow(CLOSE_WORKFLOW_ID, DEPOSIT_AMOUNT);
 
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.EXECUTING));
 
         _selectBaseFork();
         _setBaseChildActiveAdapterToAaveV3();
         vm.warp(block.timestamp + 1 days); // skip time to avoid aToken rounding at 1 USDC scale
-        _executeEpochWithdrawThroughWorkflow(baseChild.workflowRouter, WITHDRAW_WORKFLOW_ID, 2, shareAmount);
+        _executeEpochWithdrawThroughWorkflow(baseChild.workflowRouter, WITHDRAW_WORKFLOW_ID, 2, DEPOSIT_AMOUNT);
         _routeUsdcMessageTo(arbitrumFork);
 
         _selectArbitrumFork();
@@ -50,7 +50,7 @@ contract ChildWithdraw_CcipForkTest is BaseCcipForkTest {
         _changePrank(i_depositor);
         parent.vault.claimAsset(2);
 
-        assertEq(IERC20(parent.asset).balanceOf(i_depositor), depositorUsdcBefore + shareAmount);
+        assertEq(IERC20(parent.asset).balanceOf(i_depositor), depositorUsdcBefore + DEPOSIT_AMOUNT);
         assertEq(parent.share.balanceOf(i_depositor), 0);
         assertEq(parent.vault.getTotalShares(), 0);
     }

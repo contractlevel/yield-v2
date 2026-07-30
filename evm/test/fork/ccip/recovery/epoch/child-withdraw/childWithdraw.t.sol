@@ -34,21 +34,21 @@ contract ChildWithdraw_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
         parent.vault.withdraw(shareAmount);
 
         _warpPastMinEpoch();
-        _closeEpochThroughWorkflow(CLOSE_WORKFLOW_ID, shareAmount);
+        _closeEpochThroughWorkflow(CLOSE_WORKFLOW_ID, DEPOSIT_AMOUNT);
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.EXECUTING));
 
         _selectBaseFork();
         _setBaseChildActiveAdapterToFailingAdapter();
         vm.recordLogs();
-        _executeEpochWithdrawThroughWorkflow(baseChild.workflowRouter, WITHDRAW_WORKFLOW_ID, 2, shareAmount);
+        _executeEpochWithdrawThroughWorkflow(baseChild.workflowRouter, WITHDRAW_WORKFLOW_ID, 2, DEPOSIT_AMOUNT);
         Vm.Log[] memory failureLogs = vm.getRecordedLogs();
 
         Vm.Log memory storedLog = _assertEmittedBy(
             failureLogs, keccak256("EpochWithdrawRecoveryStored(uint256,uint256)"), address(baseChild.vault)
         );
         assertEq(uint256(storedLog.topics[1]), 2);
-        assertEq(uint256(storedLog.topics[2]), shareAmount);
-        _assertEpochRecovery(baseChild.vault.getEpochWithdrawRecovery(), 2, shareAmount);
+        assertEq(uint256(storedLog.topics[2]), DEPOSIT_AMOUNT);
+        _assertEpochRecovery(baseChild.vault.getEpochWithdrawRecovery(), 2, DEPOSIT_AMOUNT);
         assertTrue(baseChild.vault.getRecoveryMode() == Types.RecoveryMode.EPOCH_WITHDRAW);
 
         _restoreBaseAaveV3Adapter();
@@ -71,7 +71,7 @@ contract ChildWithdraw_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
         _changePrank(i_depositor);
         parent.vault.claimAsset(2);
 
-        assertApproxEqAbs(IERC20(parent.asset).balanceOf(i_depositor), depositorUsdcBefore + shareAmount, 1);
+        assertApproxEqAbs(IERC20(parent.asset).balanceOf(i_depositor), depositorUsdcBefore + DEPOSIT_AMOUNT, 1);
         assertEq(parent.share.balanceOf(i_depositor), 0);
         assertEq(parent.vault.getWithdrawShareBurnAmount(i_depositor, 2), 0);
     }

@@ -8,7 +8,7 @@ import {IParentVault} from "../../../../src/interfaces/vaults/IParentVault.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
 
 contract ParentVault_CompleteRebalanceUnitTest is BaseUnitTest {
-    uint256 internal constant TOTAL_SHARES = 1_000_000 * 1e6;
+    uint256 internal constant TOTAL_SHARES = 1_000_000 * YIELD_PRECISION;
     uint256 internal constant MANAGEMENT_FEE_BPS = 100;
     uint256 internal constant BPS_DENOMINATOR = 10_000;
 

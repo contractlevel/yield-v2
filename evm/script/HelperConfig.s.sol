@@ -20,7 +20,7 @@ contract HelperConfig is Script {
     uint64 internal constant ARBITRUM_CHAIN_SELECTOR = 4949039107694359620;
     uint64 internal constant ARBITRUM_SEPOLIA_CHAIN_SELECTOR = 3478487238524512106;
     uint256 internal constant INITIAL_DEFAULT_CCIP_GAS_LIMIT = 500_000;
-    bytes32 internal constant STAGING_WORKFLOW_ID = 0x00af2b6d4c060c94ddf6f13d9236199fc8cd4d5b35b46c164b36912e45655891;
+    bytes32 internal constant STAGING_WORKFLOW_ID = 0x007f8835a89ceb76bea678c0e5ac887947948acc7f464ee377a38f6a347fe63a;
     bytes10 internal constant STAGING_WORKFLOW_NAME = bytes10("67d6954c97");
 
     /*//////////////////////////////////////////////////////////////
@@ -344,8 +344,8 @@ contract HelperConfig is Script {
             }),
             cre: _getStagingCreConfig(0x76c9cf548b4179F8901cda1f8623568b58215E62),
             deployed: DeployedConfig({
-                vaultProxy: 0x584099C5200b8a63536230017F718797026E5915,
-                workflowRouter: 0x2f0aac54238f1523fE23E54Ab273E9ff5320b51C
+                vaultProxy: 0x0c4eD72777e832e2dAe6d59875e956aBD9ad91D9,
+                workflowRouter: 0x7Fd005F9552f600e8231BA821a9e7Da42A94fE83
             })
         });
     }

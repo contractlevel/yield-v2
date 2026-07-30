@@ -7,7 +7,7 @@ import {IParentVault} from "../../../../src/interfaces/vaults/IParentVault.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
 
 contract ParentVault_CancelWithdrawUnitTest is BaseUnitTest {
-    uint256 internal constant SHARE_BURN_AMOUNT = 100 * 1e6;
+    uint256 internal constant SHARE_BURN_AMOUNT = 100 * YIELD_PRECISION;
 
     function setUp() public {
         _changePrank(address(s_parentVault));

@@ -34,13 +34,14 @@ contract ParentDeposit_EpochIntegrationTest is BaseIntegrationTest {
         assertEq(uint256(parent.vault.getEpoch(1).status), uint256(Types.EpochStatus.CLAIMABLE));
         assertEq(parent.vault.getEpochNonce(), 2);
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.OPEN));
-        assertEq(parent.vault.getTotalShares(), DEPOSIT_AMOUNT);
+        uint256 expectedShares = DEPOSIT_AMOUNT * YIELD_PRECISION / ASSET_PRECISION;
+        assertEq(parent.vault.getTotalShares(), expectedShares);
         assertEq(IERC20(parent.asset).balanceOf(aaveV3Pool), poolBalanceBefore + DEPOSIT_AMOUNT);
 
         _changePrank(i_depositor);
         parent.vault.claimShares(1);
 
-        assertEq(parent.share.balanceOf(i_depositor), DEPOSIT_AMOUNT);
+        assertEq(parent.share.balanceOf(i_depositor), expectedShares);
         assertEq(parent.vault.getDepositAmount(i_depositor, 1), 0);
     }
 }

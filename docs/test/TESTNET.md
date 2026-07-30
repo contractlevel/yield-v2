@@ -124,16 +124,19 @@ forge script script/deploy/DeployChild.s.sol:DeployChild \
 
 ### Set Crosschain Vaults
 
-Run once on each testnet after all five vault proxies have been deployed. Change `--rpc-url` to
-`arbitrum_sepolia`, `ethereum_sepolia`, `base_sepolia`, `optimism_sepolia`, and `avalanche_fuji` respectively.
+Run from `evm/` after all five vault proxies have been deployed and the deployer has
+`CONFIG_OPERATOR_ROLE` on each vault proxy. The script configures every vault with the other four vaults
+defined in `script/HelperConfig.s.sol`.
 
 ```bash
-forge script script/interactions/SetCrosschainVaults.s.sol:SetCrosschainVaults \
-    --rpc-url avalanche_fuji \
-    --account testnet-deployer \
-    --sender 0x7664C538C80870824738A8ADCcd92AcA244D7e69 \
-    --broadcast \
-    -vvvv
+for rpc in arbitrum_sepolia ethereum_sepolia base_sepolia optimism_sepolia avalanche_fuji; do
+    forge script script/interactions/SetCrosschainVaults.s.sol:SetCrosschainVaults \
+        --rpc-url "$rpc" \
+        --account testnet-deployer \
+        --sender 0x7664C538C80870824738A8ADCcd92AcA244D7e69 \
+        --broadcast \
+        -vvvv || break
+done
 ```
 
 ### Configure Workflow Routers
@@ -186,42 +189,42 @@ forge script script/interactions/FundVaultLink.s.sol:FundVaultLink \
 
 | Contract                                                      | Address                                      |
 | ------------------------------------------------------------- | -------------------------------------------- |
-| `BaseVaultCcipLib`                                            | [`0x13cdee9be66127fa1c3922dd12f16b87d6d3da71`](https://sepolia.arbiscan.io/address/0x13cdee9be66127fa1c3922dd12f16b87d6d3da71#code) |
-| `ParentVaultUserEpochLib`                                     | [`0xf95d1b804a837eab54041abff4d642366dc20ea1`](https://sepolia.arbiscan.io/address/0xf95d1b804a837eab54041abff4d642366dc20ea1#code) |
-| `ParentVaultRebalanceLib`                                     | [`0x34db5430fadca96a80be89d732ae1422c577aff1`](https://sepolia.arbiscan.io/address/0x34db5430fadca96a80be89d732ae1422c577aff1#code) |
-| `ParentVaultEpochLib`                                         | [`0x9688f8ace6d139e8ed33a146ec8714c751121054`](https://sepolia.arbiscan.io/address/0x9688f8ace6d139e8ed33a146ec8714c751121054#code) |
-| `ParentVaultConfigLib`                                        | [`0x5641d1005678526605b17b4fe6d7e20a30420224`](https://sepolia.arbiscan.io/address/0x5641d1005678526605b17b4fe6d7e20a30420224#code) |
-| `ParentVaultCcipLib`                                          | [`0x0be4982561e7d1c9936cff25e43e6c805466d98b`](https://sepolia.arbiscan.io/address/0x0be4982561e7d1c9936cff25e43e6c805466d98b#code) |
-| `BaseVaultStrategyLib`                                        | [`0x4ab7794139fb422813b97e1e4a33a7947666a323`](https://sepolia.arbiscan.io/address/0x4ab7794139fb422813b97e1e4a33a7947666a323#code) |
-| `BaseVaultConfigLib`                                          | [`0x07d45439566c417491760b0698683ae42739d108`](https://sepolia.arbiscan.io/address/0x07d45439566c417491760b0698683ae42739d108#code) |
-| `PolicyEngine` implementation                                 | [`0x8383a982dc0b844ca9200fbedeebbe50ae4bb157`](https://sepolia.arbiscan.io/address/0x8383a982dc0b844ca9200fbedeebbe50ae4bb157#code) |
-| `PolicyEngine` proxy                                          | [`0x079a90b7761ff10f455bc2188392b2ae765f8dad`](https://sepolia.arbiscan.io/address/0x079a90b7761ff10f455bc2188392b2ae765f8dad#code) |
-| `IdentityRegistry` implementation                             | [`0x412749be129b2b6ba778f732adb6b69617bd7a13`](https://sepolia.arbiscan.io/address/0x412749be129b2b6ba778f732adb6b69617bd7a13#code) |
-| `IdentityRegistry` proxy                                      | [`0x971e7d69e039cc013145ceaa6aacc9dbe55deba6`](https://sepolia.arbiscan.io/address/0x971e7d69e039cc013145ceaa6aacc9dbe55deba6#code) |
-| `CredentialRegistry` implementation                           | [`0xe6d10460bf3fc0eeca03d73d393dafc867ad0836`](https://sepolia.arbiscan.io/address/0xe6d10460bf3fc0eeca03d73d393dafc867ad0836#code) |
-| `CredentialRegistry` proxy                                    | [`0xb2ac18061d6996202227b211a0c7915b010413c2`](https://sepolia.arbiscan.io/address/0xb2ac18061d6996202227b211a0c7915b010413c2#code) |
-| `AdapterRegistry`                                             | [`0x809a7bf022841e3bcda0d3cf64b780aabf898c64`](https://sepolia.arbiscan.io/address/0x809a7bf022841e3bcda0d3cf64b780aabf898c64#code) |
-| `YieldcoinShare` implementation                               | [`0x171dbab26fdd04ba215e0d6338d1270f6d20d838`](https://sepolia.arbiscan.io/address/0x171dbab26fdd04ba215e0d6338d1270f6d20d838#code) |
-| `YieldcoinShare` proxy                                        | [`0x811356c12f222c246fca7ac73f740d8accf03e0a`](https://sepolia.arbiscan.io/address/0x811356c12f222c246fca7ac73f740d8accf03e0a#code) |
-| `ParentVault` implementation                                  | [`0x58fbfdf85c4463c8d956a4fc0252a75c320b42fb`](https://sepolia.arbiscan.io/address/0x58fbfdf85c4463c8d956a4fc0252a75c320b42fb#code) |
-| `ParentVault` proxy                                           | [`0x584099c5200b8a63536230017f718797026e5915`](https://sepolia.arbiscan.io/address/0x584099c5200b8a63536230017f718797026e5915#code) |
-| `AaveV3Adapter`                                               | [`0xc8802711eb8c9defbcb1ee626bcb54b981297d19`](https://sepolia.arbiscan.io/address/0xc8802711eb8c9defbcb1ee626bcb54b981297d19#code) |
-| `CompoundV3Adapter`                                           | [`0x175b945fc2520c20f5e2cfee323f79bf29205913`](https://sepolia.arbiscan.io/address/0x175b945fc2520c20f5e2cfee323f79bf29205913#code) |
-| `WorkflowRouter`                                              | [`0x2f0aac54238f1523fe23e54ab273e9ff5320b51c`](https://sepolia.arbiscan.io/address/0x2f0aac54238f1523fe23e54ab273e9ff5320b51c#code) |
-| `TerminalAllowPolicy` implementation                          | [`0xc0e11e92188743e37fed15f0c998ed1b9533fe01`](https://sepolia.arbiscan.io/address/0xc0e11e92188743e37fed15f0c998ed1b9533fe01#code) |
-| `TerminalAllowPolicy` proxy                                   | [`0x96b4c7e3419f07bc2baa0b5a4151d220984028a9`](https://sepolia.arbiscan.io/address/0x96b4c7e3419f07bc2baa0b5a4151d220984028a9#code) |
-| `YieldcoinShareFrozenAccountPolicy` implementation            | [`0x512efe701404a637ccaca933028d0afe647cc0c4`](https://sepolia.arbiscan.io/address/0x512efe701404a637ccaca933028d0afe647cc0c4#code) |
-| `YieldcoinShareFrozenAccountPolicy` proxy                     | [`0xcd6f007979bfb9f1ea9a9df432a298d0469861d3`](https://sepolia.arbiscan.io/address/0xcd6f007979bfb9f1ea9a9df432a298d0469861d3#code) |
-| `CredentialRegistryIdentityValidatorPolicy` implementation    | [`0x66738d30269f1e88a762f421995feebe8e617d52`](https://sepolia.arbiscan.io/address/0x66738d30269f1e88a762f421995feebe8e617d52#code) |
-| `CredentialRegistryIdentityValidatorPolicy` proxy             | [`0x07c4e5242206de2da117635c31b84884522f46fb`](https://sepolia.arbiscan.io/address/0x07c4e5242206de2da117635c31b84884522f46fb#code) |
-| `SenderExtractor`                                             | [`0x921fe4ed6a98f800199b11569673a5230b522f9c`](https://sepolia.arbiscan.io/address/0x921fe4ed6a98f800199b11569673a5230b522f9c#code) |
-| `OnlyAuthorizedSenderPolicy` implementation                   | [`0x4577bdfb0fd75664586f03db266413a7609b7baa`](https://sepolia.arbiscan.io/address/0x4577bdfb0fd75664586f03db266413a7609b7baa#code) |
-| `OnlyAuthorizedSenderPolicy` proxy                            | [`0x5f8191e9fe6b4164930cdf92f6fe824ae35602e0`](https://sepolia.arbiscan.io/address/0x5f8191e9fe6b4164930cdf92f6fe824ae35602e0#code) |
-| `CredentialRegistryAccountListValidatorPolicy` implementation | [`0xcc6535ccb21f9ed8a0e593dddcd1a6fac1d6474b`](https://sepolia.arbiscan.io/address/0xcc6535ccb21f9ed8a0e593dddcd1a6fac1d6474b#code) |
-| `CredentialRegistryAccountListValidatorPolicy` proxy          | [`0x63f8cfc8a7202e2dc1f46b23d2043c7889796b3a`](https://sepolia.arbiscan.io/address/0x63f8cfc8a7202e2dc1f46b23d2043c7889796b3a#code) |
-| `YieldcoinShareKycExtractor`                                  | [`0x13aa0a08d5d867c60017c3b2f78f6c38d1e509e4`](https://sepolia.arbiscan.io/address/0x13aa0a08d5d867c60017c3b2f78f6c38d1e509e4#code) |
-| `RoleBasedAccessControlPolicy` implementation                 | [`0x0f9469f3831406c34e8a563c095392f79a7b8439`](https://sepolia.arbiscan.io/address/0x0f9469f3831406c34e8a563c095392f79a7b8439#code) |
-| `RoleBasedAccessControlPolicy` proxy                          | [`0x8dd0fbab082d591edb0666390066b5161842bb0c`](https://sepolia.arbiscan.io/address/0x8dd0fbab082d591edb0666390066b5161842bb0c#code) |
+| `BaseVaultCcipLib`                                            | [`0x81b55294f3d3af167e9f1e622149648f42859be6`](https://sepolia.arbiscan.io/address/0x81b55294f3d3af167e9f1e622149648f42859be6#code) |
+| `ParentVaultUserEpochLib`                                     | [`0xf00e3fe45530aa4308b8172ecdd23114d96b2326`](https://sepolia.arbiscan.io/address/0xf00e3fe45530aa4308b8172ecdd23114d96b2326#code) |
+| `ParentVaultRebalanceLib`                                     | [`0x3292407edbcd027d587ae2818d6f1c9ef630c41a`](https://sepolia.arbiscan.io/address/0x3292407edbcd027d587ae2818d6f1c9ef630c41a#code) |
+| `ParentVaultEpochLib`                                         | [`0xb3b24e9fc31062817fb29c7133462990e531588a`](https://sepolia.arbiscan.io/address/0xb3b24e9fc31062817fb29c7133462990e531588a#code) |
+| `ParentVaultConfigLib`                                        | [`0x363afb12607a53e3f8d2fc663946d229d83a93f5`](https://sepolia.arbiscan.io/address/0x363afb12607a53e3f8d2fc663946d229d83a93f5#code) |
+| `ParentVaultCcipLib`                                          | [`0xc64e578152bae99174f597d16eed660ab6e250a8`](https://sepolia.arbiscan.io/address/0xc64e578152bae99174f597d16eed660ab6e250a8#code) |
+| `BaseVaultStrategyLib`                                        | [`0xa7205e3bb7ecf1537f7ef2641bd9108fecd28bc5`](https://sepolia.arbiscan.io/address/0xa7205e3bb7ecf1537f7ef2641bd9108fecd28bc5#code) |
+| `BaseVaultConfigLib`                                          | [`0x287eacd24f969910914f87eb6b936dde5d0626ac`](https://sepolia.arbiscan.io/address/0x287eacd24f969910914f87eb6b936dde5d0626ac#code) |
+| `PolicyEngine` implementation                                 | [`0x0dbbb22e5a633f0cdd3e512b9427d11f7fe9ca92`](https://sepolia.arbiscan.io/address/0x0dbbb22e5a633f0cdd3e512b9427d11f7fe9ca92#code) |
+| `PolicyEngine` proxy                                          | [`0x40585f81080282e0eee11f9d459f6e0005cfb9bb`](https://sepolia.arbiscan.io/address/0x40585f81080282e0eee11f9d459f6e0005cfb9bb#code) |
+| `IdentityRegistry` implementation                             | [`0x6395c9f680cda7ca391509a04f8c35895ad89bf8`](https://sepolia.arbiscan.io/address/0x6395c9f680cda7ca391509a04f8c35895ad89bf8#code) |
+| `IdentityRegistry` proxy                                      | [`0x49a62fa0c40e1c511736abbf2e23cb11e8deb7cb`](https://sepolia.arbiscan.io/address/0x49a62fa0c40e1c511736abbf2e23cb11e8deb7cb#code) |
+| `CredentialRegistry` implementation                           | [`0x31b0d818cb4c356b5a2145a08cc5c0f70d261962`](https://sepolia.arbiscan.io/address/0x31b0d818cb4c356b5a2145a08cc5c0f70d261962#code) |
+| `CredentialRegistry` proxy                                    | [`0x5b4162118af51df69ab875e66d927ccc6e893296`](https://sepolia.arbiscan.io/address/0x5b4162118af51df69ab875e66d927ccc6e893296#code) |
+| `AdapterRegistry`                                             | [`0x10cf67db20d37930a7874843f227faca6daaf8ec`](https://sepolia.arbiscan.io/address/0x10cf67db20d37930a7874843f227faca6daaf8ec#code) |
+| `YieldcoinShare` implementation                               | [`0x2aa278dbdb32135554cb61409ae1f0720d73812c`](https://sepolia.arbiscan.io/address/0x2aa278dbdb32135554cb61409ae1f0720d73812c#code) |
+| `YieldcoinShare` proxy                                        | [`0x37672a053a258202ad2f1d0afadabf7e0db93399`](https://sepolia.arbiscan.io/address/0x37672a053a258202ad2f1d0afadabf7e0db93399#code) |
+| `ParentVault` implementation                                  | [`0x80a1c5d6859d51dce3373e8e117c059177141056`](https://sepolia.arbiscan.io/address/0x80a1c5d6859d51dce3373e8e117c059177141056#code) |
+| `ParentVault` proxy                                           | [`0x0c4ed72777e832e2dae6d59875e956abd9ad91d9`](https://sepolia.arbiscan.io/address/0x0c4ed72777e832e2dae6d59875e956abd9ad91d9#code) |
+| `AaveV3Adapter`                                               | [`0x3aa20269fe42a89debcfb1370d6b7df74e64d414`](https://sepolia.arbiscan.io/address/0x3aa20269fe42a89debcfb1370d6b7df74e64d414#code) |
+| `CompoundV3Adapter`                                           | [`0xcce8adc9df419707a5b538c6d80106b4927b2311`](https://sepolia.arbiscan.io/address/0xcce8adc9df419707a5b538c6d80106b4927b2311#code) |
+| `WorkflowRouter`                                              | [`0x7fd005f9552f600e8231ba821a9e7da42a94fe83`](https://sepolia.arbiscan.io/address/0x7fd005f9552f600e8231ba821a9e7da42a94fe83#code) |
+| `TerminalAllowPolicy` implementation                          | [`0x7f2427eefe90c3c368fd552dc05ed45fdef745ae`](https://sepolia.arbiscan.io/address/0x7f2427eefe90c3c368fd552dc05ed45fdef745ae#code) |
+| `TerminalAllowPolicy` proxy                                   | [`0xaf56279900dea0a93608deb206d9e6ec466245f2`](https://sepolia.arbiscan.io/address/0xaf56279900dea0a93608deb206d9e6ec466245f2#code) |
+| `YieldcoinShareFrozenAccountPolicy` implementation            | [`0xdcca262c9d046580271276156deadd372e5178fe`](https://sepolia.arbiscan.io/address/0xdcca262c9d046580271276156deadd372e5178fe#code) |
+| `YieldcoinShareFrozenAccountPolicy` proxy                     | [`0xe4592d35615da8cd1414aec213318e5ee6653d94`](https://sepolia.arbiscan.io/address/0xe4592d35615da8cd1414aec213318e5ee6653d94#code) |
+| `CredentialRegistryIdentityValidatorPolicy` implementation    | [`0x477d5809309e01aee380acb397fe8707e52c569e`](https://sepolia.arbiscan.io/address/0x477d5809309e01aee380acb397fe8707e52c569e#code) |
+| `CredentialRegistryIdentityValidatorPolicy` proxy             | [`0x56e7925638645685016b71f7e6d832b3f7d01c0f`](https://sepolia.arbiscan.io/address/0x56e7925638645685016b71f7e6d832b3f7d01c0f#code) |
+| `SenderExtractor`                                             | [`0x98d299159950030b7dfcb34b457f3ebda84cc733`](https://sepolia.arbiscan.io/address/0x98d299159950030b7dfcb34b457f3ebda84cc733#code) |
+| `OnlyAuthorizedSenderPolicy` implementation                   | [`0x4ab6e929e45f846a4b3431e9633c8a3422f586c3`](https://sepolia.arbiscan.io/address/0x4ab6e929e45f846a4b3431e9633c8a3422f586c3#code) |
+| `OnlyAuthorizedSenderPolicy` proxy                            | [`0x604c05048c37239d4b0dbade9c95c6114bf4c50c`](https://sepolia.arbiscan.io/address/0x604c05048c37239d4b0dbade9c95c6114bf4c50c#code) |
+| `CredentialRegistryAccountListValidatorPolicy` implementation | [`0x6d8b6f78ce622bd4418ca1bca961830a43c145ba`](https://sepolia.arbiscan.io/address/0x6d8b6f78ce622bd4418ca1bca961830a43c145ba#code) |
+| `CredentialRegistryAccountListValidatorPolicy` proxy          | [`0x004af5cefbf481798f6dd54e26c51dcb0687c903`](https://sepolia.arbiscan.io/address/0x004af5cefbf481798f6dd54e26c51dcb0687c903#code) |
+| `YieldcoinShareKycExtractor`                                  | [`0x3fbc8e2386248a217c4c364323c1c0b21d63bc43`](https://sepolia.arbiscan.io/address/0x3fbc8e2386248a217c4c364323c1c0b21d63bc43#code) |
+| `RoleBasedAccessControlPolicy` implementation                 | [`0x69ed779fd52b41a753ae90b9e828b8c448aa774a`](https://sepolia.arbiscan.io/address/0x69ed779fd52b41a753ae90b9e828b8c448aa774a#code) |
+| `RoleBasedAccessControlPolicy` proxy                          | [`0x4123be5ee9fe84a8546d2703b5e478dcee0e1adc`](https://sepolia.arbiscan.io/address/0x4123be5ee9fe84a8546d2703b5e478dcee0e1adc#code) |
 
 ## Child Deployments
 

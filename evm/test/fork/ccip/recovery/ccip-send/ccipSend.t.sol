@@ -40,7 +40,7 @@ contract CcipSend_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
         parent.vault.withdraw(shareAmount);
 
         _warpPastMinEpoch();
-        _closeEpochThroughWorkflow(CLOSE_WORKFLOW_ID, shareAmount);
+        _closeEpochThroughWorkflow(CLOSE_WORKFLOW_ID, DEPOSIT_AMOUNT);
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.EXECUTING));
 
         _prepareBaseToParentRouting();
@@ -48,7 +48,7 @@ contract CcipSend_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
         vm.warp(block.timestamp + 1 days);
 
         vm.recordLogs();
-        _executeEpochWithdrawThroughWorkflow(baseChild.workflowRouter, WITHDRAW_WORKFLOW_ID, 2, shareAmount);
+        _executeEpochWithdrawThroughWorkflow(baseChild.workflowRouter, WITHDRAW_WORKFLOW_ID, 2, DEPOSIT_AMOUNT);
         Vm.Log[] memory failureLogs = vm.getRecordedLogs();
 
         Vm.Log memory storedLog = _assertEmittedBy(
@@ -56,12 +56,12 @@ contract CcipSend_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
         );
         assertEq(uint256(storedLog.topics[1]), uint256(Types.CcipTx.EPOCH_NET_WITHDRAW));
         assertEq(uint64(uint256(storedLog.topics[2])), arbitrumConfig.ccip.thisChainSelector);
-        assertEq(uint256(storedLog.topics[3]), shareAmount);
+        assertEq(uint256(storedLog.topics[3]), DEPOSIT_AMOUNT);
         _assertCcipSendRecovery(
             baseChild.vault.getCcipSendRecovery(),
             Types.CcipTx.EPOCH_NET_WITHDRAW,
             arbitrumConfig.ccip.thisChainSelector,
-            shareAmount,
+            DEPOSIT_AMOUNT,
             2,
             bytes32(0)
         );
@@ -84,7 +84,7 @@ contract CcipSend_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
         _changePrank(i_depositor);
         parent.vault.claimAsset(2);
 
-        assertApproxEqAbs(IERC20(parent.asset).balanceOf(i_depositor), depositorUsdcBefore + shareAmount, 1);
+        assertApproxEqAbs(IERC20(parent.asset).balanceOf(i_depositor), depositorUsdcBefore + DEPOSIT_AMOUNT, 1);
     }
 
     function test_CcipFork_Recovery_ChildVault_ccipSend_Rebalance_RetryCompletesParentRebalance() external {

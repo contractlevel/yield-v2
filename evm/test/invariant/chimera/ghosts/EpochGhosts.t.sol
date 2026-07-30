@@ -10,6 +10,12 @@ abstract contract EpochGhosts is ActorGhosts {
         WITHDRAW
     }
 
+    struct FeeSnapshot {
+        uint256 totalShares;
+        uint256 treasuryShareBalance;
+        uint256[] actorShares;
+    }
+
     uint256 internal ghost_totalDeposited;
     mapping(address actor => uint256 amount) internal ghost_totalDepositedByActor;
     mapping(uint256 epochNonce => uint256 amount) internal ghost_totalDepositedByEpoch;
@@ -30,6 +36,7 @@ abstract contract EpochGhosts is ActorGhosts {
     uint256 internal ghost_claimableWithdrawObligation;
     mapping(address actor => uint256 amount) internal ghost_totalUsdcClaimedByActor;
     mapping(address actor => uint256 amount) internal ghost_feeBurdenByActor;
+    mapping(address actor => uint256 amount) internal ghost_depositRoundingBurdenByActor;
 
     function _clampDepositAmount(uint256 amountSeed) internal pure returns (uint256) {
         return _boundToRange(amountSeed, MIN_DEPOSIT_AMOUNT, MAX_DEPOSIT_AMOUNT);
@@ -83,6 +90,11 @@ abstract contract EpochGhosts is ActorGhosts {
     }
 
     function _recordSharesClaimed(address actor, uint256 epochNonce, uint256 shareMintAmount) internal {
+        uint256 depositAmount = ghost_depositedByActorByEpoch[actor][epochNonce];
+        uint256 shareValue = shareMintAmount * parent.vault.getEpoch(epochNonce).pricePerShare / SHARE_PRECISION;
+        if (depositAmount > shareValue) {
+            ghost_depositRoundingBurdenByActor[actor] += depositAmount - shareValue;
+        }
         ghost_depositedByActorByEpoch[actor][epochNonce] = 0;
         ghost_shareBalanceByActor[actor] += shareMintAmount;
     }
@@ -152,22 +164,49 @@ abstract contract EpochGhosts is ActorGhosts {
         return ghost_shareBurnedByActorByEpoch[actor][epochNonce];
     }
 
-    function _recordFeeBurden(uint256 treasuryShareBalanceBefore, uint256 totalSharesBefore) internal {
-        if (totalSharesBefore == 0) return;
+    function _feeSnapshot() internal view returns (FeeSnapshot memory snapshot) {
+        snapshot.totalShares = parent.vault.getTotalShares();
+        snapshot.treasuryShareBalance = parent.share.balanceOf(parent.vault.getTreasury());
+        snapshot.actorShares = new uint256[](s_actors.length);
+        for (uint256 i; i < s_actors.length; ++i) {
+            snapshot.actorShares[i] = _feeBearingShares(s_actors[i]);
+        }
+    }
 
-        uint256 treasuryShareBalanceAfter = parent.share.balanceOf(parent.vault.getTreasury());
-        if (treasuryShareBalanceAfter <= treasuryShareBalanceBefore) return;
-
-        uint256 feeShares = treasuryShareBalanceAfter - treasuryShareBalanceBefore;
-        uint256 feeValue = _shareValue(feeShares);
-        if (feeValue == 0) return;
+    function _recordPerformanceFeeBurden(
+        FeeSnapshot memory snapshot,
+        uint256 grossPricePerShare,
+        uint256 settlementPricePerShare
+    ) internal {
+        if (settlementPricePerShare >= grossPricePerShare) return;
+        if (parent.share.balanceOf(parent.vault.getTreasury()) <= snapshot.treasuryShareBalance) return;
 
         for (uint256 i; i < s_actors.length; ++i) {
             address actor = s_actors[i];
-            uint256 feeBearingShares = _feeBearingShares(actor);
-            if (feeBearingShares != 0) {
-                ghost_feeBurdenByActor[actor] += feeValue * feeBearingShares / totalSharesBefore;
-            }
+            uint256 feeBearingShares = snapshot.actorShares[i];
+            uint256 valueBefore = feeBearingShares * grossPricePerShare / SHARE_PRECISION;
+            uint256 valueAfter = feeBearingShares * settlementPricePerShare / SHARE_PRECISION;
+            if (valueBefore > valueAfter) ghost_feeBurdenByActor[actor] += valueBefore - valueAfter;
+        }
+    }
+
+    function _recordManagementFeeBurden(FeeSnapshot memory snapshot) internal {
+        if (snapshot.totalShares == 0) return;
+
+        uint256 treasuryShareBalanceAfter = parent.share.balanceOf(parent.vault.getTreasury());
+        if (treasuryShareBalanceAfter <= snapshot.treasuryShareBalance) return;
+
+        uint256 feeShares = treasuryShareBalanceAfter - snapshot.treasuryShareBalance;
+        uint256 restoredTvl = _activeStrategyTvl();
+        uint256 pricePerShareBefore = restoredTvl * SHARE_PRECISION / snapshot.totalShares;
+        uint256 pricePerShareAfter = restoredTvl * SHARE_PRECISION / (snapshot.totalShares + feeShares);
+
+        for (uint256 i; i < s_actors.length; ++i) {
+            address actor = s_actors[i];
+            uint256 feeBearingShares = snapshot.actorShares[i];
+            uint256 valueBefore = feeBearingShares * pricePerShareBefore / SHARE_PRECISION;
+            uint256 valueAfter = feeBearingShares * pricePerShareAfter / SHARE_PRECISION;
+            if (valueBefore > valueAfter) ghost_feeBurdenByActor[actor] += valueBefore - valueAfter;
         }
     }
 
@@ -183,6 +222,20 @@ abstract contract EpochGhosts is ActorGhosts {
             uint256 epochNonce = ghost_claimableEpochs[i];
             entitlement += _claimableDepositShareValue(actor, epochNonce);
             entitlement += _claimableWithdrawUsdc(actor, epochNonce);
+        }
+    }
+
+    function _depositRoundingBurden(address actor) internal view returns (uint256 burden) {
+        burden = ghost_depositRoundingBurdenByActor[actor];
+
+        for (uint256 i; i < ghost_claimableEpochs.length; ++i) {
+            uint256 epochNonce = ghost_claimableEpochs[i];
+            uint256 depositAmount = ghost_depositedByActorByEpoch[actor][epochNonce];
+            if (depositAmount == 0) continue;
+
+            uint256 shareValue = _claimableDepositShares(actor, epochNonce)
+                * parent.vault.getEpoch(epochNonce).pricePerShare / SHARE_PRECISION;
+            if (depositAmount > shareValue) burden += depositAmount - shareValue;
         }
     }
 
@@ -234,6 +287,6 @@ abstract contract EpochGhosts is ActorGhosts {
         uint256 tvl = _activeStrategyTvl();
 
         if (totalShares != 0 && tvl != 0) return tvl * SHARE_PRECISION / totalShares;
-        return SHARE_PRECISION;
+        return ASSET_PRECISION;
     }
 }

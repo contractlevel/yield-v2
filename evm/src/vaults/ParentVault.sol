@@ -36,8 +36,8 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /*//////////////////////////////////////////////////////////////
                                CONSTANTS
     //////////////////////////////////////////////////////////////*/
-    /// @dev Fixed precision for share pricing
-    uint256 internal constant SHARE_PRECISION = 1e12;
+    /// @dev Precision of the 18-decimal YIELD share token
+    uint256 internal constant SHARE_PRECISION = 1e18;
 
     /*//////////////////////////////////////////////////////////////
                                IMMUTABLE
@@ -94,7 +94,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         __PolicyProtected_init(params.defaultAdmin, policyEngine);
 
         ParentVaultStorage storage $ = _parentVaultStorage();
-        $.s_performanceFeeHighWaterMark = SHARE_PRECISION;
+        $.s_performanceFeeHighWaterMark = i_assetPrecision;
         $.s_epochNonce = 1;
         $.s_epochs[1].status = Types.EpochStatus.OPEN;
         $.s_epochs[1].openedAtTimestamp = block.timestamp;
@@ -359,8 +359,9 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
 
         address activeAdapter = $_baseVault.s_activeProtocolAdapter;
         bool isLocalStrategy = activeAdapter != address(0);
-        ParentVaultEpochLib.CloseEpochExternalAction memory externalAction =
-            ParentVaultEpochLib.closeEpoch($, tvl, i_share, SHARE_PRECISION, i_minDepositAmount, isLocalStrategy);
+        ParentVaultEpochLib.CloseEpochExternalAction memory externalAction = ParentVaultEpochLib.closeEpoch(
+            $, tvl, i_share, SHARE_PRECISION, i_assetPrecision, i_minDepositAmount, isLocalStrategy
+        );
 
         if (externalAction.action == ParentVaultEpochLib.ExternalAction.DEPOSIT_TO_LOCAL_STRATEGY) {
             _executeDeposit(externalAction.amount, true, activeAdapter);
@@ -582,7 +583,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
 
     /// @notice Gets the share precision
     /// @return sharePrecision The share precision
-    function getSharePrecision() external view returns (uint256 sharePrecision) {
+    function getSharePrecision() external pure returns (uint256 sharePrecision) {
         sharePrecision = SHARE_PRECISION;
     }
 

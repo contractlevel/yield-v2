@@ -12,10 +12,9 @@ import {ParentVault} from "../../../../src/vaults/ParentVault.sol";
 contract ParentVault_ClaimAssetUnitTest is BaseUnitTest {
     using stdStorage for StdStorage;
 
-    // At bootstrap (pricePerShare = SHARE_PRECISION), assetOut = shareBurnAmount
-    uint256 internal constant SHARE_BURN_AMOUNT = 100 * 1e6;
+    uint256 internal constant SHARE_BURN_AMOUNT = 100 * YIELD_PRECISION;
     uint256 internal constant LARGE_DEPOSIT_AMOUNT = 1000 * 1e6;
-    uint256 internal constant EXPECTED_ASSET = SHARE_BURN_AMOUNT; // 100e6 asset
+    uint256 internal constant EXPECTED_ASSET = 100 * ASSET_PRECISION;
 
     function setUp() public {
         // Mint shares to withdrawer via the vault (which holds MINTER_ROLE)
@@ -37,8 +36,7 @@ contract ParentVault_ClaimAssetUnitTest is BaseUnitTest {
         vm.warp(block.timestamp + MIN_EPOCH_PERIOD + 1);
         _changePrank(i_epochOperator);
         s_parentVault.closeEpoch(0);
-        // pricePerShare = SHARE_PRECISION (bootstrap, totalShares was 0)
-        // netFlow = LARGE_DEPOSIT_AMOUNT - SHARE_BURN_AMOUNT > 0 → CLAIMABLE, epoch 2 opened
+        // Bootstrap price is one whole asset per one whole share.
 
         _changePrank(i_withdrawer);
     }
@@ -114,11 +112,11 @@ contract ParentVault_ClaimAssetUnitTest is BaseUnitTest {
     function test_ParentVault_claimAsset_Success_DistributesRoundingRemainderToPoolExhaustingClaimant() public {
         _deployFreshParentVault();
 
-        uint256 firstBurn = 100 * 1e6;
-        uint256 secondBurn = 100 * 1e6;
-        uint256 thirdBurn = 101 * 1e6;
+        uint256 firstBurn = 100 * YIELD_PRECISION;
+        uint256 secondBurn = 100 * YIELD_PRECISION;
+        uint256 thirdBurn = 101 * YIELD_PRECISION;
         uint256 totalBurn = firstBurn + secondBurn + thirdBurn;
-        uint256 totalShares = 1_000 * 1e6;
+        uint256 totalShares = 1_000 * YIELD_PRECISION;
         uint256 tvl = 2_000 * 1e6;
         uint256 adjustedWithdrawClaimAmount = 601 * 1e6;
         uint256 expectedFirstAsset = firstBurn * adjustedWithdrawClaimAmount / totalBurn;
@@ -127,7 +125,7 @@ contract ParentVault_ClaimAssetUnitTest is BaseUnitTest {
         uint256 expectedThirdAsset = adjustedWithdrawClaimAmount - expectedFirstAsset - expectedSecondAsset;
 
         _setParentTotalShares(totalShares);
-        _setParentPerformanceFeeHighWaterMark(2 * SHARE_PRECISION);
+        _setParentPerformanceFeeHighWaterMark(2 * ASSET_PRECISION);
         _submitWithdraw(i_withdrawer, firstBurn);
         _submitWithdraw(i_recipient1, secondBurn);
         _submitWithdraw(i_recipient2, thirdBurn);
@@ -154,8 +152,8 @@ contract ParentVault_ClaimAssetUnitTest is BaseUnitTest {
         _deployFreshParentVault();
 
         uint256 dustShareBurnAmount = 1;
-        uint256 totalShares = 100 * 1e6;
-        uint256 tvl = totalShares - 1;
+        uint256 totalShares = 100 * YIELD_PRECISION;
+        uint256 tvl = 100 * ASSET_PRECISION - 1;
 
         _setParentTotalShares(totalShares);
         _submitWithdraw(i_withdrawer, dustShareBurnAmount);

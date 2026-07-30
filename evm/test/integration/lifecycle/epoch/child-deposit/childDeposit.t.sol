@@ -49,7 +49,8 @@ contract ChildDeposit_EpochIntegrationTest is BaseIntegrationTest {
         _changePrank(i_depositor);
         parent.vault.claimShares(1);
 
-        assertEq(parent.share.balanceOf(i_depositor), DEPOSIT_AMOUNT);
+        uint256 expectedShares = DEPOSIT_AMOUNT * YIELD_PRECISION / ASSET_PRECISION;
+        assertEq(parent.share.balanceOf(i_depositor), expectedShares);
         assertEq(parent.vault.getDepositAmount(i_depositor, 1), 0);
     }
 }

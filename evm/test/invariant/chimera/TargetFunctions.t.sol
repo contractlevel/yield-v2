@@ -136,6 +136,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         }
 
         uint256 tvl = _activeStrategyTvl();
+        uint256 grossPricePerShare = _settlementPricePerShare(tvl);
         uint256 settlementPricePerShare = _closeEpochSettlementPricePerShare(tvl);
         uint256 totalWithdrawUsdc =
             parent.vault.getEpoch(epochNonce).totalShareBurnAmount * settlementPricePerShare / SHARE_PRECISION;
@@ -146,8 +147,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             _setActiveStrategyWithdrawReturn(netWithdrawAmount);
         }
 
-        uint256 treasuryShareBalanceBefore = parent.share.balanceOf(parent.vault.getTreasury());
-        uint256 totalSharesBefore = parent.vault.getTotalShares();
+        FeeSnapshot memory feeSnapshot = _feeSnapshot();
 
         __before();
 
@@ -164,7 +164,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         __after();
 
         _recordEpochClosed(epochNonce);
-        _recordFeeBurden(treasuryShareBalanceBefore, totalSharesBefore);
+        _recordPerformanceFeeBurden(feeSnapshot, grossPricePerShare, parent.vault.getEpoch(epochNonce).pricePerShare);
         _assertCloseEpochShareAccounting(epochNonce);
         _assertPerformanceFeeMintedToTreasury();
         _assertPerformanceFeeHighWaterMarkNotDecreased();
@@ -197,14 +197,13 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         }
 
         Types.Strategy memory target = _rebalanceTarget(pathSeed, protocolSeed);
-        uint256 treasuryShareBalanceBefore = parent.share.balanceOf(parent.vault.getTreasury());
-        uint256 totalSharesBefore = parent.vault.getTotalShares();
+        FeeSnapshot memory feeSnapshot = _feeSnapshot();
 
         __before();
         _rebalanceTo(target);
         __after();
 
-        _recordFeeBurden(treasuryShareBalanceBefore, totalSharesBefore);
+        _recordManagementFeeBurden(feeSnapshot);
         _assertManagementFeeMintedToTreasury();
         _assertPerformanceFeeHighWaterMarkNotDecreased();
 
@@ -478,6 +477,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _withdrawAndAssert(actor, shareBurnAmount, "recovery setup: shares not escrowed");
 
         uint256 tvl = _activeStrategyTvl();
+        uint256 grossPricePerShare = _settlementPricePerShare(tvl);
         uint256 settlementPricePerShare = _closeEpochSettlementPricePerShare(tvl);
         uint256 totalWithdrawUsdc = shareBurnAmount * settlementPricePerShare / SHARE_PRECISION;
         uint256 totalDepositAmount = parent.vault.getEpoch(epochNonce).totalDepositAmount;
@@ -496,6 +496,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             _withdrawAndAssert(actor, shareBurnAmount, "recovery setup: shares not escrowed");
 
             tvl = _activeStrategyTvl();
+            grossPricePerShare = _settlementPricePerShare(tvl);
             settlementPricePerShare = _closeEpochSettlementPricePerShare(tvl);
             totalWithdrawUsdc = shareBurnAmount * settlementPricePerShare / SHARE_PRECISION;
             totalDepositAmount = parent.vault.getEpoch(epochNonce).totalDepositAmount;
@@ -506,8 +507,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         _setActiveStrategyWithdrawReturn(netWithdrawAmount);
 
-        uint256 treasuryShareBalanceBefore = parent.share.balanceOf(parent.vault.getTreasury());
-        uint256 totalSharesBefore = parent.vault.getTotalShares();
+        FeeSnapshot memory feeSnapshot = _feeSnapshot();
 
         __before();
 
@@ -547,7 +547,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         );
 
         _recordEpochShareAccounting(epochNonce);
-        _recordFeeBurden(treasuryShareBalanceBefore, totalSharesBefore);
+        _recordPerformanceFeeBurden(feeSnapshot, grossPricePerShare, parent.vault.getEpoch(epochNonce).pricePerShare);
     }
 
     /// @notice When the outbound CCIP send message fails for a Types.CcipTx.REBALANCE
@@ -632,6 +632,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             Types.Rebalance memory beforeRebalance = parent.vault.getRebalance();
             Types.Strategy memory target = beforeRebalance.pendingStrategy;
 
+            FeeSnapshot memory feeSnapshot = _feeSnapshot();
             __before();
 
             vault.executeRecovery();
@@ -646,7 +647,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             __after();
 
             _assertRebalanceFinalized(beforeRebalance, target, "CCIP-005c: parent rebalance not finalized after retry");
-            _recordFeeBurden(_before.treasuryShareBalance, _before.totalShares);
+            _recordManagementFeeBurden(feeSnapshot);
             _assertManagementFeeMintedToTreasury();
             _assertPerformanceFeeHighWaterMarkNotDecreased();
         } else {
@@ -709,6 +710,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _withdrawAndAssert(actor, shareBurnAmount, "recovery setup: shares not escrowed");
 
         uint256 tvl = _activeStrategyTvl();
+        uint256 grossPricePerShare = _settlementPricePerShare(tvl);
         uint256 settlementPricePerShare = _closeEpochSettlementPricePerShare(tvl);
         uint256 netWithdrawAmount = shareBurnAmount * settlementPricePerShare / SHARE_PRECISION;
 
@@ -724,14 +726,14 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             _withdrawAndAssert(actor, shareBurnAmount, "recovery setup: shares not escrowed");
 
             tvl = _activeStrategyTvl();
+            grossPricePerShare = _settlementPricePerShare(tvl);
             settlementPricePerShare = _closeEpochSettlementPricePerShare(tvl);
             netWithdrawAmount = shareBurnAmount * settlementPricePerShare / SHARE_PRECISION;
         }
 
         t(netWithdrawAmount != 0, "recovery setup: net withdraw is zero");
 
-        uint256 treasuryShareBalanceBefore = parent.share.balanceOf(parent.vault.getTreasury());
-        uint256 totalSharesBefore = parent.vault.getTotalShares();
+        FeeSnapshot memory feeSnapshot = _feeSnapshot();
 
         __before();
 
@@ -756,7 +758,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _executeEpochWithdraw(activeChild, epochNonce, netWithdrawAmount);
         _setActiveChildWithdrawReverts(activeChild, false);
 
-        _recordFeeBurden(treasuryShareBalanceBefore, totalSharesBefore);
+        _recordPerformanceFeeBurden(feeSnapshot, grossPricePerShare, parent.vault.getEpoch(epochNonce).pricePerShare);
         _recordEpochShareAccounting(epochNonce);
         _assertPendingEpochWithdrawRecovery(activeChild, epochNonce, netWithdrawAmount);
         t(
@@ -859,6 +861,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         Types.Rebalance memory beforeRebalance = parent.vault.getRebalance();
         Types.Strategy memory target = beforeRebalance.pendingStrategy;
 
+        FeeSnapshot memory feeSnapshot = _feeSnapshot();
         __before();
 
         vault.executeRecovery();
@@ -874,7 +877,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _assertRebalanceDepositRecoveryCleared(vault);
         _assertRebalanceFinalized(beforeRebalance, target, "REBAL-004: state is not none");
         t(vault.getRecoveryMode() == Types.RecoveryMode.NONE, "REC-003: vault still has recovery");
-        _recordFeeBurden(_before.treasuryShareBalance, _before.totalShares);
+        _recordManagementFeeBurden(feeSnapshot);
         _assertManagementFeeMintedToTreasury();
         _assertPerformanceFeeHighWaterMarkNotDecreased();
         eq(_recoveryModeCount(), 0, "REC-003: recovery mode not cleared");
@@ -1003,6 +1006,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         uint256 amount = _activeStrategyTvl();
         t(amount != 0, "recovery setup: rebalance withdraw amount is zero");
 
+        FeeSnapshot memory feeSnapshot = _feeSnapshot();
         __before();
 
         _setActiveStrategyWithdrawReturn(amount);
@@ -1019,7 +1023,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         __after();
 
         _assertRebalanceFinalized(beforeRebalance, target, "REBAL-004: state is not none");
-        _recordFeeBurden(_before.treasuryShareBalance, _before.totalShares);
+        _recordManagementFeeBurden(feeSnapshot);
         _assertManagementFeeMintedToTreasury();
         _assertPerformanceFeeHighWaterMarkNotDecreased();
         eq(_recoveryModeCount(), 0, "REC-003: recovery mode not cleared");
@@ -1102,7 +1106,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
     function _settlementPricePerShare(uint256 tvl) internal view returns (uint256 pricePerShare) {
         uint256 totalShares = parent.vault.getTotalShares();
         if (totalShares != 0 && tvl != 0) return tvl * SHARE_PRECISION / totalShares;
-        return SHARE_PRECISION;
+        return ASSET_PRECISION;
     }
 
     function _closeEpochSettlementPricePerShare(uint256 tvl) internal view returns (uint256 settlementPricePerShare) {
@@ -1235,14 +1239,13 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             Types.Strategy memory target = selectedChainSelector == CHILD_CHAIN_SELECTOR
                 ? _childStrategy(_protocolId(protocolSeed))
                 : _remoteChildStrategy(_protocolId(protocolSeed));
-            uint256 treasuryShareBalanceBefore = parent.share.balanceOf(parent.vault.getTreasury());
-            uint256 totalSharesBefore = parent.vault.getTotalShares();
+            FeeSnapshot memory feeSnapshot = _feeSnapshot();
 
             __before();
             _rebalanceTo(target);
             __after();
 
-            _recordFeeBurden(treasuryShareBalanceBefore, totalSharesBefore);
+            _recordManagementFeeBurden(feeSnapshot);
         }
     }
 

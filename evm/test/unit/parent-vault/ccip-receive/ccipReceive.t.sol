@@ -18,7 +18,7 @@ contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
     uint256 internal constant REBALANCE_NONCE = 1;
     uint256 internal constant BRIDGED_AMOUNT = 500 * 1e6;
     uint256 internal constant SHARE_BURN_AMOUNT = 500 * 1e18;
-    uint256 internal constant PRICE_PER_SHARE = 1e12;
+    uint256 internal constant PRICE_PER_SHARE = ASSET_PRECISION;
     uint256 internal constant TOTAL_DEPOSIT_AMOUNT = 100 * 1e6;
     uint256 internal constant TOTAL_WITHDRAW_USDC = SHARE_BURN_AMOUNT * PRICE_PER_SHARE / SHARE_PRECISION;
     uint256 internal constant EXPECTED_WITHDRAW_USDC = TOTAL_WITHDRAW_USDC - TOTAL_DEPOSIT_AMOUNT;

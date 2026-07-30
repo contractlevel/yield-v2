@@ -40,6 +40,6 @@ contract CancelWithdraw_EpochIntegrationTest is BaseIntegrationTest {
         _changePrank(i_depositor);
         parent.vault.claimShares(1);
 
-        return DEPOSIT_AMOUNT;
+        shareAmount = DEPOSIT_AMOUNT * YIELD_PRECISION / ASSET_PRECISION;
     }
 }

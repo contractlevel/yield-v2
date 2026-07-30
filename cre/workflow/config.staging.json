@@ -1,6 +1,6 @@
 {
-  "rebalanceSchedule": "0 30 */2 * * *",
-  "epochSchedule": "0 0 */2 * * *",
+  "rebalanceSchedule": "0 45 1-23/2 * * *",
+  "epochSchedule": "0 0 1-23/2 * * *",
   "blockNumber": -2,
   "defiLlama": {
     "poolIds": [
@@ -23,8 +23,8 @@
       "chainName": "ethereum-testnet-sepolia-arbitrum-1",
       "defiLlamaChainName": "Arbitrum",
       "chainSelector": 3478487238524512106,
-      "vaultAddress": "0x584099c5200b8a63536230017f718797026e5915",
-      "workflowRouterAddress": "0x2f0aac54238f1523fe23e54ab273e9ff5320b51c",
+      "vaultAddress": "0x0c4ed72777e832e2dae6d59875e956abd9ad91d9",
+      "workflowRouterAddress": "0x7fd005f9552f600e8231ba821a9e7da42a94fe83",
       "gasLimit": 500000,
       "usdcAddress": "0x75faf114eafb1bdbe2f0316df893fd58ce46aa4d",
       "aaveV3PoolAddressesProviderAddress": "0x90e10d38f75ce1a871a1fdea9bab39e8dda4531f",

@@ -65,6 +65,7 @@ library ParentVaultEpochLib {
     /// @param tvl The Total Value Locked in the active strategy of the Yieldcoin v2 system
     /// @param share The Yieldcoin share token
     /// @param sharePrecision The share precision factor
+    /// @param assetPrecision The underlying asset precision factor, used as the bootstrap price per share
     /// @param minDepositAmount The minimum deposit amount
     /// @param isLocalStrategy Whether this chain currently has the active strategy adapter
     /// @return externalAction The external action, epoch nonce, net amount, and total deposit amount ParentVault
@@ -74,10 +75,11 @@ library ParentVaultEpochLib {
         uint256 tvl,
         address share,
         uint256 sharePrecision,
+        uint256 assetPrecision,
         uint256 minDepositAmount,
         bool isLocalStrategy
     ) public returns (CloseEpochExternalAction memory externalAction) {
-        externalAction = _closeEpoch($, tvl, share, sharePrecision, minDepositAmount, isLocalStrategy);
+        externalAction = _closeEpoch($, tvl, share, sharePrecision, assetPrecision, minDepositAmount, isLocalStrategy);
     }
 
     /// @notice Settles the current epoch and returns the external action ParentVault must execute.
@@ -85,6 +87,7 @@ library ParentVaultEpochLib {
     /// @param tvl The Total Value Locked in the active strategy of the Yieldcoin v2 system
     /// @param share The Yieldcoin share token
     /// @param sharePrecision The share precision factor
+    /// @param assetPrecision The underlying asset precision factor, used as the bootstrap price per share
     /// @param minDepositAmount The minimum deposit amount
     /// @param isLocalStrategy Whether this chain currently has the active strategy adapter
     /// @return externalAction The external action, epoch nonce, net amount, and total deposit amount ParentVault
@@ -100,6 +103,7 @@ library ParentVaultEpochLib {
         uint256 tvl,
         address share,
         uint256 sharePrecision,
+        uint256 assetPrecision,
         uint256 minDepositAmount,
         bool isLocalStrategy
     ) internal returns (CloseEpochExternalAction memory externalAction) {
@@ -125,9 +129,10 @@ library ParentVaultEpochLib {
         }
 
         uint256 totalShares = $.s_totalShares;
-        uint256 grossPricePerShare = ParentVaultFeesLib._calculatePricePerShare(tvl, totalShares, sharePrecision);
+        uint256 grossPricePerShare =
+            ParentVaultFeesLib._calculatePricePerShare(tvl, totalShares, sharePrecision, assetPrecision);
         (uint256 settlementPricePerShare, uint256 feeShares) = ParentVaultFeesLib._collectPerformanceFee(
-            $, epochNonce, tvl, grossPricePerShare, totalShares, share, sharePrecision
+            $, epochNonce, tvl, grossPricePerShare, totalShares, share, sharePrecision, assetPrecision
         );
 
         uint256 totalWithdraw =

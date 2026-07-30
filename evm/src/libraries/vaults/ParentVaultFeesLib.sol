@@ -43,31 +43,34 @@ library ParentVaultFeesLib {
                                   FEES
     //////////////////////////////////////////////////////////////*/
     /// @notice Calculates the asset value of a Yieldcoin share token.
-    /// @dev Bootstrap pricing: when totalShares == 0, pricePerShare is always sharePrecision (par),
+    /// @dev Bootstrap pricing: when totalShares == 0, pricePerShare is always assetPrecision (par),
     ///      regardless of tvl. Any residual tvl at that point (e.g. dust left behind after a full
     ///      exit) is captured by the next depositor's shares rather than the prior shareholders.
     ///      See KI-010 in docs/KNOWN_ISSUES.md.
     /// @param $ ParentVault namespaced storage
     /// @param tvl The Total Value Locked in the active strategy of the Yieldcoin v2 system
     /// @param sharePrecision The share precision factor
+    /// @param assetPrecision The underlying asset precision factor, used as the bootstrap price per share
     /// @return pricePerShare Asset value of a Yieldcoin share token
-    function calculatePricePerShare(ParentVaultStore.ParentVaultStorage storage $, uint256 tvl, uint256 sharePrecision)
-        public
-        view
-        returns (uint256 pricePerShare)
-    {
-        pricePerShare = _calculatePricePerShare(tvl, $.s_totalShares, sharePrecision);
+    function calculatePricePerShare(
+        ParentVaultStore.ParentVaultStorage storage $,
+        uint256 tvl,
+        uint256 sharePrecision,
+        uint256 assetPrecision
+    ) public view returns (uint256 pricePerShare) {
+        pricePerShare = _calculatePricePerShare(tvl, $.s_totalShares, sharePrecision, assetPrecision);
     }
 
     /// @notice Calculates the asset value of a Yieldcoin share token.
     /// @param tvl The Total Value Locked in the active strategy of the Yieldcoin v2 system
     /// @param totalShares The total outstanding Yieldcoin shares (caller-supplied to avoid a redundant SLOAD)
     /// @param sharePrecision The share precision factor
+    /// @param assetPrecision The underlying asset precision factor, used as the bootstrap price per share
     /// @return pricePerShare Asset value of a Yieldcoin share token
-    /// @dev Bootstrap pricing: when totalShares == 0, pricePerShare is always sharePrecision (par), regardless
+    /// @dev Bootstrap pricing: when totalShares == 0, pricePerShare is always assetPrecision (par), regardless
     ///      of tvl. Any residual tvl at that point (e.g. dust left behind after a full exit) is captured by the
     ///      next depositor's shares rather than the prior shareholders. See KI-010 in docs/KNOWN_ISSUES.md.
-    function _calculatePricePerShare(uint256 tvl, uint256 totalShares, uint256 sharePrecision)
+    function _calculatePricePerShare(uint256 tvl, uint256 totalShares, uint256 sharePrecision, uint256 assetPrecision)
         internal
         pure
         returns (uint256 pricePerShare)
@@ -76,7 +79,7 @@ library ParentVaultFeesLib {
             pricePerShare = ParentVaultMathLib._mulDivDown(tvl, sharePrecision, totalShares);
             if (pricePerShare == 0) revert IParentVault.ParentVault__ZeroPricePerShare();
         } else if (totalShares == 0) {
-            pricePerShare = sharePrecision;
+            pricePerShare = assetPrecision;
         } else {
             revert IParentVault.ParentVault__ZeroTvlWithOutstandingShares();
         }
@@ -129,6 +132,7 @@ library ParentVaultFeesLib {
     /// @param grossPricePerShare The epoch price per share before performance fee dilution
     /// @param share The Yieldcoin share token
     /// @param sharePrecision The share precision factor
+    /// @param assetPrecision The underlying asset precision factor, used as the bootstrap price per share
     /// @return settlementPricePerShare The epoch price per share after performance fee dilution
     function collectPerformanceFee(
         ParentVaultStore.ParentVaultStorage storage $,
@@ -136,10 +140,11 @@ library ParentVaultFeesLib {
         uint256 tvl,
         uint256 grossPricePerShare,
         address share,
-        uint256 sharePrecision
+        uint256 sharePrecision,
+        uint256 assetPrecision
     ) public returns (uint256 settlementPricePerShare) {
         (settlementPricePerShare,) = _collectPerformanceFee(
-            $, epochNonce, tvl, grossPricePerShare, $.s_totalShares, share, sharePrecision
+            $, epochNonce, tvl, grossPricePerShare, $.s_totalShares, share, sharePrecision, assetPrecision
         );
     }
 
@@ -151,6 +156,7 @@ library ParentVaultFeesLib {
     /// @param totalShares The total outstanding Yieldcoin shares (caller-supplied to avoid a redundant SLOAD)
     /// @param share The Yieldcoin share token
     /// @param sharePrecision The share precision factor
+    /// @param assetPrecision The underlying asset precision factor, used as the bootstrap price per share
     /// @return settlementPricePerShare The epoch price per share after performance fee dilution
     /// @return feeShares The number of shares minted as a performance fee (0 if none were minted).
     /// @dev This function mints feeShares but deliberately does NOT write `s_totalShares` - the caller
@@ -164,7 +170,8 @@ library ParentVaultFeesLib {
         uint256 grossPricePerShare,
         uint256 totalShares,
         address share,
-        uint256 sharePrecision
+        uint256 sharePrecision,
+        uint256 assetPrecision
     ) internal returns (uint256 settlementPricePerShare, uint256 feeShares) {
         uint256 highWaterMark = $.s_performanceFeeHighWaterMark;
         if (grossPricePerShare <= highWaterMark) return (grossPricePerShare, 0);
@@ -181,7 +188,7 @@ library ParentVaultFeesLib {
 
         uint256 newTotalShares = totalShares + feeShares;
 
-        settlementPricePerShare = _calculatePricePerShare(tvl, newTotalShares, sharePrecision);
+        settlementPricePerShare = _calculatePricePerShare(tvl, newTotalShares, sharePrecision, assetPrecision);
         /// @dev feeShares rounds up and the settlement price rounds down, so dilution can land the
         ///      settlement price a dust amount below the high water mark; only ever raise it (FEE-003)
         if (settlementPricePerShare > highWaterMark) {

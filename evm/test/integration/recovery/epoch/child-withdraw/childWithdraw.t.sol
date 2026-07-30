@@ -24,7 +24,7 @@ contract ChildWithdraw_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
 
         _warpPastMinEpoch();
         _closeEpochThroughWorkflow(
-            parent.workflowRouter, CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner, shareAmount
+            parent.workflowRouter, CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner, DEPOSIT_AMOUNT
         );
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.EXECUTING));
 
@@ -35,7 +35,7 @@ contract ChildWithdraw_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
             EXECUTE_EPOCH_WITHDRAW_WORKFLOW_NAME,
             i_owner,
             2,
-            shareAmount
+            DEPOSIT_AMOUNT
         );
         Vm.Log[] memory failureLogs = vm.getRecordedLogs();
 
@@ -43,15 +43,15 @@ contract ChildWithdraw_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
             failureLogs, keccak256("EpochWithdrawRecoveryStored(uint256,uint256)"), address(child.vault)
         );
         assertEq(uint256(storedLog.topics[1]), 2);
-        assertEq(uint256(storedLog.topics[2]), shareAmount);
-        _assertEpochRecovery(child.vault.getEpochWithdrawRecovery(), 2, shareAmount);
+        assertEq(uint256(storedLog.topics[2]), DEPOSIT_AMOUNT);
+        _assertEpochRecovery(child.vault.getEpochWithdrawRecovery(), 2, DEPOSIT_AMOUNT);
         assertTrue(child.vault.getRecoveryMode() == Types.RecoveryMode.EPOCH_WITHDRAW);
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.EXECUTING));
 
         MockAToken(MockAaveV3Pool(childPool).getReserveData(parent.asset).aTokenAddress)
-            .mint(address(child.aaveV3Adapter), shareAmount);
-        deal(parent.asset, childPool, shareAmount);
-        MockAaveV3Pool(childPool).setWithdrawReturn(shareAmount);
+            .mint(address(child.aaveV3Adapter), DEPOSIT_AMOUNT);
+        deal(parent.asset, childPool, DEPOSIT_AMOUNT);
+        MockAaveV3Pool(childPool).setWithdrawReturn(DEPOSIT_AMOUNT);
 
         vm.recordLogs();
         child.vault.executeRecovery();
@@ -68,7 +68,7 @@ contract ChildWithdraw_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         _changePrank(i_depositor);
         parent.vault.claimAsset(2);
 
-        assertEq(IERC20(parent.asset).balanceOf(i_depositor), depositorUsdcBeforeClaim + shareAmount);
+        assertEq(IERC20(parent.asset).balanceOf(i_depositor), depositorUsdcBeforeClaim + DEPOSIT_AMOUNT);
         assertEq(parent.share.balanceOf(i_depositor), 0);
         assertEq(parent.vault.getWithdrawShareBurnAmount(i_depositor, 2), 0);
     }

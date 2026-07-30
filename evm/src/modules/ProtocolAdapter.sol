@@ -14,7 +14,7 @@ abstract contract ProtocolAdapter is IProtocolAdapter, ReentrancyGuard {
     //////////////////////////////////////////////////////////////*/
     /// @dev Small tolerance for protocol-side share/index rounding on deposit (e.g. Aave's
     /// ray-scaled aToken mint/balanceOf round-trip, Compound's base-index principal rounding)
-    uint256 internal constant DEPOSIT_ROUNDING_TOLERANCE_WEI = 10;
+    uint256 internal constant DEPOSIT_ROUNDING_TOLERANCE_WEI = 10; // @review increasing this
 
     /*//////////////////////////////////////////////////////////////
                                IMMUTABLE

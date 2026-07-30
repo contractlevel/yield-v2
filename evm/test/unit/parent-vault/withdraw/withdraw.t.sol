@@ -10,7 +10,7 @@ import {Types} from "../../../../src/libraries/Types.sol";
 contract ParentVault_WithdrawUnitTest is BaseUnitTest {
     using stdStorage for StdStorage;
 
-    uint256 internal constant SHARE_BURN_AMOUNT = 100 * 1e6;
+    uint256 internal constant SHARE_BURN_AMOUNT = 100 * YIELD_PRECISION;
 
     function setUp() public {
         _changePrank(address(s_parentVault));

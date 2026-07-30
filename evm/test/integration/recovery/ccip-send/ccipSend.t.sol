@@ -32,7 +32,7 @@ contract CcipSend_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
 
         _warpPastMinEpoch();
         _closeEpochThroughWorkflow(
-            parent.workflowRouter, CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner, shareAmount
+            parent.workflowRouter, CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner, DEPOSIT_AMOUNT
         );
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.EXECUTING));
 
@@ -45,7 +45,7 @@ contract CcipSend_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
             EXECUTE_EPOCH_WITHDRAW_WORKFLOW_NAME,
             i_owner,
             2,
-            shareAmount
+            DEPOSIT_AMOUNT
         );
         Vm.Log[] memory failureLogs = vm.getRecordedLogs();
 
@@ -54,12 +54,12 @@ contract CcipSend_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         );
         assertEq(uint256(storedLog.topics[1]), uint256(Types.CcipTx.EPOCH_NET_WITHDRAW));
         assertEq(uint64(uint256(storedLog.topics[2])), PARENT_CHAIN_SELECTOR);
-        assertEq(uint256(storedLog.topics[3]), shareAmount);
+        assertEq(uint256(storedLog.topics[3]), DEPOSIT_AMOUNT);
         _assertCcipSendRecovery(
             child.vault.getCcipSendRecovery(),
             Types.CcipTx.EPOCH_NET_WITHDRAW,
             PARENT_CHAIN_SELECTOR,
-            shareAmount,
+            DEPOSIT_AMOUNT,
             2,
             bytes32(0)
         );
@@ -83,7 +83,7 @@ contract CcipSend_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         _changePrank(i_depositor);
         parent.vault.claimAsset(2);
 
-        assertEq(IERC20(parent.asset).balanceOf(i_depositor), depositorUsdcBeforeClaim + shareAmount);
+        assertEq(IERC20(parent.asset).balanceOf(i_depositor), depositorUsdcBeforeClaim + DEPOSIT_AMOUNT);
     }
 
     function test_Recovery_ChildVault_ccipSend_Rebalance_RetryCompletesParentRebalance() external {

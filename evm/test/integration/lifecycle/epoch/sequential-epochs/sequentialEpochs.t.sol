@@ -9,8 +9,10 @@ import {MockAaveV3Pool} from "../../../../mocks/MockAaveV3Pool.sol";
 contract SequentialEpochs_EpochIntegrationTest is BaseIntegrationTest {
     bytes32 private constant WORKFLOW_ID = keccak256("sequential-epochs");
     bytes10 private constant WORKFLOW_NAME = bytes10("closeEpoch");
+    uint256 private constant PERFORMANCE_FEE_BPS = 777;
+    uint256 private constant BPS_DENOMINATOR = 10_000;
 
-    uint256 private s_netA;
+    uint256 private s_sharesA;
     address private s_aaveV3Pool;
 
     function setUp() public override {
@@ -30,20 +32,27 @@ contract SequentialEpochs_EpochIntegrationTest is BaseIntegrationTest {
 
         _changePrank(i_depositor);
         parent.vault.claimShares(1);
-        s_netA = parent.share.balanceOf(i_depositor);
+        s_sharesA = DEPOSIT_AMOUNT * YIELD_PRECISION / ASSET_PRECISION;
     }
 
-    function test_Epoch_sequential_SharePriceUpdatesAndStateIsolated() external {
-        deal(parent.asset, s_aaveV3Pool, 2 * s_netA);
+    function test_Epoch_sequential_MultipleUsersClaimCorrectSharesAcrossEpochs() external {
+        uint256 epochTwoTvl = DEPOSIT_AMOUNT * 2;
+        uint256 epochTwoDeposit = DEPOSIT_AMOUNT * 2;
+        deal(parent.asset, s_aaveV3Pool, epochTwoTvl);
 
-        _fundAndApproveUsdc(i_recipient1, DEPOSIT_AMOUNT * 2);
+        _fundAndApproveUsdc(i_recipient1, epochTwoDeposit);
         _changePrank(i_recipient1);
-        parent.vault.deposit(DEPOSIT_AMOUNT * 2);
+        parent.vault.deposit(epochTwoDeposit);
 
         _warpPastMinEpoch();
-        _closeEpochThroughWorkflow(parent.workflowRouter, WORKFLOW_ID, WORKFLOW_NAME, i_owner, 2 * s_netA);
+        _closeEpochThroughWorkflow(parent.workflowRouter, WORKFLOW_ID, WORKFLOW_NAME, i_owner, epochTwoTvl);
 
-        uint256 expectedRecipientShares = DEPOSIT_AMOUNT * 2 * SHARE_PRECISION / parent.vault.getEpoch(2).pricePerShare;
+        uint256 grossPricePerShare = epochTwoTvl * YIELD_PRECISION / s_sharesA;
+        uint256 yieldAmount = (grossPricePerShare - ASSET_PRECISION) * s_sharesA / YIELD_PRECISION;
+        uint256 performanceFee = _mulDivUp(yieldAmount, PERFORMANCE_FEE_BPS, BPS_DENOMINATOR);
+        uint256 feeShares = _mulDivUp(performanceFee, s_sharesA, epochTwoTvl - performanceFee);
+        uint256 expectedPricePerShare = epochTwoTvl * YIELD_PRECISION / (s_sharesA + feeShares);
+        uint256 expectedRecipientShares = epochTwoDeposit * YIELD_PRECISION / expectedPricePerShare;
 
         _changePrank(i_recipient1);
         parent.vault.claimShares(2);
@@ -52,10 +61,15 @@ contract SequentialEpochs_EpochIntegrationTest is BaseIntegrationTest {
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.CLAIMABLE));
         assertEq(uint256(parent.vault.getEpoch(3).status), uint256(Types.EpochStatus.OPEN));
         assertEq(parent.vault.getEpochNonce(), 3);
-        assertEq(parent.share.balanceOf(i_depositor), s_netA);
+        assertEq(parent.vault.getEpoch(2).pricePerShare, expectedPricePerShare);
+        assertEq(parent.share.balanceOf(i_depositor), s_sharesA);
         assertEq(parent.share.balanceOf(i_recipient1), expectedRecipientShares);
         assertEq(parent.vault.getDepositAmount(i_depositor, 2), 0);
         assertEq(parent.vault.getDepositAmount(i_recipient1, 1), 0);
         assertEq(parent.vault.getDepositAmount(i_recipient1, 2), 0);
+    }
+
+    function _mulDivUp(uint256 x, uint256 y, uint256 denominator) private pure returns (uint256) {
+        return (x * y + denominator - 1) / denominator;
     }
 }
