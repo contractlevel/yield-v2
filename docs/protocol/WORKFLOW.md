@@ -21,6 +21,55 @@ The workflow has two flows:
 
 All EVM log triggers wait for finalized logs. A separate `RebalanceDepositSuccess` handler is registered for every configured child chain, so the concrete handler count grows with the number of child vaults. The standard CRE service quota allows [EVM log triggers from up to five contracts](https://docs.chain.link/cre/service-quotas#evm-log-trigger), which limits the standard configuration to five monitored vaults and therefore five networks. Before adding another network, the commercial operator must arrange an appropriate limit increase with Chainlink Labs and update the workflow configuration. See [CRE Service Quotas](../operator/OPERATIONS.md#cre-service-quotas).
 
+## Service quotas
+
+Every handler first checks recovery mode on all five configured vaults. Those five EVM reads are included in
+the per-execution totals below. Counts are worst-case attempted capability calls after all earlier guards pass;
+most executions use fewer calls because handlers return as soon as a guard produces a no-op.
+
+| Handler                               | EVM reads | HTTPS requests | Secret reads | Consensus calls | EVM writes |
+| ------------------------------------- | --------: | -------------: | -----------: | --------------: | ---------: |
+| Rebalance cron                        |         8 |              1 |            1 |               1 |          1 |
+| `RebalanceInitiated`                  |         6 |              0 |            0 |               0 |          1 |
+| `RebalanceDepositSuccess`             |         5 |              0 |            0 |               0 |          1 |
+| Epoch cron                            |         9 |              0 |            0 |               0 |          1 |
+| `EpochExecuting`                      |         6 |              0 |            0 |               0 |          1 |
+
+The rebalance cron's eight reads are five recovery checks plus rebalance state, epoch nonce, and the previous
+epoch. The epoch cron adds rebalance state, epoch nonce, the current epoch, and active-strategy TVL to its five
+recovery checks. Its nine reads are the workflow's highest per-execution EVM-read usage.
+
+The current CRE production limits, as exported by `cre workflow limits export`, are:
+
+| Capability                            | Production limit | Maximum used here |
+| ------------------------------------- | ---------------: | ----------------: |
+| Chain reads per execution             |               15 |                 9 |
+| HTTP actions per execution            |               15 |                 1 |
+| Secret reads per execution            |                5 |                 1 |
+| Consensus calls per execution         |               50 |                 1 |
+| Chain-write target networks           |               10 |                 5 |
+| Concurrent capability calls           |               30 |                 1 |
+
+One CRE HTTPS capability call executes independently on each DON node, so the DefiLlama relay receives
+multiple physical requests even though the workflow consumes one HTTP-action call and one consensus call.
+The EVM-write column records the maximum report submission attempted by a handler; the chain-write quota
+limits configured target networks rather than expressing a per-execution write-call allowance.
+
+### EVM log-trigger contracts
+
+The standard CRE quota permits EVM log triggers to monitor at most five unique contract addresses. The
+five-chain workflow uses every available contract slot:
+
+| Monitored contract | Chain count | Events |
+| ------------------ | ----------: | ------ |
+| `ParentVault`      |           1 | `RebalanceInitiated`, `EpochExecuting` |
+| `ChildVault`       |           4 | `RebalanceDepositSuccess` |
+| **Total**          |       **5** | |
+
+Multiple event filters on the ParentVault still monitor one contract address. Each additional chain would
+introduce another ChildVault address and exceed the five-contract quota. Supporting a sixth chain therefore
+requires a CRE quota increase as well as the corresponding workflow and contract configuration.
+
 ## Rebalance flow
 
 ```text
@@ -36,6 +85,7 @@ rebalance cron
 The cron handler does nothing unless all workflow-level checks pass:
 
 - no rebalance is already in progress;
+- at least one epoch has completed and the previous epoch is not still executing;
 - the one-hour cooldown has elapsed;
 - the relay returns both an approved best pool and the current pool;
 - the best pool differs from the active strategy; and

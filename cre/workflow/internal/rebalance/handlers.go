@@ -18,6 +18,8 @@ import (
 	"cre/workflow/internal/workflowtypes"
 )
 
+const epochStatusExecuting uint8 = 2
+
 type parentCodec interface {
 	EncodeInitiateRebalanceMethodCall(parent_vault.InitiateRebalanceInput) ([]byte, error)
 	DecodeRebalanceInitiated(*evm.Log) (*parent_vault.RebalanceInitiatedDecoded, error)
@@ -43,6 +45,8 @@ var (
 type CronDeps struct {
 	FetchAndSelectPools func(runtime cre.Runtime, cfg offchain.Config, activeProtocolId [32]byte, activeChainSelector uint64) (*offchain.Pool, *offchain.Pool, error)
 	GetRebalance        func(runtime cre.Runtime, vault onchain.ParentVaultInterface, blockNumber *big.Int) (parent_vault.TypesRebalance, error)
+	GetEpochNonce       func(runtime cre.Runtime, vault onchain.ParentVaultInterface, blockNumber *big.Int) (*big.Int, error)
+	GetEpoch            func(runtime cre.Runtime, vault onchain.ParentVaultInterface, epochNonce *big.Int, blockNumber *big.Int) (parent_vault.TypesEpoch, error)
 	SubmitReport        func(runtime cre.Runtime, client *evm.Client, router common.Address, calldata []byte, gasLimit uint64) error
 }
 
@@ -60,6 +64,8 @@ type CompleterDeps struct {
 var defaultCronDeps = CronDeps{
 	FetchAndSelectPools: offchain.FetchAndSelectPools,
 	GetRebalance:        onchain.GetRebalance,
+	GetEpochNonce:       onchain.GetEpochNonce,
+	GetEpoch:            onchain.GetEpoch,
 	SubmitReport:        onchain.SubmitReport,
 }
 
@@ -98,7 +104,8 @@ func onCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, _ *cron.P
 		return nil, fmt.Errorf("bind parent vault: %w", err)
 	}
 
-	rebalance, err := deps.GetRebalance(runtime, parentVault, big.NewInt(config.BlockNumber))
+	blockNumber := big.NewInt(config.BlockNumber)
+	rebalance, err := deps.GetRebalance(runtime, parentVault, blockNumber)
 	if err != nil {
 		return nil, fmt.Errorf("get rebalance: %w", err)
 	}
@@ -107,6 +114,28 @@ func onCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, _ *cron.P
 	if rebalance.State != 0 {
 		logger.Info("Rebalance already in progress; skipping")
 		return &workflowtypes.ExecutionResult{Result: "no-op: rebalance in progress"}, nil
+	}
+
+	epochNonce, err := deps.GetEpochNonce(runtime, parentVault, blockNumber)
+	if err != nil {
+		return nil, fmt.Errorf("get epoch nonce: %w", err)
+	}
+	if epochNonce == nil {
+		return nil, fmt.Errorf("get epoch nonce: nil epoch nonce")
+	}
+	if epochNonce.Cmp(big.NewInt(1)) <= 0 {
+		logger.Info("No completed epoch; skipping rebalance")
+		return &workflowtypes.ExecutionResult{Result: "no-op: no completed epoch"}, nil
+	}
+
+	previousEpochNonce := new(big.Int).Sub(epochNonce, big.NewInt(1))
+	previousEpoch, err := deps.GetEpoch(runtime, parentVault, previousEpochNonce, blockNumber)
+	if err != nil {
+		return nil, fmt.Errorf("get previous epoch: %w", err)
+	}
+	if previousEpoch.Status == epochStatusExecuting {
+		logger.Info("Epoch executing; skipping rebalance", slog.Any("epochNonce", previousEpochNonce))
+		return &workflowtypes.ExecutionResult{Result: "no-op: epoch executing"}, nil
 	}
 
 	if rebalance.LastRebalanceCompletedTimestamp != nil && !RebalanceCooldownElapsed(rebalance.LastRebalanceCompletedTimestamp.Int64(), runtime.Now().Unix()) {

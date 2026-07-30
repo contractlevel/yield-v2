@@ -191,6 +191,12 @@ func baseCronDeps() CronDeps {
 		GetRebalance: func(cre.Runtime, onchain.ParentVaultInterface, *big.Int) (parent_vault.TypesRebalance, error) {
 			return rebalanceState(aaveProtocolID, parentChainSelector), nil
 		},
+		GetEpochNonce: func(cre.Runtime, onchain.ParentVaultInterface, *big.Int) (*big.Int, error) {
+			return big.NewInt(2), nil
+		},
+		GetEpoch: func(cre.Runtime, onchain.ParentVaultInterface, *big.Int, *big.Int) (parent_vault.TypesEpoch, error) {
+			return parent_vault.TypesEpoch{Status: 3}, nil
+		},
 		SubmitReport: func(cre.Runtime, *evm.Client, common.Address, []byte, uint64) error {
 			return nil
 		},
@@ -283,6 +289,71 @@ func Test_OnCronTrigger_withDeps(t *testing.T) {
 				return deps
 			}(),
 			wantResult: "no-op: rebalance in progress",
+		},
+		{
+			name:  "get epoch nonce error",
+			codec: &fakeParentCodec{},
+			deps: func() CronDeps {
+				deps := baseCronDeps()
+				deps.GetEpochNonce = func(cre.Runtime, onchain.ParentVaultInterface, *big.Int) (*big.Int, error) {
+					return nil, errors.New("read failed")
+				}
+				return deps
+			}(),
+			wantErr: "get epoch nonce: read failed",
+		},
+		{
+			name:  "nil epoch nonce",
+			codec: &fakeParentCodec{},
+			deps: func() CronDeps {
+				deps := baseCronDeps()
+				deps.GetEpochNonce = func(cre.Runtime, onchain.ParentVaultInterface, *big.Int) (*big.Int, error) {
+					return nil, nil
+				}
+				return deps
+			}(),
+			wantErr: "get epoch nonce: nil epoch nonce",
+		},
+		{
+			name:  "no completed epoch",
+			codec: &fakeParentCodec{},
+			deps: func() CronDeps {
+				deps := baseCronDeps()
+				deps.GetEpochNonce = func(cre.Runtime, onchain.ParentVaultInterface, *big.Int) (*big.Int, error) {
+					return big.NewInt(1), nil
+				}
+				return deps
+			}(),
+			wantResult: "no-op: no completed epoch",
+		},
+		{
+			name:  "get previous epoch error",
+			codec: &fakeParentCodec{},
+			deps: func() CronDeps {
+				deps := baseCronDeps()
+				deps.GetEpoch = func(cre.Runtime, onchain.ParentVaultInterface, *big.Int, *big.Int) (parent_vault.TypesEpoch, error) {
+					return parent_vault.TypesEpoch{}, errors.New("read failed")
+				}
+				return deps
+			}(),
+			wantErr: "get previous epoch: read failed",
+		},
+		{
+			name:  "epoch executing",
+			codec: &fakeParentCodec{},
+			deps: func() CronDeps {
+				deps := baseCronDeps()
+				deps.GetEpoch = func(_ cre.Runtime, _ onchain.ParentVaultInterface, epochNonce *big.Int, _ *big.Int) (parent_vault.TypesEpoch, error) {
+					require.Equal(t, big.NewInt(1), epochNonce)
+					return parent_vault.TypesEpoch{Status: epochStatusExecuting}, nil
+				}
+				deps.FetchAndSelectPools = func(cre.Runtime, offchain.Config, [32]byte, uint64) (*offchain.Pool, *offchain.Pool, error) {
+					t.Fatal("FetchAndSelectPools must not be called while an epoch is executing")
+					return nil, nil, nil
+				}
+				return deps
+			}(),
+			wantResult: "no-op: epoch executing",
 		},
 		{
 			name:  "fetch error",
