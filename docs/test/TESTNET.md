@@ -136,6 +136,30 @@ forge script script/interactions/SetCrosschainVaults.s.sol:SetCrosschainVaults \
     -vvvv
 ```
 
+### Configure Workflow Routers
+
+Run from `evm/` after deploying the CRE workflow and granting the deployer
+`CONFIG_OPERATOR_ROLE` on each WorkflowRouter. The script configures the deployed workflow metadata and
+allowlists the appropriate parent or child vault selectors. It validates the configured vault and verifies
+the resulting router configuration before completing.
+
+```bash
+for rpc in arbitrum_sepolia ethereum_sepolia base_sepolia optimism_sepolia avalanche_fuji; do
+    forge script script/interactions/ConfigureWorkflowRouter.s.sol:ConfigureWorkflowRouter \
+        --rpc-url "$rpc" \
+        --account testnet-deployer \
+        --sender 0x7664C538C80870824738A8ADCcd92AcA244D7e69 \
+        --broadcast \
+        -vvvv || break
+done
+```
+
+The workflow values are defined once in `script/HelperConfig.s.sol` and shared by all five testnet configs:
+
+- workflow name: `67d6954c97`
+- workflow ID: `0x00af2b6d4c060c94ddf6f13d9236199fc8cd4d5b35b46c164b36912e45655891`
+- workflow owner: `0x7664C538C80870824738A8ADCcd92AcA244D7e69`
+
 Grant the burner `CONFIG_OPERATOR_ROLE` on the active chain's vault proxy if required:
 
 ```bash

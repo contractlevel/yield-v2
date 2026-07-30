@@ -20,6 +20,8 @@ contract HelperConfig is Script {
     uint64 internal constant ARBITRUM_CHAIN_SELECTOR = 4949039107694359620;
     uint64 internal constant ARBITRUM_SEPOLIA_CHAIN_SELECTOR = 3478487238524512106;
     uint256 internal constant INITIAL_DEFAULT_CCIP_GAS_LIMIT = 500_000;
+    bytes32 internal constant STAGING_WORKFLOW_ID = 0x00af2b6d4c060c94ddf6f13d9236199fc8cd4d5b35b46c164b36912e45655891;
+    bytes10 internal constant STAGING_WORKFLOW_NAME = bytes10("67d6954c97");
 
     /*//////////////////////////////////////////////////////////////
                              NETWORK CONFIG
@@ -76,10 +78,14 @@ contract HelperConfig is Script {
 
     struct CREConfig {
         address keystoneForwarder;
+        bytes32 workflowId;
+        bytes10 workflowName;
+        address workflowOwner;
     }
 
     struct DeployedConfig {
         address vaultProxy;
+        address workflowRouter;
     }
 
     NetworkConfig public activeNetworkConfig;
@@ -147,8 +153,8 @@ contract HelperConfig is Script {
                 parentChainSelector: ARBITRUM_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
-            cre: CREConfig({keystoneForwarder: 0xF8344CFd5c43616a4366C34E3EEE75af79a74482}),
-            deployed: DeployedConfig({vaultProxy: address(0)})
+            cre: _getUndeployedCreConfig(0xF8344CFd5c43616a4366C34E3EEE75af79a74482),
+            deployed: DeployedConfig({vaultProxy: address(0), workflowRouter: address(0)})
         });
     }
 
@@ -185,8 +191,8 @@ contract HelperConfig is Script {
                 parentChainSelector: ARBITRUM_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
-            cre: CREConfig({keystoneForwarder: 0xF8344CFd5c43616a4366C34E3EEE75af79a74482}),
-            deployed: DeployedConfig({vaultProxy: address(0)})
+            cre: _getUndeployedCreConfig(0xF8344CFd5c43616a4366C34E3EEE75af79a74482),
+            deployed: DeployedConfig({vaultProxy: address(0), workflowRouter: address(0)})
         });
     }
 
@@ -222,8 +228,8 @@ contract HelperConfig is Script {
                 parentChainSelector: ARBITRUM_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
-            cre: CREConfig({keystoneForwarder: 0x0b93082D9b3C7C97fAcd250082899BAcf3af3885}),
-            deployed: DeployedConfig({vaultProxy: address(0)})
+            cre: _getUndeployedCreConfig(0x0b93082D9b3C7C97fAcd250082899BAcf3af3885),
+            deployed: DeployedConfig({vaultProxy: address(0), workflowRouter: address(0)})
         });
     }
 
@@ -259,8 +265,8 @@ contract HelperConfig is Script {
                 parentChainSelector: ARBITRUM_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
-            cre: CREConfig({keystoneForwarder: 0x76c9cf548b4179F8901cda1f8623568b58215E62}),
-            deployed: DeployedConfig({vaultProxy: address(0)})
+            cre: _getUndeployedCreConfig(0x76c9cf548b4179F8901cda1f8623568b58215E62),
+            deployed: DeployedConfig({vaultProxy: address(0), workflowRouter: address(0)})
         });
     }
 
@@ -296,8 +302,8 @@ contract HelperConfig is Script {
                 parentChainSelector: ARBITRUM_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
-            cre: CREConfig({keystoneForwarder: 0xF8344CFd5c43616a4366C34E3EEE75af79a74482}),
-            deployed: DeployedConfig({vaultProxy: address(0)})
+            cre: _getUndeployedCreConfig(0xF8344CFd5c43616a4366C34E3EEE75af79a74482),
+            deployed: DeployedConfig({vaultProxy: address(0), workflowRouter: address(0)})
         });
     }
 
@@ -336,8 +342,11 @@ contract HelperConfig is Script {
                 parentChainSelector: ARBITRUM_SEPOLIA_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
-            cre: CREConfig({keystoneForwarder: 0x76c9cf548b4179F8901cda1f8623568b58215E62}),
-            deployed: DeployedConfig({vaultProxy: 0x584099C5200b8a63536230017F718797026E5915})
+            cre: _getStagingCreConfig(0x76c9cf548b4179F8901cda1f8623568b58215E62),
+            deployed: DeployedConfig({
+                vaultProxy: 0x584099C5200b8a63536230017F718797026E5915,
+                workflowRouter: 0x2f0aac54238f1523fE23E54Ab273E9ff5320b51C
+            })
         });
     }
 
@@ -373,8 +382,11 @@ contract HelperConfig is Script {
                 parentChainSelector: ARBITRUM_SEPOLIA_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
-            cre: CREConfig({keystoneForwarder: 0xF8344CFd5c43616a4366C34E3EEE75af79a74482}),
-            deployed: DeployedConfig({vaultProxy: 0x809a7Bf022841e3bCDa0d3cf64B780Aabf898C64})
+            cre: _getStagingCreConfig(0xF8344CFd5c43616a4366C34E3EEE75af79a74482),
+            deployed: DeployedConfig({
+                vaultProxy: 0x809a7Bf022841e3bCDa0d3cf64B780Aabf898C64,
+                workflowRouter: 0xE7a5A96775f75baAaf49E5Dc009e3264779E2F9C
+            })
         });
     }
 
@@ -410,8 +422,11 @@ contract HelperConfig is Script {
                 parentChainSelector: ARBITRUM_SEPOLIA_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
-            cre: CREConfig({keystoneForwarder: 0xF8344CFd5c43616a4366C34E3EEE75af79a74482}),
-            deployed: DeployedConfig({vaultProxy: 0x221736594f42A10CE61A0f66Dc4e6B04786ff8a3})
+            cre: _getStagingCreConfig(0xF8344CFd5c43616a4366C34E3EEE75af79a74482),
+            deployed: DeployedConfig({
+                vaultProxy: 0x221736594f42A10CE61A0f66Dc4e6B04786ff8a3,
+                workflowRouter: 0x971e7D69e039CC013145CeAA6AacC9Dbe55DeBa6
+            })
         });
     }
 
@@ -447,8 +462,11 @@ contract HelperConfig is Script {
                 parentChainSelector: ARBITRUM_SEPOLIA_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
-            cre: CREConfig({keystoneForwarder: 0x76c9cf548b4179F8901cda1f8623568b58215E62}),
-            deployed: DeployedConfig({vaultProxy: 0x221736594f42A10CE61A0f66Dc4e6B04786ff8a3})
+            cre: _getStagingCreConfig(0x76c9cf548b4179F8901cda1f8623568b58215E62),
+            deployed: DeployedConfig({
+                vaultProxy: 0x221736594f42A10CE61A0f66Dc4e6B04786ff8a3,
+                workflowRouter: 0x971e7D69e039CC013145CeAA6AacC9Dbe55DeBa6
+            })
         });
     }
 
@@ -484,8 +502,11 @@ contract HelperConfig is Script {
                 parentChainSelector: ARBITRUM_SEPOLIA_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
-            cre: CREConfig({keystoneForwarder: 0x76c9cf548b4179F8901cda1f8623568b58215E62}),
-            deployed: DeployedConfig({vaultProxy: 0x781d5338EB60Ed6C0129F28cE56872Cc239aC3c2})
+            cre: _getStagingCreConfig(0x76c9cf548b4179F8901cda1f8623568b58215E62),
+            deployed: DeployedConfig({
+                vaultProxy: 0x781d5338EB60Ed6C0129F28cE56872Cc239aC3c2,
+                workflowRouter: 0x412749BE129B2B6Ba778F732adb6B69617bd7A13
+            })
         });
     }
 
@@ -507,7 +528,7 @@ contract HelperConfig is Script {
             protocols: protocols,
             ccip: ccip,
             cre: cre,
-            deployed: DeployedConfig({vaultProxy: address(0)})
+            deployed: DeployedConfig({vaultProxy: address(0), workflowRouter: address(0)})
         });
     }
 
@@ -555,6 +576,24 @@ contract HelperConfig is Script {
     }
 
     function _getMockCreConfig() private returns (CREConfig memory) {
-        return CREConfig({keystoneForwarder: makeAddr("keystoneForwarder")});
+        return _getUndeployedCreConfig(makeAddr("keystoneForwarder"));
+    }
+
+    function _getUndeployedCreConfig(address keystoneForwarder) private pure returns (CREConfig memory) {
+        return CREConfig({
+            keystoneForwarder: keystoneForwarder,
+            workflowId: bytes32(0),
+            workflowName: bytes10(0),
+            workflowOwner: address(0)
+        });
+    }
+
+    function _getStagingCreConfig(address keystoneForwarder) private pure returns (CREConfig memory) {
+        return CREConfig({
+            keystoneForwarder: keystoneForwarder,
+            workflowId: STAGING_WORKFLOW_ID,
+            workflowName: STAGING_WORKFLOW_NAME,
+            workflowOwner: BURNER_EOA
+        });
     }
 }

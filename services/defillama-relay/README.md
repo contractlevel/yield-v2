@@ -209,3 +209,10 @@ Authorization: Bearer <token>
 ```
 
 The relay returns all matching pools. The CRE workflow remains responsible for selecting the best pool.
+
+### CRE request concurrency
+
+A CRE HTTP consensus request is executed independently by each DON node. The relay therefore permits up
+to eight upstream fetches per Worker isolate. With the current nine-node DON, at most one request receives
+`429`, which remains below CRE's four-node consensus failure threshold. The limit also bounds worst-case
+upstream response buffering to `8 * 12 MiB = 96 MiB` per isolate.

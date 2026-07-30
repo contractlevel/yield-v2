@@ -5,3 +5,5 @@ offchain.cover
 
 workflow/limits.local-fork.json
 .gotmp
+
+workflow/binary.wasm.br.b64
