@@ -21,7 +21,8 @@ type ChildVaultInterface interface {
 	BaseVaultInterface
 }
 
-// BaseVaultInterface defines the subset used to read TVL.
+// BaseVaultInterface defines the common vault reads used by workflow handlers.
 type BaseVaultInterface interface {
 	GetTVL(runtime cre.Runtime, blockNumber *big.Int) cre.Promise[*big.Int]
+	GetRecoveryMode(runtime cre.Runtime, blockNumber *big.Int) cre.Promise[uint8]
 }

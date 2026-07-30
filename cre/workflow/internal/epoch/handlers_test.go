@@ -68,6 +68,10 @@ func (fakeParentVault) GetTVL(cre.Runtime, *big.Int) cre.Promise[*big.Int] {
 	return cre.PromiseFromResult(big.NewInt(0), nil)
 }
 
+func (fakeParentVault) GetRecoveryMode(cre.Runtime, *big.Int) cre.Promise[uint8] {
+	return cre.PromiseFromResult(uint8(0), nil)
+}
+
 func (fakeParentVault) GetRebalance(cre.Runtime, *big.Int) cre.Promise[parent_vault.TypesRebalance] {
 	return cre.PromiseFromResult(parent_vault.TypesRebalance{}, nil)
 }
@@ -84,6 +88,10 @@ type fakeChildVault struct{}
 
 func (fakeChildVault) GetTVL(cre.Runtime, *big.Int) cre.Promise[*big.Int] {
 	return cre.PromiseFromResult(big.NewInt(0), nil)
+}
+
+func (fakeChildVault) GetRecoveryMode(cre.Runtime, *big.Int) cre.Promise[uint8] {
+	return cre.PromiseFromResult(uint8(0), nil)
 }
 
 func testConfig() *helper.Config {

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log/slog"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/smartcontractkit/cre-sdk-go/capabilities/blockchain/evm"
@@ -12,6 +13,7 @@ import (
 	"cre/contracts/evm/src/generated/parent_vault"
 	"cre/workflow/internal/epoch"
 	"cre/workflow/internal/helper"
+	"cre/workflow/internal/onchain"
 	"cre/workflow/internal/rebalance"
 	"cre/workflow/internal/workflowtypes"
 )
@@ -23,6 +25,8 @@ type Config = helper.Config
 
 type ExecutionResult = workflowtypes.ExecutionResult
 
+type recoveryFinder func(cre.Runtime, []helper.EvmConfig, *big.Int) (*onchain.ActiveRecovery, error)
+
 // ---- INIT WORKFLOW ----
 
 // InitWorkflow registers five handlers:
@@ -32,6 +36,10 @@ type ExecutionResult = workflowtypes.ExecutionResult
 //  4. Cron → EpochInitiator
 //  5. ParentVault.EpochExecuting log → EpochExecutor
 func InitWorkflow(config *Config, logger *slog.Logger, _ cre.SecretsProvider) (cre.Workflow[*Config], error) {
+	return initWorkflow(config, logger, onchain.FindActiveRecovery)
+}
+
+func initWorkflow(config *Config, logger *slog.Logger, findRecovery recoveryFinder) (cre.Workflow[*Config], error) {
 	if err := helper.ValidateConfig(config); err != nil {
 		return nil, err
 	}
@@ -51,7 +59,7 @@ func InitWorkflow(config *Config, logger *slog.Logger, _ cre.SecretsProvider) (c
 	// Handler 1: cron → RebalanceInitiator
 	handlers = append(handlers, cre.Handler(
 		cron.Trigger(&cron.Config{Schedule: config.RebalanceSchedule}),
-		rebalance.OnCronTrigger,
+		withRecoveryGuard(findRecovery, rebalance.OnCronTrigger),
 	))
 
 	// Handler 2: ParentVault.RebalanceInitiated → RebalanceExecutor
@@ -61,12 +69,11 @@ func InitWorkflow(config *Config, logger *slog.Logger, _ cre.SecretsProvider) (c
 			Topics:     []*evm.TopicValues{{Values: [][]byte{pvCodec.RebalanceInitiatedLogHash()}}},
 			Confidence: evm.ConfidenceLevel_CONFIDENCE_LEVEL_FINALIZED,
 		}),
-		rebalance.OnRebalanceInitiated,
+		withRecoveryGuard(findRecovery, rebalance.OnRebalanceInitiated),
 	))
 
 	// Handler 3: per-chain vault RebalanceDepositSuccess → RebalanceCompleter
 	for _, evmCfg := range config.Evms {
-		evmCfg := evmCfg // capture loop variable
 		if evmCfg.IsParent {
 			continue // skip parent chain
 		}
@@ -77,16 +84,14 @@ func InitWorkflow(config *Config, logger *slog.Logger, _ cre.SecretsProvider) (c
 				Topics:     []*evm.TopicValues{{Values: [][]byte{pvCodec.RebalanceDepositSuccessLogHash()}}},
 				Confidence: evm.ConfidenceLevel_CONFIDENCE_LEVEL_FINALIZED,
 			}),
-			func(cfg *Config, runtime cre.Runtime, log *evm.Log) (*ExecutionResult, error) {
-				return rebalance.OnRebalanceDepositSuccess(cfg, runtime, log)
-			},
+			withRecoveryGuard(findRecovery, rebalance.OnRebalanceDepositSuccess),
 		))
 	}
 
 	// Handler 4: cron → EpochInitiator
 	handlers = append(handlers, cre.Handler(
 		cron.Trigger(&cron.Config{Schedule: config.EpochSchedule}),
-		epoch.OnEpochCronTrigger,
+		withRecoveryGuard(findRecovery, epoch.OnEpochCronTrigger),
 	))
 
 	// Handler 5: ParentVault.EpochExecuting → EpochExecutor
@@ -96,11 +101,29 @@ func InitWorkflow(config *Config, logger *slog.Logger, _ cre.SecretsProvider) (c
 			Topics:     []*evm.TopicValues{{Values: [][]byte{pvCodec.EpochExecutingLogHash()}}},
 			Confidence: evm.ConfidenceLevel_CONFIDENCE_LEVEL_FINALIZED,
 		}),
-		epoch.OnEpochExecuting,
+		withRecoveryGuard(findRecovery, epoch.OnEpochExecuting),
 	))
 
 	return cre.Workflow[*Config](handlers), nil
 }
 
-// @review if recovery mode exists; cancel workflow?
-// expose GetRecoveryMode to CRE, require NONE before reading/submitting TVL, test every nonzero recovery mode, and take recovery/TVL reads at the same finalized block reference.
+func withRecoveryGuard[T any](
+	findRecovery recoveryFinder,
+	handler func(*Config, cre.Runtime, *T) (*ExecutionResult, error),
+) func(*Config, cre.Runtime, *T) (*ExecutionResult, error) {
+	return func(config *Config, runtime cre.Runtime, payload *T) (*ExecutionResult, error) {
+		recovery, err := findRecovery(runtime, config.Evms, big.NewInt(config.BlockNumber))
+		if err != nil {
+			return nil, fmt.Errorf("check recovery mode: %w", err)
+		}
+		if recovery != nil {
+			runtime.Logger().Info("Recovery active; skipping workflow handler",
+				slog.String("chain", recovery.ChainName),
+				slog.Uint64("mode", uint64(recovery.Mode)),
+			)
+			return &ExecutionResult{Result: "no-op: recovery active"}, nil
+		}
+
+		return handler(config, runtime, payload)
+	}
+}

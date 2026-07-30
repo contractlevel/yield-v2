@@ -34,7 +34,17 @@
 staging-settings:
   rpcs:
     - chain-name: ethereum-testnet-sepolia
-      url: https://ethereum-sepolia-rpc.publicnode.com
+      url: ${CRE_SECRET_RPC_SEPOLIA}
+    - chain-name: ethereum-testnet-sepolia-arbitrum-1
+      url: ${CRE_SECRET_RPC_ARBITRUM_SEPOLIA}
+    - chain-name: ethereum-testnet-sepolia-base-1
+      url: ${CRE_SECRET_RPC_BASE_SEPOLIA}
+    - chain-name: ethereum-testnet-sepolia-optimism-1
+      url: ${CRE_SECRET_RPC_OPTIMISM_SEPOLIA}
+    - chain-name: avalanche-testnet-fuji
+      url: ${CRE_SECRET_RPC_AVALANCHE_FUJI}
+    - chain-name: ethereum-mainnet
+      url: ${CRE_SECRET_RPC_MAINNET}
 
 # ==========================================================================
 production-settings:

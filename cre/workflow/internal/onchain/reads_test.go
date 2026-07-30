@@ -28,6 +28,10 @@ type fakeReadVault struct {
 	tvlResult *big.Int
 	tvlErr    error
 	tvlBlock  *big.Int
+
+	recoveryMode  uint8
+	recoveryErr   error
+	recoveryBlock *big.Int
 }
 
 func (f *fakeReadVault) GetRebalance(_ cre.Runtime, blockNumber *big.Int) cre.Promise[parent_vault.TypesRebalance] {
@@ -49,6 +53,11 @@ func (f *fakeReadVault) GetEpoch(_ cre.Runtime, args parent_vault.GetEpochInput,
 func (f *fakeReadVault) GetTVL(_ cre.Runtime, blockNumber *big.Int) cre.Promise[*big.Int] {
 	f.tvlBlock = blockNumber
 	return cre.PromiseFromResult(f.tvlResult, f.tvlErr)
+}
+
+func (f *fakeReadVault) GetRecoveryMode(_ cre.Runtime, blockNumber *big.Int) cre.Promise[uint8] {
+	f.recoveryBlock = blockNumber
+	return cre.PromiseFromResult(f.recoveryMode, f.recoveryErr)
 }
 
 func Test_GetRebalance(t *testing.T) {
@@ -131,4 +140,22 @@ func Test_ReadTVL_error(t *testing.T) {
 	require.Error(t, err, "expected TVL read error")
 	require.Nil(t, got, "expected nil TVL on error")
 	require.ErrorContains(t, err, "tvl failed")
+}
+
+func Test_GetRecoveryMode(t *testing.T) {
+	blockNumber := big.NewInt(-2)
+	vault := &fakeReadVault{recoveryMode: 3}
+
+	got, err := GetRecoveryMode(nil, vault, blockNumber)
+	require.NoError(t, err)
+	require.Equal(t, uint8(3), got)
+	require.Same(t, blockNumber, vault.recoveryBlock)
+}
+
+func Test_GetRecoveryMode_error(t *testing.T) {
+	vault := &fakeReadVault{recoveryErr: errors.New("recovery failed")}
+
+	got, err := GetRecoveryMode(nil, vault, big.NewInt(1))
+	require.ErrorContains(t, err, "recovery failed")
+	require.Zero(t, got)
 }

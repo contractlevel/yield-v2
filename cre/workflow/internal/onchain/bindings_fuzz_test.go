@@ -7,6 +7,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Fuzz_NewBaseVaultBinding_addressValidation(f *testing.F) {
+	f.Add(validVaultAddress)
+	f.Add("not-an-address")
+	f.Add("")
+	f.Add("0x0000000000000000000000000000000000000000")
+
+	f.Fuzz(func(t *testing.T, addr string) {
+		binding, err := NewBaseVaultBinding(nil, addr)
+
+		if common.IsHexAddress(addr) {
+			require.NoError(t, err)
+			require.NotNil(t, binding)
+		} else {
+			require.Error(t, err)
+			require.Nil(t, binding)
+		}
+	})
+}
+
 func Fuzz_NewParentVaultBinding_addressValidation(f *testing.F) {
 	f.Add(validVaultAddress)
 	f.Add("not-an-address")

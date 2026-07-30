@@ -8,12 +8,14 @@ import (
 
 	"github.com/smartcontractkit/cre-sdk-go/capabilities/blockchain/evm"
 	"github.com/smartcontractkit/cre-sdk-go/capabilities/scheduler/cron"
+	"github.com/smartcontractkit/cre-sdk-go/cre"
 	"github.com/smartcontractkit/cre-sdk-go/cre/testutils"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/anypb"
 
 	"cre/contracts/evm/src/generated/parent_vault"
 	"cre/workflow/internal/helper"
+	"cre/workflow/internal/onchain"
 )
 
 func workflowTestAddress(n uint64) string {
@@ -126,7 +128,9 @@ func TestInitWorkflow_ChildHandlerClosure(t *testing.T) {
 		workflowTestEvmConfig(2, false),
 	)
 
-	workflow, err := InitWorkflow(config, runtime.Logger(), nil)
+	workflow, err := initWorkflow(config, runtime.Logger(), func(cre.Runtime, []helper.EvmConfig, *big.Int) (*onchain.ActiveRecovery, error) {
+		return nil, nil
+	})
 	require.NoError(t, err, "expected workflow to initialize")
 
 	codec, err := parent_vault.NewCodec()
@@ -149,4 +153,106 @@ func TestInitWorkflow_ChildHandlerClosure(t *testing.T) {
 	require.Error(t, err, "expected child completion handler to run and fail on empty log")
 	require.Nil(t, result, "expected nil result on handler error")
 	require.ErrorContains(t, err, "submit completeRebalance")
+}
+
+func TestWithRecoveryGuard_noRecovery(t *testing.T) {
+	runtime := testutils.NewRuntime(t, testutils.Secrets{})
+	config := workflowTestConfig(workflowTestEvmConfig(1, true))
+	payload := &cron.Payload{}
+	called := false
+	want := &ExecutionResult{Result: "handled"}
+
+	guarded := withRecoveryGuard(
+		func(_ cre.Runtime, evms []helper.EvmConfig, blockNumber *big.Int) (*onchain.ActiveRecovery, error) {
+			require.Equal(t, config.Evms, evms)
+			require.Equal(t, int64(-2), blockNumber.Int64())
+			return nil, nil
+		},
+		func(gotConfig *Config, gotRuntime cre.Runtime, gotPayload *cron.Payload) (*ExecutionResult, error) {
+			called = true
+			require.Same(t, config, gotConfig)
+			require.Equal(t, runtime, gotRuntime)
+			require.Same(t, payload, gotPayload)
+			return want, nil
+		},
+	)
+
+	got, err := guarded(config, runtime, payload)
+	require.NoError(t, err)
+	require.Same(t, want, got)
+	require.True(t, called)
+}
+
+func TestWithRecoveryGuard_activeRecovery(t *testing.T) {
+	runtime := testutils.NewRuntime(t, testutils.Secrets{})
+	config := workflowTestConfig(workflowTestEvmConfig(1, true))
+	called := false
+	guarded := withRecoveryGuard(
+		func(cre.Runtime, []helper.EvmConfig, *big.Int) (*onchain.ActiveRecovery, error) {
+			return &onchain.ActiveRecovery{ChainName: "chain-1", Mode: 4}, nil
+		},
+		func(*Config, cre.Runtime, *cron.Payload) (*ExecutionResult, error) {
+			called = true
+			return nil, nil
+		},
+	)
+
+	got, err := guarded(config, runtime, &cron.Payload{})
+	require.NoError(t, err)
+	require.Equal(t, &ExecutionResult{Result: "no-op: recovery active"}, got)
+	require.False(t, called)
+}
+
+func TestWithRecoveryGuard_checkError(t *testing.T) {
+	runtime := testutils.NewRuntime(t, testutils.Secrets{})
+	config := workflowTestConfig(workflowTestEvmConfig(1, true))
+	called := false
+	guarded := withRecoveryGuard(
+		func(cre.Runtime, []helper.EvmConfig, *big.Int) (*onchain.ActiveRecovery, error) {
+			return nil, errors.New("read failed")
+		},
+		func(*Config, cre.Runtime, *cron.Payload) (*ExecutionResult, error) {
+			called = true
+			return nil, nil
+		},
+	)
+
+	got, err := guarded(config, runtime, &cron.Payload{})
+	require.Nil(t, got)
+	require.ErrorContains(t, err, "check recovery mode: read failed")
+	require.False(t, called)
+}
+
+func TestInitWorkflow_allCallbacksGuarded(t *testing.T) {
+	runtime := testutils.NewRuntime(t, testutils.Secrets{})
+	config := workflowTestConfig(
+		workflowTestEvmConfig(1, true),
+		workflowTestEvmConfig(2, false),
+		workflowTestEvmConfig(3, false),
+		workflowTestEvmConfig(4, false),
+		workflowTestEvmConfig(5, false),
+	)
+	checks := 0
+	workflow, err := initWorkflow(config, runtime.Logger(), func(cre.Runtime, []helper.EvmConfig, *big.Int) (*onchain.ActiveRecovery, error) {
+		checks++
+		return &onchain.ActiveRecovery{ChainName: "chain-5", Mode: 5}, nil
+	})
+	require.NoError(t, err)
+	require.Len(t, workflow, 8)
+
+	cronCapabilityID := cron.Trigger(&cron.Config{}).CapabilityID()
+	for _, handler := range workflow {
+		var payload *anypb.Any
+		if handler.CapabilityID() == cronCapabilityID {
+			payload, err = anypb.New(&cron.Payload{})
+		} else {
+			payload, err = anypb.New(&evm.Log{})
+		}
+		require.NoError(t, err)
+
+		got, callbackErr := handler.Callback()(config, runtime, payload)
+		require.NoError(t, callbackErr)
+		require.Equal(t, &ExecutionResult{Result: "no-op: recovery active"}, got)
+	}
+	require.Equal(t, len(workflow), checks)
 }

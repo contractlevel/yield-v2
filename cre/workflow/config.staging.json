@@ -1,6 +1,6 @@
 {
-  "rebalanceSchedule": "0 0 0 * * *",
-  "epochSchedule": "0 30 */6 * * *",
+  "rebalanceSchedule": "0 30 */2 * * *",
+  "epochSchedule": "0 0 */2 * * *",
   "blockNumber": -2,
   "defiLlama": {
     "poolIds": [
@@ -20,63 +20,63 @@
   "evms": [
     {
       "isParent": true,
-      "chainName": "ethereum-mainnet-arbitrum-1",
+      "chainName": "ethereum-testnet-sepolia-arbitrum-1",
       "defiLlamaChainName": "Arbitrum",
-      "chainSelector": 4949039107694359620,
-      "vaultAddress": "0xa775662f3faf8df2aa80c636cf0597971ddc6468",
-      "workflowRouterAddress": "0x0000000000000000000000000000000000000000",
+      "chainSelector": 3478487238524512106,
+      "vaultAddress": "0x584099c5200b8a63536230017f718797026e5915",
+      "workflowRouterAddress": "0x2f0aac54238f1523fe23e54ab273e9ff5320b51c",
       "gasLimit": 500000,
-      "usdcAddress": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
-      "aaveV3PoolAddressesProviderAddress": "0xa97684ead0e402dC232d5A977953DF7ECBaB3CDb",
-      "compoundV3CometUSDCAddress": "0x9c4ec768c28520B50860ea7a15bd7213a9fF58bf"
+      "usdcAddress": "0x75faf114eafb1bdbe2f0316df893fd58ce46aa4d",
+      "aaveV3PoolAddressesProviderAddress": "0x90e10d38f75ce1a871a1fdea9bab39e8dda4531f",
+      "compoundV3CometUSDCAddress": "0xcacef2972a46d3ad67072c9bfc6c1157beaf1651"
     },
     {
       "isParent": false,
-      "chainName": "avalanche-mainnet",
+      "chainName": "avalanche-testnet-fuji",
       "defiLlamaChainName": "Avalanche",
-      "chainSelector": 6433500567565415381,
-      "vaultAddress": "0x267fb71b280fb34b278cede84180a9a9037c941b",
-      "workflowRouterAddress": "0x0000000000000000000000000000000000000000",
+      "chainSelector": 14767482510784806043,
+      "vaultAddress": "0x781d5338eb60ed6c0129f28ce56872cc239ac3c2",
+      "workflowRouterAddress": "0x412749be129b2b6ba778f732adb6b69617bd7a13",
       "gasLimit": 500000,
-      "usdcAddress": "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",
-      "aaveV3PoolAddressesProviderAddress": "0xa97684ead0e402dC232d5A977953DF7ECBaB3CDb",
+      "usdcAddress": "0x5425890298aed601595a70ab815c96711a31bc65",
+      "aaveV3PoolAddressesProviderAddress": "0x90e10d38f75ce1a871a1fdea9bab39e8dda4531f",
       "compoundV3CometUSDCAddress": ""
     },
     {
       "isParent": false,
-      "chainName": "ethereum-mainnet",
+      "chainName": "ethereum-testnet-sepolia",
       "defiLlamaChainName": "Ethereum",
-      "chainSelector": 5009297550715157269,
-      "vaultAddress": "0x1a31b818c79ed8d28bc15af0d5c8d2db584293fe",
-      "workflowRouterAddress": "0x0000000000000000000000000000000000000000",
+      "chainSelector": 16015286601757825753,
+      "vaultAddress": "0x809a7bf022841e3bcda0d3cf64b780aabf898c64",
+      "workflowRouterAddress": "0xe7a5a96775f75baaaf49e5dc009e3264779e2f9c",
       "gasLimit": 500000,
-      "usdcAddress": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-      "aaveV3PoolAddressesProviderAddress": "0x2f39d218133afab8f2b819b1066c7e434ad94e9e",
-      "compoundV3CometUSDCAddress": "0xc3d688B66703497DAA19211EEdff47f25384cdc3"
+      "usdcAddress": "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+      "aaveV3PoolAddressesProviderAddress": "0x09addfa88e49bdf33021971e38b0bfae8715af7a",
+      "compoundV3CometUSDCAddress": "0x8383a982dc0b844ca9200fbedeebbe50ae4bb157"
     },
     {
       "isParent": false,
-      "chainName": "ethereum-mainnet-base-1",
+      "chainName": "ethereum-testnet-sepolia-base-1",
       "defiLlamaChainName": "Base",
-      "chainSelector": 15971525489660198786,
-      "vaultAddress": "0x14a1fee5dac2f2b5a13a305a46531328c9992b49",
-      "workflowRouterAddress": "0x0000000000000000000000000000000000000000",
+      "chainSelector": 10344971235874465080,
+      "vaultAddress": "0x221736594f42a10ce61a0f66dc4e6b04786ff8a3",
+      "workflowRouterAddress": "0x971e7d69e039cc013145ceaa6aacc9dbe55deba6",
       "gasLimit": 500000,
-      "usdcAddress": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-      "aaveV3PoolAddressesProviderAddress": "0xe20fCBdBfFC4Dd138cE8b2E6FBb6CB49777ad64D",
-      "compoundV3CometUSDCAddress": "0xb125E6687d4313864e53df431d5425969c15Eb2F"
+      "usdcAddress": "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
+      "aaveV3PoolAddressesProviderAddress": "0x90e10d38f75ce1a871a1fdea9bab39e8dda4531f",
+      "compoundV3CometUSDCAddress": "0xcacef2972a46d3ad67072c9bfc6c1157beaf1651"
     },
     {
       "isParent": false,
-      "chainName": "ethereum-mainnet-optimism-1",
+      "chainName": "ethereum-testnet-sepolia-optimism-1",
       "defiLlamaChainName": "OP Mainnet",
-      "chainSelector": 3734403246176062136,
-      "vaultAddress": "0xf22320abe1a9bfbd8aa87f62f81dd2b35eaed0a2",
-      "workflowRouterAddress": "0x0000000000000000000000000000000000000000",
+      "chainSelector": 5224473277236331295,
+      "vaultAddress": "0x221736594f42a10ce61a0f66dc4e6b04786ff8a3",
+      "workflowRouterAddress": "0x971e7d69e039cc013145ceaa6aacc9dbe55deba6",
       "gasLimit": 500000,
-      "usdcAddress": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
-      "aaveV3PoolAddressesProviderAddress": "0xa97684ead0e402dC232d5A977953DF7ECBaB3CDb",
-      "compoundV3CometUSDCAddress": "0x2e44e174f7D53F0212823acC11C01A11d58c5bCB"
+      "usdcAddress": "0x5fd84259d66cd46123540766be93dfe6d43130d7",
+      "aaveV3PoolAddressesProviderAddress": "0x90e10d38f75ce1a871a1fdea9bab39e8dda4531f",
+      "compoundV3CometUSDCAddress": "0xcacef2972a46d3ad67072c9bfc6c1157beaf1651"
     }
   ]
 }

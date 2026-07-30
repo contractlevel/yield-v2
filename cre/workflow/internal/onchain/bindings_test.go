@@ -8,6 +8,19 @@ import (
 
 const validVaultAddress = "0x0000000000000000000000000000000000000001"
 
+func Test_NewBaseVaultBinding_valid(t *testing.T) {
+	binding, err := NewBaseVaultBinding(nil, validVaultAddress)
+	require.NoError(t, err)
+	require.NotNil(t, binding)
+	require.Implements(t, (*BaseVaultInterface)(nil), binding)
+}
+
+func Test_NewBaseVaultBinding_invalidAddress(t *testing.T) {
+	binding, err := NewBaseVaultBinding(nil, "not-an-address")
+	require.ErrorContains(t, err, "invalid BaseVault address: not-an-address")
+	require.Nil(t, binding)
+}
+
 func Test_NewParentVaultBinding_valid(t *testing.T) {
 	binding, err := NewParentVaultBinding(nil, validVaultAddress)
 	require.NoError(t, err, "expected valid parent vault address to construct binding")

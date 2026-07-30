@@ -23,3 +23,7 @@ func GetEpoch(runtime cre.Runtime, vault ParentVaultInterface, epochNonce *big.I
 func ReadTVL(runtime cre.Runtime, vault BaseVaultInterface, blockNumber *big.Int) (*big.Int, error) {
 	return vault.GetTVL(runtime, blockNumber).Await()
 }
+
+func GetRecoveryMode(runtime cre.Runtime, vault BaseVaultInterface, blockNumber *big.Int) (uint8, error) {
+	return vault.GetRecoveryMode(runtime, blockNumber).Await()
+}
