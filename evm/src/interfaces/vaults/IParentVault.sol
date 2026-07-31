@@ -131,6 +131,7 @@ interface IParentVault is IBaseVault {
     /// @param chainSelector The target strategy chain selector
     /// @param protocolId The target strategy protocol ID
     event RebalanceInitiated(uint256 indexed rebalanceNonce, uint64 indexed chainSelector, bytes32 indexed protocolId);
+    // @review RebalanceInitiated and RebalanceCompleted event params should be consistently ordered
     /// @notice Emitted when a rebalance is completed
     /// @param rebalanceNonce The nonce of the completed rebalance
     /// @param newProtocolId The protocol ID for the new strategy

@@ -51,9 +51,10 @@ const UPSTREAM_READ_TIMEOUT_SECS: u64 = 30;
 /// requests cannot multiply the per-request byte cap unboundedly.
 ///
 /// CRE currently fans each HTTP consensus request out across nine DON nodes.
-/// Allowing eight requests ensures at most one node is rate-limited, remaining
-/// below the four-node error threshold that fails consensus.
-const MAX_CONCURRENT_UPSTREAM_FETCHES: usize = 8;
+/// Allowing six requests leaves at most three nodes rate-limited, remaining
+/// below the four-node error threshold that fails consensus while bounding
+/// worst-case upstream response buffering to 72 MiB per isolate.
+const MAX_CONCURRENT_UPSTREAM_FETCHES: usize = 6;
 
 /// Maximum number of compact pool entries returned to CRE.
 const MAX_RELAY_POOLS: usize = 32;

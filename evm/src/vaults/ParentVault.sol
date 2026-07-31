@@ -305,6 +305,8 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
                 );
             }
         }
+
+        // @review CCIPReceived event? to mirror CCIPBridged?
     }
 
     /*//////////////////////////////////////////////////////////////

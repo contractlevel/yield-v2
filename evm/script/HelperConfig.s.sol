@@ -20,7 +20,7 @@ contract HelperConfig is Script {
     uint64 internal constant ARBITRUM_CHAIN_SELECTOR = 4949039107694359620;
     uint64 internal constant ARBITRUM_SEPOLIA_CHAIN_SELECTOR = 3478487238524512106;
     uint256 internal constant INITIAL_DEFAULT_CCIP_GAS_LIMIT = 500_000;
-    bytes32 internal constant STAGING_WORKFLOW_ID = 0x007f8835a89ceb76bea678c0e5ac887947948acc7f464ee377a38f6a347fe63a;
+    bytes32 internal constant STAGING_WORKFLOW_ID = 0x008ed53617a116cbfa73849a3eb22ab73099b7c30e14a54c6a34116c19a1e4da;
     bytes10 internal constant STAGING_WORKFLOW_NAME = bytes10("67d6954c97");
 
     /*//////////////////////////////////////////////////////////////

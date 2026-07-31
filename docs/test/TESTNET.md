@@ -187,8 +187,8 @@ forge script script/interactions/FundVaultLink.s.sol:FundVaultLink \
 
 ## Parent Deployments (Arbitrum Sepolia)
 
-| Contract                                                      | Address                                      |
-| ------------------------------------------------------------- | -------------------------------------------- |
+| Contract                                                      | Address                                                                                                                             |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `BaseVaultCcipLib`                                            | [`0x81b55294f3d3af167e9f1e622149648f42859be6`](https://sepolia.arbiscan.io/address/0x81b55294f3d3af167e9f1e622149648f42859be6#code) |
 | `ParentVaultUserEpochLib`                                     | [`0xf00e3fe45530aa4308b8172ecdd23114d96b2326`](https://sepolia.arbiscan.io/address/0xf00e3fe45530aa4308b8172ecdd23114d96b2326#code) |
 | `ParentVaultRebalanceLib`                                     | [`0x3292407edbcd027d587ae2818d6f1c9ef630c41a`](https://sepolia.arbiscan.io/address/0x3292407edbcd027d587ae2818d6f1c9ef630c41a#code) |
@@ -230,8 +230,8 @@ forge script script/interactions/FundVaultLink.s.sol:FundVaultLink \
 
 ### Ethereum Sepolia
 
-| Contract                    | Address                                      |
-| --------------------------- | -------------------------------------------- |
+| Contract                    | Address                                                                                                                              |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `BaseVaultStrategyLib`      | [`0x4ab7794139fb422813b97e1e4a33a7947666a323`](https://sepolia.etherscan.io/address/0x4ab7794139fb422813b97e1e4a33a7947666a323#code) |
 | `AdapterRegistry`           | [`0x971e7d69e039cc013145ceaa6aacc9dbe55deba6`](https://sepolia.etherscan.io/address/0x971e7d69e039cc013145ceaa6aacc9dbe55deba6#code) |
 | `ChildVault` implementation | [`0xb2ac18061d6996202227b211a0c7915b010413c2`](https://sepolia.etherscan.io/address/0xb2ac18061d6996202227b211a0c7915b010413c2#code) |
@@ -243,8 +243,8 @@ forge script script/interactions/FundVaultLink.s.sol:FundVaultLink \
 
 ### Base Sepolia
 
-| Contract                    | Address                                      |
-| --------------------------- | -------------------------------------------- |
+| Contract                    | Address                                                                                                                              |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `BaseVaultStrategyLib`      | [`0x4ab7794139fb422813b97e1e4a33a7947666a323`](https://sepolia.basescan.org/address/0x4ab7794139fb422813b97e1e4a33a7947666a323#code) |
 | `AdapterRegistry`           | [`0x4f162bc4acc9e5847fcbef84cebaf45087430c36`](https://sepolia.basescan.org/address/0x4f162bc4acc9e5847fcbef84cebaf45087430c36#code) |
 | `ChildVault` implementation | [`0x781d5338eb60ed6c0129f28ce56872cc239ac3c2`](https://sepolia.basescan.org/address/0x781d5338eb60ed6c0129f28ce56872cc239ac3c2#code) |
@@ -255,8 +255,8 @@ forge script script/interactions/FundVaultLink.s.sol:FundVaultLink \
 
 ### Optimism Sepolia
 
-| Contract                    | Address                                      |
-| --------------------------- | -------------------------------------------- |
+| Contract                    | Address                                                                                                                                       |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | `BaseVaultStrategyLib`      | [`0x4ab7794139fb422813b97e1e4a33a7947666a323`](https://sepolia-optimism.etherscan.io/address/0x4ab7794139fb422813b97e1e4a33a7947666a323#code) |
 | `AdapterRegistry`           | [`0x4f162bc4acc9e5847fcbef84cebaf45087430c36`](https://sepolia-optimism.etherscan.io/address/0x4f162bc4acc9e5847fcbef84cebaf45087430c36#code) |
 | `ChildVault` implementation | [`0x781d5338eb60ed6c0129f28ce56872cc239ac3c2`](https://sepolia-optimism.etherscan.io/address/0x781d5338eb60ed6c0129f28ce56872cc239ac3c2#code) |
@@ -267,8 +267,8 @@ forge script script/interactions/FundVaultLink.s.sol:FundVaultLink \
 
 ### Avalanche Fuji
 
-| Contract                    | Address                                      |
-| --------------------------- | -------------------------------------------- |
+| Contract                    | Address                                                                                                                              |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `BaseVaultStrategyLib`      | [`0x4ab7794139fb422813b97e1e4a33a7947666a323`](https://testnet.snowtrace.io/address/0x4ab7794139fb422813b97e1e4a33a7947666a323#code) |
 | `AdapterRegistry`           | [`0xd9e76077c65fe2ca25ced7432bf206c19507c553`](https://testnet.snowtrace.io/address/0xd9e76077c65fe2ca25ced7432bf206c19507c553#code) |
 | `ChildVault` implementation | [`0x26254c3c69b63e490c7dd88662549b12f8884e08`](https://testnet.snowtrace.io/address/0x26254c3c69b63e490c7dd88662549b12f8884e08#code) |
@@ -276,3 +276,39 @@ forge script script/interactions/FundVaultLink.s.sol:FundVaultLink \
 | `AaveV3Adapter`             | [`0x221736594f42a10ce61a0f66dc4e6b04786ff8a3`](https://testnet.snowtrace.io/address/0x221736594f42a10ce61a0f66dc4e6b04786ff8a3#code) |
 | `AaveV4Adapter`             | [`0x09addfa88e49bdf33021971e38b0bfae8715af7a`](https://testnet.snowtrace.io/address/0x09addfa88e49bdf33021971e38b0bfae8715af7a#code) |
 | `WorkflowRouter`            | [`0x412749be129b2b6ba778f732adb6b69617bd7a13`](https://testnet.snowtrace.io/address/0x412749be129b2b6ba778f732adb6b69617bd7a13#code) |
+
+---
+
+## Testnet Transactions
+
+### 1st Epoch
+
+[closeEpoch triggered by CRE](https://sepolia.arbiscan.io/tx/0xbd9b7866971569bc146f9fc83a74417a83c72add1561ad9860d325ebcf8d97ef)
+
+[claimShares in first epoch](https://sepolia.arbiscan.io/tx/0x347e5212e2f6d7b7aea16ebe814b3a1c76358760fa85237dd3242576eb445eae)
+
+### 1st Rebalance
+
+[first rebalance (crosschain: parent to child)](https://sepolia.arbiscan.io/tx/0x9aa14b92e1d3cb7aa57167b8a3c68f770e516f43978cd50cb08deff5ad0e64e1)
+
+[ccip tx for first rebalance](https://ccip.chain.link/msg/0x390dd2a29c4041fccbbd174cd5ae8ec5d31c1f519d6689267199416600179f4b)
+
+[RebalanceDepositSuccess](https://sepolia.basescan.org/tx/0x0e5adc745484f778328a4476c3c3bf8dd63939d08f5fda5aabf76d7fb58c42b3#eventlog)
+
+[RebalanceCompleted](https://sepolia.arbiscan.io/tx/0x2994730ddfc737704f2e0ab3c2e65d5a414bb718a3246623e18451ca151f3a24)
+
+### 2nd Epoch
+
+[closeEpoch (NET_DEPOSIT)](https://sepolia.arbiscan.io/tx/0x3f6d26488f2e595ee529204f3d60224631a9c52dfc43c23803abe303b1821d28)
+
+[ccip net deposit from parent to strategy](https://ccip.chain.link/msg/0xad1f3ac53d999e1d325df19a7e99503ab6e0652422a9e3b046cacddb2c11bca0)
+
+[DepositToStrategySuccess](https://sepolia.basescan.org/tx/0x6cf5aaea473e1a80879344a218813f7ca8be7e42d7d252716ee46bae285af79b)
+
+### 3rd Epoch
+
+[EpochExecuting (NET_WITHDRAW) (log triggers CRE to write to strategy)](https://sepolia.arbiscan.io/tx/0xd77a8a7d18e6f321efd7068090f385692549865df6c6ff12b041bb8efc48fefc)
+
+[WithdrawFromStrategySuccess, RebalanceWithdrawSuccess, CCIPBridged (from strategy to parent)](https://sepolia.basescan.org/tx/0x35025414a798fa1fff584d1614ee9ee4e8bb6aedc08910e4975cdec73743edf6)
+
+[EpochClaimable (ccipReceive on Parent)](https://sepolia.arbiscan.io/tx/0xdf259b960b246f4c2d8e498d6154d6213b49dda850429ba696b514ec2cf35d55#eventlog)

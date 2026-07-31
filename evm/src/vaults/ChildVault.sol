@@ -100,6 +100,8 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         } else {
             revert BaseVault__InvalidTxType(ccipTxType);
         }
+
+        // @review CCIPReceived event? to mirror CCIPBridged?
     }
 
     /// @notice Internal function to only allow messages from allowed crosschain vaults

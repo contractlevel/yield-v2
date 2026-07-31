@@ -1,6 +1,6 @@
 {
-  "rebalanceSchedule": "0 45 1-23/2 * * *",
-  "epochSchedule": "0 0 1-23/2 * * *",
+  "rebalanceSchedule": "0 5 * * * *",
+  "epochSchedule": "0 35 * * * *",
   "blockNumber": -2,
   "defiLlama": {
     "poolIds": [
@@ -25,7 +25,7 @@
       "chainSelector": 3478487238524512106,
       "vaultAddress": "0x0c4ed72777e832e2dae6d59875e956abd9ad91d9",
       "workflowRouterAddress": "0x7fd005f9552f600e8231ba821a9e7da42a94fe83",
-      "gasLimit": 500000,
+      "gasLimit": 1000000,
       "usdcAddress": "0x75faf114eafb1bdbe2f0316df893fd58ce46aa4d",
       "aaveV3PoolAddressesProviderAddress": "0x90e10d38f75ce1a871a1fdea9bab39e8dda4531f",
       "compoundV3CometUSDCAddress": "0xcacef2972a46d3ad67072c9bfc6c1157beaf1651"
@@ -37,7 +37,7 @@
       "chainSelector": 14767482510784806043,
       "vaultAddress": "0x781d5338eb60ed6c0129f28ce56872cc239ac3c2",
       "workflowRouterAddress": "0x412749be129b2b6ba778f732adb6b69617bd7a13",
-      "gasLimit": 500000,
+      "gasLimit": 1000000,
       "usdcAddress": "0x5425890298aed601595a70ab815c96711a31bc65",
       "aaveV3PoolAddressesProviderAddress": "0x90e10d38f75ce1a871a1fdea9bab39e8dda4531f",
       "compoundV3CometUSDCAddress": ""
@@ -49,7 +49,7 @@
       "chainSelector": 16015286601757825753,
       "vaultAddress": "0x809a7bf022841e3bcda0d3cf64b780aabf898c64",
       "workflowRouterAddress": "0xe7a5a96775f75baaaf49e5dc009e3264779e2f9c",
-      "gasLimit": 500000,
+      "gasLimit": 1000000,
       "usdcAddress": "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
       "aaveV3PoolAddressesProviderAddress": "0x09addfa88e49bdf33021971e38b0bfae8715af7a",
       "compoundV3CometUSDCAddress": "0x8383a982dc0b844ca9200fbedeebbe50ae4bb157"
@@ -61,7 +61,7 @@
       "chainSelector": 10344971235874465080,
       "vaultAddress": "0x221736594f42a10ce61a0f66dc4e6b04786ff8a3",
       "workflowRouterAddress": "0x971e7d69e039cc013145ceaa6aacc9dbe55deba6",
-      "gasLimit": 500000,
+      "gasLimit": 1000000,
       "usdcAddress": "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
       "aaveV3PoolAddressesProviderAddress": "0x90e10d38f75ce1a871a1fdea9bab39e8dda4531f",
       "compoundV3CometUSDCAddress": "0xcacef2972a46d3ad67072c9bfc6c1157beaf1651"
@@ -73,7 +73,7 @@
       "chainSelector": 5224473277236331295,
       "vaultAddress": "0x221736594f42a10ce61a0f66dc4e6b04786ff8a3",
       "workflowRouterAddress": "0x971e7d69e039cc013145ceaa6aacc9dbe55deba6",
-      "gasLimit": 500000,
+      "gasLimit": 1000000,
       "usdcAddress": "0x5fd84259d66cd46123540766be93dfe6d43130d7",
       "aaveV3PoolAddressesProviderAddress": "0x90e10d38f75ce1a871a1fdea9bab39e8dda4531f",
       "compoundV3CometUSDCAddress": "0xcacef2972a46d3ad67072c9bfc6c1157beaf1651"
