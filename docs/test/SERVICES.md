@@ -1,5 +1,7 @@
 # Services
 
+All commands below run from the DefiLlama relay project root, `services/defillama-relay/`.
+
 ```
 cargo fmt --check
 cargo test

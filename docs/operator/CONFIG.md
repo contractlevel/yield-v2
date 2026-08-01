@@ -83,7 +83,7 @@ Registering a workflow ID, or updating the metadata of one that is still registe
 | `pause()`   | `PAUSER_ROLE`   | Parent vault, child vault, WorkflowRouter, YieldcoinShare through ACE RBAC | Stops the protected contract path during incidents or controlled maintenance.    |
 | `unpause()` | `UNPAUSER_ROLE` | Parent vault, child vault, WorkflowRouter, YieldcoinShare through ACE RBAC | Resumes operation after the condition that required the pause has been resolved. |
 
-Vault pause state blocks normal user, epoch, rebalance, recovery, and inbound CCIP flows. `completeRebalance` remains callable because it performs only local finalization.
+Vault pause state blocks normal user, epoch, rebalance, recovery, and inbound CCIP flows. Two ParentVault functions remain callable while paused because they perform only local finalization of already-confirmed work: `completeEpochDeposit()` finalizes the most recently closed remote net-deposit epoch, and `completeRebalance()` finalizes an in-progress rebalance. Their role and state-machine checks still apply.
 
 ## Adapter Registry Configuration
 

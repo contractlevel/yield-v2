@@ -2,8 +2,10 @@
 
 This runbook covers normal public operator responsibilities for Yieldcoin v2. Use placeholder addresses in public docs unless a deployment intentionally publishes real addresses.
 
-// @review mention launch requirements including chainlink-ace BSL license grant somewhere
-// @review add a roadmap for morpho adapter and utilization workflow calculator
+Before operating a production deployment, complete every gate in [`LAUNCH_REQUIREMENTS`](./LAUNCH_REQUIREMENTS.md), including obtaining the required Chainlink ACE production licence grant.
+
+Potential post-MVP work is tracked separately in the [`ROADMAP`](../protocol/ROADMAP.md).
+
 // @review seal 911/usmans msig series - https://x.com/0xusmanf/status/2078584503350776182
 
 ## Routine Monitoring

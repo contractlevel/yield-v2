@@ -1,5 +1,7 @@
 # EVM Testing
 
+All commands below run from the EVM project root, `evm/`.
+
 ## Build
 
 ```
@@ -47,6 +49,10 @@ medusa fuzz --config medusa.json --test-limit 1000 --timeout 60
 ```
 
 Do not delete medusa/ between runs if you want it to build on prior corpus. Delete it only when you need a clean rerun.
+
+### Clean Medusa Reset
+
+The following command permanently deletes the accumulated Medusa corpus and coverage data. Run it only when you need a clean fuzzing run.
 
 ```
 rm -rf medusa

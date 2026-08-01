@@ -160,7 +160,7 @@ done
 The workflow values are defined once in `script/HelperConfig.s.sol` and shared by all five testnet configs:
 
 - workflow name: `67d6954c97`
-- workflow ID: `0x00af2b6d4c060c94ddf6f13d9236199fc8cd4d5b35b46c164b36912e45655891`
+- workflow ID: `0x008ed53617a116cbfa73849a3eb22ab73099b7c30e14a54c6a34116c19a1e4da`
 - workflow owner: `0x7664C538C80870824738A8ADCcd92AcA244D7e69`
 
 Grant the burner `CONFIG_OPERATOR_ROLE` on the active chain's vault proxy if required:

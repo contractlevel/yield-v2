@@ -43,4 +43,4 @@ Each strategy is a `protocolId` and a `chainSelector`.
 
 ## Further Reading
 
-For exact rebalance paths, see [`PATHS`](../protocol/PATHS.md). For rebalance invariants, see [`INVARIANTS`](../security/INVARIANTS.md#rebalance-lifecycle). For rebalance design rationale, see [`DECISIONS`](../protocol/DECISIONS.md).
+For exact rebalance paths, see [`PATHS`](../protocol/PATHS.md). For rebalance invariants, see [`INVARIANTS`](../security/INVARIANTS.md#rebalance-lifecycle-and-tvl). For rebalance design rationale, see [`DECISIONS`](../protocol/DECISIONS.md).
