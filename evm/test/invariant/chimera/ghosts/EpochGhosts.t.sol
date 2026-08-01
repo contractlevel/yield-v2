@@ -29,6 +29,12 @@ abstract contract EpochGhosts is ActorGhosts {
     mapping(uint256 epochNonce => uint256 shares) internal ghost_maxRemainingShareBurnAmountByEpoch;
     mapping(uint256 epochNonce => uint256 amount) internal ghost_maxRemainingWithdrawClaimAmountByEpoch;
     uint256 internal ghost_maxPerformanceFeeHighWaterMark;
+    uint256 internal ghost_maxParentEpochNonce;
+    uint256 internal ghost_maxParentRebalanceNonce;
+    uint256 internal ghost_maxChildEpochNonce;
+    uint256 internal ghost_maxChildRebalanceNonce;
+    uint256 internal ghost_maxRemoteChildEpochNonce;
+    uint256 internal ghost_maxRemoteChildRebalanceNonce;
     mapping(uint256 epochNonce => bool isClaimable) internal ghost_epochIsClaimable;
     uint256[] internal ghost_claimableEpochs;
     mapping(uint256 epochNonce => bool isTracked) internal ghost_epochShareAccountingTracked;
@@ -88,6 +94,12 @@ abstract contract EpochGhosts is ActorGhosts {
         if (ghost_epochShareAccountingTracked[epochNonce]) return;
 
         ghost_epochShareAccountingTracked[epochNonce] = true;
+        Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
+        ghost_totalShareMintedByEpoch[epochNonce] = epoch.remainingShareMintAmount;
+        ghost_maxRemainingDepositClaimAmountByEpoch[epochNonce] = epoch.remainingDepositClaimAmount;
+        ghost_maxRemainingShareMintAmountByEpoch[epochNonce] = epoch.remainingShareMintAmount;
+        ghost_maxRemainingShareBurnAmountByEpoch[epochNonce] = epoch.remainingShareBurnAmount;
+        ghost_maxRemainingWithdrawClaimAmountByEpoch[epochNonce] = epoch.remainingWithdrawClaimAmount;
         ghost_shareAccountingEpochs.push(epochNonce);
     }
 

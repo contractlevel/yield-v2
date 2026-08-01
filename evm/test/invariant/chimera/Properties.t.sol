@@ -7,6 +7,7 @@ import {Types} from "../../../src/libraries/Types.sol";
 import {BaseVault} from "../../../src/vaults/BaseVault.sol";
 import {ChildVault} from "../../../src/vaults/ChildVault.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IProtocolAdapter} from "../../../src/interfaces/adapters/IProtocolAdapter.sol";
 
 abstract contract Properties is BeforeAfter, Asserts {
     /*//////////////////////////////////////////////////////////////
@@ -32,6 +33,19 @@ abstract contract Properties is BeforeAfter, Asserts {
         );
     }
 
+    function invariant_SOLV_003_parentCoversAccountedShareEscrow() public {
+        uint256 accountedEscrow = parent.vault.getEpoch(parent.vault.getEpochNonce()).totalShareBurnAmount;
+        for (uint256 i; i < ghost_shareAccountingEpochs.length; ++i) {
+            accountedEscrow += parent.vault.getEpoch(ghost_shareAccountingEpochs[i]).remainingShareBurnAmount;
+        }
+
+        lte(
+            accountedEscrow,
+            parent.share.balanceOf(address(parent.vault)),
+            "SOLV-003: parent share balance does not cover accounted escrow"
+        );
+    }
+
     function invariant_SOLV_005_userRedemptionEntitlementCoversPrincipalNetOfFees() public {
         if (_recoveryModeExists()) return;
 
@@ -49,6 +63,17 @@ abstract contract Properties is BeforeAfter, Asserts {
                 "SOLV-005: user redemption entitlement below principal net of fees"
             );
         }
+    }
+
+    function invariant_SOLV_002_REC_007_recoveryPreservesSolvency() public {
+        lte(
+            ghost_claimableWithdrawObligation,
+            IERC20(parent.vault.getAsset()).balanceOf(address(parent.vault)),
+            "SOLV-002/REC-007: recovery broke withdraw solvency"
+        );
+
+        _assertPendingCcipSendRecoveryIsCollateralized(child.vault);
+        _assertPendingCcipSendRecoveryIsCollateralized(remoteChild.vault);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -99,8 +124,8 @@ abstract contract Properties is BeforeAfter, Asserts {
     }
 
     function invariant_EPOCH_007_depositRemainingCountersAreMonotonicallyNonIncreasing() public {
-        for (uint256 i; i < ghost_claimableEpochs.length; ++i) {
-            uint256 epochNonce = ghost_claimableEpochs[i];
+        for (uint256 i; i < ghost_shareAccountingEpochs.length; ++i) {
+            uint256 epochNonce = ghost_shareAccountingEpochs[i];
             Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
             lte(
                 epoch.remainingDepositClaimAmount,
@@ -116,8 +141,8 @@ abstract contract Properties is BeforeAfter, Asserts {
     }
 
     function invariant_EPOCH_008_depositRemainingCountersStayBounded() public {
-        for (uint256 i; i < ghost_claimableEpochs.length; ++i) {
-            uint256 epochNonce = ghost_claimableEpochs[i];
+        for (uint256 i; i < ghost_shareAccountingEpochs.length; ++i) {
+            uint256 epochNonce = ghost_shareAccountingEpochs[i];
             Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
 
             lte(
@@ -133,20 +158,20 @@ abstract contract Properties is BeforeAfter, Asserts {
         }
     }
 
-    function invariant_EPOCH_009_depositRemainingCountersReachZeroTogether() public {
-        for (uint256 i; i < ghost_claimableEpochs.length; ++i) {
-            uint256 epochNonce = ghost_claimableEpochs[i];
+    function invariant_EPOCH_008_depositRemainingCountersReachZeroTogether() public {
+        for (uint256 i; i < ghost_shareAccountingEpochs.length; ++i) {
+            uint256 epochNonce = ghost_shareAccountingEpochs[i];
             Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
             bool depositCountersMatch =
                 (epoch.remainingDepositClaimAmount == 0) == (epoch.remainingShareMintAmount == 0);
 
-            t(depositCountersMatch, "EPOCH-009: deposit-side remaining counters did not reach zero together");
+            t(depositCountersMatch, "EPOCH-008: deposit-side remaining counters did not reach zero together");
         }
     }
 
     function invariant_EPOCH_010_withdrawRemainingCountersAreMonotonicallyNonIncreasing() public {
-        for (uint256 i; i < ghost_claimableEpochs.length; ++i) {
-            uint256 epochNonce = ghost_claimableEpochs[i];
+        for (uint256 i; i < ghost_shareAccountingEpochs.length; ++i) {
+            uint256 epochNonce = ghost_shareAccountingEpochs[i];
             Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
             lte(
                 epoch.remainingShareBurnAmount,
@@ -162,8 +187,8 @@ abstract contract Properties is BeforeAfter, Asserts {
     }
 
     function invariant_EPOCH_011_withdrawRemainingCountersStayBounded() public {
-        for (uint256 i; i < ghost_claimableEpochs.length; ++i) {
-            uint256 epochNonce = ghost_claimableEpochs[i];
+        for (uint256 i; i < ghost_shareAccountingEpochs.length; ++i) {
+            uint256 epochNonce = ghost_shareAccountingEpochs[i];
             Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
 
             lte(
@@ -179,14 +204,14 @@ abstract contract Properties is BeforeAfter, Asserts {
         }
     }
 
-    function invariant_EPOCH_012_noWithdrawClaimAmountAfterShareBurnsProcessed() public {
-        for (uint256 i; i < ghost_claimableEpochs.length; ++i) {
-            uint256 epochNonce = ghost_claimableEpochs[i];
+    function invariant_EPOCH_013_noWithdrawClaimAmountAfterShareBurnsProcessed() public {
+        for (uint256 i; i < ghost_shareAccountingEpochs.length; ++i) {
+            uint256 epochNonce = ghost_shareAccountingEpochs[i];
             Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
 
             t(
                 epoch.remainingShareBurnAmount != 0 || epoch.remainingWithdrawClaimAmount == 0,
-                "EPOCH-012: withdraw claim amount remains after all share burns processed"
+                "EPOCH-013: withdraw claim amount remains after all share burns processed"
             );
         }
     }
@@ -194,15 +219,15 @@ abstract contract Properties is BeforeAfter, Asserts {
     /*//////////////////////////////////////////////////////////////
                             SHARE / FEES
     //////////////////////////////////////////////////////////////*/
-    function invariant_SHARE_001_totalSupplyEqualsAuthoritativeSharesPlusLazyBurns() public {
+    function invariant_SHARE_003_tokenSupplyMatchesAuthoritativeLazySettlementLedger() public {
         eq(
             parent.share.totalSupply(),
             _expectedShareTokenSupply(),
-            "SHARE-001: token supply does not match authoritative shares adjusted for lazy settlement"
+            "SHARE-003: token supply does not match authoritative shares adjusted for lazy settlement"
         );
     }
 
-    function invariant_SHARE_005_allFeeSharesMintToTreasury() public {
+    function invariant_FEE_002_allFeeSharesMintToTreasury() public {
         uint256 totalUserSharesMinted;
         uint256 totalSharesBurned;
         for (uint256 i; i < ghost_claimableEpochs.length; ++i) {
@@ -226,7 +251,7 @@ abstract contract Properties is BeforeAfter, Asserts {
         eq(
             parent.share.balanceOf(parent.vault.getTreasury()),
             expectedTreasuryShares,
-            "SHARE-005: treasury share balance doesn't match total fee shares minted"
+            "FEE-002: treasury share balance doesn't match total fee shares minted"
         );
     }
 
@@ -298,7 +323,7 @@ abstract contract Properties is BeforeAfter, Asserts {
         }
     }
 
-    function invariant_REBAL_008_noRebalanceWhilePreviousEpochExecuting() public {
+    function invariant_REBAL_009_noRebalanceWhilePreviousEpochExecuting() public {
         uint256 currentEpochNonce = parent.vault.getEpochNonce();
         if (currentEpochNonce <= 1) return;
 
@@ -307,7 +332,7 @@ abstract contract Properties is BeforeAfter, Asserts {
 
         t(
             rebalance.state != Types.RebalanceState.REBALANCING || previousEpoch.status != Types.EpochStatus.EXECUTING,
-            "REBAL-008: rebalance active while previous epoch is executing"
+            "REBAL-009: rebalance active while previous epoch is executing"
         );
     }
 
@@ -320,21 +345,16 @@ abstract contract Properties is BeforeAfter, Asserts {
         _assertChildRecoverySentinels(remoteChild.vault);
     }
 
-    function invariant_REC_004_childEpochRecoveriesAreMutuallyExclusive() public {
-        _assertChildEpochRecoveryMutex(child.vault);
-        _assertChildEpochRecoveryMutex(remoteChild.vault);
+    function invariant_REC_010_onlyOneGlobalRecoveryModeIsPending() public {
+        lte(_recoveryModeCount(), 1, "REC-010: more than one recovery mode is pending");
     }
 
-    function invariant_REC_007_rebalanceDepositAndCcipSendRecoveriesAreMutuallyExclusive() public {
-        _assertRebalanceDepositAndCcipSendMutex(child.vault);
-        _assertRebalanceDepositAndCcipSendMutex(remoteChild.vault);
+    function invariant_SOLV_004_pendingChildCcipSendRecoveryIsCollateralized() public {
+        _assertPendingCcipSendRecoveryIsCollateralized(child.vault);
+        _assertPendingCcipSendRecoveryIsCollateralized(remoteChild.vault);
     }
 
-    function invariant_REC_009_onlyOneGlobalRecoveryModeIsPending() public {
-        lte(_recoveryModeCount(), 1, "REC-009: more than one recovery mode is pending");
-    }
-
-    function invariant_CCIP_005b_pendingChildCcipSendRecoveryIsCollateralized() public {
+    function invariant_CCIP_006_pendingChildCcipSendRecoveryIsCollateralized() public {
         _assertPendingCcipSendRecoveryIsCollateralized(child.vault);
         _assertPendingCcipSendRecoveryIsCollateralized(remoteChild.vault);
     }
@@ -342,12 +362,65 @@ abstract contract Properties is BeforeAfter, Asserts {
     /*//////////////////////////////////////////////////////////////
                                 ADAPTERS
     //////////////////////////////////////////////////////////////*/
-    function invariant_ADAPTER_004_nonActiveStrategyChainsReportZeroTvl() public {
-        uint64 activeChainSelector = parent.vault.getRebalance().activeStrategy.chainSelector;
+    function invariant_REBAL_008_vaultTvlEquationsAreExact() public {
+        _assertParentTvlEquation(parent.vault);
+        _assertChildTvlEquation(child.vault);
+        _assertChildTvlEquation(remoteChild.vault);
+    }
 
-        _assertNonActiveTvlIsZero(parent.vault, PARENT_CHAIN_SELECTOR, activeChainSelector);
-        _assertNonActiveTvlIsZero(child.vault, CHILD_CHAIN_SELECTOR, activeChainSelector);
-        _assertNonActiveTvlIsZero(remoteChild.vault, REMOTE_CHILD_CHAIN_SELECTOR, activeChainSelector);
+    function invariant_REC_006_ADAPTER_005_recoveryAttributionAndPhaseAwareTvlAreExact() public {
+        _assertParentTvlEquation(parent.vault);
+        _assertChildTvlEquation(child.vault);
+        _assertChildTvlEquation(remoteChild.vault);
+    }
+
+    function invariant_CFG_002_treasuryIsNonzero() public {
+        t(parent.vault.getTreasury() != address(0), "CFG-002: treasury is zero");
+    }
+
+    function invariant_NONCE_002_childNonceHighWaterMarksNeverDecrease() public {
+        lte(ghost_maxChildEpochNonce, child.vault.getLastHandledEpochNonce(), "NONCE-002: child epoch nonce decreased");
+        lte(
+            ghost_maxChildRebalanceNonce,
+            child.vault.getLastHandledRebalanceNonce(),
+            "NONCE-002: child rebalance nonce decreased"
+        );
+        lte(
+            ghost_maxRemoteChildEpochNonce,
+            remoteChild.vault.getLastHandledEpochNonce(),
+            "NONCE-002: remote child epoch nonce decreased"
+        );
+        lte(
+            ghost_maxRemoteChildRebalanceNonce,
+            remoteChild.vault.getLastHandledRebalanceNonce(),
+            "NONCE-002: remote child rebalance nonce decreased"
+        );
+    }
+
+    function invariant_NONCE_009_parentNoncesAreStrictlyPositive() public {
+        t(parent.vault.getEpochNonce() != 0, "NONCE-009: parent epoch nonce is zero");
+        t(parent.vault.getRebalance().nonce != 0, "NONCE-009: parent rebalance nonce is zero");
+        lte(ghost_maxParentEpochNonce, parent.vault.getEpochNonce(), "NONCE-009: parent epoch nonce decreased");
+        lte(
+            ghost_maxParentRebalanceNonce,
+            parent.vault.getRebalance().nonce,
+            "NONCE-009: parent rebalance nonce decreased"
+        );
+    }
+
+    function invariant_NONCE_006_pendingRecoveryNonceMatchesChildHighWaterMark() public {
+        _assertPendingRecoveryNonce(child.vault);
+        _assertPendingRecoveryNonce(remoteChild.vault);
+    }
+
+    function invariant_NONCE_011_parentRebalanceUsesCurrentNonce() public {
+        Types.Rebalance memory rebalance = parent.vault.getRebalance();
+        if (rebalance.state != Types.RebalanceState.REBALANCING) return;
+
+        Types.RebalanceDepositRecovery memory parentRecovery = parent.vault.getRebalanceDepositRecovery();
+        if (_rebalanceDepositRecoveryPending(parentRecovery)) {
+            eq(parentRecovery.rebalanceNonce, rebalance.nonce, "NONCE-011: parent recovery nonce mismatch");
+        }
     }
 
     function _recoveryModeExists() internal view returns (bool) {
@@ -369,6 +442,32 @@ abstract contract Properties is BeforeAfter, Asserts {
     }
 
     function _assertChildRecoverySentinels(ChildVault vault) internal {
+        Types.RecoveryMode mode = vault.getRecoveryMode();
+        uint256 matchingPayloads;
+        if (
+            mode == Types.RecoveryMode.REBALANCE_DEPOSIT
+                && _rebalanceDepositRecoveryPending(vault.getRebalanceDepositRecovery())
+        ) ++matchingPayloads;
+        if (mode == Types.RecoveryMode.EPOCH_DEPOSIT && _epochRecoveryPending(vault.getEpochDepositRecovery())) {
+            ++matchingPayloads;
+        }
+        if (mode == Types.RecoveryMode.EPOCH_WITHDRAW && _epochRecoveryPending(vault.getEpochWithdrawRecovery())) {
+            ++matchingPayloads;
+        }
+        if (
+            mode == Types.RecoveryMode.REBALANCE_WITHDRAW
+                && _rebalanceWithdrawRecoveryPending(vault.getRebalanceWithdrawRecovery())
+        ) ++matchingPayloads;
+        if (mode == Types.RecoveryMode.CCIP_SEND && _ccipSendRecoveryPending(vault.getCcipSendRecovery())) {
+            ++matchingPayloads;
+        }
+        eq(matchingPayloads, mode == Types.RecoveryMode.NONE ? 0 : 1, "REC-002: mode does not match payload");
+        eq(
+            _childRecoveryModeCount(vault),
+            mode == Types.RecoveryMode.NONE ? 0 : 1,
+            "REC-002: payloads are not exclusive"
+        );
+
         _assertRebalanceDepositRecoverySentinel(vault);
         _assertEpochRecoverySentinel(vault.getEpochDepositRecovery(), "REC-002: epoch deposit recovery");
         _assertEpochRecoverySentinel(vault.getEpochWithdrawRecovery(), "REC-002: epoch withdraw recovery");
@@ -378,10 +477,13 @@ abstract contract Properties is BeforeAfter, Asserts {
 
     function _assertRebalanceDepositRecoverySentinel(BaseVault vault) internal {
         Types.RebalanceDepositRecovery memory recovery = vault.getRebalanceDepositRecovery();
+        Types.RecoveryMode mode = vault.getRecoveryMode();
 
         if (_rebalanceDepositRecoveryPending(recovery)) {
+            t(mode == Types.RecoveryMode.REBALANCE_DEPOSIT, "REC-002: rebalance deposit mode mismatch");
             t(recovery.amount != 0, "REC-002: rebalance deposit recovery amount missing");
         } else {
+            t(mode != Types.RecoveryMode.REBALANCE_DEPOSIT, "REC-002: rebalance deposit mode has no payload");
             eq(recovery.rebalanceNonce, 0, "REC-002: cleared rebalance deposit recovery nonce set");
             eq(recovery.amount, 0, "REC-002: cleared rebalance deposit recovery amount set");
         }
@@ -420,22 +522,6 @@ abstract contract Properties is BeforeAfter, Asserts {
         }
     }
 
-    function _assertChildEpochRecoveryMutex(ChildVault vault) internal {
-        uint256 pendingEpochRecoveries;
-        if (_epochRecoveryPending(vault.getEpochDepositRecovery())) ++pendingEpochRecoveries;
-        if (_epochRecoveryPending(vault.getEpochWithdrawRecovery())) ++pendingEpochRecoveries;
-
-        lte(pendingEpochRecoveries, 1, "REC-004: child epoch recoveries are both pending");
-    }
-
-    function _assertRebalanceDepositAndCcipSendMutex(ChildVault vault) internal {
-        uint256 pendingRecoveries;
-        if (_rebalanceDepositRecoveryPending(vault.getRebalanceDepositRecovery())) ++pendingRecoveries;
-        if (_ccipSendRecoveryPending(vault.getCcipSendRecovery())) ++pendingRecoveries;
-
-        lte(pendingRecoveries, 1, "REC-007: rebalance deposit and CCIP send recoveries are both pending");
-    }
-
     function _assertPendingCcipSendRecoveryIsCollateralized(ChildVault vault) internal {
         Types.CcipSendRecovery memory recovery = vault.getCcipSendRecovery();
         if (!_ccipSendRecoveryPending(recovery)) return;
@@ -443,8 +529,43 @@ abstract contract Properties is BeforeAfter, Asserts {
         lte(
             recovery.amount,
             IERC20(parent.vault.getAsset()).balanceOf(address(vault)),
-            "CCIP-005b: pending child CCIP send recovery is not collateralized"
+            "SOLV-004: pending child CCIP send recovery is not collateralized"
         );
+    }
+
+    function _assertPendingRecoveryNonce(ChildVault vault) internal {
+        Types.EpochRecovery memory epochDeposit = vault.getEpochDepositRecovery();
+        Types.EpochRecovery memory epochWithdraw = vault.getEpochWithdrawRecovery();
+        Types.RebalanceDepositRecovery memory rebalanceDeposit = vault.getRebalanceDepositRecovery();
+        Types.RebalanceWithdrawRecovery memory rebalanceWithdraw = vault.getRebalanceWithdrawRecovery();
+        Types.CcipSendRecovery memory ccipSend = vault.getCcipSendRecovery();
+
+        if (_epochRecoveryPending(epochDeposit)) {
+            eq(epochDeposit.epochNonce, vault.getLastHandledEpochNonce(), "NONCE-006: epoch deposit nonce mismatch");
+        }
+        if (_epochRecoveryPending(epochWithdraw)) {
+            eq(epochWithdraw.epochNonce, vault.getLastHandledEpochNonce(), "NONCE-006: epoch withdraw nonce mismatch");
+        }
+        if (_rebalanceDepositRecoveryPending(rebalanceDeposit)) {
+            eq(
+                rebalanceDeposit.rebalanceNonce,
+                vault.getLastHandledRebalanceNonce(),
+                "NONCE-006: rebalance deposit nonce mismatch"
+            );
+        }
+        if (_rebalanceWithdrawRecoveryPending(rebalanceWithdraw)) {
+            eq(
+                rebalanceWithdraw.rebalanceNonce,
+                vault.getLastHandledRebalanceNonce(),
+                "NONCE-006: rebalance withdraw nonce mismatch"
+            );
+        }
+        if (_ccipSendRecoveryPending(ccipSend)) {
+            uint256 highWaterMark = ccipSend.ccipTxType == Types.CcipTx.REBALANCE
+                ? vault.getLastHandledRebalanceNonce()
+                : vault.getLastHandledEpochNonce();
+            eq(ccipSend.nonce, highWaterMark, "NONCE-006: CCIP send nonce mismatch");
+        }
     }
 
     function _expectedShareTokenSupply() internal view returns (uint256 supply) {
@@ -460,26 +581,21 @@ abstract contract Properties is BeforeAfter, Asserts {
         supply = parent.vault.getTotalShares() + lazyShareBurns - lazyShareMints;
     }
 
-    function _assertNonActiveTvlIsZero(BaseVault vault, uint64 vaultChainSelector, uint64 activeChainSelector)
-        internal
-    {
-        if (vaultChainSelector == activeChainSelector) return;
+    function _assertParentTvlEquation(BaseVault vault) internal {
+        address adapter = vault.getActiveProtocolAdapter();
+        uint256 expectedTvl =
+            adapter == address(0) ? 0 : IProtocolAdapter(adapter).getTVL() + vault.getRebalanceDepositRecovery().amount;
+        eq(vault.getTVL(), expectedTvl, "REBAL-008: parent TVL equation mismatch");
+    }
 
-        uint256 expectedTvl;
-        Types.RebalanceDepositRecovery memory rebalanceDepositRecovery = vault.getRebalanceDepositRecovery();
-        if (_rebalanceDepositRecoveryPending(rebalanceDepositRecovery)) {
-            expectedTvl += rebalanceDepositRecovery.amount;
+    function _assertChildTvlEquation(ChildVault vault) internal {
+        address adapter = vault.getActiveProtocolAdapter();
+        uint256 expectedTvl = vault.getCcipSendRecovery().amount;
+        if (adapter != address(0)) {
+            expectedTvl += IProtocolAdapter(adapter).getTVL() + vault.getEpochDepositRecovery().amount
+            + vault.getRebalanceDepositRecovery().amount;
         }
-
-        if (vaultChainSelector != PARENT_CHAIN_SELECTOR) {
-            ChildVault childVault = ChildVault(address(vault));
-            Types.EpochRecovery memory epochDepositRecovery = childVault.getEpochDepositRecovery();
-            if (_epochRecoveryPending(epochDepositRecovery)) {
-                expectedTvl += epochDepositRecovery.amount;
-            }
-        }
-
-        eq(vault.getTVL(), expectedTvl, "ADAPTER-004: non-active strategy chain reports unexpected TVL");
+        eq(vault.getTVL(), expectedTvl, "REBAL-008: child TVL equation mismatch");
     }
 
     function _epochRecoveryPending(Types.EpochRecovery memory recovery) internal pure returns (bool) {

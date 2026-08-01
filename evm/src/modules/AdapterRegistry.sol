@@ -40,6 +40,7 @@ contract AdapterRegistry is IAdapterRegistry, AccessControlDefaultAdminRules {
     /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
     /// @dev Precondition: protocolId must not be zero
     /// @dev Explicitly no zero address check on adapter
+    /// @dev Design decision: does not check whether the adapter being replaced is the active adapter for the vault // @review this
     //slither-disable-next-line missing-zero-check
     function setAdapter(bytes32 protocolId, address adapter) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
         if (protocolId == bytes32(0)) revert AdapterRegistry__NoZeroProtocolId();

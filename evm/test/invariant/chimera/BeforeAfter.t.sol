@@ -7,6 +7,11 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 abstract contract BeforeAfter is EpochGhosts {
     struct Vars {
         uint256 epochNonce;
+        uint256 rebalanceNonce;
+        uint256 childEpochNonce;
+        uint256 childRebalanceNonce;
+        uint256 remoteChildEpochNonce;
+        uint256 remoteChildRebalanceNonce;
         uint256 totalShares;
         uint256 treasuryShareBalance;
         uint256 performanceFeeHighWaterMark;
@@ -33,6 +38,11 @@ abstract contract BeforeAfter is EpochGhosts {
     function __before() internal {
         uint256 epochNonce = parent.vault.getEpochNonce();
         _before.epochNonce = epochNonce;
+        _before.rebalanceNonce = parent.vault.getRebalance().nonce;
+        _before.childEpochNonce = child.vault.getLastHandledEpochNonce();
+        _before.childRebalanceNonce = child.vault.getLastHandledRebalanceNonce();
+        _before.remoteChildEpochNonce = remoteChild.vault.getLastHandledEpochNonce();
+        _before.remoteChildRebalanceNonce = remoteChild.vault.getLastHandledRebalanceNonce();
         _before.totalShares = parent.vault.getTotalShares();
         _before.treasuryShareBalance = parent.share.balanceOf(parent.vault.getTreasury());
         _before.performanceFeeHighWaterMark = parent.vault.getPerformanceFeeHighWaterMark();
@@ -59,6 +69,11 @@ abstract contract BeforeAfter is EpochGhosts {
     function __after() internal {
         uint256 epochNonce = parent.vault.getEpochNonce();
         _after.epochNonce = epochNonce;
+        _after.rebalanceNonce = parent.vault.getRebalance().nonce;
+        _after.childEpochNonce = child.vault.getLastHandledEpochNonce();
+        _after.childRebalanceNonce = child.vault.getLastHandledRebalanceNonce();
+        _after.remoteChildEpochNonce = remoteChild.vault.getLastHandledEpochNonce();
+        _after.remoteChildRebalanceNonce = remoteChild.vault.getLastHandledRebalanceNonce();
         _after.totalShares = parent.vault.getTotalShares();
         _after.treasuryShareBalance = parent.share.balanceOf(parent.vault.getTreasury());
         _after.performanceFeeHighWaterMark = parent.vault.getPerformanceFeeHighWaterMark();
@@ -83,5 +98,16 @@ abstract contract BeforeAfter is EpochGhosts {
         _after.actorTargetEpochDepositAmount = parent.vault.getDepositAmount(s_currentActor, s_targetEpochNonce);
         _after.actorTargetEpochWithdrawShareBurnAmount =
             parent.vault.getWithdrawShareBurnAmount(s_currentActor, s_targetEpochNonce);
+
+        ghost_maxParentEpochNonce = _max(ghost_maxParentEpochNonce, _after.epochNonce);
+        ghost_maxParentRebalanceNonce = _max(ghost_maxParentRebalanceNonce, _after.rebalanceNonce);
+        ghost_maxChildEpochNonce = _max(ghost_maxChildEpochNonce, _after.childEpochNonce);
+        ghost_maxChildRebalanceNonce = _max(ghost_maxChildRebalanceNonce, _after.childRebalanceNonce);
+        ghost_maxRemoteChildEpochNonce = _max(ghost_maxRemoteChildEpochNonce, _after.remoteChildEpochNonce);
+        ghost_maxRemoteChildRebalanceNonce = _max(ghost_maxRemoteChildRebalanceNonce, _after.remoteChildRebalanceNonce);
+    }
+
+    function _max(uint256 a, uint256 b) private pure returns (uint256) {
+        return a > b ? a : b;
     }
 }

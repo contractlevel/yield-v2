@@ -6,15 +6,20 @@ import {Properties} from "./Properties.t.sol";
 import {Types} from "../../../src/libraries/Types.sol";
 import {BaseVault} from "../../../src/vaults/BaseVault.sol";
 import {ChildVault} from "../../../src/vaults/ChildVault.sol";
+import {ParentVault} from "../../../src/vaults/ParentVault.sol";
 import {MockAaveV3Pool} from "../../mocks/MockAaveV3Pool.sol";
 import {MockAaveV4Spoke} from "../../mocks/MockAaveV4Spoke.sol";
 import {MockComet} from "../../mocks/MockComet.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {FixedPointMathLib} from "@solady/utils/FixedPointMathLib.sol";
+import {IAdapterRegistry} from "../../../src/interfaces/modules/IAdapterRegistry.sol";
+import {Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
+import {IAny2EVMMessageReceiver} from "@chainlink/contracts-ccip/contracts/applications/CCIPReceiver.sol";
 
 abstract contract TargetFunctions is BaseTargetFunctions, Properties {
     uint256 internal constant BPS_DENOMINATOR = 10_000;
     uint256 internal constant PERFORMANCE_FEE_BPS = 777;
+    uint256 internal constant MANAGEMENT_FEE_BPS = 100;
     uint256 internal constant SHARE_BOOTSTRAP_DEPOSIT_AMOUNT = 1_000_000_000_000 * 1e6;
     address internal constant INVALID_CCIP_RECEIVER = address(1);
 
@@ -73,12 +78,12 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             _before.currentEpochTotalDepositAmount - amount,
             "EPOCH-005: cancelDeposit did not decrease current epoch total"
         );
-        eq(_after.actorCurrentEpochDepositAmount, 0, "EPOCH-013: cancelDeposit did not clear actor deposit");
-        eq(_after.actorUsdcBalance, _before.actorUsdcBalance + amount, "EPOCH-006: cancelDeposit did not refund USDC");
+        eq(_after.actorCurrentEpochDepositAmount, 0, "EPOCH-006a: cancelDeposit did not clear actor deposit");
+        eq(_after.actorUsdcBalance, _before.actorUsdcBalance + amount, "EPOCH-006a: cancelDeposit did not refund USDC");
         eq(
             ghost_depositedByActorByEpoch[actor][epochNonce],
             0,
-            "EPOCH-013: cancelDeposit did not clear actor deposit ghost"
+            "EPOCH-006a: cancelDeposit did not clear actor deposit ghost"
         );
     }
 
@@ -108,16 +113,16 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             _before.currentEpochTotalDepositAmount - amount,
             "EPOCH-005: forceCancelDeposit did not decrease current epoch total"
         );
-        eq(_after.actorCurrentEpochDepositAmount, 0, "EPOCH-013: forceCancelDeposit did not clear actor deposit");
+        eq(_after.actorCurrentEpochDepositAmount, 0, "EPOCH-006a: forceCancelDeposit did not clear actor deposit");
         eq(
             _after.actorUsdcBalance,
             _before.actorUsdcBalance + amount,
-            "EPOCH-006: forceCancelDeposit did not refund USDC"
+            "EPOCH-006a: forceCancelDeposit did not refund USDC"
         );
         eq(
             ghost_depositedByActorByEpoch[actor][epochNonce],
             0,
-            "EPOCH-013: forceCancelDeposit did not clear actor deposit ghost"
+            "EPOCH-006a: forceCancelDeposit did not clear actor deposit ghost"
         );
     }
 
@@ -175,9 +180,10 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _recordPerformanceFeeBurden(feeSnapshot, grossPricePerShare, parent.vault.getEpoch(epochNonce).pricePerShare);
         _assertCloseEpochShareAccounting(epochNonce);
         _assertPerformanceFeeMintedToTreasury();
+        _assertPerformanceFeeConditions(tvl, grossPricePerShare);
         _assertPerformanceFeeHighWaterMarkNotDecreased();
 
-        eq(_after.epochNonce, epochNonce + 1, "EPOCH-004: closeEpoch did not increment epoch nonce");
+        eq(_after.epochNonce, epochNonce + 1, "EPOCH-004/NONCE-010: closeEpoch did not increment epoch nonce");
         t(
             parent.vault.getEpoch(epochNonce).status == Types.EpochStatus.CLAIMABLE || _recoveryModeExists(),
             "EPOCH-004: closeEpoch did not settle or store recovery"
@@ -206,6 +212,21 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         Types.Strategy memory target = _rebalanceTarget(pathSeed, protocolSeed);
         FeeSnapshot memory feeSnapshot = _feeSnapshot();
+        Types.Rebalance memory beforeRebalance = parent.vault.getRebalance();
+
+        t(beforeRebalance.state == Types.RebalanceState.NONE, "REBAL-002: rebalance did not start from NONE");
+        t(parent.vault.getEpochNonce() > 1, "REBAL-010: rebalance began before an epoch completed");
+        t(parent.vault.getSupportedProtocol(target.protocolId), "REBAL-003: target protocol is unsupported");
+        t(
+            target.chainSelector == PARENT_CHAIN_SELECTOR
+                || parent.vault.getCrosschainVault(target.chainSelector) != address(0),
+            "REBAL-003: target chain is unsupported"
+        );
+        t(
+            target.protocolId != beforeRebalance.activeStrategy.protocolId
+                || target.chainSelector != beforeRebalance.activeStrategy.chainSelector,
+            "REBAL-002: target equals active strategy"
+        );
 
         __before();
         _rebalanceTo(target);
@@ -213,6 +234,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         _recordManagementFeeBurden(feeSnapshot);
         _assertManagementFeeMintedToTreasury();
+        _assertManagementFeeAmount();
         _assertPerformanceFeeHighWaterMarkNotDecreased();
 
         Types.Rebalance memory rebalance = parent.vault.getRebalance();
@@ -225,6 +247,55 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         t(rebalance.pendingStrategy.protocolId == bytes32(0), "REBAL-004: pending protocol not cleared");
         eq(uint256(rebalance.pendingStrategy.chainSelector), 0, "REBAL-004: pending chain not cleared");
         eq(uint256(rebalance.state), uint256(Types.RebalanceState.NONE), "REBAL-004: state not cleared");
+    }
+
+    function handler_replaceActiveAdapterRegistryEntry() public {
+        if (_recoveryModeExists() || parent.vault.getRebalance().state != Types.RebalanceState.NONE) return;
+
+        Types.Strategy memory strategy = parent.vault.getRebalance().activeStrategy;
+        BaseVault vault = _activeVault();
+        IAdapterRegistry registry = _activeAdapterRegistry(strategy.chainSelector);
+        address storedAdapter = vault.getActiveProtocolAdapter();
+        if (storedAdapter == address(0)) return;
+        uint256 tvlBefore = vault.getTVL();
+
+        _changePrank(i_configOperator);
+        registry.setAdapter(strategy.protocolId, address(0));
+
+        t(vault.getActiveProtocolAdapter() == storedAdapter, "REBAL-007: registry change replaced active adapter");
+        eq(vault.getTVL(), tvlBefore, "ADAPTER-003: registry change affected active adapter TVL");
+
+        _changePrank(i_configOperator);
+        registry.setAdapter(strategy.protocolId, storedAdapter);
+
+        if (
+            strategy.chainSelector == PARENT_CHAIN_SELECTOR && parent.vault.getEpochNonce() > 1
+                && !_recoveryModeExists()
+        ) {
+            _assertLocalAdapterFailureCreatesNoRecovery(strategy, tvlBefore);
+        }
+    }
+
+    function _assertLocalAdapterFailureCreatesNoRecovery(Types.Strategy memory activeStrategy, uint256 tvlBefore)
+        internal
+    {
+        Types.Strategy memory target = _parentStrategy(_differentProtocol(activeStrategy.protocolId));
+
+        _markParentRebalanceCooldownElapsed();
+        Types.Rebalance memory rebalanceBefore = parent.vault.getRebalance();
+        _setParentActiveWithdrawReverts(true);
+        _changePrank(address(parent.workflowRouter));
+        (bool success,) =
+            address(parent.vault).call(abi.encodeWithSelector(ParentVault.initiateRebalance.selector, target));
+        _setParentActiveWithdrawReverts(false);
+
+        t(!success, "REC-009: synchronous local adapter failure succeeded");
+        t(parent.vault.getRecoveryMode() == Types.RecoveryMode.NONE, "REC-009: local failure created recovery");
+        t(
+            keccak256(abi.encode(parent.vault.getRebalance())) == keccak256(abi.encode(rebalanceBefore)),
+            "REC-009: local failure changed rebalance state"
+        );
+        eq(parent.vault.getTVL(), tvlBefore, "REC-009: local failure changed TVL");
     }
 
     function handler_claimShares(uint256 actorSeed, uint256 epochSeed, uint256 amountSeed) public {
@@ -262,21 +333,21 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _updateDepositRemainingCounterMax(claimEpochNonce);
 
         eq(_after.epochNonce, _before.epochNonce, "claimShares changed current epoch nonce");
-        eq(_after.actorTargetEpochDepositAmount, 0, "EPOCH-013: claimShares did not clear actor deposit");
+        eq(_after.actorTargetEpochDepositAmount, 0, "EPOCH-009: claimShares did not clear actor deposit");
         eq(
             ghost_depositedByActorByEpoch[actor][claimEpochNonce],
             0,
-            "EPOCH-013: claimShares did not clear actor deposit ghost"
+            "EPOCH-009: claimShares did not clear actor deposit ghost"
         );
         eq(
             _after.targetEpochRemainingDepositClaimAmount,
             _before.targetEpochRemainingDepositClaimAmount - depositAmount,
-            "claimShares did not decrease remaining deposit claims"
+            "EPOCH-009: claimShares did not decrease remaining deposit claims"
         );
         eq(
             _after.targetEpochRemainingShareMintAmount,
             _before.targetEpochRemainingShareMintAmount - shareMintAmount,
-            "claimShares did not decrease remaining share mints"
+            "EPOCH-009: claimShares did not decrease remaining share mints"
         );
         eq(_after.actorShareBalance, _before.actorShareBalance + shareMintAmount, "claimShares did not mint shares");
     }
@@ -318,16 +389,20 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             _before.currentEpochTotalShareBurnAmount - shareBurnAmount,
             "EPOCH-005: cancelWithdraw did not decrease current epoch share burn total"
         );
-        eq(_after.actorCurrentEpochWithdrawShareBurnAmount, 0, "EPOCH-013: cancelWithdraw did not clear actor withdraw");
+        eq(
+            _after.actorCurrentEpochWithdrawShareBurnAmount,
+            0,
+            "EPOCH-006b: cancelWithdraw did not clear actor withdraw"
+        );
         eq(
             ghost_shareBurnedByActorByEpoch[actor][epochNonce],
             0,
-            "EPOCH-013: cancelWithdraw did not clear actor withdraw ghost"
+            "EPOCH-006b: cancelWithdraw did not clear actor withdraw ghost"
         );
         eq(
             _after.actorShareBalance,
             _before.actorShareBalance + shareBurnAmount,
-            "EPOCH-006: cancelWithdraw did not refund shares"
+            "EPOCH-006b: cancelWithdraw did not refund shares"
         );
     }
 
@@ -366,23 +441,27 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _updateWithdrawRemainingCounterMax(claimEpochNonce);
 
         eq(_after.epochNonce, _before.epochNonce, "claimAsset changed current epoch nonce");
-        eq(_after.actorTargetEpochWithdrawShareBurnAmount, 0, "EPOCH-013: claimAsset did not clear actor withdraw");
+        eq(_after.actorTargetEpochWithdrawShareBurnAmount, 0, "EPOCH-012: claimAsset did not clear actor withdraw");
         eq(
             ghost_shareBurnedByActorByEpoch[actor][claimEpochNonce],
             0,
-            "EPOCH-013: claimAsset did not clear actor withdraw ghost"
+            "EPOCH-012: claimAsset did not clear actor withdraw ghost"
         );
         eq(
             _after.targetEpochRemainingShareBurnAmount,
             _before.targetEpochRemainingShareBurnAmount - shareBurnAmount,
-            "claimAsset did not decrease remaining share burns"
+            "EPOCH-012: claimAsset did not decrease remaining share burns"
         );
         eq(
             _after.targetEpochRemainingWithdrawClaimAmount,
             _before.targetEpochRemainingWithdrawClaimAmount - usdcWithdrawAmount,
-            "claimAsset did not decrease remaining withdraw claims"
+            "EPOCH-012: claimAsset did not decrease remaining withdraw claims"
         );
-        eq(_after.actorUsdcBalance, _before.actorUsdcBalance + usdcWithdrawAmount, "claimAsset did not transfer USDC");
+        eq(
+            _after.actorUsdcBalance,
+            _before.actorUsdcBalance + usdcWithdrawAmount,
+            "EPOCH-012: claimAsset did not transfer USDC"
+        );
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -392,9 +471,174 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         public
     {
         if (_recoveryModeExists()) {
+            ChildVault pendingChild =
+                child.vault.getRecoveryMode() != Types.RecoveryMode.NONE ? child.vault : remoteChild.vault;
+            Types.RecoveryMode pendingMode = pendingChild.getRecoveryMode();
+            uint256 handledNonce = _pendingChildRecoveryNonce(pendingChild, pendingMode);
+            bool rebalanceDomain = pendingMode == Types.RecoveryMode.REBALANCE_DEPOSIT
+                || pendingMode == Types.RecoveryMode.REBALANCE_WITHDRAW
+                || (pendingMode == Types.RecoveryMode.CCIP_SEND
+                    && pendingChild.getCcipSendRecovery().ccipTxType == Types.CcipTx.REBALANCE);
             _resolvePendingRecovery();
+            if (pendingMode != Types.RecoveryMode.NONE) {
+                _assertHandledChildNonceCannotBeReplayed(pendingChild, rebalanceDomain, handledNonce);
+            }
         } else {
             _stageRecovery(scenarioSeed, protocolSeed, actorSeed, amountSeed);
+            _assertEpochCloseBlockedByActiveLifecycle();
+            _assertPendingRecoveryCannotBeOverwritten();
+            _assertFailedRecoveryRetryPreservesState();
+        }
+    }
+
+    function _assertHandledChildNonceCannotBeReplayed(ChildVault vault, bool rebalanceDomain, uint256 handledNonce)
+        internal
+    {
+        Types.CcipTx ccipTxType = rebalanceDomain ? Types.CcipTx.REBALANCE : Types.CcipTx.EPOCH_NET_DEPOSIT;
+        bytes memory payload = rebalanceDomain
+            ? abi.encode(handledNonce, parent.vault.getRebalance().activeStrategy.protocolId)
+            : abi.encode(handledNonce);
+        Client.EVMTokenAmount[] memory amounts = new Client.EVMTokenAmount[](1);
+        amounts[0] = Client.EVMTokenAmount({token: parent.vault.getAsset(), amount: 1});
+        Client.Any2EVMMessage memory message = Client.Any2EVMMessage({
+            messageId: bytes32(0),
+            sourceChainSelector: PARENT_CHAIN_SELECTOR,
+            sender: abi.encode(address(parent.vault)),
+            data: abi.encode(ccipTxType, payload),
+            destTokenAmounts: amounts
+        });
+        bytes32 stateHash = _childRecoveryHash(vault);
+        _changePrank(address(local.mockCcipRouter));
+        (bool success,) =
+            address(vault).call(abi.encodeWithSelector(IAny2EVMMessageReceiver.ccipReceive.selector, message));
+
+        t(!success, "CCIP-004/NONCE-004/NONCE-005: handled nonce replay succeeded");
+        t(_childRecoveryHash(vault) == stateHash, "CCIP-004: invalid replay changed child lifecycle state");
+    }
+
+    function _pendingChildRecoveryNonce(ChildVault vault, Types.RecoveryMode mode)
+        internal
+        view
+        returns (uint256 nonce)
+    {
+        if (mode == Types.RecoveryMode.EPOCH_DEPOSIT) {
+            return vault.getEpochDepositRecovery().epochNonce;
+        }
+        if (mode == Types.RecoveryMode.EPOCH_WITHDRAW) return vault.getEpochWithdrawRecovery().epochNonce;
+        if (mode == Types.RecoveryMode.REBALANCE_DEPOSIT) return vault.getRebalanceDepositRecovery().rebalanceNonce;
+        if (mode == Types.RecoveryMode.REBALANCE_WITHDRAW) return vault.getRebalanceWithdrawRecovery().rebalanceNonce;
+        if (mode == Types.RecoveryMode.CCIP_SEND) return vault.getCcipSendRecovery().nonce;
+    }
+
+    function _assertEpochCloseBlockedByActiveLifecycle() internal {
+        uint256 currentNonce = parent.vault.getEpochNonce();
+        Types.RebalanceState rebalanceState = parent.vault.getRebalance().state;
+        Types.EpochStatus previousStatus =
+            currentNonce > 1 ? parent.vault.getEpoch(currentNonce - 1).status : Types.EpochStatus.NONE;
+        if (rebalanceState != Types.RebalanceState.REBALANCING && previousStatus != Types.EpochStatus.EXECUTING) {
+            return;
+        }
+
+        _changePrank(address(parent.workflowRouter));
+        (bool success,) = address(parent.vault).call(abi.encodeWithSelector(ParentVault.closeEpoch.selector, 0));
+
+        t(!success, "EPOCH-003: closeEpoch succeeded during an active lifecycle");
+        eq(parent.vault.getEpochNonce(), currentNonce, "EPOCH-003: failed closeEpoch changed nonce");
+    }
+
+    function _assertPendingRecoveryCannotBeOverwritten() internal {
+        if (parent.vault.getRecoveryMode() != Types.RecoveryMode.NONE) {
+            bytes32 recoveryHash = keccak256(abi.encode(parent.vault.getRebalanceDepositRecovery()));
+            _changePrank(address(parent.workflowRouter));
+            (bool success,) = address(parent.vault)
+                .call(
+                    abi.encodeWithSelector(
+                        ParentVault.initiateRebalance.selector, parent.vault.getRebalance().activeStrategy
+                    )
+                );
+
+            t(!success, "REC-003: operation succeeded while parent recovery was pending");
+            t(
+                keccak256(abi.encode(parent.vault.getRebalanceDepositRecovery())) == recoveryHash,
+                "REC-003: parent recovery was overwritten"
+            );
+            return;
+        }
+
+        ChildVault vault = child.vault.getRecoveryMode() != Types.RecoveryMode.NONE ? child.vault : remoteChild.vault;
+        bytes32 recoveryHash = _childRecoveryHash(vault);
+        address workflowRouter = address(vault) == address(child.vault)
+            ? address(child.workflowRouter)
+            : address(remoteChild.workflowRouter);
+
+        _changePrank(workflowRouter);
+        (bool success,) = address(vault)
+            .call(
+                abi.encodeWithSelector(
+                    ChildVault.executeEpochWithdraw.selector, vault.getLastHandledEpochNonce() + 1, 1
+                )
+            );
+
+        t(!success, "REC-003: operation succeeded while child recovery was pending");
+        t(_childRecoveryHash(vault) == recoveryHash, "REC-003: child recovery was overwritten");
+    }
+
+    function _assertFailedRecoveryRetryPreservesState() internal {
+        if (parent.vault.getRecoveryMode() != Types.RecoveryMode.NONE) {
+            Types.Strategy memory target = parent.vault.getRebalance().pendingStrategy;
+            bytes32 recoveryHash = keccak256(abi.encode(parent.vault.getRebalanceDepositRecovery()));
+            uint256 balance = IERC20(parent.vault.getAsset()).balanceOf(address(parent.vault));
+
+            _setParentDepositReverts(target, true);
+            (bool success,) = address(parent.vault).call(abi.encodeWithSelector(BaseVault.executeRecovery.selector));
+            _setParentDepositReverts(target, false);
+
+            t(!success, "REC-005: failed parent retry succeeded");
+            t(
+                keccak256(abi.encode(parent.vault.getRebalanceDepositRecovery())) == recoveryHash,
+                "REC-005: failed parent retry changed recovery"
+            );
+            eq(
+                IERC20(parent.vault.getAsset()).balanceOf(address(parent.vault)),
+                balance,
+                "REC-005: failed parent retry changed attributable funds"
+            );
+            return;
+        }
+
+        ChildVault vault = child.vault.getRecoveryMode() != Types.RecoveryMode.NONE ? child.vault : remoteChild.vault;
+        Types.RecoveryMode mode = vault.getRecoveryMode();
+        bytes32 recoveryHash = _childRecoveryHash(vault);
+        uint256 balance = IERC20(parent.vault.getAsset()).balanceOf(address(vault));
+
+        _setChildRetryFailure(vault, mode, true);
+        (bool success,) = address(vault).call(abi.encodeWithSelector(BaseVault.executeRecovery.selector));
+        _setChildRetryFailure(vault, mode, false);
+
+        t(!success, "REC-005: failed child retry succeeded");
+        t(_childRecoveryHash(vault) == recoveryHash, "REC-005: failed child retry changed recovery or nonce");
+        eq(
+            IERC20(parent.vault.getAsset()).balanceOf(address(vault)),
+            balance,
+            "REC-005: failed child retry changed attributable funds"
+        );
+    }
+
+    function _setChildRetryFailure(ChildVault vault, Types.RecoveryMode mode, bool reverts) internal {
+        if (mode == Types.RecoveryMode.EPOCH_DEPOSIT) {
+            _setActiveChildDepositReverts(vault, reverts);
+        } else if (mode == Types.RecoveryMode.EPOCH_WITHDRAW || mode == Types.RecoveryMode.REBALANCE_WITHDRAW) {
+            _setActiveChildWithdrawReverts(vault, reverts);
+        } else if (mode == Types.RecoveryMode.REBALANCE_DEPOSIT) {
+            _setChildDepositReverts(vault, parent.vault.getRebalance().pendingStrategy, reverts);
+        } else if (mode == Types.RecoveryMode.CCIP_SEND) {
+            Types.CcipSendRecovery memory recovery = vault.getCcipSendRecovery();
+            address destination = _crosschainVault(recovery.destinationChainSelector);
+            if (reverts) {
+                _breakDestination(vault, recovery.destinationChainSelector);
+            } else {
+                _restoreDestination(vault, recovery.destinationChainSelector, destination);
+            }
         }
     }
 
@@ -417,7 +661,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
     }
 
     function _resolvePendingRecovery() internal {
-        eq(_recoveryModeCount(), 1, "REC-009: expected one pending recovery");
+        eq(_recoveryModeCount(), 1, "REC-010: expected one pending recovery");
 
         if (_rebalanceDepositRecoveryPending(parent.vault.getRebalanceDepositRecovery())) {
             _recoverFailedRebalanceDeposit(parent.vault);
@@ -427,7 +671,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         if (_resolveChildPendingRecovery(child.vault)) return;
         if (_resolveChildPendingRecovery(remoteChild.vault)) return;
 
-        t(false, "REC-009: pending recovery not found");
+        t(false, "REC-010: pending recovery not found");
     }
 
     function _resolveChildPendingRecovery(ChildVault vault) internal returns (bool recovered) {
@@ -551,7 +795,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         lte(
             netWithdrawAmount,
             IERC20(parent.vault.getAsset()).balanceOf(address(activeChild)),
-            "CCIP-005b: pending send is not collateralized"
+            "CCIP-006: pending send is not collateralized"
         );
 
         _recordEpochShareAccounting(epochNonce);
@@ -617,7 +861,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         lte(
             amount,
             IERC20(parent.vault.getAsset()).balanceOf(address(sourceChild)),
-            "CCIP-005b: pending send is not collateralized"
+            "CCIP-006: pending send is not collateralized"
         );
     }
 
@@ -633,7 +877,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             _assertEpochTransition(epochNonce, Types.EpochStatus.EXECUTING, parent.vault.getEpoch(epochNonce).status);
             t(
                 parent.vault.getEpoch(epochNonce).status == Types.EpochStatus.CLAIMABLE,
-                "CCIP-005c: parent epoch not claimable after retry"
+                "CCIP-007: parent epoch not claimable after retry"
             );
             _recordEpochClosed(epochNonce);
         } else if (recovery.ccipTxType == Types.CcipTx.REBALANCE) {
@@ -654,16 +898,56 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
             __after();
 
-            _assertRebalanceFinalized(beforeRebalance, target, "CCIP-005c: parent rebalance not finalized after retry");
+            _assertRebalanceFinalized(beforeRebalance, target, "CCIP-007: parent rebalance not finalized after retry");
             _recordManagementFeeBurden(feeSnapshot);
             _assertManagementFeeMintedToTreasury();
+            _assertManagementFeeAmount();
             _assertPerformanceFeeHighWaterMarkNotDecreased();
         } else {
             t(false, "REC-002: invalid CCIP recovery tx type");
         }
 
-        t(vault.getRecoveryMode() == Types.RecoveryMode.NONE, "REC-003: child still has recovery");
-        eq(_recoveryModeCount(), 0, "REC-003: recovery mode not cleared");
+        t(vault.getRecoveryMode() == Types.RecoveryMode.NONE, "REC-004: child still has recovery");
+        eq(_recoveryModeCount(), 0, "REC-004: recovery mode not cleared");
+        _assertParentCcipReplayRejected(vault, recovery);
+    }
+
+    function _assertParentCcipReplayRejected(ChildVault sourceVault, Types.CcipSendRecovery memory recovery) internal {
+        bytes memory payload = recovery.ccipTxType == Types.CcipTx.REBALANCE
+            ? abi.encode(recovery.nonce, recovery.protocolId)
+            : abi.encode(recovery.nonce);
+        Client.EVMTokenAmount[] memory amounts = new Client.EVMTokenAmount[](1);
+        amounts[0] = Client.EVMTokenAmount({token: parent.vault.getAsset(), amount: recovery.amount});
+        Client.Any2EVMMessage memory message = Client.Any2EVMMessage({
+            messageId: bytes32(0),
+            sourceChainSelector: _childChainSelector(sourceVault),
+            sender: abi.encode(address(sourceVault)),
+            data: abi.encode(recovery.ccipTxType, payload),
+            destTokenAmounts: amounts
+        });
+        bytes32 stateHash = _parentLifecycleHash();
+
+        _changePrank(address(local.mockCcipRouter));
+        (bool success,) =
+            address(parent.vault).call(abi.encodeWithSelector(IAny2EVMMessageReceiver.ccipReceive.selector, message));
+
+        t(!success, "CCIP-004/NONCE-013: completed parent callback replay succeeded");
+        t(_parentLifecycleHash() == stateHash, "CCIP-004: invalid callback changed parent lifecycle state");
+    }
+
+    function _parentLifecycleHash() internal view returns (bytes32) {
+        uint256 currentNonce = parent.vault.getEpochNonce();
+        return keccak256(
+            abi.encode(
+                currentNonce,
+                parent.vault.getEpoch(currentNonce),
+                currentNonce > 1 ? parent.vault.getEpoch(currentNonce - 1) : parent.vault.getEpoch(0),
+                parent.vault.getRebalance(),
+                parent.vault.getRecoveryMode(),
+                parent.vault.getRebalanceDepositRecovery(),
+                parent.vault.getTotalShares()
+            )
+        );
     }
 
     function _stageFailedEpochDeposit(uint256 childSeed, uint256 protocolSeed, uint256 actorSeed, uint256 amountSeed)
@@ -702,9 +986,9 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         );
 
         _assertEpochDepositRecoveryCleared(vault);
-        t(vault.getRecoveryMode() == Types.RecoveryMode.NONE, "REC-003: child still has recovery");
+        t(vault.getRecoveryMode() == Types.RecoveryMode.NONE, "REC-004: child still has recovery");
         _recordEpochClosed(epochNonce);
-        eq(_recoveryModeCount(), 0, "REC-003: recovery mode not cleared");
+        eq(_recoveryModeCount(), 0, "REC-004: recovery mode not cleared");
     }
 
     function _stageFailedEpochWithdraw(uint256 childSeed, uint256 protocolSeed, uint256 actorSeed, uint256 amountSeed)
@@ -797,9 +1081,9 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             parent.vault.getEpoch(recovery.epochNonce).status == Types.EpochStatus.CLAIMABLE,
             "EPOCH-014: parent epoch not claimable after recovery"
         );
-        t(vault.getRecoveryMode() == Types.RecoveryMode.NONE, "REC-003: child still has recovery");
+        t(vault.getRecoveryMode() == Types.RecoveryMode.NONE, "REC-004: child still has recovery");
         _recordEpochClosed(recovery.epochNonce);
-        eq(_recoveryModeCount(), 0, "REC-003: recovery mode not cleared");
+        eq(_recoveryModeCount(), 0, "REC-004: recovery mode not cleared");
     }
 
     function _stageFailedRebalanceDeposit(
@@ -890,11 +1174,12 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         _assertRebalanceDepositRecoveryCleared(vault);
         _assertRebalanceFinalized(beforeRebalance, target, "REBAL-004: state is not none");
-        t(vault.getRecoveryMode() == Types.RecoveryMode.NONE, "REC-003: vault still has recovery");
+        t(vault.getRecoveryMode() == Types.RecoveryMode.NONE, "REC-004: vault still has recovery");
         _recordManagementFeeBurden(feeSnapshot);
         _assertManagementFeeMintedToTreasury();
+        _assertManagementFeeAmount();
         _assertPerformanceFeeHighWaterMarkNotDecreased();
-        eq(_recoveryModeCount(), 0, "REC-003: recovery mode not cleared");
+        eq(_recoveryModeCount(), 0, "REC-004: recovery mode not cleared");
     }
 
     function _stageFailedRebalanceDepositChild(
@@ -1026,7 +1311,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _setActiveStrategyWithdrawReturn(amount);
         vault.executeRecovery();
         _assertRebalanceWithdrawRecoveryCleared(vault);
-        t(vault.getRecoveryMode() == Types.RecoveryMode.NONE, "REC-003: child still has recovery");
+        t(vault.getRecoveryMode() == Types.RecoveryMode.NONE, "REC-004: child still has recovery");
 
         if (target.chainSelector != PARENT_CHAIN_SELECTOR) {
             _completeRebalanceThroughWorkflow(
@@ -1039,8 +1324,9 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _assertRebalanceFinalized(beforeRebalance, target, "REBAL-004: state is not none");
         _recordManagementFeeBurden(feeSnapshot);
         _assertManagementFeeMintedToTreasury();
+        _assertManagementFeeAmount();
         _assertPerformanceFeeHighWaterMarkNotDecreased();
-        eq(_recoveryModeCount(), 0, "REC-003: recovery mode not cleared");
+        eq(_recoveryModeCount(), 0, "REC-004: recovery mode not cleared");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -1096,7 +1382,27 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         uint256 derivedFeeShares =
             _after.totalShares + epoch.totalShareBurnAmount - _before.totalShares - epoch.remainingShareMintAmount;
 
-        eq(derivedFeeShares, treasuryShareIncrease, "SHARE-005: performance fee did not mint to treasury");
+        eq(derivedFeeShares, treasuryShareIncrease, "FEE-002: performance fee did not mint to treasury");
+    }
+
+    function _assertPerformanceFeeConditions(uint256 tvl, uint256 grossPricePerShare) internal {
+        uint256 actualFeeShares = _after.treasuryShareBalance - _before.treasuryShareBalance;
+        if (grossPricePerShare <= _before.performanceFeeHighWaterMark || _before.totalShares == 0) {
+            eq(actualFeeShares, 0, "FEE-001: fee minted without yield above high-water mark");
+            return;
+        }
+
+        uint256 totalYield = FixedPointMathLib.fullMulDivUp(
+            grossPricePerShare - _before.performanceFeeHighWaterMark, _before.totalShares, SHARE_PRECISION
+        );
+        uint256 feeAmount = FixedPointMathLib.fullMulDivUp(totalYield, PERFORMANCE_FEE_BPS, BPS_DENOMINATOR);
+        if (feeAmount >= tvl) {
+            eq(actualFeeShares, 0, "FEE-001: fee minted when fee consumes TVL");
+            return;
+        }
+
+        uint256 expectedFeeShares = FixedPointMathLib.fullMulDivUp(feeAmount, _before.totalShares, tvl - feeAmount);
+        eq(actualFeeShares, expectedFeeShares, "FEE-001: incorrect performance fee shares");
     }
 
     function _assertManagementFeeMintedToTreasury() internal {
@@ -1105,7 +1411,19 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         eq(
             _after.totalShares,
             _before.totalShares + treasuryShareIncrease,
-            "SHARE-005: management fee did not mint to treasury"
+            "FEE-002: management fee did not mint to treasury"
+        );
+    }
+
+    function _assertManagementFeeAmount() internal {
+        uint256 elapsed = block.timestamp > 365 days ? 365 days : block.timestamp;
+        uint256 expectedFeeShares = FixedPointMathLib.fullMulDivUp(
+            _before.totalShares, MANAGEMENT_FEE_BPS * elapsed, BPS_DENOMINATOR * 365 days
+        );
+        eq(
+            _after.treasuryShareBalance - _before.treasuryShareBalance,
+            expectedFeeShares,
+            "FEE-004: incorrect capped management fee"
         );
     }
 
@@ -1184,7 +1502,11 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         );
         t(afterRebalance.pendingStrategy.protocolId == bytes32(0), "REBAL-004: pending protocol still set");
         eq(uint256(afterRebalance.pendingStrategy.chainSelector), 0, "REBAL-004: pending chain still set");
-        eq(_activeStrategyTvl(), tvlBefore, "REBAL-006: TVL changed during rebalance");
+        eq(
+            _activeStrategyTvl(),
+            tvlBefore,
+            "ADAPTER-007/ADAPTER-008/ADAPTER-009: TVL changed during successful rebalance"
+        );
         _assertActiveAdapterFor(target);
     }
 
@@ -1472,6 +1794,19 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         }
     }
 
+    function _setParentActiveWithdrawReverts(bool reverts) internal {
+        _setProtocolWithdrawReverts(
+            parent.vault.getActiveProtocolAdapter(),
+            address(parent.aaveV3Adapter),
+            address(parent.aaveV4Adapter),
+            address(parent.compoundV3Adapter),
+            parent.aaveV3Adapter.getProtocolPool(),
+            parent.aaveV4Adapter.getProtocolPool(),
+            parent.compoundV3Adapter.getProtocolPool(),
+            reverts
+        );
+    }
+
     function _setProtocolDepositReverts(
         address activeAdapter,
         address aaveV3Adapter,
@@ -1556,43 +1891,43 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
     function _assertPendingEpochDepositRecovery(ChildVault vault, uint256 epochNonce, uint256 amount) internal {
         Types.EpochRecovery memory recovery = vault.getEpochDepositRecovery();
 
-        eq(recovery.epochNonce, epochNonce, "REC-002: wrong epoch deposit recovery nonce");
-        eq(recovery.amount, amount, "REC-002: wrong epoch deposit recovery amount");
+        eq(recovery.epochNonce, epochNonce, "REC-001: wrong epoch deposit recovery nonce");
+        eq(recovery.amount, amount, "REC-001: wrong epoch deposit recovery amount");
     }
 
     function _assertEpochDepositRecoveryCleared(ChildVault vault) internal {
         Types.EpochRecovery memory recovery = vault.getEpochDepositRecovery();
 
-        eq(recovery.epochNonce, 0, "REC-003: epoch deposit recovery nonce not cleared");
-        eq(recovery.amount, 0, "REC-003: epoch deposit recovery amount not cleared");
+        eq(recovery.epochNonce, 0, "REC-004: epoch deposit recovery nonce not cleared");
+        eq(recovery.amount, 0, "REC-004: epoch deposit recovery amount not cleared");
     }
 
     function _assertPendingEpochWithdrawRecovery(ChildVault vault, uint256 epochNonce, uint256 amount) internal {
         Types.EpochRecovery memory recovery = vault.getEpochWithdrawRecovery();
 
-        eq(recovery.epochNonce, epochNonce, "REC-002: wrong epoch withdraw recovery nonce");
-        eq(recovery.amount, amount, "REC-002: wrong epoch withdraw recovery amount");
+        eq(recovery.epochNonce, epochNonce, "REC-001: wrong epoch withdraw recovery nonce");
+        eq(recovery.amount, amount, "REC-001: wrong epoch withdraw recovery amount");
     }
 
     function _assertEpochWithdrawRecoveryCleared(ChildVault vault) internal {
         Types.EpochRecovery memory recovery = vault.getEpochWithdrawRecovery();
 
-        eq(recovery.epochNonce, 0, "REC-003: epoch withdraw recovery nonce not cleared");
-        eq(recovery.amount, 0, "REC-003: epoch withdraw recovery amount not cleared");
+        eq(recovery.epochNonce, 0, "REC-004: epoch withdraw recovery nonce not cleared");
+        eq(recovery.amount, 0, "REC-004: epoch withdraw recovery amount not cleared");
     }
 
     function _assertPendingRebalanceDepositRecovery(BaseVault vault, uint256 rebalanceNonce, uint256 amount) internal {
         Types.RebalanceDepositRecovery memory recovery = vault.getRebalanceDepositRecovery();
 
-        eq(recovery.rebalanceNonce, rebalanceNonce, "REC-005a: wrong rebalance deposit recovery nonce");
-        eq(recovery.amount, amount, "REC-005b: wrong rebalance deposit recovery amount");
+        eq(recovery.rebalanceNonce, rebalanceNonce, "REC-001: wrong rebalance deposit recovery nonce");
+        eq(recovery.amount, amount, "REC-001: wrong rebalance deposit recovery amount");
     }
 
     function _assertRebalanceDepositRecoveryCleared(BaseVault vault) internal {
         Types.RebalanceDepositRecovery memory recovery = vault.getRebalanceDepositRecovery();
 
-        eq(recovery.rebalanceNonce, 0, "REC-003: rebalance deposit recovery nonce not cleared");
-        eq(recovery.amount, 0, "REC-003: rebalance deposit recovery amount not cleared");
+        eq(recovery.rebalanceNonce, 0, "REC-004: rebalance deposit recovery nonce not cleared");
+        eq(recovery.amount, 0, "REC-004: rebalance deposit recovery amount not cleared");
     }
 
     function _assertPendingRebalanceWithdrawRecovery(
@@ -1602,21 +1937,21 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
     ) internal {
         Types.RebalanceWithdrawRecovery memory recovery = vault.getRebalanceWithdrawRecovery();
 
-        eq(recovery.rebalanceNonce, rebalanceNonce, "REC-002: wrong rebalance withdraw recovery nonce");
-        t(recovery.strategy.protocolId == strategy.protocolId, "REC-002: wrong rebalance withdraw recovery protocol");
+        eq(recovery.rebalanceNonce, rebalanceNonce, "REC-001: wrong rebalance withdraw recovery nonce");
+        t(recovery.strategy.protocolId == strategy.protocolId, "REC-001: wrong rebalance withdraw recovery protocol");
         eq(
             uint256(recovery.strategy.chainSelector),
             uint256(strategy.chainSelector),
-            "REC-002: wrong rebalance withdraw recovery chain"
+            "REC-001: wrong rebalance withdraw recovery chain"
         );
     }
 
     function _assertRebalanceWithdrawRecoveryCleared(ChildVault vault) internal {
         Types.RebalanceWithdrawRecovery memory recovery = vault.getRebalanceWithdrawRecovery();
 
-        eq(recovery.rebalanceNonce, 0, "REC-003: rebalance withdraw recovery nonce not cleared");
-        t(recovery.strategy.protocolId == bytes32(0), "REC-003: rebalance withdraw recovery protocol not cleared");
-        eq(uint256(recovery.strategy.chainSelector), 0, "REC-003: rebalance withdraw recovery chain not cleared");
+        eq(recovery.rebalanceNonce, 0, "REC-004: rebalance withdraw recovery nonce not cleared");
+        t(recovery.strategy.protocolId == bytes32(0), "REC-004: rebalance withdraw recovery protocol not cleared");
+        eq(uint256(recovery.strategy.chainSelector), 0, "REC-004: rebalance withdraw recovery chain not cleared");
     }
 
     function _assertPendingCcipSendRecovery(
@@ -1629,25 +1964,40 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
     ) internal {
         Types.CcipSendRecovery memory recovery = vault.getCcipSendRecovery();
 
-        eq(uint256(recovery.ccipTxType), uint256(ccipTxType), "CCIP-005a: wrong recovery tx type");
+        eq(uint256(recovery.ccipTxType), uint256(ccipTxType), "CCIP-005: wrong recovery tx type");
         eq(
             uint256(recovery.destinationChainSelector),
             uint256(destinationChainSelector),
-            "CCIP-005a: wrong recovery destination"
+            "CCIP-005: wrong recovery destination"
         );
-        eq(recovery.amount, amount, "CCIP-005a: wrong recovery amount");
-        eq(recovery.nonce, nonce, "CCIP-005a: wrong recovery nonce");
-        t(recovery.protocolId == protocolId, "CCIP-005a: wrong recovery protocol id");
+        eq(recovery.amount, amount, "CCIP-005: wrong recovery amount");
+        eq(recovery.nonce, nonce, "CCIP-005: wrong recovery nonce");
+        t(recovery.protocolId == protocolId, "CCIP-005: wrong recovery protocol id");
     }
 
     function _assertCcipSendRecoveryCleared(ChildVault vault) internal {
         Types.CcipSendRecovery memory recovery = vault.getCcipSendRecovery();
 
-        eq(uint256(recovery.ccipTxType), 0, "REC-003: recovery tx type not cleared");
-        eq(recovery.amount, 0, "REC-003: recovery amount not cleared");
-        eq(uint256(recovery.destinationChainSelector), 0, "REC-003: recovery destination not cleared");
-        eq(recovery.nonce, 0, "REC-003: recovery nonce not cleared");
-        t(recovery.protocolId == bytes32(0), "REC-003: recovery protocol id not cleared");
+        eq(uint256(recovery.ccipTxType), 0, "REC-004: recovery tx type not cleared");
+        eq(recovery.amount, 0, "REC-004: recovery amount not cleared");
+        eq(uint256(recovery.destinationChainSelector), 0, "REC-004: recovery destination not cleared");
+        eq(recovery.nonce, 0, "REC-004: recovery nonce not cleared");
+        t(recovery.protocolId == bytes32(0), "REC-004: recovery protocol id not cleared");
+    }
+
+    function _childRecoveryHash(ChildVault vault) internal view returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                vault.getRecoveryMode(),
+                vault.getRebalanceDepositRecovery(),
+                vault.getRebalanceWithdrawRecovery(),
+                vault.getEpochDepositRecovery(),
+                vault.getEpochWithdrawRecovery(),
+                vault.getCcipSendRecovery(),
+                vault.getLastHandledEpochNonce(),
+                vault.getLastHandledRebalanceNonce()
+            )
+        );
     }
 
     function _rebalanceTarget(uint256 pathSeed, uint256 protocolSeed)
@@ -1670,6 +2020,12 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         if (target.protocolId == activeStrategy.protocolId && target.chainSelector == activeStrategy.chainSelector) {
             target.protocolId = _differentProtocol(protocolId);
         }
+    }
+
+    function _activeAdapterRegistry(uint64 chainSelector) internal view returns (IAdapterRegistry registry) {
+        if (chainSelector == PARENT_CHAIN_SELECTOR) return IAdapterRegistry(address(parent.adapterRegistry));
+        if (chainSelector == CHILD_CHAIN_SELECTOR) return IAdapterRegistry(address(child.adapterRegistry));
+        return IAdapterRegistry(address(remoteChild.adapterRegistry));
     }
 
     function _protocolId(uint256 protocolSeed) internal pure returns (bytes32) {

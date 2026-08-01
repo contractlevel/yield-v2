@@ -46,7 +46,7 @@ contract Target {
         emit TargetDepositSuccess();
     }
 
-    function fail() pure external {
+    function fail() external pure {
         revert Target__Fail();
     }
 }
