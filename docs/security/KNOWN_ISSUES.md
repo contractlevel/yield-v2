@@ -676,3 +676,54 @@ The failure mode is availability and operational delay. The pause-triggered reve
 - CRE or operator monitoring can no longer reliably detect and reconcile paused cross-chain execution.
 
 ---
+
+## KI-014 — Strategy-withdraw recovery requires full market liquidity
+
+**Status:** Accepted — recovery deliberately retries the original strategy withdrawal atomically.
+
+**Last reviewed:** 2026-08-01
+
+**Component:** `ChildVault.executeEpochWithdraw`, `ChildVault.executeRebalance`, `ChildVault.executeRecovery`, epoch- and rebalance-withdraw recovery state, strategy adapters, and the CRE global recovery guard.
+
+### Summary
+
+When a ChildVault cannot withdraw the requested assets from its active strategy, it stores typed recovery state and leaves the operation in progress. Recovery retries the original withdrawal rather than accepting incremental liquidity:
+
+- `EPOCH_WITHDRAW` retries the full stored epoch withdrawal amount.
+- `REBALANCE_WITHDRAW` retries withdrawal of the entire strategy position with `type(uint256).max`.
+
+If the lending market cannot provide the full requested liquidity in one transaction, `executeRecovery()` continues to revert until sufficient liquidity returns. There is no path to withdraw a partial amount, reduce a stored remainder, or settle either operation through multiple withdrawals and CCIP messages.
+
+### Impact
+
+This is an availability limitation rather than an accounting or custody failure:
+
+- An affected epoch remains `EXECUTING`, so its claims cannot become available and the previous-epoch guard prevents a later epoch from closing.
+- An affected rebalance remains `REBALANCING`, so another rebalance cannot begin and epoch close remains blocked.
+- The ChildVault remains in `EPOCH_WITHDRAW` or `REBALANCE_WITHDRAW` recovery mode.
+- The normal CRE path detects the outstanding recovery and skips new fund-moving or state-creating operations across the configured deployment.
+- Repeated recovery attempts cannot make incremental progress when only part of the requested liquidity is available.
+
+Assets that could not be withdrawn remain accounted for in the existing strategy position. The recovery does not create an unbacked claim, discard the requested amount, or clear the active adapter. The operational delay can nevertheless be indefinite if the market never again makes the full withdrawal available in one transaction.
+
+### Why this is accepted, not mitigated on-chain
+
+Recovery modes are intentionally exact continuations of previously accepted operations. Retrying the original amount or full position keeps recovery state deterministic and makes the resulting strategy and CCIP transitions straightforward to reconcile.
+
+Partial recovery would require a substantially larger state machine: cumulative withdrawal accounting, stored remaining amounts, potentially repeated CCIP transfers, partial rebalance migration, epoch shortfall treatment across multiple receipts, and an explicit finalization condition. The protocol accepts waiting for full strategy liquidity rather than adding that complexity.
+
+### Operational mitigations
+
+- Monitor `EPOCH_WITHDRAW` and `REBALANCE_WITHDRAW` recovery mode, including the affected nonce, position size, and recovery age.
+- Monitor lending-market liquidity and retry `executeRecovery()` only when the full requested withdrawal is expected to succeed.
+- Track the affected ParentVault epoch or rebalance until it reaches `CLAIMABLE` or completes, including any subsequent CCIP message.
+- Escalate prolonged market illiquidity through the incident and upgrade process rather than manually altering recovery state or repeating the original source operation.
+
+### Conditions that would warrant revisiting
+
+- Full-liquidity recovery delays become frequent or exceed the protocol's accepted settlement window.
+- A supported lending market introduces persistent withdrawal queues or routinely exposes only partial liquidity.
+- Product requirements demand bounded epoch or rebalance completion time.
+- The protocol adopts a formally specified partial-withdrawal and multi-message settlement design.
+
+---
