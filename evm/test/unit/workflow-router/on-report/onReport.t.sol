@@ -44,6 +44,22 @@ contract WorkflowRouter_OnReportUnitTest is BaseWorkflowRouterUnitTest {
         s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, s_workflowName, i_owner), abi.encodePacked(SELECTOR));
     }
 
+    function test_WorkflowRouter_onReport_RevertWhen_MetadataIsTooShort() external {
+        bytes memory metadata = abi.encodePacked(WORKFLOW_ID, s_workflowName, i_owner, bytes1(0));
+        vm.expectRevert(
+            abi.encodeWithSelector(IWorkflowRouter.WorkflowRouter__InvalidMetadataLength.selector, metadata.length)
+        );
+        s_workflowRouter.onReport(metadata, abi.encodePacked(SELECTOR));
+    }
+
+    function test_WorkflowRouter_onReport_RevertWhen_MetadataIsTooLong() external {
+        bytes memory metadata = abi.encodePacked(WORKFLOW_ID, s_workflowName, i_owner, bytes3(0));
+        vm.expectRevert(
+            abi.encodeWithSelector(IWorkflowRouter.WorkflowRouter__InvalidMetadataLength.selector, metadata.length)
+        );
+        s_workflowRouter.onReport(metadata, abi.encodePacked(SELECTOR));
+    }
+
     function test_WorkflowRouter_onReport_RevertWhen_WorkflowIdIsZero() external {
         vm.expectRevert(
             abi.encodeWithSelector(

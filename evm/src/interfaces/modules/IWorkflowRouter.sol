@@ -22,6 +22,9 @@ interface IWorkflowRouter is IReceiver, IPauseable {
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
+    /// @dev Thrown when Keystone metadata is not exactly 64 bytes
+    /// @param metadataLength The length of the metadata received
+    error WorkflowRouter__InvalidMetadataLength(uint256 metadataLength);
     /// @dev Thrown when any of the metadata fields are zero: in onReport, when the decoded workflowId,
     ///      workflowName, or workflowOwner is zero; in setWorkflowMetadata, when name and owner are not
     ///      both zero (removal) or both nonzero (registration)

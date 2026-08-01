@@ -16,6 +16,12 @@ import {Roles} from "../libraries/Roles.sol";
 ///      then dispatches the raw report calldata to the vault. No business logic lives here.
 contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Pausable {
     /*//////////////////////////////////////////////////////////////
+                               CONSTANTS
+    //////////////////////////////////////////////////////////////*/
+    /// @dev Keystone metadata contains workflow ID (32), name (10), owner (20), and report ID (2)
+    uint256 internal constant KEYSTONE_METADATA_LENGTH = 64;
+
+    /*//////////////////////////////////////////////////////////////
                                IMMUTABLE
     //////////////////////////////////////////////////////////////*/
     /// @dev The Yieldcoin v2 Vault
@@ -98,6 +104,7 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
     /// @param report Workflow report.
     /// @dev Precondition: Caller must have the KEYSTONE_FORWARDER_ROLE
     /// @dev Precondition: WorkflowRouter must not be paused
+    /// @dev Precondition: metadata.length must equal the Keystone metadata length
     /// @dev Precondition: Workflow ID must not be zero
     /// @dev Precondition: Workflow Metadata must be valid
     /// @dev Precondition: report.length must be valid for a selector
@@ -136,6 +143,7 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
     ///      - Offset  0, size 32: workflowId    (bytes32)
     ///      - Offset 32, size 10: workflowName  (bytes10)
     ///      - Offset 42, size 20: workflowOwner (address)
+    ///      - Offset 62, size  2: reportId      (unused)
     /// @param metadata The raw metadata bytes from onReport
     /// @return workflowId The unique workflow identifier
     /// @return workflowName The hash-encoded workflow name (bytes10)
@@ -145,6 +153,10 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
         pure
         returns (bytes32 workflowId, bytes10 workflowName, address workflowOwner)
     {
+        if (metadata.length != KEYSTONE_METADATA_LENGTH) {
+            revert WorkflowRouter__InvalidMetadataLength(metadata.length);
+        }
+
         //slither-disable-next-line assembly
         assembly {
             workflowId := calldataload(metadata.offset)

@@ -288,6 +288,7 @@ values.
 | `ROUTER-007` | Selector-to-function correctness is a trusted configuration responsibility. WorkflowRouter authenticates and dispatches but contains no vault accounting or lifecycle state transitions of its own.                                                     | `manual`        | revalidation pending |
 | `ROUTER-008` | Workflow metadata configuration requires a nonzero workflow ID, a paired nonzero name and owner when registering, and a `(name, owner)` pair different from the current value. Selector configuration requires the workflow to be currently registered. | `unit`          | revalidation pending |
 | `ROUTER-009` | `onReport` rejects reports shorter than four bytes before extracting or authorizing a selector.                                                                                                                                                         | `unit`          | revalidation pending |
+| `ROUTER-010` | `onReport` accepts only the exact 64-byte Keystone metadata layout before decoding the workflow ID, name, and owner.                                                                                                                                     | `unit`          | revalidation pending |
 
 ## Adapters
 

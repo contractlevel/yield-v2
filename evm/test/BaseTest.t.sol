@@ -99,7 +99,7 @@ contract BaseTest is Constants, Test {
         vm.startPrank(newCaller);
     }
 
-    /// @notice Builds the metadata for a workflow
+    /// @notice Builds Keystone metadata for a workflow
     /// @param workflowId The ID of the workflow
     /// @param name The name of the workflow
     /// @param owner The owner of the workflow
@@ -109,7 +109,7 @@ contract BaseTest is Constants, Test {
         pure
         returns (bytes memory metadata)
     {
-        metadata = abi.encodePacked(workflowId, name, owner);
+        metadata = abi.encodePacked(workflowId, name, owner, bytes2(0));
     }
 
     /// @notice Helper function to create CRE encoded workflow name

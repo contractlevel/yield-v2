@@ -758,6 +758,17 @@
   },
   {
     "type": "error",
+    "name": "WorkflowRouter__InvalidMetadataLength",
+    "inputs": [
+      {
+        "name": "metadataLength",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "WorkflowRouter__MetadataMismatch",
     "inputs": [
       {
