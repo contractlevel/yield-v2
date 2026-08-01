@@ -16,9 +16,8 @@ import {ParentVaultUserEpochLib} from "../libraries/vaults/ParentVaultUserEpochL
 import {IProtocolAdapter} from "../interfaces/adapters/IProtocolAdapter.sol";
 
 import {Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
-import {CCIPReceiver, IAny2EVMMessageReceiver} from "@chainlink/contracts-ccip/contracts/applications/CCIPReceiver.sol";
+import {IAny2EVMMessageReceiver} from "@chainlink/contracts-ccip/contracts/applications/CCIPReceiver.sol";
 import {PolicyProtectedUpgradeable} from "@chainlink/policy-management/core/PolicyProtectedUpgradeable.sol";
-import {PolicyProtectedBaseUpgradeable} from "@chainlink/policy-management/core/PolicyProtectedBaseUpgradeable.sol";
 import {IPolicyProtected} from "@chainlink/policy-management/interfaces/IPolicyProtected.sol";
 
 import {
