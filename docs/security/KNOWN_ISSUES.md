@@ -727,3 +727,53 @@ Partial recovery would require a substantially larger state machine: cumulative 
 - The protocol adopts a formally specified partial-withdrawal and multi-message settlement design.
 
 ---
+
+## KI-015 — Operator-controlled cross-chain routes remain mutable during in-flight operations
+
+**Status:** Accepted — trusted configuration authority with operational safeguards.
+
+**Last reviewed:** 2026-08-01
+
+**Component:** `BaseVault.setCrosschainVaults`, ParentVault and ChildVault CCIP send/receive paths, cross-chain epoch and rebalance execution, and ChildVault CCIP-send recovery.
+
+### Summary
+
+`CONFIG_OPERATOR_ROLE` can add, replace, or remove the trusted vault address for any configured chain selector. The contracts do not prevent this configuration from changing while an epoch, rebalance, CCIP message, or stored recovery depends on the existing route.
+
+Changing a required route mid-flight can interrupt the affected operation:
+
+- An inbound message from the previously configured vault can fail source-vault validation.
+- A new send or stored `CCIP_SEND` recovery can fail if its destination route was removed.
+- A retry can use a replacement destination address rather than the address configured when recovery was stored.
+- A ChildVault can remain in its vault-wide recovery mode, blocking normal epoch, rebalance, and inbound CCIP processing until the route is corrected and recovery succeeds.
+
+Recovery state is not lost when a retry reverts: EVM atomicity restores the stored recovery data and recovery mode. A trusted operator can normally restore the required mapping and retry. The primary risk is cross-chain liveness and operational misrouting, not an automatic loss of accounting state or funds.
+
+### Why this is accepted
+
+Cross-chain route configuration must remain mutable so operators can deploy new routes, rotate vault addresses, and respond to a broken or compromised destination. A universal on-chain lock during any potentially related operation would require the contracts to identify every relevant in-flight CCIP message and could prevent an emergency route correction when it is most needed.
+
+The system therefore treats route continuity as a trusted operator responsibility. This assumption is also recorded in [ENV-006](./INVARIANTS.md#external-assumptions).
+
+### Operational requirements
+
+- Before changing a route, reconcile active and previous epochs, rebalance state, every vault's recovery mode, and CCIP messages in flight for the affected selector.
+- Preserve the old route while any accepted message, settlement, or recovery still depends on it unless an incident procedure explicitly requires replacement.
+- Stop the relevant CRE automation before an emergency route change so it cannot submit new work against a partially updated deployment.
+- Apply coordinated configuration changes across the affected chains and verify both send-side destination and receive-side source authentication.
+- After restoring or replacing a route, retry stored recovery and monitor the parent epoch or rebalance through final completion.
+
+See [CONFIG - Vault Configuration](../operator/CONFIG.md#vault-configuration) and [OPERATIONS - Paused Cross-Chain Execution](../operator/OPERATIONS.md#paused-cross-chain-execution).
+
+### Residual risk
+
+An incorrect or incomplete route change can leave an epoch or rebalance in progress indefinitely and can block unrelated ChildVault operations through the vault-wide recovery singleton. Restoring the prior configuration normally recovers liveness, but an address rotation performed after messages have already been emitted may require careful reconciliation or a purpose-built upgrade if the original counterparty cannot safely be restored.
+
+### Conditions that would warrant revisiting
+
+- Cross-chain route changes become frequent routine operations rather than exceptional configuration changes.
+- Operational monitoring cannot reliably identify messages and recoveries that still depend on an existing route.
+- A route-versioning or two-phase rotation design is introduced that can preserve old counterparties for outstanding messages.
+- CCIP exposes an on-chain mechanism that lets the vault reliably enumerate or prove all messages still in flight for a route.
+
+---

@@ -104,7 +104,7 @@ Before changing an adapter, verify the adapter is deployed for the correct vault
 
 `withdrawLink(amount)` only moves LINK, not the underlying asset. LINK is still operationally important because CCIP sends depend on LINK balances.
 
-`forceCancelDeposit(user)` is a narrow liveness tool for deposits that could block epoch settlement. It should not be used as a normal user support path.
+`forceCancelDeposit(user)` is a narrow epoch-liveness tool and should not be used as a normal user-support or compliance-bypass path. Its operational rationale is documented in [DD-012](../protocol/DECISIONS.md#dd-012---forcecanceldeposit-is-a-narrow-epoch-liveness-tool).
 
 ## Token and Policy Configuration
 

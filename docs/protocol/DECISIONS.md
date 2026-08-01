@@ -110,3 +110,31 @@ This is deliberate: management fee is charged for the elapsed duration of a comp
 If the vault remains on a single optimal strategy for longer than a year without rebalancing, elapsed time beyond the most recent 365 days is not collected on the eventual next rebalance. That time is forfeited, not deferred - the fee is intentionally capped at one year's worth per collection.
 
 See [INVARIANTS - FEE-004](../security/INVARIANTS.md#fee-accounting).
+
+## DD-011 - Adapter Registry Changes Are Not Live Migrations
+
+The vault reads and validates the AdapterRegistry when activating a strategy, then stores that adapter address. Later registry changes do not replace the active adapter or redirect existing vault operations.
+
+This prevents a configuration update from silently migrating active funds. Replacing a faulty active adapter requires an explicit rebalance or a purpose-built vault upgrade; changing the registry entry alone is insufficient.
+
+See [INVARIANTS - Rebalance Lifecycle And TVL](../security/INVARIANTS.md#rebalance-lifecycle-and-tvl) and [INVARIANTS - Adapters](../security/INVARIANTS.md#adapters).
+
+## DD-012 - `forceCancelDeposit` Is A Narrow Epoch-Liveness Tool
+
+`forceCancelDeposit(user)` allows `CANCEL_DEPOSIT_OPERATOR_ROLE` to remove and refund a user's deposit from the current open epoch without the user's participation or an ACE policy check.
+
+This authority exists because an individual deposit can produce a zero-share allocation at settlement and cause the entire epoch close to revert. The operator can remove that deposit so settlement can proceed for the epoch. The function is not intended as a routine user-support path or a general compliance override.
+
+No equivalent forced withdrawal-cancellation or forced claim functions are provided. Those positions do not create the same zero-share epoch-settlement failure, so they do not justify expanding operator authority over user positions.
+
+See [ACCESS_CONTROL_MATRIX - Authority Matrix](../security/ACCESS_CONTROL_MATRIX.md#authority-matrix) and [CONFIG - Operational Functions](../operator/CONFIG.md#operational-functions).
+
+## DD-013 - Compliance Freezes Block Vault User Actions Until Unfrozen
+
+All direct `ParentVault` user functions enforce the configured ACE compliance policy. A frozen user cannot deposit, withdraw, claim shares or assets, or cancel an open deposit or withdrawal until an authorized compliance operator unfreezes the account.
+
+This is the intended effect of a compliance freeze. Open intents and settled claims remain recorded for the user; freezing does not delete, reassign, or settle them through an alternate privileged vault path. Once the account is unfrozen and satisfies the remaining configured policies, the user can resume the normal cancel or claim flow.
+
+`forceCancelDeposit(user)` does not change this policy. Its separate, narrow epoch-liveness purpose is documented in [DD-012](#dd-012---forcecanceldeposit-is-a-narrow-epoch-liveness-tool).
+
+See [COMPLIANCE - ParentVault User Functions](../operator/COMPLIANCE.md#parentvault-user-functions).
