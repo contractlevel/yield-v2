@@ -49,10 +49,14 @@ library ParentVaultEpochLib {
     /// @notice Emitted when an epoch is open
     /// @param epochNonce The nonce of the open epoch
     event EpochOpen(uint256 indexed epochNonce);
-    /// @notice Emitted when an epoch is executing
+    /// @notice Emitted when a remote net-deposit epoch is executing
+    /// @param epochNonce The nonce of the executing epoch
+    /// @param amount The amount of asset being deposited on the remote strategy chain
+    event EpochDepositExecuting(uint256 indexed epochNonce, uint256 indexed amount);
+    /// @notice Emitted when a remote net-withdraw epoch is executing
     /// @param epochNonce The nonce of the executing epoch
     /// @param amount The amount of asset that needs to be withdrawn
-    event EpochExecuting(uint256 indexed epochNonce, uint256 indexed amount);
+    event EpochWithdrawExecuting(uint256 indexed epochNonce, uint256 indexed amount);
     /// @notice Emitted when an epoch is claimable
     /// @param epochNonce The nonce of the claimable epoch
     event EpochClaimable(uint256 indexed epochNonce);
@@ -170,8 +174,13 @@ library ParentVaultEpochLib {
         externalAction.epochNonce = epochNonce;
         externalAction.totalDepositAmount = totalDepositAmount;
         if (netFlow >= 0) {
-            s_epoch.status = Types.EpochStatus.CLAIMABLE;
-            emit EpochClaimable(epochNonce);
+            if (netFlow == 0 || isLocalStrategy) {
+                s_epoch.status = Types.EpochStatus.CLAIMABLE;
+                emit EpochClaimable(epochNonce);
+            } else {
+                s_epoch.status = Types.EpochStatus.EXECUTING;
+                emit EpochDepositExecuting(epochNonce, uint256(netFlow));
+            }
 
             if (netFlow == 0) return externalAction;
 
@@ -189,9 +198,32 @@ library ParentVaultEpochLib {
             } else {
                 externalAction.action = ExternalAction.WAIT_FOR_REMOTE_WITHDRAW;
                 s_epoch.status = Types.EpochStatus.EXECUTING;
-                emit EpochExecuting(epochNonce, netWithdrawAmount);
+                emit EpochWithdrawExecuting(epochNonce, netWithdrawAmount);
             }
         }
+    }
+
+    /// @notice Completes the most recently closed remote net-deposit epoch.
+    /// @param $ ParentVault namespaced storage
+    /// @dev Precondition: at least one epoch must have completed
+    /// @dev Precondition: the previous epoch must have positive net flow and be EXECUTING
+    function completeEpochDeposit(ParentVaultStore.ParentVaultStorage storage $) public {
+        _completeEpochDeposit($);
+    }
+
+    /// @notice Completes the most recently closed remote net-deposit epoch.
+    /// @param $ ParentVault namespaced storage
+    function _completeEpochDeposit(ParentVaultStore.ParentVaultStorage storage $) internal {
+        uint256 currentEpochNonce = $.s_epochNonce;
+        if (currentEpochNonce == 1) revert IParentVault.ParentVault__NoCompletedEpoch();
+
+        uint256 epochNonce = currentEpochNonce - 1;
+        Types.Epoch storage s_epoch = $.s_epochs[epochNonce];
+        if (s_epoch.totalDepositAmount <= s_epoch.totalWithdrawClaimAmount) {
+            revert IParentVault.ParentVault__EpochNotNetDeposit(epochNonce);
+        }
+
+        _finalizeEpoch(s_epoch, epochNonce);
     }
 
     /// @notice Finalizes a local net-withdraw epoch after ParentVault receives actual adapter output.
@@ -223,6 +255,19 @@ library ParentVaultEpochLib {
         uint256 totalWithdrawClaimAmount = totalDepositAmount + amountOut;
         s_epoch.totalWithdrawClaimAmount = totalWithdrawClaimAmount;
         s_epoch.remainingWithdrawClaimAmount = totalWithdrawClaimAmount;
+        s_epoch.status = Types.EpochStatus.CLAIMABLE;
+        emit EpochClaimable(epochNonce);
+    }
+
+    /// @notice Marks a settled epoch as claimable.
+    /// @param s_epoch The epoch's storage struct
+    /// @param epochNonce The nonce of the epoch being finalized
+    /// @dev Precondition: the epoch's status must be EXECUTING
+    function _finalizeEpoch(Types.Epoch storage s_epoch, uint256 epochNonce) internal {
+        if (s_epoch.status != Types.EpochStatus.EXECUTING) {
+            revert IParentVault.ParentVault__EpochNotExecuting(epochNonce);
+        }
+
         s_epoch.status = Types.EpochStatus.CLAIMABLE;
         emit EpochClaimable(epochNonce);
     }

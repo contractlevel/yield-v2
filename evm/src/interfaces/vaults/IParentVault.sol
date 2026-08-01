@@ -47,6 +47,9 @@ interface IParentVault is IBaseVault {
     /// @dev Thrown when the epoch is not executing
     /// @param epochNonce The nonce for the epoch that is not executing
     error ParentVault__EpochNotExecuting(uint256 epochNonce);
+    /// @dev Thrown when epoch deposit completion is attempted for an epoch without positive net flow
+    /// @param epochNonce The nonce for the epoch that is not a net-deposit epoch
+    error ParentVault__EpochNotNetDeposit(uint256 epochNonce);
     /// @dev Thrown when the rebalance is in progress
     error ParentVault__RebalanceInProgress();
     /// @dev Thrown when no rebalance is in progress
@@ -112,10 +115,14 @@ interface IParentVault is IBaseVault {
     /// @notice Emitted when an epoch is open
     /// @param epochNonce The nonce of the open epoch
     event EpochOpen(uint256 indexed epochNonce);
-    /// @notice Emitted when an epoch is executing
+    /// @notice Emitted when a remote net-deposit epoch is executing
+    /// @param epochNonce The nonce of the executing epoch
+    /// @param amount The amount of asset being deposited on the remote strategy chain
+    event EpochDepositExecuting(uint256 indexed epochNonce, uint256 indexed amount);
+    /// @notice Emitted when a remote net-withdraw epoch is executing
     /// @param epochNonce The nonce of the executing epoch
     /// @param amount The amount of asset that needs to be withdrawn
-    event EpochExecuting(uint256 indexed epochNonce, uint256 indexed amount);
+    event EpochWithdrawExecuting(uint256 indexed epochNonce, uint256 indexed amount);
     /// @notice Emitted when an epoch is claimable
     /// @param epochNonce The nonce of the claimable epoch
     event EpochClaimable(uint256 indexed epochNonce);
@@ -283,6 +290,11 @@ interface IParentVault is IBaseVault {
     /// @dev Precondition: the resulting price per share must not round down to zero
     /// @dev Precondition: settlement must not mint zero shares for a minimum-size depositor
     function closeEpoch(uint256 tvl) external;
+
+    /// @notice Completes the most recently closed remote net-deposit epoch
+    /// @dev Precondition: caller must have the EPOCH_OPERATOR_ROLE
+    /// @dev Precondition: the previous epoch must be an executing net-deposit epoch
+    function completeEpochDeposit() external;
 
     /// @notice Initiates a rebalance from the current strategy to a new strategy
     /// @param newStrategy The new strategy to rebalance to

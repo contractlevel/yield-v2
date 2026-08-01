@@ -50,7 +50,6 @@ type ParentVaultMock struct {
 	GetRoleAdmin                       func(GetRoleAdminInput) ([32]byte, error)
 	GetRouter                          func() (common.Address, error)
 	GetShare                           func() (common.Address, error)
-	GetSharePrecision                  func() (*big.Int, error)
 	GetSupportedProtocol               func(GetSupportedProtocolInput) (bool, error)
 	GetTVL                             func() (*big.Int, error)
 	GetThisChainSelector               func() (uint64, error)
@@ -448,16 +447,6 @@ func NewParentVaultMock(address common.Address, clientMock *evmmock.ClientCapabi
 				return nil, err
 			}
 			return abi.Methods["getShare"].Outputs.Pack(result)
-		},
-		string(abi.Methods["getSharePrecision"].ID[:4]): func(payload []byte) ([]byte, error) {
-			if mock.GetSharePrecision == nil {
-				return nil, errors.New("getSharePrecision method not mocked")
-			}
-			result, err := mock.GetSharePrecision()
-			if err != nil {
-				return nil, err
-			}
-			return abi.Methods["getSharePrecision"].Outputs.Pack(result)
 		},
 		string(abi.Methods["getSupportedProtocol"].ID[:4]): func(payload []byte) ([]byte, error) {
 			if mock.GetSupportedProtocol == nil {

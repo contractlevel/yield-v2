@@ -15,8 +15,8 @@ In remote Child paths, strategy interaction and Child-originated CCIP send failu
 | --------------------------------- | -------------- | ------------------ | ------------------------------------------ |
 | 1a Epoch, parent, net deposit     | 0              | 1                  | Fully synchronous                          |
 | 1b Epoch, parent, net withdrawal  | 0              | 1                  | Fully synchronous                          |
-| 2a Epoch, child, net deposit      | 1              | 1                  | Epoch claimable before CCIP settles        |
-| 2b Epoch, child, net withdrawal   | 1              | 2                  | Epoch claimable after CCIP settles         |
+| 2a Epoch, child, net deposit      | 1              | 2                  | Epoch claimable after remote settlement confirmation |
+| 2b Epoch, child, net withdrawal   | 1              | 2                  | Epoch claimable after CCIP settles on Parent |
 | 3a Rebalance, parent to parent    | 0              | 1                  | Fully synchronous                          |
 | 3b Rebalance, parent to child     | 1              | 2                  | Completes asynchronously                   |
 | 4a Rebalance, Child to Parent     | 1              | 2                  | Finalises in Parent ccipReceive on success |
@@ -39,7 +39,7 @@ More deposits than withdrawals. Active strategy is on Parent chain.
 
 - Parent updates totalShares: += newShares, -= totalShareBurnAmount.
 
-- **netFlow > 0**: epoch → CLAIMABLE. Next epoch opens.
+- **netFlow > 0**: epoch → EXECUTING. Next epoch opens. Emits EpochDepositExecuting(epochNonce, netFlow).
 
 - \_executeDeposit(netFlow, true) directly to local active adapter. Reverts on failure.
 
@@ -95,7 +95,11 @@ More deposits than withdrawals. Active strategy is on a Child chain.
 
 - Parent **\_ccipSend**(netFlow, strategyChain, DEPOSIT, epochNonce).
 
-- Child \_handleCCIPDeposit() → \_executeDeposit(amount, false). Emits DepositToStrategySuccess on success. On failure, stores epoch deposit recovery and emits DepositToStrategyFailure; `executeRecovery()` retries the stored deposit.
+- Child \_handleCCIPDeposit() → \_executeDeposit(amount, false). Emits EpochDepositToStrategySuccess on success. On failure, stores epoch deposit recovery and emits EpochDepositToStrategyFailure; `executeRecovery()` retries the stored deposit.
+
+- **CRE log trigger** (EpochDepositToStrategySuccess from the destination ChildVault) → Parent.completeEpochDeposit().
+
+- Parent verifies the most recently closed epoch is a positive-net-flow EXECUTING epoch, then transitions it to CLAIMABLE and emits EpochClaimable.
 
 - Depositors call claimShares() on Parent. Yieldcoin minted.
 
@@ -103,9 +107,9 @@ More deposits than withdrawals. Active strategy is on a Child chain.
 
 **CCIP sends: 1**
 
-**CRE executions: 1**
+**CRE executions: 2**
 
-**_Epoch claimable before CCIP settles_**
+**_Epoch claimable after remote deposit settlement confirmation_**
 
 ## **2b — Epoch, Child Strategy, Net Withdrawal**
 
@@ -119,11 +123,11 @@ More withdrawals than deposits. Active strategy is on a Child chain.
 
 - Parent updates totalShares: += newShares, -= totalShareBurnAmount.
 
-- **netFlow < 0**: epoch → EXECUTING. Next epoch opens. Emits EpochExecuting(epochNonce, netWithdrawAmount).
+- **netFlow < 0**: epoch → EXECUTING. Next epoch opens. Emits EpochWithdrawExecuting(epochNonce, netWithdrawAmount).
 
-- **CRE log trigger** (EpochExecuting) → child.executeEpochWithdraw(epochNonce, netWithdrawAmount).
+- **CRE log trigger** (EpochWithdrawExecuting) → child.executeEpochWithdraw(epochNonce, netWithdrawAmount).
 
-- Child \_executeWithdraw(amount, false). Emits WithdrawFromStrategySuccess on success. On failure, stores epoch withdraw recovery and emits WithdrawFromStrategyFailure; `executeRecovery()` retries the stored withdrawal.
+- Child \_executeWithdraw(amount, false). Emits EpochWithdrawFromStrategySuccess on success. On failure, stores epoch withdraw recovery and emits EpochWithdrawFromStrategyFailure; `executeRecovery()` retries the stored withdrawal.
 
 - On success: child **\_ccipSend**(amountOut, parentChain, WITHDRAW, epochNonce).
 

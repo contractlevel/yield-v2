@@ -865,7 +865,26 @@
   },
   {
     "type": "event",
-    "name": "DepositToStrategySuccess",
+    "name": "EpochDepositToStrategySuccess",
+    "inputs": [
+      {
+        "name": "epochNonce",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "EpochWithdrawFromStrategySuccess",
     "inputs": [
       {
         "name": "epochNonce",
@@ -1113,25 +1132,6 @@
         "type": "address",
         "indexed": true,
         "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "WithdrawFromStrategySuccess",
-    "inputs": [
-      {
-        "name": "epochNonce",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
       }
     ],
     "anonymous": false

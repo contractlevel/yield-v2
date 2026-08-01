@@ -297,13 +297,13 @@ Shareholders can still pay management fees for time when the user-facing vault w
 
 **Last reviewed:** 2026-07-08
 
-**Component:** CRE epoch workflow, `WorkflowRouter.onReport`, and `ParentVault.closeEpoch`.
+**Component:** CRE epoch workflow, `WorkflowRouter.onReport`, `ParentVault.closeEpoch`, and `ParentVault.completeEpochDeposit`.
 
 ### Summary
 
 Epoch settlement is intentionally driven by the Chainlink CRE workflow. The workflow's cron handler reads the current parent epoch, checks that it is open, has activity, is past `MIN_EPOCH_PERIOD`, has no active rebalance, reads TVL from the active strategy chain, and submits `closeEpoch(tvl)` through `WorkflowRouter.onReport`.
 
-If the CRE workflow does not execute, cannot read the required state, cannot submit a valid report, or the report does not reach `WorkflowRouter`, the current parent epoch remains `OPEN`. There is no autonomous on-chain timer and no public `closeEpoch` path; `ParentVault.closeEpoch` is restricted to `EPOCH_OPERATOR_ROLE`, which is granted to the `WorkflowRouter` under the normal access-control model.
+If the initial CRE step does not execute, cannot read the required state, cannot submit a valid report, or the report does not reach `WorkflowRouter`, the current parent epoch remains `OPEN`. If a required remote continuation fails, the closed epoch remains `EXECUTING`. There is no autonomous on-chain timer or public completion path; `closeEpoch` and `completeEpochDeposit` are restricted to `EPOCH_OPERATOR_ROLE`, which is granted to the `WorkflowRouter` under the normal access-control model.
 
 ### Impact
 
@@ -313,7 +313,8 @@ The failure mode is delayed settlement:
 - Depositors and withdrawers for that epoch cannot claim shares or assets while the epoch remains open.
 - The next epoch is not opened, so later user intents continue to accrue into the same open epoch rather than a new scheduled epoch.
 - The settlement price is based on TVL at the eventual close, not at the missed scheduled close time.
-- For remote-strategy net-withdraw epochs, the second CRE step (`EpochExecuting` log handling on the child chain) is also required before the parent epoch can become claimable.
+- For remote-strategy net-withdraw epochs, the second CRE step (`EpochWithdrawExecuting` log handling on the child chain) is required before the parent epoch can become claimable.
+- For remote-strategy net-deposit epochs, CRE must observe the destination ChildVault's `EpochDepositToStrategySuccess` event and submit `completeEpochDeposit()` before the parent epoch can become claimable.
 
 This does not by itself create an accounting inconsistency or direct loss of funds. User deposits and withdraw-intent shares remain escrowed by the protocol. While the epoch is still open, users may cancel their current-epoch deposit or withdraw intent through the normal cancellation functions, subject to the usual pause and policy checks.
 
@@ -332,7 +333,8 @@ The current design keeps the authority narrow: the router validates workflow met
 
 - Monitor missed CRE cron executions, failed workflow runs, Keystone Forwarder delivery failures, and `WorkflowRouter.onReport` reverts.
 - Alert when `ParentVault.getEpochNonce()` has not advanced after the expected close window and the open epoch has nonzero activity.
-- Ensure the deployed workflow metadata and selector allowlists include the `closeEpoch(uint256)` selector for the active workflow ID.
+- Alert when a remote net-deposit epoch remains `EXECUTING` after the destination ChildVault emits `EpochDepositToStrategySuccess`, or when the corresponding `completeEpochDeposit()` report fails.
+- Ensure the deployed workflow metadata and selector allowlists include both `closeEpoch(uint256)` and `completeEpochDeposit()` for the active epoch workflow ID.
 - Keep CRE configuration, Keystone Forwarder configuration, workflow ownership, gas limits, and chain selectors under deployment/runbook review.
 - In an emergency, the commercial operator can update workflow configuration or, if explicitly accepted through an operational runbook, grant temporary epoch authority to a replacement router/operator and revoke it after recovery. This is a privileged break-glass action and should be treated as an operational trust escalation.
 
@@ -635,7 +637,7 @@ A DON node operator (or anyone able to read that node's process memory during wo
 
 ### Summary
 
-For a remote-strategy net-withdraw epoch, `ParentVault.closeEpoch` records the epoch as `EXECUTING` and emits `EpochExecuting`. For a rebalance whose active strategy is on a child chain, `ParentVault.initiateRebalance` records the rebalance as `REBALANCING` and emits `RebalanceInitiated`. CRE observes the relevant event and submits the corresponding child-chain call through `WorkflowRouter`.
+For a remote-strategy net-withdraw epoch, `ParentVault.closeEpoch` records the epoch as `EXECUTING` and emits `EpochWithdrawExecuting`. For a rebalance whose active strategy is on a child chain, `ParentVault.initiateRebalance` records the rebalance as `REBALANCING` and emits `RebalanceInitiated`. CRE observes the relevant event and submits the corresponding child-chain call through `WorkflowRouter`.
 
 If the affected `ChildVault` is paused before CRE calls `executeEpochWithdraw` or `executeRebalance`, the call reverts at `whenNotPaused`. The pause check occurs before the child attempts the strategy operation, sends a CCIP message, or stores typed recovery state. The parent has already entered its intermediate state, so it cannot advance until the child operation is deliberately resumed.
 
@@ -655,7 +657,7 @@ The design therefore favors explicit containment and operator reconciliation ove
 
 ### Operational mitigation
 
-- Monitor failed CRE reports and `WorkflowRouter` calls for pause-related reverts after `EpochExecuting` or `RebalanceInitiated` events.
+- Monitor failed CRE reports and `WorkflowRouter` calls for pause-related reverts after `EpochWithdrawExecuting` or `RebalanceInitiated` events.
 - Alert when a parent epoch remains `EXECUTING` or a rebalance remains `REBALANCING` beyond its expected completion window.
 - Before retrying, reconcile the parent state, child state, recovery mode, transaction history, and CCIP message status so a source-chain action is not executed twice.
 - Follow the [Paused Cross-Chain Execution](../operator/OPERATIONS.md#paused-cross-chain-execution) playbook. Keep the normal router paused or unauthorized, temporarily unpause only the affected child, execute the exact event- or parent-state-derived calldata through an approved break-glass operator, and revoke temporary authority after reconciliation.

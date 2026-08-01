@@ -46,6 +46,7 @@ contract ConfigureWorkflowRouterTest is Test {
 
         _assertMetadata();
         assertTrue(router.getAllowlistedWorkflowSelector(WORKFLOW_ID, IParentVault.closeEpoch.selector));
+        assertTrue(router.getAllowlistedWorkflowSelector(WORKFLOW_ID, IParentVault.completeEpochDeposit.selector));
         assertTrue(router.getAllowlistedWorkflowSelector(WORKFLOW_ID, IParentVault.initiateRebalance.selector));
         assertTrue(router.getAllowlistedWorkflowSelector(WORKFLOW_ID, IParentVault.completeRebalance.selector));
         assertFalse(router.getAllowlistedWorkflowSelector(WORKFLOW_ID, IChildVault.executeRebalance.selector));
@@ -104,10 +105,11 @@ contract ConfigureWorkflowRouterTest is Test {
 
     function test_workflowSelectors() external view {
         bytes4[] memory parentSelectors = script.workflowSelectors(true);
-        assertEq(parentSelectors.length, 3);
+        assertEq(parentSelectors.length, 4);
         assertEq(parentSelectors[0], IParentVault.closeEpoch.selector);
-        assertEq(parentSelectors[1], IParentVault.initiateRebalance.selector);
-        assertEq(parentSelectors[2], IParentVault.completeRebalance.selector);
+        assertEq(parentSelectors[1], IParentVault.completeEpochDeposit.selector);
+        assertEq(parentSelectors[2], IParentVault.initiateRebalance.selector);
+        assertEq(parentSelectors[3], IParentVault.completeRebalance.selector);
 
         bytes4[] memory childSelectors = script.workflowSelectors(false);
         assertEq(childSelectors.length, 2);

@@ -212,19 +212,19 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
         assertEq(s_childVault.getLastHandledEpochNonce(), EPOCH_NONCE);
     }
 
-    function test_ChildVault_ccipReceive_Deposit_Success_EmitsDepositToStrategySuccess() public {
+    function test_ChildVault_ccipReceive_Deposit_Success_EmitsEpochDepositToStrategySuccess() public {
         _setChildActiveAdapter(address(s_mockProtocolAdapter));
 
         vm.recordLogs();
         s_childVault.ccipReceive(_depositMessage(EPOCH_NONCE));
 
         Vm.Log memory log =
-            _assertEmittedBy(keccak256("DepositToStrategySuccess(uint256,uint256)"), address(s_childVault));
+            _assertEmittedBy(keccak256("EpochDepositToStrategySuccess(uint256,uint256)"), address(s_childVault));
         assertEq(uint256(log.topics[1]), EPOCH_NONCE);
         assertEq(uint256(log.topics[2]), BRIDGED_AMOUNT);
     }
 
-    function test_ChildVault_ccipReceive_Deposit_WhenActiveAdapterDepositReverts_EmitsDepositToStrategyFailure()
+    function test_ChildVault_ccipReceive_Deposit_WhenActiveAdapterDepositReverts_EmitsEpochDepositToStrategyFailure()
         public
     {
         _setChildActiveAdapter(address(s_mockProtocolAdapter));
@@ -234,7 +234,7 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
         s_childVault.ccipReceive(_depositMessage(EPOCH_NONCE));
 
         Vm.Log memory log =
-            _assertEmittedBy(keccak256("DepositToStrategyFailure(uint256,uint256)"), address(s_childVault));
+            _assertEmittedBy(keccak256("EpochDepositToStrategyFailure(uint256,uint256)"), address(s_childVault));
         assertEq(uint256(log.topics[1]), EPOCH_NONCE);
         assertEq(uint256(log.topics[2]), BRIDGED_AMOUNT);
     }

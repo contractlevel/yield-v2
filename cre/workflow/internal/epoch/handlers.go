@@ -21,11 +21,13 @@ const minEpochPeriod = int64(3600) // matches MIN_EPOCH_PERIOD in ParentVault.so
 
 type parentCodec interface {
 	EncodeCloseEpochMethodCall(parent_vault.CloseEpochInput) ([]byte, error)
-	DecodeEpochExecuting(*evm.Log) (*parent_vault.EpochExecutingDecoded, error)
+	EncodeCompleteEpochDepositMethodCall() ([]byte, error)
+	DecodeEpochWithdrawExecuting(*evm.Log) (*parent_vault.EpochWithdrawExecutingDecoded, error)
 }
 
 type childCodec interface {
 	EncodeExecuteEpochWithdrawMethodCall(child_vault.ExecuteEpochWithdrawInput) ([]byte, error)
+	DecodeEpochDepositToStrategySuccess(*evm.Log) (*child_vault.EpochDepositToStrategySuccessDecoded, error)
 }
 
 var (
@@ -202,11 +204,11 @@ func validateEpochCloseFields(epoch parent_vault.TypesEpoch) error {
 	return nil
 }
 
-func OnEpochExecuting(config *helper.Config, runtime cre.Runtime, log *evm.Log) (*workflowtypes.ExecutionResult, error) {
-	return onEpochExecutingWithDeps(config, runtime, log, defaultExecutorDeps)
+func OnEpochWithdrawExecuting(config *helper.Config, runtime cre.Runtime, log *evm.Log) (*workflowtypes.ExecutionResult, error) {
+	return onEpochWithdrawExecutingWithDeps(config, runtime, log, defaultExecutorDeps)
 }
 
-func onEpochExecutingWithDeps(config *helper.Config, runtime cre.Runtime, log *evm.Log, deps ExecutorDeps) (*workflowtypes.ExecutionResult, error) {
+func onEpochWithdrawExecutingWithDeps(config *helper.Config, runtime cre.Runtime, log *evm.Log, deps ExecutorDeps) (*workflowtypes.ExecutionResult, error) {
 	logger := runtime.Logger()
 
 	pvCodec, err := newParentCodec()
@@ -218,9 +220,9 @@ func onEpochExecutingWithDeps(config *helper.Config, runtime cre.Runtime, log *e
 		return nil, fmt.Errorf("init child vault codec: %w", err)
 	}
 
-	evt, err := pvCodec.DecodeEpochExecuting(log)
+	evt, err := pvCodec.DecodeEpochWithdrawExecuting(log)
 	if err != nil {
-		return nil, fmt.Errorf("decode EpochExecuting: %w", err)
+		return nil, fmt.Errorf("decode EpochWithdrawExecuting: %w", err)
 	}
 
 	parentCfg, err := helper.FindParent(config.Evms)
@@ -243,7 +245,7 @@ func onEpochExecutingWithDeps(config *helper.Config, runtime cre.Runtime, log *e
 	}
 
 	if rebalance.ActiveStrategy.ChainSelector == parentCfg.ChainSelector {
-		logger.Info("EpochExecuting: active strategy on parent; no action required",
+		logger.Info("EpochWithdrawExecuting: active strategy on parent; no action required",
 			slog.Any("nonce", evt.EpochNonce),
 		)
 		return &workflowtypes.ExecutionResult{Result: "no-op: active strategy on parent"}, nil
@@ -277,4 +279,50 @@ func onEpochExecutingWithDeps(config *helper.Config, runtime cre.Runtime, log *e
 		slog.String("strategyChain", stratCfg.ChainName),
 	)
 	return &workflowtypes.ExecutionResult{Result: "submitted executeEpochWithdraw"}, nil
+}
+
+func OnEpochDepositSuccess(config *helper.Config, runtime cre.Runtime, log *evm.Log) (*workflowtypes.ExecutionResult, error) {
+	return onEpochDepositSuccessWithDeps(config, runtime, log, defaultExecutorDeps)
+}
+
+func onEpochDepositSuccessWithDeps(config *helper.Config, runtime cre.Runtime, log *evm.Log, deps ExecutorDeps) (*workflowtypes.ExecutionResult, error) {
+	logger := runtime.Logger()
+
+	cvCodec, err := newChildCodec()
+	if err != nil {
+		return nil, fmt.Errorf("init child vault codec: %w", err)
+	}
+	evt, err := cvCodec.DecodeEpochDepositToStrategySuccess(log)
+	if err != nil {
+		return nil, fmt.Errorf("decode EpochDepositToStrategySuccess: %w", err)
+	}
+
+	pvCodec, err := newParentCodec()
+	if err != nil {
+		return nil, fmt.Errorf("init parent vault codec: %w", err)
+	}
+	calldata, err := pvCodec.EncodeCompleteEpochDepositMethodCall()
+	if err != nil {
+		return nil, fmt.Errorf("encode completeEpochDeposit: %w", err)
+	}
+
+	parentCfg, err := helper.FindParent(config.Evms)
+	if err != nil {
+		return nil, err
+	}
+	if err := deps.SubmitReport(
+		runtime,
+		&evm.Client{ChainSelector: parentCfg.ChainSelector},
+		common.HexToAddress(parentCfg.WorkflowRouterAddress),
+		calldata,
+		parentCfg.GasLimit,
+	); err != nil {
+		return nil, fmt.Errorf("submit completeEpochDeposit: %w", err)
+	}
+
+	logger.Info("Completed epoch deposit",
+		slog.Any("nonce", evt.EpochNonce),
+		slog.Any("amount", evt.Amount),
+	)
+	return &workflowtypes.ExecutionResult{Result: "completed epoch deposit"}, nil
 }

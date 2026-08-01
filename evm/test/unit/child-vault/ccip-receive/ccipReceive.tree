@@ -29,9 +29,9 @@ ChildVault_ccipReceive
 │   ├── when active adapter deposit succeeds
 │   │   ├── it should deposit bridged USDC into the active adapter
 │   │   ├── it should update the last handled epoch nonce
-│   │   └── it should emit DepositToStrategySuccess
+│   │   └── it should emit EpochDepositToStrategySuccess
 │   └── when active adapter deposit reverts
-│       ├── it should emit DepositToStrategyFailure
+│       ├── it should emit EpochDepositToStrategyFailure
 │       ├── it should store epoch deposit recovery
 │       ├── it should retain the handled epoch nonce
 │       ├── it should emit EpochDepositRecoveryStored

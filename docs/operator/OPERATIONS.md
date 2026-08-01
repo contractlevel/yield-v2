@@ -76,7 +76,7 @@ Before temporarily unpausing a vault, pause the normal `WorkflowRouter` or revok
 
 ### Child Paused Before Epoch Withdraw Execution
 
-1. Identify the canonical `EpochExecuting(epochNonce, amount)` event emitted by the parent.
+1. Identify the canonical `EpochWithdrawExecuting(epochNonce, amount)` event emitted by the parent.
 2. Confirm the parent epoch is still `EXECUTING`, the paused child holds the active strategy, and the child execution or resulting CCIP message has not already succeeded.
 3. Use the exact `epochNonce` and `amount` from the event; do not recalculate the amount manually.
 4. Grant `EPOCH_OPERATOR_ROLE` temporarily to the approved break-glass executor while the normal router remains paused or unauthorized.

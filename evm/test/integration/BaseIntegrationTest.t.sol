@@ -305,8 +305,9 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
         bytes10 workflowName,
         address workflowOwner
     ) internal {
-        bytes4[] memory selectors = new bytes4[](1);
+        bytes4[] memory selectors = new bytes4[](2);
         selectors[0] = ParentVault.closeEpoch.selector;
+        selectors[1] = ParentVault.completeEpochDeposit.selector;
         _configureWorkflow(router, workflowId, workflowName, workflowOwner, selectors);
     }
 
@@ -367,6 +368,21 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
             workflowName,
             workflowOwner,
             abi.encodeWithSelector(ParentVault.closeEpoch.selector, tvl)
+        );
+    }
+
+    function _completeEpochDepositThroughWorkflow(
+        WorkflowRouter router,
+        bytes32 workflowId,
+        bytes10 workflowName,
+        address workflowOwner
+    ) internal {
+        _callWorkflowRouter(
+            router,
+            workflowId,
+            workflowName,
+            workflowOwner,
+            abi.encodeWithSelector(ParentVault.completeEpochDeposit.selector)
         );
     }
 
@@ -486,6 +502,9 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
         _warpPastMinEpoch();
         _closeEpochThroughWorkflow(
             parent.workflowRouter, keccak256("seed-child-local-tvl"), bytes10("closeEpoch"), i_owner, 0
+        );
+        _completeEpochDepositThroughWorkflow(
+            parent.workflowRouter, keccak256("seed-child-local-tvl"), bytes10("closeEpoch"), i_owner
         );
 
         _changePrank(i_depositor);

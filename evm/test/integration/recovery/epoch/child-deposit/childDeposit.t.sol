@@ -47,13 +47,17 @@ contract ChildDeposit_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
 
         _assertEmittedBy(recoveryLogs, keccak256("EpochDepositRecoveryCleared(uint256)"), address(child.vault));
         Vm.Log memory successLog = _assertEmittedBy(
-            recoveryLogs, keccak256("DepositToStrategySuccess(uint256,uint256)"), address(child.vault)
+            recoveryLogs, keccak256("EpochDepositToStrategySuccess(uint256,uint256)"), address(child.vault)
         );
         assertEq(uint256(successLog.topics[1]), 1);
         assertEq(uint256(successLog.topics[2]), DEPOSIT_AMOUNT);
         _assertEpochRecoveryCleared(child.vault.getEpochDepositRecovery());
         assertTrue(child.vault.getRecoveryMode() == Types.RecoveryMode.NONE);
         assertEq(IERC20(parent.asset).balanceOf(childPool), childPoolBalanceBefore + DEPOSIT_AMOUNT);
+
+        _completeEpochDepositThroughWorkflow(
+            parent.workflowRouter, CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner
+        );
 
         _changePrank(i_depositor);
         parent.vault.claimShares(1);

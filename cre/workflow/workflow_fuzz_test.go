@@ -42,7 +42,7 @@ func Fuzz_InitWorkflow_ConfigShape(f *testing.F) {
 				childCount++
 			}
 		}
-		require.Len(t, workflow, 4+childCount, "unexpected handler count")
+		require.Len(t, workflow, 4+2*childCount, "unexpected handler count")
 	})
 }
 

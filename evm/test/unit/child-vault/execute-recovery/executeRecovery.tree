@@ -8,7 +8,7 @@ ChildVault_executeRecovery
 │   ├── RevertWhen_AdapterDepositReverts
 │   ├── DepositsIntoActiveAdapter ✓
 │   ├── ClearsRecoveryState ✓
-│   ├── EmitsDepositToStrategySuccess ✓
+│   ├── EmitsEpochDepositToStrategySuccess ✓
 │   └── EmitsEpochDepositRecoveryCleared ✓
 ├── EPOCH_WITHDRAW
 │   ├── RevertWhen_NoActiveAdapter
@@ -18,7 +18,7 @@ ChildVault_executeRecovery
 │   ├── BridgesToParent ✓
 │   ├── ClearsRecoveryState ✓
 │   ├── PreservesHandledNonceAndRejectsOriginalCreActionReplay ✓
-│   ├── EmitsWithdrawFromStrategySuccess ✓
+│   ├── EmitsEpochWithdrawFromStrategySuccess ✓
 │   └── EmitsEpochWithdrawRecoveryCleared ✓
 ├── REBALANCE_DEPOSIT
 │   ├── RevertWhen_NoActiveAdapter

@@ -17,15 +17,19 @@ The workflow has two flows:
 | `ParentVault.RebalanceInitiated`              | `rebalance.OnRebalanceInitiated`      | If the current strategy is remote, call `ChildVault.executeRebalance` on its chain to withdraw and route the capital to the new strategy. |
 | `RebalanceDepositSuccess` on each child vault | `rebalance.OnRebalanceDepositSuccess` | Call `ParentVault.completeRebalance` after a child strategy receives and deposits the capital.                                            |
 | Epoch cron                                    | `epoch.OnEpochCronTrigger`            | Read the active strategy's TVL and call `ParentVault.closeEpoch`.                                                                         |
-| `ParentVault.EpochExecuting`                  | `epoch.OnEpochExecuting`              | For a remote net withdrawal, call `ChildVault.executeEpochWithdraw` on the active strategy chain.                                         |
+| `ParentVault.EpochWithdrawExecuting`          | `epoch.OnEpochWithdrawExecuting`      | For a remote net withdrawal, call `ChildVault.executeEpochWithdraw` on the active strategy chain.                                         |
+| `EpochDepositToStrategySuccess` on each child | `epoch.OnEpochDepositSuccess`         | Call `ParentVault.completeEpochDeposit` after the destination ChildVault deposits the net epoch assets.                                  |
 
-All EVM log triggers wait for finalized logs. A separate `RebalanceDepositSuccess` handler is registered for every configured child chain, so the concrete handler count grows with the number of child vaults. The standard CRE service quota allows [EVM log triggers from up to five contracts](https://docs.chain.link/cre/service-quotas#evm-log-trigger), which limits the standard configuration to five monitored vaults and therefore five networks. Before adding another network, the commercial operator must arrange an appropriate limit increase with Chainlink Labs and update the workflow configuration. See [CRE Service Quotas](../operator/OPERATIONS.md#cre-service-quotas).
+All EVM log triggers wait for finalized logs. Separate `RebalanceDepositSuccess` and `EpochDepositToStrategySuccess` handlers are registered for every configured child chain, so the concrete handler count grows by two per child vault. Both filters monitor the same ChildVault address and therefore consume one log-trigger contract slot per child. The standard CRE service quota allows [EVM log triggers from up to five contracts](https://docs.chain.link/cre/service-quotas#evm-log-trigger), which limits the standard configuration to five monitored vaults and therefore five networks. Before adding another network, the commercial operator must arrange an appropriate limit increase with Chainlink Labs and update the workflow configuration. See [CRE Service Quotas](../operator/OPERATIONS.md#cre-service-quotas).
 
 ## Service quotas
 
-Every handler first checks recovery mode on all five configured vaults. Those five EVM reads are included in
-the per-execution totals below. Counts are worst-case attempted capability calls after all earlier guards pass;
-most executions use fewer calls because handlers return as soon as a guard produces a no-op.
+Every handler that can move funds or start a new protocol action first checks recovery mode on all five configured
+vaults. Those five EVM reads are included in the per-execution totals below. The deposit-completion handler is the
+exception: it only acknowledges an already-successful ChildVault strategy deposit and cannot create recovery or
+perform an external call, so an unrelated recovery does not block it. Counts are worst-case attempted capability
+calls after all earlier guards pass; most executions use fewer calls because handlers return as soon as a guard
+produces a no-op.
 
 | Handler                               | EVM reads | HTTPS requests | Secret reads | Consensus calls | EVM writes |
 | ------------------------------------- | --------: | -------------: | -----------: | --------------: | ---------: |
@@ -33,7 +37,8 @@ most executions use fewer calls because handlers return as soon as a guard produ
 | `RebalanceInitiated`                  |         6 |              0 |            0 |               0 |          1 |
 | `RebalanceDepositSuccess`             |         5 |              0 |            0 |               0 |          1 |
 | Epoch cron                            |         9 |              0 |            0 |               0 |          1 |
-| `EpochExecuting`                      |         6 |              0 |            0 |               0 |          1 |
+| `EpochWithdrawExecuting`              |         6 |              0 |            0 |               0 |          1 |
+| `EpochDepositToStrategySuccess`       |         0 |              0 |            0 |               0 |          1 |
 
 The rebalance cron's eight reads are five recovery checks plus rebalance state, epoch nonce, and the previous
 epoch. The epoch cron adds rebalance state, epoch nonce, the current epoch, and active-strategy TVL to its five
@@ -62,8 +67,8 @@ five-chain workflow uses every available contract slot:
 
 | Monitored contract | Chain count | Events |
 | ------------------ | ----------: | ------ |
-| `ParentVault`      |           1 | `RebalanceInitiated`, `EpochExecuting` |
-| `ChildVault`       |           4 | `RebalanceDepositSuccess` |
+| `ParentVault`      |           1 | `RebalanceInitiated`, `EpochWithdrawExecuting` |
+| `ChildVault`       |           4 | `RebalanceDepositSuccess`, `EpochDepositToStrategySuccess` |
 | **Total**          |       **5** | |
 
 Multiple event filters on the ParentVault still monitor one contract address. Each additional chain would
@@ -102,9 +107,11 @@ epoch cron
   -> read ParentVault epoch and rebalance state
   -> read TVL from the vault holding the active strategy
   -> closeEpoch(tvl) on ParentVault
-  -> EpochExecuting, only for a remote net withdrawal
-  -> executeEpochWithdraw(epochNonce, amount) on ChildVault
-  -> CCIP returns the withdrawn asset to ParentVault
+  -> remote net deposit: CCIP deposit -> EpochDepositToStrategySuccess on ChildVault
+     -> completeEpochDeposit() on ParentVault -> EpochClaimable
+  -> remote net withdrawal: EpochWithdrawExecuting on ParentVault
+     -> executeEpochWithdraw(epochNonce, amount) on ChildVault
+     -> CCIP returns the withdrawn asset to ParentVault -> EpochClaimable
 ```
 
 The cron handler closes an epoch only when:
@@ -114,7 +121,7 @@ The cron handler closes an epoch only when:
 - the epoch contains deposits or withdrawal requests; and
 - it has been open for at least one hour.
 
-TVL is read from `ParentVault` for a local strategy or from the active `ChildVault` for a remote strategy. CRE uses its consensus-derived time for the age check. After `closeEpoch`, the vault contracts determine whether settlement is local, requires a CCIP deposit, or emits `EpochExecuting` for a remote withdrawal. See [PATHS.md](PATHS.md#epoch-flows) for those settlement paths.
+TVL is read from `ParentVault` for a local strategy or from the active `ChildVault` for a remote strategy. CRE uses its consensus-derived time for the age check. After `closeEpoch`, the vault contracts determine whether settlement is local, requires a CCIP deposit followed by a ChildVault success acknowledgement, or emits `EpochWithdrawExecuting` for a remote withdrawal. The deposit-success trigger is registered only for non-parent chain selectors and exact ChildVault addresses, so the identically signed ParentVault event cannot trigger `completeEpochDeposit`. See [PATHS.md](PATHS.md#epoch-flows) for those settlement paths.
 
 ## How a CRE write reaches a vault
 

@@ -5,6 +5,7 @@ import {ParentVaultStore} from "../../vaults/ParentVaultStore.sol";
 import {IBaseVault} from "../../interfaces/vaults/IBaseVault.sol";
 import {IParentVault} from "../../interfaces/vaults/IParentVault.sol";
 import {Types} from "../Types.sol";
+import {ParentVaultEpochLib} from "./ParentVaultEpochLib.sol";
 
 /// @title Yieldcoin v2 ParentVault CCIP receive logic library
 /// @author @contractlevel
@@ -15,9 +16,6 @@ library ParentVaultCcipLib {
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
     /// @dev Solidity requires locally declared events for emits; these must match IParentVault and emit from the vault via DELEGATECALL.
-    /// @notice Emitted when an epoch is claimable
-    /// @param epochNonce The nonce of the claimable epoch
-    event EpochClaimable(uint256 indexed epochNonce);
     /// @notice Emitted when a CCIP withdraw message delivers less asset than expected
     /// @param epochNonce The nonce of the epoch with the short withdrawal
     /// @param expectedAmount The amount of asset expected from the remote strategy
@@ -92,7 +90,7 @@ library ParentVaultCcipLib {
             emit EpochWithdrawAmountShort(epochNonce, expectedWithdraw, receivedAmount);
         }
 
-        _finalizeEpoch(s_epoch, epochNonce);
+        ParentVaultEpochLib._finalizeEpoch(s_epoch, epochNonce);
     }
 
     /// @notice Validates a rebalance callback CCIP payload against the vault's stored pending rebalance.
@@ -120,18 +118,5 @@ library ParentVaultCcipLib {
         if (s_rebalance.pendingStrategy.protocolId != protocolId) {
             revert IParentVault.ParentVault__InvalidPendingProtocolId(protocolId);
         }
-    }
-
-    /// @notice Marks a settled epoch as claimable.
-    /// @param s_epoch The epoch's storage struct
-    /// @param epochNonce The nonce of the epoch being finalized
-    /// @dev Precondition: the epoch's status must be EXECUTING
-    function _finalizeEpoch(Types.Epoch storage s_epoch, uint256 epochNonce) internal {
-        if (s_epoch.status != Types.EpochStatus.EXECUTING) {
-            revert IParentVault.ParentVault__EpochNotExecuting(epochNonce);
-        }
-
-        s_epoch.status = Types.EpochStatus.CLAIMABLE;
-        emit EpochClaimable(epochNonce);
     }
 }

@@ -81,12 +81,12 @@ contract ChildVault_ExecuteRecovery_EpochDeposit_UnitTest is BaseUnitTest {
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.NONE);
     }
 
-    function test_ChildVault_executeRecovery_EPOCH_DEPOSIT_EmitsDepositToStrategySuccess() public {
+    function test_ChildVault_executeRecovery_EPOCH_DEPOSIT_EmitsEpochDepositToStrategySuccess() public {
         vm.recordLogs();
         s_childVault.executeRecovery();
 
         Vm.Log memory log =
-            _assertEmittedBy(keccak256("DepositToStrategySuccess(uint256,uint256)"), address(s_childVault));
+            _assertEmittedBy(keccak256("EpochDepositToStrategySuccess(uint256,uint256)"), address(s_childVault));
         assertEq(uint256(log.topics[1]), EPOCH_NONCE);
         assertEq(uint256(log.topics[2]), DEPOSIT_AMOUNT);
     }
@@ -195,12 +195,12 @@ contract ChildVault_ExecuteRecovery_EpochWithdraw_UnitTest is BaseUnitTest {
         s_childVault.executeEpochWithdraw(EPOCH_NONCE, WITHDRAW_AMOUNT);
     }
 
-    function test_ChildVault_executeRecovery_EPOCH_WITHDRAW_EmitsWithdrawFromStrategySuccess() public {
+    function test_ChildVault_executeRecovery_EPOCH_WITHDRAW_EmitsEpochWithdrawFromStrategySuccess() public {
         vm.recordLogs();
         s_childVault.executeRecovery();
 
         Vm.Log memory log =
-            _assertEmittedBy(keccak256("WithdrawFromStrategySuccess(uint256,uint256)"), address(s_childVault));
+            _assertEmittedBy(keccak256("EpochWithdrawFromStrategySuccess(uint256,uint256)"), address(s_childVault));
         assertEq(uint256(log.topics[1]), EPOCH_NONCE);
         assertEq(uint256(log.topics[2]), WITHDRAW_AMOUNT);
     }

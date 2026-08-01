@@ -33,6 +33,8 @@ contract ChildDeposit_CcipForkTest is BaseCcipForkTest {
         _routeUsdcMessageTo(baseFork);
 
         _selectArbitrumFork();
+        assertEq(uint256(parent.vault.getEpoch(1).status), uint256(Types.EpochStatus.EXECUTING));
+        _completeEpochDepositThroughWorkflow(CLOSE_WORKFLOW_ID);
         assertEq(uint256(parent.vault.getEpoch(1).status), uint256(Types.EpochStatus.CLAIMABLE));
         assertEq(parent.vault.getEpochNonce(), 2);
 

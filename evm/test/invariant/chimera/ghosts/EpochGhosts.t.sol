@@ -72,6 +72,8 @@ abstract contract EpochGhosts is ActorGhosts {
         Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
 
         _recordEpochShareAccounting(epochNonce);
+        if (epoch.status != Types.EpochStatus.CLAIMABLE || ghost_epochIsClaimable[epochNonce]) return;
+
         ghost_epochIsClaimable[epochNonce] = true;
         ghost_totalShareMintedByEpoch[epochNonce] = epoch.remainingShareMintAmount;
         ghost_maxRemainingDepositClaimAmountByEpoch[epochNonce] = epoch.remainingDepositClaimAmount;

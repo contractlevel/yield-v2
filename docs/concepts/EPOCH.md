@@ -12,14 +12,14 @@ After settlement:
 - withdrawers call `claimAsset(epochNonce)` to burn escrowed shares and receive the underlying asset;
 - users can cancel only current-epoch intents that have not yet settled.
 
-If the active strategy is local to the parent chain, settlement can complete synchronously. If the active strategy is on a child chain and the epoch has a net withdrawal, the epoch enters an executing state until the child chain withdrawal and CCIP return path complete.
+If the active strategy is local to the parent chain, settlement can complete synchronously. If the active strategy is on a child chain, a nonzero net flow enters an executing state. A remote net deposit remains executing until the ChildVault strategy deposit succeeds and CRE calls `completeEpochDeposit`; a remote net withdrawal remains executing until the child withdrawal and CCIP return to ParentVault complete.
 
 ## Epoch Status
 
 An epoch moves through up to three statuses after it opens:
 
 - `OPEN` — the epoch accepts deposits and withdraw intents.
-- `EXECUTING` — settlement has priced the epoch, but the underlying asset is still moving cross-chain. This only happens when the active strategy is on a child chain and the epoch has a net withdrawal; the epoch stays `EXECUTING` until the child chain withdrawal and CCIP return path complete.
+- `EXECUTING` — settlement has priced the epoch, but a remote strategy operation is not yet confirmed on ParentVault. A remote net deposit waits for successful ChildVault deposit acknowledgement; a remote net withdrawal waits for the child withdrawal and CCIP return path.
 - `CLAIMABLE` — settlement is finalized. Depositors and withdrawers can claim.
 
 `NONE` is the zero value for a nonce that has never been opened, not a state an opened epoch passes through.

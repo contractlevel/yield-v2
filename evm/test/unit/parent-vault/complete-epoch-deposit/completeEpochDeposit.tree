@@ -1,0 +1,13 @@
+ParentVault_completeEpochDeposit
+├── when caller does not have EPOCH_OPERATOR_ROLE
+│   └── it should revert
+├── when no epoch has completed
+│   └── it should revert with ParentVault__NoCompletedEpoch
+├── when the previous epoch is not a net-deposit epoch
+│   └── it should revert with ParentVault__EpochNotNetDeposit
+├── when the previous net-deposit epoch is not executing
+│   └── it should revert with ParentVault__EpochNotExecuting
+├── it should mark the previous epoch claimable
+├── it should emit EpochClaimable
+└── when the vault is paused
+    └── it should mark the previous epoch claimable

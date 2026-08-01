@@ -26,11 +26,13 @@ const (
 var aaveProtocolID = [32]byte{1}
 
 type fakeParentCodec struct {
-	closeErr           error
-	closeCalldata      []byte
-	closeInput         parent_vault.CloseEpochInput
-	epochExecuting     *parent_vault.EpochExecutingDecoded
-	decodeExecutingErr error
+	closeErr                   error
+	closeCalldata              []byte
+	closeInput                 parent_vault.CloseEpochInput
+	completeDepositErr         error
+	completeDepositCalldata    []byte
+	epochWithdrawExecuting     *parent_vault.EpochWithdrawExecutingDecoded
+	decodeWithdrawExecutingErr error
 }
 
 func (f *fakeParentCodec) EncodeCloseEpochMethodCall(in parent_vault.CloseEpochInput) ([]byte, error) {
@@ -41,17 +43,33 @@ func (f *fakeParentCodec) EncodeCloseEpochMethodCall(in parent_vault.CloseEpochI
 	return f.closeCalldata, nil
 }
 
-func (f *fakeParentCodec) DecodeEpochExecuting(*evm.Log) (*parent_vault.EpochExecutingDecoded, error) {
-	if f.decodeExecutingErr != nil {
-		return nil, f.decodeExecutingErr
+func (f *fakeParentCodec) EncodeCompleteEpochDepositMethodCall() ([]byte, error) {
+	if f.completeDepositErr != nil {
+		return nil, f.completeDepositErr
 	}
-	return f.epochExecuting, nil
+	return f.completeDepositCalldata, nil
+}
+
+func (f *fakeParentCodec) DecodeEpochWithdrawExecuting(*evm.Log) (*parent_vault.EpochWithdrawExecutingDecoded, error) {
+	if f.decodeWithdrawExecutingErr != nil {
+		return nil, f.decodeWithdrawExecutingErr
+	}
+	return f.epochWithdrawExecuting, nil
 }
 
 type fakeChildCodec struct {
-	withdrawErr      error
-	withdrawCalldata []byte
-	withdrawInput    child_vault.ExecuteEpochWithdrawInput
+	withdrawErr             error
+	withdrawCalldata        []byte
+	withdrawInput           child_vault.ExecuteEpochWithdrawInput
+	epochDepositSuccess     *child_vault.EpochDepositToStrategySuccessDecoded
+	decodeDepositSuccessErr error
+}
+
+func (f *fakeChildCodec) DecodeEpochDepositToStrategySuccess(*evm.Log) (*child_vault.EpochDepositToStrategySuccessDecoded, error) {
+	if f.decodeDepositSuccessErr != nil {
+		return nil, f.decodeDepositSuccessErr
+	}
+	return f.epochDepositSuccess, nil
 }
 
 func (f *fakeChildCodec) EncodeExecuteEpochWithdrawMethodCall(in child_vault.ExecuteEpochWithdrawInput) ([]byte, error) {
@@ -511,19 +529,19 @@ func baseExecutorDeps() ExecutorDeps {
 	}
 }
 
-func Test_OnEpochExecuting_wrapper(t *testing.T) {
+func Test_OnEpochWithdrawExecuting_wrapper(t *testing.T) {
 	resetSeams(t)
-	installParentCodec(t, &fakeParentCodec{epochExecuting: &parent_vault.EpochExecutingDecoded{EpochNonce: big.NewInt(1), Amount: big.NewInt(2)}})
+	installParentCodec(t, &fakeParentCodec{epochWithdrawExecuting: &parent_vault.EpochWithdrawExecutingDecoded{EpochNonce: big.NewInt(1), Amount: big.NewInt(2)}})
 	installChildCodec(t, &fakeChildCodec{withdrawCalldata: []byte{1}})
 	installBindings(t)
 	defaultExecutorDeps = baseExecutorDeps()
 
-	result, err := OnEpochExecuting(testConfig(), testRuntime(t), &evm.Log{})
+	result, err := OnEpochWithdrawExecuting(testConfig(), testRuntime(t), &evm.Log{})
 	require.NoError(t, err, "expected wrapper to use default deps")
 	require.Equal(t, "submitted executeEpochWithdraw", result.Result)
 }
 
-func Test_OnEpochExecuting_withDeps(t *testing.T) {
+func Test_OnEpochWithdrawExecuting_withDeps(t *testing.T) {
 	tests := []struct {
 		name        string
 		config      *helper.Config
@@ -538,12 +556,12 @@ func Test_OnEpochExecuting_withDeps(t *testing.T) {
 	}{
 		{name: "parent codec error", parentErr: errors.New("codec failed"), deps: baseExecutorDeps(), wantErr: "init parent vault codec: codec failed"},
 		{name: "child codec error", parentCodec: &fakeParentCodec{}, childErr: errors.New("child failed"), deps: baseExecutorDeps(), wantErr: "init child vault codec: child failed"},
-		{name: "decode error", parentCodec: &fakeParentCodec{decodeExecutingErr: errors.New("decode failed")}, childCodec: &fakeChildCodec{}, deps: baseExecutorDeps(), wantErr: "decode EpochExecuting: decode failed"},
-		{name: "no parent", config: &helper.Config{Evms: []helper.EvmConfig{{ChainSelector: childChainSelector}}}, parentCodec: &fakeParentCodec{epochExecuting: &parent_vault.EpochExecutingDecoded{}}, childCodec: &fakeChildCodec{}, deps: baseExecutorDeps(), wantErr: "no parent chain configured"},
-		{name: "bind error", parentCodec: &fakeParentCodec{epochExecuting: &parent_vault.EpochExecutingDecoded{}}, childCodec: &fakeChildCodec{}, bindingErr: errors.New("bind failed"), deps: baseExecutorDeps(), wantErr: "bind parent vault: bind failed"},
+		{name: "decode error", parentCodec: &fakeParentCodec{decodeWithdrawExecutingErr: errors.New("decode failed")}, childCodec: &fakeChildCodec{}, deps: baseExecutorDeps(), wantErr: "decode EpochWithdrawExecuting: decode failed"},
+		{name: "no parent", config: &helper.Config{Evms: []helper.EvmConfig{{ChainSelector: childChainSelector}}}, parentCodec: &fakeParentCodec{epochWithdrawExecuting: &parent_vault.EpochWithdrawExecutingDecoded{}}, childCodec: &fakeChildCodec{}, deps: baseExecutorDeps(), wantErr: "no parent chain configured"},
+		{name: "bind error", parentCodec: &fakeParentCodec{epochWithdrawExecuting: &parent_vault.EpochWithdrawExecutingDecoded{}}, childCodec: &fakeChildCodec{}, bindingErr: errors.New("bind failed"), deps: baseExecutorDeps(), wantErr: "bind parent vault: bind failed"},
 		{
 			name:        "get rebalance error",
-			parentCodec: &fakeParentCodec{epochExecuting: &parent_vault.EpochExecutingDecoded{}},
+			parentCodec: &fakeParentCodec{epochWithdrawExecuting: &parent_vault.EpochWithdrawExecutingDecoded{}},
 			childCodec:  &fakeChildCodec{},
 			deps: ExecutorDeps{
 				GetRebalance: func(cre.Runtime, onchain.ParentVaultInterface, *big.Int) (parent_vault.TypesRebalance, error) {
@@ -555,7 +573,7 @@ func Test_OnEpochExecuting_withDeps(t *testing.T) {
 		},
 		{
 			name:        "strategy missing",
-			parentCodec: &fakeParentCodec{epochExecuting: &parent_vault.EpochExecutingDecoded{}},
+			parentCodec: &fakeParentCodec{epochWithdrawExecuting: &parent_vault.EpochWithdrawExecutingDecoded{}},
 			childCodec:  &fakeChildCodec{},
 			deps: ExecutorDeps{
 				GetRebalance: func(cre.Runtime, onchain.ParentVaultInterface, *big.Int) (parent_vault.TypesRebalance, error) {
@@ -567,7 +585,7 @@ func Test_OnEpochExecuting_withDeps(t *testing.T) {
 		},
 		{
 			name:        "active strategy on parent",
-			parentCodec: &fakeParentCodec{epochExecuting: &parent_vault.EpochExecutingDecoded{EpochNonce: big.NewInt(1)}},
+			parentCodec: &fakeParentCodec{epochWithdrawExecuting: &parent_vault.EpochWithdrawExecutingDecoded{EpochNonce: big.NewInt(1)}},
 			childCodec:  &fakeChildCodec{},
 			deps: ExecutorDeps{
 				GetRebalance: func(cre.Runtime, onchain.ParentVaultInterface, *big.Int) (parent_vault.TypesRebalance, error) {
@@ -580,10 +598,10 @@ func Test_OnEpochExecuting_withDeps(t *testing.T) {
 			},
 			wantResult: "no-op: active strategy on parent",
 		},
-		{name: "encode error", parentCodec: &fakeParentCodec{epochExecuting: &parent_vault.EpochExecutingDecoded{}}, childCodec: &fakeChildCodec{withdrawErr: errors.New("encode failed")}, deps: baseExecutorDeps(), wantErr: "encode executeEpochWithdraw: encode failed"},
+		{name: "encode error", parentCodec: &fakeParentCodec{epochWithdrawExecuting: &parent_vault.EpochWithdrawExecutingDecoded{}}, childCodec: &fakeChildCodec{withdrawErr: errors.New("encode failed")}, deps: baseExecutorDeps(), wantErr: "encode executeEpochWithdraw: encode failed"},
 		{
 			name:        "submit error",
-			parentCodec: &fakeParentCodec{epochExecuting: &parent_vault.EpochExecutingDecoded{}},
+			parentCodec: &fakeParentCodec{epochWithdrawExecuting: &parent_vault.EpochWithdrawExecutingDecoded{}},
 			childCodec:  &fakeChildCodec{withdrawCalldata: []byte{1}},
 			deps: ExecutorDeps{
 				GetRebalance: baseExecutorDeps().GetRebalance,
@@ -593,7 +611,7 @@ func Test_OnEpochExecuting_withDeps(t *testing.T) {
 			},
 			wantErr: "submit executeEpochWithdraw: submit failed",
 		},
-		{name: "success", parentCodec: &fakeParentCodec{epochExecuting: &parent_vault.EpochExecutingDecoded{EpochNonce: big.NewInt(1), Amount: big.NewInt(2)}}, childCodec: &fakeChildCodec{withdrawCalldata: []byte{1}}, deps: baseExecutorDeps(), wantResult: "submitted executeEpochWithdraw"},
+		{name: "success", parentCodec: &fakeParentCodec{epochWithdrawExecuting: &parent_vault.EpochWithdrawExecutingDecoded{EpochNonce: big.NewInt(1), Amount: big.NewInt(2)}}, childCodec: &fakeChildCodec{withdrawCalldata: []byte{1}}, deps: baseExecutorDeps(), wantResult: "submitted executeEpochWithdraw"},
 	}
 
 	for _, tt := range tests {
@@ -620,7 +638,7 @@ func Test_OnEpochExecuting_withDeps(t *testing.T) {
 				return fakeParentVault{}, nil
 			}
 
-			result, err := onEpochExecutingWithDeps(cfg, testRuntime(t), &evm.Log{}, tt.deps)
+			result, err := onEpochWithdrawExecutingWithDeps(cfg, testRuntime(t), &evm.Log{}, tt.deps)
 			if tt.wantErr != "" {
 				require.Error(t, err, "expected error")
 				require.Nil(t, result, "expected nil result on error")
@@ -628,6 +646,86 @@ func Test_OnEpochExecuting_withDeps(t *testing.T) {
 				return
 			}
 			require.NoError(t, err, "expected no error")
+			require.Equal(t, tt.wantResult, result.Result)
+		})
+	}
+}
+
+func Test_OnEpochDepositSuccess_wrapper(t *testing.T) {
+	resetSeams(t)
+	installParentCodec(t, &fakeParentCodec{completeDepositCalldata: []byte{1}})
+	installChildCodec(t, &fakeChildCodec{
+		epochDepositSuccess: &child_vault.EpochDepositToStrategySuccessDecoded{
+			EpochNonce: big.NewInt(1), Amount: big.NewInt(2),
+		},
+	})
+	defaultExecutorDeps = baseExecutorDeps()
+
+	result, err := OnEpochDepositSuccess(testConfig(), testRuntime(t), &evm.Log{})
+	require.NoError(t, err)
+	require.Equal(t, "completed epoch deposit", result.Result)
+}
+
+func Test_OnEpochDepositSuccess_withDeps(t *testing.T) {
+	tests := []struct {
+		name        string
+		config      *helper.Config
+		parentCodec *fakeParentCodec
+		childCodec  *fakeChildCodec
+		parentErr   error
+		childErr    error
+		deps        ExecutorDeps
+		wantResult  string
+		wantErr     string
+	}{
+		{name: "child codec error", childErr: errors.New("codec failed"), deps: baseExecutorDeps(), wantErr: "init child vault codec: codec failed"},
+		{name: "decode error", childCodec: &fakeChildCodec{decodeDepositSuccessErr: errors.New("decode failed")}, deps: baseExecutorDeps(), wantErr: "decode EpochDepositToStrategySuccess: decode failed"},
+		{name: "parent codec error", childCodec: &fakeChildCodec{}, parentErr: errors.New("codec failed"), deps: baseExecutorDeps(), wantErr: "init parent vault codec: codec failed"},
+		{name: "encode error", childCodec: &fakeChildCodec{}, parentCodec: &fakeParentCodec{completeDepositErr: errors.New("encode failed")}, deps: baseExecutorDeps(), wantErr: "encode completeEpochDeposit: encode failed"},
+		{name: "no parent", config: &helper.Config{Evms: []helper.EvmConfig{{ChainSelector: childChainSelector}}}, childCodec: &fakeChildCodec{}, parentCodec: &fakeParentCodec{}, deps: baseExecutorDeps(), wantErr: "no parent chain configured"},
+		{
+			name: "submit error", childCodec: &fakeChildCodec{},
+			parentCodec: &fakeParentCodec{completeDepositCalldata: []byte{1}},
+			deps: ExecutorDeps{SubmitReport: func(cre.Runtime, *evm.Client, common.Address, []byte, uint64) error {
+				return errors.New("submit failed")
+			}},
+			wantErr: "submit completeEpochDeposit: submit failed",
+		},
+		{
+			name: "success",
+			childCodec: &fakeChildCodec{epochDepositSuccess: &child_vault.EpochDepositToStrategySuccessDecoded{
+				EpochNonce: big.NewInt(1), Amount: big.NewInt(2),
+			}},
+			parentCodec: &fakeParentCodec{completeDepositCalldata: []byte{1}},
+			deps: baseExecutorDeps(), wantResult: "completed epoch deposit",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resetSeams(t)
+			cfg := tt.config
+			if cfg == nil {
+				cfg = testConfig()
+			}
+			if tt.parentErr != nil {
+				newParentCodec = func() (parentCodec, error) { return nil, tt.parentErr }
+			} else {
+				installParentCodec(t, tt.parentCodec)
+			}
+			if tt.childErr != nil {
+				newChildCodec = func() (childCodec, error) { return nil, tt.childErr }
+			} else {
+				installChildCodec(t, tt.childCodec)
+			}
+
+			result, err := onEpochDepositSuccessWithDeps(cfg, testRuntime(t), &evm.Log{}, tt.deps)
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+				require.Nil(t, result)
+				return
+			}
+			require.NoError(t, err)
 			require.Equal(t, tt.wantResult, result.Result)
 		})
 	}

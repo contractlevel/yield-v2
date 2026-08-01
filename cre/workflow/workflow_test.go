@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/anypb"
 
+	"cre/contracts/evm/src/generated/child_vault"
 	"cre/contracts/evm/src/generated/parent_vault"
 	"cre/workflow/internal/helper"
 	"cre/workflow/internal/onchain"
@@ -59,6 +60,18 @@ func withWorkflowParentCodecError(t *testing.T, err error) {
 	})
 }
 
+func withWorkflowChildCodecError(t *testing.T, err error) {
+	t.Helper()
+
+	original := newWorkflowChildCodec
+	newWorkflowChildCodec = func() (child_vault.ChildVaultCodec, error) {
+		return nil, err
+	}
+	t.Cleanup(func() {
+		newWorkflowChildCodec = original
+	})
+}
+
 func TestInitWorkflow_PropagatesValidationError(t *testing.T) {
 	runtime := testutils.NewRuntime(t, testutils.Secrets{})
 
@@ -77,6 +90,17 @@ func TestInitWorkflow_ParentCodecError(t *testing.T) {
 	require.Error(t, err, "expected codec error")
 	require.Nil(t, workflow, "expected no workflow when codec init fails")
 	require.ErrorContains(t, err, "init parent vault codec: codec failed")
+}
+
+func TestInitWorkflow_ChildCodecError(t *testing.T) {
+	runtime := testutils.NewRuntime(t, testutils.Secrets{})
+	config := workflowTestConfig(workflowTestEvmConfig(1, true))
+	withWorkflowChildCodecError(t, errors.New("codec failed"))
+
+	workflow, err := InitWorkflow(config, runtime.Logger(), nil)
+	require.Error(t, err)
+	require.Nil(t, workflow)
+	require.ErrorContains(t, err, "init child vault codec: codec failed")
 }
 
 func TestInitWorkflow_ParentOnly(t *testing.T) {
@@ -101,9 +125,9 @@ func TestInitWorkflow_MultipleChildren(t *testing.T) {
 
 	workflow, err := InitWorkflow(config, runtime.Logger(), nil)
 	require.NoError(t, err, "expected multi-child config to initialize")
-	require.Len(t, workflow, 7, "expected base handlers plus one rebalance-completer per child")
+	require.Len(t, workflow, 10, "expected base handlers plus two completion handlers per child")
 	require.Equal(t, cron.Trigger(&cron.Config{}).CapabilityID(), workflow[0].CapabilityID())
-	require.Equal(t, cron.Trigger(&cron.Config{}).CapabilityID(), workflow[5].CapabilityID())
+	require.Equal(t, cron.Trigger(&cron.Config{}).CapabilityID(), workflow[8].CapabilityID())
 }
 
 func TestInitWorkflow_ParentDoesNotNeedToBeFirst(t *testing.T) {
@@ -116,9 +140,9 @@ func TestInitWorkflow_ParentDoesNotNeedToBeFirst(t *testing.T) {
 
 	workflow, err := InitWorkflow(config, runtime.Logger(), nil)
 	require.NoError(t, err, "expected parent lookup to use IsParent, not slice position")
-	require.Len(t, workflow, 6, "expected two child handlers when parent is in the middle")
+	require.Len(t, workflow, 8, "expected four child handlers when parent is in the middle")
 	require.Equal(t, cron.Trigger(&cron.Config{}).CapabilityID(), workflow[0].CapabilityID())
-	require.Equal(t, cron.Trigger(&cron.Config{}).CapabilityID(), workflow[4].CapabilityID())
+	require.Equal(t, cron.Trigger(&cron.Config{}).CapabilityID(), workflow[6].CapabilityID())
 }
 
 func TestInitWorkflow_ChildHandlerClosure(t *testing.T) {
@@ -223,7 +247,7 @@ func TestWithRecoveryGuard_checkError(t *testing.T) {
 	require.False(t, called)
 }
 
-func TestInitWorkflow_allCallbacksGuarded(t *testing.T) {
+func TestInitWorkflow_DepositCompletionBypassesRecoveryGuard(t *testing.T) {
 	runtime := testutils.NewRuntime(t, testutils.Secrets{})
 	config := workflowTestConfig(
 		workflowTestEvmConfig(1, true),
@@ -238,12 +262,23 @@ func TestInitWorkflow_allCallbacksGuarded(t *testing.T) {
 		return &onchain.ActiveRecovery{ChainName: "chain-5", Mode: 5}, nil
 	})
 	require.NoError(t, err)
-	require.Len(t, workflow, 8)
+	require.Len(t, workflow, 12)
+	childCodec, err := child_vault.NewCodec()
+	require.NoError(t, err)
+	nonceTopic := make([]byte, 32)
+	big.NewInt(1).FillBytes(nonceTopic)
+	amountTopic := make([]byte, 32)
+	big.NewInt(100).FillBytes(amountTopic)
 
 	cronCapabilityID := cron.Trigger(&cron.Config{}).CapabilityID()
-	for _, handler := range workflow {
+	for i, handler := range workflow {
+		isDepositCompletion := i >= 3 && i <= 9 && i%2 == 1
 		var payload *anypb.Any
-		if handler.CapabilityID() == cronCapabilityID {
+		if isDepositCompletion {
+			payload, err = anypb.New(&evm.Log{Topics: [][]byte{
+				childCodec.EpochDepositToStrategySuccessLogHash(), nonceTopic, amountTopic,
+			}})
+		} else if handler.CapabilityID() == cronCapabilityID {
 			payload, err = anypb.New(&cron.Payload{})
 		} else {
 			payload, err = anypb.New(&evm.Log{})
@@ -251,8 +286,14 @@ func TestInitWorkflow_allCallbacksGuarded(t *testing.T) {
 		require.NoError(t, err)
 
 		got, callbackErr := handler.Callback()(config, runtime, payload)
+		if isDepositCompletion {
+			require.Error(t, callbackErr, "completion should reach unconfigured report submission")
+			require.NotContains(t, callbackErr.Error(), "check recovery mode")
+			require.Nil(t, got)
+			continue
+		}
 		require.NoError(t, callbackErr)
 		require.Equal(t, &ExecutionResult{Result: "no-op: recovery active"}, got)
 	}
-	require.Equal(t, len(workflow), checks)
+	require.Equal(t, 8, checks, "only fund-moving and state-creating handlers should check recovery")
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/smartcontractkit/cre-sdk-go/capabilities/scheduler/cron"
 	"github.com/smartcontractkit/cre-sdk-go/cre"
 
+	"cre/contracts/evm/src/generated/child_vault"
 	"cre/contracts/evm/src/generated/parent_vault"
 	"cre/workflow/internal/epoch"
 	"cre/workflow/internal/helper"
@@ -18,7 +19,10 @@ import (
 	"cre/workflow/internal/workflowtypes"
 )
 
-var newWorkflowParentCodec = parent_vault.NewCodec
+var (
+	newWorkflowParentCodec = parent_vault.NewCodec
+	newWorkflowChildCodec  = child_vault.NewCodec
+)
 
 // Config and ExecutionResult are the top-level types used by all handlers.
 type Config = helper.Config
@@ -29,12 +33,13 @@ type recoveryFinder func(cre.Runtime, []helper.EvmConfig, *big.Int) (*onchain.Ac
 
 // ---- INIT WORKFLOW ----
 
-// InitWorkflow registers five handlers:
+// InitWorkflow registers six handler types:
 //  1. Cron → RebalanceInitiator
 //  2. ParentVault.RebalanceInitiated log → RebalanceExecutor
 //  3. Per-child vault RebalanceDepositSuccess log → RebalanceCompleter
 //  4. Cron → EpochInitiator
-//  5. ParentVault.EpochExecuting log → EpochExecutor
+//  5. ParentVault.EpochWithdrawExecuting log → EpochWithdrawExecutor
+//  6. Per-child vault EpochDepositToStrategySuccess log → EpochDepositCompleter
 func InitWorkflow(config *Config, logger *slog.Logger, _ cre.SecretsProvider) (cre.Workflow[*Config], error) {
 	return initWorkflow(config, logger, onchain.FindActiveRecovery)
 }
@@ -52,6 +57,10 @@ func initWorkflow(config *Config, logger *slog.Logger, findRecovery recoveryFind
 	pvCodec, err := newWorkflowParentCodec()
 	if err != nil {
 		return nil, fmt.Errorf("init parent vault codec: %w", err)
+	}
+	cvCodec, err := newWorkflowChildCodec()
+	if err != nil {
+		return nil, fmt.Errorf("init child vault codec: %w", err)
 	}
 
 	parentVaultAddr := common.HexToAddress(parentCfg.VaultAddress)
@@ -86,6 +95,17 @@ func initWorkflow(config *Config, logger *slog.Logger, findRecovery recoveryFind
 			}),
 			withRecoveryGuard(findRecovery, rebalance.OnRebalanceDepositSuccess),
 		))
+
+		// The chain selector and address restrict this trigger to ChildVault logs;
+		// an identically signed ParentVault event cannot match it.
+		handlers = append(handlers, cre.Handler(
+			evm.LogTrigger(evmCfg.ChainSelector, &evm.FilterLogTriggerRequest{
+				Addresses:  [][]byte{vaultAddr.Bytes()},
+				Topics:     []*evm.TopicValues{{Values: [][]byte{cvCodec.EpochDepositToStrategySuccessLogHash()}}},
+				Confidence: evm.ConfidenceLevel_CONFIDENCE_LEVEL_FINALIZED,
+			}),
+			epoch.OnEpochDepositSuccess,
+		))
 	}
 
 	// Handler 4: cron → EpochInitiator
@@ -94,14 +114,14 @@ func initWorkflow(config *Config, logger *slog.Logger, findRecovery recoveryFind
 		withRecoveryGuard(findRecovery, epoch.OnEpochCronTrigger),
 	))
 
-	// Handler 5: ParentVault.EpochExecuting → EpochExecutor
+	// Handler 5: ParentVault.EpochWithdrawExecuting → EpochWithdrawExecutor
 	handlers = append(handlers, cre.Handler(
 		evm.LogTrigger(parentCfg.ChainSelector, &evm.FilterLogTriggerRequest{
 			Addresses:  [][]byte{parentVaultAddr.Bytes()},
-			Topics:     []*evm.TopicValues{{Values: [][]byte{pvCodec.EpochExecutingLogHash()}}},
+			Topics:     []*evm.TopicValues{{Values: [][]byte{pvCodec.EpochWithdrawExecutingLogHash()}}},
 			Confidence: evm.ConfidenceLevel_CONFIDENCE_LEVEL_FINALIZED,
 		}),
-		withRecoveryGuard(findRecovery, epoch.OnEpochExecuting),
+		withRecoveryGuard(findRecovery, epoch.OnEpochWithdrawExecuting),
 	))
 
 	return cre.Workflow[*Config](handlers), nil

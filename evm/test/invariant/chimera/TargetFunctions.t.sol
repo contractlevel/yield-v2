@@ -157,7 +157,15 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         );
         _assertEpochTransition(epochNonce, Types.EpochStatus.OPEN, parent.vault.getEpoch(epochNonce).status);
         if (parent.vault.getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING) {
-            _settleRemoteEpochWithdraw(epochNonce, netWithdrawAmount);
+            if (netWithdrawAmount == 0) {
+                if (!_recoveryModeExists()) {
+                    _completeEpochDepositThroughWorkflow(
+                        parent.workflowRouter, CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner
+                    );
+                }
+            } else {
+                _settleRemoteEpochWithdraw(epochNonce, netWithdrawAmount);
+            }
             _assertEpochTransition(epochNonce, Types.EpochStatus.EXECUTING, parent.vault.getEpoch(epochNonce).status);
         }
 
@@ -171,8 +179,8 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         eq(_after.epochNonce, epochNonce + 1, "EPOCH-004: closeEpoch did not increment epoch nonce");
         t(
-            parent.vault.getEpoch(epochNonce).status == Types.EpochStatus.CLAIMABLE,
-            "EPOCH-004: closeEpoch did not make epoch claimable"
+            parent.vault.getEpoch(epochNonce).status == Types.EpochStatus.CLAIMABLE || _recoveryModeExists(),
+            "EPOCH-004: closeEpoch did not settle or store recovery"
         );
         t(
             parent.vault.getEpoch(epochNonce + 1).status == Types.EpochStatus.OPEN,
@@ -680,16 +688,22 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             "REC-002: child epoch deposit recovery mode not set"
         );
         t(
-            parent.vault.getEpoch(epochNonce).status == Types.EpochStatus.CLAIMABLE,
-            "EPOCH-002: remote deposit epoch not claimable"
+            parent.vault.getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING,
+            "EPOCH-002: failed remote deposit epoch not executing"
         );
     }
 
     function _recoverFailedEpochDeposit(ChildVault vault) internal {
+        uint256 epochNonce = vault.getEpochDepositRecovery().epochNonce;
         vault.executeRecovery();
+
+        _completeEpochDepositThroughWorkflow(
+            parent.workflowRouter, CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner
+        );
 
         _assertEpochDepositRecoveryCleared(vault);
         t(vault.getRecoveryMode() == Types.RecoveryMode.NONE, "REC-003: child still has recovery");
+        _recordEpochClosed(epochNonce);
         eq(_recoveryModeCount(), 0, "REC-003: recovery mode not cleared");
     }
 

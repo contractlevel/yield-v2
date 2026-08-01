@@ -488,19 +488,6 @@
   },
   {
     "type": "function",
-    "name": "getLink",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "link",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "getLastHandledEpochNonce",
     "inputs": [],
     "outputs": [
@@ -521,6 +508,19 @@
         "name": "lastHandledRebalanceNonce",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getLink",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "link",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -1345,44 +1345,6 @@
   },
   {
     "type": "event",
-    "name": "DepositToStrategyFailure",
-    "inputs": [
-      {
-        "name": "epochNonce",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "DepositToStrategySuccess",
-    "inputs": [
-      {
-        "name": "epochNonce",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
     "name": "EpochDepositRecoveryCleared",
     "inputs": [
       {
@@ -1397,6 +1359,82 @@
   {
     "type": "event",
     "name": "EpochDepositRecoveryStored",
+    "inputs": [
+      {
+        "name": "epochNonce",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "EpochDepositToStrategyFailure",
+    "inputs": [
+      {
+        "name": "epochNonce",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "EpochDepositToStrategySuccess",
+    "inputs": [
+      {
+        "name": "epochNonce",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "EpochWithdrawFromStrategyFailure",
+    "inputs": [
+      {
+        "name": "epochNonce",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "EpochWithdrawFromStrategySuccess",
     "inputs": [
       {
         "name": "epochNonce",
@@ -1727,44 +1765,6 @@
         "type": "address",
         "indexed": true,
         "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "WithdrawFromStrategyFailure",
-    "inputs": [
-      {
-        "name": "epochNonce",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "WithdrawFromStrategySuccess",
-    "inputs": [
-      {
-        "name": "epochNonce",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
       }
     ],
     "anonymous": false

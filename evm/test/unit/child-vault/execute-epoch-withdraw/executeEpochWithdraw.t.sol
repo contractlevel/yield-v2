@@ -117,12 +117,12 @@ contract ChildVault_ExecuteEpochWithdrawUnitTest is BaseUnitTest {
         assertEq(s_mockUsdc.balanceOf(address(s_mockCcipRouter)), routerBefore + WITHDRAW_AMOUNT);
     }
 
-    function test_ChildVault_executeEpochWithdraw_Success_EmitsWithdrawFromStrategySuccess() public {
+    function test_ChildVault_executeEpochWithdraw_Success_EmitsEpochWithdrawFromStrategySuccess() public {
         vm.recordLogs();
         s_childVault.executeEpochWithdraw(EPOCH_NONCE, WITHDRAW_AMOUNT);
 
         Vm.Log memory log =
-            _assertEmittedBy(keccak256("WithdrawFromStrategySuccess(uint256,uint256)"), address(s_childVault));
+            _assertEmittedBy(keccak256("EpochWithdrawFromStrategySuccess(uint256,uint256)"), address(s_childVault));
         assertEq(uint256(log.topics[1]), EPOCH_NONCE);
         assertEq(uint256(log.topics[2]), WITHDRAW_AMOUNT);
     }
@@ -158,7 +158,7 @@ contract ChildVault_ExecuteEpochWithdrawUnitTest is BaseUnitTest {
         vm.recordLogs();
         s_childVault.executeEpochWithdraw(EPOCH_NONCE, WITHDRAW_AMOUNT);
 
-        _assertEmittedBy(keccak256("WithdrawFromStrategyFailure(uint256,uint256)"), address(s_childVault));
+        _assertEmittedBy(keccak256("EpochWithdrawFromStrategyFailure(uint256,uint256)"), address(s_childVault));
         assertEq(s_mockUsdc.balanceOf(address(s_mockCcipRouter)), routerBefore);
     }
 

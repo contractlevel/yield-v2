@@ -127,10 +127,10 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     ) internal {
         bool success = _executeDeposit(amount, false, $_baseVault.s_activeProtocolAdapter);
         if (success) {
-            emit DepositToStrategySuccess(epochNonce, amount);
+            emit EpochDepositToStrategySuccess(epochNonce, amount);
         } else {
             _storeEpochDepositRecovery($, $_baseVault, epochNonce, amount);
-            emit DepositToStrategyFailure(epochNonce, amount);
+            emit EpochDepositToStrategyFailure(epochNonce, amount);
         }
     }
 
@@ -218,11 +218,11 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         (bool success, uint256 amountOut) = _executeWithdraw(amount, false, $_baseVault.s_activeProtocolAdapter);
         if (success) {
             _revertIfZeroAmount(amountOut);
-            emit WithdrawFromStrategySuccess(epochNonce, amountOut);
+            emit EpochWithdrawFromStrategySuccess(epochNonce, amountOut);
             _ccipSend(amountOut, i_parentChainSelector, Types.CcipTx.EPOCH_NET_WITHDRAW, epochNonce, bytes32(0));
         } else {
             _storeEpochWithdrawRecovery($, $_baseVault, epochNonce, amount);
-            emit WithdrawFromStrategyFailure(epochNonce, amount);
+            emit EpochWithdrawFromStrategyFailure(epochNonce, amount);
         }
     }
 
@@ -381,7 +381,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         _executeDeposit(recovery.amount, true, $_baseVault.s_activeProtocolAdapter);
         _clearEpochDepositRecovery($, $_baseVault, epochNonce);
 
-        emit DepositToStrategySuccess(epochNonce, recovery.amount);
+        emit EpochDepositToStrategySuccess(epochNonce, recovery.amount);
     }
 
     /// @notice Clears recovery state for a failed epoch deposit
@@ -432,7 +432,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         if (amountOut == 0) revert BaseVault__ZeroRecoveryAmount();
 
         _clearEpochWithdrawRecovery($, $_baseVault, epochNonce);
-        emit WithdrawFromStrategySuccess(epochNonce, amountOut);
+        emit EpochWithdrawFromStrategySuccess(epochNonce, amountOut);
         _ccipSend(amountOut, i_parentChainSelector, Types.CcipTx.EPOCH_NET_WITHDRAW, epochNonce, bytes32(0));
     }
 

@@ -38,20 +38,21 @@ ParentVault_closeEpoch
 ├── when local strategy has net deposit
 │   ├── it should deposit net flow into the adapter
 │   ├── it should emit EpochClaimable
-│   └── it should emit DepositToStrategySuccess
+│   └── it should emit EpochDepositToStrategySuccess
 ├── when local strategy has net withdrawal
 │   ├── it should withdraw net flow from the adapter
 │   ├── it should update totalWithdrawClaimAmount and remainingWithdrawClaimAmount when adapter returns a different amount
 │   ├── it should emit EpochClaimable
-│   └── it should emit WithdrawFromStrategySuccess
+│   └── it should emit EpochWithdrawFromStrategySuccess
 ├── when remote strategy has net deposit
 │   ├── it should bridge net flow to the strategy chain
+│   ├── it should mark the epoch executing
 │   ├── when ccipSend reverts
 │   │   └── it should revert
-│   └── it should emit EpochClaimable
+│   └── it should emit EpochDepositExecuting
 ├── when remote strategy has net withdrawal
 │   ├── it should mark the epoch executing
-│   └── it should emit EpochExecuting
+│   └── it should emit EpochWithdrawExecuting
 └── when local adapter reverts
     ├── it should revert on net deposit
     └── it should revert on net withdrawal

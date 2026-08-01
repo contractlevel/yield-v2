@@ -190,6 +190,15 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         assertEq(s_mockUsdc.balanceOf(address(s_mockCcipRouter)), routerBefore + DEPOSIT_AMOUNT);
     }
 
+    function test_ParentVault_closeEpoch_RemoteNetDeposit_MarksEpochExecuting() public {
+        _prepareRemoteStrategy();
+        _submitDeposit();
+
+        _closeEpoch(TVL);
+
+        assertEq(uint8(s_parentVault.getEpoch(1).status), uint8(Types.EpochStatus.EXECUTING));
+    }
+
     function test_ParentVault_closeEpoch_RemoteNetDeposit_RevertWhen_CcipSendReverts() public {
         _prepareRemoteStrategy();
         _submitDeposit();
@@ -210,14 +219,15 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         assertEq(uint8(s_parentVault.getEpoch(1).status), uint8(Types.EpochStatus.EXECUTING));
     }
 
-    function test_ParentVault_closeEpoch_RemoteNetWithdraw_EmitsEpochExecuting() public {
+    function test_ParentVault_closeEpoch_RemoteNetWithdraw_EmitsEpochWithdrawExecuting() public {
         _prepareRemoteStrategy();
         _prepareNetWithdraw();
 
         vm.recordLogs();
         _closeEpoch(TVL);
 
-        Vm.Log memory log = _assertEmittedBy(keccak256("EpochExecuting(uint256,uint256)"), address(s_parentVault));
+        Vm.Log memory log =
+            _assertEmittedBy(keccak256("EpochWithdrawExecuting(uint256,uint256)"), address(s_parentVault));
         assertEq(uint256(log.topics[1]), 1);
         assertEq(uint256(log.topics[2]), TVL);
     }
@@ -472,14 +482,14 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         assertEq(uint256(log.topics[1]), 1);
     }
 
-    function test_ParentVault_closeEpoch_LocalNetDeposit_EmitsDepositToStrategySuccess() public {
+    function test_ParentVault_closeEpoch_LocalNetDeposit_EmitsEpochDepositToStrategySuccess() public {
         _submitDeposit();
 
         vm.recordLogs();
         _closeEpoch(TVL);
 
         Vm.Log memory log =
-            _assertEmittedBy(keccak256("DepositToStrategySuccess(uint256,uint256)"), address(s_parentVault));
+            _assertEmittedBy(keccak256("EpochDepositToStrategySuccess(uint256,uint256)"), address(s_parentVault));
         assertEq(uint256(log.topics[1]), 1);
         assertEq(uint256(log.topics[2]), DEPOSIT_AMOUNT);
     }
@@ -494,27 +504,29 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         assertEq(uint256(log.topics[1]), 1);
     }
 
-    function test_ParentVault_closeEpoch_LocalNetWithdraw_EmitsWithdrawFromStrategySuccess() public {
+    function test_ParentVault_closeEpoch_LocalNetWithdraw_EmitsEpochWithdrawFromStrategySuccess() public {
         _prepareNetWithdraw();
 
         vm.recordLogs();
         _closeEpoch(TVL);
 
         Vm.Log memory log =
-            _assertEmittedBy(keccak256("WithdrawFromStrategySuccess(uint256,uint256)"), address(s_parentVault));
+            _assertEmittedBy(keccak256("EpochWithdrawFromStrategySuccess(uint256,uint256)"), address(s_parentVault));
         assertEq(uint256(log.topics[1]), 1);
         assertEq(uint256(log.topics[2]), TVL);
     }
 
-    function test_ParentVault_closeEpoch_RemoteNetDeposit_EmitsEpochClaimable() public {
+    function test_ParentVault_closeEpoch_RemoteNetDeposit_EmitsEpochDepositExecuting() public {
         _prepareRemoteStrategy();
         _submitDeposit();
 
         vm.recordLogs();
         _closeEpoch(TVL);
 
-        Vm.Log memory log = _assertEmittedBy(keccak256("EpochClaimable(uint256)"), address(s_parentVault));
+        Vm.Log memory log =
+            _assertEmittedBy(keccak256("EpochDepositExecuting(uint256,uint256)"), address(s_parentVault));
         assertEq(uint256(log.topics[1]), 1);
+        assertEq(uint256(log.topics[2]), DEPOSIT_AMOUNT);
     }
 
     function test_ParentVault_closeEpoch_RemoteNetDeposit_EmitsCCIPBridged() public {

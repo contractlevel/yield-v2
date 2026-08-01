@@ -32,12 +32,12 @@ interface IChildVault is IBaseVault {
     /// @notice Emitted when a deposit to the strategy fails
     /// @param epochNonce The nonce of the epoch
     /// @param amount The amount of asset that failed to deposit
-    event DepositToStrategyFailure(uint256 indexed epochNonce, uint256 indexed amount);
+    event EpochDepositToStrategyFailure(uint256 indexed epochNonce, uint256 indexed amount);
 
     /// @notice Emitted when a withdraw from the strategy fails
     /// @param epochNonce The nonce of the epoch
     /// @param amount The amount of asset that failed to withdraw
-    event WithdrawFromStrategyFailure(uint256 indexed epochNonce, uint256 indexed amount);
+    event EpochWithdrawFromStrategyFailure(uint256 indexed epochNonce, uint256 indexed amount);
 
     /// @notice Emitted when a rebalance withdraw from the old strategy fails
     /// @param rebalanceNonce The nonce of the rebalance

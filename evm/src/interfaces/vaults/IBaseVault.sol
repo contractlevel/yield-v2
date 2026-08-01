@@ -80,11 +80,11 @@ interface IBaseVault is IPauseable {
     /// @notice Emitted when a deposit to the strategy is successful
     /// @param epochNonce The nonce of the epoch
     /// @param amount The amount of asset deposited
-    event DepositToStrategySuccess(uint256 indexed epochNonce, uint256 indexed amount);
+    event EpochDepositToStrategySuccess(uint256 indexed epochNonce, uint256 indexed amount);
     /// @notice Emitted when a withdraw from the strategy is successful
     /// @param epochNonce The nonce of the epoch
     /// @param amount The amount of asset withdrawn
-    event WithdrawFromStrategySuccess(uint256 indexed epochNonce, uint256 indexed amount);
+    event EpochWithdrawFromStrategySuccess(uint256 indexed epochNonce, uint256 indexed amount);
 
     /// @notice Emitted when a rebalance deposit to the new strategy is successful
     /// @param rebalanceNonce The nonce of the rebalance

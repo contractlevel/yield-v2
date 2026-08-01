@@ -316,11 +316,11 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @param tvl The Total Value Locked in the active strategy of the Yieldcoin v2 system
     /// @dev Called by WorkflowRouter.
     /// @dev The `netFlow` is `total asset deposit amount` minus `calculated total asset withdraw amount` for the given epoch.
-    ///      When `netFlow >= 0`: the epoch is CLAIMABLE
+    ///      When `netFlow == 0`: the epoch is CLAIMABLE
     ///      When `netFlow > 0` and the active strategy is local to this chain: the netFlow is deposited straight into the strategy
-    ///      When `netFlow > 0` and the active strategy is remote to this chain: the netFlow is sent via CCIP to the strategy
+    ///      When `netFlow > 0` and the active strategy is remote to this chain: the netFlow is sent via CCIP and the epoch is EXECUTING
     ///      When `netFlow < 0` and the active strategy is local to this chain: the netFlow is withdrawn from the strategy and the epoch is CLAIMABLE
-    ///      When `netFlow < 0` and the active strategy is remote to this chain: EpochExecuting() event triggers CRE to write to strategy chain and the epoch is EXECUTING
+    ///      When `netFlow < 0` and the active strategy is remote to this chain: EpochWithdrawExecuting() triggers CRE to write to the strategy chain and the epoch is EXECUTING
     /// @dev Precondition: the caller must have the EPOCH_OPERATOR_ROLE
     /// @dev Precondition: there must not be an active rebalance
     /// @dev Precondition: there must not be a stored recovery mode
@@ -331,17 +331,9 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @dev Precondition: local strategy interactions must be successful
     /// @dev Precondition: the contract must not be paused
     /// @dev The previous-epoch guard prevents closing a later epoch while a prior
-    ///      remote-withdraw epoch is still EXECUTING. This protects withdraw claimants:
+    ///      remote epoch is still EXECUTING. This prevents claims and strategy changes until cross-chain settlement completes.
     ///      if a child strategy withdraw fails, the owed USDC is not back on the Parent,
     ///      so affected users cannot claim until executeRecovery() succeeds on the child vault.
-    ///
-    ///      The guard intentionally does not make the Parent aware of pending child-side
-    ///      remote-deposit recovery. Remote net-deposit epochs are marked CLAIMABLE on
-    ///      the Parent before the Child deposit into the strategy completes. If that
-    ///      child deposit fails, user claims are still live: withdrawer USDC is already
-    ///      covered by netting/settlement, and depositors can claim shares minted at
-    ///      epoch close. The remaining issue is yield drag from idle USDC on the Child,
-    ///      so singleton child recovery plus workflow retry discipline is sufficient.
     /// @dev previousEpochNonce == 0 means no prior epoch exists (initialize() sets s_epochNonce = 1).
     /// @dev The tvl parameter is provided by the CRE workflow via WorkflowRouter and is trusted
     ///      to accurately reflect the active strategy chain's TVL. The CRE workflow is audited to
@@ -353,7 +345,6 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @dev If TVL goes to zero with shares outstanding, closeEpoch reverts until TVL is restored via
     ///      an on-behalf-of supply to the active protocol; the permanent admin seed deposit means this
     ///      requires a full loss of the active strategy, not a partial one. See KI-008, KI-010 in docs/KNOWN_ISSUES.md.
-    /// @dev Remote net-deposit epochs are marked CLAIMABLE — and their shares minted — before the CCIP-bridged capital lands
     function closeEpoch(uint256 tvl) external nonReentrant whenNotPaused onlyRole(Roles.EPOCH_OPERATOR_ROLE) {
         ParentVaultStorage storage $ = _parentVaultStorage();
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
@@ -367,7 +358,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
 
         if (externalAction.action == ParentVaultEpochLib.ExternalAction.DEPOSIT_TO_LOCAL_STRATEGY) {
             _executeDeposit(externalAction.amount, true, activeAdapter);
-            emit DepositToStrategySuccess(externalAction.epochNonce, externalAction.amount);
+            emit EpochDepositToStrategySuccess(externalAction.epochNonce, externalAction.amount);
         } else if (externalAction.action == ParentVaultEpochLib.ExternalAction.SEND_DEPOSIT_TO_REMOTE_STRATEGY) {
             _ccipSend(
                 externalAction.amount,
@@ -378,14 +369,23 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
             );
         } else if (externalAction.action == ParentVaultEpochLib.ExternalAction.WITHDRAW_FROM_LOCAL_STRATEGY) {
             (, uint256 amountOut) = _executeWithdraw(externalAction.amount, true, activeAdapter);
-            emit WithdrawFromStrategySuccess(externalAction.epochNonce, amountOut);
+            emit EpochWithdrawFromStrategySuccess(externalAction.epochNonce, amountOut);
             ParentVaultEpochLib.finalizeLocalNetWithdraw(
                 $, externalAction.epochNonce, externalAction.totalDepositAmount, amountOut
             );
         }
-        // else CRE is trigged via EpochExecuting event emission in ParentVaultEpochLib.closeEpoch, which writes to strategy chain to withdraw and ccipSend here
+        // else CRE is triggered by EpochWithdrawExecuting and writes to the strategy chain to withdraw and CCIP-send here
 
         ParentVaultEpochLib.openNextEpoch($, externalAction.epochNonce);
+    }
+
+    /// @notice Completes the most recently closed remote net-deposit epoch
+    /// @dev Called by WorkflowRouter after the destination ChildVault emits EpochDepositToStrategySuccess.
+    /// @dev Deliberately callable while paused: claims remain paused, but confirmed settlement can finalize.
+    /// @dev Precondition: caller must have EPOCH_OPERATOR_ROLE
+    /// @dev Precondition: the previous epoch must be an executing net-deposit epoch
+    function completeEpochDeposit() external nonReentrant onlyRole(Roles.EPOCH_OPERATOR_ROLE) {
+        ParentVaultEpochLib.completeEpochDeposit(_parentVaultStorage());
     }
 
     /*//////////////////////////////////////////////////////////////

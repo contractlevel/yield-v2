@@ -159,8 +159,9 @@ abstract contract BaseCcipForkTest is BaseForkTest {
     }
 
     function _configureCloseEpochWorkflow(bytes32 workflowId) internal {
-        bytes4[] memory selectors = new bytes4[](1);
+        bytes4[] memory selectors = new bytes4[](2);
         selectors[0] = ParentVault.closeEpoch.selector;
+        selectors[1] = ParentVault.completeEpochDeposit.selector;
         _configureWorkflow(parent.workflowRouter, workflowId, CLOSE_EPOCH_WORKFLOW_NAME, i_owner, selectors);
     }
 
@@ -219,6 +220,17 @@ abstract contract BaseCcipForkTest is BaseForkTest {
             CLOSE_EPOCH_WORKFLOW_NAME,
             i_owner,
             abi.encodeWithSelector(ParentVault.closeEpoch.selector, tvl)
+        );
+    }
+
+    function _completeEpochDepositThroughWorkflow(bytes32 workflowId) internal {
+        _selectArbitrumFork();
+        _callWorkflowRouter(
+            parent.workflowRouter,
+            workflowId,
+            CLOSE_EPOCH_WORKFLOW_NAME,
+            i_owner,
+            abi.encodeWithSelector(ParentVault.completeEpochDeposit.selector)
         );
     }
 
@@ -354,6 +366,7 @@ abstract contract BaseCcipForkTest is BaseForkTest {
         _selectArbitrumFork();
         _routeUsdcMessageTo(baseFork);
 
+        _completeEpochDepositThroughWorkflow(workflowId);
         _changePrank(i_depositor);
         parent.vault.claimShares(1);
 

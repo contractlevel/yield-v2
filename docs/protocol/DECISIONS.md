@@ -41,7 +41,7 @@ This split is an implementation boundary, not a trust boundary: linked libraries
 
 While a vault is paused, it does not execute recovery, child epoch withdrawals, child rebalances, or inbound CCIP messages. These paths call strategy adapters, send CCIP messages, or process cross-chain state and must stop during incident containment.
 
-`completeRebalance` intentionally remains callable while paused because it performs only local finalization and does not call an adapter or CCIP router.
+`completeRebalance` and `completeEpochDeposit` intentionally remain callable while paused because they perform only local finalization and do not call an adapter or CCIP router. For the same reason, the CRE deposit-completion handler does not apply the global recovery guard: it acknowledges an already-successful remote deposit and cannot create recovery or start another external operation.
 
 This containment boundary can leave an epoch or rebalance in an intermediate cross-chain state. Operators must inspect the parent, child, recovery, and CCIP message states before resuming the affected operation. The break-glass procedure is documented in [OPERATIONS](../operator/OPERATIONS.md#paused-cross-chain-execution).
 
@@ -100,3 +100,13 @@ Secondary protocol rewards are outside this accounting model. For Compound V3, C
 The protocol does not currently decide whether claimed COMP is retained, sold, manually distributed, or routed into a future rewards distributor. Handling that on-chain would require additional reward-token accounting, distribution policy, and operational controls. The current design avoids that complexity and keeps user-facing yield calculations underlying-only.
 
 See [ACCESS_CONTROL_MATRIX - Protocol rewards claiming](../security/ACCESS_CONTROL_MATRIX.md#authority-matrix). If product requirements change to include secondary reward tokens in user yield, this design decision and related accounting invariants should be revisited.
+
+## DD-010 - Management Fee Accrual Is Gated On Rebalance Finalization
+
+`ParentVaultFeesLib._collectManagementFee` is invoked only from rebalance finalization (`_finalizeRebalance`). `closeEpoch` never collects management fee.
+
+This is deliberate: management fee is charged for the elapsed duration of a completed strategy allocation, not as a background per-epoch accrual, and elapsed time is capped at 365 days per collection regardless of how long the vault stayed on that strategy.
+
+If the vault remains on a single optimal strategy for longer than a year without rebalancing, elapsed time beyond the most recent 365 days is not collected on the eventual next rebalance. That time is forfeited, not deferred - the fee is intentionally capped at one year's worth per collection.
+
+See [INVARIANTS - FEE-004](../security/INVARIANTS.md#fee-accounting).

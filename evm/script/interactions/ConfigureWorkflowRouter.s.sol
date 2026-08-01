@@ -53,10 +53,11 @@ contract ConfigureWorkflowRouter is Script {
 
     function workflowSelectors(bool isParent) public pure returns (bytes4[] memory selectors) {
         if (isParent) {
-            selectors = new bytes4[](3);
+            selectors = new bytes4[](4);
             selectors[0] = IParentVault.closeEpoch.selector;
-            selectors[1] = IParentVault.initiateRebalance.selector;
-            selectors[2] = IParentVault.completeRebalance.selector;
+            selectors[1] = IParentVault.completeEpochDeposit.selector;
+            selectors[2] = IParentVault.initiateRebalance.selector;
+            selectors[3] = IParentVault.completeRebalance.selector;
         } else {
             selectors = new bytes4[](2);
             selectors[0] = IChildVault.executeEpochWithdraw.selector;

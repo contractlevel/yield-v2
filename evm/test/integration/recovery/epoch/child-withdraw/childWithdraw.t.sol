@@ -58,7 +58,9 @@ contract ChildWithdraw_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         Vm.Log[] memory recoveryLogs = vm.getRecordedLogs();
 
         _assertEmittedBy(recoveryLogs, keccak256("EpochWithdrawRecoveryCleared(uint256)"), address(child.vault));
-        _assertEmittedBy(recoveryLogs, keccak256("WithdrawFromStrategySuccess(uint256,uint256)"), address(child.vault));
+        _assertEmittedBy(
+            recoveryLogs, keccak256("EpochWithdrawFromStrategySuccess(uint256,uint256)"), address(child.vault)
+        );
         _assertEpochRecoveryCleared(child.vault.getEpochWithdrawRecovery());
         assertTrue(child.vault.getRecoveryMode() == Types.RecoveryMode.NONE);
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.CLAIMABLE));
