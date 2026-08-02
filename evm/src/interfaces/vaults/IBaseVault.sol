@@ -108,9 +108,18 @@ interface IBaseVault is IPauseable {
 
     /// @notice Emitted when a CCIP transfer is sent to a destination chain
     /// @param ccipMessageId The ID of the CCIP message
-    /// @param amount The amount of asset bridged
+    /// @param destinationChainSelector The CCIP selector of the destination chain
     /// @param ccipTxType The type of CCIP transaction
-    event CCIPBridged(bytes32 indexed ccipMessageId, uint256 indexed amount, Types.CcipTx indexed ccipTxType);
+    event CCIPBridged(
+        bytes32 indexed ccipMessageId, uint64 indexed destinationChainSelector, Types.CcipTx indexed ccipTxType
+    );
+    /// @notice Emitted when a CCIP transfer is received and handled
+    /// @param ccipMessageId The ID of the CCIP message
+    /// @param sourceChainSelector The CCIP selector of the source chain
+    /// @param ccipTxType The type of CCIP transaction
+    event CCIPReceived(
+        bytes32 indexed ccipMessageId, uint64 indexed sourceChainSelector, Types.CcipTx indexed ccipTxType
+    );
 
     /// @notice Emitted when the crosschain vaults are set by a CONFIG_OPERATOR
     /// @param chainSelector The CCIP selectors of the chain
@@ -209,6 +218,7 @@ interface IBaseVault is IPauseable {
     function getDefaultCcipGasLimit() external view returns (uint256 defaultCcipGasLimit);
     /// @notice Returns the active strategy protocol adapter
     /// @return activeProtocolAdapter The address of the active strategy protocol adapter
+    /// @dev Do not use the adapter directly as the vault's canonical TVL source; use getTVL()
     function getActiveProtocolAdapter() external view returns (address activeProtocolAdapter);
     /// @notice Gets the TVL of the vault
     /// @return tvl The TVL of the vault

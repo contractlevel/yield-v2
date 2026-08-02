@@ -31,7 +31,8 @@ ParentVault_ccipReceive
 │   ├── when the received USDC amount matches the epoch withdraw obligation
 │   │   ├── it should make the epoch claimable
 │   │   ├── it should update the withdraw claim amount and remaining withdraw claim amount
-│   │   └── it should emit EpochClaimable
+│   │   ├── it should emit EpochClaimable
+│   │   └── it should emit CCIPReceived
 │   └── when the received USDC amount is greater than the epoch withdraw obligation
 │       ├── it should make the epoch claimable
 │       ├── it should update the withdraw claim amount and remaining withdraw claim amount

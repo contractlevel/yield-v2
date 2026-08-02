@@ -224,6 +224,20 @@ contract ChildVault_CcipReceiveUnitTest is BaseUnitTest {
         assertEq(uint256(log.topics[2]), BRIDGED_AMOUNT);
     }
 
+    function test_ChildVault_ccipReceive_Deposit_Success_EmitsCCIPReceived() public {
+        _setChildActiveAdapter(address(s_mockProtocolAdapter));
+        Client.Any2EVMMessage memory message = _depositMessage(EPOCH_NONCE);
+        message.messageId = keccak256("ccip-message");
+
+        vm.recordLogs();
+        s_childVault.ccipReceive(message);
+
+        Vm.Log memory log = _assertEmittedBy(keccak256("CCIPReceived(bytes32,uint64,uint8)"), address(s_childVault));
+        assertEq(log.topics[1], message.messageId);
+        assertEq(uint256(log.topics[2]), PARENT_CHAIN_SELECTOR);
+        assertEq(uint256(log.topics[3]), uint256(Types.CcipTx.EPOCH_NET_DEPOSIT));
+    }
+
     function test_ChildVault_ccipReceive_Deposit_WhenActiveAdapterDepositReverts_EmitsEpochDepositToStrategyFailure()
         public
     {

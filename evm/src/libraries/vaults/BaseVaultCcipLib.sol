@@ -22,9 +22,11 @@ library BaseVaultCcipLib {
     /// @dev Solidity requires locally declared events for emits; these must match IBaseVault and emit from the vault via DELEGATECALL.
     /// @notice Emitted when a CCIP transfer is sent to a destination chain
     /// @param ccipMessageId The ID of the CCIP message
-    /// @param amount The amount of asset bridged
+    /// @param destinationChainSelector The CCIP selector of the destination chain
     /// @param ccipTxType The type of CCIP transaction
-    event CCIPBridged(bytes32 indexed ccipMessageId, uint256 indexed amount, Types.CcipTx indexed ccipTxType);
+    event CCIPBridged(
+        bytes32 indexed ccipMessageId, uint64 indexed destinationChainSelector, Types.CcipTx indexed ccipTxType
+    );
 
     /*//////////////////////////////////////////////////////////////
                                   CCIP
@@ -163,7 +165,7 @@ library BaseVaultCcipLib {
         IERC20(link).forceApprove(ccipRouter, fee);
         IERC20(asset).forceApprove(ccipRouter, bridgeAmount);
         bytes32 ccipMessageId = IRouterClient(ccipRouter).ccipSend(destinationChainSelector, message);
-        emit CCIPBridged(ccipMessageId, bridgeAmount, ccipTxType);
+        emit CCIPBridged(ccipMessageId, destinationChainSelector, ccipTxType);
     }
 
     /// @notice Validates that a CCIP message delivered the vault's configured asset token and returns the delivered amount.

@@ -1,37 +1,40 @@
 ParentVault_initiateRebalance
-├── when caller does not have REBALANCE_OPERATOR_ROLE
+├── when the caller does not have REBALANCE_OPERATOR_ROLE
 │   └── it should revert
 ├── when the vault is paused
 │   └── it should revert with EnforcedPause
-├── when rebalance is already in progress
+├── when a rebalance is already in progress
 │   └── it should revert with ParentVault__RebalanceInProgress
-├── when MIN_REBALANCE_PERIOD has not elapsed since the last rebalance completed
+├── when MIN_REBALANCE_PERIOD has not elapsed
 │   └── it should revert with ParentVault__RebalanceTooSoon
-├── when recovery exists
+├── when a recovery exists
 │   └── it should revert with BaseVault__RecoveryAlreadyPending
-├── when new strategy is the active strategy
+├── when the new strategy is the active strategy
 │   └── it should revert with ParentVault__SameStrategy
-├── when new strategy chain selector is not supported
+├── when the new strategy chain selector is not supported
 │   └── it should revert with ParentVault__InvalidChainSelector
-├── when new strategy protocol ID is not supported
+├── when the new strategy protocol ID is not supported
 │   └── it should revert with ParentVault__InvalidProtocolId
-├── when no epoch has completed
+├── when no epochs have completed
 │   └── it should revert with ParentVault__NoCompletedEpoch
-├── when prior epoch is executing
+├── when the prior epoch is executing
 │   └── it should revert with ParentVault__EpochExecuting
-├── when parent rebalances local to local without a crosschain vault self-registration
+├── when the parent rebalances local to local without a crosschain vault self-registration
 │   ├── it should withdraw from the old adapter
 │   ├── it should deposit into the new adapter
 │   ├── it should emit ActiveProtocolAdapterSet
 │   └── it should finalize the rebalance
-├── when parent rebalances local to child
+├── when the parent rebalances local to child
 │   ├── it should withdraw from the old adapter
 │   ├── it should bridge to the child
 │   ├── it should emit ActiveProtocolAdapterCleared
-│   ├── when ccipSend reverts
+│   ├── when the CCIP send reverts
 │   │   └── it should revert
 │   └── it should leave the rebalance pending
-└── when local adapter fails
-    ├── it should revert when withdraw reverts
-    ├── it should continue when withdraw returns zero
-    └── it should revert when local deposit reverts
+└── when a local adapter operation does not succeed
+    ├── when the withdraw reverts
+    │   └── it should revert
+    ├── when withdraw returns 0
+    │   └── it should revert
+    └── when the deposit reverts
+        └── it should revert

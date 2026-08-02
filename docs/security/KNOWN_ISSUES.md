@@ -728,36 +728,37 @@ Partial recovery would require a substantially larger state machine: cumulative 
 
 ---
 
-## KI-015 — Operator-controlled cross-chain routes remain mutable during in-flight operations
+## KI-015 — Operator-controlled cross-chain configuration remains mutable during in-flight operations
 
 **Status:** Accepted — trusted configuration authority with operational safeguards.
 
 **Last reviewed:** 2026-08-01
 
-**Component:** `BaseVault.setCrosschainVaults`, ParentVault and ChildVault CCIP send/receive paths, cross-chain epoch and rebalance execution, and ChildVault CCIP-send recovery.
+**Component:** `BaseVault.setCrosschainVaults`, `AdapterRegistry.setAdapter`, cross-chain epoch and rebalance execution, and ChildVault recovery.
 
 ### Summary
 
-`CONFIG_OPERATOR_ROLE` can add, replace, or remove the trusted vault address for any configured chain selector. The contracts do not prevent this configuration from changing while an epoch, rebalance, CCIP message, or stored recovery depends on the existing route.
+`CONFIG_OPERATOR_ROLE` can change trusted cross-chain vault routes and protocol adapter mappings. The contracts do not prevent this configuration from changing while an epoch, rebalance, CCIP message, or stored recovery depends on it.
 
 Changing a required route mid-flight can interrupt the affected operation:
 
 - An inbound message from the previously configured vault can fail source-vault validation.
 - A new send or stored `CCIP_SEND` recovery can fail if its destination route was removed.
 - A retry can use a replacement destination address rather than the address configured when recovery was stored.
+- Destination execution can fail or use a replacement adapter if its protocol mapping changes before activation.
 - A ChildVault can remain in its vault-wide recovery mode, blocking normal epoch, rebalance, and inbound CCIP processing until the route is corrected and recovery succeeds.
 
 Recovery state is not lost when a retry reverts: EVM atomicity restores the stored recovery data and recovery mode. A trusted operator can normally restore the required mapping and retry. The primary risk is cross-chain liveness and operational misrouting, not an automatic loss of accounting state or funds.
 
 ### Why this is accepted
 
-Cross-chain route configuration must remain mutable so operators can deploy new routes, rotate vault addresses, and respond to a broken or compromised destination. A universal on-chain lock during any potentially related operation would require the contracts to identify every relevant in-flight CCIP message and could prevent an emergency route correction when it is most needed.
+Cross-chain configuration must remain mutable so operators can deploy or rotate routes and adapters and respond to broken or compromised components. A universal on-chain lock could prevent an emergency correction when it is most needed.
 
 The system therefore treats route continuity as a trusted operator responsibility. This assumption is also recorded in [ENV-006](./INVARIANTS.md#external-assumptions).
 
 ### Operational requirements
 
-- Before changing a route, reconcile active and previous epochs, rebalance state, every vault's recovery mode, and CCIP messages in flight for the affected selector.
+- Before changing a route or adapter mapping, reconcile active and previous epochs, rebalance state, every vault's recovery mode, and relevant CCIP messages.
 - Preserve the old route while any accepted message, settlement, or recovery still depends on it unless an incident procedure explicitly requires replacement.
 - Stop the relevant CRE automation before an emergency route change so it cannot submit new work against a partially updated deployment.
 - Apply coordinated configuration changes across the affected chains and verify both send-side destination and receive-side source authentication.

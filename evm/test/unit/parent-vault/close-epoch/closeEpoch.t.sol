@@ -333,7 +333,7 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         assertEq(s_parentVault.getEpoch(1).totalWithdrawClaimAmount, DEPOSIT_AMOUNT);
         assertEq(s_parentVault.getEpoch(1).remainingWithdrawClaimAmount, DEPOSIT_AMOUNT);
 
-        bytes32 ccipBridgedSig = keccak256("CCIPBridged(bytes32,uint256,uint8)");
+        bytes32 ccipBridgedSig = keccak256("CCIPBridged(bytes32,uint64,uint8)");
         Vm.Log[] memory logs = vm.getRecordedLogs();
         for (uint256 i; i < logs.length; ++i) {
             assertFalse(logs[i].topics[0] == ccipBridgedSig && logs[i].emitter == address(s_parentVault));
@@ -536,8 +536,8 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         vm.recordLogs();
         _closeEpoch(TVL);
 
-        Vm.Log memory log = _assertEmittedBy(keccak256("CCIPBridged(bytes32,uint256,uint8)"), address(s_parentVault));
-        assertEq(uint256(log.topics[2]), DEPOSIT_AMOUNT);
+        Vm.Log memory log = _assertEmittedBy(keccak256("CCIPBridged(bytes32,uint64,uint8)"), address(s_parentVault));
+        assertEq(uint256(log.topics[2]), CHILD_CHAIN_SELECTOR);
         assertEq(uint256(log.topics[3]), uint256(Types.CcipTx.EPOCH_NET_DEPOSIT));
     }
 

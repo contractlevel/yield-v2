@@ -221,6 +221,8 @@ abstract contract BaseVault is
     /// @return success Whether the deposit into the new strategy succeeded or not
     /// @dev Called from both ParentVault and ChildVault's `_ccipReceive` when the previous strategy chain
     ///      sends a CCIP rebalance to this new strategy chain.
+    /// @dev The active adapter is set before deposit. If deposit fails, it points to the new
+    ///      adapter while the rebalance remains incomplete and deposit recovery is pending.
     function _handleCCIPRebalance(uint256 rebalanceNonce, bytes32 protocolId, uint256 amount)
         internal
         returns (bool success)
@@ -522,6 +524,7 @@ abstract contract BaseVault is
 
     /// @notice Returns the active strategy protocol adapter
     /// @return activeProtocolAdapter The address of the active strategy protocol adapter
+    /// @dev Do not use the adapter directly as the vault's canonical TVL source; use getTVL()
     function getActiveProtocolAdapter() external view returns (address activeProtocolAdapter) {
         activeProtocolAdapter = _baseVaultStorage().s_activeProtocolAdapter;
     }

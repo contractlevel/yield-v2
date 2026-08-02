@@ -77,9 +77,6 @@ abstract contract BeforeAfter is EpochGhosts {
         _after.totalShares = parent.vault.getTotalShares();
         _after.treasuryShareBalance = parent.share.balanceOf(parent.vault.getTreasury());
         _after.performanceFeeHighWaterMark = parent.vault.getPerformanceFeeHighWaterMark();
-        if (_after.performanceFeeHighWaterMark > ghost_maxPerformanceFeeHighWaterMark) {
-            ghost_maxPerformanceFeeHighWaterMark = _after.performanceFeeHighWaterMark;
-        }
         _after.tvl = _activeStrategyTvl();
         _after.vaultBalance = IERC20(parent.vault.getAsset()).balanceOf(address(_activeVault()));
         _after.currentEpochTotalDepositAmount = parent.vault.getEpoch(epochNonce).totalDepositAmount;
@@ -99,15 +96,21 @@ abstract contract BeforeAfter is EpochGhosts {
         _after.actorTargetEpochWithdrawShareBurnAmount =
             parent.vault.getWithdrawShareBurnAmount(s_currentActor, s_targetEpochNonce);
 
-        ghost_maxParentEpochNonce = _max(ghost_maxParentEpochNonce, _after.epochNonce);
-        ghost_maxParentRebalanceNonce = _max(ghost_maxParentRebalanceNonce, _after.rebalanceNonce);
-        ghost_maxChildEpochNonce = _max(ghost_maxChildEpochNonce, _after.childEpochNonce);
-        ghost_maxChildRebalanceNonce = _max(ghost_maxChildRebalanceNonce, _after.childRebalanceNonce);
-        ghost_maxRemoteChildEpochNonce = _max(ghost_maxRemoteChildEpochNonce, _after.remoteChildEpochNonce);
-        ghost_maxRemoteChildRebalanceNonce = _max(ghost_maxRemoteChildRebalanceNonce, _after.remoteChildRebalanceNonce);
-    }
-
-    function _max(uint256 a, uint256 b) private pure returns (uint256) {
-        return a > b ? a : b;
+        require(
+            _before.performanceFeeHighWaterMark <= _after.performanceFeeHighWaterMark,
+            "FEE-003: performance fee high-water mark decreased"
+        );
+        require(_before.epochNonce <= _after.epochNonce, "NONCE-009: parent epoch nonce decreased");
+        require(_before.rebalanceNonce <= _after.rebalanceNonce, "NONCE-009: parent rebalance nonce decreased");
+        require(_before.childEpochNonce <= _after.childEpochNonce, "NONCE-002: child epoch nonce decreased");
+        require(_before.childRebalanceNonce <= _after.childRebalanceNonce, "NONCE-002: child rebalance nonce decreased");
+        require(
+            _before.remoteChildEpochNonce <= _after.remoteChildEpochNonce,
+            "NONCE-002: remote child epoch nonce decreased"
+        );
+        require(
+            _before.remoteChildRebalanceNonce <= _after.remoteChildRebalanceNonce,
+            "NONCE-002: remote child rebalance nonce decreased"
+        );
     }
 }

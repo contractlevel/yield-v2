@@ -131,8 +131,8 @@ contract ChildVault_ExecuteEpochWithdrawUnitTest is BaseUnitTest {
         vm.recordLogs();
         s_childVault.executeEpochWithdraw(EPOCH_NONCE, WITHDRAW_AMOUNT);
 
-        Vm.Log memory log = _assertEmittedBy(keccak256("CCIPBridged(bytes32,uint256,uint8)"), address(s_childVault));
-        assertEq(uint256(log.topics[2]), WITHDRAW_AMOUNT);
+        Vm.Log memory log = _assertEmittedBy(keccak256("CCIPBridged(bytes32,uint64,uint8)"), address(s_childVault));
+        assertEq(uint256(log.topics[2]), PARENT_CHAIN_SELECTOR);
         assertEq(uint256(log.topics[3]), uint256(Types.CcipTx.EPOCH_NET_WITHDRAW));
     }
 

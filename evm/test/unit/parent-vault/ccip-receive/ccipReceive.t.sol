@@ -277,6 +277,21 @@ contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
         assertEq(uint256(log.topics[1]), EPOCH_NONCE);
     }
 
+    function test_ParentVault_ccipReceive_Withdraw_Success_EmitsCCIPReceived() public {
+        _setParentEpochStatus(EPOCH_NONCE, Types.EpochStatus.EXECUTING);
+        _setParentEpochWithdrawAccounting(EPOCH_NONCE);
+        Client.Any2EVMMessage memory message = _withdrawMessage(EPOCH_NONCE, EXPECTED_WITHDRAW_USDC);
+        message.messageId = keccak256("ccip-message");
+
+        vm.recordLogs();
+        s_parentVault.ccipReceive(message);
+
+        Vm.Log memory log = _assertEmittedBy(keccak256("CCIPReceived(bytes32,uint64,uint8)"), address(s_parentVault));
+        assertEq(log.topics[1], message.messageId);
+        assertEq(uint256(log.topics[2]), CHILD_CHAIN_SELECTOR);
+        assertEq(uint256(log.topics[3]), uint256(Types.CcipTx.EPOCH_NET_WITHDRAW));
+    }
+
     /*//////////////////////////////////////////////////////////////
                              REBALANCE PATH
     //////////////////////////////////////////////////////////////*/

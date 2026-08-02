@@ -101,7 +101,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
             revert BaseVault__InvalidTxType(ccipTxType);
         }
 
-        // @review CCIPReceived event? to mirror CCIPBridged?
+        emit CCIPReceived(message.messageId, message.sourceChainSelector, ccipTxType);
     }
 
     /// @notice Internal function to only allow messages from allowed crosschain vaults

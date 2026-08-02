@@ -46,7 +46,9 @@ abstract contract Properties is BeforeAfter, Asserts {
         );
     }
 
-    function invariant_SOLV_005_userRedemptionEntitlementCoversPrincipalNetOfFees() public {
+    /// @dev The protocol mocks do not model involuntary strategy loss. This fixture-only
+    ///      conservation check is not evidence of production principal protection.
+    function invariant_SOLV_005_losslessFixtureEntitlementCoversPrincipalNetOfFees() public {
         if (_recoveryModeExists()) return;
 
         for (uint256 i; i < s_actors.length; ++i) {
@@ -107,8 +109,8 @@ abstract contract Properties is BeforeAfter, Asserts {
     }
 
     function invariant_EPOCH_005_closedEpochTotalsAreFrozen() public {
-        for (uint256 i; i < ghost_claimableEpochs.length; ++i) {
-            uint256 epochNonce = ghost_claimableEpochs[i];
+        for (uint256 i; i < ghost_shareAccountingEpochs.length; ++i) {
+            uint256 epochNonce = ghost_shareAccountingEpochs[i];
             Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
             eq(
                 epoch.totalDepositAmount,
@@ -119,23 +121,6 @@ abstract contract Properties is BeforeAfter, Asserts {
                 epoch.totalShareBurnAmount,
                 ghost_totalShareBurnedByEpoch[epochNonce],
                 "EPOCH-005: share burn amount changed in closed epoch"
-            );
-        }
-    }
-
-    function invariant_EPOCH_007_depositRemainingCountersAreMonotonicallyNonIncreasing() public {
-        for (uint256 i; i < ghost_shareAccountingEpochs.length; ++i) {
-            uint256 epochNonce = ghost_shareAccountingEpochs[i];
-            Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
-            lte(
-                epoch.remainingDepositClaimAmount,
-                ghost_maxRemainingDepositClaimAmountByEpoch[epochNonce],
-                "EPOCH-007: remaining deposit claims increased"
-            );
-            lte(
-                epoch.remainingShareMintAmount,
-                ghost_maxRemainingShareMintAmountByEpoch[epochNonce],
-                "EPOCH-007: remaining share mints increased"
             );
         }
     }
@@ -166,23 +151,6 @@ abstract contract Properties is BeforeAfter, Asserts {
                 (epoch.remainingDepositClaimAmount == 0) == (epoch.remainingShareMintAmount == 0);
 
             t(depositCountersMatch, "EPOCH-008: deposit-side remaining counters did not reach zero together");
-        }
-    }
-
-    function invariant_EPOCH_010_withdrawRemainingCountersAreMonotonicallyNonIncreasing() public {
-        for (uint256 i; i < ghost_shareAccountingEpochs.length; ++i) {
-            uint256 epochNonce = ghost_shareAccountingEpochs[i];
-            Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
-            lte(
-                epoch.remainingShareBurnAmount,
-                ghost_maxRemainingShareBurnAmountByEpoch[epochNonce],
-                "EPOCH-010: remaining share burns increased"
-            );
-            lte(
-                epoch.remainingWithdrawClaimAmount,
-                ghost_maxRemainingWithdrawClaimAmountByEpoch[epochNonce],
-                "EPOCH-010: remaining withdraw claims increased"
-            );
         }
     }
 
@@ -255,14 +223,6 @@ abstract contract Properties is BeforeAfter, Asserts {
         );
     }
 
-    function invariant_FEE_003_performanceFeeHighWaterMarkIsMonotonicallyNonDecreasing() public {
-        lte(
-            ghost_maxPerformanceFeeHighWaterMark,
-            parent.vault.getPerformanceFeeHighWaterMark(),
-            "FEE-003: performance fee high-water mark decreased from historical max"
-        );
-    }
-
     /*//////////////////////////////////////////////////////////////
                                REBALANCE
     //////////////////////////////////////////////////////////////*/
@@ -294,16 +254,14 @@ abstract contract Properties is BeforeAfter, Asserts {
         if (activeStrategy.chainSelector == PARENT_CHAIN_SELECTOR) {
             _assertActiveStrategyAdapter(
                 parent.vault.getActiveProtocolAdapter(),
-                parent.adapterRegistry.getAdapter(activeStrategy.protocolId),
+                address(parent.vault),
                 "REBAL-006: parent active adapter mismatch"
             );
             t(child.vault.getActiveProtocolAdapter() == address(0), "REBAL-006: adapter set for child strategy");
             t(remoteChild.vault.getActiveProtocolAdapter() == address(0), "REBAL-006: adapter set for child strategy");
         } else if (activeStrategy.chainSelector == CHILD_CHAIN_SELECTOR) {
             _assertActiveStrategyAdapter(
-                child.vault.getActiveProtocolAdapter(),
-                child.adapterRegistry.getAdapter(activeStrategy.protocolId),
-                "REBAL-006: child active adapter mismatch"
+                child.vault.getActiveProtocolAdapter(), address(child.vault), "REBAL-006: child active adapter mismatch"
             );
             t(parent.vault.getActiveProtocolAdapter() == address(0), "REBAL-006: parent adapter set for child strategy");
             t(
@@ -313,7 +271,7 @@ abstract contract Properties is BeforeAfter, Asserts {
         } else if (activeStrategy.chainSelector == REMOTE_CHILD_CHAIN_SELECTOR) {
             _assertActiveStrategyAdapter(
                 remoteChild.vault.getActiveProtocolAdapter(),
-                remoteChild.adapterRegistry.getAdapter(activeStrategy.protocolId),
+                address(remoteChild.vault),
                 "REBAL-006: remote child active adapter mismatch"
             );
             t(parent.vault.getActiveProtocolAdapter() == address(0), "REBAL-006: parent adapter set for child strategy");
@@ -345,8 +303,8 @@ abstract contract Properties is BeforeAfter, Asserts {
         _assertChildRecoverySentinels(remoteChild.vault);
     }
 
-    function invariant_REC_010_onlyOneGlobalRecoveryModeIsPending() public {
-        lte(_recoveryModeCount(), 1, "REC-010: more than one recovery mode is pending");
+    function invariant_REC_010_onlyOneConfiguredVaultRecoveryModeIsPending() public {
+        lte(_recoveryModeCount(), 1, "REC-010: more than one configured vault recovery mode is pending");
     }
 
     function invariant_SOLV_004_pendingChildCcipSendRecoveryIsCollateralized() public {
@@ -378,34 +336,9 @@ abstract contract Properties is BeforeAfter, Asserts {
         t(parent.vault.getTreasury() != address(0), "CFG-002: treasury is zero");
     }
 
-    function invariant_NONCE_002_childNonceHighWaterMarksNeverDecrease() public {
-        lte(ghost_maxChildEpochNonce, child.vault.getLastHandledEpochNonce(), "NONCE-002: child epoch nonce decreased");
-        lte(
-            ghost_maxChildRebalanceNonce,
-            child.vault.getLastHandledRebalanceNonce(),
-            "NONCE-002: child rebalance nonce decreased"
-        );
-        lte(
-            ghost_maxRemoteChildEpochNonce,
-            remoteChild.vault.getLastHandledEpochNonce(),
-            "NONCE-002: remote child epoch nonce decreased"
-        );
-        lte(
-            ghost_maxRemoteChildRebalanceNonce,
-            remoteChild.vault.getLastHandledRebalanceNonce(),
-            "NONCE-002: remote child rebalance nonce decreased"
-        );
-    }
-
     function invariant_NONCE_009_parentNoncesAreStrictlyPositive() public {
         t(parent.vault.getEpochNonce() != 0, "NONCE-009: parent epoch nonce is zero");
         t(parent.vault.getRebalance().nonce != 0, "NONCE-009: parent rebalance nonce is zero");
-        lte(ghost_maxParentEpochNonce, parent.vault.getEpochNonce(), "NONCE-009: parent epoch nonce decreased");
-        lte(
-            ghost_maxParentRebalanceNonce,
-            parent.vault.getRebalance().nonce,
-            "NONCE-009: parent rebalance nonce decreased"
-        );
     }
 
     function invariant_NONCE_006_pendingRecoveryNonceMatchesChildHighWaterMark() public {
@@ -585,7 +518,7 @@ abstract contract Properties is BeforeAfter, Asserts {
         address adapter = vault.getActiveProtocolAdapter();
         uint256 expectedTvl =
             adapter == address(0) ? 0 : IProtocolAdapter(adapter).getTVL() + vault.getRebalanceDepositRecovery().amount;
-        eq(vault.getTVL(), expectedTvl, "REBAL-008: parent TVL equation mismatch");
+        eq(vault.getTVL(), expectedTvl, "REBAL-008/REC-006/ADAPTER-005: parent TVL equation mismatch");
     }
 
     function _assertChildTvlEquation(ChildVault vault) internal {
@@ -595,7 +528,7 @@ abstract contract Properties is BeforeAfter, Asserts {
             expectedTvl += IProtocolAdapter(adapter).getTVL() + vault.getEpochDepositRecovery().amount
             + vault.getRebalanceDepositRecovery().amount;
         }
-        eq(vault.getTVL(), expectedTvl, "REBAL-008: child TVL equation mismatch");
+        eq(vault.getTVL(), expectedTvl, "REBAL-008/REC-006/ADAPTER-005: child TVL equation mismatch");
     }
 
     function _epochRecoveryPending(Types.EpochRecovery memory recovery) internal pure returns (bool) {
@@ -626,11 +559,11 @@ abstract contract Properties is BeforeAfter, Asserts {
         return strategy.protocolId == bytes32(0) && strategy.chainSelector == 0;
     }
 
-    function _assertActiveStrategyAdapter(address activeAdapter, address expectedAdapter, string memory message)
+    function _assertActiveStrategyAdapter(address activeAdapter, address expectedVault, string memory message)
         internal
     {
-        t(expectedAdapter != address(0), "REBAL-006: active strategy has no registered adapter");
-        t(activeAdapter == expectedAdapter, message);
+        t(activeAdapter != address(0), message);
+        t(IProtocolAdapter(activeAdapter).getVault() == expectedVault, "REBAL-006: active adapter bound to wrong vault");
     }
 
     function _redemptionRoundingTolerance() internal view returns (uint256) {

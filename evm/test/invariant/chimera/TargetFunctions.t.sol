@@ -13,8 +13,13 @@ import {MockComet} from "../../mocks/MockComet.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {FixedPointMathLib} from "@solady/utils/FixedPointMathLib.sol";
 import {IAdapterRegistry} from "../../../src/interfaces/modules/IAdapterRegistry.sol";
+import {IProtocolAdapter} from "../../../src/interfaces/adapters/IProtocolAdapter.sol";
+import {IBaseVault} from "../../../src/interfaces/vaults/IBaseVault.sol";
+import {IChildVault} from "../../../src/interfaces/vaults/IChildVault.sol";
 import {Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
 import {IAny2EVMMessageReceiver} from "@chainlink/contracts-ccip/contracts/applications/CCIPReceiver.sol";
+import {IReceiver} from "@chainlink/contracts/src/v0.8/shared/interfaces/IReceiver.sol";
+import {WorkflowRouter} from "../../../src/modules/WorkflowRouter.sol";
 
 abstract contract TargetFunctions is BaseTargetFunctions, Properties {
     uint256 internal constant BPS_DENOMINATOR = 10_000;
@@ -26,6 +31,8 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
     function handler_deposit(uint256 actorSeed, uint256 amountSeed) public {
         address actor = _actor(actorSeed);
         s_currentActor = actor;
+
+        _assertSubminimumDepositRejected(actor);
 
         uint256 amount = _clampDepositAmount(amountSeed);
         uint256 epochNonce = parent.vault.getEpochNonce();
@@ -52,6 +59,22 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         );
     }
 
+    function _assertSubminimumDepositRejected(address actor) internal {
+        uint256 epochNonce = parent.vault.getEpochNonce();
+        uint256 epochTotal = parent.vault.getEpoch(epochNonce).totalDepositAmount;
+        uint256 actorDeposit = parent.vault.getDepositAmount(actor, epochNonce);
+        uint256 actorBalance = IERC20(parent.vault.getAsset()).balanceOf(actor);
+
+        _changePrank(actor);
+        (bool success,) =
+            address(parent.vault).call(abi.encodeWithSelector(ParentVault.deposit.selector, MIN_DEPOSIT_AMOUNT - 1));
+
+        t(!success, "EPOCH-015: subminimum deposit succeeded");
+        eq(parent.vault.getEpoch(epochNonce).totalDepositAmount, epochTotal, "EPOCH-015: failed deposit changed total");
+        eq(parent.vault.getDepositAmount(actor, epochNonce), actorDeposit, "EPOCH-015: failed deposit changed intent");
+        eq(IERC20(parent.vault.getAsset()).balanceOf(actor), actorBalance, "EPOCH-015: failed deposit changed balance");
+    }
+
     function handler_cancelDeposit(uint256 actorSeed, uint256 amountSeed) public {
         address actor = _actor(actorSeed);
         uint256 epochNonce = parent.vault.getEpochNonce();
@@ -62,6 +85,16 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         s_currentActor = actor;
         uint256 amount = parent.vault.getDepositAmount(actor, epochNonce);
+
+        _changePrank(i_configOperator);
+        (bool configSuccess,) =
+            address(parent.vault).call(abi.encodeWithSelector(ParentVault.forceCancelDeposit.selector, actor));
+        t(!configSuccess, "AC-006: config operator force-cancelled a deposit");
+        eq(
+            parent.vault.getDepositAmount(actor, epochNonce),
+            amount,
+            "AC-006: unauthorized force cancel changed deposit"
+        );
 
         __before();
 
@@ -131,13 +164,38 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             _resolvePendingRecovery();
         }
 
+        _assertWorkflowRouterGuards();
+
         uint256 epochNonce = parent.vault.getEpochNonce();
 
         if (
             parent.vault.getEpoch(epochNonce).totalDepositAmount == 0
                 && parent.vault.getEpoch(epochNonce).totalShareBurnAmount == 0
         ) {
+            _warpPastEpoch(epochNonce);
+            _assertCloseRejectedAndUnchanged(0, "EPOCH-016: empty epoch closed");
             handler_deposit(tvlSeed, MIN_DEPOSIT_AMOUNT);
+        }
+
+        vm.warp(parent.vault.getEpoch(epochNonce).openedAtTimestamp);
+        _assertCloseRejectedAndUnchanged(_activeStrategyTvl(), "EPOCH-016: short epoch closed");
+
+        uint256 authoritativeShares = parent.vault.getTotalShares();
+        if (authoritativeShares != 0) {
+            _warpPastEpoch(epochNonce);
+            _assertCloseRejectedAndUnchanged(0, "EPOCH-017: zero TVL accepted with outstanding shares");
+
+            if (authoritativeShares > SHARE_PRECISION) {
+                _assertCloseRejectedAndUnchanged(1, "EPOCH-017: zero price-per-share settlement succeeded");
+            }
+
+            uint256 highTvl = type(uint128).max;
+            uint256 settlementPrice = _closeEpochSettlementPricePerShare(highTvl);
+            uint256 deposits = parent.vault.getEpoch(epochNonce).totalDepositAmount;
+            uint256 newShares = deposits * SHARE_PRECISION / settlementPrice;
+            if (deposits != 0 && newShares * MIN_DEPOSIT_AMOUNT < deposits) {
+                _assertCloseRejectedAndUnchanged(highTvl, "EPOCH-018: zero-share deposit allocation succeeded");
+            }
         }
 
         uint256 tvl = _activeStrategyTvl();
@@ -183,6 +241,14 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _assertPerformanceFeeConditions(tvl, grossPricePerShare);
         _assertPerformanceFeeHighWaterMarkNotDecreased();
 
+        if (_before.totalShares == 0) {
+            eq(
+                parent.vault.getEpoch(epochNonce).pricePerShare,
+                ASSET_PRECISION,
+                "EPOCH-017: bootstrap price is not asset precision"
+            );
+        }
+
         eq(_after.epochNonce, epochNonce + 1, "EPOCH-004/NONCE-010: closeEpoch did not increment epoch nonce");
         t(
             parent.vault.getEpoch(epochNonce).status == Types.EpochStatus.CLAIMABLE || _recoveryModeExists(),
@@ -197,6 +263,83 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             _before.currentEpochTotalDepositAmount,
             "closeEpoch did not initialize remaining deposit claims"
         );
+    }
+
+    function _assertCloseRejectedAndUnchanged(uint256 tvl, string memory message) internal {
+        bytes32 stateHash = _parentLifecycleHash();
+        _changePrank(address(parent.workflowRouter));
+        (bool success,) = address(parent.vault).call(abi.encodeWithSelector(ParentVault.closeEpoch.selector, tvl));
+
+        t(!success, message);
+        t(_parentLifecycleHash() == stateHash, "EPOCH-016/EPOCH-017/EPOCH-018: failed close changed state");
+    }
+
+    function _assertWorkflowRouterGuards() internal {
+        WorkflowRouter router = parent.workflowRouter;
+        bytes memory metadata = _buildMetadata(CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner);
+        bytes memory report = abi.encodeWithSelector(ParentVault.closeEpoch.selector, 0);
+        bytes32 stateHash = _parentLifecycleHash();
+
+        _changePrank(i_nonOwner);
+        (bool success,) = address(router).call(abi.encodeWithSelector(IReceiver.onReport.selector, metadata, report));
+        t(!success, "ROUTER-001: unauthorized report succeeded");
+
+        _changePrank(networkConfig.cre.keystoneForwarder);
+        (success,) = address(router).call(abi.encodeWithSelector(IReceiver.onReport.selector, new bytes(63), report));
+        t(!success, "ROUTER-010: invalid metadata length succeeded");
+
+        bytes memory zeroMetadata = _buildMetadata(bytes32(0), CLOSE_EPOCH_WORKFLOW_NAME, i_owner);
+        (success,) = address(router).call(abi.encodeWithSelector(IReceiver.onReport.selector, zeroMetadata, report));
+        t(!success, "ROUTER-003: zero metadata succeeded");
+
+        bytes memory mismatchMetadata = _buildMetadata(CLOSE_EPOCH_WORKFLOW_ID, bytes10("mismatch"), i_owner);
+        (success,) = address(router).call(abi.encodeWithSelector(IReceiver.onReport.selector, mismatchMetadata, report));
+        t(!success, "ROUTER-003: mismatched metadata succeeded");
+
+        (success,) = address(router).call(abi.encodeWithSelector(IReceiver.onReport.selector, metadata, bytes("abc")));
+        t(!success, "ROUTER-009: short report succeeded");
+
+        bytes memory unallowlistedReport = abi.encodeWithSelector(ParentVault.deposit.selector, MIN_DEPOSIT_AMOUNT);
+        (success,) =
+            address(router).call(abi.encodeWithSelector(IReceiver.onReport.selector, metadata, unallowlistedReport));
+        t(!success, "ROUTER-004: unallowlisted selector succeeded");
+
+        bytes memory malformedAllowedReport = abi.encodePacked(ParentVault.closeEpoch.selector);
+        (success,) =
+            address(router).call(abi.encodeWithSelector(IReceiver.onReport.selector, metadata, malformedAllowedReport));
+        t(!success, "ROUTER-006: downstream revert did not revert report");
+        t(_parentLifecycleHash() == stateHash, "ROUTER-006: rejected report changed vault state");
+
+        _changePrank(i_nonOwner);
+        (success,) = address(parent.vault).call(abi.encodeWithSelector(ParentVault.closeEpoch.selector, 0));
+        t(!success, "AC-003: unauthorized epoch close succeeded");
+        t(_parentLifecycleHash() == stateHash, "AC-003: unauthorized epoch close changed state");
+    }
+
+    function _assertUnauthorizedRebalanceRejected(Types.Strategy memory target) internal {
+        bytes32 stateHash = _parentLifecycleHash();
+        _changePrank(i_nonOwner);
+        (bool success,) =
+            address(parent.vault).call(abi.encodeWithSelector(ParentVault.initiateRebalance.selector, target));
+        t(!success, "AC-003: unauthorized rebalance succeeded");
+        t(_parentLifecycleHash() == stateHash, "AC-003: unauthorized rebalance changed state");
+    }
+
+    function _assertMissingTargetRouteRejected(Types.Strategy memory target) internal {
+        if (target.chainSelector == PARENT_CHAIN_SELECTOR) return;
+
+        address destination = parent.vault.getCrosschainVault(target.chainSelector);
+        _setCrosschainVault(parent.vault, target.chainSelector, address(0));
+        _markParentRebalanceCooldownElapsed();
+        bytes32 stateHash = _parentLifecycleHash();
+
+        _changePrank(address(parent.workflowRouter));
+        (bool success,) =
+            address(parent.vault).call(abi.encodeWithSelector(ParentVault.initiateRebalance.selector, target));
+        t(!success, "CFG-003: rebalance consumed a missing target route");
+        t(_parentLifecycleHash() == stateHash, "CFG-003: missing-route rebalance changed state");
+
+        _setCrosschainVault(parent.vault, target.chainSelector, destination);
     }
 
     function handler_initiateRebalance(uint256 pathSeed, uint256 protocolSeed, uint256 actorSeed, uint256 amountSeed)
@@ -228,6 +371,9 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             "REBAL-002: target equals active strategy"
         );
 
+        _assertUnauthorizedRebalanceRejected(target);
+        _assertMissingTargetRouteRejected(target);
+
         __before();
         _rebalanceTo(target);
         __after();
@@ -257,23 +403,128 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         IAdapterRegistry registry = _activeAdapterRegistry(strategy.chainSelector);
         address storedAdapter = vault.getActiveProtocolAdapter();
         if (storedAdapter == address(0)) return;
+        address registryAdapter = registry.getAdapter(strategy.protocolId);
+        address replacementAdapter = _replacementAdapter(registry, storedAdapter);
+        if (replacementAdapter == address(0)) return;
         uint256 tvlBefore = vault.getTVL();
 
+        _assertAdapterRegistryConfigurationIsAuthorized(registry, strategy.protocolId, registryAdapter);
+        _assertActiveAdapterOnlyAcceptsVaultCalls(storedAdapter, tvlBefore);
+        _assertInitialAdapterCannotBeReset(strategy);
+        _assertActiveProtocolCannotBeDisabled(strategy.protocolId);
+
         _changePrank(i_configOperator);
-        registry.setAdapter(strategy.protocolId, address(0));
+        registry.setAdapter(strategy.protocolId, replacementAdapter);
 
         t(vault.getActiveProtocolAdapter() == storedAdapter, "REBAL-007: registry change replaced active adapter");
         eq(vault.getTVL(), tvlBefore, "ADAPTER-003: registry change affected active adapter TVL");
-
-        _changePrank(i_configOperator);
-        registry.setAdapter(strategy.protocolId, storedAdapter);
 
         if (
             strategy.chainSelector == PARENT_CHAIN_SELECTOR && parent.vault.getEpochNonce() > 1
                 && !_recoveryModeExists()
         ) {
+            _assertInvalidTargetAdapterRejected(strategy, tvlBefore);
             _assertLocalAdapterFailureCreatesNoRecovery(strategy, tvlBefore);
         }
+    }
+
+    function _assertAdapterRegistryConfigurationIsAuthorized(
+        IAdapterRegistry registry,
+        bytes32 protocolId,
+        address currentAdapter
+    ) internal {
+        _changePrank(i_nonOwner);
+        (bool unauthorizedSuccess,) =
+            address(registry).call(abi.encodeWithSelector(IAdapterRegistry.setAdapter.selector, protocolId, address(1)));
+
+        t(!unauthorizedSuccess, "ADAPTER-001: unauthorized registry update succeeded");
+        t(registry.getAdapter(protocolId) == currentAdapter, "ADAPTER-001: unauthorized update changed registry");
+
+        _changePrank(i_configOperator);
+        (bool zeroProtocolSuccess,) = address(registry)
+            .call(abi.encodeWithSelector(IAdapterRegistry.setAdapter.selector, bytes32(0), currentAdapter));
+
+        t(!zeroProtocolSuccess, "ADAPTER-001: zero protocol ID was registered");
+        t(registry.getAdapter(bytes32(0)) == address(0), "ADAPTER-001: zero protocol ID changed registry");
+    }
+
+    function _assertInvalidTargetAdapterRejected(Types.Strategy memory activeStrategy, uint256 tvlBefore) internal {
+        Types.Strategy memory target = _parentStrategy(_differentProtocol(activeStrategy.protocolId));
+        address validAdapter = parent.adapterRegistry.getAdapter(target.protocolId);
+
+        _assertTargetAdapterRejected(target, address(0), tvlBefore, "ADAPTER-002: missing target adapter activated");
+
+        address wrongVaultAdapter =
+            target.protocolId == AAVE_V3_PROTOCOL_ID ? address(child.aaveV3Adapter) : address(child.aaveV4Adapter);
+        _assertTargetAdapterRejected(
+            target, wrongVaultAdapter, tvlBefore, "ADAPTER-002: wrong-vault target adapter activated"
+        );
+
+        _changePrank(i_configOperator);
+        parent.adapterRegistry.setAdapter(target.protocolId, validAdapter);
+    }
+
+    function _assertTargetAdapterRejected(
+        Types.Strategy memory target,
+        address invalidAdapter,
+        uint256 tvlBefore,
+        string memory label
+    ) internal {
+        _changePrank(i_configOperator);
+        parent.adapterRegistry.setAdapter(target.protocolId, invalidAdapter);
+
+        _markParentRebalanceCooldownElapsed();
+        Types.Rebalance memory rebalanceBefore = parent.vault.getRebalance();
+        _changePrank(address(parent.workflowRouter));
+        (bool success,) =
+            address(parent.vault).call(abi.encodeWithSelector(ParentVault.initiateRebalance.selector, target));
+
+        t(!success, label);
+        t(
+            keccak256(abi.encode(parent.vault.getRebalance())) == keccak256(abi.encode(rebalanceBefore)),
+            "ADAPTER-002: failed activation changed rebalance"
+        );
+        eq(parent.vault.getTVL(), tvlBefore, "ADAPTER-002: failed activation changed TVL");
+    }
+
+    function _assertActiveAdapterOnlyAcceptsVaultCalls(address adapter, uint256 tvlBefore) internal {
+        _changePrank(i_nonOwner);
+        (bool depositSuccess,) = adapter.call(abi.encodeWithSelector(IProtocolAdapter.deposit.selector, 1));
+        (bool withdrawSuccess,) = adapter.call(abi.encodeWithSelector(IProtocolAdapter.withdraw.selector, 1));
+
+        t(!depositSuccess, "ADAPTER-004: non-vault adapter deposit succeeded");
+        t(!withdrawSuccess, "ADAPTER-004: non-vault adapter withdraw succeeded");
+        eq(IProtocolAdapter(adapter).getTVL(), tvlBefore, "ADAPTER-004: unauthorized adapter call changed TVL");
+    }
+
+    function _assertInitialAdapterCannotBeReset(Types.Strategy memory strategy) internal {
+        Types.Rebalance memory rebalanceBefore = parent.vault.getRebalance();
+        address parentAdapterBefore = parent.vault.getActiveProtocolAdapter();
+
+        _changePrank(i_owner);
+        (bool success,) = address(parent.vault)
+            .call(abi.encodeWithSelector(ParentVault.setInitialActiveProtocolAdapter.selector, strategy.protocolId));
+
+        t(!success, "UPGRADE-004: initial adapter was set more than once");
+        t(parent.vault.getActiveProtocolAdapter() == parentAdapterBefore, "UPGRADE-004: reset changed active adapter");
+        t(
+            keccak256(abi.encode(parent.vault.getRebalance())) == keccak256(abi.encode(rebalanceBefore)),
+            "UPGRADE-004: reset changed active strategy"
+        );
+    }
+
+    function _assertActiveProtocolCannotBeDisabled(bytes32 protocolId) internal {
+        bool supportedBefore = parent.vault.getSupportedProtocol(protocolId);
+
+        _changePrank(i_configOperator);
+        (bool success,) = address(parent.vault)
+            .call(abi.encodeWithSelector(ParentVault.setSupportedProtocol.selector, protocolId, false));
+
+        t(!success, "CFG-005: active protocol was disabled");
+        t(
+            parent.vault.getSupportedProtocol(protocolId) == supportedBefore,
+            "CFG-005: failed removal changed protocol support"
+        );
     }
 
     function _assertLocalAdapterFailureCreatesNoRecovery(Types.Strategy memory activeStrategy, uint256 tvlBefore)
@@ -322,15 +573,14 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _recordSharesClaimed(actor, claimEpochNonce, shareMintAmount);
         lte(
             _after.targetEpochRemainingDepositClaimAmount,
-            ghost_maxRemainingDepositClaimAmountByEpoch[claimEpochNonce],
+            _before.targetEpochRemainingDepositClaimAmount,
             "EPOCH-007: remaining deposit claims increased"
         );
         lte(
             _after.targetEpochRemainingShareMintAmount,
-            ghost_maxRemainingShareMintAmountByEpoch[claimEpochNonce],
+            _before.targetEpochRemainingShareMintAmount,
             "EPOCH-007: remaining share mints increased"
         );
-        _updateDepositRemainingCounterMax(claimEpochNonce);
 
         eq(_after.epochNonce, _before.epochNonce, "claimShares changed current epoch nonce");
         eq(_after.actorTargetEpochDepositAmount, 0, "EPOCH-009: claimShares did not clear actor deposit");
@@ -360,7 +610,31 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         }
 
         uint256 shareBurnAmount = _clampWithdrawShareBurnAmount(shareSeed, parent.share.balanceOf(actor));
+        _assertZeroWithdrawRejected(actor);
         _withdrawAndAssert(actor, shareBurnAmount, "withdraw did not transfer shares");
+    }
+
+    function _assertZeroWithdrawRejected(address actor) internal {
+        uint256 epochNonce = parent.vault.getEpochNonce();
+        uint256 epochTotal = parent.vault.getEpoch(epochNonce).totalShareBurnAmount;
+        uint256 actorWithdraw = parent.vault.getWithdrawShareBurnAmount(actor, epochNonce);
+        uint256 actorShares = parent.share.balanceOf(actor);
+
+        _changePrank(actor);
+        (bool success,) = address(parent.vault).call(abi.encodeWithSelector(ParentVault.withdraw.selector, 0));
+
+        t(!success, "EPOCH-015: zero withdraw succeeded");
+        eq(
+            parent.vault.getEpoch(epochNonce).totalShareBurnAmount,
+            epochTotal,
+            "EPOCH-015: failed withdraw changed total"
+        );
+        eq(
+            parent.vault.getWithdrawShareBurnAmount(actor, epochNonce),
+            actorWithdraw,
+            "EPOCH-015: failed withdraw changed intent"
+        );
+        eq(parent.share.balanceOf(actor), actorShares, "EPOCH-015: failed withdraw changed balance");
     }
 
     function handler_cancelWithdraw(uint256 actorSeed, uint256 shareSeed, uint256 amountSeed) public {
@@ -430,15 +704,14 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _recordUsdcClaimed(actor, claimEpochNonce, usdcWithdrawAmount);
         lte(
             _after.targetEpochRemainingShareBurnAmount,
-            ghost_maxRemainingShareBurnAmountByEpoch[claimEpochNonce],
+            _before.targetEpochRemainingShareBurnAmount,
             "EPOCH-010: remaining share burns increased"
         );
         lte(
             _after.targetEpochRemainingWithdrawClaimAmount,
-            ghost_maxRemainingWithdrawClaimAmountByEpoch[claimEpochNonce],
+            _before.targetEpochRemainingWithdrawClaimAmount,
             "EPOCH-010: remaining withdraw claims increased"
         );
-        _updateWithdrawRemainingCounterMax(claimEpochNonce);
 
         eq(_after.epochNonce, _before.epochNonce, "claimAsset changed current epoch nonce");
         eq(_after.actorTargetEpochWithdrawShareBurnAmount, 0, "EPOCH-012: claimAsset did not clear actor withdraw");
@@ -482,6 +755,9 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             _resolvePendingRecovery();
             if (pendingMode != Types.RecoveryMode.NONE) {
                 _assertHandledChildNonceCannotBeReplayed(pendingChild, rebalanceDomain, handledNonce);
+                _assertNoPendingRecoveryRetryRejected(pendingChild);
+            } else {
+                _assertNoPendingRecoveryRetryRejected(parent.vault);
             }
         } else {
             _stageRecovery(scenarioSeed, protocolSeed, actorSeed, amountSeed);
@@ -508,12 +784,103 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             destTokenAmounts: amounts
         });
         bytes32 stateHash = _childRecoveryHash(vault);
+
+        _assertChildCcipRejected(vault, message, i_nonOwner, stateHash, "CCIP-001: non-router callback succeeded");
+
+        message.sender = abi.encode(i_nonOwner);
+        _assertChildCcipRejected(
+            vault, message, address(local.mockCcipRouter), stateHash, "CCIP-001: invalid sender succeeded"
+        );
+        message.sender = abi.encode(address(parent.vault));
+
+        Client.EVMTokenAmount[] memory validAmounts = message.destTokenAmounts;
+        message.destTokenAmounts = new Client.EVMTokenAmount[](0);
+        _assertChildCcipRejected(
+            vault, message, address(local.mockCcipRouter), stateHash, "CCIP-002: empty token list succeeded"
+        );
+
+        message.destTokenAmounts = new Client.EVMTokenAmount[](2);
+        message.destTokenAmounts[0] = Client.EVMTokenAmount({token: parent.vault.getAsset(), amount: 1});
+        message.destTokenAmounts[1] = Client.EVMTokenAmount({token: parent.vault.getAsset(), amount: 1});
+        _assertChildCcipRejected(
+            vault, message, address(local.mockCcipRouter), stateHash, "CCIP-002: multiple token entries succeeded"
+        );
+
+        message.destTokenAmounts = validAmounts;
+        message.destTokenAmounts[0].token = parent.link;
+        _assertChildCcipRejected(
+            vault, message, address(local.mockCcipRouter), stateHash, "CCIP-002: wrong token succeeded"
+        );
+        message.destTokenAmounts[0].token = parent.vault.getAsset();
+        message.destTokenAmounts[0].amount = 0;
+        _assertChildCcipRejected(
+            vault, message, address(local.mockCcipRouter), stateHash, "CCIP-002: zero token amount succeeded"
+        );
+        message.destTokenAmounts[0].amount = 1;
+
+        bytes memory validData = message.data;
+        message.data = abi.encode(uint256(3), payload);
+        _assertChildCcipRejected(
+            vault, message, address(local.mockCcipRouter), stateHash, "CCIP-003: invalid transaction type succeeded"
+        );
+        message.data = abi.encode(ccipTxType, bytes(""));
+        _assertChildCcipRejected(
+            vault, message, address(local.mockCcipRouter), stateHash, "CCIP-003: malformed payload succeeded"
+        );
+        message.data = validData;
+
+        message.data = abi.encode(ccipTxType, rebalanceDomain ? abi.encode(uint256(0), bytes32(0)) : abi.encode(0));
+        _assertChildNonceRejected(vault, message, rebalanceDomain, stateHash, "NONCE-003: zero nonce succeeded");
+        if (handledNonce > 1) {
+            message.data = abi.encode(
+                ccipTxType, rebalanceDomain ? abi.encode(handledNonce - 1, bytes32(0)) : abi.encode(handledNonce - 1)
+            );
+            _assertChildNonceRejected(vault, message, rebalanceDomain, stateHash, "NONCE-003: lower nonce succeeded");
+        }
+        message.data = validData;
+
         _changePrank(address(local.mockCcipRouter));
-        (bool success,) =
+        (bool success, bytes memory revertData) =
             address(vault).call(abi.encodeWithSelector(IAny2EVMMessageReceiver.ccipReceive.selector, message));
 
         t(!success, "CCIP-004/NONCE-004/NONCE-005: handled nonce replay succeeded");
+        bytes4 expectedSelector = rebalanceDomain
+            ? IChildVault.ChildVault__InvalidRebalanceNonce.selector
+            : IChildVault.ChildVault__InvalidEpochNonce.selector;
+        t(_revertSelector(revertData) == expectedSelector, "NONCE-003/NONCE-007: wrong stale-nonce error");
         t(_childRecoveryHash(vault) == stateHash, "CCIP-004: invalid replay changed child lifecycle state");
+    }
+
+    function _assertChildNonceRejected(
+        ChildVault vault,
+        Client.Any2EVMMessage memory message,
+        bool rebalanceDomain,
+        bytes32 stateHash,
+        string memory label
+    ) internal {
+        _changePrank(address(local.mockCcipRouter));
+        (bool success, bytes memory revertData) =
+            address(vault).call(abi.encodeWithSelector(IAny2EVMMessageReceiver.ccipReceive.selector, message));
+        bytes4 expectedSelector = rebalanceDomain
+            ? IChildVault.ChildVault__InvalidRebalanceNonce.selector
+            : IChildVault.ChildVault__InvalidEpochNonce.selector;
+        t(!success, label);
+        t(_revertSelector(revertData) == expectedSelector, "NONCE-003: wrong invalid-nonce error");
+        t(_childRecoveryHash(vault) == stateHash, "NONCE-003: invalid nonce changed state");
+    }
+
+    function _assertChildCcipRejected(
+        ChildVault vault,
+        Client.Any2EVMMessage memory message,
+        address caller,
+        bytes32 stateHash,
+        string memory label
+    ) internal {
+        _changePrank(caller);
+        (bool success,) =
+            address(vault).call(abi.encodeWithSelector(IAny2EVMMessageReceiver.ccipReceive.selector, message));
+        t(!success, label);
+        t(_childRecoveryHash(vault) == stateHash, "CCIP-001/CCIP-002/CCIP-003: invalid message changed state");
     }
 
     function _pendingChildRecoveryNonce(ChildVault vault, Types.RecoveryMode mode)
@@ -547,6 +914,8 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
     }
 
     function _assertPendingRecoveryCannotBeOverwritten() internal {
+        _assertPendingProtocolCannotBeDisabled();
+
         if (parent.vault.getRecoveryMode() != Types.RecoveryMode.NONE) {
             bytes32 recoveryHash = keccak256(abi.encode(parent.vault.getRebalanceDepositRecovery()));
             _changePrank(address(parent.workflowRouter));
@@ -572,7 +941,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             : address(remoteChild.workflowRouter);
 
         _changePrank(workflowRouter);
-        (bool success,) = address(vault)
+        (bool success, bytes memory revertData) = address(vault)
             .call(
                 abi.encodeWithSelector(
                     ChildVault.executeEpochWithdraw.selector, vault.getLastHandledEpochNonce() + 1, 1
@@ -580,7 +949,47 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             );
 
         t(!success, "REC-003: operation succeeded while child recovery was pending");
+        t(
+            _revertSelector(revertData) == IBaseVault.BaseVault__RecoveryAlreadyPending.selector,
+            "NONCE-007: pending-recovery guard did not run first"
+        );
         t(_childRecoveryHash(vault) == recoveryHash, "REC-003: child recovery was overwritten");
+    }
+
+    function _assertPendingProtocolCannotBeDisabled() internal {
+        bytes32 pendingProtocolId = parent.vault.getRebalance().pendingStrategy.protocolId;
+        if (pendingProtocolId == bytes32(0)) return;
+
+        bool supportedBefore = parent.vault.getSupportedProtocol(pendingProtocolId);
+        _changePrank(i_configOperator);
+        (bool success,) = address(parent.vault)
+            .call(abi.encodeWithSelector(ParentVault.setSupportedProtocol.selector, pendingProtocolId, false));
+
+        t(!success, "CFG-005: pending protocol was disabled");
+        t(
+            parent.vault.getSupportedProtocol(pendingProtocolId) == supportedBefore,
+            "CFG-005: failed removal changed pending protocol support"
+        );
+    }
+
+    function _assertNoPendingRecoveryRetryRejected(BaseVault vault) internal {
+        Types.RecoveryMode mode = vault.getRecoveryMode();
+        _changePrank(s_actors[0]);
+        (bool success, bytes memory revertData) =
+            address(vault).call(abi.encodeWithSelector(BaseVault.executeRecovery.selector));
+        t(!success, "REC-008: recovery succeeded without an active mode");
+        t(
+            _revertSelector(revertData) == IBaseVault.BaseVault__NoPendingRecovery.selector,
+            "REC-008: wrong no-recovery error"
+        );
+        t(vault.getRecoveryMode() == mode, "REC-008: rejected retry changed mode");
+    }
+
+    function _revertSelector(bytes memory revertData) internal pure returns (bytes4 selector) {
+        if (revertData.length < 4) return bytes4(0);
+        assembly ("memory-safe") {
+            selector := mload(add(revertData, 0x20))
+        }
     }
 
     function _assertFailedRecoveryRetryPreservesState() internal {
@@ -945,7 +1354,9 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
                 parent.vault.getRebalance(),
                 parent.vault.getRecoveryMode(),
                 parent.vault.getRebalanceDepositRecovery(),
-                parent.vault.getTotalShares()
+                parent.vault.getTotalShares(),
+                parent.vault.getPerformanceFeeHighWaterMark(),
+                parent.share.balanceOf(parent.vault.getTreasury())
             )
         );
     }
@@ -1389,6 +1800,11 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         uint256 actualFeeShares = _after.treasuryShareBalance - _before.treasuryShareBalance;
         if (grossPricePerShare <= _before.performanceFeeHighWaterMark || _before.totalShares == 0) {
             eq(actualFeeShares, 0, "FEE-001: fee minted without yield above high-water mark");
+            eq(
+                _after.performanceFeeHighWaterMark,
+                _before.performanceFeeHighWaterMark,
+                "FEE-003: high-water mark changed when no performance fee was due"
+            );
             return;
         }
 
@@ -1398,6 +1814,11 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         uint256 feeAmount = FixedPointMathLib.fullMulDivUp(totalYield, PERFORMANCE_FEE_BPS, BPS_DENOMINATOR);
         if (feeAmount >= tvl) {
             eq(actualFeeShares, 0, "FEE-001: fee minted when fee consumes TVL");
+            eq(
+                _after.performanceFeeHighWaterMark,
+                _before.performanceFeeHighWaterMark,
+                "FEE-003: high-water mark changed when fee collection was skipped"
+            );
             return;
         }
 
@@ -1416,7 +1837,11 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
     }
 
     function _assertManagementFeeAmount() internal {
+        // _markParentRebalanceCooldownElapsed() force-writes lastRebalanceCompletedTimestamp to 0
+        // via stdstore immediately before every real initiateRebalance call, so the contract's
+        // elapsed-since-last-rebalance baseline is always 0 here, not the pre-call snapshot.
         uint256 elapsed = block.timestamp > 365 days ? 365 days : block.timestamp;
+
         uint256 expectedFeeShares = FixedPointMathLib.fullMulDivUp(
             _before.totalShares, MANAGEMENT_FEE_BPS * elapsed, BPS_DENOMINATOR * 365 days
         );
@@ -1512,6 +1937,9 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
     function _settleRemoteEpochWithdraw(uint256 epochNonce, uint256 amount) internal {
         uint64 chainSelector = parent.vault.getRebalance().activeStrategy.chainSelector;
+        ChildVault sourceVault = chainSelector == CHILD_CHAIN_SELECTOR ? child.vault : remoteChild.vault;
+
+        _assertInvalidParentEpochCallbacksRejected(sourceVault, epochNonce, amount, false);
 
         if (chainSelector == CHILD_CHAIN_SELECTOR) {
             _executeEpochWithdrawThroughWorkflow(
@@ -1532,6 +1960,43 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
                 amount
             );
         }
+
+        _assertInvalidParentEpochCallbacksRejected(sourceVault, epochNonce, amount, true);
+    }
+
+    function _assertInvalidParentEpochCallbacksRejected(
+        ChildVault sourceVault,
+        uint256 epochNonce,
+        uint256 amount,
+        bool settled
+    ) internal {
+        Client.EVMTokenAmount[] memory amounts = new Client.EVMTokenAmount[](1);
+        amounts[0] = Client.EVMTokenAmount({token: parent.vault.getAsset(), amount: amount});
+        Client.Any2EVMMessage memory message = Client.Any2EVMMessage({
+            messageId: bytes32(0),
+            sourceChainSelector: _childChainSelector(sourceVault),
+            sender: abi.encode(address(sourceVault)),
+            data: abi.encode(Types.CcipTx.EPOCH_NET_WITHDRAW, abi.encode(settled ? epochNonce : 0)),
+            destTokenAmounts: amounts
+        });
+
+        _assertParentEpochCallbackRejected(
+            message, settled ? "NONCE-012: duplicate callback succeeded" : "NONCE-012: old callback succeeded"
+        );
+
+        if (!settled) {
+            message.data = abi.encode(Types.CcipTx.EPOCH_NET_WITHDRAW, abi.encode(epochNonce + 1));
+            _assertParentEpochCallbackRejected(message, "NONCE-012: future callback succeeded");
+        }
+    }
+
+    function _assertParentEpochCallbackRejected(Client.Any2EVMMessage memory message, string memory label) internal {
+        bytes32 stateHash = _parentLifecycleHash();
+        _changePrank(address(local.mockCcipRouter));
+        (bool success,) =
+            address(parent.vault).call(abi.encodeWithSelector(IAny2EVMMessageReceiver.ccipReceive.selector, message));
+        t(!success, label);
+        t(_parentLifecycleHash() == stateHash, "NONCE-012: invalid callback changed lifecycle state");
     }
 
     function _withdrawAndAssert(address actor, uint256 shareBurnAmount, string memory shareBalanceMessage) internal {
@@ -1629,10 +2094,22 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         s_currentActor = actor;
         s_targetEpochNonce = depositEpochNonce;
 
+        Types.Epoch memory beforeClaim = parent.vault.getEpoch(depositEpochNonce);
         _changePrank(actor);
         uint256 shareMintAmount = parent.vault.claimShares(depositEpochNonce);
+        Types.Epoch memory afterClaim = parent.vault.getEpoch(depositEpochNonce);
         _recordSharesClaimed(actor, depositEpochNonce, shareMintAmount);
-        _updateDepositRemainingCounterMax(depositEpochNonce);
+
+        lte(
+            afterClaim.remainingDepositClaimAmount,
+            beforeClaim.remainingDepositClaimAmount,
+            "EPOCH-007: bootstrap claim increased remaining deposit claims"
+        );
+        lte(
+            afterClaim.remainingShareMintAmount,
+            beforeClaim.remainingShareMintAmount,
+            "EPOCH-007: bootstrap claim increased remaining share mints"
+        );
 
         t(parent.share.balanceOf(actor) != 0, "recovery setup: actor has no shares");
     }
@@ -2038,6 +2515,21 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
     function _differentProtocol(bytes32 protocolId) internal pure returns (bytes32) {
         if (protocolId == AAVE_V3_PROTOCOL_ID) return AAVE_V4_PROTOCOL_ID;
         return AAVE_V3_PROTOCOL_ID;
+    }
+
+    function _replacementAdapter(IAdapterRegistry registry, address storedAdapter)
+        internal
+        view
+        returns (address replacement)
+    {
+        replacement = registry.getAdapter(AAVE_V3_PROTOCOL_ID);
+        if (replacement != address(0) && replacement != storedAdapter) return replacement;
+
+        replacement = registry.getAdapter(AAVE_V4_PROTOCOL_ID);
+        if (replacement != address(0) && replacement != storedAdapter) return replacement;
+
+        replacement = registry.getAdapter(COMPOUND_V3_PROTOCOL_ID);
+        if (replacement == storedAdapter) return address(0);
     }
 
     function _assertActiveAdapterFor(Types.Strategy memory strategy) internal {

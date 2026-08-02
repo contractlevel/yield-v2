@@ -135,10 +135,9 @@ interface IParentVault is IBaseVault {
     );
     /// @notice Emitted when a rebalance is initiated
     /// @param rebalanceNonce The nonce of the rebalance
-    /// @param chainSelector The target strategy chain selector
     /// @param protocolId The target strategy protocol ID
-    event RebalanceInitiated(uint256 indexed rebalanceNonce, uint64 indexed chainSelector, bytes32 indexed protocolId);
-    // @review RebalanceInitiated and RebalanceCompleted event params should be consistently ordered
+    /// @param chainSelector The target strategy chain selector
+    event RebalanceInitiated(uint256 indexed rebalanceNonce, bytes32 indexed protocolId, uint64 indexed chainSelector);
     /// @notice Emitted when a rebalance is completed
     /// @param rebalanceNonce The nonce of the completed rebalance
     /// @param newProtocolId The protocol ID for the new strategy
@@ -307,6 +306,7 @@ interface IParentVault is IBaseVault {
     /// @dev Precondition: no prior epoch may still be executing
     /// @dev Precondition: newStrategy's chain selector must be supported
     /// @dev Precondition: newStrategy's protocol ID must be supported
+    /// @dev Precondition: a local active strategy withdrawal must return a nonzero amount
     function initiateRebalance(Types.Strategy memory newStrategy) external;
 
     /// @notice Completes a rebalance

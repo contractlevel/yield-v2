@@ -18,6 +18,8 @@ Deposit flow:
 
 The deposit is recorded in the current open epoch and the underlying asset is escrowed by the vault. Shares are not minted at deposit time.
 
+Do not transfer tokens directly to a vault address; only use the documented protocol functions. Vaults do not provide a recovery path for unsolicited token transfers.
+
 Useful reads:
 
 - `getDepositAmount(user, epochNonce)` returns the user's submitted deposit amount for that epoch.

@@ -164,8 +164,8 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
         vm.recordLogs();
         _executeRemoteChildRebalance();
 
-        Vm.Log memory log = _assertEmittedBy(keccak256("CCIPBridged(bytes32,uint256,uint8)"), address(s_childVault));
-        assertEq(uint256(log.topics[2]), REBALANCE_AMOUNT);
+        Vm.Log memory log = _assertEmittedBy(keccak256("CCIPBridged(bytes32,uint64,uint8)"), address(s_childVault));
+        assertEq(uint256(log.topics[2]), REMOTE_CHILD_CHAIN_SELECTOR);
         assertEq(uint256(log.topics[3]), uint256(Types.CcipTx.REBALANCE));
     }
 

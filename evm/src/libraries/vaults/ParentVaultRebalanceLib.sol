@@ -41,9 +41,9 @@ library ParentVaultRebalanceLib {
     /// @dev Solidity requires locally declared events for emits; these must match IParentVault and emit from the vault via DELEGATECALL.
     /// @notice Emitted when a rebalance is initiated
     /// @param rebalanceNonce The nonce of the rebalance
-    /// @param chainSelector The target strategy chain selector
     /// @param protocolId The target strategy protocol ID
-    event RebalanceInitiated(uint256 indexed rebalanceNonce, uint64 indexed chainSelector, bytes32 indexed protocolId);
+    /// @param chainSelector The target strategy chain selector
+    event RebalanceInitiated(uint256 indexed rebalanceNonce, bytes32 indexed protocolId, uint64 indexed chainSelector);
     /// @notice Emitted when a rebalance is completed
     /// @param rebalanceNonce The nonce of the completed rebalance
     /// @param newProtocolId The protocol ID for the new strategy
@@ -110,7 +110,7 @@ library ParentVaultRebalanceLib {
         }
 
         uint256 rebalanceNonce = s_rebalance.nonce;
-        emit RebalanceInitiated(rebalanceNonce, newStrategy.chainSelector, newStrategy.protocolId);
+        emit RebalanceInitiated(rebalanceNonce, newStrategy.protocolId, newStrategy.chainSelector);
         result.rebalanceNonce = rebalanceNonce;
 
         bool isLocalActive = activeStrategy.chainSelector == thisChainSelector;

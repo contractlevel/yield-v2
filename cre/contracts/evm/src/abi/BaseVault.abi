@@ -748,10 +748,35 @@
         "internalType": "bytes32"
       },
       {
-        "name": "amount",
-        "type": "uint256",
+        "name": "destinationChainSelector",
+        "type": "uint64",
         "indexed": true,
-        "internalType": "uint256"
+        "internalType": "uint64"
+      },
+      {
+        "name": "ccipTxType",
+        "type": "uint8",
+        "indexed": true,
+        "internalType": "enum Types.CcipTx"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "CCIPReceived",
+    "inputs": [
+      {
+        "name": "ccipMessageId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "sourceChainSelector",
+        "type": "uint64",
+        "indexed": true,
+        "internalType": "uint64"
       },
       {
         "name": "ccipTxType",

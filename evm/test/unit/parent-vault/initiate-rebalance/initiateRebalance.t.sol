@@ -104,16 +104,11 @@ contract ParentVault_InitiateRebalanceUnitTest is BaseUnitTest {
         s_parentVault.initiateRebalance(_localStrategy(AAVE_V4_PROTOCOL_ID));
     }
 
-    function test_ParentVault_initiateRebalance_WhenLocalWithdrawReturnsZero_EmitsRebalanceWithdrawSuccess() public {
+    function test_ParentVault_initiateRebalance_RevertWhen_LocalWithdrawReturnsZero() public {
         s_mockProtocolAdapter.setWithdrawReturnAmount(0);
 
-        vm.recordLogs();
+        vm.expectRevert(IBaseVault.BaseVault__NoZeroAmount.selector);
         s_parentVault.initiateRebalance(_localStrategy(AAVE_V4_PROTOCOL_ID));
-
-        Vm.Log memory log =
-            _assertEmittedBy(keccak256("RebalanceWithdrawSuccess(uint256,uint256)"), address(s_parentVault));
-        assertEq(uint256(log.topics[1]), 1);
-        assertEq(uint256(log.topics[2]), 0);
     }
 
     function test_ParentVault_initiateRebalance_RevertWhen_LocalDepositAdapterReverts() public {
@@ -142,10 +137,10 @@ contract ParentVault_InitiateRebalanceUnitTest is BaseUnitTest {
         _initiateLocalToLocal();
 
         Vm.Log memory log =
-            _assertEmittedBy(keccak256("RebalanceInitiated(uint256,uint64,bytes32)"), address(s_parentVault));
+            _assertEmittedBy(keccak256("RebalanceInitiated(uint256,bytes32,uint64)"), address(s_parentVault));
         assertEq(uint256(log.topics[1]), 1);
-        assertEq(uint64(uint256(log.topics[2])), PARENT_CHAIN_SELECTOR);
-        assertEq(bytes32(log.topics[3]), AAVE_V4_PROTOCOL_ID);
+        assertEq(bytes32(log.topics[2]), AAVE_V4_PROTOCOL_ID);
+        assertEq(uint64(uint256(log.topics[3])), PARENT_CHAIN_SELECTOR);
     }
 
     function test_ParentVault_initiateRebalance_LocalToLocal_EmitsRebalanceWithdrawSuccess() public {

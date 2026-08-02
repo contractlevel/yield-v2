@@ -117,6 +117,8 @@ The vault reads and validates the AdapterRegistry when activating a strategy, th
 
 This prevents a configuration update from silently migrating active funds. Replacing a faulty active adapter requires an explicit rebalance or a purpose-built vault upgrade; changing the registry entry alone is insufficient.
 
+A pending destination strategy does not store an adapter address. The destination vault resolves the protocol ID from its local AdapterRegistry when execution arrives, so operators must preserve a valid vault-bound mapping until activation completes.
+
 See [INVARIANTS - Rebalance Lifecycle And TVL](../security/INVARIANTS.md#rebalance-lifecycle-and-tvl) and [INVARIANTS - Adapters](../security/INVARIANTS.md#adapters).
 
 ## DD-012 - `forceCancelDeposit` Is A Narrow Epoch-Liveness Tool
@@ -138,3 +140,13 @@ This is the intended effect of a compliance freeze. Open intents and settled cla
 `forceCancelDeposit(user)` does not change this policy. Its separate, narrow epoch-liveness purpose is documented in [DD-012](#dd-012---forcecanceldeposit-is-a-narrow-epoch-liveness-tool).
 
 See [COMPLIANCE - ParentVault User Functions](../operator/COMPLIANCE.md#parentvault-user-functions).
+
+## DD-014 - Trusted Configuration Setters Are Idempotent
+
+Trusted configuration setters may accept and re-emit an unchanged value. This keeps configuration behavior consistent and operationally idempotent. Event consumers must not assume every setter event represents a value transition.
+
+## DD-015 - YieldcoinShare Policy Engine Replacement Uses ACE Authorization
+
+`YieldcoinShare.attachPolicyEngine` is intentionally authorized by the currently attached ACE policy engine. During normal operation, `POLICY_ENGINE_MANAGER_ROLE` can replace the engine without a contract upgrade.
+
+If the current engine cannot authorize its replacement, recovery requires an owner-authorized UUPS upgrade. The independent upgrader is the break-glass authority for this failure mode.

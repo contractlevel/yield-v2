@@ -24,17 +24,6 @@ abstract contract EpochGhosts is ActorGhosts {
     mapping(uint256 epochNonce => uint256 shares) internal ghost_totalShareBurnedByEpoch;
     mapping(address actor => mapping(uint256 epochNonce => uint256 shares)) internal ghost_shareBurnedByActorByEpoch;
     mapping(uint256 epochNonce => uint256 shares) internal ghost_totalShareMintedByEpoch;
-    mapping(uint256 epochNonce => uint256 amount) internal ghost_maxRemainingDepositClaimAmountByEpoch;
-    mapping(uint256 epochNonce => uint256 shares) internal ghost_maxRemainingShareMintAmountByEpoch;
-    mapping(uint256 epochNonce => uint256 shares) internal ghost_maxRemainingShareBurnAmountByEpoch;
-    mapping(uint256 epochNonce => uint256 amount) internal ghost_maxRemainingWithdrawClaimAmountByEpoch;
-    uint256 internal ghost_maxPerformanceFeeHighWaterMark;
-    uint256 internal ghost_maxParentEpochNonce;
-    uint256 internal ghost_maxParentRebalanceNonce;
-    uint256 internal ghost_maxChildEpochNonce;
-    uint256 internal ghost_maxChildRebalanceNonce;
-    uint256 internal ghost_maxRemoteChildEpochNonce;
-    uint256 internal ghost_maxRemoteChildRebalanceNonce;
     mapping(uint256 epochNonce => bool isClaimable) internal ghost_epochIsClaimable;
     uint256[] internal ghost_claimableEpochs;
     mapping(uint256 epochNonce => bool isTracked) internal ghost_epochShareAccountingTracked;
@@ -82,10 +71,6 @@ abstract contract EpochGhosts is ActorGhosts {
 
         ghost_epochIsClaimable[epochNonce] = true;
         ghost_totalShareMintedByEpoch[epochNonce] = epoch.remainingShareMintAmount;
-        ghost_maxRemainingDepositClaimAmountByEpoch[epochNonce] = epoch.remainingDepositClaimAmount;
-        ghost_maxRemainingShareMintAmountByEpoch[epochNonce] = epoch.remainingShareMintAmount;
-        ghost_maxRemainingShareBurnAmountByEpoch[epochNonce] = epoch.remainingShareBurnAmount;
-        ghost_maxRemainingWithdrawClaimAmountByEpoch[epochNonce] = epoch.remainingWithdrawClaimAmount;
         ghost_claimableWithdrawObligation += epoch.remainingWithdrawClaimAmount;
         ghost_claimableEpochs.push(epochNonce);
     }
@@ -96,10 +81,6 @@ abstract contract EpochGhosts is ActorGhosts {
         ghost_epochShareAccountingTracked[epochNonce] = true;
         Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
         ghost_totalShareMintedByEpoch[epochNonce] = epoch.remainingShareMintAmount;
-        ghost_maxRemainingDepositClaimAmountByEpoch[epochNonce] = epoch.remainingDepositClaimAmount;
-        ghost_maxRemainingShareMintAmountByEpoch[epochNonce] = epoch.remainingShareMintAmount;
-        ghost_maxRemainingShareBurnAmountByEpoch[epochNonce] = epoch.remainingShareBurnAmount;
-        ghost_maxRemainingWithdrawClaimAmountByEpoch[epochNonce] = epoch.remainingWithdrawClaimAmount;
         ghost_shareAccountingEpochs.push(epochNonce);
     }
 
@@ -111,12 +92,6 @@ abstract contract EpochGhosts is ActorGhosts {
         }
         ghost_depositedByActorByEpoch[actor][epochNonce] = 0;
         ghost_shareBalanceByActor[actor] += shareMintAmount;
-    }
-
-    function _updateDepositRemainingCounterMax(uint256 epochNonce) internal {
-        Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
-        ghost_maxRemainingDepositClaimAmountByEpoch[epochNonce] = epoch.remainingDepositClaimAmount;
-        ghost_maxRemainingShareMintAmountByEpoch[epochNonce] = epoch.remainingShareMintAmount;
     }
 
     function _recordWithdraw(address actor, uint256 amount) internal {
@@ -139,12 +114,6 @@ abstract contract EpochGhosts is ActorGhosts {
         ghost_shareBurnedByActorByEpoch[actor][epochNonce] = 0;
         ghost_claimableWithdrawObligation -= usdcWithdrawAmount;
         ghost_totalUsdcClaimedByActor[actor] += usdcWithdrawAmount;
-    }
-
-    function _updateWithdrawRemainingCounterMax(uint256 epochNonce) internal {
-        Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
-        ghost_maxRemainingShareBurnAmountByEpoch[epochNonce] = epoch.remainingShareBurnAmount;
-        ghost_maxRemainingWithdrawClaimAmountByEpoch[epochNonce] = epoch.remainingWithdrawClaimAmount;
     }
 
     function _claimableDepositEpoch(address actor, uint256 epochSeed) internal view returns (uint256 epochNonce) {

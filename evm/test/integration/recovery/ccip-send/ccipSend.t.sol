@@ -73,7 +73,7 @@ contract CcipSend_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         Vm.Log[] memory recoveryLogs = vm.getRecordedLogs();
 
         _assertEmittedBy(recoveryLogs, keccak256("CcipSendRecoveryCleared(uint8,uint64,uint256)"), address(child.vault));
-        _assertEmittedBy(recoveryLogs, keccak256("CCIPBridged(bytes32,uint256,uint8)"), address(child.vault));
+        _assertEmittedBy(recoveryLogs, keccak256("CCIPBridged(bytes32,uint64,uint8)"), address(child.vault));
         _assertCcipSendRecoveryCleared(child.vault.getCcipSendRecovery());
         assertTrue(child.vault.getRecoveryMode() == Types.RecoveryMode.NONE);
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.CLAIMABLE));
@@ -142,7 +142,7 @@ contract CcipSend_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         Vm.Log[] memory recoveryLogs = vm.getRecordedLogs();
 
         _assertEmittedBy(recoveryLogs, keccak256("CcipSendRecoveryCleared(uint8,uint64,uint256)"), address(child.vault));
-        _assertEmittedBy(recoveryLogs, keccak256("CCIPBridged(bytes32,uint256,uint8)"), address(child.vault));
+        _assertEmittedBy(recoveryLogs, keccak256("CCIPBridged(bytes32,uint64,uint8)"), address(child.vault));
         _assertCcipSendRecoveryCleared(child.vault.getCcipSendRecovery());
         assertTrue(child.vault.getRecoveryMode() == Types.RecoveryMode.NONE);
         assertEq(

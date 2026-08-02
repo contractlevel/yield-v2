@@ -93,7 +93,7 @@ Vault pause state blocks normal user, epoch, rebalance, recovery, and inbound CC
 | --------------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------- |
 | `setAdapter(protocolId, adapter)` | `CONFIG_OPERATOR_ROLE` | Registers, replaces, or removes the adapter for a protocol ID. Set `adapter` to `address(0)` to remove it. |
 
-Before changing an adapter, verify the adapter is deployed for the correct vault and underlying asset. A vault can only activate an adapter that is registered for the requested protocol ID and bound to that vault.
+Before changing an adapter, verify it is deployed for the correct vault and underlying asset, and that no pending rebalance or recovery still depends on the current mapping. A vault can only activate an adapter that is registered for the requested protocol ID and bound to that vault.
 
 ## Operational Functions
 

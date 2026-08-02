@@ -305,7 +305,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
             }
         }
 
-        // @review CCIPReceived event? to mirror CCIPBridged?
+        emit CCIPReceived(message.messageId, message.sourceChainSelector, ccipTxType);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -400,6 +400,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @dev Precondition: newStrategy must not be the same as the current active strategy
     /// @dev Precondition: An epoch must not be EXECUTING
     /// @dev Precondition: If current/active/previous strategy is on this chain, withdrawing tvl from the old strategy must succeed
+    /// @dev Precondition: If current/active/previous strategy is on this chain, the withdrawn amount must not be zero
     /// @dev Precondition: If current/active/previous strategy and newStrategy is on this chain, depositing tvl into the new strategy must succeed
     /// @dev Precondition: there must not be a stored recovery mode
     function initiateRebalance(Types.Strategy memory newStrategy)
@@ -424,6 +425,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
             // withdraw from local strategy
             address activeAdapter = $_baseVault.s_activeProtocolAdapter;
             (, uint256 amountOut) = _executeWithdraw(type(uint256).max, true, activeAdapter);
+            _revertIfZeroAmount(amountOut);
             emit RebalanceWithdrawSuccess(result.rebalanceNonce, amountOut);
             if (result.action == ParentVaultRebalanceLib.ExternalAction.WITHDRAW_LOCAL_TO_LOCAL) {
                 // deposit into local strategy

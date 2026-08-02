@@ -30,6 +30,7 @@ abstract contract Setup is BaseSetup, BaseIntegrationTest {
         super.setUp();
 
         _deployLocalParentTwoChildTopology();
+        _assertInitialInvariantState();
         _configureCloseEpochWorkflow(parent.workflowRouter, CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner);
         _configureInitiateRebalanceWorkflow(
             parent.workflowRouter, INITIATE_REBALANCE_WORKFLOW_ID, INITIATE_REBALANCE_WORKFLOW_NAME, i_owner
@@ -56,6 +57,66 @@ abstract contract Setup is BaseSetup, BaseIntegrationTest {
 
         _setupInvariantProtocolLiquidity();
         _setupInvariantActors();
+    }
+
+    function _assertInitialInvariantState() internal view {
+        require(child.vault.getLastHandledEpochNonce() == 0, "NONCE-001: child epoch nonce not zero");
+        require(child.vault.getLastHandledRebalanceNonce() == 0, "NONCE-001: child rebalance nonce not zero");
+        require(remoteChild.vault.getLastHandledEpochNonce() == 0, "NONCE-001: remote epoch nonce not zero");
+        require(remoteChild.vault.getLastHandledRebalanceNonce() == 0, "NONCE-001: remote rebalance nonce not zero");
+
+        Types.Epoch memory epoch = parent.vault.getEpoch(1);
+        Types.Rebalance memory rebalance = parent.vault.getRebalance();
+        require(parent.vault.getEpochNonce() == 1, "NONCE-008/UPGRADE-003: initial epoch nonce mismatch");
+        require(rebalance.nonce == 1, "NONCE-008/UPGRADE-003: initial rebalance nonce mismatch");
+        require(epoch.status == Types.EpochStatus.OPEN, "UPGRADE-003: initial epoch is not open");
+        require(epoch.openedAtTimestamp != 0, "UPGRADE-003: initial epoch timestamp missing");
+        require(rebalance.state == Types.RebalanceState.NONE, "UPGRADE-003: initial rebalance state mismatch");
+        require(rebalance.lastRebalanceCompletedTimestamp != 0, "UPGRADE-003: rebalance timestamp missing");
+        require(
+            parent.vault.getPerformanceFeeHighWaterMark() == ASSET_PRECISION,
+            "UPGRADE-003: initial high-water mark mismatch"
+        );
+        require(parent.vault.getTotalShares() == 0, "UPGRADE-003: initial shares not zero");
+        require(parent.vault.getRecoveryMode() == Types.RecoveryMode.NONE, "UPGRADE-003: initial recovery active");
+
+        _assertVaultImmutableConfiguration(parent.vault, parent.vaultImpl, address(parent.adapterRegistry));
+        _assertVaultImmutableConfiguration(child.vault, child.vaultImpl, address(child.adapterRegistry));
+        _assertVaultImmutableConfiguration(
+            remoteChild.vault, remoteChild.vaultImpl, address(remoteChild.adapterRegistry)
+        );
+        require(parent.vault.getShare() == address(parent.share), "UPGRADE-005: parent share mismatch");
+        require(
+            child.vault.getParentChainSelector() == PARENT_CHAIN_SELECTOR, "UPGRADE-005: child parent selector mismatch"
+        );
+        require(
+            remoteChild.vault.getParentChainSelector() == PARENT_CHAIN_SELECTOR,
+            "UPGRADE-005: remote child parent selector mismatch"
+        );
+        require(parent.workflowRouter.getVault() == address(parent.vault), "UPGRADE-005: parent router mismatch");
+        require(child.workflowRouter.getVault() == address(child.vault), "UPGRADE-005: child router mismatch");
+        require(
+            remoteChild.workflowRouter.getVault() == address(remoteChild.vault),
+            "UPGRADE-005: remote child router mismatch"
+        );
+    }
+
+    function _assertVaultImmutableConfiguration(BaseVault proxy, BaseVault implementation, address registry)
+        internal
+        view
+    {
+        require(proxy.getAsset() == implementation.getAsset(), "UPGRADE-005: implementation asset mismatch");
+        require(proxy.getLink() == implementation.getLink(), "UPGRADE-005: implementation LINK mismatch");
+        require(proxy.getRouter() == implementation.getRouter(), "UPGRADE-005: implementation router mismatch");
+        require(
+            proxy.getThisChainSelector() == implementation.getThisChainSelector(),
+            "UPGRADE-005: implementation chain selector mismatch"
+        );
+        require(proxy.getAdapterRegistry() == registry, "UPGRADE-005: proxy registry mismatch");
+        require(
+            proxy.getAdapterRegistry() == implementation.getAdapterRegistry(),
+            "UPGRADE-005: implementation registry mismatch"
+        );
     }
 
     function _setupInvariantActors() internal virtual {}

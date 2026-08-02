@@ -49,11 +49,11 @@ contract ChildToParent_RebalanceIntegrationTest is BaseIntegrationTest {
         Vm.Log[] memory initiateLogs = vm.getRecordedLogs();
 
         Vm.Log memory initiatedLog = _assertEmittedBy(
-            initiateLogs, keccak256("RebalanceInitiated(uint256,uint64,bytes32)"), address(parent.vault)
+            initiateLogs, keccak256("RebalanceInitiated(uint256,bytes32,uint64)"), address(parent.vault)
         );
         assertEq(uint256(initiatedLog.topics[1]), 1);
-        assertEq(uint64(uint256(initiatedLog.topics[2])), PARENT_CHAIN_SELECTOR);
-        assertEq(bytes32(initiatedLog.topics[3]), AAVE_V4_PROTOCOL_ID);
+        assertEq(bytes32(initiatedLog.topics[2]), AAVE_V4_PROTOCOL_ID);
+        assertEq(uint64(uint256(initiatedLog.topics[3])), PARENT_CHAIN_SELECTOR);
 
         Types.Rebalance memory pendingRebalance = parent.vault.getRebalance();
         assertEq(uint256(pendingRebalance.state), uint256(Types.RebalanceState.REBALANCING));
@@ -80,8 +80,8 @@ contract ChildToParent_RebalanceIntegrationTest is BaseIntegrationTest {
         assertEq(uint256(withdrawLog.topics[2]), tvl);
 
         Vm.Log memory childBridgeLog =
-            _assertEmittedBy(executeLogs, keccak256("CCIPBridged(bytes32,uint256,uint8)"), address(child.vault));
-        assertEq(uint256(childBridgeLog.topics[2]), tvl);
+            _assertEmittedBy(executeLogs, keccak256("CCIPBridged(bytes32,uint64,uint8)"), address(child.vault));
+        assertEq(uint256(childBridgeLog.topics[2]), PARENT_CHAIN_SELECTOR);
         assertEq(uint256(childBridgeLog.topics[3]), uint256(Types.CcipTx.REBALANCE));
 
         Vm.Log memory depositLog =
