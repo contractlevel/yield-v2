@@ -6,11 +6,7 @@
                             METHODS
 //////////////////////////////////////////////////////////////*/
 methods {
-    // TerminalAllowPolicy methods
-    function typeAndVersion() external returns (string) envfree;
-
     // Harness helper methods
-    function emptyParameters() external returns (bytes[]) envfree;
     function nonEmptyParameters(bytes) external returns (bytes[]) envfree;
     function allowedResult() external returns (IPolicyEngine.PolicyResult) envfree;
 }

@@ -4,7 +4,12 @@ pragma solidity 0.8.34;
 contract MockYieldcoinShare {
     mapping(address account => uint256 balance) public balanceOf;
     mapping(address owner => mapping(address spender => uint256 amount)) public allowance;
+    mapping(address account => bool frozen) public isFrozen;
     uint256 public totalSupply;
+
+    function setAddressFrozen(address account, bool frozen) external {
+        isFrozen[account] = frozen;
+    }
 
     function mint(address to, uint256 amount) external {
         balanceOf[to] += amount;

@@ -31,18 +31,18 @@ contract YieldcoinShareFrozenAccountPolicy is Policy, IYieldcoinShareFrozenAccou
 
     /// @notice Rejects when the extracted account is frozen on YieldcoinShare.
     /// @param parameters Policy parameters; expects exactly one `abi.encode(address)` item
-    /// @return The policy result, `Continue` when the account is not frozen
+    /// @return policyResult The policy result, `Continue` when the account is not frozen
     function run(address, address, bytes4, bytes[] calldata parameters, bytes calldata)
         public
         view
         override(Policy, IPolicy)
-        returns (IPolicyEngine.PolicyResult)
+        returns (IPolicyEngine.PolicyResult policyResult)
     {
         if (parameters.length != 1) revert InvalidParameters("expected account");
 
         address account = abi.decode(parameters[0], (address));
         if (i_share.isFrozen(account)) revert IPolicyEngine.PolicyRejected("account is frozen");
 
-        return IPolicyEngine.PolicyResult.Continue;
+        policyResult = IPolicyEngine.PolicyResult.Continue;
     }
 }
