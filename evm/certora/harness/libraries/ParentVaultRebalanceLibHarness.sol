@@ -21,15 +21,23 @@ contract ParentVaultRebalanceLibHarness is ParentVaultStore, HelperHarness {
     ) external returns (uint256 rebalanceNonce, uint8 action) {
         Types.Strategy memory newStrategy = Types.Strategy({protocolId: protocolId, chainSelector: chainSelector});
         ParentVaultRebalanceLib.InitiateRebalanceResult memory result =
-            ParentVaultRebalanceLib._initiateRebalance(
+            ParentVaultRebalanceLib.initiateRebalance(
                 _parentVaultStorage(), newStrategy, thisChainSelector, isSupportedChain
             );
         rebalanceNonce = result.rebalanceNonce;
         action = uint8(result.action);
     }
 
-    function finalizeRebalance() external {
-        ParentVaultRebalanceLib._finalizeRebalance(_parentVaultStorage(), i_share);
+    function finalizeRebalance(
+        uint256 rebalanceNonce,
+        bytes32 protocolId,
+        uint64 chainSelector,
+        bool isLocalToLocalRebalance
+    ) external {
+        Types.Strategy memory newStrategy = Types.Strategy({protocolId: protocolId, chainSelector: chainSelector});
+        ParentVaultRebalanceLib.finalizeRebalance(
+            _parentVaultStorage(), i_share, rebalanceNonce, newStrategy, isLocalToLocalRebalance
+        );
     }
 
     function getRebalanceNonce() external view returns (uint256 nonce) {
