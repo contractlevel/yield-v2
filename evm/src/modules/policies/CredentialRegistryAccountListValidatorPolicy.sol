@@ -58,12 +58,12 @@ contract CredentialRegistryAccountListValidatorPolicy is
     ///      restored or the policy is removed — the intended fail-closed behavior, not a bug.
     /// @param parameters Policy parameters; expects exactly one `abi.encode(address[])` item
     /// @param context Additional policy context passed to the credential validator
-    /// @return The policy result, `Continue` when every account validates
+    /// @return policyResult The policy result, `Continue` when every account validates
     function run(address, address, bytes4, bytes[] calldata parameters, bytes calldata context)
         public
         view
         override(Policy, IPolicy)
-        returns (IPolicyEngine.PolicyResult)
+        returns (IPolicyEngine.PolicyResult policyResult)
     {
         if (parameters.length != 1) revert InvalidParameters("expected kyc account list");
 
@@ -80,6 +80,6 @@ contract CredentialRegistryAccountListValidatorPolicy is
             }
         }
 
-        return IPolicyEngine.PolicyResult.Continue;
+        policyResult = IPolicyEngine.PolicyResult.Continue;
     }
 }

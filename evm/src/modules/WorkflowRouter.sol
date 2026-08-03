@@ -215,6 +215,7 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
     /// @param isAllowlisted Whether the selectors are allowlisted
     /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
     /// @dev Precondition: workflowId must not be zero
+    /// @dev Precondition: selectors must not be empty
     /// @dev Precondition: workflowId must have registered metadata (see `getWorkflowMetadata`)
     /// @dev Set `isAllowlisted` to false to remove selectors from the workflow allowlist.
     /// @dev Writes into the workflow's current selector-allowlist generation (see `getWorkflowGeneration`).
@@ -223,6 +224,7 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
         onlyRole(Roles.CONFIG_OPERATOR_ROLE)
     {
         if (workflowId == bytes32(0)) revert WorkflowRouter__NoZeroWorkflowId();
+        if (selectors.length == 0) revert WorkflowRouter__NoSelectors();
         if (s_workflowMetadata[workflowId].owner == address(0)) {
             revert WorkflowRouter__WorkflowNotRegistered(workflowId);
         }

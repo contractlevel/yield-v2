@@ -36,6 +36,8 @@ interface IWorkflowRouter is IReceiver, IPauseable {
     error WorkflowRouter__NoZeroAddress();
     /// @dev Thrown when the zero workflow ID is provided
     error WorkflowRouter__NoZeroWorkflowId();
+    /// @dev Thrown when no workflow selectors are provided
+    error WorkflowRouter__NoSelectors();
     /// @dev Thrown when the decoded metadata does not match the registered metadata for the workflow ID
     /// @param workflowId The workflow ID whose metadata was checked
     /// @param workflowName The decoded workflow name that failed to match
@@ -106,6 +108,7 @@ interface IWorkflowRouter is IReceiver, IPauseable {
     /// @param isAllowlisted Whether the selectors are allowlisted
     /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
     /// @dev Precondition: workflowId must not be zero
+    /// @dev Precondition: selectors must not be empty
     /// @dev Precondition: workflowId must have registered metadata (see `getWorkflowMetadata`)
     /// @dev Set `isAllowlisted` to false to remove selectors from the workflow allowlist
     /// @dev Writes into the workflow's current selector-allowlist generation (see `getWorkflowGeneration`)

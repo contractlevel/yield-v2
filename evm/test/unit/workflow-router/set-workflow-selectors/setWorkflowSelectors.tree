@@ -3,6 +3,8 @@ setWorkflowSelectors
   │   └── it should revert
   ├── when workflowId is zero
   │   └── it should revert with WorkflowRouter__NoZeroWorkflowId
+  ├── when selectors is empty
+  │   └── it should revert with WorkflowRouter__NoSelectors
   ├── when workflowId has no registered metadata
   │   ├── when the workflow was never registered
   │   │   └── it should revert with WorkflowRouter__WorkflowNotRegistered

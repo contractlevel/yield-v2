@@ -10,12 +10,10 @@ methods {
     function validate(address, bytes) external returns (bool) envfree;
 
     // Harness helper methods
-    function setAccountValid(address, bool) external;
     function emptyParameters() external returns (bytes[]) envfree;
     function oneAccountParameters(address) external returns (bytes[]) envfree;
-    function twoAccountParameters(address, address) external returns (bytes[]) envfree;
     function emptyAccountListParameters() external returns (bytes[]) envfree;
-    function multiplePolicyParameters(address, address) external returns (bytes[]) envfree;
+    function malformedAccountListParameters() external returns (bytes[]) envfree;
     function bytesToAddressArray(bytes) external returns (address[]) envfree;
 }
 
@@ -32,6 +30,7 @@ rule run_RevertWhen_ParametersAreEmpty() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require currentContract.s_requirementsConfigured, "requirements should be configured";
 
     /// @dev revert condition being verified
     require parameters.length == 0, "parameters should be empty";
@@ -51,6 +50,7 @@ rule run_RevertWhen_AccountListIsEmpty() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require parameters.length == 1, "expected kyc account list";
+    require currentContract.s_requirementsConfigured, "requirements should be configured";
 
     /// @dev revert condition being verified
     address[] accounts = bytesToAddressArray(parameters[0]);
@@ -60,28 +60,26 @@ rule run_RevertWhen_AccountListIsEmpty() {
     assert lastReverted;
 }
 
-// @review vacuous
-rule run_RevertWhen_MultipleParameters() {
+rule run_RevertWhen_AccountListEncodingIsMalformed() {
     env e;
     address caller;
     address subject;
     bytes4 selector;
     bytes context;
-    address a1;
-    address a2;
+    bytes[] parameters = malformedAccountListParameters();
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require parameters.length == 1, "expected kyc account list";
+    require currentContract.s_requirementsConfigured, "requirements should be configured";
 
     /// @dev revert condition being verified
-    bytes[] parameters = multiplePolicyParameters(a1, a2);
-    require parameters.length == 2, "multiple policy parameters";
+    require parameters[0].length == 0, "account list encoding should be malformed";
 
     run@withrevert(e, caller, subject, selector, parameters, context);
     assert lastReverted;
 }
 
-// @review vacuous
 rule run_RevertWhen_AccountInvalid() {
     env e;
     address caller;
@@ -89,19 +87,45 @@ rule run_RevertWhen_AccountInvalid() {
     bytes4 selector;
     bytes context;
     address a1;
-    address a2;
+    bytes[] parameters = oneAccountParameters(a1);
+
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require parameters.length == 1, "expected kyc account list";
+    address[] accounts = bytesToAddressArray(parameters[0]);
+    require accounts.length == 1, "account list should not be empty";
+    require currentContract.s_requirementsConfigured, "requirements should be configured";
 
     /// @dev revert condition being verified
-    require !validate(a1, context) || !validate(a2, context), "an account not should be valid";
-    bytes[] parameters = twoAccountParameters(a1, a2);
+    require !validate(a1, context), "account should not be valid";
 
     run@withrevert(e, caller, subject, selector, parameters, context);
     assert lastReverted;
 }
 
-// @review vacuous
+rule run_RevertWhen_NoCredentialRequirementsAreConfigured() {
+    env e;
+    address caller;
+    address subject;
+    bytes4 selector;
+    bytes context;
+    address account;
+    bytes[] parameters = oneAccountParameters(account);
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require parameters.length == 1, "expected kyc account list";
+    address[] accounts = bytesToAddressArray(parameters[0]);
+    require accounts.length == 1, "account list should not be empty";
+    require validate(account, context), "account should be valid";
+
+    /// @dev revert condition being verified
+    require !currentContract.s_requirementsConfigured, "requirements should be NOT configured";
+
+    run@withrevert(e, caller, subject, selector, parameters, context);
+    assert lastReverted;
+}
+
 rule run_Success() {
     env e;
     address caller;
@@ -109,12 +133,15 @@ rule run_Success() {
     bytes4 selector;
     bytes context;
     address a1;
-    address a2;
-    bytes[] parameters = twoAccountParameters(a1, a2);
+    bytes[] parameters = oneAccountParameters(a1);
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
-    require validate(a1, context) && validate(a2, context), "account should be valid";
+    require parameters.length == 1, "expected kyc account list";
+    address[] accounts = bytesToAddressArray(parameters[0]);
+    require accounts.length == 1, "account list should not be empty";
+    require currentContract.s_requirementsConfigured, "requirements should be configured";
+    require validate(a1, context), "account should be valid";
 
     IPolicyEngine.PolicyResult result = run@withrevert(e, caller, subject, selector, parameters, context);
     assert !lastReverted;
