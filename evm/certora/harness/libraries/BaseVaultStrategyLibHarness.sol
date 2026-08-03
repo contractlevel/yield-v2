@@ -17,12 +17,11 @@ contract BaseVaultStrategyLibHarness is BaseVaultStore, HelperHarness {
     }
 
     function setActiveAdapter(bytes32 protocolId) external returns (address adapter) {
-        adapter = BaseVaultStrategyLib._setActiveAdapter(
-            _baseVaultStorage(), protocolId, i_adapterRegistry, address(this)
-        );
+        adapter =
+            BaseVaultStrategyLib._setActiveAdapter(_baseVaultStorage(), protocolId, i_adapterRegistry, address(this));
     }
 
-    function clearActiveAdapter() external {
-        BaseVaultStrategyLib._clearActiveAdapter(_baseVaultStorage());
+    function clearActiveAdapter(address adapter) external {
+        BaseVaultStrategyLib._clearActiveAdapter(_baseVaultStorage(), adapter);
     }
 }

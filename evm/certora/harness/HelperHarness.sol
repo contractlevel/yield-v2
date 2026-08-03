@@ -2,6 +2,7 @@
 pragma solidity 0.8.34;
 
 import {Types} from "../../src/libraries/Types.sol";
+import {Client} from "@chainlink/contracts-ccip/contracts/libraries/Client.sol";
 
 import {IAny2EVMMessageReceiver} from "@chainlink/contracts-ccip/contracts/applications/CCIPReceiver.sol";
 import {
@@ -79,23 +80,19 @@ contract HelperHarness {
         encoded = abi.encode(rebalanceNonce, protocolId);
     }
 
-    function encodeCcipTxData(Types.CcipTx ccipTxType, bytes memory data)
-        external
-        pure
-        returns (bytes memory encoded)
-    {
+    function encodeCcipTxData(Types.CcipTx ccipTxType, bytes memory data) external pure returns (bytes memory encoded) {
         encoded = abi.encode(ccipTxType, data);
+    }
+
+    function encodeCcipExtraArgs(uint256 gasLimit) external pure returns (bytes memory encoded) {
+        encoded = Client._argsToBytes(Client.GenericExtraArgsV2({gasLimit: gasLimit, allowOutOfOrderExecution: false}));
     }
 
     function hashBytes(bytes memory value) external pure returns (bytes32 hash) {
         hash = keccak256(value);
     }
 
-    function encodeRawCcipTxData(uint256 ccipTxType, bytes memory data)
-        external
-        pure
-        returns (bytes memory encoded)
-    {
+    function encodeRawCcipTxData(uint256 ccipTxType, bytes memory data) external pure returns (bytes memory encoded) {
         encoded = abi.encode(ccipTxType, data);
     }
 

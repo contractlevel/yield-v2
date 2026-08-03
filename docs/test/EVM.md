@@ -121,9 +121,11 @@ certoraRun ./certora/conf/modules/policies/YieldcoinShareFrozenAccountPolicy.con
 certoraRun ./certora/conf/token/YieldcoinShare.conf
 
 certoraRun certora/conf/libraries/BaseVaultCcipLib.conf
+certoraRun certora/conf/libraries/BaseVaultConfigLib.conf
 certoraRun certora/conf/libraries/BaseVaultStrategyLib.conf
 
 certoraRun certora/conf/libraries/ParentVaultCcipLib.conf
+certoraRun certora/conf/libraries/ParentVaultConfigLib.conf
 certoraRun certora/conf/libraries/ParentVaultEpochLib.conf
 certoraRun certora/conf/libraries/ParentVaultFeesLib.conf
 certoraRun certora/conf/libraries/ParentVaultRebalanceLib.conf

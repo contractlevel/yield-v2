@@ -60,7 +60,8 @@ contract BaseVaultCcipLibHarness is BaseVaultStore, HelperHarness {
         uint256 bridgeAmount,
         uint64 destinationChainSelector,
         Types.CcipTx ccipTxType,
-        bytes calldata txData,
+        uint256 nonce,
+        bytes32 protocolId,
         uint64 thisChainSelector
     ) external {
         BaseVaultCcipLib._send(
@@ -68,7 +69,8 @@ contract BaseVaultCcipLibHarness is BaseVaultStore, HelperHarness {
             bridgeAmount,
             destinationChainSelector,
             ccipTxType,
-            txData,
+            nonce,
+            protocolId,
             i_asset,
             i_link,
             i_ccipRouter,

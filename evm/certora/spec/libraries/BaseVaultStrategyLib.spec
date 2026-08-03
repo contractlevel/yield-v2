@@ -15,7 +15,7 @@ methods {
 
     // Library internal wrappers
     function setActiveAdapter(bytes32) external returns (address);
-    function clearActiveAdapter() external;
+    function clearActiveAdapter(address) external;
 
     // Mock methods
     function adapterRegistry.getAdapter(bytes32) external returns (address) envfree;
@@ -195,26 +195,26 @@ rule setActiveAdapter_Success() {
 /// ─────────────────── CLEAR ACTIVE ADAPTER ────────────────────
 
 /// @notice Clearing the active adapter always succeeds.
-/// @dev Verifies that the previous adapter is emitted and active adapter storage is cleared.
+/// @dev Verifies that the caller-supplied adapter is emitted and active adapter storage is cleared.
 rule clearActiveAdapter_Success() {
     env e;
+    address adapterToClear;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "clearActiveAdapter is nonpayable";
 
-    /// Clearing an already-zero active adapter is valid
-    address previousAdapter = getActiveProtocolAdapter();
+    /// Clearing an already-zero active adapter or supplying an adapter different from storage is valid.
 
     /// @dev ghost starting values
     require ghost_ActiveProtocolAdapterCleared_EventCount == 0, "ActiveProtocolAdapterCleared event count starts at zero";
     require ghost_activeProtocolAdapter_StoreCount == 0, "active adapter store count starts at zero";
 
-    clearActiveAdapter@withrevert(e);
+    clearActiveAdapter@withrevert(e, adapterToClear);
 
     assert !lastReverted;
     assert getActiveProtocolAdapter() == 0;
     assert ghost_ActiveProtocolAdapterCleared_EventCount == 1;
-    assert ghost_ActiveProtocolAdapterCleared_Param_adapter == previousAdapter;
+    assert ghost_ActiveProtocolAdapterCleared_Param_adapter == adapterToClear;
     assert ghost_activeProtocolAdapter_StoreCount == 1;
     assert ghost_activeProtocolAdapter_StoredValue == 0;
 }

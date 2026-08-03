@@ -21,7 +21,7 @@ methods {
     // Library internal wrappers
     function onlyAllowedSender(address, uint64) external;
     function validateCcipSend(uint256, uint64, uint64) external returns (address);
-    function executeCcipSend(uint256, uint64, Types.CcipTx, bytes, uint64) external;
+    function executeCcipSend(uint256, uint64, Types.CcipTx, uint256, bytes32, uint64) external;
     function validateReceivedTokenAndGetAmount(Client.Any2EVMMessage) external returns (uint256);
 
     // Mock methods
@@ -30,14 +30,25 @@ methods {
     function ccipRouter.getFee() external returns (uint256) envfree;
     function ccipRouter.getFeeReverts() external returns (bool) envfree;
     function ccipRouter.ccipSendReverts() external returns (bool) envfree;
+    function ccipRouter.getLastDestinationChainSelector() external returns (uint64) envfree;
+    function ccipRouter.getLastReceiverHash() external returns (bytes32) envfree;
     function ccipRouter.getLastMessageDataHash() external returns (bytes32) envfree;
+    function ccipRouter.getLastTokenAmountsLength() external returns (uint256) envfree;
+    function ccipRouter.getLastToken() external returns (address) envfree;
+    function ccipRouter.getLastTokenAmount() external returns (uint256) envfree;
+    function ccipRouter.getLastExtraArgsHash() external returns (bytes32) envfree;
+    function ccipRouter.getLastFeeToken() external returns (address) envfree;
 
     // Harness helper methods
     function bytes32ToUint256(bytes32) external returns (uint256) envfree;
+    function bytes32ToUint64(bytes32) external returns (uint64) envfree;
     function bytes32ToUint8(bytes32) external returns (uint8) envfree;
     function uint8ToCcipTxType(uint8) external returns (Types.CcipTx) envfree;
     function encodeEpochNonce(uint256) external returns (bytes) envfree;
+    function encodeRebalanceData(uint256, bytes32) external returns (bytes) envfree;
     function encodeCcipTxData(Types.CcipTx, bytes) external returns (bytes) envfree;
+    function encodeCcipExtraArgs(uint256) external returns (bytes) envfree;
+    function encodeAddress(address) external returns (bytes) envfree;
     function hashBytes(bytes) external returns (bytes32) envfree;
 
     // Dispatcher summaries
@@ -55,8 +66,8 @@ methods {
                          DEFINITIONS
 //////////////////////////////////////////////////////////////*/
 definition CCIPBridgedEvent() returns bytes32 =
-// keccak256("CCIPBridged(bytes32,uint256,uint8)")
-    to_bytes32(0x39e716d942b34d57d78c584f648ec8e13b9621c6e5b1a57d18ef47a98b11b39d);
+// keccak256("CCIPBridged(bytes32,uint64,uint8)")
+    to_bytes32(0x2fec67437fa2b2e63688e15520acdbd76b9c4d152a8e345d00ce467eaf4e67fc);
 
 /*//////////////////////////////////////////////////////////////
                              GHOSTS
@@ -71,9 +82,9 @@ ghost bytes32 ghost_CCIPBridged_Param_ccipMessageId {
     init_state axiom ghost_CCIPBridged_Param_ccipMessageId == to_bytes32(0);
 }
 
-/// @notice EmittedValue: track amount param emitted in CCIPBridged event
-ghost uint256 ghost_CCIPBridged_Param_amount {
-    init_state axiom ghost_CCIPBridged_Param_amount == 0;
+/// @notice EmittedValue: track destinationChainSelector param emitted in CCIPBridged event
+ghost uint64 ghost_CCIPBridged_Param_destinationChainSelector {
+    init_state axiom ghost_CCIPBridged_Param_destinationChainSelector == 0;
 }
 
 /// @notice EmittedValue: track ccipTxType param emitted in CCIPBridged event
@@ -89,7 +100,7 @@ hook LOG4(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2, bytes32 
     if (t0 == CCIPBridgedEvent()) {
         ghost_CCIPBridged_EventCount = ghost_CCIPBridged_EventCount + 1;
         ghost_CCIPBridged_Param_ccipMessageId = t1;
-        ghost_CCIPBridged_Param_amount = bytes32ToUint256(t2);
+        ghost_CCIPBridged_Param_destinationChainSelector = bytes32ToUint64(t2);
         ghost_CCIPBridged_Param_ccipTxType = uint8ToCcipTxType(bytes32ToUint8(t3));
     }
 }
@@ -201,6 +212,8 @@ rule validateCcipSend_RevertWhen_DestinationChainIsZero() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "validateCcipSend is nonpayable";
     require bridgeAmount != 0, "bridge amount is nonzero";
+    require thisChainSelector != 0, "destination is not this chain";
+    require getCrosschainVault(0) != 0, "destination vault is registered";
 
     /// @dev revert condition being verified
     uint64 destinationChainSelector = 0;
@@ -223,6 +236,8 @@ rule validateCcipSend_RevertWhen_DestinationIsSelfChain() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "validateCcipSend is nonpayable";
     require bridgeAmount != 0, "bridge amount is nonzero";
+    require thisChainSelector != 0, "destination chain selector is nonzero";
+    require getCrosschainVault(thisChainSelector) != 0, "destination vault is registered";
 
     /// @dev revert condition being verified
     uint64 destinationChainSelector = thisChainSelector;
@@ -320,7 +335,8 @@ rule executeCcipSend_RevertWhen_BridgeAmountIsZero() {
     uint64 destSelector;
     uint64 thisChainSelector;
     Types.CcipTx ccipTxType;
-    bytes txData;
+    uint256 nonce;
+    bytes32 protocolId;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "executeCcipSend is nonpayable";
@@ -336,7 +352,7 @@ rule executeCcipSend_RevertWhen_BridgeAmountIsZero() {
     /// @dev ghost starting values
     require ghost_CCIPBridged_EventCount == 0, "CCIPBridged event count starts at zero";
 
-    executeCcipSend@withrevert(e, bridgeAmount, destSelector, ccipTxType, txData, thisChainSelector);
+    executeCcipSend@withrevert(e, bridgeAmount, destSelector, ccipTxType, nonce, protocolId, thisChainSelector);
 
     assert lastReverted;
     assert ghost_CCIPBridged_EventCount == 0;
@@ -349,13 +365,23 @@ rule executeCcipSend_RevertWhen_DestinationChainIsZero() {
     uint256 bridgeAmount;
     uint64 thisChainSelector;
     Types.CcipTx ccipTxType;
-    bytes txData;
+    uint256 nonce;
+    bytes32 protocolId;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "executeCcipSend is nonpayable";
     require bridgeAmount != 0, "bridge amount is nonzero";
+    require thisChainSelector != 0, "destination is not this chain";
+    require getCrosschainVault(0) != 0, "destination vault is registered";
     require !ccipRouter.getFeeReverts(), "router fee lookup does not revert";
     require !ccipRouter.ccipSendReverts(), "router send does not revert";
+
+    uint256 vaultAssetBalance = asset.balanceOf(currentContract);
+    uint256 routerAssetBalance = asset.balanceOf(getRouter());
+
+    /// @dev mock token arithmetic conditions
+    require bridgeAmount <= vaultAssetBalance, "vault asset balance covers the bridge amount";
+    require routerAssetBalance <= max_uint256 - bridgeAmount, "router asset balance does not overflow";
 
     /// @dev revert condition being verified
     uint64 destSelector = 0;
@@ -363,7 +389,7 @@ rule executeCcipSend_RevertWhen_DestinationChainIsZero() {
     /// @dev ghost starting values
     require ghost_CCIPBridged_EventCount == 0, "CCIPBridged event count starts at zero";
 
-    executeCcipSend@withrevert(e, bridgeAmount, destSelector, ccipTxType, txData, thisChainSelector);
+    executeCcipSend@withrevert(e, bridgeAmount, destSelector, ccipTxType, nonce, protocolId, thisChainSelector);
 
     assert lastReverted;
     assert ghost_CCIPBridged_EventCount == 0;
@@ -376,13 +402,23 @@ rule executeCcipSend_RevertWhen_DestinationIsSelfChain() {
     uint256 bridgeAmount;
     uint64 thisChainSelector;
     Types.CcipTx ccipTxType;
-    bytes txData;
+    uint256 nonce;
+    bytes32 protocolId;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "executeCcipSend is nonpayable";
     require bridgeAmount != 0, "bridge amount is nonzero";
+    require thisChainSelector != 0, "destination chain selector is nonzero";
+    require getCrosschainVault(thisChainSelector) != 0, "destination vault is registered";
     require !ccipRouter.getFeeReverts(), "router fee lookup does not revert";
     require !ccipRouter.ccipSendReverts(), "router send does not revert";
+
+    uint256 vaultAssetBalance = asset.balanceOf(currentContract);
+    uint256 routerAssetBalance = asset.balanceOf(getRouter());
+
+    /// @dev mock token arithmetic conditions
+    require bridgeAmount <= vaultAssetBalance, "vault asset balance covers the bridge amount";
+    require routerAssetBalance <= max_uint256 - bridgeAmount, "router asset balance does not overflow";
 
     /// @dev revert condition being verified
     uint64 destSelector = thisChainSelector;
@@ -390,7 +426,7 @@ rule executeCcipSend_RevertWhen_DestinationIsSelfChain() {
     /// @dev ghost starting values
     require ghost_CCIPBridged_EventCount == 0, "CCIPBridged event count starts at zero";
 
-    executeCcipSend@withrevert(e, bridgeAmount, destSelector, ccipTxType, txData, thisChainSelector);
+    executeCcipSend@withrevert(e, bridgeAmount, destSelector, ccipTxType, nonce, protocolId, thisChainSelector);
 
     assert lastReverted;
     assert ghost_CCIPBridged_EventCount == 0;
@@ -404,7 +440,8 @@ rule executeCcipSend_RevertWhen_DestinationVaultNotRegistered() {
     uint64 destSelector;
     uint64 thisChainSelector;
     Types.CcipTx ccipTxType;
-    bytes txData;
+    uint256 nonce;
+    bytes32 protocolId;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "executeCcipSend is nonpayable";
@@ -414,19 +451,26 @@ rule executeCcipSend_RevertWhen_DestinationVaultNotRegistered() {
     require !ccipRouter.getFeeReverts(), "router fee lookup does not revert";
     require !ccipRouter.ccipSendReverts(), "router send does not revert";
 
+    uint256 vaultAssetBalance = asset.balanceOf(currentContract);
+    uint256 routerAssetBalance = asset.balanceOf(getRouter());
+
+    /// @dev mock token arithmetic conditions
+    require bridgeAmount <= vaultAssetBalance, "vault asset balance covers the bridge amount";
+    require routerAssetBalance <= max_uint256 - bridgeAmount, "router asset balance does not overflow";
+
     /// @dev revert condition being verified
     require getCrosschainVault(destSelector) == 0, "destination vault is not registered";
 
     /// @dev ghost starting values
     require ghost_CCIPBridged_EventCount == 0, "CCIPBridged event count starts at zero";
 
-    executeCcipSend@withrevert(e, bridgeAmount, destSelector, ccipTxType, txData, thisChainSelector);
+    executeCcipSend@withrevert(e, bridgeAmount, destSelector, ccipTxType, nonce, protocolId, thisChainSelector);
 
     assert lastReverted;
     assert ghost_CCIPBridged_EventCount == 0;
 }
 
-/// @notice A valid CCIP send emits CCIPBridged with the bridged amount and transaction type.
+/// @notice A valid CCIP send emits CCIPBridged with the message ID, destination selector, and transaction type.
 /// @dev Verifies the linked token and router mocks approve and send without reverting.
 rule executeCcipSend_Success_EmitsCCIPBridged() {
     env e;
@@ -434,7 +478,8 @@ rule executeCcipSend_Success_EmitsCCIPBridged() {
     uint64 destSelector;
     uint64 thisChainSelector;
     Types.CcipTx ccipTxType;
-    bytes txData;
+    uint256 nonce;
+    bytes32 protocolId;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "executeCcipSend is nonpayable";
@@ -463,14 +508,15 @@ rule executeCcipSend_Success_EmitsCCIPBridged() {
     /// @dev ghost starting values
     require ghost_CCIPBridged_EventCount == 0, "CCIPBridged event count starts at zero";
     require ghost_CCIPBridged_Param_ccipMessageId == to_bytes32(0), "CCIPBridged messageId ghost starts at zero";
-    require ghost_CCIPBridged_Param_amount == 0, "CCIPBridged amount ghost starts at zero";
+    require ghost_CCIPBridged_Param_destinationChainSelector == 0,
+        "CCIPBridged destination chain selector ghost starts at zero";
 
-    executeCcipSend@withrevert(e, bridgeAmount, destSelector, ccipTxType, txData, thisChainSelector);
+    executeCcipSend@withrevert(e, bridgeAmount, destSelector, ccipTxType, nonce, protocolId, thisChainSelector);
 
     assert !lastReverted;
     assert ghost_CCIPBridged_EventCount == 1;
     assert ghost_CCIPBridged_Param_ccipMessageId != to_bytes32(0);
-    assert ghost_CCIPBridged_Param_amount == bridgeAmount;
+    assert ghost_CCIPBridged_Param_destinationChainSelector == destSelector;
     assert ghost_CCIPBridged_Param_ccipTxType == ccipTxType;
 }
 
@@ -482,6 +528,7 @@ rule executeCcipSend_EpochWithdraw_SendsEncodedEpochNoncePayload() {
     uint64 destSelector;
     uint64 thisChainSelector;
     uint256 epochNonce;
+    bytes32 protocolId;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "executeCcipSend is nonpayable";
@@ -507,20 +554,122 @@ rule executeCcipSend_EpochWithdraw_SendsEncodedEpochNoncePayload() {
     require bridgeAmount <= vaultAssetBalanceBefore, "vault asset balance covers the bridge amount";
     require routerAssetBalanceBefore <= max_uint256 - bridgeAmount, "router asset balance does not overflow";
 
-    bytes txData = encodeEpochNonce(epochNonce);
-    bytes expectedMessageData = encodeCcipTxData(Types.CcipTx.EPOCH_NET_WITHDRAW, txData);
+    bytes expectedTxData = encodeEpochNonce(epochNonce);
+    bytes expectedMessageData = encodeCcipTxData(Types.CcipTx.EPOCH_NET_WITHDRAW, expectedTxData);
 
     executeCcipSend@withrevert(
         e,
         bridgeAmount,
         destSelector,
         Types.CcipTx.EPOCH_NET_WITHDRAW,
-        txData,
+        epochNonce,
+        protocolId,
         thisChainSelector
     );
 
     assert !lastReverted;
     assert ccipRouter.getLastMessageDataHash() == hashBytes(expectedMessageData);
+}
+
+/// @notice Rebalance CCIP sends pass both the rebalance nonce and protocol ID in the router message payload.
+/// @dev Verifies the exact message data hash observed by the router without reading dynamic bytes from storage.
+rule executeCcipSend_Rebalance_SendsEncodedNonceAndProtocolIdPayload() {
+    env e;
+    uint256 bridgeAmount;
+    uint64 destSelector;
+    uint64 thisChainSelector;
+    uint256 rebalanceNonce;
+    bytes32 protocolId;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "executeCcipSend is nonpayable";
+
+    /// @dev success conditions being verified
+    require bridgeAmount != 0, "bridge amount is nonzero";
+    require destSelector != 0, "destination chain selector is nonzero";
+    require destSelector != thisChainSelector, "destination is not this chain";
+    require getCrosschainVault(destSelector) != 0, "destination vault is registered";
+    require !ccipRouter.getFeeReverts(), "router fee lookup does not revert";
+    require !ccipRouter.ccipSendReverts(), "router send does not revert";
+
+    uint256 fee = ccipRouter.getFee();
+    address router = getRouter();
+    uint256 vaultLinkBalanceBefore = link.balanceOf(currentContract);
+    uint256 routerLinkBalanceBefore = link.balanceOf(router);
+    uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
+    uint256 routerAssetBalanceBefore = asset.balanceOf(router);
+
+    /// @dev mock token arithmetic conditions
+    require fee <= vaultLinkBalanceBefore, "vault LINK balance covers the CCIP fee";
+    require routerLinkBalanceBefore <= max_uint256 - fee, "router LINK balance does not overflow";
+    require bridgeAmount <= vaultAssetBalanceBefore, "vault asset balance covers the bridge amount";
+    require routerAssetBalanceBefore <= max_uint256 - bridgeAmount, "router asset balance does not overflow";
+
+    bytes expectedTxData = encodeRebalanceData(rebalanceNonce, protocolId);
+    bytes expectedMessageData = encodeCcipTxData(Types.CcipTx.REBALANCE, expectedTxData);
+
+    executeCcipSend@withrevert(
+        e,
+        bridgeAmount,
+        destSelector,
+        Types.CcipTx.REBALANCE,
+        rebalanceNonce,
+        protocolId,
+        thisChainSelector
+    );
+
+    assert !lastReverted;
+    assert ccipRouter.getLastMessageDataHash() == hashBytes(expectedMessageData);
+}
+
+/// @notice A valid CCIP send passes every routing, token, fee, and execution parameter to the router.
+/// @dev Verifies the exact constructed CCIP message independently of its transaction payload rule.
+rule executeCcipSend_Success_PassesExpectedRouterParameters() {
+    env e;
+    uint256 bridgeAmount;
+    uint64 destSelector;
+    uint64 thisChainSelector;
+    Types.CcipTx ccipTxType;
+    uint256 nonce;
+    bytes32 protocolId;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "executeCcipSend is nonpayable";
+
+    /// @dev success conditions being verified
+    require bridgeAmount != 0, "bridge amount is nonzero";
+    require destSelector != 0, "destination chain selector is nonzero";
+    require destSelector != thisChainSelector, "destination is not this chain";
+    require getCrosschainVault(destSelector) != 0, "destination vault is registered";
+    require !ccipRouter.getFeeReverts(), "router fee lookup does not revert";
+    require !ccipRouter.ccipSendReverts(), "router send does not revert";
+
+    uint256 fee = ccipRouter.getFee();
+    address router = getRouter();
+    uint256 vaultLinkBalanceBefore = link.balanceOf(currentContract);
+    uint256 routerLinkBalanceBefore = link.balanceOf(router);
+    uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
+    uint256 routerAssetBalanceBefore = asset.balanceOf(router);
+
+    /// @dev mock token arithmetic conditions
+    require fee <= vaultLinkBalanceBefore, "vault LINK balance covers the CCIP fee";
+    require routerLinkBalanceBefore <= max_uint256 - fee, "router LINK balance does not overflow";
+    require bridgeAmount <= vaultAssetBalanceBefore, "vault asset balance covers the bridge amount";
+    require routerAssetBalanceBefore <= max_uint256 - bridgeAmount, "router asset balance does not overflow";
+
+    address destinationVault = getCrosschainVault(destSelector);
+    uint256 gasLimit = getResolvedCcipGasLimit(destSelector);
+
+    executeCcipSend@withrevert(e, bridgeAmount, destSelector, ccipTxType, nonce, protocolId, thisChainSelector);
+
+    assert !lastReverted;
+    assert ccipRouter.getLastDestinationChainSelector() == destSelector;
+    assert ccipRouter.getLastReceiverHash() == hashBytes(encodeAddress(destinationVault));
+    assert ccipRouter.getLastTokenAmountsLength() == 1;
+    assert ccipRouter.getLastToken() == getAsset();
+    assert ccipRouter.getLastTokenAmount() == bridgeAmount;
+    assert ccipRouter.getLastExtraArgsHash() == hashBytes(encodeCcipExtraArgs(gasLimit));
+    assert ccipRouter.getLastFeeToken() == link;
 }
 
 /// @notice A valid CCIP send transfers the fee and bridged asset from the harness to the router.
@@ -531,7 +680,8 @@ rule executeCcipSend_Success_BalanceChanges() {
     uint64 destSelector;
     uint64 thisChainSelector;
     Types.CcipTx ccipTxType;
-    bytes txData;
+    uint256 nonce;
+    bytes32 protocolId;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "executeCcipSend is nonpayable";
@@ -557,7 +707,7 @@ rule executeCcipSend_Success_BalanceChanges() {
     require bridgeAmount <= vaultAssetBalanceBefore, "vault asset balance covers the bridge amount";
     require routerAssetBalanceBefore <= max_uint256 - bridgeAmount, "router asset balance does not overflow";
 
-    executeCcipSend@withrevert(e, bridgeAmount, destSelector, ccipTxType, txData, thisChainSelector);
+    executeCcipSend@withrevert(e, bridgeAmount, destSelector, ccipTxType, nonce, protocolId, thisChainSelector);
 
     assert !lastReverted;
     assert link.balanceOf(currentContract) == vaultLinkBalanceBefore - fee;
@@ -574,7 +724,8 @@ rule executeCcipSend_RevertWhen_RouterGetFeeReverts() {
     uint64 destSelector;
     uint64 thisChainSelector;
     Types.CcipTx ccipTxType;
-    bytes txData;
+    uint256 nonce;
+    bytes32 protocolId;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "executeCcipSend is nonpayable";
@@ -594,10 +745,14 @@ rule executeCcipSend_RevertWhen_RouterGetFeeReverts() {
     uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
     uint256 routerAssetBalanceBefore = asset.balanceOf(router);
 
+    /// @dev mock token arithmetic conditions
+    require bridgeAmount <= vaultAssetBalanceBefore, "vault asset balance covers the bridge amount";
+    require routerAssetBalanceBefore <= max_uint256 - bridgeAmount, "router asset balance does not overflow";
+
     /// @dev ghost starting values
     require ghost_CCIPBridged_EventCount == 0, "CCIPBridged event count starts at zero";
 
-    executeCcipSend@withrevert(e, bridgeAmount, destSelector, ccipTxType, txData, thisChainSelector);
+    executeCcipSend@withrevert(e, bridgeAmount, destSelector, ccipTxType, nonce, protocolId, thisChainSelector);
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
@@ -616,7 +771,8 @@ rule executeCcipSend_RevertWhen_RouterCcipSendReverts() {
     uint64 destSelector;
     uint64 thisChainSelector;
     Types.CcipTx ccipTxType;
-    bytes txData;
+    uint256 nonce;
+    bytes32 protocolId;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "executeCcipSend is nonpayable";
@@ -636,10 +792,14 @@ rule executeCcipSend_RevertWhen_RouterCcipSendReverts() {
     uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
     uint256 routerAssetBalanceBefore = asset.balanceOf(router);
 
+    /// @dev mock token arithmetic conditions
+    require bridgeAmount <= vaultAssetBalanceBefore, "vault asset balance covers the bridge amount";
+    require routerAssetBalanceBefore <= max_uint256 - bridgeAmount, "router asset balance does not overflow";
+
     /// @dev ghost starting values
     require ghost_CCIPBridged_EventCount == 0, "CCIPBridged event count starts at zero";
 
-    executeCcipSend@withrevert(e, bridgeAmount, destSelector, ccipTxType, txData, thisChainSelector);
+    executeCcipSend@withrevert(e, bridgeAmount, destSelector, ccipTxType, nonce, protocolId, thisChainSelector);
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
