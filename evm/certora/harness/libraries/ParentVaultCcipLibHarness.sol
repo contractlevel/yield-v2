@@ -15,10 +15,6 @@ contract ParentVaultCcipLibHarness is ParentVaultStore, HelperHarness {
             ParentVaultCcipLib._receiveCcip(_parentVaultStorage(), ccipTxType, data, receivedAmount);
     }
 
-    function finalizeEpoch(uint256 epochNonce) external {
-        ParentVaultCcipLib._finalizeEpoch(_parentVaultStorage(), epochNonce);
-    }
-
     function getEpochNonce() external view returns (uint256 epochNonce) {
         epochNonce = _parentVaultStorage().s_epochNonce;
     }

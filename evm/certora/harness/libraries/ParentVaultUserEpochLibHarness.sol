@@ -36,6 +36,10 @@ contract ParentVaultUserEpochLibHarness is ParentVaultStore, HelperHarness {
         ParentVaultUserEpochLib._cancelDeposit(_parentVaultStorage(), i_asset, user);
     }
 
+    function forceCancelDeposit(address user) external {
+        ParentVaultUserEpochLib._forceCancelDeposit(_parentVaultStorage(), i_asset, user);
+    }
+
     function cancelWithdraw(address user) external {
         ParentVaultUserEpochLib._cancelWithdraw(_parentVaultStorage(), i_share, user);
     }

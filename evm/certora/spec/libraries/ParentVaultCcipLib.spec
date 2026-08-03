@@ -18,7 +18,6 @@ methods {
 
     // Library internal wrappers
     function receiveCcip(Types.CcipTx, bytes, uint256) external returns (uint256, bytes32);
-    function finalizeEpoch(uint256) external;
 
     // Harness helper methods
     function bytes32ToUint256(bytes32) external returns (uint256) envfree;
@@ -175,12 +174,18 @@ rule CCIP_004_receiveCcip_RevertWhen_TxTypeInvalid() {
     /// @dev revert condition being verified
     Types.CcipTx ccipTxType = Types.CcipTx.EPOCH_NET_DEPOSIT;
 
+    /// @dev ghost starting values
+    require ghost_EpochWithdrawAmountShort_EventCount == 0, "EpochWithdrawAmountShort event count starts at zero";
+    require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
+
     storage before = lastStorage;
 
     receiveCcip@withrevert(e, ccipTxType, data, receivedAmount);
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_EpochWithdrawAmountShort_EventCount == 0;
+    assert ghost_EpochClaimable_EventCount == 0;
 }
 
 /// ─────────────────── EPOCH NET WITHDRAW ─────────────────────
@@ -195,17 +200,29 @@ rule receiveCcip_EpochNetWithdraw_RevertWhen_EpochNonceInvalid() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "receiveCcip is nonpayable";
     require getEpochNonce() != 0, "current epoch nonce is nonzero";
+    require getEpochStatus(epochNonce) == Types.EpochStatus.EXECUTING, "epoch is executing";
+    require getEpochTotalWithdrawClaimAmount(epochNonce) >= getEpochTotalDepositAmount(epochNonce),
+        "expected withdraw does not underflow";
+    require getEpochTotalDepositAmount(epochNonce) <= max_uint256 - receivedAmount,
+        "settled withdraw claim amount does not overflow";
 
     /// @dev revert condition being verified
     require epochNonce != getEpochNonce() - 1, "payload epoch nonce is invalid";
 
     bytes data = encodeEpochNonce(epochNonce);
+
+    /// @dev ghost starting values
+    require ghost_EpochWithdrawAmountShort_EventCount == 0, "EpochWithdrawAmountShort event count starts at zero";
+    require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
+
     storage before = lastStorage;
 
     receiveCcip@withrevert(e, Types.CcipTx.EPOCH_NET_WITHDRAW, data, receivedAmount);
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_EpochWithdrawAmountShort_EventCount == 0;
+    assert ghost_EpochClaimable_EventCount == 0;
 }
 
 /// @notice Epoch net-withdraw handling reverts when the current epoch nonce is zero.
@@ -221,13 +238,27 @@ rule receiveCcip_EpochNetWithdraw_RevertWhen_CurrentEpochNonceIsZero() {
     /// @dev revert condition being verified
     require getEpochNonce() == 0, "current epoch nonce is zero";
 
+    /// @dev later revert conditions NOT being verified
+    require getEpochStatus(epochNonce) == Types.EpochStatus.EXECUTING, "epoch is executing";
+    require getEpochTotalWithdrawClaimAmount(epochNonce) >= getEpochTotalDepositAmount(epochNonce),
+        "expected withdraw does not underflow";
+    require getEpochTotalDepositAmount(epochNonce) <= max_uint256 - receivedAmount,
+        "settled withdraw claim amount does not overflow";
+
     bytes data = encodeEpochNonce(epochNonce);
+
+    /// @dev ghost starting values
+    require ghost_EpochWithdrawAmountShort_EventCount == 0, "EpochWithdrawAmountShort event count starts at zero";
+    require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
+
     storage before = lastStorage;
 
     receiveCcip@withrevert(e, Types.CcipTx.EPOCH_NET_WITHDRAW, data, receivedAmount);
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_EpochWithdrawAmountShort_EventCount == 0;
+    assert ghost_EpochClaimable_EventCount == 0;
 }
 
 /// @notice Epoch net-withdraw handling reverts when the epoch payload cannot decode to a uint256.
@@ -243,12 +274,18 @@ rule receiveCcip_EpochNetWithdraw_RevertWhen_DataIsMalformed() {
     /// @dev revert condition being verified
     require data.length < 32, "payload is too short to decode uint256";
 
+    /// @dev ghost starting values
+    require ghost_EpochWithdrawAmountShort_EventCount == 0, "EpochWithdrawAmountShort event count starts at zero";
+    require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
+
     storage before = lastStorage;
 
     receiveCcip@withrevert(e, Types.CcipTx.EPOCH_NET_WITHDRAW, data, receivedAmount);
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_EpochWithdrawAmountShort_EventCount == 0;
+    assert ghost_EpochClaimable_EventCount == 0;
 }
 
 /// @notice Epoch net-withdraw handling reverts when the target epoch is not executing.
@@ -272,12 +309,19 @@ rule receiveCcip_EpochNetWithdraw_RevertWhen_EpochNotExecuting() {
         "settled withdraw claim amount does not overflow";
 
     bytes data = encodeEpochNonce(epochNonce);
+
+    /// @dev ghost starting values
+    require ghost_EpochWithdrawAmountShort_EventCount == 0, "EpochWithdrawAmountShort event count starts at zero";
+    require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
+
     storage before = lastStorage;
 
     receiveCcip@withrevert(e, Types.CcipTx.EPOCH_NET_WITHDRAW, data, receivedAmount);
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_EpochWithdrawAmountShort_EventCount == 0;
+    assert ghost_EpochClaimable_EventCount == 0;
 }
 
 /// @notice Epoch net-withdraw handling reverts when expected withdraw arithmetic underflows.
@@ -290,18 +334,26 @@ rule receiveCcip_EpochNetWithdraw_RevertWhen_ExpectedWithdrawUnderflows() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "receiveCcip is nonpayable";
     require getEpochNonce() == epochNonce + 1, "payload epoch nonce is the previous epoch";
+    require getEpochStatus(epochNonce) == Types.EpochStatus.EXECUTING, "epoch is executing";
 
     /// @dev revert condition being verified
     require getEpochTotalWithdrawClaimAmount(epochNonce) < getEpochTotalDepositAmount(epochNonce),
         "expected withdraw underflows";
 
     bytes data = encodeEpochNonce(epochNonce);
+
+    /// @dev ghost starting values
+    require ghost_EpochWithdrawAmountShort_EventCount == 0, "EpochWithdrawAmountShort event count starts at zero";
+    require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
+
     storage before = lastStorage;
 
     receiveCcip@withrevert(e, Types.CcipTx.EPOCH_NET_WITHDRAW, data, receivedAmount);
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_EpochWithdrawAmountShort_EventCount == 0;
+    assert ghost_EpochClaimable_EventCount == 0;
 }
 
 /// @notice Epoch net-withdraw handling reverts when settled withdraw accounting overflows.
@@ -314,6 +366,7 @@ rule receiveCcip_EpochNetWithdraw_RevertWhen_SettledAmountOverflows() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "receiveCcip is nonpayable";
     require getEpochNonce() == epochNonce + 1, "payload epoch nonce is the previous epoch";
+    require getEpochStatus(epochNonce) == Types.EpochStatus.EXECUTING, "epoch is executing";
     require getEpochTotalWithdrawClaimAmount(epochNonce) >= getEpochTotalDepositAmount(epochNonce),
         "expected withdraw does not underflow";
 
@@ -322,12 +375,19 @@ rule receiveCcip_EpochNetWithdraw_RevertWhen_SettledAmountOverflows() {
         "settled withdraw claim amount overflows";
 
     bytes data = encodeEpochNonce(epochNonce);
+
+    /// @dev ghost starting values
+    require ghost_EpochWithdrawAmountShort_EventCount == 0, "EpochWithdrawAmountShort event count starts at zero";
+    require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
+
     storage before = lastStorage;
 
     receiveCcip@withrevert(e, Types.CcipTx.EPOCH_NET_WITHDRAW, data, receivedAmount);
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_EpochWithdrawAmountShort_EventCount == 0;
+    assert ghost_EpochClaimable_EventCount == 0;
 }
 
 /// @notice Epoch net-withdraw handling succeeds and emits EpochWithdrawAmountShort when received amount is below expected.
@@ -455,7 +515,6 @@ rule receiveCcip_EpochNetWithdraw_Success_WhenReceivedAmountCoversExpected() {
 /// @dev Verifies that no ParentVault storage is modified.
 rule receiveCcip_Rebalance_RevertWhen_NoRebalanceInProgress() {
     env e;
-    bytes data;
     uint256 receivedAmount;
 
     /// @dev revert conditions NOT being verified
@@ -464,12 +523,20 @@ rule receiveCcip_Rebalance_RevertWhen_NoRebalanceInProgress() {
     /// @dev revert condition being verified
     require getRebalanceState() != Types.RebalanceState.REBALANCING, "rebalance is not in progress";
 
+    bytes data = encodeRebalanceData(getRebalanceNonce(), getPendingStrategyProtocolId());
+
+    /// @dev ghost starting values
+    require ghost_EpochWithdrawAmountShort_EventCount == 0, "EpochWithdrawAmountShort event count starts at zero";
+    require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
+
     storage before = lastStorage;
 
     receiveCcip@withrevert(e, Types.CcipTx.REBALANCE, data, receivedAmount);
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_EpochWithdrawAmountShort_EventCount == 0;
+    assert ghost_EpochClaimable_EventCount == 0;
 }
 
 /// @notice Rebalance CCIP validation reverts when the rebalance payload cannot decode to nonce and protocol ID.
@@ -486,12 +553,18 @@ rule receiveCcip_Rebalance_RevertWhen_DataIsMalformed() {
     /// @dev revert condition being verified
     require data.length < 64, "payload is too short to decode uint256 and bytes32";
 
+    /// @dev ghost starting values
+    require ghost_EpochWithdrawAmountShort_EventCount == 0, "EpochWithdrawAmountShort event count starts at zero";
+    require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
+
     storage before = lastStorage;
 
     receiveCcip@withrevert(e, Types.CcipTx.REBALANCE, data, receivedAmount);
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_EpochWithdrawAmountShort_EventCount == 0;
+    assert ghost_EpochClaimable_EventCount == 0;
 }
 
 /// @notice Rebalance CCIP validation reverts when the payload rebalance nonce is invalid.
@@ -505,17 +578,25 @@ rule receiveCcip_Rebalance_RevertWhen_RebalanceNonceInvalid() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "receiveCcip is nonpayable";
     require getRebalanceState() == Types.RebalanceState.REBALANCING, "rebalance is in progress";
+    require protocolId == getPendingStrategyProtocolId(), "payload protocol ID is the pending strategy";
 
     /// @dev revert condition being verified
     require rebalanceNonce != getRebalanceNonce(), "payload rebalance nonce is invalid";
 
     bytes data = encodeRebalanceData(rebalanceNonce, protocolId);
+
+    /// @dev ghost starting values
+    require ghost_EpochWithdrawAmountShort_EventCount == 0, "EpochWithdrawAmountShort event count starts at zero";
+    require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
+
     storage before = lastStorage;
 
     receiveCcip@withrevert(e, Types.CcipTx.REBALANCE, data, receivedAmount);
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_EpochWithdrawAmountShort_EventCount == 0;
+    assert ghost_EpochClaimable_EventCount == 0;
 }
 
 /// @notice Rebalance CCIP validation reverts when the payload protocol ID is not the pending strategy.
@@ -535,12 +616,19 @@ rule receiveCcip_Rebalance_RevertWhen_PendingProtocolIdInvalid() {
     require protocolId != getPendingStrategyProtocolId(), "payload protocol ID is invalid";
 
     bytes data = encodeRebalanceData(rebalanceNonce, protocolId);
+
+    /// @dev ghost starting values
+    require ghost_EpochWithdrawAmountShort_EventCount == 0, "EpochWithdrawAmountShort event count starts at zero";
+    require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
+
     storage before = lastStorage;
 
     receiveCcip@withrevert(e, Types.CcipTx.REBALANCE, data, receivedAmount);
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_EpochWithdrawAmountShort_EventCount == 0;
+    assert ghost_EpochClaimable_EventCount == 0;
 }
 
 /// @notice Rebalance CCIP validation returns the payload nonce and pending protocol ID when they match storage.
@@ -558,6 +646,11 @@ rule receiveCcip_Rebalance_Success() {
     uint256 rebalanceNonce = getRebalanceNonce();
     bytes32 protocolId = getPendingStrategyProtocolId();
     bytes data = encodeRebalanceData(rebalanceNonce, protocolId);
+
+    /// @dev ghost starting values
+    require ghost_EpochWithdrawAmountShort_EventCount == 0, "EpochWithdrawAmountShort event count starts at zero";
+    require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
+
     storage before = lastStorage;
 
     uint256 returnedNonce; bytes32 returnedProtocolId;
@@ -568,56 +661,6 @@ rule receiveCcip_Rebalance_Success() {
     assert returnedNonce == rebalanceNonce;
     assert returnedProtocolId == protocolId;
     assert before[currentContract] == lastStorage[currentContract];
-}
-
-/// ─────────────────── FINALIZE EPOCH ─────────────────────────
-
-/// @notice Finalizing an epoch reverts when the epoch is not executing.
-/// @dev Verifies that the epoch status is unchanged and no EpochClaimable event is emitted.
-rule finalizeEpoch_RevertWhen_EpochNotExecuting() {
-    env e;
-    uint256 epochNonce;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "finalizeEpoch is nonpayable";
-
-    /// @dev revert condition being verified
-    require getEpochStatus(epochNonce) != Types.EpochStatus.EXECUTING, "epoch is not executing";
-
-    /// @dev ghost starting values
-    require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
-    require ghost_epoch_status_StoreCount == 0, "epoch status store count starts at zero";
-
-    finalizeEpoch@withrevert(e, epochNonce);
-
-    assert lastReverted;
+    assert ghost_EpochWithdrawAmountShort_EventCount == 0;
     assert ghost_EpochClaimable_EventCount == 0;
-    assert ghost_epoch_status_StoreCount == 0;
-}
-
-/// @notice Finalizing an executing epoch makes it claimable.
-/// @dev Verifies the epoch status write and EpochClaimable event parameter.
-rule finalizeEpoch_Success() {
-    env e;
-    uint256 epochNonce;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "finalizeEpoch is nonpayable";
-
-    /// @dev success conditions being verified
-    require getEpochStatus(epochNonce) == Types.EpochStatus.EXECUTING, "epoch is executing";
-
-    /// @dev ghost starting values
-    require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
-    require ghost_epoch_status_StoreCount == 0, "epoch status store count starts at zero";
-
-    finalizeEpoch@withrevert(e, epochNonce);
-
-    assert !lastReverted;
-    assert getEpochStatus(epochNonce) == Types.EpochStatus.CLAIMABLE;
-    assert ghost_EpochClaimable_EventCount == 1;
-    assert ghost_EpochClaimable_Param_epochNonce == epochNonce;
-    assert ghost_epoch_status_StoreCount == 1;
-    assert ghost_epoch_status_StoredKey == epochNonce;
-    assert ghost_epoch_status_StoredValue == Types.EpochStatus.CLAIMABLE;
 }

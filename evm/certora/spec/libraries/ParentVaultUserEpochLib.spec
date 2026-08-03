@@ -29,6 +29,7 @@ methods {
     function claimShares(address, uint256) external returns (uint256);
     function claimAsset(address, uint256) external returns (uint256);
     function cancelDeposit(address) external;
+    function forceCancelDeposit(address) external;
     function cancelWithdraw(address) external;
     function proportionalAmount(uint256, uint256, uint256) external returns (uint256) envfree;
 
@@ -72,6 +73,10 @@ definition WithdrawClaimedEvent() returns bytes32 =
 definition DepositCancelledEvent() returns bytes32 =
 // keccak256("DepositCancelled(uint256,address,uint256)")
     to_bytes32(0x24c9e122007bd4087408943168fbcd65248594530e482b6a9abe4484767eb0c3);
+
+definition DepositForceCancelledEvent() returns bytes32 =
+// keccak256("DepositForceCancelled(uint256,address,uint256)")
+    to_bytes32(0x5ab5ba9c804f5bd8c25d7a48e5fd58b3e7b2c7729a0de56d8184368734c60c4b);
 
 definition WithdrawCancelledEvent() returns bytes32 =
 // keccak256("WithdrawCancelled(uint256,address,uint256)")
@@ -160,6 +165,22 @@ ghost uint256 ghost_DepositCancelled_Param_amount {
     init_state axiom ghost_DepositCancelled_Param_amount == 0;
 }
 
+ghost mathint ghost_DepositForceCancelled_EventCount {
+    init_state axiom ghost_DepositForceCancelled_EventCount == 0;
+}
+
+ghost uint256 ghost_DepositForceCancelled_Param_epochNonce {
+    init_state axiom ghost_DepositForceCancelled_Param_epochNonce == 0;
+}
+
+ghost address ghost_DepositForceCancelled_Param_depositor {
+    init_state axiom ghost_DepositForceCancelled_Param_depositor == 0;
+}
+
+ghost uint256 ghost_DepositForceCancelled_Param_amount {
+    init_state axiom ghost_DepositForceCancelled_Param_amount == 0;
+}
+
 ghost mathint ghost_WithdrawCancelled_EventCount {
     init_state axiom ghost_WithdrawCancelled_EventCount == 0;
 }
@@ -214,6 +235,13 @@ hook LOG4(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2, bytes32 
         ghost_DepositCancelled_Param_epochNonce = bytes32ToUint256(t1);
         ghost_DepositCancelled_Param_depositor = bytes32ToAddress(t2);
         ghost_DepositCancelled_Param_amount = bytes32ToUint256(t3);
+    }
+
+    if (t0 == DepositForceCancelledEvent()) {
+        ghost_DepositForceCancelled_EventCount = ghost_DepositForceCancelled_EventCount + 1;
+        ghost_DepositForceCancelled_Param_epochNonce = bytes32ToUint256(t1);
+        ghost_DepositForceCancelled_Param_depositor = bytes32ToAddress(t2);
+        ghost_DepositForceCancelled_Param_amount = bytes32ToUint256(t3);
     }
 
     if (t0 == WithdrawCancelledEvent()) {
@@ -272,17 +300,17 @@ rule proportionalAmount_RevertWhen_ZeroProductAndDenominatorIsZero() {
 /// @dev Verifies full-precision mulDivDown result overflow.
 rule proportionalAmount_RevertWhen_ResultOverflows() {
     env e;
-    uint256 userAmount;
-    uint256 remainingNumerator;
-    uint256 remainingDenominator;
+    uint256 userAmount = max_uint256;
+    uint256 remainingNumerator = max_uint256;
+    uint256 remainingDenominator = 1;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "proportionalAmount is nonpayable";
 
     /// @dev revert condition being verified
-    require remainingDenominator != 0, "remaining denominator is nonzero";
-    require userAmount * remainingNumerator > max_uint256 * remainingDenominator,
-        "proportional full-precision result overflows";
+    /// @dev Solady fullMulDiv reconstructs a 512-bit product in assembly using mulmod.
+    ///      Certora does not reliably preserve that relationship for fully symbolic operands,
+    ///      so this rule uses a concrete input whose quotient necessarily exceeds uint256.
 
     proportionalAmount@withrevert(e, userAmount, remainingNumerator, remainingDenominator);
 
@@ -301,8 +329,11 @@ rule proportionalAmount_Success() {
     require e.msg.value == 0, "proportionalAmount is nonpayable";
     /// @dev success conditions being verified
     require remainingDenominator != 0, "remaining denominator is nonzero";
-    require userAmount * remainingNumerator <= max_uint256 * remainingDenominator,
-        "proportional full-precision result does not overflow";
+    /// @dev Restrict inputs to Solady fullMulDiv's directly modeled 256-bit multiplication path.
+    ///      The 512-bit assembly path uses mulmod and cannot be reliably checked with arbitrary
+    ///      symbolic operands; its overflow behavior is covered separately with a concrete vector.
+    require remainingNumerator == 0 || userAmount <= max_uint256 / remainingNumerator,
+        "proportional product does not overflow";
 
     uint256 amount = proportionalAmount@withrevert(e, userAmount, remainingNumerator, remainingDenominator);
     mathint expectedAmount = userAmount * remainingNumerator / remainingDenominator;
@@ -323,9 +354,20 @@ rule deposit_RevertWhen_AmountTooSmall() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "deposit is nonpayable";
+    require getEpochStatus(getEpochNonce()) == Types.EpochStatus.OPEN, "epoch is open";
+    require getDeposit(user, getEpochNonce()) <= max_uint256 - amount, "user deposit addition does not overflow";
+    require getEpochTotalDepositAmount(getEpochNonce()) <= max_uint256 - amount,
+        "epoch total deposit addition does not overflow";
+    require user != currentContract, "user is not the vault";
+    require asset.balanceOf(user) >= amount, "user has enough asset";
+    require asset.balanceOf(currentContract) <= max_uint256 - amount, "vault asset balance does not overflow";
+    require asset.allowance(user, currentContract) >= amount, "vault is approved to transfer asset";
 
     /// @dev revert condition being verified
     require amount < minDepositAmount, "amount is below minimum";
+
+    /// @dev ghost starting values
+    require ghost_DepositSubmitted_EventCount == 0, "DepositSubmitted event count starts at zero";
 
     storage before = lastStorage;
 
@@ -333,6 +375,7 @@ rule deposit_RevertWhen_AmountTooSmall() {
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_DepositSubmitted_EventCount == 0;
 }
 
 /// @notice Depositing reverts when the current epoch is not open.
@@ -349,8 +392,19 @@ rule deposit_RevertWhen_EpochNotOpen() {
 
     uint256 epochNonce = getEpochNonce();
 
+    require getDeposit(user, epochNonce) <= max_uint256 - amount, "user deposit addition does not overflow";
+    require getEpochTotalDepositAmount(epochNonce) <= max_uint256 - amount,
+        "epoch total deposit addition does not overflow";
+    require user != currentContract, "user is not the vault";
+    require asset.balanceOf(user) >= amount, "user has enough asset";
+    require asset.balanceOf(currentContract) <= max_uint256 - amount, "vault asset balance does not overflow";
+    require asset.allowance(user, currentContract) >= amount, "vault is approved to transfer asset";
+
     /// @dev revert condition being verified
     require getEpochStatus(epochNonce) != Types.EpochStatus.OPEN, "epoch is not open";
+
+    /// @dev ghost starting values
+    require ghost_DepositSubmitted_EventCount == 0, "DepositSubmitted event count starts at zero";
 
     storage before = lastStorage;
 
@@ -358,6 +412,7 @@ rule deposit_RevertWhen_EpochNotOpen() {
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_DepositSubmitted_EventCount == 0;
 }
 
 /// @notice Depositing reverts when adding to the user's deposit overflows.
@@ -374,9 +429,19 @@ rule deposit_RevertWhen_UserDepositAdditionOverflows() {
 
     uint256 epochNonce = getEpochNonce();
 
+    require getEpochTotalDepositAmount(epochNonce) <= max_uint256 - amount,
+        "epoch total deposit addition does not overflow";
+    require user != currentContract, "user is not the vault";
+    require asset.balanceOf(user) >= amount, "user has enough asset";
+    require asset.balanceOf(currentContract) <= max_uint256 - amount, "vault asset balance does not overflow";
+    require asset.allowance(user, currentContract) >= amount, "vault is approved to transfer asset";
+
     /// @dev revert condition being verified
     require getEpochStatus(epochNonce) == Types.EpochStatus.OPEN, "epoch is open";
     require getDeposit(user, epochNonce) > max_uint256 - amount, "user deposit addition overflows";
+
+    /// @dev ghost starting values
+    require ghost_DepositSubmitted_EventCount == 0, "DepositSubmitted event count starts at zero";
 
     storage before = lastStorage;
 
@@ -384,6 +449,7 @@ rule deposit_RevertWhen_UserDepositAdditionOverflows() {
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_DepositSubmitted_EventCount == 0;
 }
 
 /// @notice Depositing reverts when adding to the epoch total deposit overflows.
@@ -400,11 +466,19 @@ rule deposit_RevertWhen_EpochTotalDepositAdditionOverflows() {
 
     uint256 epochNonce = getEpochNonce();
 
+    require user != currentContract, "user is not the vault";
+    require asset.balanceOf(user) >= amount, "user has enough asset";
+    require asset.balanceOf(currentContract) <= max_uint256 - amount, "vault asset balance does not overflow";
+    require asset.allowance(user, currentContract) >= amount, "vault is approved to transfer asset";
+
     /// @dev revert condition being verified
     require getEpochStatus(epochNonce) == Types.EpochStatus.OPEN, "epoch is open";
     require getDeposit(user, epochNonce) <= max_uint256 - amount, "user deposit addition does not overflow";
     require getEpochTotalDepositAmount(epochNonce) > max_uint256 - amount,
         "epoch total deposit addition overflows";
+
+    /// @dev ghost starting values
+    require ghost_DepositSubmitted_EventCount == 0, "DepositSubmitted event count starts at zero";
 
     storage before = lastStorage;
 
@@ -412,6 +486,7 @@ rule deposit_RevertWhen_EpochTotalDepositAdditionOverflows() {
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_DepositSubmitted_EventCount == 0;
 }
 
 /// @notice Depositing succeeds and records asset deposit during an open epoch.
@@ -469,9 +544,17 @@ rule withdraw_RevertWhen_AmountIsZero() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "withdraw is nonpayable";
+    require getEpochStatus(getEpochNonce()) == Types.EpochStatus.OPEN, "epoch is open";
+    require getWithdraw(user, getEpochNonce()) <= max_uint256 - shareBurnAmount,
+        "user withdraw addition does not overflow";
+    require getEpochTotalShareBurnAmount(getEpochNonce()) <= max_uint256 - shareBurnAmount,
+        "epoch total share burn addition does not overflow";
 
     /// @dev revert condition being verified
     require shareBurnAmount == 0, "share burn amount is zero";
+
+    /// @dev ghost starting values
+    require ghost_WithdrawSubmitted_EventCount == 0, "WithdrawSubmitted event count starts at zero";
 
     storage before = lastStorage;
 
@@ -479,6 +562,7 @@ rule withdraw_RevertWhen_AmountIsZero() {
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_WithdrawSubmitted_EventCount == 0;
 }
 
 /// @notice Withdrawing reverts when the current epoch is not open.
@@ -494,8 +578,21 @@ rule withdraw_RevertWhen_EpochNotOpen() {
 
     uint256 epochNonce = getEpochNonce();
 
+    require getWithdraw(user, epochNonce) <= max_uint256 - shareBurnAmount,
+        "user withdraw addition does not overflow";
+    require getEpochTotalShareBurnAmount(epochNonce) <= max_uint256 - shareBurnAmount,
+        "epoch total share burn addition does not overflow";
+    require user != currentContract, "user is not the vault";
+    require share.balanceOf(user) >= shareBurnAmount, "user has enough shares";
+    require share.balanceOf(currentContract) <= max_uint256 - shareBurnAmount,
+        "vault share balance does not overflow";
+    require share.allowance(user, currentContract) >= shareBurnAmount, "vault is approved to transfer shares";
+
     /// @dev revert condition being verified
     require getEpochStatus(epochNonce) != Types.EpochStatus.OPEN, "epoch is not open";
+
+    /// @dev ghost starting values
+    require ghost_WithdrawSubmitted_EventCount == 0, "WithdrawSubmitted event count starts at zero";
 
     storage before = lastStorage;
 
@@ -503,6 +600,7 @@ rule withdraw_RevertWhen_EpochNotOpen() {
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_WithdrawSubmitted_EventCount == 0;
 }
 
 /// @notice Withdrawing reverts when adding to the user's withdraw intent overflows.
@@ -518,10 +616,21 @@ rule withdraw_RevertWhen_UserWithdrawAdditionOverflows() {
 
     uint256 epochNonce = getEpochNonce();
 
+    require getEpochTotalShareBurnAmount(epochNonce) <= max_uint256 - shareBurnAmount,
+        "epoch total share burn addition does not overflow";
+    require user != currentContract, "user is not the vault";
+    require share.balanceOf(user) >= shareBurnAmount, "user has enough shares";
+    require share.balanceOf(currentContract) <= max_uint256 - shareBurnAmount,
+        "vault share balance does not overflow";
+    require share.allowance(user, currentContract) >= shareBurnAmount, "vault is approved to transfer shares";
+
     /// @dev revert condition being verified
     require getEpochStatus(epochNonce) == Types.EpochStatus.OPEN, "epoch is open";
     require getWithdraw(user, epochNonce) > max_uint256 - shareBurnAmount,
         "user withdraw addition overflows";
+
+    /// @dev ghost starting values
+    require ghost_WithdrawSubmitted_EventCount == 0, "WithdrawSubmitted event count starts at zero";
 
     storage before = lastStorage;
 
@@ -529,6 +638,7 @@ rule withdraw_RevertWhen_UserWithdrawAdditionOverflows() {
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_WithdrawSubmitted_EventCount == 0;
 }
 
 /// @notice Withdrawing reverts when adding to the epoch total share burn overflows.
@@ -544,6 +654,12 @@ rule withdraw_RevertWhen_EpochTotalShareBurnAdditionOverflows() {
 
     uint256 epochNonce = getEpochNonce();
 
+    require user != currentContract, "user is not the vault";
+    require share.balanceOf(user) >= shareBurnAmount, "user has enough shares";
+    require share.balanceOf(currentContract) <= max_uint256 - shareBurnAmount,
+        "vault share balance does not overflow";
+    require share.allowance(user, currentContract) >= shareBurnAmount, "vault is approved to transfer shares";
+
     /// @dev revert condition being verified
     require getEpochStatus(epochNonce) == Types.EpochStatus.OPEN, "epoch is open";
     require getWithdraw(user, epochNonce) <= max_uint256 - shareBurnAmount,
@@ -551,12 +667,16 @@ rule withdraw_RevertWhen_EpochTotalShareBurnAdditionOverflows() {
     require getEpochTotalShareBurnAmount(epochNonce) > max_uint256 - shareBurnAmount,
         "epoch total share burn addition overflows";
 
+    /// @dev ghost starting values
+    require ghost_WithdrawSubmitted_EventCount == 0, "WithdrawSubmitted event count starts at zero";
+
     storage before = lastStorage;
 
     withdraw@withrevert(e, user, shareBurnAmount);
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_WithdrawSubmitted_EventCount == 0;
 }
 
 /// @notice Withdrawing succeeds and records share burn intent during an open epoch.
@@ -613,9 +733,19 @@ rule claimShares_RevertWhen_EpochNotClaimable() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "claimShares is nonpayable";
+    require getDeposit(user, epochNonce) != 0, "user has a deposit";
+    require getDeposit(user, epochNonce) == getEpochRemainingDepositClaimAmount(epochNonce),
+        "user is the final deposit claimant";
+    require share.balanceOf(user) <= max_uint256 - getEpochRemainingShareMintAmount(epochNonce),
+        "user share balance does not overflow";
+    require share.totalSupply() <= max_uint256 - getEpochRemainingShareMintAmount(epochNonce),
+        "share total supply does not overflow";
 
     /// @dev revert condition being verified
     require getEpochStatus(epochNonce) != Types.EpochStatus.CLAIMABLE, "epoch is not claimable";
+
+    /// @dev ghost starting values
+    require ghost_DepositClaimed_EventCount == 0, "DepositClaimed event count starts at zero";
 
     storage before = lastStorage;
 
@@ -623,6 +753,7 @@ rule claimShares_RevertWhen_EpochNotClaimable() {
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_DepositClaimed_EventCount == 0;
 }
 
 /// @notice Claiming shares reverts when the user has no deposit for the epoch.
@@ -635,9 +766,14 @@ rule claimShares_RevertWhen_NoDeposit() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "claimShares is nonpayable";
     require getEpochStatus(epochNonce) == Types.EpochStatus.CLAIMABLE, "epoch is claimable";
+    require getEpochRemainingDepositClaimAmount(epochNonce) == 0, "remaining deposit claim amount is zero";
+    require getEpochRemainingShareMintAmount(epochNonce) == 0, "remaining share mint amount is zero";
 
     /// @dev revert condition being verified
     require getDeposit(user, epochNonce) == 0, "user has no deposit";
+
+    /// @dev ghost starting values
+    require ghost_DepositClaimed_EventCount == 0, "DepositClaimed event count starts at zero";
 
     storage before = lastStorage;
 
@@ -645,6 +781,7 @@ rule claimShares_RevertWhen_NoDeposit() {
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_DepositClaimed_EventCount == 0;
 }
 
 /// @notice Claiming shares reverts when proportional deposit claim denominator is zero.
@@ -666,17 +803,21 @@ rule claimShares_RevertWhen_ProportionalDenominatorIsZero() {
     require getEpochRemainingDepositClaimAmount(epochNonce) == 0, "remaining deposit denominator is zero";
     require getEpochRemainingShareMintAmount(epochNonce) != 0, "remaining share mint numerator is nonzero";
 
+    /// @dev ghost starting values
+    require ghost_DepositClaimed_EventCount == 0, "DepositClaimed event count starts at zero";
+
     storage before = lastStorage;
 
     claimShares@withrevert(e, user, epochNonce);
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_DepositClaimed_EventCount == 0;
 }
 
-/// @notice Claiming shares reverts when proportional share calculation overflows.
-/// @dev Verifies proportional deposit claim multiplication overflow.
-rule claimShares_RevertWhen_ProportionalMultiplicationOverflows() {
+/// @notice Claiming shares reverts when the proportional full-precision result overflows uint256.
+/// @dev Verifies proportional deposit claim result overflow.
+rule claimShares_RevertWhen_ProportionalResultOverflows() {
     env e;
     address user;
     uint256 epochNonce;
@@ -693,7 +834,12 @@ rule claimShares_RevertWhen_ProportionalMultiplicationOverflows() {
     require depositAmount != getEpochRemainingDepositClaimAmount(epochNonce), "user is not final deposit claimant";
     require getEpochRemainingDepositClaimAmount(epochNonce) != 0, "remaining deposit denominator is nonzero";
     require remainingShareMintAmount != 0, "remaining share mint amount is nonzero";
-    require depositAmount > max_uint256 / remainingShareMintAmount, "proportional share calculation overflows";
+    require depositAmount * remainingShareMintAmount
+        > max_uint256 * getEpochRemainingDepositClaimAmount(epochNonce),
+        "proportional full-precision result overflows";
+
+    /// @dev ghost starting values
+    require ghost_DepositClaimed_EventCount == 0, "DepositClaimed event count starts at zero";
 
     storage before = lastStorage;
 
@@ -701,6 +847,7 @@ rule claimShares_RevertWhen_ProportionalMultiplicationOverflows() {
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_DepositClaimed_EventCount == 0;
 }
 
 /// @notice Claiming shares reverts when remaining deposit claim amount underflows.
@@ -724,12 +871,16 @@ rule claimShares_RevertWhen_RemainingDepositClaimAmountUnderflows() {
     require getEpochRemainingShareMintAmount(epochNonce) == 0, "proportional share amount is zero";
     require depositAmount > remainingDepositClaimAmount, "remaining deposit claim amount underflows";
 
+    /// @dev ghost starting values
+    require ghost_DepositClaimed_EventCount == 0, "DepositClaimed event count starts at zero";
+
     storage before = lastStorage;
 
     claimShares@withrevert(e, user, epochNonce);
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_DepositClaimed_EventCount == 0;
 }
 
 /// @notice Claiming shares succeeds for the final deposit claimant.
@@ -745,13 +896,14 @@ rule claimShares_Success_WhenFinalDepositClaimant() {
     uint256 depositAmount = getDeposit(user, epochNonce);
     uint256 remainingShareMintAmount = getEpochRemainingShareMintAmount(epochNonce);
     uint256 userBalanceBefore = share.balanceOf(user);
+    uint256 totalSupplyBefore = share.totalSupply();
 
     /// @dev success conditions being verified
     require getEpochStatus(epochNonce) == Types.EpochStatus.CLAIMABLE, "epoch is claimable";
     require depositAmount != 0, "user has a deposit";
     require depositAmount == getEpochRemainingDepositClaimAmount(epochNonce), "user is final deposit claimant";
     require userBalanceBefore <= max_uint256 - remainingShareMintAmount, "user share balance does not overflow";
-    require share.totalSupply() <= max_uint256 - remainingShareMintAmount, "share total supply does not overflow";
+    require totalSupplyBefore <= max_uint256 - remainingShareMintAmount, "share total supply does not overflow";
 
     /// @dev ghost starting values
     require ghost_DepositClaimed_EventCount == 0, "DepositClaimed event count starts at zero";
@@ -764,6 +916,7 @@ rule claimShares_Success_WhenFinalDepositClaimant() {
     assert getEpochRemainingDepositClaimAmount(epochNonce) == 0;
     assert getEpochRemainingShareMintAmount(epochNonce) == 0;
     assert share.balanceOf(user) == userBalanceBefore + remainingShareMintAmount;
+    assert share.totalSupply() == totalSupplyBefore + remainingShareMintAmount;
     assert ghost_DepositClaimed_EventCount == 1;
     assert ghost_DepositClaimed_Param_epochNonce == epochNonce;
     assert ghost_DepositClaimed_Param_depositor == user;
@@ -784,19 +937,23 @@ rule claimShares_Success_WhenProportionalDepositClaimant() {
     uint256 remainingDepositClaimAmount = getEpochRemainingDepositClaimAmount(epochNonce);
     uint256 remainingShareMintAmount = getEpochRemainingShareMintAmount(epochNonce);
     uint256 userBalanceBefore = share.balanceOf(user);
+    uint256 totalSupplyBefore = share.totalSupply();
 
     /// @dev success conditions being verified
     require getEpochStatus(epochNonce) == Types.EpochStatus.CLAIMABLE, "epoch is claimable";
     require depositAmount != 0, "user has a deposit";
     require depositAmount != remainingDepositClaimAmount, "user is not final deposit claimant";
     require remainingDepositClaimAmount != 0, "remaining deposit denominator is nonzero";
+    /// @dev Restrict inputs to Solady fullMulDiv's directly modeled 256-bit multiplication path.
+    ///      The 512-bit assembly path uses mulmod and cannot be reliably checked with arbitrary
+    ///      symbolic operands; its overflow behavior is covered separately with a concrete vector.
     require remainingShareMintAmount == 0 || depositAmount <= max_uint256 / remainingShareMintAmount,
-        "proportional share calculation does not overflow";
+        "proportional product does not overflow";
     mathint shareMintAmount = depositAmount * remainingShareMintAmount / remainingDepositClaimAmount;
     require depositAmount <= remainingDepositClaimAmount, "remaining deposit claim amount does not underflow";
     require shareMintAmount <= remainingShareMintAmount, "remaining share mint amount does not underflow";
     require userBalanceBefore <= max_uint256 - shareMintAmount, "user share balance does not overflow";
-    require share.totalSupply() <= max_uint256 - shareMintAmount, "share total supply does not overflow";
+    require totalSupplyBefore <= max_uint256 - shareMintAmount, "share total supply does not overflow";
 
     /// @dev ghost starting values
     require ghost_DepositClaimed_EventCount == 0, "DepositClaimed event count starts at zero";
@@ -809,6 +966,7 @@ rule claimShares_Success_WhenProportionalDepositClaimant() {
     assert getEpochRemainingDepositClaimAmount(epochNonce) == remainingDepositClaimAmount - depositAmount;
     assert getEpochRemainingShareMintAmount(epochNonce) == remainingShareMintAmount - shareMintAmount;
     assert share.balanceOf(user) == userBalanceBefore + shareMintAmount;
+    assert share.totalSupply() == totalSupplyBefore + shareMintAmount;
     assert ghost_DepositClaimed_EventCount == 1;
     assert ghost_DepositClaimed_Param_epochNonce == epochNonce;
     assert ghost_DepositClaimed_Param_depositor == user;
@@ -826,9 +984,22 @@ rule claimAsset_RevertWhen_EpochNotClaimable() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "claimAsset is nonpayable";
+    require getWithdraw(user, epochNonce) != 0, "user has a withdraw intent";
+    require getWithdraw(user, epochNonce) == getEpochRemainingShareBurnAmount(epochNonce),
+        "user is the final withdraw claimant";
+    require share.balanceOf(currentContract) >= getWithdraw(user, epochNonce), "vault share balance covers burn";
+    require share.totalSupply() >= getWithdraw(user, epochNonce), "share total supply covers burn";
+    require user != currentContract, "user is not the vault";
+    require asset.balanceOf(currentContract) >= getEpochRemainingWithdrawClaimAmount(epochNonce),
+        "vault has enough asset";
+    require asset.balanceOf(user) <= max_uint256 - getEpochRemainingWithdrawClaimAmount(epochNonce),
+        "user asset balance does not overflow";
 
     /// @dev revert condition being verified
     require getEpochStatus(epochNonce) != Types.EpochStatus.CLAIMABLE, "epoch is not claimable";
+
+    /// @dev ghost starting values
+    require ghost_WithdrawClaimed_EventCount == 0, "WithdrawClaimed event count starts at zero";
 
     storage before = lastStorage;
 
@@ -836,6 +1007,7 @@ rule claimAsset_RevertWhen_EpochNotClaimable() {
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_WithdrawClaimed_EventCount == 0;
 }
 
 /// @notice Claiming asset reverts when the user has no withdraw intent for the epoch.
@@ -848,9 +1020,14 @@ rule claimAsset_RevertWhen_NoWithdraw() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "claimAsset is nonpayable";
     require getEpochStatus(epochNonce) == Types.EpochStatus.CLAIMABLE, "epoch is claimable";
+    require getEpochRemainingShareBurnAmount(epochNonce) == 0, "remaining share burn amount is zero";
+    require getEpochRemainingWithdrawClaimAmount(epochNonce) == 0, "remaining withdraw claim amount is zero";
 
     /// @dev revert condition being verified
     require getWithdraw(user, epochNonce) == 0, "user has no withdraw intent";
+
+    /// @dev ghost starting values
+    require ghost_WithdrawClaimed_EventCount == 0, "WithdrawClaimed event count starts at zero";
 
     storage before = lastStorage;
 
@@ -858,6 +1035,7 @@ rule claimAsset_RevertWhen_NoWithdraw() {
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_WithdrawClaimed_EventCount == 0;
 }
 
 /// @notice Claiming asset reverts when proportional withdraw claim denominator is zero.
@@ -878,6 +1056,11 @@ rule claimAsset_RevertWhen_ProportionalDenominatorIsZero() {
     require shareBurnAmount != getEpochRemainingShareBurnAmount(epochNonce), "user is not final withdraw claimant";
     require getEpochRemainingShareBurnAmount(epochNonce) == 0, "remaining share burn denominator is zero";
     require getEpochRemainingWithdrawClaimAmount(epochNonce) != 0, "remaining withdraw numerator is nonzero";
+    require share.balanceOf(currentContract) >= shareBurnAmount, "vault share balance covers burn";
+    require share.totalSupply() >= shareBurnAmount, "share total supply covers burn";
+
+    /// @dev ghost starting values
+    require ghost_WithdrawClaimed_EventCount == 0, "WithdrawClaimed event count starts at zero";
 
     storage before = lastStorage;
 
@@ -885,11 +1068,12 @@ rule claimAsset_RevertWhen_ProportionalDenominatorIsZero() {
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_WithdrawClaimed_EventCount == 0;
 }
 
-/// @notice Claiming asset reverts when proportional withdraw calculation overflows.
-/// @dev Verifies proportional withdraw claim multiplication overflow.
-rule claimAsset_RevertWhen_ProportionalMultiplicationOverflows() {
+/// @notice Claiming asset reverts when the proportional full-precision result overflows uint256.
+/// @dev Verifies proportional withdraw claim result overflow.
+rule claimAsset_RevertWhen_ProportionalResultOverflows() {
     env e;
     address user;
     uint256 epochNonce;
@@ -906,8 +1090,14 @@ rule claimAsset_RevertWhen_ProportionalMultiplicationOverflows() {
     require shareBurnAmount != getEpochRemainingShareBurnAmount(epochNonce), "user is not final withdraw claimant";
     require getEpochRemainingShareBurnAmount(epochNonce) != 0, "remaining share burn denominator is nonzero";
     require remainingWithdrawClaimAmount != 0, "remaining withdraw amount is nonzero";
-    require shareBurnAmount > max_uint256 / remainingWithdrawClaimAmount,
-        "proportional withdraw calculation overflows";
+    require shareBurnAmount * remainingWithdrawClaimAmount
+        > max_uint256 * getEpochRemainingShareBurnAmount(epochNonce),
+        "proportional full-precision result overflows";
+    require share.balanceOf(currentContract) >= shareBurnAmount, "vault share balance covers burn";
+    require share.totalSupply() >= shareBurnAmount, "share total supply covers burn";
+
+    /// @dev ghost starting values
+    require ghost_WithdrawClaimed_EventCount == 0, "WithdrawClaimed event count starts at zero";
 
     storage before = lastStorage;
 
@@ -915,6 +1105,7 @@ rule claimAsset_RevertWhen_ProportionalMultiplicationOverflows() {
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_WithdrawClaimed_EventCount == 0;
 }
 
 /// @notice Claiming asset reverts when remaining share burn amount underflows.
@@ -937,6 +1128,11 @@ rule claimAsset_RevertWhen_RemainingShareBurnAmountUnderflows() {
     require remainingShareBurnAmount != 0, "remaining share burn denominator is nonzero";
     require getEpochRemainingWithdrawClaimAmount(epochNonce) == 0, "proportional withdraw amount is zero";
     require shareBurnAmount > remainingShareBurnAmount, "remaining share burn amount underflows";
+    require share.balanceOf(currentContract) >= shareBurnAmount, "vault share balance covers burn";
+    require share.totalSupply() >= shareBurnAmount, "share total supply covers burn";
+
+    /// @dev ghost starting values
+    require ghost_WithdrawClaimed_EventCount == 0, "WithdrawClaimed event count starts at zero";
 
     storage before = lastStorage;
 
@@ -944,6 +1140,7 @@ rule claimAsset_RevertWhen_RemainingShareBurnAmountUnderflows() {
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_WithdrawClaimed_EventCount == 0;
 }
 
 /// @notice Claiming asset succeeds for the final withdraw claimant with nonzero asset amount.
@@ -960,6 +1157,8 @@ rule claimAsset_Success_WhenFinalWithdrawClaimantAndAmountNonzero() {
     uint256 remainingWithdrawClaimAmount = getEpochRemainingWithdrawClaimAmount(epochNonce);
     uint256 userAssetBalanceBefore = asset.balanceOf(user);
     uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
+    uint256 vaultShareBalanceBefore = share.balanceOf(currentContract);
+    uint256 totalSupplyBefore = share.totalSupply();
 
     /// @dev success conditions being verified
     require user != currentContract, "user is not the vault";
@@ -967,7 +1166,8 @@ rule claimAsset_Success_WhenFinalWithdrawClaimantAndAmountNonzero() {
     require shareBurnAmount != 0, "user has a withdraw intent";
     require shareBurnAmount == getEpochRemainingShareBurnAmount(epochNonce), "user is final withdraw claimant";
     require remainingWithdrawClaimAmount != 0, "withdraw amount is nonzero";
-    require share.totalSupply() >= shareBurnAmount, "share total supply covers burn";
+    require vaultShareBalanceBefore >= shareBurnAmount, "vault share balance covers burn";
+    require totalSupplyBefore >= shareBurnAmount, "share total supply covers burn";
     require vaultAssetBalanceBefore >= remainingWithdrawClaimAmount, "vault has enough asset";
     require userAssetBalanceBefore <= max_uint256 - remainingWithdrawClaimAmount, "user asset balance does not overflow";
 
@@ -983,6 +1183,8 @@ rule claimAsset_Success_WhenFinalWithdrawClaimantAndAmountNonzero() {
     assert getEpochRemainingWithdrawClaimAmount(epochNonce) == 0;
     assert asset.balanceOf(user) == userAssetBalanceBefore + remainingWithdrawClaimAmount;
     assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore - remainingWithdrawClaimAmount;
+    assert share.balanceOf(currentContract) == vaultShareBalanceBefore - shareBurnAmount;
+    assert share.totalSupply() == totalSupplyBefore - shareBurnAmount;
     assert ghost_WithdrawClaimed_EventCount == 1;
     assert ghost_WithdrawClaimed_Param_epochNonce == epochNonce;
     assert ghost_WithdrawClaimed_Param_withdrawer == user;
@@ -1002,13 +1204,16 @@ rule claimAsset_Success_WhenFinalWithdrawClaimantAndAmountZero() {
     uint256 shareBurnAmount = getWithdraw(user, epochNonce);
     uint256 userAssetBalanceBefore = asset.balanceOf(user);
     uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
+    uint256 vaultShareBalanceBefore = share.balanceOf(currentContract);
+    uint256 totalSupplyBefore = share.totalSupply();
 
     /// @dev success conditions being verified
     require getEpochStatus(epochNonce) == Types.EpochStatus.CLAIMABLE, "epoch is claimable";
     require shareBurnAmount != 0, "user has a withdraw intent";
     require shareBurnAmount == getEpochRemainingShareBurnAmount(epochNonce), "user is final withdraw claimant";
     require getEpochRemainingWithdrawClaimAmount(epochNonce) == 0, "withdraw amount is zero";
-    require share.totalSupply() >= shareBurnAmount, "share total supply covers burn";
+    require vaultShareBalanceBefore >= shareBurnAmount, "vault share balance covers burn";
+    require totalSupplyBefore >= shareBurnAmount, "share total supply covers burn";
 
     /// @dev ghost starting values
     require ghost_WithdrawClaimed_EventCount == 0, "WithdrawClaimed event count starts at zero";
@@ -1022,6 +1227,8 @@ rule claimAsset_Success_WhenFinalWithdrawClaimantAndAmountZero() {
     assert getEpochRemainingWithdrawClaimAmount(epochNonce) == 0;
     assert asset.balanceOf(user) == userAssetBalanceBefore;
     assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
+    assert share.balanceOf(currentContract) == vaultShareBalanceBefore - shareBurnAmount;
+    assert share.totalSupply() == totalSupplyBefore - shareBurnAmount;
     assert ghost_WithdrawClaimed_EventCount == 1;
     assert ghost_WithdrawClaimed_Param_epochNonce == epochNonce;
     assert ghost_WithdrawClaimed_Param_withdrawer == user;
@@ -1043,18 +1250,21 @@ rule claimAsset_Success_WhenProportionalWithdrawClaimantAndAmountZero() {
     uint256 remainingWithdrawClaimAmount = getEpochRemainingWithdrawClaimAmount(epochNonce);
     uint256 userAssetBalanceBefore = asset.balanceOf(user);
     uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
+    uint256 vaultShareBalanceBefore = share.balanceOf(currentContract);
+    uint256 totalSupplyBefore = share.totalSupply();
 
     /// @dev success conditions being verified
     require getEpochStatus(epochNonce) == Types.EpochStatus.CLAIMABLE, "epoch is claimable";
     require shareBurnAmount != 0, "user has a withdraw intent";
     require shareBurnAmount != remainingShareBurnAmount, "user is not final withdraw claimant";
     require remainingShareBurnAmount != 0, "remaining share burn denominator is nonzero";
-    require remainingWithdrawClaimAmount == 0 || shareBurnAmount <= max_uint256 / remainingWithdrawClaimAmount,
-        "proportional withdraw calculation does not overflow";
+    require shareBurnAmount * remainingWithdrawClaimAmount <= max_uint256 * remainingShareBurnAmount,
+        "proportional full-precision result does not overflow";
     mathint withdrawAmount = shareBurnAmount * remainingWithdrawClaimAmount / remainingShareBurnAmount;
     require withdrawAmount == 0, "withdraw amount is zero";
     require shareBurnAmount <= remainingShareBurnAmount, "remaining share burn amount does not underflow";
-    require share.totalSupply() >= shareBurnAmount, "share total supply covers burn";
+    require vaultShareBalanceBefore >= shareBurnAmount, "vault share balance covers burn";
+    require totalSupplyBefore >= shareBurnAmount, "share total supply covers burn";
 
     /// @dev ghost starting values
     require ghost_WithdrawClaimed_EventCount == 0, "WithdrawClaimed event count starts at zero";
@@ -1068,6 +1278,8 @@ rule claimAsset_Success_WhenProportionalWithdrawClaimantAndAmountZero() {
     assert getEpochRemainingWithdrawClaimAmount(epochNonce) == remainingWithdrawClaimAmount;
     assert asset.balanceOf(user) == userAssetBalanceBefore;
     assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
+    assert share.balanceOf(currentContract) == vaultShareBalanceBefore - shareBurnAmount;
+    assert share.totalSupply() == totalSupplyBefore - shareBurnAmount;
     assert ghost_WithdrawClaimed_EventCount == 1;
     assert ghost_WithdrawClaimed_Param_epochNonce == epochNonce;
     assert ghost_WithdrawClaimed_Param_withdrawer == user;
@@ -1089,6 +1301,8 @@ rule claimAsset_Success_WhenProportionalWithdrawClaimantAndAmountNonzero() {
     uint256 remainingWithdrawClaimAmount = getEpochRemainingWithdrawClaimAmount(epochNonce);
     uint256 userAssetBalanceBefore = asset.balanceOf(user);
     uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
+    uint256 vaultShareBalanceBefore = share.balanceOf(currentContract);
+    uint256 totalSupplyBefore = share.totalSupply();
 
     /// @dev success conditions being verified
     require user != currentContract, "user is not the vault";
@@ -1096,13 +1310,17 @@ rule claimAsset_Success_WhenProportionalWithdrawClaimantAndAmountNonzero() {
     require shareBurnAmount != 0, "user has a withdraw intent";
     require shareBurnAmount != remainingShareBurnAmount, "user is not final withdraw claimant";
     require remainingShareBurnAmount != 0, "remaining share burn denominator is nonzero";
+    /// @dev Restrict inputs to Solady fullMulDiv's directly modeled 256-bit multiplication path.
+    ///      The 512-bit assembly path uses mulmod and cannot be reliably checked with arbitrary
+    ///      symbolic operands; its overflow behavior is covered separately with a concrete vector.
     require remainingWithdrawClaimAmount == 0 || shareBurnAmount <= max_uint256 / remainingWithdrawClaimAmount,
-        "proportional withdraw calculation does not overflow";
+        "proportional product does not overflow";
     mathint withdrawAmount = shareBurnAmount * remainingWithdrawClaimAmount / remainingShareBurnAmount;
     require withdrawAmount != 0, "withdraw amount is nonzero";
     require shareBurnAmount <= remainingShareBurnAmount, "remaining share burn amount does not underflow";
     require withdrawAmount <= remainingWithdrawClaimAmount, "remaining withdraw claim amount does not underflow";
-    require share.totalSupply() >= shareBurnAmount, "share total supply covers burn";
+    require vaultShareBalanceBefore >= shareBurnAmount, "vault share balance covers burn";
+    require totalSupplyBefore >= shareBurnAmount, "share total supply covers burn";
     require vaultAssetBalanceBefore >= withdrawAmount, "vault has enough asset";
     require userAssetBalanceBefore <= max_uint256 - withdrawAmount, "user asset balance does not overflow";
 
@@ -1118,6 +1336,8 @@ rule claimAsset_Success_WhenProportionalWithdrawClaimantAndAmountNonzero() {
     assert getEpochRemainingWithdrawClaimAmount(epochNonce) == remainingWithdrawClaimAmount - withdrawAmount;
     assert asset.balanceOf(user) == userAssetBalanceBefore + withdrawAmount;
     assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore - withdrawAmount;
+    assert share.balanceOf(currentContract) == vaultShareBalanceBefore - shareBurnAmount;
+    assert share.totalSupply() == totalSupplyBefore - shareBurnAmount;
     assert ghost_WithdrawClaimed_EventCount == 1;
     assert ghost_WithdrawClaimed_Param_epochNonce == epochNonce;
     assert ghost_WithdrawClaimed_Param_withdrawer == user;
@@ -1137,8 +1357,20 @@ rule cancelDeposit_RevertWhen_EpochNotOpen() {
 
     uint256 epochNonce = getEpochNonce();
 
+    require getDeposit(user, epochNonce) != 0, "user has a deposit";
+    require getEpochTotalDepositAmount(epochNonce) >= getDeposit(user, epochNonce),
+        "epoch total deposit does not underflow";
+    require user != currentContract, "user is not the vault";
+    require asset.balanceOf(currentContract) >= getDeposit(user, epochNonce), "vault has enough asset";
+    require asset.balanceOf(user) <= max_uint256 - getDeposit(user, epochNonce),
+        "user asset balance does not overflow";
+
     /// @dev revert condition being verified
     require getEpochStatus(epochNonce) != Types.EpochStatus.OPEN, "epoch is not open";
+
+    /// @dev ghost starting values
+    require ghost_DepositCancelled_EventCount == 0, "DepositCancelled event count starts at zero";
+    require ghost_DepositForceCancelled_EventCount == 0, "DepositForceCancelled event count starts at zero";
 
     storage before = lastStorage;
 
@@ -1146,6 +1378,8 @@ rule cancelDeposit_RevertWhen_EpochNotOpen() {
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_DepositCancelled_EventCount == 0;
+    assert ghost_DepositForceCancelled_EventCount == 0;
 }
 
 /// @notice Canceling a deposit reverts when the user has no deposit for the current epoch.
@@ -1163,12 +1397,18 @@ rule cancelDeposit_RevertWhen_NoDeposit() {
     require getEpochStatus(epochNonce) == Types.EpochStatus.OPEN, "epoch is open";
     require getDeposit(user, epochNonce) == 0, "user has no deposit";
 
+    /// @dev ghost starting values
+    require ghost_DepositCancelled_EventCount == 0, "DepositCancelled event count starts at zero";
+    require ghost_DepositForceCancelled_EventCount == 0, "DepositForceCancelled event count starts at zero";
+
     storage before = lastStorage;
 
     cancelDeposit@withrevert(e, user);
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_DepositCancelled_EventCount == 0;
+    assert ghost_DepositForceCancelled_EventCount == 0;
 }
 
 /// @notice Canceling a deposit reverts when epoch total deposit underflows.
@@ -1183,10 +1423,18 @@ rule cancelDeposit_RevertWhen_EpochTotalDepositUnderflows() {
     uint256 epochNonce = getEpochNonce();
     uint256 depositAmount = getDeposit(user, epochNonce);
 
+    require user != currentContract, "user is not the vault";
+    require asset.balanceOf(currentContract) >= depositAmount, "vault has enough asset";
+    require asset.balanceOf(user) <= max_uint256 - depositAmount, "user asset balance does not overflow";
+
     /// @dev revert condition being verified
     require getEpochStatus(epochNonce) == Types.EpochStatus.OPEN, "epoch is open";
     require depositAmount != 0, "user has a deposit";
     require getEpochTotalDepositAmount(epochNonce) < depositAmount, "epoch total deposit underflows";
+
+    /// @dev ghost starting values
+    require ghost_DepositCancelled_EventCount == 0, "DepositCancelled event count starts at zero";
+    require ghost_DepositForceCancelled_EventCount == 0, "DepositForceCancelled event count starts at zero";
 
     storage before = lastStorage;
 
@@ -1194,6 +1442,8 @@ rule cancelDeposit_RevertWhen_EpochTotalDepositUnderflows() {
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_DepositCancelled_EventCount == 0;
+    assert ghost_DepositForceCancelled_EventCount == 0;
 }
 
 /// @notice Canceling a deposit succeeds and returns the deposited asset.
@@ -1221,6 +1471,7 @@ rule cancelDeposit_Success() {
 
     /// @dev ghost starting values
     require ghost_DepositCancelled_EventCount == 0, "DepositCancelled event count starts at zero";
+    require ghost_DepositForceCancelled_EventCount == 0, "DepositForceCancelled event count starts at zero";
 
     cancelDeposit@withrevert(e, user);
 
@@ -1233,6 +1484,141 @@ rule cancelDeposit_Success() {
     assert ghost_DepositCancelled_Param_epochNonce == epochNonce;
     assert ghost_DepositCancelled_Param_depositor == user;
     assert ghost_DepositCancelled_Param_amount == depositAmount;
+    assert ghost_DepositForceCancelled_EventCount == 0;
+}
+
+/// @notice Force-canceling a deposit reverts when the current epoch is not open.
+/// @dev Verifies current epoch open guard and that neither cancellation event is emitted.
+rule forceCancelDeposit_RevertWhen_EpochNotOpen() {
+    env e;
+    address user;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "forceCancelDeposit is nonpayable";
+    require getDeposit(user, getEpochNonce()) != 0, "user has a deposit";
+    require getEpochTotalDepositAmount(getEpochNonce()) >= getDeposit(user, getEpochNonce()),
+        "epoch total deposit does not underflow";
+    require user != currentContract, "user is not the vault";
+    require asset.balanceOf(currentContract) >= getDeposit(user, getEpochNonce()), "vault has enough asset";
+    require asset.balanceOf(user) <= max_uint256 - getDeposit(user, getEpochNonce()),
+        "user asset balance does not overflow";
+
+    /// @dev revert condition being verified
+    require getEpochStatus(getEpochNonce()) != Types.EpochStatus.OPEN, "epoch is not open";
+
+    /// @dev ghost starting values
+    require ghost_DepositCancelled_EventCount == 0, "DepositCancelled event count starts at zero";
+    require ghost_DepositForceCancelled_EventCount == 0, "DepositForceCancelled event count starts at zero";
+
+    storage before = lastStorage;
+
+    forceCancelDeposit@withrevert(e, user);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_DepositCancelled_EventCount == 0;
+    assert ghost_DepositForceCancelled_EventCount == 0;
+}
+
+/// @notice Force-canceling a deposit reverts when the user has no deposit for the current epoch.
+/// @dev Verifies the no-deposit guard and that neither cancellation event is emitted.
+rule forceCancelDeposit_RevertWhen_NoDeposit() {
+    env e;
+    address user;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "forceCancelDeposit is nonpayable";
+    require getEpochStatus(getEpochNonce()) == Types.EpochStatus.OPEN, "epoch is open";
+
+    /// @dev revert condition being verified
+    require getDeposit(user, getEpochNonce()) == 0, "user has no deposit";
+
+    /// @dev ghost starting values
+    require ghost_DepositCancelled_EventCount == 0, "DepositCancelled event count starts at zero";
+    require ghost_DepositForceCancelled_EventCount == 0, "DepositForceCancelled event count starts at zero";
+
+    storage before = lastStorage;
+
+    forceCancelDeposit@withrevert(e, user);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_DepositCancelled_EventCount == 0;
+    assert ghost_DepositForceCancelled_EventCount == 0;
+}
+
+/// @notice Force-canceling a deposit reverts when epoch total deposit accounting underflows.
+/// @dev Verifies the subtraction revert rolls back the deposit deletion and emits neither cancellation event.
+rule forceCancelDeposit_RevertWhen_EpochTotalDepositUnderflows() {
+    env e;
+    address user;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "forceCancelDeposit is nonpayable";
+    require getEpochStatus(getEpochNonce()) == Types.EpochStatus.OPEN, "epoch is open";
+    require getDeposit(user, getEpochNonce()) != 0, "user has a deposit";
+    require user != currentContract, "user is not the vault";
+    require asset.balanceOf(currentContract) >= getDeposit(user, getEpochNonce()), "vault has enough asset";
+    require asset.balanceOf(user) <= max_uint256 - getDeposit(user, getEpochNonce()),
+        "user asset balance does not overflow";
+
+    /// @dev revert condition being verified
+    require getEpochTotalDepositAmount(getEpochNonce()) < getDeposit(user, getEpochNonce()),
+        "epoch total deposit underflows";
+
+    /// @dev ghost starting values
+    require ghost_DepositCancelled_EventCount == 0, "DepositCancelled event count starts at zero";
+    require ghost_DepositForceCancelled_EventCount == 0, "DepositForceCancelled event count starts at zero";
+
+    storage before = lastStorage;
+
+    forceCancelDeposit@withrevert(e, user);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_DepositCancelled_EventCount == 0;
+    assert ghost_DepositForceCancelled_EventCount == 0;
+}
+
+/// @notice Force-canceling a deposit succeeds and returns the deposited asset to its owner.
+/// @dev Verifies exact state, balances, and DepositForceCancelled parameters without emitting DepositCancelled.
+rule forceCancelDeposit_Success() {
+    env e;
+    address user;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "forceCancelDeposit is nonpayable";
+
+    uint256 epochNonce = getEpochNonce();
+    uint256 depositAmount = getDeposit(user, epochNonce);
+    uint256 totalDepositBefore = getEpochTotalDepositAmount(epochNonce);
+    uint256 userBalanceBefore = asset.balanceOf(user);
+    uint256 vaultBalanceBefore = asset.balanceOf(currentContract);
+
+    /// @dev success conditions being verified
+    require user != currentContract, "user is not the vault";
+    require getEpochStatus(epochNonce) == Types.EpochStatus.OPEN, "epoch is open";
+    require depositAmount != 0, "user has a deposit";
+    require totalDepositBefore >= depositAmount, "epoch total deposit does not underflow";
+    require vaultBalanceBefore >= depositAmount, "vault has enough asset";
+    require userBalanceBefore <= max_uint256 - depositAmount, "user asset balance does not overflow";
+
+    /// @dev ghost starting values
+    require ghost_DepositCancelled_EventCount == 0, "DepositCancelled event count starts at zero";
+    require ghost_DepositForceCancelled_EventCount == 0, "DepositForceCancelled event count starts at zero";
+
+    forceCancelDeposit@withrevert(e, user);
+
+    assert !lastReverted;
+    assert getDeposit(user, epochNonce) == 0;
+    assert getEpochTotalDepositAmount(epochNonce) == totalDepositBefore - depositAmount;
+    assert asset.balanceOf(user) == userBalanceBefore + depositAmount;
+    assert asset.balanceOf(currentContract) == vaultBalanceBefore - depositAmount;
+    assert ghost_DepositCancelled_EventCount == 0;
+    assert ghost_DepositForceCancelled_EventCount == 1;
+    assert ghost_DepositForceCancelled_Param_epochNonce == epochNonce;
+    assert ghost_DepositForceCancelled_Param_depositor == user;
+    assert ghost_DepositForceCancelled_Param_amount == depositAmount;
 }
 
 /// @notice Canceling a withdraw reverts when the current epoch is not open.
@@ -1246,8 +1632,19 @@ rule cancelWithdraw_RevertWhen_EpochNotOpen() {
 
     uint256 epochNonce = getEpochNonce();
 
+    require getWithdraw(user, epochNonce) != 0, "user has a withdraw intent";
+    require getEpochTotalShareBurnAmount(epochNonce) >= getWithdraw(user, epochNonce),
+        "epoch total share burn does not underflow";
+    require user != currentContract, "user is not the vault";
+    require share.balanceOf(currentContract) >= getWithdraw(user, epochNonce), "vault has enough shares";
+    require share.balanceOf(user) <= max_uint256 - getWithdraw(user, epochNonce),
+        "user share balance does not overflow";
+
     /// @dev revert condition being verified
     require getEpochStatus(epochNonce) != Types.EpochStatus.OPEN, "epoch is not open";
+
+    /// @dev ghost starting values
+    require ghost_WithdrawCancelled_EventCount == 0, "WithdrawCancelled event count starts at zero";
 
     storage before = lastStorage;
 
@@ -1255,6 +1652,7 @@ rule cancelWithdraw_RevertWhen_EpochNotOpen() {
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_WithdrawCancelled_EventCount == 0;
 }
 
 /// @notice Canceling a withdraw reverts when the user has no withdraw intent for the current epoch.
@@ -1272,12 +1670,16 @@ rule cancelWithdraw_RevertWhen_NoWithdraw() {
     require getEpochStatus(epochNonce) == Types.EpochStatus.OPEN, "epoch is open";
     require getWithdraw(user, epochNonce) == 0, "user has no withdraw intent";
 
+    /// @dev ghost starting values
+    require ghost_WithdrawCancelled_EventCount == 0, "WithdrawCancelled event count starts at zero";
+
     storage before = lastStorage;
 
     cancelWithdraw@withrevert(e, user);
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_WithdrawCancelled_EventCount == 0;
 }
 
 /// @notice Canceling a withdraw reverts when epoch total share burn underflows.
@@ -1292,10 +1694,17 @@ rule cancelWithdraw_RevertWhen_EpochTotalShareBurnUnderflows() {
     uint256 epochNonce = getEpochNonce();
     uint256 shareBurnAmount = getWithdraw(user, epochNonce);
 
+    require user != currentContract, "user is not the vault";
+    require share.balanceOf(currentContract) >= shareBurnAmount, "vault has enough shares";
+    require share.balanceOf(user) <= max_uint256 - shareBurnAmount, "user share balance does not overflow";
+
     /// @dev revert condition being verified
     require getEpochStatus(epochNonce) == Types.EpochStatus.OPEN, "epoch is open";
     require shareBurnAmount != 0, "user has a withdraw intent";
     require getEpochTotalShareBurnAmount(epochNonce) < shareBurnAmount, "epoch total share burn underflows";
+
+    /// @dev ghost starting values
+    require ghost_WithdrawCancelled_EventCount == 0, "WithdrawCancelled event count starts at zero";
 
     storage before = lastStorage;
 
@@ -1303,6 +1712,7 @@ rule cancelWithdraw_RevertWhen_EpochTotalShareBurnUnderflows() {
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_WithdrawCancelled_EventCount == 0;
 }
 
 /// @notice Canceling a withdraw succeeds and returns the escrowed shares.
