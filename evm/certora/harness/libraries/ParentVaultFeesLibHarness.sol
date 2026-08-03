@@ -12,12 +12,24 @@ contract ParentVaultFeesLibHarness is ParentVaultStore, HelperHarness {
         i_share = share;
     }
 
-    function calculatePricePerShare(uint256 tvl, uint256 sharePrecision)
+    function calculatePricePerShare(uint256 tvl, uint256 sharePrecision, uint256 assetPrecision)
         external
         view
         returns (uint256 pricePerShare)
     {
-        pricePerShare = ParentVaultFeesLib._calculatePricePerShare(_parentVaultStorage(), tvl, sharePrecision);
+        pricePerShare = ParentVaultFeesLib._calculatePricePerShare(
+            tvl, _parentVaultStorage().s_totalShares, sharePrecision, assetPrecision
+        );
+    }
+
+    function calculatePricePerSharePublic(uint256 tvl, uint256 sharePrecision, uint256 assetPrecision)
+        external
+        view
+        returns (uint256 pricePerShare)
+    {
+        pricePerShare = ParentVaultFeesLib.calculatePricePerShare(
+            _parentVaultStorage(), tvl, sharePrecision, assetPrecision
+        );
     }
 
     function collectManagementFee(uint256 rebalanceNonce, uint256 lastRebalanceCompletedTimestamp) external {
@@ -26,14 +38,35 @@ contract ParentVaultFeesLibHarness is ParentVaultStore, HelperHarness {
         );
     }
 
+    function collectManagementFeePublic(uint256 rebalanceNonce, uint256 lastRebalanceCompletedTimestamp) external {
+        ParentVaultFeesLib.collectManagementFee(
+            _parentVaultStorage(), rebalanceNonce, lastRebalanceCompletedTimestamp, i_share
+        );
+    }
+
     function collectPerformanceFee(
         uint256 epochNonce,
         uint256 tvl,
         uint256 grossPricePerShare,
-        uint256 sharePrecision
+        uint256 totalShares,
+        uint256 sharePrecision,
+        uint256 assetPrecision
+    ) external returns (uint256 settlementPricePerShare, uint256 feeShares) {
+        (settlementPricePerShare, feeShares) = ParentVaultFeesLib._collectPerformanceFee(
+            _parentVaultStorage(), epochNonce, tvl, grossPricePerShare, totalShares, i_share, sharePrecision,
+            assetPrecision
+        );
+    }
+
+    function collectPerformanceFeePublic(
+        uint256 epochNonce,
+        uint256 tvl,
+        uint256 grossPricePerShare,
+        uint256 sharePrecision,
+        uint256 assetPrecision
     ) external returns (uint256 settlementPricePerShare) {
-        settlementPricePerShare = ParentVaultFeesLib._collectPerformanceFee(
-            _parentVaultStorage(), epochNonce, tvl, grossPricePerShare, i_share, sharePrecision
+        settlementPricePerShare = ParentVaultFeesLib.collectPerformanceFee(
+            _parentVaultStorage(), epochNonce, tvl, grossPricePerShare, i_share, sharePrecision, assetPrecision
         );
     }
 
