@@ -14,7 +14,7 @@ abstract contract ProtocolAdapter is IProtocolAdapter, ReentrancyGuard {
     //////////////////////////////////////////////////////////////*/
     /// @dev Small tolerance for protocol-side share/index rounding on deposit (e.g. Aave's
     /// ray-scaled aToken mint/balanceOf round-trip, Compound's base-index principal rounding)
-    uint256 internal constant DEPOSIT_ROUNDING_TOLERANCE_WEI = 10; // @review increasing this
+    uint256 internal constant DEPOSIT_ROUNDING_TOLERANCE_WEI = 100;
 
     /*//////////////////////////////////////////////////////////////
                                IMMUTABLE
@@ -61,7 +61,10 @@ abstract contract ProtocolAdapter is IProtocolAdapter, ReentrancyGuard {
     /// @param tvlAfter The adapter's TVL in the protocol after depositing
     /// @param amount The amount requested to be deposited
     function _revertIfIncompleteDeposit(uint256 tvlBefore, uint256 tvlAfter, uint256 amount) internal pure {
-        if (tvlAfter - tvlBefore + DEPOSIT_ROUNDING_TOLERANCE_WEI < amount) {
+        if (tvlAfter < tvlBefore) revert ProtocolAdapter__TVLDecreasedOnDeposit();
+
+        uint256 creditedAmount = tvlAfter - tvlBefore;
+        if (creditedAmount < amount && amount - creditedAmount > DEPOSIT_ROUNDING_TOLERANCE_WEI) {
             revert ProtocolAdapter__IncompleteDeposit();
         }
     }

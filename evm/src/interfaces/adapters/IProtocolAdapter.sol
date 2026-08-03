@@ -16,6 +16,8 @@ interface IProtocolAdapter {
     error ProtocolAdapter__WithdrawAmountExceedsTotalValue();
     /// @dev Thrown when the wired protocol's configured asset does not match the adapter's underlying asset
     error ProtocolAdapter__AssetMismatch();
+    /// @dev Thrown when the protocol reports less TVL after a deposit than before it
+    error ProtocolAdapter__TVLDecreasedOnDeposit();
     /// @dev Thrown when the protocol credits less than the requested deposit amount, beyond rounding tolerance
     error ProtocolAdapter__IncompleteDeposit();
     /// @dev Thrown when the protocol returns less asset than the requested withdraw amount

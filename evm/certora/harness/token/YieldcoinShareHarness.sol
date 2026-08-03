@@ -49,9 +49,27 @@ contract YieldcoinShareHarness is YieldcoinShare, HelperHarness {
     ///      whose arbitrary Certora-havoced bytes encoding causes spurious reverts.
     function _runPolicyAfter() internal override {}
 
-    /// @dev Override getPolicyEngine so spec rules that read getPolicyEngine() stay consistent
-    ///      with the _runPolicyBefore override above.
-    function getPolicyEngine() public view override returns (address) {
-        return s_mockPolicyEngine;
+    function hasExpectedMetadata() external view returns (bool) {
+        ComplianceTokenStorage storage $ = getComplianceTokenStorage();
+        return keccak256(bytes($.tokenName)) == keccak256(bytes("Yieldcoin"))
+            && keccak256(bytes($.tokenSymbol)) == keccak256(bytes("YIELD")) && $.tokenDecimals == 18;
+    }
+
+    /// @dev A freshly deployed proxy has empty tokenName and tokenSymbol storage slots. Reading
+    ///      arbitrary, malformed string encodings through Solidity's string decoder can revert,
+    ///      so Certora checks the two raw slots before exercising the initializer.
+    function hasEmptyMetadata() external view returns (bool) {
+        ComplianceTokenStorage storage $ = getComplianceTokenStorage();
+        uint256 tokenNameSlot;
+        uint256 tokenSymbolSlot;
+        assembly {
+            tokenNameSlot := sload($.slot)
+            tokenSymbolSlot := sload(add($.slot, 1))
+        }
+        return tokenNameSlot == 0 && tokenSymbolSlot == 0;
+    }
+
+    function callInheritedInitialize(address policyEngine) external {
+        this.initialize("Invalid", "INVALID", 1, policyEngine);
     }
 }

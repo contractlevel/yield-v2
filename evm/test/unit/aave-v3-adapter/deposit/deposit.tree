@@ -4,6 +4,14 @@ AaveV3Adapter_deposit
   └── when the caller is the vault
       ├── when the actual deposited amount is less than the amount requested
       │   └── it should revert
+      ├── when TVL decreases during the deposit
+      │   └── it should revert
+      ├── when the credited shortfall exceeds the rounding tolerance
+      │   └── it should revert
+      ├── when the credited shortfall equals the rounding tolerance
+      │   └── it should succeed
+      ├── when the credited amount exceeds the requested amount
+      │   └── it should succeed
       └── when the actual deposited amount is at least the amount requested
           ├── it should emit a Deposit event
           └── it should supply USDC to the Aave V3 pool

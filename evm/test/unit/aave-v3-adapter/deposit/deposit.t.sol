@@ -7,7 +7,9 @@ import {IProtocolAdapter} from "../../../../src/interfaces/adapters/IProtocolAda
 
 contract AaveV3Adapter_DepositUnitTest is BaseAaveV3AdapterUnitTest {
     uint256 internal constant PARTIAL_DEPOSIT_AMOUNT = DEPOSIT_AMOUNT / 2;
-    uint256 internal constant TOLERANCE_SHORTFALL_AMOUNT = DEPOSIT_AMOUNT - 10;
+    uint256 internal constant TOLERANCE_SHORTFALL_AMOUNT = DEPOSIT_AMOUNT - 100;
+    uint256 internal constant EXCESSIVE_SHORTFALL_AMOUNT = DEPOSIT_AMOUNT - 101;
+    uint256 internal constant EXCESS_CREDIT_AMOUNT = DEPOSIT_AMOUNT + 1;
 
     function setUp() public {
         deal(address(s_mockUsdc), address(s_aaveV3Adapter), DEPOSIT_AMOUNT);
@@ -27,12 +29,35 @@ contract AaveV3Adapter_DepositUnitTest is BaseAaveV3AdapterUnitTest {
         s_aaveV3Adapter.deposit(DEPOSIT_AMOUNT);
     }
 
+    function test_AaveV3Adapter_deposit_RevertWhen_TVLDecreases() external {
+        s_mockAToken.mint(address(s_aaveV3Adapter), DEPOSIT_AMOUNT);
+        s_mockAaveV3Pool.setSupplyTVLDecreaseAmount(1);
+
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__TVLDecreasedOnDeposit.selector);
+        s_aaveV3Adapter.deposit(DEPOSIT_AMOUNT);
+    }
+
+    function test_AaveV3Adapter_deposit_RevertWhen_CreditedShortfallExceedsRoundingTolerance() external {
+        s_mockAaveV3Pool.setSupplyCreditAmount(EXCESSIVE_SHORTFALL_AMOUNT);
+
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__IncompleteDeposit.selector);
+        s_aaveV3Adapter.deposit(DEPOSIT_AMOUNT);
+    }
+
     function test_AaveV3Adapter_deposit_SucceedsWhen_CreditedAmountIsWithinRoundingTolerance() external {
         s_mockAaveV3Pool.setSupplyCreditAmount(TOLERANCE_SHORTFALL_AMOUNT);
 
         s_aaveV3Adapter.deposit(DEPOSIT_AMOUNT);
 
         assertEq(s_aaveV3Adapter.getTVL(), TOLERANCE_SHORTFALL_AMOUNT);
+    }
+
+    function test_AaveV3Adapter_deposit_SucceedsWhen_CreditedAmountExceedsRequestedAmount() external {
+        s_mockAaveV3Pool.setSupplyCreditAmount(EXCESS_CREDIT_AMOUNT);
+
+        s_aaveV3Adapter.deposit(DEPOSIT_AMOUNT);
+
+        assertEq(s_aaveV3Adapter.getTVL(), EXCESS_CREDIT_AMOUNT);
     }
 
     function test_AaveV3Adapter_deposit_Success() external {

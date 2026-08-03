@@ -17,6 +17,11 @@ methods {
     function getVault() external returns (address) envfree;
     function getAsset() external returns (address) envfree;
 
+    // Adapter-agnostic harness helper methods
+    function mockDepositDecreasesTVL() external returns (bool) envfree;
+    function mockDepositTVLChange() external returns (uint256) envfree;
+    function mockWithdrawAmount() external returns (uint256) envfree;
+
     // External methods
     function asset.balanceOf(address) external returns (uint256) envfree;
 
@@ -92,14 +97,20 @@ rule assetConsistency(env e) {
     assert currentContract.i_asset == currentContract.i_vault.getAsset(e);
 }
 
-rule ADAPTER_003_deposit_RevertWhen_CallerIsNotVault() {
+rule ADAPTER_004_deposit_RevertWhen_CallerIsNotVault() {
     env e;
     uint256 amount;
+    uint256 tvlBefore = getTVL();
+    uint256 tvlChange = mockDepositTVLChange();
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "deposit is nonpayable";
     require currentContract._status == 1, "deposit is nonReentrant";
-    require getTVL() + amount <= max_uint256, "deposit does not overflow TVL";
+    require !mockDepositDecreasesTVL(), "TVL should not decrease during deposit";
+    require tvlBefore <= max_uint256 - tvlChange, "TVL increase should not overflow";
+    require tvlChange >= amount || amount - tvlChange <= 100, "exclude incomplete deposit revert";
+    require asset.balanceOf(currentContract) >= amount, "adapter asset balance covers deposit";
+    require asset.balanceOf(getProtocolPool()) <= max_uint256 - amount, "protocol can receive deposited asset";
 
     /// @dev revert condition being verified
     require e.msg.sender != getVault(), "caller is not vault";
@@ -113,17 +124,103 @@ rule ADAPTER_003_deposit_RevertWhen_CallerIsNotVault() {
     assert ghost_Deposit_EventCount == 0;
 }
 
-rule deposit_Success_EmitsDepositEvent() {
+rule deposit_RevertWhen_ReentrancyGuardIsEntered() {
     env e;
     uint256 amount;
+    uint256 tvlBefore = getTVL();
+    uint256 tvlChange = mockDepositTVLChange();
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "deposit is nonpayable";
+    require e.msg.sender == getVault(), "caller is vault";
+    require !mockDepositDecreasesTVL(), "TVL should not decrease during deposit";
+    require tvlBefore <= max_uint256 - tvlChange, "TVL increase should not overflow";
+    require tvlChange >= amount || amount - tvlChange <= 100, "exclude incomplete deposit revert";
+    require asset.balanceOf(currentContract) >= amount, "adapter asset balance covers deposit";
+    require asset.balanceOf(getProtocolPool()) <= max_uint256 - amount, "protocol can receive deposited asset";
+
+    /// @dev revert condition being verified
+    require currentContract._status == 2, "reentrancy guard is entered";
+
+    /// @dev ghost starting values
+    require ghost_Deposit_EventCount == 0, "Deposit event count starts at zero";
+
+    deposit@withrevert(e, amount);
+
+    assert lastReverted;
+    assert ghost_Deposit_EventCount == 0;
+}
+
+rule deposit_RevertWhen_TVLDecreases() {
+    env e;
+    uint256 amount;
+    uint256 tvlBefore = getTVL();
+    uint256 tvlChange = mockDepositTVLChange();
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "deposit is nonpayable";
     require e.msg.sender == getVault(), "caller is vault";
     require currentContract._status == 1, "deposit is nonReentrant";
-    require getTVL() <= max_uint256 - amount, "deposit does not overflow TVL";
     require asset.balanceOf(currentContract) >= amount, "adapter asset balance covers deposit";
-    require asset.balanceOf(getProtocolPool()) <= max_uint256 - amount, "protocol asset balance can receive deposit";
+    require asset.balanceOf(getProtocolPool()) <= max_uint256 - amount, "protocol can receive deposited asset";
+
+    /// @dev revert condition being verified
+    require mockDepositDecreasesTVL(), "TVL decreases during deposit";
+    require tvlChange > 0, "TVL decrease is nonzero";
+    require tvlChange <= tvlBefore, "mock TVL decrease should not underflow";
+
+    /// @dev ghost starting values
+    require ghost_Deposit_EventCount == 0, "Deposit event count starts at zero";
+
+    deposit@withrevert(e, amount);
+
+    assert lastReverted;
+    assert ghost_Deposit_EventCount == 0;
+}
+
+rule deposit_RevertWhen_CreditedShortfallExceedsRoundingTolerance() {
+    env e;
+    uint256 amount;
+    uint256 tvlBefore = getTVL();
+    uint256 creditedAmount = mockDepositTVLChange();
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "deposit is nonpayable";
+    require e.msg.sender == getVault(), "caller is vault";
+    require currentContract._status == 1, "deposit is nonReentrant";
+    require !mockDepositDecreasesTVL(), "TVL should not decrease during deposit";
+    require tvlBefore <= max_uint256 - creditedAmount, "TVL increase should not overflow";
+    require asset.balanceOf(currentContract) >= amount, "adapter asset balance covers deposit";
+    require asset.balanceOf(getProtocolPool()) <= max_uint256 - amount, "protocol can receive deposited asset";
+
+    /// @dev revert condition being verified
+    require creditedAmount < amount, "credited amount is less than requested amount";
+    require amount - creditedAmount > 100, "credited shortfall exceeds rounding tolerance";
+
+    /// @dev ghost starting values
+    require ghost_Deposit_EventCount == 0, "Deposit event count starts at zero";
+
+    deposit@withrevert(e, amount);
+
+    assert lastReverted;
+    assert ghost_Deposit_EventCount == 0;
+}
+
+rule deposit_Success() {
+    env e;
+    uint256 amount;
+    uint256 tvlBefore = getTVL();
+    uint256 creditedAmount = mockDepositTVLChange();
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "deposit is nonpayable";
+    require e.msg.sender == getVault(), "caller is vault";
+    require currentContract._status == 1, "deposit is nonReentrant";
+    require !mockDepositDecreasesTVL(), "TVL should not decrease during deposit";
+    require tvlBefore <= max_uint256 - creditedAmount, "TVL increase should not overflow";
+    require creditedAmount >= amount || amount - creditedAmount <= 100, "credited shortfall is within tolerance";
+    require asset.balanceOf(currentContract) >= amount, "adapter asset balance covers deposit";
+    require asset.balanceOf(getProtocolPool()) <= max_uint256 - amount, "protocol can receive deposited asset";
 
     /// @dev ghost starting values
     require ghost_Deposit_EventCount == 0, "Deposit event count starts at zero";
@@ -132,39 +229,57 @@ rule deposit_Success_EmitsDepositEvent() {
     deposit@withrevert(e, amount);
 
     assert !lastReverted;
+    assert getTVL() == tvlBefore + creditedAmount;
     assert ghost_Deposit_EventCount == 1;
     assert ghost_Deposit_EventParam_amount == amount;
 }
 
-rule deposit_Success_IncreasesTVLByAmount() {
+rule ADAPTER_004_withdraw_RevertWhen_CallerIsNotVault() {
     env e;
     uint256 amount;
-    uint256 preTVL = getTVL();
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "deposit is nonpayable";
-    require e.msg.sender == getVault(), "caller is vault";
-    require currentContract._status == 1, "deposit is nonReentrant";
-    require preTVL <= max_uint256 - amount, "deposit does not overflow TVL";
-    require asset.balanceOf(currentContract) >= amount, "adapter asset balance covers deposit";
-    require asset.balanceOf(getProtocolPool()) <= max_uint256 - amount, "protocol asset balance can receive deposit";
-
-    deposit@withrevert(e, amount);
-
-    assert !lastReverted;
-    assert getTVL() >= preTVL + amount;
-}
-
-rule ADAPTER_003_withdraw_RevertWhen_CallerIsNotVault() {
-    env e;
-    uint256 amount;
+    uint256 tvlBefore = getTVL();
+    uint256 amountOut = mockWithdrawAmount();
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "withdraw is nonpayable";
     require currentContract._status == 1, "withdraw is nonReentrant";
+    require amount != max_uint256, "exercise epoch withdraw path";
+    require amount <= tvlBefore, "amount does not exceed TVL";
+    require amountOut >= amount, "actual withdraw amount is sufficient";
+    require asset.balanceOf(currentContract) <= max_uint256 - amountOut, "adapter can receive withdrawn asset";
+    require asset.balanceOf(getVault()) <= max_uint256 - amountOut, "vault can receive withdrawn asset";
+    require asset.balanceOf(getProtocolPool()) >= amountOut, "protocol asset balance covers withdraw";
 
     /// @dev revert condition being verified
     require e.msg.sender != getVault(), "caller is not vault";
+
+    /// @dev ghost starting values
+    require ghost_Withdraw_EventCount == 0, "Withdraw event count starts at zero";
+
+    withdraw@withrevert(e, amount);
+
+    assert lastReverted;
+    assert ghost_Withdraw_EventCount == 0;
+}
+
+rule withdraw_RevertWhen_ReentrancyGuardIsEntered() {
+    env e;
+    uint256 amount;
+    uint256 tvlBefore = getTVL();
+    uint256 amountOut = mockWithdrawAmount();
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "withdraw is nonpayable";
+    require e.msg.sender == getVault(), "caller is vault";
+    require amount != max_uint256, "exercise epoch withdraw path";
+    require amount <= tvlBefore, "amount does not exceed TVL";
+    require amountOut >= amount, "actual withdraw amount is sufficient";
+    require asset.balanceOf(currentContract) <= max_uint256 - amountOut, "adapter can receive withdrawn asset";
+    require asset.balanceOf(getVault()) <= max_uint256 - amountOut, "vault can receive withdrawn asset";
+    require asset.balanceOf(getProtocolPool()) >= amountOut, "protocol asset balance covers withdraw";
+
+    /// @dev revert condition being verified
+    require currentContract._status == 2, "reentrancy guard is entered";
 
     /// @dev ghost starting values
     require ghost_Withdraw_EventCount == 0, "Withdraw event count starts at zero";
@@ -183,6 +298,10 @@ rule withdraw_Epoch_RevertWhen_AmountExceedsTVL() {
     require e.msg.value == 0, "withdraw is nonpayable";
     require e.msg.sender == getVault(), "caller is vault";
     require currentContract._status == 1, "withdraw is nonReentrant";
+    require asset.balanceOf(currentContract) <= max_uint256 - mockWithdrawAmount(),
+        "adapter can receive withdrawn asset";
+    require asset.balanceOf(getVault()) <= max_uint256 - mockWithdrawAmount(), "vault can receive withdrawn asset";
+    require asset.balanceOf(getProtocolPool()) >= mockWithdrawAmount(), "protocol asset balance covers withdraw";
 
     /// @dev epoch withdraw condition
     require amount != max_uint256, "amount is not max uint256";
@@ -199,116 +318,120 @@ rule withdraw_Epoch_RevertWhen_AmountExceedsTVL() {
     assert ghost_Withdraw_EventCount == 0;
 }
 
-
-rule withdraw_Epoch_Success_ReturnsAtLeastAmountAndEmitsWithdrawEvent() {
+rule withdraw_Epoch_RevertWhen_ActualWithdrawnAmountIsInsufficient() {
     env e;
     uint256 amount;
-    uint256 preTVL = getTVL();
+    uint256 tvlBefore = getTVL();
+    uint256 amountOut = mockWithdrawAmount();
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "withdraw is nonpayable";
     require e.msg.sender == getVault(), "caller is vault";
     require currentContract._status == 1, "withdraw is nonReentrant";
-    require amount <= preTVL, "amount does not exceed TVL";
-    require preTVL - amount >= 0, "should not underflow";
-    uint256 adapterAssetBalanceBefore = getAsset().balanceOf(e, currentContract);
-    uint256 vaultAssetBalanceBefore = getAsset().balanceOf(e, getVault());
-    uint256 protocolAssetBalanceBefore = getAsset().balanceOf(e, getProtocolPool());
-    require protocolAssetBalanceBefore >= amount, "protocol asset balance covers withdraw";
-    require adapterAssetBalanceBefore <= max_uint256 - amount, "adapter asset balance can receive withdraw";
-    require vaultAssetBalanceBefore <= max_uint256 - amount, "vault asset balance can receive withdraw";
-
-    /// @dev epoch withdraw condition
     require amount != max_uint256, "amount is not max uint256";
+    require amount <= tvlBefore, "amount does not exceed TVL";
+    require asset.balanceOf(currentContract) <= max_uint256 - amountOut, "adapter can receive withdrawn asset";
+    require asset.balanceOf(getVault()) <= max_uint256 - amountOut, "vault can receive withdrawn asset";
+    require asset.balanceOf(getProtocolPool()) >= amountOut, "protocol asset balance covers withdraw";
+
+    /// @dev revert condition being verified
+    require amountOut < amount, "actual withdrawn amount is insufficient";
 
     /// @dev ghost starting values
     require ghost_Withdraw_EventCount == 0, "Withdraw event count starts at zero";
-    require ghost_Withdraw_EventParam_amount == 0, "Withdraw amount ghost starts at zero";
 
-    uint256 amountOut = withdraw@withrevert(e, amount);
+    withdraw@withrevert(e, amount);
 
-    assert !lastReverted;
-    assert amountOut >= amount;
-    assert ghost_Withdraw_EventCount == 1;
-    assert ghost_Withdraw_EventParam_amount == amountOut;
+    assert lastReverted;
+    assert ghost_Withdraw_EventCount == 0;
 }
 
-rule withdraw_Epoch_Success_DecreasesTVLByAmount() {
+rule withdraw_Epoch_Success() {
     env e;
     uint256 amount;
-    uint256 preTVL = getTVL();
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "withdraw is nonpayable";
-    require e.msg.sender == getVault(), "caller is vault";
-    require currentContract._status == 1, "withdraw is nonReentrant";
-    require amount <= preTVL, "amount does not exceed TVL";
-    require preTVL - amount >= 0, "should not underflow";
-    uint256 adapterAssetBalanceBefore = getAsset().balanceOf(e, currentContract);
-    uint256 vaultAssetBalanceBefore = getAsset().balanceOf(e, getVault());
-    uint256 protocolAssetBalanceBefore = getAsset().balanceOf(e, getProtocolPool());
-    require protocolAssetBalanceBefore >= amount, "protocol asset balance covers withdraw";
-    require adapterAssetBalanceBefore <= max_uint256 - amount, "adapter asset balance can receive withdraw";
-    require vaultAssetBalanceBefore <= max_uint256 - amount, "vault asset balance can receive withdraw";
-
-    /// @dev epoch withdraw condition
-    require amount != max_uint256, "amount is not max uint256";
-
-    uint256 amountOut = withdraw@withrevert(e, amount);
-
-    assert !lastReverted;
-    assert amountOut >= amount;
-    assert getTVL() == preTVL - amount;
-}
-
-rule withdraw_Rebalance_Success_ReturnsAtLeastPreWithdrawTVLAndEmitsWithdrawEvent() {
-    env e;
-    uint256 preTVL = getTVL();
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "withdraw is nonpayable";
-    require e.msg.sender == getVault(), "caller is vault";
-    require currentContract._status == 1, "withdraw is nonReentrant";
-    require preTVL > 0, "should not be 0";
-    uint256 adapterAssetBalanceBefore = getAsset().balanceOf(e, currentContract);
-    uint256 vaultAssetBalanceBefore = getAsset().balanceOf(e, getVault());
-    uint256 protocolAssetBalanceBefore = getAsset().balanceOf(e, getProtocolPool());
-    require protocolAssetBalanceBefore >= preTVL, "protocol asset balance covers withdraw";
-    require adapterAssetBalanceBefore <= max_uint256 - preTVL, "adapter asset balance can receive withdraw";
-    require vaultAssetBalanceBefore <= max_uint256 - preTVL, "vault asset balance can receive withdraw";
-
-    /// @dev ghost starting values
-    require ghost_Withdraw_EventCount == 0, "Withdraw event count starts at zero";
-    require ghost_Withdraw_EventParam_amount == 0, "Withdraw amount ghost starts at zero";
-
-    uint256 amountOut = withdraw@withrevert(e, max_uint256);
-
-    assert !lastReverted;
-    assert amountOut >= preTVL;
-    assert ghost_Withdraw_EventCount == 1;
-    assert ghost_Withdraw_EventParam_amount == amountOut;
-}
-
-rule withdraw_Success_IncreasesVaultBalances() {
-    env e;
-    uint256 preTVL = getTVL();
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "withdraw is nonpayable";
-    require e.msg.sender == getVault(), "caller is vault";
-    require currentContract._status == 1, "withdraw is nonReentrant";
-    require preTVL > 0, "should not be 0";
+    uint256 tvlBefore = getTVL();
+    uint256 expectedAmountOut = mockWithdrawAmount();
     uint256 adapterBalanceBefore = asset.balanceOf(e, currentContract);
-    uint256 protocolBalanceBefore = asset.balanceOf(e, getProtocolPool());
-    require protocolBalanceBefore >= preTVL, "protocol asset balance covers withdraw";
-    require adapterBalanceBefore <= max_uint256 - preTVL, "adapter asset balance can receive withdraw";
+    uint256 vaultBalanceBefore = asset.balanceOf(e, getVault());
 
-    uint256 vaultBalanceBefore = asset.balanceOf(getVault());
-    require vaultBalanceBefore <= max_uint256 - preTVL, "vault asset balance can receive withdraw";
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "withdraw is nonpayable";
+    require e.msg.sender == getVault(), "caller is vault";
+    require currentContract._status == 1, "withdraw is nonReentrant";
+    require amount != max_uint256, "amount is not max uint256";
+    require amount <= tvlBefore, "amount does not exceed TVL";
+    require expectedAmountOut >= amount, "actual withdrawn amount is sufficient";
+    require adapterBalanceBefore <= max_uint256 - expectedAmountOut, "adapter can receive withdrawn asset";
+    require vaultBalanceBefore <= max_uint256 - expectedAmountOut, "vault can receive withdrawn asset";
+    require asset.balanceOf(getProtocolPool()) >= expectedAmountOut, "protocol asset balance covers withdraw";
+
+    /// @dev ghost starting values
+    require ghost_Withdraw_EventCount == 0, "Withdraw event count starts at zero";
+    require ghost_Withdraw_EventParam_amount == 0, "Withdraw amount ghost starts at zero";
+
+    uint256 amountOut = withdraw@withrevert(e, amount);
+
+    assert !lastReverted;
+    assert amountOut == expectedAmountOut;
+    assert getTVL() == tvlBefore - amount;
+    assert asset.balanceOf(currentContract) == adapterBalanceBefore;
+    assert asset.balanceOf(getVault()) == vaultBalanceBefore + amountOut;
+    assert ghost_Withdraw_EventCount == 1;
+    assert ghost_Withdraw_EventParam_amount == amountOut;
+}
+
+rule withdraw_Rebalance_RevertWhen_ActualWithdrawnAmountIsInsufficient() {
+    env e;
+    uint256 tvlBefore = getTVL();
+    uint256 amountOut = mockWithdrawAmount();
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "withdraw is nonpayable";
+    require e.msg.sender == getVault(), "caller is vault";
+    require currentContract._status == 1, "withdraw is nonReentrant";
+    require asset.balanceOf(currentContract) <= max_uint256 - amountOut, "adapter can receive withdrawn asset";
+    require asset.balanceOf(getVault()) <= max_uint256 - amountOut, "vault can receive withdrawn asset";
+    require asset.balanceOf(getProtocolPool()) >= amountOut, "protocol asset balance covers withdraw";
+
+    /// @dev revert condition being verified
+    require amountOut < tvlBefore, "actual withdrawn amount is less than pre-withdraw TVL";
+
+    /// @dev ghost starting values
+    require ghost_Withdraw_EventCount == 0, "Withdraw event count starts at zero";
+
+    withdraw@withrevert(e, max_uint256);
+
+    assert lastReverted;
+    assert ghost_Withdraw_EventCount == 0;
+}
+
+rule withdraw_Rebalance_Success() {
+    env e;
+    uint256 tvlBefore = getTVL();
+    uint256 expectedAmountOut = mockWithdrawAmount();
+    uint256 adapterBalanceBefore = asset.balanceOf(e, currentContract);
+    uint256 vaultBalanceBefore = asset.balanceOf(e, getVault());
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "withdraw is nonpayable";
+    require e.msg.sender == getVault(), "caller is vault";
+    require currentContract._status == 1, "withdraw is nonReentrant";
+    require expectedAmountOut >= tvlBefore, "actual withdrawn amount covers pre-withdraw TVL";
+    require adapterBalanceBefore <= max_uint256 - expectedAmountOut, "adapter can receive withdrawn asset";
+    require vaultBalanceBefore <= max_uint256 - expectedAmountOut, "vault can receive withdrawn asset";
+    require asset.balanceOf(getProtocolPool()) >= expectedAmountOut, "protocol asset balance covers withdraw";
+
+    /// @dev ghost starting values
+    require ghost_Withdraw_EventCount == 0, "Withdraw event count starts at zero";
+    require ghost_Withdraw_EventParam_amount == 0, "Withdraw amount ghost starts at zero";
 
     uint256 amountOut = withdraw@withrevert(e, max_uint256);
 
     assert !lastReverted;
-
+    assert amountOut == expectedAmountOut;
+    assert getTVL() == 0;
+    assert asset.balanceOf(currentContract) == adapterBalanceBefore;
     assert asset.balanceOf(getVault()) == vaultBalanceBefore + amountOut;
+    assert ghost_Withdraw_EventCount == 1;
+    assert ghost_Withdraw_EventParam_amount == amountOut;
 }

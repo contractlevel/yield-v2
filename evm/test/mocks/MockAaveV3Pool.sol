@@ -14,6 +14,7 @@ contract MockAaveV3Pool {
     uint256 internal s_withdrawReturn;
     uint256 internal s_expectedWithdrawAmount;
     uint256 internal s_supplyCreditAmount;
+    uint256 internal s_supplyTVLDecreaseAmount;
     bool internal s_supplyReverts;
     bool internal s_withdrawReverts;
     bool internal s_useWithdrawReturn;
@@ -52,9 +53,17 @@ contract MockAaveV3Pool {
         s_useSupplyCreditAmount = true;
     }
 
+    function setSupplyTVLDecreaseAmount(uint256 amount) external {
+        s_supplyTVLDecreaseAmount = amount;
+    }
+
     function supply(address asset, uint256 amount, address onBehalfOf, uint16) external {
         if (s_supplyReverts) revert MockAaveV3Pool__SupplyReverts();
         IERC20(asset).transferFrom(msg.sender, address(this), amount);
+        if (s_supplyTVLDecreaseAmount != 0) {
+            MockAToken(s_reserveData[asset].aTokenAddress).burn(onBehalfOf, s_supplyTVLDecreaseAmount);
+            return;
+        }
         uint256 creditAmount = s_useSupplyCreditAmount ? s_supplyCreditAmount : amount;
         MockAToken(s_reserveData[asset].aTokenAddress).mint(onBehalfOf, creditAmount);
     }

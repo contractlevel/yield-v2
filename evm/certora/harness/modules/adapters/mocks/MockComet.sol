@@ -6,20 +6,35 @@ interface IMintableERC20 {
 }
 
 contract MockComet {
+    address internal immutable i_asset;
+
     mapping(address account => uint256 balance) internal s_balances;
 
+    bool public s_decreaseTVLOnSupply;
+    uint256 public s_supplyTVLChange;
+    uint256 public s_withdrawAmount;
+
+    constructor(address asset) {
+        i_asset = asset;
+    }
+
+    function baseToken() external view returns (address) {
+        return i_asset;
+    }
+
     function supply(address, uint256 amount) external {
-        s_balances[msg.sender] += amount;
+        if (s_decreaseTVLOnSupply) s_balances[msg.sender] -= s_supplyTVLChange;
+        else s_balances[msg.sender] += s_supplyTVLChange;
     }
 
     function withdraw(address asset, uint256 amount) external {
         uint256 balance = s_balances[msg.sender];
-        uint256 amountOut = amount == type(uint256).max ? balance : amount;
+        uint256 tvlChange = amount == type(uint256).max ? balance : amount;
 
-        require(amountOut <= balance);
+        require(tvlChange <= balance);
 
-        s_balances[msg.sender] = balance - amountOut;
-        IMintableERC20(asset).mint(msg.sender, amountOut);
+        s_balances[msg.sender] = balance - tvlChange;
+        IMintableERC20(asset).mint(msg.sender, s_withdrawAmount);
     }
 
     function balanceOf(address account) external view returns (uint256 balance) {

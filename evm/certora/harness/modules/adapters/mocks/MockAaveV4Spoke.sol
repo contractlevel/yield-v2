@@ -9,6 +9,10 @@ contract MockAaveV4Spoke is IAaveV4Spoke {
 
     mapping(uint256 reserveId => mapping(address user => uint256 suppliedAssets)) internal s_suppliedAssets;
 
+    bool public s_decreaseTVLOnSupply;
+    uint256 public s_supplyTVLChange;
+    uint256 public s_withdrawAmount;
+
     constructor(address underlying) {
         i_underlying = underlying;
     }
@@ -18,9 +22,10 @@ contract MockAaveV4Spoke is IAaveV4Spoke {
         returns (uint256 suppliedShares, uint256 suppliedAmount)
     {
         IERC20(i_underlying).transferFrom(msg.sender, address(this), amount);
-        s_suppliedAssets[reserveId][onBehalfOf] += amount;
+        if (s_decreaseTVLOnSupply) s_suppliedAssets[reserveId][onBehalfOf] -= s_supplyTVLChange;
+        else s_suppliedAssets[reserveId][onBehalfOf] += s_supplyTVLChange;
 
-        return (amount, amount);
+        return (s_supplyTVLChange, s_supplyTVLChange);
     }
 
     function withdraw(uint256 reserveId, uint256 amount, address to)
@@ -28,11 +33,12 @@ contract MockAaveV4Spoke is IAaveV4Spoke {
         returns (uint256 withdrawnShares, uint256 withdrawnAmount)
     {
         uint256 suppliedAssets = s_suppliedAssets[reserveId][msg.sender];
-        withdrawnAmount = amount == type(uint256).max ? suppliedAssets : amount;
+        uint256 tvlChange = amount == type(uint256).max ? suppliedAssets : amount;
+        withdrawnAmount = s_withdrawAmount;
 
-        require(withdrawnAmount <= suppliedAssets);
+        require(tvlChange <= suppliedAssets);
 
-        s_suppliedAssets[reserveId][msg.sender] = suppliedAssets - withdrawnAmount;
+        s_suppliedAssets[reserveId][msg.sender] = suppliedAssets - tvlChange;
         IERC20(i_underlying).transfer(to, withdrawnAmount);
 
         return (withdrawnAmount, withdrawnAmount);

@@ -1,5 +1,5 @@
 using MockComet as comet;
-using MockCometRewards as cometRewards;
+using MockCometRewardsVerifier as cometRewards;
 using MockAccessControlVault as vault;
 
 /// Verification of CompoundV3Adapter protocol-specific behavior
@@ -16,7 +16,11 @@ methods {
     function claimRewards(address) external;
 
     function comet.balanceOf(address) external returns (uint256) envfree;
-    function cometRewards.lastTo() external returns (address) envfree;
+    function cometRewards.s_lastComet() external returns (address) envfree;
+    function cometRewards.s_lastSrc() external returns (address) envfree;
+    function cometRewards.s_lastTo() external returns (address) envfree;
+    function cometRewards.s_lastShouldAccrue() external returns (bool) envfree;
+    function cometRewards.s_claimToCallCount() external returns (uint256) envfree;
     function vault.hasRole(bytes32, address) external returns (bool) envfree;
 
     function bytes32ToAddress(bytes32) external returns (address) envfree;
@@ -74,18 +78,20 @@ rule claimRewards_RevertWhen_CallerNotRewardsOperator() {
 
     /// @dev revert conditions NOT being verified
     require to != 0, "to is not zero";
-    require e.msg.value == 0, "non--payable";
+    require e.msg.value == 0, "non-payable";
 
     /// @dev revert condition being verified
     require !vault.hasRole(REWARDS_OPERATOR_ROLE(), e.msg.sender), "caller is not rewards operator";
 
     /// @dev ghost starting values
     require ghost_RewardsClaimed_EventCount == 0, "RewardsClaimed event count starts at zero";
+    require cometRewards.s_claimToCallCount() == 0, "claimTo call count starts at zero";
 
     claimRewards@withrevert(e, to);
 
     assert lastReverted;
     assert ghost_RewardsClaimed_EventCount == 0;
+    assert cometRewards.s_claimToCallCount() == 0;
 }
 
 rule claimRewards_RevertWhen_ToIsZeroAddress() {
@@ -93,18 +99,20 @@ rule claimRewards_RevertWhen_ToIsZeroAddress() {
 
     /// @dev revert conditions NOT being verified
     require vault.hasRole(REWARDS_OPERATOR_ROLE(), e.msg.sender), "caller is rewards operator";
-    require e.msg.value == 0, "non--payable";
+    require e.msg.value == 0, "non-payable";
 
     /// @dev revert condition being verified
     address to = 0;
 
     /// @dev ghost starting values
     require ghost_RewardsClaimed_EventCount == 0, "RewardsClaimed event count starts at zero";
+    require cometRewards.s_claimToCallCount() == 0, "claimTo call count starts at zero";
 
     claimRewards@withrevert(e, to);
 
     assert lastReverted;
     assert ghost_RewardsClaimed_EventCount == 0;
+    assert cometRewards.s_claimToCallCount() == 0;
 }
 
 rule claimRewards_Success_EmitsEventAndClaimsToRecipient() {
@@ -120,11 +128,16 @@ rule claimRewards_Success_EmitsEventAndClaimsToRecipient() {
     /// @dev ghost starting values
     require ghost_RewardsClaimed_EventCount == 0, "RewardsClaimed event count starts at zero";
     require ghost_RewardsClaimed_EventParam_to == 0, "RewardsClaimed to ghost starts at zero";
+    require cometRewards.s_claimToCallCount() == 0, "claimTo call count starts at zero";
 
     claimRewards@withrevert(e, to);
 
     assert !lastReverted;
     assert ghost_RewardsClaimed_EventCount == 1;
     assert ghost_RewardsClaimed_EventParam_to == to;
-    assert cometRewards.lastTo() == to;
+    assert cometRewards.s_claimToCallCount() == 1;
+    assert cometRewards.s_lastComet() == getProtocolPool();
+    assert cometRewards.s_lastSrc() == currentContract;
+    assert cometRewards.s_lastTo() == to;
+    assert cometRewards.s_lastShouldAccrue();
 }

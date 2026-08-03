@@ -7,7 +7,9 @@ import {IProtocolAdapter} from "../../../../src/interfaces/adapters/IProtocolAda
 
 contract CompoundV3Adapter_DepositUnitTest is BaseCompoundV3AdapterUnitTest {
     uint256 internal constant PARTIAL_DEPOSIT_AMOUNT = DEPOSIT_AMOUNT / 2;
-    uint256 internal constant TOLERANCE_SHORTFALL_AMOUNT = DEPOSIT_AMOUNT - 10;
+    uint256 internal constant TOLERANCE_SHORTFALL_AMOUNT = DEPOSIT_AMOUNT - 100;
+    uint256 internal constant EXCESSIVE_SHORTFALL_AMOUNT = DEPOSIT_AMOUNT - 101;
+    uint256 internal constant EXCESS_CREDIT_AMOUNT = DEPOSIT_AMOUNT + 1;
 
     function setUp() public {
         deal(address(s_mockUsdc), address(s_compoundV3Adapter), DEPOSIT_AMOUNT);
@@ -27,12 +29,35 @@ contract CompoundV3Adapter_DepositUnitTest is BaseCompoundV3AdapterUnitTest {
         s_compoundV3Adapter.deposit(DEPOSIT_AMOUNT);
     }
 
+    function test_CompoundV3Adapter_deposit_RevertWhen_TVLDecreases() external {
+        s_mockComet.setBalance(address(s_compoundV3Adapter), DEPOSIT_AMOUNT);
+        s_mockComet.setSupplyTVLDecreaseAmount(1);
+
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__TVLDecreasedOnDeposit.selector);
+        s_compoundV3Adapter.deposit(DEPOSIT_AMOUNT);
+    }
+
+    function test_CompoundV3Adapter_deposit_RevertWhen_CreditedShortfallExceedsRoundingTolerance() external {
+        s_mockComet.setSupplyCreditAmount(EXCESSIVE_SHORTFALL_AMOUNT);
+
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__IncompleteDeposit.selector);
+        s_compoundV3Adapter.deposit(DEPOSIT_AMOUNT);
+    }
+
     function test_CompoundV3Adapter_deposit_SucceedsWhen_CreditedAmountIsWithinRoundingTolerance() external {
         s_mockComet.setSupplyCreditAmount(TOLERANCE_SHORTFALL_AMOUNT);
 
         s_compoundV3Adapter.deposit(DEPOSIT_AMOUNT);
 
         assertEq(s_compoundV3Adapter.getTVL(), TOLERANCE_SHORTFALL_AMOUNT);
+    }
+
+    function test_CompoundV3Adapter_deposit_SucceedsWhen_CreditedAmountExceedsRequestedAmount() external {
+        s_mockComet.setSupplyCreditAmount(EXCESS_CREDIT_AMOUNT);
+
+        s_compoundV3Adapter.deposit(DEPOSIT_AMOUNT);
+
+        assertEq(s_compoundV3Adapter.getTVL(), EXCESS_CREDIT_AMOUNT);
     }
 
     function test_CompoundV3Adapter_deposit_Success() external {

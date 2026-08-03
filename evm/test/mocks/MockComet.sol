@@ -13,6 +13,7 @@ contract MockComet {
     uint256 internal s_withdrawReturn;
     uint256 internal s_expectedWithdrawAmount;
     uint256 internal s_supplyCreditAmount;
+    uint256 internal s_supplyTVLDecreaseAmount;
     bool internal s_supplyReverts;
     bool internal s_withdrawReverts;
     bool internal s_useExpectedWithdrawAmount;
@@ -53,9 +54,17 @@ contract MockComet {
         s_useSupplyCreditAmount = true;
     }
 
+    function setSupplyTVLDecreaseAmount(uint256 amount) external {
+        s_supplyTVLDecreaseAmount = amount;
+    }
+
     function supply(address asset, uint256 amount) external {
         if (s_supplyReverts) revert MockComet__SupplyReverts();
         IERC20(asset).transferFrom(msg.sender, address(this), amount);
+        if (s_supplyTVLDecreaseAmount != 0) {
+            s_balances[msg.sender] -= s_supplyTVLDecreaseAmount;
+            return;
+        }
         s_balances[msg.sender] += s_useSupplyCreditAmount ? s_supplyCreditAmount : amount;
     }
 
