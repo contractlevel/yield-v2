@@ -9,3 +9,7 @@ Research and potentially add a Morpho adapter. The specific Morpho vault or mark
 ## Utilization-Aware Rebalancing
 
 Add utilization-aware strategy evaluation when protocol TVL becomes large enough for a rebalance deposit to materially reduce the destination strategy's APY.
+
+## Offchain Monitoring
+
+A lightweight, offchain app for monitoring crosschain LINK reserves, existent (and automating) recovery modes, and TVL.
