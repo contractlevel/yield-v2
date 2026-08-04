@@ -1,6 +1,13 @@
 /// Verification of YieldcoinShareKycExtractor
 /// @author @contractlevel
 /// @notice YieldcoinShareKycExtractor extracts accounts requiring KYC from YieldcoinShare payloads
+/// @dev transfer, transferFrom, batchTransfer, approve, and increaseAllowance all decode payload.data inside
+/// extract(). Harness-built payloads that round-trip a value through that decode (constructed via abi.encode in
+/// the harness, then abi.decode'd across the extract() external-call boundary) were confirmed vacuous for every
+/// one of these selectors, matching a dynamic-bytes/array modeling limitation seen elsewhere in this suite.
+/// decreaseAllowance is the only selector with a concrete success rule because it never decodes payload.data.
+/// The generic extract_SuccessfulReturn_IsWellFormed rule below still covers output structure (parameters.length
+/// and name) for every supported selector.
 
 /*//////////////////////////////////////////////////////////////
                             METHODS
