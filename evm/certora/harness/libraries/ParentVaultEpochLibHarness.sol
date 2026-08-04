@@ -13,24 +13,37 @@ contract ParentVaultEpochLibHarness is ParentVaultStore, HelperHarness {
         i_share = share;
     }
 
-    function closeEpoch(uint256 tvl, uint256 sharePrecision, uint256 minDepositAmount, bool isLocalStrategy)
+    function closeEpoch(
+        uint256 tvl,
+        uint256 sharePrecision,
+        uint256 assetPrecision,
+        uint256 minDepositAmount,
+        bool isLocalStrategy
+    )
         external
-        returns (uint256 epochNonce, uint8 action, uint256 amount)
+        returns (uint256 epochNonce, uint8 action, uint256 amount, uint256 totalDepositAmount)
     {
-        ParentVaultEpochLib.CloseEpochExternalAction memory externalAction = ParentVaultEpochLib._closeEpoch(
-            _parentVaultStorage(), tvl, i_share, sharePrecision, minDepositAmount, isLocalStrategy
+        ParentVaultEpochLib.CloseEpochExternalAction memory externalAction = ParentVaultEpochLib.closeEpoch(
+            _parentVaultStorage(), tvl, i_share, sharePrecision, assetPrecision, minDepositAmount, isLocalStrategy
         );
         epochNonce = externalAction.epochNonce;
         action = uint8(externalAction.action);
         amount = externalAction.amount;
+        totalDepositAmount = externalAction.totalDepositAmount;
     }
 
-    function finalizeLocalNetWithdraw(uint256 epochNonce, uint256 amountOut) external {
-        ParentVaultEpochLib._finalizeLocalNetWithdraw(_parentVaultStorage(), epochNonce, amountOut);
+    function completeEpochDeposit() external {
+        ParentVaultEpochLib.completeEpochDeposit(_parentVaultStorage());
     }
 
-    function openNextEpoch() external {
-        ParentVaultEpochLib._openNextEpoch(_parentVaultStorage());
+    function finalizeLocalNetWithdraw(uint256 epochNonce, uint256 totalDepositAmount, uint256 amountOut) external {
+        ParentVaultEpochLib.finalizeLocalNetWithdraw(
+            _parentVaultStorage(), epochNonce, totalDepositAmount, amountOut
+        );
+    }
+
+    function openNextEpoch(uint256 epochNonce) external {
+        ParentVaultEpochLib.openNextEpoch(_parentVaultStorage(), epochNonce);
     }
 
     function getMinEpochPeriod() external pure returns (uint256 minEpochPeriod) {
