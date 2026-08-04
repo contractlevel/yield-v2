@@ -316,8 +316,7 @@ abstract contract BaseVault is
 
     /// @notice Clears the active strategy protocol adapter for this chain, given a known adapter
     /// @param adapter The active strategy adapter being cleared, already known by the caller
-    /// @dev Precondition: this chain is no longer the active strategy chain
-    function _clearActiveAdapter(address adapter) internal {
+    function _clearActiveAdapter(address adapter) internal virtual {
         BaseVaultStrategyLib.clearActiveAdapter(_baseVaultStorage(), adapter);
     }
 

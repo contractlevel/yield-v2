@@ -54,40 +54,41 @@ contract ParentVaultHarness is ParentVault, HelperHarness {
     }
 
     function storeRebalanceDepositRecovery(uint256 rebalanceNonce, uint256 amount) external {
-        _storeRebalanceDepositRecovery(rebalanceNonce, amount);
+        _storeRebalanceDepositRecovery(_baseVaultStorage(), rebalanceNonce, amount);
     }
 
     function clearRebalanceDepositRecovery() external {
-        _clearRebalanceDepositRecovery();
-    }
-
-    function requireRebalanceDepositRecovery()
-        external
-        view
-        returns (Types.RebalanceDepositRecovery memory recovery)
-    {
-        recovery = _requireRebalanceDepositRecovery();
+        uint256 rebalanceNonce = _baseVaultStorage().s_rebalanceDepositRecovery.rebalanceNonce;
+        _clearRebalanceDepositRecovery(_baseVaultStorage(), rebalanceNonce);
     }
 
     function recoverFailedRebalanceDepositInternal() external returns (uint256 rebalanceNonce, uint256 amount) {
-        (rebalanceNonce, amount) = _recoverFailedRebalanceDeposit();
+        (rebalanceNonce, amount) = _recoverFailedRebalanceDeposit(_baseVaultStorage());
     }
 
     function executeDeposit(uint256 amount, bool revertOnFailure) external returns (bool success) {
-        success = _executeDeposit(amount, revertOnFailure);
+        success = _executeDeposit(amount, revertOnFailure, _baseVaultStorage().s_activeProtocolAdapter);
     }
 
     function executeWithdraw(uint256 amount, bool revertOnFailure) external returns (bool success, uint256 amountOut) {
-        (success, amountOut) = _executeWithdraw(amount, revertOnFailure);
+        (success, amountOut) = _executeWithdraw(amount, revertOnFailure, _baseVaultStorage().s_activeProtocolAdapter);
+    }
+
+    function clearActiveAdapter(address adapter) external {
+        _clearActiveAdapter(adapter);
+    }
+  
+    function _clearActiveAdapter(address adapter) internal override {
+        BaseVaultStrategyLib._clearActiveAdapter(_baseVaultStorage(), adapter);
     }
 
     function handleCCIPRebalance(uint256 rebalanceNonce, bytes32 protocolId, uint256 amount)
         external
         returns (bool success)
     {
-        /// @dev Certora cannot link external libraries, so model only the active-adapter boundary here.
-        BaseVaultStrategyLib._setActiveAdapter(_baseVaultStorage(), protocolId, i_adapterRegistry, address(this));
-        success = _handleCCIPRebalanceDeposit(rebalanceNonce, amount);
+        /// @dev Dispatches through the _setActiveAdapter override below, which avoids the unresolved
+        ///      external library call Certora cannot link.
+        success = _handleCCIPRebalance(rebalanceNonce, protocolId, amount);
     }
 
     /// @dev Certora cannot link external libraries, so model only the active-adapter boundary here.
@@ -98,11 +99,7 @@ contract ParentVaultHarness is ParentVault, HelperHarness {
     }
 
     function requireNoRecovery() external view {
-        _requireNoRecovery();
-    }
-
-    function requireRecoveryMode(Types.RecoveryMode expected) external view {
-        _requireRecoveryMode(expected);
+        _requireNoRecovery(_baseVaultStorage());
     }
 
     function authorizeUpgrade(address newImplementation) external {
@@ -115,10 +112,6 @@ contract ParentVaultHarness is ParentVault, HelperHarness {
 
     function getRecoveryAmount() external view returns (uint256) {
         return _baseVaultStorage().s_rebalanceDepositRecovery.amount;
-    }
-
-    function getRecoveryCreatedAt() external view returns (uint256) {
-        return _baseVaultStorage().s_rebalanceDepositRecovery.createdAt;
     }
 
     function policyProtectedInterfaceId() external pure returns (bytes4) {

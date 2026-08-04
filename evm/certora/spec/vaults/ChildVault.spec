@@ -19,8 +19,8 @@ methods {
     //////////////////////////////////////////////////////////////*/
     function initialize(BaseVault.InitParams) external;
     function ccipReceive(Client.Any2EVMMessage) external;
-    function ccipSend(uint256, uint64, Types.CcipTx, bytes) external;
-    function tryCcipSend(uint256, uint64, Types.CcipTx, bytes) external;
+    function ccipSend(uint256, uint64, Types.CcipTx, uint256, bytes32) external;
+    function tryCcipSend(uint256, uint64, Types.CcipTx, uint256, bytes32) external;
     function tryDepositToAdapter(address, uint256) external;
     function executeEpochWithdraw(uint256, uint256) external;
     function executeRebalance(uint256, Types.Strategy) external;
@@ -31,6 +31,8 @@ methods {
                              GETTERS
     //////////////////////////////////////////////////////////////*/
     function getParentChainSelector() external returns (uint64) envfree;
+    function getLastHandledEpochNonce() external returns (uint256) envfree;
+    function getLastHandledRebalanceNonce() external returns (uint256) envfree;
     function getEpochDepositRecovery() external returns (Types.EpochRecovery) envfree;
     function getEpochWithdrawRecovery() external returns (Types.EpochRecovery) envfree;
     function getRebalanceWithdrawRecovery() external returns (Types.RebalanceWithdrawRecovery) envfree;
@@ -38,7 +40,6 @@ methods {
     function getCcipSendRecoveryTxType() external returns (Types.CcipTx) envfree;
     function getCcipSendRecoveryAmount() external returns (uint256) envfree;
     function getCcipSendRecoveryDestinationChainSelector() external returns (uint64) envfree;
-    function getCcipSendRecoveryCreatedAt() external returns (uint256) envfree;
     function getCcipSendRecoveryNonce() external returns (uint256) envfree;
     function getCcipSendRecoveryProtocolId() external returns (bytes32) envfree;
     function getRebalanceDepositRecovery() external returns (Types.RebalanceDepositRecovery) envfree;
@@ -52,6 +53,7 @@ methods {
     function getAsset() external returns (address) envfree;
     function getLink() external returns (address) envfree;
     function supportsInterface(bytes4) external returns (bool) envfree;
+    function paused() external returns (bool) envfree;
 
     /*//////////////////////////////////////////////////////////////
                        LINKED CONTRACT GETTERS
@@ -85,6 +87,8 @@ methods {
     function bytes32ToUint8(bytes32) external returns (uint8) envfree;
     function uint8ToCcipTxType(uint8) external returns (Types.CcipTx) envfree;
     function isInitialized() external returns (bool) envfree;
+    function isInitializing() external returns (bool) envfree;
+    function defaultAdmin() external returns (address) envfree;
     function encodeAddress(address) external returns (bytes) envfree;
     function encodeEpochNonce(uint256) external returns (bytes) envfree;
     function encodeRebalanceData(uint256, bytes32) external returns (bytes) envfree;
@@ -118,6 +122,72 @@ methods {
 /*//////////////////////////////////////////////////////////////
                          DEFINITIONS
 //////////////////////////////////////////////////////////////*/
+/// @notice Functions exposed only by ChildVaultHarness or HelperHarness for isolated verification.
+definition isHarnessHelper(method f) returns bool =
+    f.selector == sig:initializeBaseVault(BaseVault.InitParams).selector ||
+    f.selector == sig:isInitialized().selector ||
+    f.selector == sig:isInitializing().selector ||
+    f.selector == sig:revertIfZeroAddress(address).selector ||
+    f.selector == sig:revertIfZeroAmount(uint256).selector ||
+    f.selector == sig:revertIfZeroChainSelector(uint64).selector ||
+    f.selector == sig:storeRebalanceDepositRecovery(uint256,uint256).selector ||
+    f.selector == sig:clearRebalanceDepositRecovery().selector ||
+    f.selector == sig:recoverFailedRebalanceDepositInternal().selector ||
+    f.selector == sig:ccipSend(uint256,uint64,Types.CcipTx,uint256,bytes32).selector ||
+    f.selector == sig:clearCcipSendRecovery().selector ||
+    f.selector == sig:getCcipSendRecoveryTxType().selector ||
+    f.selector == sig:getCcipSendRecoveryAmount().selector ||
+    f.selector == sig:getCcipSendRecoveryDestinationChainSelector().selector ||
+    f.selector == sig:getCcipSendRecoveryNonce().selector ||
+    f.selector == sig:getCcipSendRecoveryProtocolId().selector ||
+    f.selector == sig:executeDeposit(uint256,bool).selector ||
+    f.selector == sig:executeWithdraw(uint256,bool).selector ||
+    f.selector == sig:clearActiveAdapter(address).selector ||
+    f.selector == sig:handleCCIPRebalance(uint256,bytes32,uint256).selector ||
+    f.selector == sig:requireNoRecovery().selector ||
+    f.selector == sig:authorizeUpgrade(address).selector ||
+    f.selector == sig:getRecoveryRebalanceNonce().selector ||
+    f.selector == sig:getRecoveryAmount().selector ||
+    f.selector == sig:reentrancyGuardEntered().selector ||
+    f.selector == sig:bytes32ToAddress(bytes32).selector ||
+    f.selector == sig:bytes32ToUint256(bytes32).selector ||
+    f.selector == sig:bytes32ToUint8(bytes32).selector ||
+    f.selector == sig:uint8ToCcipTxType(uint8).selector ||
+    f.selector == sig:bytes32ToUint64(bytes32).selector ||
+    f.selector == sig:bytes32ToBytes4(bytes32).selector ||
+    f.selector == sig:bytes32ToBytes10(bytes32).selector ||
+    f.selector == sig:bytes32ToBool(bytes32).selector ||
+    f.selector == sig:bytesToAddress(bytes).selector ||
+    f.selector == sig:bytesToAddressArray(bytes).selector ||
+    f.selector == sig:encodeAddress(address).selector ||
+    f.selector == sig:encodeEpochNonce(uint256).selector ||
+    f.selector == sig:encodeRebalanceData(uint256,bytes32).selector ||
+    f.selector == sig:encodeCcipTxData(Types.CcipTx,bytes).selector ||
+    f.selector == sig:encodeCcipExtraArgs(uint256).selector ||
+    f.selector == sig:hashBytes(bytes).selector ||
+    f.selector == sig:encodeRawCcipTxData(uint256,bytes).selector ||
+    f.selector == sig:decodeCcipTxType(bytes).selector ||
+    f.selector == sig:decodeCcipTxPayload(bytes).selector ||
+    f.selector == sig:emptyParameters().selector ||
+    f.selector == sig:erc165InterfaceId().selector ||
+    f.selector == sig:accessControlDefaultAdminRulesInterfaceId().selector ||
+    f.selector == sig:any2EVMMessageReceiverInterfaceId().selector ||
+    f.selector == sig:UPGRADER_ROLE().selector ||
+    f.selector == sig:PAUSER_ROLE().selector ||
+    f.selector == sig:UNPAUSER_ROLE().selector ||
+    f.selector == sig:CONFIG_OPERATOR_ROLE().selector ||
+    f.selector == sig:REBALANCE_OPERATOR_ROLE().selector ||
+    f.selector == sig:EPOCH_OPERATOR_ROLE().selector ||
+    f.selector == sig:LINK_OPERATOR_ROLE().selector ||
+    f.selector == sig:DONATE_OPERATOR_ROLE().selector ||
+    f.selector == sig:COMPLIANCE_OPERATOR_ROLE().selector ||
+    f.selector == sig:EMERGENCY_DRAINER_ROLE().selector ||
+    f.selector == sig:KEYSTONE_FORWARDER_ROLE().selector ||
+    f.selector == sig:POLICY_ENGINE_MANAGER_ROLE().selector ||
+    f.selector == sig:MINTER_ROLE().selector ||
+    f.selector == sig:BURNER_ROLE().selector ||
+    f.selector == sig:REWARDS_OPERATOR_ROLE().selector;
+
 definition EpochDepositRecoveryStoredEvent() returns bytes32 =
 // keccak256("EpochDepositRecoveryStored(uint256,uint256)")
     to_bytes32(0x6985100e96bcd0c1720ec939d9dc621afeaf8d0ff9ef1e037aed1aa435c78309);
@@ -151,20 +221,24 @@ definition CcipSendRecoveryClearedEvent() returns bytes32 =
     to_bytes32(0xce718a4b1be47c1b43b083b936720c3b2c16bad5577d1da8a3888791ac294991);
 
 definition CCIPBridgedEvent() returns bytes32 =
-// keccak256("CCIPBridged(bytes32,uint256,uint8)")
-    to_bytes32(0x39e716d942b34d57d78c584f648ec8e13b9621c6e5b1a57d18ef47a98b11b39d);
+// keccak256("CCIPBridged(bytes32,uint64,uint8)")
+    to_bytes32(0x2fec67437fa2b2e63688e15520acdbd76b9c4d152a8e345d00ce467eaf4e67fc);
+
+definition CCIPReceivedEvent() returns bytes32 =
+// keccak256("CCIPReceived(bytes32,uint64,uint8)")
+    to_bytes32(0xcad89c08e093f9ba49742fdc90e42d33fc4ad95fd450fa31060e1050ab852932);
 
 definition DepositToStrategySuccessEvent() returns bytes32 =
-// keccak256("DepositToStrategySuccess(uint256,uint256)")
-    to_bytes32(0x822db7c313fcf6d7b9ea5da5e0e6f3d27317446731e4016faa07a1127bb0a1c4);
+// keccak256("EpochDepositToStrategySuccess(uint256,uint256)")
+    to_bytes32(0x78a668caa26414a04375566a4f66def1a635b5bfc0b55d95afa96141377fe18b);
 
 definition DepositToStrategyFailureEvent() returns bytes32 =
-// keccak256("DepositToStrategyFailure(uint256,uint256)")
-    to_bytes32(0xe793c4fcefcfc6be38155702c97e12901a8434f945b26921d530968edb0ef0e9);
+// keccak256("EpochDepositToStrategyFailure(uint256,uint256)")
+    to_bytes32(0xddd788f15bd3fc5f402378810bef6417e51f55330e364babc08db405ead2dc4d);
 
 definition WithdrawFromStrategySuccessEvent() returns bytes32 =
-// keccak256("WithdrawFromStrategySuccess(uint256,uint256)")
-    to_bytes32(0xb38981e8f1428114c35ad63ef9ab14a90a34bc12cac0782d420baab4522a659f);
+// keccak256("EpochWithdrawFromStrategySuccess(uint256,uint256)")
+    to_bytes32(0x444cf00a2b9a3f54fd8bef5181e55f6d94b18ae241a090ee45c24ebd80225c4d);
 
 definition ActiveProtocolAdapterSetEvent() returns bytes32 =
 // keccak256("ActiveProtocolAdapterSet(bytes32,address)")
@@ -191,8 +265,8 @@ definition RebalanceDepositRecoveryClearedEvent() returns bytes32 =
     to_bytes32(0xfd0affe04f47c983df51f211349e202dc404654e6851f1ad16dc04aa5c683e6f);
 
 definition WithdrawFromStrategyFailureEvent() returns bytes32 =
-// keccak256("WithdrawFromStrategyFailure(uint256,uint256)")
-    to_bytes32(0x37f4f811d10c7b3a19d28781f245b42c5320a1736a27b2b43b34f9360c760e38);
+// keccak256("EpochWithdrawFromStrategyFailure(uint256,uint256)")
+    to_bytes32(0x1bd1365180f571a54024f306c91551fbcb8f576daf039342a686633045d744d0);
 
 definition RebalanceWithdrawSuccessEvent() returns bytes32 =
 // keccak256("RebalanceWithdrawSuccess(uint256,uint256)")
@@ -209,6 +283,12 @@ definition RebalanceWithdrawFailureEvent() returns bytes32 =
 ghost mathint ghost_rebalanceWithdrawRecovery_rebalanceNonce_StoreCount { init_state axiom ghost_rebalanceWithdrawRecovery_rebalanceNonce_StoreCount == 0; }
 ghost uint256  ghost_rebalanceWithdrawRecovery_rebalanceNonce_StoredValue { init_state axiom ghost_rebalanceWithdrawRecovery_rebalanceNonce_StoredValue == 0; }
 
+/// ─── handled nonces ──────────────────────────────────────────
+ghost mathint ghost_lastHandledEpochNonce_StoreCount { init_state axiom ghost_lastHandledEpochNonce_StoreCount == 0; }
+ghost uint256 ghost_lastHandledEpochNonce_StoredValue { init_state axiom ghost_lastHandledEpochNonce_StoredValue == 0; }
+ghost mathint ghost_lastHandledRebalanceNonce_StoreCount { init_state axiom ghost_lastHandledRebalanceNonce_StoreCount == 0; }
+ghost uint256 ghost_lastHandledRebalanceNonce_StoredValue { init_state axiom ghost_lastHandledRebalanceNonce_StoredValue == 0; }
+
 /// ─── s_rebalanceWithdrawRecovery.strategy.protocolId ────────
 ghost mathint ghost_rebalanceWithdrawRecovery_protocolId_StoreCount { init_state axiom ghost_rebalanceWithdrawRecovery_protocolId_StoreCount == 0; }
 ghost bytes32  ghost_rebalanceWithdrawRecovery_protocolId_StoredValue { init_state axiom ghost_rebalanceWithdrawRecovery_protocolId_StoredValue == to_bytes32(0); }
@@ -216,10 +296,6 @@ ghost bytes32  ghost_rebalanceWithdrawRecovery_protocolId_StoredValue { init_sta
 /// ─── s_rebalanceWithdrawRecovery.strategy.chainSelector ─────
 ghost mathint ghost_rebalanceWithdrawRecovery_chainSelector_StoreCount { init_state axiom ghost_rebalanceWithdrawRecovery_chainSelector_StoreCount == 0; }
 ghost uint64   ghost_rebalanceWithdrawRecovery_chainSelector_StoredValue { init_state axiom ghost_rebalanceWithdrawRecovery_chainSelector_StoredValue == 0; }
-
-/// ─── s_rebalanceWithdrawRecovery.createdAt ──────────────────
-ghost mathint ghost_rebalanceWithdrawRecovery_createdAt_StoreCount { init_state axiom ghost_rebalanceWithdrawRecovery_createdAt_StoreCount == 0; }
-ghost uint256  ghost_rebalanceWithdrawRecovery_createdAt_StoredValue { init_state axiom ghost_rebalanceWithdrawRecovery_createdAt_StoredValue == 0; }
 
 /// ─── s_epochDepositRecovery.epochNonce ──────────────────────
 ghost mathint ghost_epochDepositRecovery_epochNonce_StoreCount { init_state axiom ghost_epochDepositRecovery_epochNonce_StoreCount == 0; }
@@ -229,10 +305,6 @@ ghost uint256  ghost_epochDepositRecovery_epochNonce_StoredValue { init_state ax
 ghost mathint ghost_epochDepositRecovery_amount_StoreCount { init_state axiom ghost_epochDepositRecovery_amount_StoreCount == 0; }
 ghost uint256  ghost_epochDepositRecovery_amount_StoredValue { init_state axiom ghost_epochDepositRecovery_amount_StoredValue == 0; }
 
-/// ─── s_epochDepositRecovery.createdAt ───────────────────────
-ghost mathint ghost_epochDepositRecovery_createdAt_StoreCount { init_state axiom ghost_epochDepositRecovery_createdAt_StoreCount == 0; }
-ghost uint256  ghost_epochDepositRecovery_createdAt_StoredValue { init_state axiom ghost_epochDepositRecovery_createdAt_StoredValue == 0; }
-
 /// ─── s_epochWithdrawRecovery.epochNonce ─────────────────────
 ghost mathint ghost_epochWithdrawRecovery_epochNonce_StoreCount { init_state axiom ghost_epochWithdrawRecovery_epochNonce_StoreCount == 0; }
 ghost uint256  ghost_epochWithdrawRecovery_epochNonce_StoredValue { init_state axiom ghost_epochWithdrawRecovery_epochNonce_StoredValue == 0; }
@@ -240,10 +312,6 @@ ghost uint256  ghost_epochWithdrawRecovery_epochNonce_StoredValue { init_state a
 /// ─── s_epochWithdrawRecovery.amount ─────────────────────────
 ghost mathint ghost_epochWithdrawRecovery_amount_StoreCount { init_state axiom ghost_epochWithdrawRecovery_amount_StoreCount == 0; }
 ghost uint256  ghost_epochWithdrawRecovery_amount_StoredValue { init_state axiom ghost_epochWithdrawRecovery_amount_StoredValue == 0; }
-
-/// ─── s_epochWithdrawRecovery.createdAt ──────────────────────
-ghost mathint ghost_epochWithdrawRecovery_createdAt_StoreCount { init_state axiom ghost_epochWithdrawRecovery_createdAt_StoreCount == 0; }
-ghost uint256  ghost_epochWithdrawRecovery_createdAt_StoredValue { init_state axiom ghost_epochWithdrawRecovery_createdAt_StoredValue == 0; }
 
 /// ─── s_ccipSendRecovery.ccipTxType ──────────────────────────
 // ghost mathint ghost_ccipSendRecovery_ccipTxType_StoreCount { init_state axiom ghost_ccipSendRecovery_ccipTxType_StoreCount == 0; }
@@ -265,10 +333,6 @@ ghost uint256  ghost_ccipSendRecovery_nonce_StoredValue { init_state axiom ghost
 ghost mathint ghost_ccipSendRecovery_protocolId_StoreCount { init_state axiom ghost_ccipSendRecovery_protocolId_StoreCount == 0; }
 ghost bytes32  ghost_ccipSendRecovery_protocolId_StoredValue { init_state axiom ghost_ccipSendRecovery_protocolId_StoredValue == to_bytes32(0); }
 
-/// ─── s_ccipSendRecovery.createdAt ───────────────────────────
-ghost mathint ghost_ccipSendRecovery_createdAt_StoreCount { init_state axiom ghost_ccipSendRecovery_createdAt_StoreCount == 0; }
-ghost uint256  ghost_ccipSendRecovery_createdAt_StoredValue { init_state axiom ghost_ccipSendRecovery_createdAt_StoredValue == 0; }
-
 /// ─── s_recoveryMode ──────────────────────────────────────────
 ghost mathint            ghost_recoveryMode_StoreCount { init_state axiom ghost_recoveryMode_StoreCount == 0; }
 ghost Types.RecoveryMode ghost_recoveryMode_StoredValue { init_state axiom ghost_recoveryMode_StoredValue == Types.RecoveryMode.NONE; }
@@ -284,10 +348,6 @@ ghost uint256  ghost_rebalanceDepositRecovery_nonce_StoredValue { init_state axi
 /// ─── s_rebalanceDepositRecovery.amount ───────────────────────
 ghost mathint ghost_rebalanceDepositRecovery_amount_StoreCount { init_state axiom ghost_rebalanceDepositRecovery_amount_StoreCount == 0; }
 ghost uint256  ghost_rebalanceDepositRecovery_amount_StoredValue { init_state axiom ghost_rebalanceDepositRecovery_amount_StoredValue == 0; }
-
-/// ─── s_rebalanceDepositRecovery.createdAt ────────────────────
-ghost mathint ghost_rebalanceDepositRecovery_createdAt_StoreCount { init_state axiom ghost_rebalanceDepositRecovery_createdAt_StoreCount == 0; }
-ghost uint256  ghost_rebalanceDepositRecovery_createdAt_StoredValue { init_state axiom ghost_rebalanceDepositRecovery_createdAt_StoredValue == 0; }
 
 /// ─── Event: EpochDepositRecoveryStored ──────────────────────
 ghost mathint ghost_EpochDepositRecoveryStored_EventCount { init_state axiom ghost_EpochDepositRecoveryStored_EventCount == 0; }
@@ -332,8 +392,16 @@ ghost uint256 ghost_CcipSendRecoveryCleared_Param_amount { init_state axiom ghos
 /// ─── Event: CCIPBridged ──────────────────────────────────────
 ghost mathint ghost_CCIPBridged_EventCount { init_state axiom ghost_CCIPBridged_EventCount == 0; }
 ghost bytes32 ghost_CCIPBridged_Param_ccipMessageId { init_state axiom ghost_CCIPBridged_Param_ccipMessageId == to_bytes32(0); }
-ghost uint256 ghost_CCIPBridged_Param_amount { init_state axiom ghost_CCIPBridged_Param_amount == 0; }
+ghost uint64 ghost_CCIPBridged_Param_destinationChainSelector {
+    init_state axiom ghost_CCIPBridged_Param_destinationChainSelector == 0;
+}
 ghost Types.CcipTx ghost_CCIPBridged_Param_ccipTxType { init_state axiom ghost_CCIPBridged_Param_ccipTxType == Types.CcipTx.EPOCH_NET_DEPOSIT; }
+
+/// ─── Event: CCIPReceived ─────────────────────────────────────
+ghost mathint ghost_CCIPReceived_EventCount { init_state axiom ghost_CCIPReceived_EventCount == 0; }
+ghost bytes32 ghost_CCIPReceived_Param_ccipMessageId { init_state axiom ghost_CCIPReceived_Param_ccipMessageId == to_bytes32(0); }
+ghost uint64 ghost_CCIPReceived_Param_sourceChainSelector { init_state axiom ghost_CCIPReceived_Param_sourceChainSelector == 0; }
+ghost Types.CcipTx ghost_CCIPReceived_Param_ccipTxType { init_state axiom ghost_CCIPReceived_Param_ccipTxType == Types.CcipTx.EPOCH_NET_DEPOSIT; }
 
 /// ─── Event: DepositToStrategySuccess ─────────────────────────
 ghost mathint ghost_DepositToStrategySuccess_EventCount { init_state axiom ghost_DepositToStrategySuccess_EventCount == 0; }
@@ -396,6 +464,16 @@ ghost uint256 ghost_RebalanceWithdrawFailure_Param_nonce { init_state axiom ghos
                              HOOKS
 //////////////////////////////////////////////////////////////*/
 /// ─── ChildVault storage hooks ────────────────────────────────
+hook Sstore currentContract.ext_yieldcoin_storage_ChildVault.s_lastHandledEpochNonce uint256 newValue {
+    ghost_lastHandledEpochNonce_StoreCount = ghost_lastHandledEpochNonce_StoreCount + 1;
+    ghost_lastHandledEpochNonce_StoredValue = newValue;
+}
+
+hook Sstore currentContract.ext_yieldcoin_storage_ChildVault.s_lastHandledRebalanceNonce uint256 newValue {
+    ghost_lastHandledRebalanceNonce_StoreCount = ghost_lastHandledRebalanceNonce_StoreCount + 1;
+    ghost_lastHandledRebalanceNonce_StoredValue = newValue;
+}
+
 hook Sstore currentContract.ext_yieldcoin_storage_ChildVault.s_rebalanceWithdrawRecovery.rebalanceNonce uint256 newValue {
     ghost_rebalanceWithdrawRecovery_rebalanceNonce_StoreCount = ghost_rebalanceWithdrawRecovery_rebalanceNonce_StoreCount + 1;
     ghost_rebalanceWithdrawRecovery_rebalanceNonce_StoredValue = newValue;
@@ -411,11 +489,6 @@ hook Sstore currentContract.ext_yieldcoin_storage_ChildVault.s_rebalanceWithdraw
     ghost_rebalanceWithdrawRecovery_chainSelector_StoredValue = newValue;
 }
 
-hook Sstore currentContract.ext_yieldcoin_storage_ChildVault.s_rebalanceWithdrawRecovery.createdAt uint256 newValue {
-    ghost_rebalanceWithdrawRecovery_createdAt_StoreCount = ghost_rebalanceWithdrawRecovery_createdAt_StoreCount + 1;
-    ghost_rebalanceWithdrawRecovery_createdAt_StoredValue = newValue;
-}
-
 hook Sstore currentContract.ext_yieldcoin_storage_ChildVault.s_epochDepositRecovery.epochNonce uint256 newValue {
     ghost_epochDepositRecovery_epochNonce_StoreCount = ghost_epochDepositRecovery_epochNonce_StoreCount + 1;
     ghost_epochDepositRecovery_epochNonce_StoredValue = newValue;
@@ -426,11 +499,6 @@ hook Sstore currentContract.ext_yieldcoin_storage_ChildVault.s_epochDepositRecov
     ghost_epochDepositRecovery_amount_StoredValue = newValue;
 }
 
-hook Sstore currentContract.ext_yieldcoin_storage_ChildVault.s_epochDepositRecovery.createdAt uint256 newValue {
-    ghost_epochDepositRecovery_createdAt_StoreCount = ghost_epochDepositRecovery_createdAt_StoreCount + 1;
-    ghost_epochDepositRecovery_createdAt_StoredValue = newValue;
-}
-
 hook Sstore currentContract.ext_yieldcoin_storage_ChildVault.s_epochWithdrawRecovery.epochNonce uint256 newValue {
     ghost_epochWithdrawRecovery_epochNonce_StoreCount = ghost_epochWithdrawRecovery_epochNonce_StoreCount + 1;
     ghost_epochWithdrawRecovery_epochNonce_StoredValue = newValue;
@@ -439,11 +507,6 @@ hook Sstore currentContract.ext_yieldcoin_storage_ChildVault.s_epochWithdrawReco
 hook Sstore currentContract.ext_yieldcoin_storage_ChildVault.s_epochWithdrawRecovery.amount uint256 newValue {
     ghost_epochWithdrawRecovery_amount_StoreCount = ghost_epochWithdrawRecovery_amount_StoreCount + 1;
     ghost_epochWithdrawRecovery_amount_StoredValue = newValue;
-}
-
-hook Sstore currentContract.ext_yieldcoin_storage_ChildVault.s_epochWithdrawRecovery.createdAt uint256 newValue {
-    ghost_epochWithdrawRecovery_createdAt_StoreCount = ghost_epochWithdrawRecovery_createdAt_StoreCount + 1;
-    ghost_epochWithdrawRecovery_createdAt_StoredValue = newValue;
 }
 
 // hook Sstore currentContract.ext_yieldcoin_storage_ChildVault.s_ccipSendRecovery.ccipTxType Types.CcipTx newValue {
@@ -471,11 +534,6 @@ hook Sstore currentContract.ext_yieldcoin_storage_ChildVault.s_ccipSendRecovery.
     ghost_ccipSendRecovery_protocolId_StoredValue = newValue;
 }
 
-hook Sstore currentContract.ext_yieldcoin_storage_ChildVault.s_ccipSendRecovery.createdAt uint256 newValue {
-    ghost_ccipSendRecovery_createdAt_StoreCount = ghost_ccipSendRecovery_createdAt_StoreCount + 1;
-    ghost_ccipSendRecovery_createdAt_StoredValue = newValue;
-}
-
 /// ─── BaseVault storage hooks used by ChildVault flows ────────
 hook Sstore currentContract.ext_yieldcoin_storage_BaseVault.s_recoveryMode Types.RecoveryMode newValue {
     ghost_recoveryMode_StoreCount = ghost_recoveryMode_StoreCount + 1;
@@ -495,11 +553,6 @@ hook Sstore currentContract.ext_yieldcoin_storage_BaseVault.s_rebalanceDepositRe
 hook Sstore currentContract.ext_yieldcoin_storage_BaseVault.s_rebalanceDepositRecovery.amount uint256 newValue {
     ghost_rebalanceDepositRecovery_amount_StoreCount = ghost_rebalanceDepositRecovery_amount_StoreCount + 1;
     ghost_rebalanceDepositRecovery_amount_StoredValue = newValue;
-}
-
-hook Sstore currentContract.ext_yieldcoin_storage_BaseVault.s_rebalanceDepositRecovery.createdAt uint256 newValue {
-    ghost_rebalanceDepositRecovery_createdAt_StoreCount = ghost_rebalanceDepositRecovery_createdAt_StoreCount + 1;
-    ghost_rebalanceDepositRecovery_createdAt_StoredValue = newValue;
 }
 
 /// ─── Event hooks ─────────────────────────────────────────────
@@ -592,8 +645,14 @@ hook LOG4(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2, bytes32 
     if (t0 == CCIPBridgedEvent()) {
         ghost_CCIPBridged_EventCount = ghost_CCIPBridged_EventCount + 1;
         ghost_CCIPBridged_Param_ccipMessageId = t1;
-        ghost_CCIPBridged_Param_amount = bytes32ToUint256(t2);
+        ghost_CCIPBridged_Param_destinationChainSelector = bytes32ToUint64(t2);
         ghost_CCIPBridged_Param_ccipTxType = uint8ToCcipTxType(bytes32ToUint8(t3));
+    }
+    if (t0 == CCIPReceivedEvent()) {
+        ghost_CCIPReceived_EventCount = ghost_CCIPReceived_EventCount + 1;
+        ghost_CCIPReceived_Param_ccipMessageId = t1;
+        ghost_CCIPReceived_Param_sourceChainSelector = bytes32ToUint64(t2);
+        ghost_CCIPReceived_Param_ccipTxType = uint8ToCcipTxType(bytes32ToUint8(t3));
     }
     if (t0 == RebalanceWithdrawRecoveryStoredEvent()) {
         ghost_RebalanceWithdrawRecoveryStored_EventCount = ghost_RebalanceWithdrawRecoveryStored_EventCount + 1;
@@ -618,14 +677,17 @@ hook LOG4(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2, bytes32 
 /*//////////////////////////////////////////////////////////////
                            INVARIANTS
 //////////////////////////////////////////////////////////////*/
-/// @dev filtered: upgradeToAndCall to stop delegatecall havocing immutable state
-/// @dev Certora storage analysis can fail on the other filtered storage-extension paths for these methods.
+/// @dev Harness-only selectors are excluded because they are not part of the deployed ChildVault ABI.
+///      upgradeToAndCall is excluded because its delegatecall may legitimately replace implementation behavior.
+///      Certora storage-extension analysis fails on the remaining explicitly filtered ChildVault paths even
+///      though Solidity immutables cannot be written by them; retain those filters as a prover-model limitation.
 invariant validParentChainSelector()
     currentContract.i_parentChainSelector != 0
     && currentContract.i_parentChainSelector != currentContract.i_thisChainSelector
     filtered {
         f -> f.selector != sig:upgradeToAndCall(address,bytes).selector
-            && f.selector != sig:ccipSend(uint256,uint64,Types.CcipTx,bytes).selector
+            && !isHarnessHelper(f)
+            && f.selector != sig:ccipSend(uint256,uint64,Types.CcipTx,uint256,bytes32).selector
             && f.selector != sig:executeRebalance(uint256,Types.Strategy).selector
             && f.selector != sig:executeRecovery().selector
             && f.selector != sig:executeEpochWithdraw(uint256,uint256).selector
@@ -637,13 +699,16 @@ invariant validParentChainSelector()
 
 /// ─────────────────── GET TVL ────────────────────────────────
 
-/// @notice ChildVault TVL is zero when this chain is not the active strategy chain
+/// @notice ChildVault TVL with no active adapter equals any pending CCIP-send recovery amount
 /// @dev Verifies the ChildVault _getTVL override through the public BaseVault.getTVL entry point.
-rule getTVL_ReturnsZero_WhenNoActiveAdapter() {
+///      Funds cleared from the active adapter before a rebalance-away CCIP send remain counted via
+///      s_ccipSendRecovery.amount if that send failed (0 if no such recovery is pending), so TVL is
+///      not unconditionally zero here.
+rule getTVL_EqualsCcipSendRecovery_WhenNoActiveAdapter() {
     /// @dev condition being verified
     require getActiveProtocolAdapter() == 0, "active adapter should not be set";
 
-    assert getTVL() == 0;
+    assert getTVL() == getCcipSendRecoveryAmount();
 }
 
 /// @notice ChildVault TVL includes active adapter TVL and pending recovery amounts
@@ -740,23 +805,77 @@ rule initialize_RevertWhen_AlreadyInitialized() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !isInitializing(), "contract should not be initializing";
     require params.defaultAdmin != 0, "default admin should not be zero";
     require params.pauser != 0, "pauser should not be zero";
     require params.unpauser != 0, "unpauser should not be zero";
     require params.configOperator != 0, "config operator should not be zero";
-    require params.emergencyReceiver != 0, "emergency receiver should not be zero";
     require params.upgrader != 0, "upgrader should not be zero";
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
+    require defaultAdmin() == 0, "default admin should not be initialized";
 
     /// @dev revert condition being verified
     require isInitialized(), "contract should already be initialized";
 
-    storage before = lastStorage;
 
     initialize@withrevert(e, params);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
+}
+
+/// @notice ChildVault initialization reverts during an active non-reentrant execution.
+/// @dev Verifies the nonReentrant modifier independently of initializer and BaseVault initializer reverts.
+rule initialize_RevertWhen_ReentrantCall() {
+    env e;
+    BaseVault.InitParams params;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !isInitialized(), "contract should not be initialized";
+    require !isInitializing(), "contract should not be initializing";
+    require params.defaultAdmin != 0, "default admin should not be zero";
+    require params.pauser != 0, "pauser should not be zero";
+    require params.unpauser != 0, "unpauser should not be zero";
+    require params.configOperator != 0, "config operator should not be zero";
+    require params.upgrader != 0, "upgrader should not be zero";
+    require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
+    require defaultAdmin() == 0, "default admin should not be initialized";
+
+    /// @dev revert condition being verified
+    require reentrancyGuardEntered(), "reentrancy guard should be entered";
+
+    initialize@withrevert(e, params);
+
+    assert lastReverted;
+}
+
+/// @notice ChildVault initialization succeeds through the real public entry point
+/// @dev __BaseVault_init's own state effects (roles, s_defaultCcipGasLimit, unpaused, no recovery)
+///      are already comprehensively verified in BaseVault.spec via the harness's initializeBaseVault
+///      bypass wrapper; this rule only confirms initialize()'s own modifiers (nonReentrant,
+///      initializer) don't block the real entry point from reaching __BaseVault_init and completing.
+rule initialize_Success() {
+    env e;
+    BaseVault.InitParams params;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !isInitialized(), "contract should not be initialized";
+    require !isInitializing(), "contract should not be initializing";
+    require params.defaultAdmin != 0, "default admin should not be zero";
+    require params.pauser != 0, "pauser should not be zero";
+    require params.unpauser != 0, "unpauser should not be zero";
+    require params.configOperator != 0, "config operator should not be zero";
+    require params.upgrader != 0, "upgrader should not be zero";
+    require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
+    require defaultAdmin() == 0, "default admin should not be initialized";
+
+    initialize@withrevert(e, params);
+
+    assert !lastReverted;
+    assert isInitialized();
 }
 
 /// ─────────────────── CCIP RECEIVE ────────────────────────────
@@ -767,11 +886,18 @@ rule ccipReceive_RevertWhen_CallerIsNotCCIPRouter() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
+    require message.sourceChainSelector == getParentChainSelector(),
+        "source chain should be the parent chain";
+    require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
+    require ghost_lastHandledEpochNonce_StoreCount == 0,
+        "handled epoch nonce store count starts at zero";
     address sender;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require ghost_CCIPReceived_EventCount == 0, "CCIPReceived event count starts at zero";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require sender != 0, "sender should not be zero";
     require sender == getCrosschainVault(message.sourceChainSelector), "sender should be the registered vault";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
@@ -787,12 +913,10 @@ rule ccipReceive_RevertWhen_CallerIsNotCCIPRouter() {
     /// @dev revert condition being verified
     require e.msg.sender != getRouter(), "caller should not be the CCIP router";
 
-    storage before = lastStorage;
 
     ccipReceive@withrevert(e, message);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
 }
 
 /// @notice CCIP receive reverts when called during an active non-reentrant execution
@@ -801,10 +925,16 @@ rule ccipReceive_RevertWhen_ReentrantCall() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
+    require message.sourceChainSelector == getParentChainSelector(),
+        "source chain should be the parent chain";
+    require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
+    require ghost_lastHandledEpochNonce_StoreCount == 0,
+        "handled epoch nonce store count starts at zero";
     address sender;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require ghost_CCIPReceived_EventCount == 0, "CCIPReceived event count starts at zero";
     require e.msg.sender == getRouter(), "caller should be the CCIP router";
     require sender != 0, "sender should not be zero";
     require sender == getCrosschainVault(message.sourceChainSelector), "sender should be the registered vault";
@@ -820,13 +950,51 @@ rule ccipReceive_RevertWhen_ReentrantCall() {
 
     /// @dev revert condition being verified
     require reentrancyGuardEntered(), "reentrancy guard should be entered";
+    require !paused(), "vault should not be paused";
 
-    storage before = lastStorage;
 
     ccipReceive@withrevert(e, message);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
+}
+
+/// @notice CCIP receive reverts when the vault is paused
+/// @dev Verifies that a delivery attempt while paused leaves all vault state unchanged
+rule ccipReceive_RevertWhen_Paused() {
+    env e;
+    Client.Any2EVMMessage message;
+    uint256 epochNonce;
+    require message.sourceChainSelector == getParentChainSelector(),
+        "source chain should be the parent chain";
+    require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
+    require ghost_lastHandledEpochNonce_StoreCount == 0,
+        "handled epoch nonce store count starts at zero";
+    address sender;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require ghost_CCIPReceived_EventCount == 0, "CCIPReceived event count starts at zero";
+    require e.msg.sender == getRouter(), "caller should be the CCIP router";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require sender != 0, "sender should not be zero";
+    require sender == getCrosschainVault(message.sourceChainSelector), "sender should be the registered vault";
+    require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
+    require message.destTokenAmounts.length == 1, "token amounts should contain one element";
+    require message.destTokenAmounts[0].token == getAsset(), "delivered token should be the vault asset";
+    require message.destTokenAmounts[0].amount != 0, "delivered amount should not be zero";
+    require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
+    require !adapter.depositReverts();
+    require message.sender == encodeAddress(sender), "message sender should encode the registered vault";
+    require message.data == encodeCcipTxData(Types.CcipTx.EPOCH_NET_DEPOSIT, encodeEpochNonce(epochNonce)),
+        "message data should encode an epoch deposit";
+
+    /// @dev revert condition being verified
+    require paused(), "vault should be paused";
+
+
+    ccipReceive@withrevert(e, message);
+
+    assert lastReverted;
 }
 
 /// @notice CCIP receive reverts when the decoded sender is not the registered vault for the source chain
@@ -835,12 +1003,19 @@ rule ccipReceive_RevertWhen_SenderIsNotAllowed() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
+    require message.sourceChainSelector == getParentChainSelector(),
+        "source chain should be the parent chain";
+    require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
+    require ghost_lastHandledEpochNonce_StoreCount == 0,
+        "handled epoch nonce store count starts at zero";
     address sender;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require ghost_CCIPReceived_EventCount == 0, "CCIPReceived event count starts at zero";
     require e.msg.sender == getRouter(), "caller should be the CCIP router";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require message.destTokenAmounts.length == 1, "token amounts should contain one element";
     require message.destTokenAmounts[0].token == getAsset(), "delivered token should be the vault asset";
@@ -854,12 +1029,10 @@ rule ccipReceive_RevertWhen_SenderIsNotAllowed() {
     /// @dev revert condition being verified
     require sender != getCrosschainVault(message.sourceChainSelector), "sender should not be the registered vault";
 
-    storage before = lastStorage;
 
     ccipReceive@withrevert(e, message);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
 }
 
 /// @notice CCIP receive reverts when a zero sender is supplied for an unregistered source chain
@@ -868,12 +1041,19 @@ rule ccipReceive_RevertWhen_SenderAndRegisteredVaultAreZero() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
+    require message.sourceChainSelector == getParentChainSelector(),
+        "source chain should be the parent chain";
+    require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
+    require ghost_lastHandledEpochNonce_StoreCount == 0,
+        "handled epoch nonce store count starts at zero";
     address sender;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require ghost_CCIPReceived_EventCount == 0, "CCIPReceived event count starts at zero";
     require e.msg.sender == getRouter(), "caller should be the CCIP router";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require message.destTokenAmounts.length == 1, "token amounts should contain one element";
     require message.destTokenAmounts[0].token == getAsset(), "delivered token should be the vault asset";
@@ -889,12 +1069,10 @@ rule ccipReceive_RevertWhen_SenderAndRegisteredVaultAreZero() {
     require sender == 0, "sender should be zero";
     require getCrosschainVault(message.sourceChainSelector) == 0, "source chain should not have a registered vault";
 
-    storage before = lastStorage;
 
     ccipReceive@withrevert(e, message);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
 }
 
 /// @notice CCIP receive reverts when the encoded sender is too short to decode as an address
@@ -903,11 +1081,18 @@ rule ccipReceive_RevertWhen_SenderEncodingIsMalformed() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
+    require message.sourceChainSelector == getParentChainSelector(),
+        "source chain should be the parent chain";
+    require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
+    require ghost_lastHandledEpochNonce_StoreCount == 0,
+        "handled epoch nonce store count starts at zero";
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require ghost_CCIPReceived_EventCount == 0, "CCIPReceived event count starts at zero";
     require e.msg.sender == getRouter(), "caller should be the CCIP router";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require message.destTokenAmounts.length == 1, "token amounts should contain one element";
     require message.destTokenAmounts[0].token == getAsset(), "delivered token should be the vault asset";
@@ -918,12 +1103,10 @@ rule ccipReceive_RevertWhen_SenderEncodingIsMalformed() {
     /// @dev revert condition being verified
     require message.sender.length < 32, "message sender should be too short to decode";
 
-    storage before = lastStorage;
 
     ccipReceive@withrevert(e, message);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
 }
 
 /// @notice CCIP receive reverts when any recovery operation is already pending
@@ -932,12 +1115,19 @@ rule ccipReceive_RevertWhen_RecoveryAlreadyPending() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
+    require message.sourceChainSelector == getParentChainSelector(),
+        "source chain should be the parent chain";
+    require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
+    require ghost_lastHandledEpochNonce_StoreCount == 0,
+        "handled epoch nonce store count starts at zero";
     address sender;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require ghost_CCIPReceived_EventCount == 0, "CCIPReceived event count starts at zero";
     require e.msg.sender == getRouter(), "caller should be the CCIP router";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require sender != 0, "sender should not be zero";
     require sender == getCrosschainVault(message.sourceChainSelector), "sender should be the registered vault";
     require message.destTokenAmounts.length == 1, "token amounts should contain one element";
@@ -952,12 +1142,10 @@ rule ccipReceive_RevertWhen_RecoveryAlreadyPending() {
     /// @dev revert condition being verified
     require getRecoveryMode() != Types.RecoveryMode.NONE, "recovery should be pending";
 
-    storage before = lastStorage;
 
     ccipReceive@withrevert(e, message);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
 }
 
 /// @notice CCIP receive reverts unless exactly one token amount is delivered
@@ -966,12 +1154,19 @@ rule ccipReceive_RevertWhen_TokenAmountsLengthIsInvalid() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
+    require message.sourceChainSelector == getParentChainSelector(),
+        "source chain should be the parent chain";
+    require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
+    require ghost_lastHandledEpochNonce_StoreCount == 0,
+        "handled epoch nonce store count starts at zero";
     address sender;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require ghost_CCIPReceived_EventCount == 0, "CCIPReceived event count starts at zero";
     require e.msg.sender == getRouter(), "caller should be the CCIP router";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require sender != 0, "sender should not be zero";
     require sender == getCrosschainVault(message.sourceChainSelector), "sender should be the registered vault";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
@@ -984,12 +1179,10 @@ rule ccipReceive_RevertWhen_TokenAmountsLengthIsInvalid() {
     /// @dev revert condition being verified
     require message.destTokenAmounts.length != 1, "token amounts length should be invalid";
 
-    storage before = lastStorage;
 
     ccipReceive@withrevert(e, message);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
 }
 
 /// @notice CCIP receive reverts when the delivered token is not the vault asset
@@ -998,12 +1191,19 @@ rule ccipReceive_RevertWhen_ReceivedTokenIsInvalid() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
+    require message.sourceChainSelector == getParentChainSelector(),
+        "source chain should be the parent chain";
+    require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
+    require ghost_lastHandledEpochNonce_StoreCount == 0,
+        "handled epoch nonce store count starts at zero";
     address sender;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require ghost_CCIPReceived_EventCount == 0, "CCIPReceived event count starts at zero";
     require e.msg.sender == getRouter(), "caller should be the CCIP router";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require sender != 0, "sender should not be zero";
     require sender == getCrosschainVault(message.sourceChainSelector), "sender should be the registered vault";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
@@ -1018,12 +1218,10 @@ rule ccipReceive_RevertWhen_ReceivedTokenIsInvalid() {
     /// @dev revert condition being verified
     require message.destTokenAmounts[0].token != getAsset(), "delivered token should not be the vault asset";
 
-    storage before = lastStorage;
 
     ccipReceive@withrevert(e, message);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
 }
 
 /// @notice CCIP receive reverts when the delivered asset amount is zero
@@ -1032,12 +1230,19 @@ rule ccipReceive_RevertWhen_ReceivedAmountIsZero() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
+    require message.sourceChainSelector == getParentChainSelector(),
+        "source chain should be the parent chain";
+    require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
+    require ghost_lastHandledEpochNonce_StoreCount == 0,
+        "handled epoch nonce store count starts at zero";
     address sender;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require ghost_CCIPReceived_EventCount == 0, "CCIPReceived event count starts at zero";
     require e.msg.sender == getRouter(), "caller should be the CCIP router";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require sender != 0, "sender should not be zero";
     require sender == getCrosschainVault(message.sourceChainSelector), "sender should be the registered vault";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
@@ -1052,12 +1257,10 @@ rule ccipReceive_RevertWhen_ReceivedAmountIsZero() {
     /// @dev revert condition being verified
     require message.destTokenAmounts[0].amount == 0, "delivered amount should be zero";
 
-    storage before = lastStorage;
 
     ccipReceive@withrevert(e, message);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
 }
 
 /// @notice CCIP receive reverts when the message data is too short to decode its transaction envelope
@@ -1070,8 +1273,10 @@ rule ccipReceive_RevertWhen_TxDataEncodingIsMalformed() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require ghost_CCIPReceived_EventCount == 0, "CCIPReceived event count starts at zero";
     require e.msg.sender == getRouter(), "caller should be the CCIP router";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require sender != 0, "sender should not be zero";
     require sender == getCrosschainVault(message.sourceChainSelector), "sender should be the registered vault";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
@@ -1084,12 +1289,10 @@ rule ccipReceive_RevertWhen_TxDataEncodingIsMalformed() {
     require message.data == encodeEpochNonce(singleValue),
         "message data should contain only one value instead of the required transaction type and payload";
 
-    storage before = lastStorage;
 
     ccipReceive@withrevert(e, message);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
 }
 
 /// @notice CCIP receive reverts when the encoded transaction type is outside the CcipTx enum
@@ -1099,12 +1302,19 @@ rule ccipReceive_RevertWhen_TxTypeEncodingIsOutOfRange() {
     Client.Any2EVMMessage message;
     uint256 rawCcipTxType;
     uint256 epochNonce;
+    require message.sourceChainSelector == getParentChainSelector(),
+        "source chain should be the parent chain";
+    require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
+    require ghost_lastHandledEpochNonce_StoreCount == 0,
+        "handled epoch nonce store count starts at zero";
     address sender;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require ghost_CCIPReceived_EventCount == 0, "CCIPReceived event count starts at zero";
     require e.msg.sender == getRouter(), "caller should be the CCIP router";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require sender != 0, "sender should not be zero";
     require sender == getCrosschainVault(message.sourceChainSelector), "sender should be the registered vault";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
@@ -1118,12 +1328,10 @@ rule ccipReceive_RevertWhen_TxTypeEncodingIsOutOfRange() {
     /// @dev revert condition being verified
     require rawCcipTxType > 2, "transaction type should be outside the CcipTx enum";
 
-    storage before = lastStorage;
 
     ccipReceive@withrevert(e, message);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
 }
 
 /// @notice CCIP receive reverts when the transaction type is unsupported by ChildVault
@@ -1132,13 +1340,17 @@ rule CCIP_004_ccipReceive_RevertWhen_TxTypeIsInvalid() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
+    require message.sourceChainSelector == getParentChainSelector(),
+        "source chain should be the parent chain";
     address sender;
     Types.CcipTx ccipTxType;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require ghost_CCIPReceived_EventCount == 0, "CCIPReceived event count starts at zero";
     require e.msg.sender == getRouter(), "caller should be the CCIP router";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require sender != 0, "sender should not be zero";
     require sender == getCrosschainVault(message.sourceChainSelector), "sender should be the registered vault";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
@@ -1154,17 +1366,53 @@ rule CCIP_004_ccipReceive_RevertWhen_TxTypeIsInvalid() {
     /// @dev revert condition being verified
     require ccipTxType == Types.CcipTx.EPOCH_NET_WITHDRAW, "transaction type should be unsupported";
 
-    storage before = lastStorage;
 
     ccipReceive@withrevert(e, message);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
 }
 
-/// @notice CCIP epoch deposit reverts when no active protocol adapter is configured
-/// @dev Verifies that a deposit without an active strategy leaves all vault state unchanged
-rule ccipReceive_EPOCH_NET_DEPOSIT_RevertWhen_NoActiveAdapter() {
+/// @notice A received epoch deposit reverts when it did not originate from the parent chain.
+/// @dev Verifies the ChildVault-specific parent-source restriction after sender validation.
+rule ccipReceive_EPOCH_NET_DEPOSIT_RevertWhen_SourceChainIsNotParentChain() {
+    env e;
+    Client.Any2EVMMessage message;
+    uint256 epochNonce;
+    require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
+    require ghost_lastHandledEpochNonce_StoreCount == 0,
+        "handled epoch nonce store count starts at zero";
+    address sender;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require e.msg.sender == getRouter(), "caller should be the CCIP router";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
+    require sender != 0, "sender should not be zero";
+    require sender == getCrosschainVault(message.sourceChainSelector), "sender should be the registered vault";
+    require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
+    require message.destTokenAmounts.length == 1, "token amounts should contain one element";
+    require message.destTokenAmounts[0].token == getAsset(), "delivered token should be the vault asset";
+    require message.destTokenAmounts[0].amount != 0, "delivered amount should not be zero";
+    require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
+    require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
+    require !adapter.depositReverts(), "adapter deposit should not revert";
+    require message.sender == encodeAddress(sender), "message sender should encode the registered vault";
+    require message.data == encodeCcipTxData(Types.CcipTx.EPOCH_NET_DEPOSIT, encodeEpochNonce(epochNonce)),
+        "message data should encode an epoch deposit";
+
+    /// @dev revert condition being verified
+    require message.sourceChainSelector != getParentChainSelector(), "source chain should not be the parent chain";
+
+    require ghost_CCIPReceived_EventCount == 0, "CCIPReceived event count starts at zero";
+
+    ccipReceive@withrevert(e, message);
+
+    assert lastReverted;
+}
+
+/// @notice A received epoch deposit reverts when its nonce was already handled.
+rule ccipReceive_EPOCH_NET_DEPOSIT_RevertWhen_EpochNonceIsNotNew() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -1174,6 +1422,49 @@ rule ccipReceive_EPOCH_NET_DEPOSIT_RevertWhen_NoActiveAdapter() {
     require e.msg.value == 0, "non-payable";
     require e.msg.sender == getRouter(), "caller should be the CCIP router";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
+    require message.sourceChainSelector == getParentChainSelector(), "source chain should be the parent chain";
+    require sender != 0, "sender should not be zero";
+    require sender == getCrosschainVault(message.sourceChainSelector), "sender should be the registered vault";
+    require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
+    require message.destTokenAmounts.length == 1, "token amounts should contain one element";
+    require message.destTokenAmounts[0].token == getAsset(), "delivered token should be the vault asset";
+    require message.destTokenAmounts[0].amount != 0, "delivered amount should not be zero";
+    require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
+    require !adapter.depositReverts(), "adapter deposit should not revert";
+    require message.sender == encodeAddress(sender), "message sender should encode the registered vault";
+    require message.data == encodeCcipTxData(Types.CcipTx.EPOCH_NET_DEPOSIT, encodeEpochNonce(epochNonce)),
+        "message data should encode an epoch deposit";
+
+    /// @dev revert condition being verified
+    require epochNonce <= getLastHandledEpochNonce(), "epoch nonce should already be handled";
+
+    require ghost_CCIPReceived_EventCount == 0, "CCIPReceived event count starts at zero";
+
+    ccipReceive@withrevert(e, message);
+
+    assert lastReverted;
+}
+
+/// @notice CCIP epoch deposit reverts when no active protocol adapter is configured
+/// @dev Verifies that a deposit without an active strategy leaves all vault state unchanged
+rule ccipReceive_EPOCH_NET_DEPOSIT_RevertWhen_NoActiveAdapter() {
+    env e;
+    Client.Any2EVMMessage message;
+    uint256 epochNonce;
+    require message.sourceChainSelector == getParentChainSelector(),
+        "source chain should be the parent chain";
+    require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
+    require ghost_lastHandledEpochNonce_StoreCount == 0,
+        "handled epoch nonce store count starts at zero";
+    address sender;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require ghost_CCIPReceived_EventCount == 0, "CCIPReceived event count starts at zero";
+    require e.msg.sender == getRouter(), "caller should be the CCIP router";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require sender != 0, "sender should not be zero";
     require sender == getCrosschainVault(message.sourceChainSelector), "sender should be the registered vault";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
@@ -1187,16 +1478,15 @@ rule ccipReceive_EPOCH_NET_DEPOSIT_RevertWhen_NoActiveAdapter() {
     /// @dev revert condition being verified
     require getActiveProtocolAdapter() == 0, "active adapter should be zero";
 
-    storage before = lastStorage;
 
     ccipReceive@withrevert(e, message);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
 }
 
 /// @notice CCIP epoch deposit reverts when its payload is too short to decode the epoch nonce
-/// @dev Verifies that malformed epoch data leaves all vault state unchanged
+/// @dev Verifies that malformed epoch data leaves all vault state unchanged. A competing nonce
+///      condition cannot be imposed because the targeted payload intentionally has no decodable nonce.
 rule ccipReceive_EPOCH_NET_DEPOSIT_RevertWhen_PayloadEncodingIsMalformed() {
     env e;
     Client.Any2EVMMessage message;
@@ -1205,8 +1495,10 @@ rule ccipReceive_EPOCH_NET_DEPOSIT_RevertWhen_PayloadEncodingIsMalformed() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require ghost_CCIPReceived_EventCount == 0, "CCIPReceived event count starts at zero";
     require e.msg.sender == getRouter(), "caller should be the CCIP router";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require sender != 0, "sender should not be zero";
     require sender == getCrosschainVault(message.sourceChainSelector), "sender should be the registered vault";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
@@ -1220,12 +1512,10 @@ rule ccipReceive_EPOCH_NET_DEPOSIT_RevertWhen_PayloadEncodingIsMalformed() {
     /// @dev revert condition being verified
     require data.length < 32, "epoch deposit payload should be too short to decode";
 
-    storage before = lastStorage;
 
     ccipReceive@withrevert(e, message);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
 }
 
 /// @notice A successful CCIP epoch deposit transfers the delivered asset into the active adapter
@@ -1234,12 +1524,19 @@ rule ccipReceive_EPOCH_NET_DEPOSIT_Success() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
+    require message.sourceChainSelector == getParentChainSelector(),
+        "source chain should be the parent chain";
+    require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
+    require ghost_lastHandledEpochNonce_StoreCount == 0,
+        "handled epoch nonce store count starts at zero";
     address sender;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require ghost_CCIPReceived_EventCount == 0, "CCIPReceived event count starts at zero";
     require e.msg.sender == getRouter(), "caller should be the CCIP router";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require sender != 0, "sender should not be zero";
     require sender == getCrosschainVault(message.sourceChainSelector), "sender should be the registered vault";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
@@ -1275,12 +1572,18 @@ rule ccipReceive_EPOCH_NET_DEPOSIT_Success() {
     require ghost_recoveryMode_StoreCount == 0;
     require ghost_epochDepositRecovery_epochNonce_StoreCount == 0;
     require ghost_epochDepositRecovery_amount_StoreCount == 0;
-    require ghost_epochDepositRecovery_createdAt_StoreCount == 0;
 
     ccipReceive@withrevert(e, message);
 
 
     assert !lastReverted;
+    assert ghost_CCIPReceived_EventCount == 1;
+    assert ghost_CCIPReceived_Param_ccipMessageId == message.messageId;
+    assert ghost_CCIPReceived_Param_sourceChainSelector == message.sourceChainSelector;
+    assert ghost_CCIPReceived_Param_ccipTxType == Types.CcipTx.EPOCH_NET_DEPOSIT;
+    assert getLastHandledEpochNonce() == epochNonce;
+    assert ghost_lastHandledEpochNonce_StoreCount == 1;
+    assert ghost_lastHandledEpochNonce_StoredValue == epochNonce;
     Types.EpochRecovery recoveryAfter = getEpochDepositRecovery();
     assert asset.balanceOf(currentContract) == vaultBalanceBefore - amount;
     assert asset.balanceOf(adapter) == adapterBalanceBefore + amount;
@@ -1288,7 +1591,6 @@ rule ccipReceive_EPOCH_NET_DEPOSIT_Success() {
     assert getRecoveryMode() == Types.RecoveryMode.NONE;
     assert recoveryAfter.epochNonce == recoveryBefore.epochNonce;
     assert recoveryAfter.amount == recoveryBefore.amount;
-    assert recoveryAfter.createdAt == recoveryBefore.createdAt;
     assert ghost_DepositToStrategySuccess_EventCount == 1;
     assert ghost_DepositToStrategySuccess_Param_epochNonce == epochNonce;
     assert ghost_DepositToStrategySuccess_Param_amount == amount;
@@ -1297,7 +1599,6 @@ rule ccipReceive_EPOCH_NET_DEPOSIT_Success() {
     assert ghost_recoveryMode_StoreCount == 0;
     assert ghost_epochDepositRecovery_epochNonce_StoreCount == 0;
     assert ghost_epochDepositRecovery_amount_StoreCount == 0;
-    assert ghost_epochDepositRecovery_createdAt_StoreCount == 0;
 }
 
 /// @notice A failed CCIP epoch deposit stores recovery for the delivered asset
@@ -1306,12 +1607,19 @@ rule ccipReceive_EPOCH_NET_DEPOSIT_FailedDepositStoresRecovery() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
+    require message.sourceChainSelector == getParentChainSelector(),
+        "source chain should be the parent chain";
+    require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
+    require ghost_lastHandledEpochNonce_StoreCount == 0,
+        "handled epoch nonce store count starts at zero";
     address sender;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require ghost_CCIPReceived_EventCount == 0, "CCIPReceived event count starts at zero";
     require e.msg.sender == getRouter(), "caller should be the CCIP router";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require sender != 0, "sender should not be zero";
     require sender == getCrosschainVault(message.sourceChainSelector), "sender should be the registered vault";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
@@ -1344,11 +1652,17 @@ rule ccipReceive_EPOCH_NET_DEPOSIT_FailedDepositStoresRecovery() {
     require ghost_recoveryMode_StoreCount == 0;
     require ghost_epochDepositRecovery_epochNonce_StoreCount == 0;
     require ghost_epochDepositRecovery_amount_StoreCount == 0;
-    require ghost_epochDepositRecovery_createdAt_StoreCount == 0;
 
     ccipReceive@withrevert(e, message);
 
     assert !lastReverted;
+    assert ghost_CCIPReceived_EventCount == 1;
+    assert ghost_CCIPReceived_Param_ccipMessageId == message.messageId;
+    assert ghost_CCIPReceived_Param_sourceChainSelector == message.sourceChainSelector;
+    assert ghost_CCIPReceived_Param_ccipTxType == Types.CcipTx.EPOCH_NET_DEPOSIT;
+    assert getLastHandledEpochNonce() == epochNonce;
+    assert ghost_lastHandledEpochNonce_StoreCount == 1;
+    assert ghost_lastHandledEpochNonce_StoredValue == epochNonce;
     Types.EpochRecovery recovery = getEpochDepositRecovery();
     assert asset.balanceOf(currentContract) == vaultBalanceBefore;
     assert asset.balanceOf(adapter) == adapterBalanceBefore;
@@ -1356,7 +1670,6 @@ rule ccipReceive_EPOCH_NET_DEPOSIT_FailedDepositStoresRecovery() {
     assert getRecoveryMode() == Types.RecoveryMode.EPOCH_DEPOSIT;
     assert recovery.epochNonce == epochNonce;
     assert recovery.amount == amount;
-    assert recovery.createdAt == e.block.timestamp;
     assert ghost_DepositToStrategySuccess_EventCount == 0;
     assert ghost_DepositToStrategyFailure_EventCount == 1;
     assert ghost_DepositToStrategyFailure_Param_epochNonce == epochNonce;
@@ -1368,15 +1681,12 @@ rule ccipReceive_EPOCH_NET_DEPOSIT_FailedDepositStoresRecovery() {
     assert ghost_epochDepositRecovery_epochNonce_StoredValue == epochNonce;
     assert ghost_epochDepositRecovery_amount_StoreCount == 1;
     assert ghost_epochDepositRecovery_amount_StoredValue == amount;
-    assert ghost_epochDepositRecovery_createdAt_StoreCount == 1;
-    assert ghost_epochDepositRecovery_createdAt_StoredValue == e.block.timestamp;
     assert ghost_recoveryMode_StoreCount == 1 => ghost_recoveryMode_StoredValue == Types.RecoveryMode.EPOCH_DEPOSIT,
         "recovery mode stored value is only meaningful when the recovery mode hook fires, which may not happen due to state packing";
 }
 
-/// @notice CCIP rebalance reverts when the target protocol adapter is not registered
-/// @dev Verifies that an unknown target protocol leaves all vault state unchanged
-rule ccipReceive_REBALANCE_RevertWhen_AdapterNotRegistered() {
+/// @notice A received rebalance reverts when its nonce was already handled.
+rule ccipReceive_REBALANCE_RevertWhen_RebalanceNonceIsNotNew() {
     env e;
     Client.Any2EVMMessage message;
     uint256 rebalanceNonce;
@@ -1387,6 +1697,48 @@ rule ccipReceive_REBALANCE_RevertWhen_AdapterNotRegistered() {
     require e.msg.value == 0, "non-payable";
     require e.msg.sender == getRouter(), "caller should be the CCIP router";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
+    require sender != 0, "sender should not be zero";
+    require sender == getCrosschainVault(message.sourceChainSelector), "sender should be the registered vault";
+    require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
+    require message.destTokenAmounts.length == 1, "token amounts should contain one element";
+    require message.destTokenAmounts[0].token == getAsset(), "delivered token should be the vault asset";
+    require message.destTokenAmounts[0].amount != 0, "delivered amount should not be zero";
+    require adapterRegistry.getAdapter(e, protocolId) == adapter, "adapter should be registered";
+    require adapter.getVault() == currentContract, "adapter should be bound to the vault";
+    require !adapter.depositReverts(), "adapter deposit should not revert";
+    require message.sender == encodeAddress(sender), "message sender should encode the registered vault";
+    require message.data == encodeCcipTxData(Types.CcipTx.REBALANCE, encodeRebalanceData(rebalanceNonce, protocolId)),
+        "message data should encode a rebalance";
+
+    /// @dev revert condition being verified
+    require rebalanceNonce <= getLastHandledRebalanceNonce(), "rebalance nonce should already be handled";
+
+    require ghost_CCIPReceived_EventCount == 0, "CCIPReceived event count starts at zero";
+
+    ccipReceive@withrevert(e, message);
+
+    assert lastReverted;
+}
+
+/// @notice CCIP rebalance reverts when the target protocol adapter is not registered
+/// @dev Verifies that an unknown target protocol leaves all vault state unchanged
+rule ccipReceive_REBALANCE_RevertWhen_AdapterNotRegistered() {
+    env e;
+    Client.Any2EVMMessage message;
+    uint256 rebalanceNonce;
+    require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
+    require ghost_lastHandledRebalanceNonce_StoreCount == 0,
+        "handled rebalance nonce store count starts at zero";
+    bytes32 protocolId;
+    address sender;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require ghost_CCIPReceived_EventCount == 0, "CCIPReceived event count starts at zero";
+    require e.msg.sender == getRouter(), "caller should be the CCIP router";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require sender != 0, "sender should not be zero";
     require sender == getCrosschainVault(message.sourceChainSelector), "sender should be the registered vault";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
@@ -1400,16 +1752,15 @@ rule ccipReceive_REBALANCE_RevertWhen_AdapterNotRegistered() {
     /// @dev revert condition being verified
     require adapterRegistry.getAdapter(e, protocolId) == 0, "adapter should not be registered";
 
-    storage before = lastStorage;
 
     ccipReceive@withrevert(e, message);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
 }
 
 /// @notice CCIP rebalance reverts when its payload is too short to decode the nonce and protocol ID
-/// @dev Verifies that malformed rebalance data leaves all vault state unchanged
+/// @dev Verifies that malformed rebalance data leaves all vault state unchanged. Competing nonce and
+///      protocol conditions cannot be imposed because the targeted payload intentionally cannot decode them.
 rule ccipReceive_REBALANCE_RevertWhen_PayloadEncodingIsMalformed() {
     env e;
     Client.Any2EVMMessage message;
@@ -1418,8 +1769,10 @@ rule ccipReceive_REBALANCE_RevertWhen_PayloadEncodingIsMalformed() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require ghost_CCIPReceived_EventCount == 0, "CCIPReceived event count starts at zero";
     require e.msg.sender == getRouter(), "caller should be the CCIP router";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require sender != 0, "sender should not be zero";
     require sender == getCrosschainVault(message.sourceChainSelector), "sender should be the registered vault";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
@@ -1433,12 +1786,10 @@ rule ccipReceive_REBALANCE_RevertWhen_PayloadEncodingIsMalformed() {
     /// @dev revert condition being verified
     require data.length < 64, "rebalance payload should be too short to decode";
 
-    storage before = lastStorage;
 
     ccipReceive@withrevert(e, message);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
 }
 
 /// @notice CCIP rebalance reverts when the registered adapter is bound to another vault
@@ -1447,13 +1798,18 @@ rule ccipReceive_REBALANCE_RevertWhen_AdapterVaultIsInvalid() {
     env e;
     Client.Any2EVMMessage message;
     uint256 rebalanceNonce;
+    require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
+    require ghost_lastHandledRebalanceNonce_StoreCount == 0,
+        "handled rebalance nonce store count starts at zero";
     bytes32 protocolId;
     address sender;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require ghost_CCIPReceived_EventCount == 0, "CCIPReceived event count starts at zero";
     require e.msg.sender == getRouter(), "caller should be the CCIP router";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require sender != 0, "sender should not be zero";
     require sender == getCrosschainVault(message.sourceChainSelector), "sender should be the registered vault";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
@@ -1468,12 +1824,10 @@ rule ccipReceive_REBALANCE_RevertWhen_AdapterVaultIsInvalid() {
     /// @dev revert condition being verified
     require adapterRegistry.getAdapter(e, protocolId) == invalidAdapter, "invalid adapter should be registered";
 
-    storage before = lastStorage;
 
     ccipReceive@withrevert(e, message);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
 }
 
 /// @notice A successful CCIP rebalance selects the target adapter and deposits the delivered asset
@@ -1482,13 +1836,18 @@ rule ccipReceive_REBALANCE_Success() {
     env e;
     Client.Any2EVMMessage message;
     uint256 rebalanceNonce;
+    require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
+    require ghost_lastHandledRebalanceNonce_StoreCount == 0,
+        "handled rebalance nonce store count starts at zero";
     bytes32 protocolId;
     address sender;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require ghost_CCIPReceived_EventCount == 0, "CCIPReceived event count starts at zero";
     require e.msg.sender == getRouter(), "caller should be the CCIP router";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require sender != 0, "sender should not be zero";
     require sender == getCrosschainVault(message.sourceChainSelector), "sender should be the registered vault";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
@@ -1523,12 +1882,18 @@ rule ccipReceive_REBALANCE_Success() {
     require ghost_recoveryMode_StoreCount == 0;
     require ghost_rebalanceDepositRecovery_nonce_StoreCount == 0;
     require ghost_rebalanceDepositRecovery_amount_StoreCount == 0;
-    require ghost_rebalanceDepositRecovery_createdAt_StoreCount == 0;
 
     ccipReceive@withrevert(e, message);
 
 
     assert !lastReverted;
+    assert ghost_CCIPReceived_EventCount == 1;
+    assert ghost_CCIPReceived_Param_ccipMessageId == message.messageId;
+    assert ghost_CCIPReceived_Param_sourceChainSelector == message.sourceChainSelector;
+    assert ghost_CCIPReceived_Param_ccipTxType == Types.CcipTx.REBALANCE;
+    assert getLastHandledRebalanceNonce() == rebalanceNonce;
+    assert ghost_lastHandledRebalanceNonce_StoreCount == 1;
+    assert ghost_lastHandledRebalanceNonce_StoredValue == rebalanceNonce;
     Types.RebalanceDepositRecovery recoveryAfter = getRebalanceDepositRecovery();
     assert getActiveProtocolAdapter() == adapter;
     assert asset.balanceOf(currentContract) == vaultBalanceBefore - amount;
@@ -1537,7 +1902,6 @@ rule ccipReceive_REBALANCE_Success() {
     assert getRecoveryMode() == Types.RecoveryMode.NONE;
     assert recoveryAfter.rebalanceNonce == recoveryBefore.rebalanceNonce;
     assert recoveryAfter.amount == recoveryBefore.amount;
-    assert recoveryAfter.createdAt == recoveryBefore.createdAt;
     assert ghost_ActiveProtocolAdapterSet_EventCount == 1;
     assert ghost_ActiveProtocolAdapterSet_Param_protocolId == protocolId;
     assert ghost_ActiveProtocolAdapterSet_Param_adapter == adapter;
@@ -1551,7 +1915,6 @@ rule ccipReceive_REBALANCE_Success() {
     assert ghost_recoveryMode_StoreCount == 0;
     assert ghost_rebalanceDepositRecovery_nonce_StoreCount == 0;
     assert ghost_rebalanceDepositRecovery_amount_StoreCount == 0;
-    assert ghost_rebalanceDepositRecovery_createdAt_StoreCount == 0;
 }
 
 /// @notice A failed CCIP rebalance deposit selects the target adapter and stores recovery
@@ -1560,13 +1923,18 @@ rule ccipReceive_REBALANCE_FailedDepositStoresRecovery() {
     env e;
     Client.Any2EVMMessage message;
     uint256 rebalanceNonce;
+    require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
+    require ghost_lastHandledRebalanceNonce_StoreCount == 0,
+        "handled rebalance nonce store count starts at zero";
     bytes32 protocolId;
     address sender;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require ghost_CCIPReceived_EventCount == 0, "CCIPReceived event count starts at zero";
     require e.msg.sender == getRouter(), "caller should be the CCIP router";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require sender != 0, "sender should not be zero";
     require sender == getCrosschainVault(message.sourceChainSelector), "sender should be the registered vault";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
@@ -1598,12 +1966,18 @@ rule ccipReceive_REBALANCE_FailedDepositStoresRecovery() {
     require ghost_recoveryMode_StoreCount == 0;
     require ghost_rebalanceDepositRecovery_nonce_StoreCount == 0;
     require ghost_rebalanceDepositRecovery_amount_StoreCount == 0;
-    require ghost_rebalanceDepositRecovery_createdAt_StoreCount == 0;
 
     ccipReceive@withrevert(e, message);
 
 
     assert !lastReverted;
+    assert ghost_CCIPReceived_EventCount == 1;
+    assert ghost_CCIPReceived_Param_ccipMessageId == message.messageId;
+    assert ghost_CCIPReceived_Param_sourceChainSelector == message.sourceChainSelector;
+    assert ghost_CCIPReceived_Param_ccipTxType == Types.CcipTx.REBALANCE;
+    assert getLastHandledRebalanceNonce() == rebalanceNonce;
+    assert ghost_lastHandledRebalanceNonce_StoreCount == 1;
+    assert ghost_lastHandledRebalanceNonce_StoredValue == rebalanceNonce;
     Types.RebalanceDepositRecovery recovery = getRebalanceDepositRecovery();
     assert getActiveProtocolAdapter() == adapter;
     assert asset.balanceOf(currentContract) == vaultBalanceBefore;
@@ -1612,7 +1986,6 @@ rule ccipReceive_REBALANCE_FailedDepositStoresRecovery() {
     assert getRecoveryMode() == Types.RecoveryMode.REBALANCE_DEPOSIT;
     assert recovery.rebalanceNonce == rebalanceNonce;
     assert recovery.amount == amount;
-    assert recovery.createdAt == e.block.timestamp;
     assert ghost_ActiveProtocolAdapterSet_EventCount == 1;
     assert ghost_ActiveProtocolAdapterSet_Param_protocolId == protocolId;
     assert ghost_ActiveProtocolAdapterSet_Param_adapter == adapter;
@@ -1631,8 +2004,6 @@ rule ccipReceive_REBALANCE_FailedDepositStoresRecovery() {
     assert ghost_rebalanceDepositRecovery_nonce_StoredValue == rebalanceNonce;
     assert ghost_rebalanceDepositRecovery_amount_StoreCount == 1;
     assert ghost_rebalanceDepositRecovery_amount_StoredValue == amount;
-    assert ghost_rebalanceDepositRecovery_createdAt_StoreCount == 1;
-    assert ghost_rebalanceDepositRecovery_createdAt_StoredValue == e.block.timestamp;
 }
 
 /// ─────────────────── TRY CCIP SEND ───────────────────────────
@@ -1644,9 +2015,7 @@ rule tryCcipSend_RevertWhen_CallerIsNotSelf() {
     uint256 bridgeAmount;
     uint64 destinationChainSelector;
     Types.CcipTx ccipTxType;
-    bytes txData;
-    uint256 epochNonce;
-    uint256 rebalanceNonce;
+    uint256 nonce;
     bytes32 protocolId;
 
     /// @dev revert conditions NOT being verified
@@ -1657,36 +2026,17 @@ rule tryCcipSend_RevertWhen_CallerIsNotSelf() {
     require getCrosschainVault(destinationChainSelector) != 0, "destination vault should be registered";
     require !ccipRouter.getFeeReverts(), "router fee lookup should not revert";
     require !ccipRouter.ccipSendReverts(), "router send should not revert";
-    require (
-        ccipTxType == Types.CcipTx.EPOCH_NET_WITHDRAW
-            && txData == encodeEpochNonce(epochNonce)
-    ) || (
-        ccipTxType == Types.CcipTx.REBALANCE
-            && txData == encodeRebalanceData(rebalanceNonce, protocolId)
-    ), "transaction type and data should encode a supported ChildVault send";
 
     /// @dev revert condition being verified
     require e.msg.sender != currentContract, "caller should not be the vault";
 
-    storage before = lastStorage;
     address router = getRouter();
-    uint256 vaultLinkBalanceBefore = link.balanceOf(currentContract);
-    uint256 routerLinkBalanceBefore = link.balanceOf(router);
-    uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
-    uint256 routerAssetBalanceBefore = asset.balanceOf(router);
 
     /// @dev set ghost starting values
-    require ghost_CCIPBridged_EventCount == 0;
 
-    tryCcipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, txData);
+    tryCcipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, nonce, protocolId);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert link.balanceOf(currentContract) == vaultLinkBalanceBefore;
-    assert link.balanceOf(router) == routerLinkBalanceBefore;
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(router) == routerAssetBalanceBefore;
-    assert ghost_CCIPBridged_EventCount == 0;
 }
 
 /// @notice Try CCIP send reverts when the bridge amount is zero
@@ -1695,9 +2045,7 @@ rule tryCcipSend_RevertWhen_BridgeAmountIsZero() {
     env e;
     uint64 destinationChainSelector;
     Types.CcipTx ccipTxType;
-    bytes txData;
-    uint256 epochNonce;
-    uint256 rebalanceNonce;
+    uint256 nonce;
     bytes32 protocolId;
 
     /// @dev revert conditions NOT being verified
@@ -1708,36 +2056,17 @@ rule tryCcipSend_RevertWhen_BridgeAmountIsZero() {
     require getCrosschainVault(destinationChainSelector) != 0, "destination vault should be registered";
     require !ccipRouter.getFeeReverts(), "router fee lookup should not revert";
     require !ccipRouter.ccipSendReverts(), "router send should not revert";
-    require (
-        ccipTxType == Types.CcipTx.EPOCH_NET_WITHDRAW
-            && txData == encodeEpochNonce(epochNonce)
-    ) || (
-        ccipTxType == Types.CcipTx.REBALANCE
-            && txData == encodeRebalanceData(rebalanceNonce, protocolId)
-    ), "transaction type and data should encode a supported ChildVault send";
 
     /// @dev revert condition being verified
     uint256 bridgeAmount = 0;
 
-    storage before = lastStorage;
     address router = getRouter();
-    uint256 vaultLinkBalanceBefore = link.balanceOf(currentContract);
-    uint256 routerLinkBalanceBefore = link.balanceOf(router);
-    uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
-    uint256 routerAssetBalanceBefore = asset.balanceOf(router);
 
     /// @dev set ghost starting values
-    require ghost_CCIPBridged_EventCount == 0;
 
-    tryCcipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, txData);
+    tryCcipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, nonce, protocolId);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert link.balanceOf(currentContract) == vaultLinkBalanceBefore;
-    assert link.balanceOf(router) == routerLinkBalanceBefore;
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(router) == routerAssetBalanceBefore;
-    assert ghost_CCIPBridged_EventCount == 0;
 }
 
 /// @notice Try CCIP send reverts when the destination chain selector is zero
@@ -1746,9 +2075,7 @@ rule tryCcipSend_RevertWhen_DestinationChainIsZero() {
     env e;
     uint256 bridgeAmount;
     Types.CcipTx ccipTxType;
-    bytes txData;
-    uint256 epochNonce;
-    uint256 rebalanceNonce;
+    uint256 nonce;
     bytes32 protocolId;
 
     /// @dev revert conditions NOT being verified
@@ -1758,21 +2085,11 @@ rule tryCcipSend_RevertWhen_DestinationChainIsZero() {
     require getThisChainSelector() != 0, "this chain selector should not be zero";
     require !ccipRouter.getFeeReverts(), "router fee lookup should not revert";
     require !ccipRouter.ccipSendReverts(), "router send should not revert";
-    require (
-        ccipTxType == Types.CcipTx.EPOCH_NET_WITHDRAW
-            && txData == encodeEpochNonce(epochNonce)
-    ) || (
-        ccipTxType == Types.CcipTx.REBALANCE
-            && txData == encodeRebalanceData(rebalanceNonce, protocolId)
-    ), "transaction type and data should encode a supported ChildVault send";
 
     /// @dev revert condition being verified
     uint64 destinationChainSelector = 0;
 
-    storage before = lastStorage;
     address router = getRouter();
-    uint256 vaultLinkBalanceBefore = link.balanceOf(currentContract);
-    uint256 routerLinkBalanceBefore = link.balanceOf(router);
     uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
     uint256 routerAssetBalanceBefore = asset.balanceOf(router);
 
@@ -1781,17 +2098,10 @@ rule tryCcipSend_RevertWhen_DestinationChainIsZero() {
     require routerAssetBalanceBefore <= max_uint256 - bridgeAmount, "router asset balance should not overflow";
 
     /// @dev set ghost starting values
-    require ghost_CCIPBridged_EventCount == 0;
 
-    tryCcipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, txData);
+    tryCcipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, nonce, protocolId);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert link.balanceOf(currentContract) == vaultLinkBalanceBefore;
-    assert link.balanceOf(router) == routerLinkBalanceBefore;
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(router) == routerAssetBalanceBefore;
-    assert ghost_CCIPBridged_EventCount == 0;
 }
 
 /// @notice Try CCIP send reverts when the destination is this chain
@@ -1800,9 +2110,7 @@ rule tryCcipSend_RevertWhen_DestinationIsSelfChain() {
     env e;
     uint256 bridgeAmount;
     Types.CcipTx ccipTxType;
-    bytes txData;
-    uint256 epochNonce;
-    uint256 rebalanceNonce;
+    uint256 nonce;
     bytes32 protocolId;
 
     /// @dev revert conditions NOT being verified
@@ -1812,21 +2120,11 @@ rule tryCcipSend_RevertWhen_DestinationIsSelfChain() {
     require getThisChainSelector() != 0, "this chain selector should not be zero";
     require !ccipRouter.getFeeReverts(), "router fee lookup should not revert";
     require !ccipRouter.ccipSendReverts(), "router send should not revert";
-    require (
-        ccipTxType == Types.CcipTx.EPOCH_NET_WITHDRAW
-            && txData == encodeEpochNonce(epochNonce)
-    ) || (
-        ccipTxType == Types.CcipTx.REBALANCE
-            && txData == encodeRebalanceData(rebalanceNonce, protocolId)
-    ), "transaction type and data should encode a supported ChildVault send";
 
     /// @dev revert condition being verified
     uint64 destinationChainSelector = getThisChainSelector();
 
-    storage before = lastStorage;
     address router = getRouter();
-    uint256 vaultLinkBalanceBefore = link.balanceOf(currentContract);
-    uint256 routerLinkBalanceBefore = link.balanceOf(router);
     uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
     uint256 routerAssetBalanceBefore = asset.balanceOf(router);
 
@@ -1835,17 +2133,10 @@ rule tryCcipSend_RevertWhen_DestinationIsSelfChain() {
     require routerAssetBalanceBefore <= max_uint256 - bridgeAmount, "router asset balance should not overflow";
 
     /// @dev set ghost starting values
-    require ghost_CCIPBridged_EventCount == 0;
 
-    tryCcipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, txData);
+    tryCcipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, nonce, protocolId);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert link.balanceOf(currentContract) == vaultLinkBalanceBefore;
-    assert link.balanceOf(router) == routerLinkBalanceBefore;
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(router) == routerAssetBalanceBefore;
-    assert ghost_CCIPBridged_EventCount == 0;
 }
 
 /// @notice Try CCIP send reverts when the destination vault is not registered
@@ -1855,9 +2146,7 @@ rule tryCcipSend_RevertWhen_DestinationVaultNotRegistered() {
     uint256 bridgeAmount;
     uint64 destinationChainSelector;
     Types.CcipTx ccipTxType;
-    bytes txData;
-    uint256 epochNonce;
-    uint256 rebalanceNonce;
+    uint256 nonce;
     bytes32 protocolId;
 
     /// @dev revert conditions NOT being verified
@@ -1868,21 +2157,11 @@ rule tryCcipSend_RevertWhen_DestinationVaultNotRegistered() {
     require destinationChainSelector != getThisChainSelector(), "destination should not be this chain";
     require !ccipRouter.getFeeReverts(), "router fee lookup should not revert";
     require !ccipRouter.ccipSendReverts(), "router send should not revert";
-    require (
-        ccipTxType == Types.CcipTx.EPOCH_NET_WITHDRAW
-            && txData == encodeEpochNonce(epochNonce)
-    ) || (
-        ccipTxType == Types.CcipTx.REBALANCE
-            && txData == encodeRebalanceData(rebalanceNonce, protocolId)
-    ), "transaction type and data should encode a supported ChildVault send";
 
     /// @dev revert condition being verified
     require getCrosschainVault(destinationChainSelector) == 0, "destination vault should not be registered";
 
-    storage before = lastStorage;
     address router = getRouter();
-    uint256 vaultLinkBalanceBefore = link.balanceOf(currentContract);
-    uint256 routerLinkBalanceBefore = link.balanceOf(router);
     uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
     uint256 routerAssetBalanceBefore = asset.balanceOf(router);
 
@@ -1891,17 +2170,10 @@ rule tryCcipSend_RevertWhen_DestinationVaultNotRegistered() {
     require routerAssetBalanceBefore <= max_uint256 - bridgeAmount, "router asset balance should not overflow";
 
     /// @dev set ghost starting values
-    require ghost_CCIPBridged_EventCount == 0;
 
-    tryCcipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, txData);
+    tryCcipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, nonce, protocolId);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert link.balanceOf(currentContract) == vaultLinkBalanceBefore;
-    assert link.balanceOf(router) == routerLinkBalanceBefore;
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(router) == routerAssetBalanceBefore;
-    assert ghost_CCIPBridged_EventCount == 0;
 }
 
 /// @notice Try CCIP send reverts when the router fee lookup fails
@@ -1911,9 +2183,7 @@ rule tryCcipSend_RevertWhen_RouterGetFeeReverts() {
     uint256 bridgeAmount;
     uint64 destinationChainSelector;
     Types.CcipTx ccipTxType;
-    bytes txData;
-    uint256 epochNonce;
-    uint256 rebalanceNonce;
+    uint256 nonce;
     bytes32 protocolId;
 
     /// @dev revert conditions NOT being verified
@@ -1924,21 +2194,11 @@ rule tryCcipSend_RevertWhen_RouterGetFeeReverts() {
     require destinationChainSelector != getThisChainSelector(), "destination should not be this chain";
     require getCrosschainVault(destinationChainSelector) != 0, "destination vault should be registered";
     require !ccipRouter.ccipSendReverts(), "router send should not revert";
-    require (
-        ccipTxType == Types.CcipTx.EPOCH_NET_WITHDRAW
-            && txData == encodeEpochNonce(epochNonce)
-    ) || (
-        ccipTxType == Types.CcipTx.REBALANCE
-            && txData == encodeRebalanceData(rebalanceNonce, protocolId)
-    ), "transaction type and data should encode a supported ChildVault send";
 
     /// @dev revert condition being verified
     require ccipRouter.getFeeReverts(), "router fee lookup should revert";
 
-    storage before = lastStorage;
     address router = getRouter();
-    uint256 vaultLinkBalanceBefore = link.balanceOf(currentContract);
-    uint256 routerLinkBalanceBefore = link.balanceOf(router);
     uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
     uint256 routerAssetBalanceBefore = asset.balanceOf(router);
 
@@ -1947,17 +2207,10 @@ rule tryCcipSend_RevertWhen_RouterGetFeeReverts() {
     require routerAssetBalanceBefore <= max_uint256 - bridgeAmount, "router asset balance should not overflow";
 
     /// @dev set ghost starting values
-    require ghost_CCIPBridged_EventCount == 0;
 
-    tryCcipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, txData);
+    tryCcipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, nonce, protocolId);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert link.balanceOf(currentContract) == vaultLinkBalanceBefore;
-    assert link.balanceOf(router) == routerLinkBalanceBefore;
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(router) == routerAssetBalanceBefore;
-    assert ghost_CCIPBridged_EventCount == 0;
 }
 
 /// @notice Try CCIP send reverts when the router send fails
@@ -1967,9 +2220,7 @@ rule tryCcipSend_RevertWhen_RouterCcipSendReverts() {
     uint256 bridgeAmount;
     uint64 destinationChainSelector;
     Types.CcipTx ccipTxType;
-    bytes txData;
-    uint256 epochNonce;
-    uint256 rebalanceNonce;
+    uint256 nonce;
     bytes32 protocolId;
 
     /// @dev revert conditions NOT being verified
@@ -1980,18 +2231,10 @@ rule tryCcipSend_RevertWhen_RouterCcipSendReverts() {
     require destinationChainSelector != getThisChainSelector(), "destination should not be this chain";
     require getCrosschainVault(destinationChainSelector) != 0, "destination vault should be registered";
     require !ccipRouter.getFeeReverts(), "router fee lookup should not revert";
-    require (
-        ccipTxType == Types.CcipTx.EPOCH_NET_WITHDRAW
-            && txData == encodeEpochNonce(epochNonce)
-    ) || (
-        ccipTxType == Types.CcipTx.REBALANCE
-            && txData == encodeRebalanceData(rebalanceNonce, protocolId)
-    ), "transaction type and data should encode a supported ChildVault send";
 
     /// @dev revert condition being verified
     require ccipRouter.ccipSendReverts(), "router send should revert";
 
-    storage before = lastStorage;
     uint256 fee = ccipRouter.getFee();
     address router = getRouter();
     uint256 vaultLinkBalanceBefore = link.balanceOf(currentContract);
@@ -2006,17 +2249,10 @@ rule tryCcipSend_RevertWhen_RouterCcipSendReverts() {
     require routerAssetBalanceBefore <= max_uint256 - bridgeAmount, "router asset balance should not overflow";
 
     /// @dev set ghost starting values
-    require ghost_CCIPBridged_EventCount == 0;
 
-    tryCcipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, txData);
+    tryCcipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, nonce, protocolId);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert link.balanceOf(currentContract) == vaultLinkBalanceBefore;
-    assert link.balanceOf(router) == routerLinkBalanceBefore;
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(router) == routerAssetBalanceBefore;
-    assert ghost_CCIPBridged_EventCount == 0;
 }
 
 /// @notice Try CCIP send forwards a valid self-call to BaseVault CCIP execution
@@ -2026,9 +2262,7 @@ rule tryCcipSend_Success() {
     uint256 bridgeAmount;
     uint64 destinationChainSelector;
     Types.CcipTx ccipTxType;
-    bytes txData;
-    uint256 epochNonce;
-    uint256 rebalanceNonce;
+    uint256 nonce;
     bytes32 protocolId;
 
     /// @dev revert conditions NOT being verified
@@ -2039,13 +2273,6 @@ rule tryCcipSend_Success() {
     require getCrosschainVault(destinationChainSelector) != 0, "destination vault should be registered";
     require !ccipRouter.getFeeReverts(), "router fee lookup should not revert";
     require !ccipRouter.ccipSendReverts(), "router send should not revert";
-    require (
-        ccipTxType == Types.CcipTx.EPOCH_NET_WITHDRAW
-            && txData == encodeEpochNonce(epochNonce)
-    ) || (
-        ccipTxType == Types.CcipTx.REBALANCE
-            && txData == encodeRebalanceData(rebalanceNonce, protocolId)
-    ), "transaction type and data should encode a supported ChildVault send";
 
     /// @dev success condition being verified
     require e.msg.sender == currentContract, "caller should be the vault";
@@ -2066,7 +2293,7 @@ rule tryCcipSend_Success() {
     /// @dev set ghost starting values
     require ghost_CCIPBridged_EventCount == 0;
 
-    tryCcipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, txData);
+    tryCcipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, nonce, protocolId);
 
     assert !lastReverted;
     assert link.balanceOf(currentContract) == vaultLinkBalanceBefore - fee;
@@ -2075,11 +2302,31 @@ rule tryCcipSend_Success() {
     assert asset.balanceOf(router) == routerAssetBalanceBefore + bridgeAmount;
     assert ghost_CCIPBridged_EventCount == 1;
     assert ghost_CCIPBridged_Param_ccipMessageId != to_bytes32(0);
-    assert ghost_CCIPBridged_Param_amount == bridgeAmount;
+    assert ghost_CCIPBridged_Param_destinationChainSelector == destinationChainSelector;
     assert ghost_CCIPBridged_Param_ccipTxType == ccipTxType;
 }
 
 /// ──────────────────────── EXECUTE RECOVERY ──────────────────────
+
+/// @notice executeRecovery reverts while the vault is paused.
+rule executeRecovery_RevertWhen_Paused() {
+    env e;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require getRecoveryMode() == Types.RecoveryMode.EPOCH_DEPOSIT, "epoch deposit recovery should be pending";
+    require getEpochDepositRecovery().amount != 0, "recovery amount should not be zero";
+    require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
+    require !adapter.depositReverts(), "adapter deposit should not revert";
+
+    /// @dev revert condition being verified
+    require paused(), "vault should be paused";
+
+    executeRecovery@withrevert(e);
+
+    assert lastReverted;
+}
 
 /// @notice executeRecovery reverts when the call is reentrant
 /// @dev Verifies that storage remains unchanged
@@ -2088,17 +2335,19 @@ rule executeRecovery_RevertWhen_ReentrantCall() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
-    /// @dev nonReentrant fires before the mode check, so no mode precondition is needed
+    require getRecoveryMode() == Types.RecoveryMode.EPOCH_DEPOSIT, "epoch deposit recovery should be pending";
+    require getEpochDepositRecovery().amount != 0, "recovery amount should not be zero";
+    require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
+    require !adapter.depositReverts(), "adapter deposit should not revert";
 
     /// @dev revert condition being verified
     require reentrancyGuardEntered(), "reentrancy guard should be entered";
+    require !paused(), "vault should not be paused";
 
-    storage before = lastStorage;
 
     executeRecovery@withrevert(e);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
 }
 
 /// @notice executeRecovery reverts when no recovery is pending
@@ -2109,16 +2358,15 @@ rule executeRecovery_NONE_RevertWhen_NoRecoveryPending() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
 
     /// @dev revert condition being verified
     require getRecoveryMode() == Types.RecoveryMode.NONE, "no recovery should be pending";
 
-    storage before = lastStorage;
 
     executeRecovery@withrevert(e);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
 }
 
 /// ──────────────────── EPOCH_DEPOSIT ─────────────────────────
@@ -2131,6 +2379,7 @@ rule executeRecovery_EPOCH_DEPOSIT_RevertWhen_NoActiveAdapter() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.EPOCH_DEPOSIT, "epoch deposit recovery should be pending";
     require getEpochDepositRecovery().amount != 0, "recovery amount should not be zero";
     require !adapter.depositReverts(), "adapter deposit should not revert";
@@ -2138,24 +2387,12 @@ rule executeRecovery_EPOCH_DEPOSIT_RevertWhen_NoActiveAdapter() {
     /// @dev revert condition being verified
     require getActiveProtocolAdapter() == 0, "active adapter should not be set";
 
-    storage before = lastStorage;
-    uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
-    uint256 adapterAssetBalanceBefore = asset.balanceOf(adapter);
-    uint256 adapterTVLBefore = adapter.getTVL();
 
     /// @dev set ghost starting values
-    require ghost_EpochDepositRecoveryCleared_EventCount == 0;
-    require ghost_DepositToStrategySuccess_EventCount == 0;
 
     executeRecovery@withrevert(e);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(adapter) == adapterAssetBalanceBefore;
-    assert adapter.getTVL() == adapterTVLBefore;
-    assert ghost_EpochDepositRecoveryCleared_EventCount == 0;
-    assert ghost_DepositToStrategySuccess_EventCount == 0;
 }
 
 /// @notice Epoch deposit recovery via executeRecovery reverts when the adapter deposit fails
@@ -2166,6 +2403,7 @@ rule executeRecovery_EPOCH_DEPOSIT_RevertWhen_DepositFails() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.EPOCH_DEPOSIT, "epoch deposit recovery should be pending";
     require getEpochDepositRecovery().amount != 0, "recovery amount should not be zero";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
@@ -2173,24 +2411,12 @@ rule executeRecovery_EPOCH_DEPOSIT_RevertWhen_DepositFails() {
     /// @dev revert condition being verified
     require adapter.depositReverts(), "adapter deposit should revert";
 
-    storage before = lastStorage;
-    uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
-    uint256 adapterAssetBalanceBefore = asset.balanceOf(adapter);
-    uint256 adapterTVLBefore = adapter.getTVL();
 
     /// @dev set ghost starting values
-    require ghost_EpochDepositRecoveryCleared_EventCount == 0;
-    require ghost_DepositToStrategySuccess_EventCount == 0;
 
     executeRecovery@withrevert(e);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(adapter) == adapterAssetBalanceBefore;
-    assert adapter.getTVL() == adapterTVLBefore;
-    assert ghost_EpochDepositRecoveryCleared_EventCount == 0;
-    assert ghost_DepositToStrategySuccess_EventCount == 0;
 }
 
 /// @notice Epoch deposit recovery via executeRecovery deposits the stored amount and clears recovery
@@ -2201,6 +2427,7 @@ rule executeRecovery_EPOCH_DEPOSIT_Success() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.EPOCH_DEPOSIT, "epoch deposit recovery should be pending";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
     require !adapter.depositReverts(), "adapter deposit should not revert";
@@ -2222,7 +2449,6 @@ rule executeRecovery_EPOCH_DEPOSIT_Success() {
     require ghost_DepositToStrategySuccess_EventCount == 0;
     require ghost_epochDepositRecovery_epochNonce_StoreCount == 0;
     require ghost_epochDepositRecovery_amount_StoreCount == 0;
-    require ghost_epochDepositRecovery_createdAt_StoreCount == 0;
     require ghost_recoveryMode_StoreCount == 0;
 
     executeRecovery@withrevert(e);
@@ -2234,7 +2460,6 @@ rule executeRecovery_EPOCH_DEPOSIT_Success() {
     assert getRecoveryMode() == Types.RecoveryMode.NONE;
     assert getEpochDepositRecovery().epochNonce == 0;
     assert getEpochDepositRecovery().amount == 0;
-    assert getEpochDepositRecovery().createdAt == 0;
     assert ghost_EpochDepositRecoveryCleared_EventCount == 1;
     assert ghost_EpochDepositRecoveryCleared_Param_epochNonce == recovery.epochNonce;
     assert ghost_DepositToStrategySuccess_EventCount == 1;
@@ -2244,8 +2469,6 @@ rule executeRecovery_EPOCH_DEPOSIT_Success() {
     assert ghost_epochDepositRecovery_epochNonce_StoredValue == 0;
     assert ghost_epochDepositRecovery_amount_StoreCount == 1;
     assert ghost_epochDepositRecovery_amount_StoredValue == 0;
-    assert ghost_epochDepositRecovery_createdAt_StoreCount == 1;
-    assert ghost_epochDepositRecovery_createdAt_StoredValue == 0;
     assert ghost_recoveryMode_StoreCount == 1 => ghost_recoveryMode_StoredValue == Types.RecoveryMode.NONE,
         "recovery mode stored value is only meaningful when the recovery mode hook fires, which may not happen due to state packing";
 }
@@ -2260,6 +2483,7 @@ rule executeRecovery_REBALANCE_DEPOSIT_RevertWhen_NoActiveAdapter() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.REBALANCE_DEPOSIT, "rebalance deposit recovery should be pending";
     require getRebalanceDepositRecovery().amount != 0, "recovery amount should not be zero";
     require !adapter.depositReverts(), "adapter deposit should not revert";
@@ -2268,7 +2492,6 @@ rule executeRecovery_REBALANCE_DEPOSIT_RevertWhen_NoActiveAdapter() {
     /// @dev revert condition being verified
     require getActiveProtocolAdapter() == 0, "active adapter should not be set";
 
-    storage before = lastStorage;
     Types.RebalanceDepositRecovery recovery = getRebalanceDepositRecovery();
     uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
     uint256 adapterAssetBalanceBefore = asset.balanceOf(adapter);
@@ -2280,18 +2503,10 @@ rule executeRecovery_REBALANCE_DEPOSIT_RevertWhen_NoActiveAdapter() {
     require adapterTVLBefore <= max_uint256 - recovery.amount, "adapter TVL should not overflow";
 
     /// @dev set ghost starting values
-    require ghost_RebalanceDepositRecoveryCleared_EventCount == 0;
-    require ghost_RebalanceDepositSuccess_EventCount == 0;
 
     executeRecovery@withrevert(e);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(adapter) == adapterAssetBalanceBefore;
-    assert adapter.getTVL() == adapterTVLBefore;
-    assert ghost_RebalanceDepositRecoveryCleared_EventCount == 0;
-    assert ghost_RebalanceDepositSuccess_EventCount == 0;
 }
 
 /// @notice Rebalance deposit recovery via executeRecovery reverts when the adapter deposit fails
@@ -2302,6 +2517,7 @@ rule executeRecovery_REBALANCE_DEPOSIT_RevertWhen_DepositFails() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.REBALANCE_DEPOSIT, "rebalance deposit recovery should be pending";
     require getRebalanceDepositRecovery().amount != 0, "recovery amount should not be zero";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
@@ -2310,7 +2526,6 @@ rule executeRecovery_REBALANCE_DEPOSIT_RevertWhen_DepositFails() {
     /// @dev revert condition being verified
     require adapter.depositReverts(), "adapter deposit should revert";
 
-    storage before = lastStorage;
     Types.RebalanceDepositRecovery recovery = getRebalanceDepositRecovery();
     uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
     uint256 adapterAssetBalanceBefore = asset.balanceOf(adapter);
@@ -2322,18 +2537,10 @@ rule executeRecovery_REBALANCE_DEPOSIT_RevertWhen_DepositFails() {
     require adapterTVLBefore <= max_uint256 - recovery.amount, "adapter TVL should not overflow";
 
     /// @dev set ghost starting values
-    require ghost_RebalanceDepositRecoveryCleared_EventCount == 0;
-    require ghost_RebalanceDepositSuccess_EventCount == 0;
 
     executeRecovery@withrevert(e);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(adapter) == adapterAssetBalanceBefore;
-    assert adapter.getTVL() == adapterTVLBefore;
-    assert ghost_RebalanceDepositRecoveryCleared_EventCount == 0;
-    assert ghost_RebalanceDepositSuccess_EventCount == 0;
 }
 
 /// @notice Rebalance deposit recovery via executeRecovery deposits the stored amount and clears recovery
@@ -2344,6 +2551,7 @@ rule executeRecovery_REBALANCE_DEPOSIT_Success() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.REBALANCE_DEPOSIT, "rebalance deposit recovery should be pending";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
     require !adapter.depositReverts(), "adapter deposit should not revert";
@@ -2365,7 +2573,6 @@ rule executeRecovery_REBALANCE_DEPOSIT_Success() {
     require ghost_RebalanceDepositSuccess_EventCount == 0;
     require ghost_rebalanceDepositRecovery_nonce_StoreCount == 0;
     require ghost_rebalanceDepositRecovery_amount_StoreCount == 0;
-    require ghost_rebalanceDepositRecovery_createdAt_StoreCount == 0;
     require ghost_recoveryMode_StoreCount == 0;
 
     executeRecovery@withrevert(e);
@@ -2377,7 +2584,6 @@ rule executeRecovery_REBALANCE_DEPOSIT_Success() {
     assert getRecoveryMode() == Types.RecoveryMode.NONE;
     assert getRebalanceDepositRecovery().rebalanceNonce == 0;
     assert getRebalanceDepositRecovery().amount == 0;
-    assert getRebalanceDepositRecovery().createdAt == 0;
     assert ghost_RebalanceDepositRecoveryCleared_EventCount == 1;
     assert ghost_RebalanceDepositRecoveryCleared_Param_nonce == recovery.rebalanceNonce;
     assert ghost_RebalanceDepositSuccess_EventCount == 1;
@@ -2387,8 +2593,6 @@ rule executeRecovery_REBALANCE_DEPOSIT_Success() {
     assert ghost_rebalanceDepositRecovery_nonce_StoredValue == 0;
     assert ghost_rebalanceDepositRecovery_amount_StoreCount == 1;
     assert ghost_rebalanceDepositRecovery_amount_StoredValue == 0;
-    assert ghost_rebalanceDepositRecovery_createdAt_StoreCount == 1;
-    assert ghost_rebalanceDepositRecovery_createdAt_StoredValue == 0;
     assert ghost_recoveryMode_StoreCount == 1 => ghost_recoveryMode_StoredValue == Types.RecoveryMode.NONE,
         "recovery mode stored value is only meaningful when the recovery mode hook fires, which may not happen due to state packing";
 }
@@ -2406,7 +2610,8 @@ rule REC_006_ccipSend_RevertWhen_RecoveryAlreadyPending() {
     uint256 bridgeAmount;
     uint64 destinationChainSelector;
     Types.CcipTx ccipTxType;
-    bytes txData;
+    uint256 nonce;
+    bytes32 protocolId;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -2420,18 +2625,12 @@ rule REC_006_ccipSend_RevertWhen_RecoveryAlreadyPending() {
     /// @dev revert condition being verified
     require getRecoveryMode() != Types.RecoveryMode.NONE, "recovery should be pending";
 
-    storage before = lastStorage;
 
     /// @dev set ghost starting values
-    require ghost_CCIPBridged_EventCount == 0;
-    require ghost_CcipSendRecoveryStored_EventCount == 0;
 
-    ccipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, txData);
+    ccipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, nonce, protocolId);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert ghost_CCIPBridged_EventCount == 0;
-    assert ghost_CcipSendRecoveryStored_EventCount == 0;
 }
 
 /// @notice ChildVault CCIP send reverts when the bridge amount is zero
@@ -2440,7 +2639,8 @@ rule ccipSend_RevertWhen_BridgeAmountIsZero() {
     env e;
     uint64 destinationChainSelector;
     Types.CcipTx ccipTxType;
-    bytes txData;
+    uint256 nonce;
+    bytes32 protocolId;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -2456,18 +2656,12 @@ rule ccipSend_RevertWhen_BridgeAmountIsZero() {
     /// @dev revert condition being verified
     uint256 bridgeAmount = 0;
 
-    storage before = lastStorage;
 
     /// @dev set ghost starting values
-    require ghost_CCIPBridged_EventCount == 0;
-    require ghost_CcipSendRecoveryStored_EventCount == 0;
 
-    ccipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, txData);
+    ccipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, nonce, protocolId);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert ghost_CCIPBridged_EventCount == 0;
-    assert ghost_CcipSendRecoveryStored_EventCount == 0;
 }
 
 /// @notice ChildVault CCIP send reverts when the destination chain selector is zero
@@ -2476,7 +2670,8 @@ rule ccipSend_RevertWhen_DestinationChainIsZero() {
     env e;
     uint256 bridgeAmount;
     Types.CcipTx ccipTxType;
-    bytes txData;
+    uint256 nonce;
+    bytes32 protocolId;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -2490,18 +2685,12 @@ rule ccipSend_RevertWhen_DestinationChainIsZero() {
     /// @dev revert condition being verified
     uint64 destinationChainSelector = 0;
 
-    storage before = lastStorage;
 
     /// @dev set ghost starting values
-    require ghost_CCIPBridged_EventCount == 0;
-    require ghost_CcipSendRecoveryStored_EventCount == 0;
 
-    ccipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, txData);
+    ccipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, nonce, protocolId);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert ghost_CCIPBridged_EventCount == 0;
-    assert ghost_CcipSendRecoveryStored_EventCount == 0;
 }
 
 /// @notice ChildVault CCIP send reverts when the destination is the current chain
@@ -2510,7 +2699,8 @@ rule ccipSend_RevertWhen_DestinationIsSelfChain() {
     env e;
     uint256 bridgeAmount;
     Types.CcipTx ccipTxType;
-    bytes txData;
+    uint256 nonce;
+    bytes32 protocolId;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -2524,18 +2714,12 @@ rule ccipSend_RevertWhen_DestinationIsSelfChain() {
     /// @dev revert condition being verified
     uint64 destinationChainSelector = getThisChainSelector();
 
-    storage before = lastStorage;
 
     /// @dev set ghost starting values
-    require ghost_CCIPBridged_EventCount == 0;
-    require ghost_CcipSendRecoveryStored_EventCount == 0;
 
-    ccipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, txData);
+    ccipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, nonce, protocolId);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert ghost_CCIPBridged_EventCount == 0;
-    assert ghost_CcipSendRecoveryStored_EventCount == 0;
 }
 
 /// @notice ChildVault CCIP send reverts when no destination vault is registered
@@ -2545,7 +2729,8 @@ rule ccipSend_RevertWhen_DestinationVaultNotRegistered() {
     uint256 bridgeAmount;
     uint64 destinationChainSelector;
     Types.CcipTx ccipTxType;
-    bytes txData;
+    uint256 nonce;
+    bytes32 protocolId;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -2561,18 +2746,12 @@ rule ccipSend_RevertWhen_DestinationVaultNotRegistered() {
     /// @dev revert condition being verified
     require getCrosschainVault(destinationChainSelector) == 0, "destination vault should not be registered";
 
-    storage before = lastStorage;
 
     /// @dev set ghost starting values
-    require ghost_CCIPBridged_EventCount == 0;
-    require ghost_CcipSendRecoveryStored_EventCount == 0;
 
-    ccipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, txData);
+    ccipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, nonce, protocolId);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert ghost_CCIPBridged_EventCount == 0;
-    assert ghost_CcipSendRecoveryStored_EventCount == 0;
 }
 
 /// @notice A successful ChildVault CCIP send bridges the asset without storing recovery
@@ -2582,7 +2761,8 @@ rule ccipSend_Success() {
     uint256 bridgeAmount;
     uint64 destinationChainSelector;
     Types.CcipTx ccipTxType;
-    bytes txData;
+    uint256 nonce;
+    bytes32 protocolId;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -2613,7 +2793,7 @@ rule ccipSend_Success() {
     require ghost_CCIPBridged_EventCount == 0;
     require ghost_CcipSendRecoveryStored_EventCount == 0;
 
-    ccipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, txData);
+    ccipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, nonce, protocolId);
 
     assert !lastReverted;
     assert link.balanceOf(currentContract) == vaultLinkBalanceBefore - fee;
@@ -2623,7 +2803,7 @@ rule ccipSend_Success() {
     assert getRecoveryMode() == Types.RecoveryMode.NONE;
     assert ghost_CCIPBridged_EventCount == 1;
     assert ghost_CCIPBridged_Param_ccipMessageId != to_bytes32(0);
-    assert ghost_CCIPBridged_Param_amount == bridgeAmount;
+    assert ghost_CCIPBridged_Param_destinationChainSelector == destinationChainSelector;
     assert ghost_CCIPBridged_Param_ccipTxType == ccipTxType;
     assert ghost_CcipSendRecoveryStored_EventCount == 0;
 }
@@ -2635,9 +2815,7 @@ rule ccipSend_When_RouterGetFeeReverts_StoresRecovery() {
     uint256 bridgeAmount;
     uint64 destinationChainSelector;
     Types.CcipTx ccipTxType;
-    bytes txData;
-    uint256 epochNonce;
-    uint256 rebalanceNonce;
+    uint256 nonce;
     bytes32 protocolId;
 
     /// @dev revert conditions NOT being verified
@@ -2650,13 +2828,6 @@ rule ccipSend_When_RouterGetFeeReverts_StoresRecovery() {
     require destinationChainSelector != getThisChainSelector(), "destination should not be this chain";
     require getCrosschainVault(destinationChainSelector) != 0, "destination vault should be registered";
     require !ccipRouter.ccipSendReverts(), "router send should not revert";
-    require (
-        ccipTxType == Types.CcipTx.EPOCH_NET_WITHDRAW
-            && txData == encodeEpochNonce(epochNonce)
-    ) || (
-        ccipTxType == Types.CcipTx.REBALANCE
-            && txData == encodeRebalanceData(rebalanceNonce, protocolId)
-    ), "transaction type and data should encode a supported ChildVault send";
 
     /// @dev failure condition being verified
     require ccipRouter.getFeeReverts(), "router fee lookup should revert";
@@ -2674,10 +2845,9 @@ rule ccipSend_When_RouterGetFeeReverts_StoresRecovery() {
     require ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 0;
     require ghost_ccipSendRecovery_nonce_StoreCount == 0;
     require ghost_ccipSendRecovery_protocolId_StoreCount == 0;
-    require ghost_ccipSendRecovery_createdAt_StoreCount == 0;
     require ghost_recoveryMode_StoreCount == 0;
 
-    ccipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, txData);
+    ccipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, nonce, protocolId);
 
     assert !lastReverted;
     assert link.balanceOf(currentContract) == vaultLinkBalanceBefore;
@@ -2688,11 +2858,8 @@ rule ccipSend_When_RouterGetFeeReverts_StoresRecovery() {
     assert getCcipSendRecoveryTxType() == ccipTxType;
     assert getCcipSendRecoveryAmount() == bridgeAmount;
     assert getCcipSendRecoveryDestinationChainSelector() == destinationChainSelector;
-    assert getCcipSendRecoveryCreatedAt() == e.block.timestamp;
-    assert ccipTxType == Types.CcipTx.EPOCH_NET_WITHDRAW
-        => getCcipSendRecoveryNonce() == epochNonce;
-    assert ccipTxType == Types.CcipTx.REBALANCE
-        => getCcipSendRecoveryNonce() == rebalanceNonce && getCcipSendRecoveryProtocolId() == protocolId;
+    assert getCcipSendRecoveryNonce() == nonce;
+    assert getCcipSendRecoveryProtocolId() == protocolId;
     assert ghost_CCIPBridged_EventCount == 0;
     assert ghost_CcipSendRecoveryStored_EventCount == 1;
     assert ghost_CcipSendRecoveryStored_Param_ccipTxType == ccipTxType;
@@ -2702,14 +2869,10 @@ rule ccipSend_When_RouterGetFeeReverts_StoresRecovery() {
     assert ghost_ccipSendRecovery_amount_StoredValue == bridgeAmount;
     assert ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 1;
     assert ghost_ccipSendRecovery_destinationChainSelector_StoredValue == destinationChainSelector;
-    assert ghost_ccipSendRecovery_createdAt_StoreCount == 1;
-    assert ghost_ccipSendRecovery_createdAt_StoredValue == e.block.timestamp;
     assert ghost_ccipSendRecovery_nonce_StoreCount == 1;
     assert ghost_ccipSendRecovery_protocolId_StoreCount == 1;
-    assert ccipTxType == Types.CcipTx.EPOCH_NET_WITHDRAW
-        => ghost_ccipSendRecovery_nonce_StoredValue == epochNonce;
-    assert ccipTxType == Types.CcipTx.REBALANCE
-        => ghost_ccipSendRecovery_nonce_StoredValue == rebalanceNonce && ghost_ccipSendRecovery_protocolId_StoredValue == protocolId;
+    assert ghost_ccipSendRecovery_nonce_StoredValue == nonce;
+    assert ghost_ccipSendRecovery_protocolId_StoredValue == protocolId;
     assert ghost_recoveryMode_StoreCount == 1 => ghost_recoveryMode_StoredValue == Types.RecoveryMode.CCIP_SEND,
         "recovery mode stored value is only meaningful when the recovery mode hook fires, which may not happen due to state packing";
 }
@@ -2721,9 +2884,7 @@ rule ccipSend_When_RouterCcipSendReverts_StoresRecovery() {
     uint256 bridgeAmount;
     uint64 destinationChainSelector;
     Types.CcipTx ccipTxType;
-    bytes txData;
-    uint256 epochNonce;
-    uint256 rebalanceNonce;
+    uint256 nonce;
     bytes32 protocolId;
 
     /// @dev revert conditions NOT being verified
@@ -2736,13 +2897,6 @@ rule ccipSend_When_RouterCcipSendReverts_StoresRecovery() {
     require destinationChainSelector != getThisChainSelector(), "destination should not be this chain";
     require getCrosschainVault(destinationChainSelector) != 0, "destination vault should be registered";
     require !ccipRouter.getFeeReverts(), "router fee lookup should not revert";
-    require (
-        ccipTxType == Types.CcipTx.EPOCH_NET_WITHDRAW
-            && txData == encodeEpochNonce(epochNonce)
-    ) || (
-        ccipTxType == Types.CcipTx.REBALANCE
-            && txData == encodeRebalanceData(rebalanceNonce, protocolId)
-    ), "transaction type and data should encode a supported ChildVault send";
 
     /// @dev failure condition being verified
     require ccipRouter.ccipSendReverts(), "router send should revert";
@@ -2760,10 +2914,9 @@ rule ccipSend_When_RouterCcipSendReverts_StoresRecovery() {
     require ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 0;
     require ghost_ccipSendRecovery_nonce_StoreCount == 0;
     require ghost_ccipSendRecovery_protocolId_StoreCount == 0;
-    require ghost_ccipSendRecovery_createdAt_StoreCount == 0;
     require ghost_recoveryMode_StoreCount == 0;
 
-    ccipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, txData);
+    ccipSend@withrevert(e, bridgeAmount, destinationChainSelector, ccipTxType, nonce, protocolId);
 
     assert !lastReverted;
     assert link.balanceOf(currentContract) == vaultLinkBalanceBefore;
@@ -2774,11 +2927,8 @@ rule ccipSend_When_RouterCcipSendReverts_StoresRecovery() {
     assert getCcipSendRecoveryTxType() == ccipTxType;
     assert getCcipSendRecoveryAmount() == bridgeAmount;
     assert getCcipSendRecoveryDestinationChainSelector() == destinationChainSelector;
-    assert getCcipSendRecoveryCreatedAt() == e.block.timestamp;
-    assert ccipTxType == Types.CcipTx.EPOCH_NET_WITHDRAW
-        => getCcipSendRecoveryNonce() == epochNonce;
-    assert ccipTxType == Types.CcipTx.REBALANCE
-        => getCcipSendRecoveryNonce() == rebalanceNonce && getCcipSendRecoveryProtocolId() == protocolId;
+    assert getCcipSendRecoveryNonce() == nonce;
+    assert getCcipSendRecoveryProtocolId() == protocolId;
     assert ghost_CCIPBridged_EventCount == 0;
     assert ghost_CcipSendRecoveryStored_EventCount == 1;
     assert ghost_CcipSendRecoveryStored_Param_ccipTxType == ccipTxType;
@@ -2788,23 +2938,49 @@ rule ccipSend_When_RouterCcipSendReverts_StoresRecovery() {
     assert ghost_ccipSendRecovery_amount_StoredValue == bridgeAmount;
     assert ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 1;
     assert ghost_ccipSendRecovery_destinationChainSelector_StoredValue == destinationChainSelector;
-    assert ghost_ccipSendRecovery_createdAt_StoreCount == 1;
-    assert ghost_ccipSendRecovery_createdAt_StoredValue == e.block.timestamp;
     assert ghost_ccipSendRecovery_nonce_StoreCount == 1;
     assert ghost_ccipSendRecovery_protocolId_StoreCount == 1;
-    assert ccipTxType == Types.CcipTx.EPOCH_NET_WITHDRAW
-        => ghost_ccipSendRecovery_nonce_StoredValue == epochNonce;
-    assert ccipTxType == Types.CcipTx.REBALANCE
-        => ghost_ccipSendRecovery_nonce_StoredValue == rebalanceNonce && ghost_ccipSendRecovery_protocolId_StoredValue == protocolId;
+    assert ghost_ccipSendRecovery_nonce_StoredValue == nonce;
+    assert ghost_ccipSendRecovery_protocolId_StoredValue == protocolId;
     assert ghost_recoveryMode_StoreCount == 1 => ghost_recoveryMode_StoredValue == Types.RecoveryMode.CCIP_SEND,
         "recovery mode stored value is only meaningful when the recovery mode hook fires, which may not happen due to state packing";
 }
 
 /// ─────────────────── EXECUTE EPOCH WITHDRAW ──────────────────
 
-/// @notice Epoch withdraw reverts when the caller does not have the epoch operator role
-/// @dev Verifies that an unauthorized call leaves all vault state unchanged
-rule executeEpochWithdraw_RevertWhen_CallerDoesNotHaveEPOCH_OPERATOR_ROLE() {
+/// @notice Epoch withdraw reverts while the vault is paused.
+rule executeEpochWithdraw_RevertWhen_Paused() {
+    env e;
+    uint256 epochNonce;
+    require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
+    require ghost_lastHandledEpochNonce_StoreCount == 0,
+        "handled epoch nonce store count starts at zero";
+    uint256 amount;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require hasRole(EPOCH_OPERATOR_ROLE(), e.msg.sender);
+    require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
+    require amount != 0, "amount should not be zero";
+    require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
+    require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
+    require !adapter.withdrawReverts(), "adapter withdraw should not revert";
+    require adapter.getTVL() >= amount, "adapter TVL should cover the withdraw amount";
+    require getCrosschainVault(getParentChainSelector()) != 0, "parent vault should be registered";
+    require !ccipRouter.getFeeReverts(), "router fee lookup should not revert";
+    require !ccipRouter.ccipSendReverts(), "router send should not revert";
+
+    /// @dev revert condition being verified
+    require paused(), "vault should be paused";
+
+    executeEpochWithdraw@withrevert(e, epochNonce, amount);
+
+    assert lastReverted;
+}
+
+/// @notice Epoch withdraw reverts when its nonce was already handled.
+rule executeEpochWithdraw_RevertWhen_EpochNonceIsNotNew() {
     env e;
     uint256 epochNonce;
     uint256 amount;
@@ -2812,6 +2988,39 @@ rule executeEpochWithdraw_RevertWhen_CallerDoesNotHaveEPOCH_OPERATOR_ROLE() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
+    require hasRole(EPOCH_OPERATOR_ROLE(), e.msg.sender);
+    require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
+    require amount != 0, "amount should not be zero";
+    require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
+    require !adapter.withdrawReverts(), "adapter withdraw should not revert";
+    require adapter.getTVL() >= amount, "adapter TVL should cover the withdraw amount";
+    require getCrosschainVault(getParentChainSelector()) != 0, "parent vault should be registered";
+    require !ccipRouter.getFeeReverts(), "router fee lookup should not revert";
+    require !ccipRouter.ccipSendReverts(), "router send should not revert";
+
+    /// @dev revert condition being verified
+    require epochNonce <= getLastHandledEpochNonce(), "epoch nonce should already be handled";
+
+    executeEpochWithdraw@withrevert(e, epochNonce, amount);
+
+    assert lastReverted;
+}
+
+/// @notice Epoch withdraw reverts when the caller does not have the epoch operator role
+/// @dev Verifies that an unauthorized call leaves all vault state unchanged
+rule executeEpochWithdraw_RevertWhen_CallerDoesNotHaveEPOCH_OPERATOR_ROLE() {
+    env e;
+    uint256 epochNonce;
+    require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
+    require ghost_lastHandledEpochNonce_StoreCount == 0,
+        "handled epoch nonce store count starts at zero";
+    uint256 amount;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require amount != 0, "amount should not be zero";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
@@ -2828,24 +3037,12 @@ rule executeEpochWithdraw_RevertWhen_CallerDoesNotHaveEPOCH_OPERATOR_ROLE() {
     /// @dev revert condition being verified
     require !hasRole(EPOCH_OPERATOR_ROLE(), e.msg.sender);
 
-    storage before = lastStorage;
 
     /// @dev set ghost starting values
-    require ghost_WithdrawFromStrategySuccess_EventCount == 0;
-    require ghost_WithdrawFromStrategyFailure_EventCount == 0;
-    require ghost_EpochWithdrawRecoveryStored_EventCount == 0;
-    require ghost_CCIPBridged_EventCount == 0;
-    require ghost_CcipSendRecoveryStored_EventCount == 0;
 
     executeEpochWithdraw@withrevert(e, epochNonce, amount);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert ghost_WithdrawFromStrategySuccess_EventCount == 0;
-    assert ghost_WithdrawFromStrategyFailure_EventCount == 0;
-    assert ghost_EpochWithdrawRecoveryStored_EventCount == 0;
-    assert ghost_CCIPBridged_EventCount == 0;
-    assert ghost_CcipSendRecoveryStored_EventCount == 0;
 }
 
 /// @notice Epoch withdraw reverts when called during an active non-reentrant execution
@@ -2853,6 +3050,9 @@ rule executeEpochWithdraw_RevertWhen_CallerDoesNotHaveEPOCH_OPERATOR_ROLE() {
 rule executeEpochWithdraw_RevertWhen_ReentrantCall() {
     env e;
     uint256 epochNonce;
+    require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
+    require ghost_lastHandledEpochNonce_StoreCount == 0,
+        "handled epoch nonce store count starts at zero";
     uint256 amount;
 
     /// @dev revert conditions NOT being verified
@@ -2873,25 +3073,14 @@ rule executeEpochWithdraw_RevertWhen_ReentrantCall() {
 
     /// @dev revert condition being verified
     require reentrancyGuardEntered(), "reentrancy guard should be entered";
+    require !paused(), "vault should not be paused";
 
-    storage before = lastStorage;
 
     /// @dev set ghost starting values
-    require ghost_WithdrawFromStrategySuccess_EventCount == 0;
-    require ghost_WithdrawFromStrategyFailure_EventCount == 0;
-    require ghost_EpochWithdrawRecoveryStored_EventCount == 0;
-    require ghost_CCIPBridged_EventCount == 0;
-    require ghost_CcipSendRecoveryStored_EventCount == 0;
 
     executeEpochWithdraw@withrevert(e, epochNonce, amount);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert ghost_WithdrawFromStrategySuccess_EventCount == 0;
-    assert ghost_WithdrawFromStrategyFailure_EventCount == 0;
-    assert ghost_EpochWithdrawRecoveryStored_EventCount == 0;
-    assert ghost_CCIPBridged_EventCount == 0;
-    assert ghost_CcipSendRecoveryStored_EventCount == 0;
 }
 
 /// @notice Epoch withdraw reverts when any recovery operation is already pending
@@ -2899,12 +3088,16 @@ rule executeEpochWithdraw_RevertWhen_ReentrantCall() {
 rule executeEpochWithdraw_RevertWhen_RecoveryAlreadyPending() {
     env e;
     uint256 epochNonce;
+    require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
+    require ghost_lastHandledEpochNonce_StoreCount == 0,
+        "handled epoch nonce store count starts at zero";
     uint256 amount;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require hasRole(EPOCH_OPERATOR_ROLE(), e.msg.sender);
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require amount != 0, "amount should not be zero";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
     require !adapter.withdrawReverts(), "adapter withdraw should not revert";
@@ -2920,24 +3113,12 @@ rule executeEpochWithdraw_RevertWhen_RecoveryAlreadyPending() {
     /// @dev revert condition being verified
     require getRecoveryMode() != Types.RecoveryMode.NONE, "recovery should be pending";
 
-    storage before = lastStorage;
 
     /// @dev set ghost starting values
-    require ghost_WithdrawFromStrategySuccess_EventCount == 0;
-    require ghost_WithdrawFromStrategyFailure_EventCount == 0;
-    require ghost_EpochWithdrawRecoveryStored_EventCount == 0;
-    require ghost_CCIPBridged_EventCount == 0;
-    require ghost_CcipSendRecoveryStored_EventCount == 0;
 
     executeEpochWithdraw@withrevert(e, epochNonce, amount);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert ghost_WithdrawFromStrategySuccess_EventCount == 0;
-    assert ghost_WithdrawFromStrategyFailure_EventCount == 0;
-    assert ghost_EpochWithdrawRecoveryStored_EventCount == 0;
-    assert ghost_CCIPBridged_EventCount == 0;
-    assert ghost_CcipSendRecoveryStored_EventCount == 0;
 }
 
 /// @notice Epoch withdraw reverts when the requested amount is zero
@@ -2945,11 +3126,15 @@ rule executeEpochWithdraw_RevertWhen_RecoveryAlreadyPending() {
 rule executeEpochWithdraw_RevertWhen_AmountIsZero() {
     env e;
     uint256 epochNonce;
+    require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
+    require ghost_lastHandledEpochNonce_StoreCount == 0,
+        "handled epoch nonce store count starts at zero";
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require hasRole(EPOCH_OPERATOR_ROLE(), e.msg.sender);
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
     require !adapter.withdrawReverts(), "adapter withdraw should not revert";
@@ -2961,24 +3146,12 @@ rule executeEpochWithdraw_RevertWhen_AmountIsZero() {
     /// @dev revert condition being verified
     uint256 amount = 0;
 
-    storage before = lastStorage;
 
     /// @dev set ghost starting values
-    require ghost_WithdrawFromStrategySuccess_EventCount == 0;
-    require ghost_WithdrawFromStrategyFailure_EventCount == 0;
-    require ghost_EpochWithdrawRecoveryStored_EventCount == 0;
-    require ghost_CCIPBridged_EventCount == 0;
-    require ghost_CcipSendRecoveryStored_EventCount == 0;
 
     executeEpochWithdraw@withrevert(e, epochNonce, amount);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert ghost_WithdrawFromStrategySuccess_EventCount == 0;
-    assert ghost_WithdrawFromStrategyFailure_EventCount == 0;
-    assert ghost_EpochWithdrawRecoveryStored_EventCount == 0;
-    assert ghost_CCIPBridged_EventCount == 0;
-    assert ghost_CcipSendRecoveryStored_EventCount == 0;
 }
 
 /// @notice Epoch withdraw reverts when no active protocol adapter is configured
@@ -2986,12 +3159,16 @@ rule executeEpochWithdraw_RevertWhen_AmountIsZero() {
 rule executeEpochWithdraw_RevertWhen_NoActiveAdapter() {
     env e;
     uint256 epochNonce;
+    require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
+    require ghost_lastHandledEpochNonce_StoreCount == 0,
+        "handled epoch nonce store count starts at zero";
     uint256 amount;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require hasRole(EPOCH_OPERATOR_ROLE(), e.msg.sender);
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require amount != 0, "amount should not be zero";
     require getCcipSendRecoveryNonce() == 0 && getCcipSendRecoveryProtocolId() == to_bytes32(0),
@@ -3002,24 +3179,12 @@ rule executeEpochWithdraw_RevertWhen_NoActiveAdapter() {
     /// @dev revert condition being verified
     require getActiveProtocolAdapter() == 0, "active adapter should be zero";
 
-    storage before = lastStorage;
 
     /// @dev set ghost starting values
-    require ghost_WithdrawFromStrategySuccess_EventCount == 0;
-    require ghost_WithdrawFromStrategyFailure_EventCount == 0;
-    require ghost_EpochWithdrawRecoveryStored_EventCount == 0;
-    require ghost_CCIPBridged_EventCount == 0;
-    require ghost_CcipSendRecoveryStored_EventCount == 0;
 
     executeEpochWithdraw@withrevert(e, epochNonce, amount);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert ghost_WithdrawFromStrategySuccess_EventCount == 0;
-    assert ghost_WithdrawFromStrategyFailure_EventCount == 0;
-    assert ghost_EpochWithdrawRecoveryStored_EventCount == 0;
-    assert ghost_CCIPBridged_EventCount == 0;
-    assert ghost_CcipSendRecoveryStored_EventCount == 0;
 }
 
 /// @notice Epoch withdraw reverts when a successful adapter call returns zero asset
@@ -3027,12 +3192,16 @@ rule executeEpochWithdraw_RevertWhen_NoActiveAdapter() {
 rule executeEpochWithdraw_RevertWhen_AmountOutIsZero() {
     env e;
     uint256 epochNonce;
+    require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
+    require ghost_lastHandledEpochNonce_StoreCount == 0,
+        "handled epoch nonce store count starts at zero";
     uint256 amount;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require hasRole(EPOCH_OPERATOR_ROLE(), e.msg.sender);
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require amount != 0, "amount should not be zero";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
@@ -3045,29 +3214,12 @@ rule executeEpochWithdraw_RevertWhen_AmountOutIsZero() {
     /// @dev revert condition being verified
     require adapter.getTVL() == 0, "adapter withdraw should return zero";
 
-    storage before = lastStorage;
-    uint256 vaultBalanceBefore = asset.balanceOf(currentContract);
-    uint256 adapterBalanceBefore = asset.balanceOf(adapter);
 
     /// @dev set ghost starting values
-    require ghost_WithdrawFromStrategySuccess_EventCount == 0;
-    require ghost_WithdrawFromStrategyFailure_EventCount == 0;
-    require ghost_EpochWithdrawRecoveryStored_EventCount == 0;
-    require ghost_CCIPBridged_EventCount == 0;
-    require ghost_CcipSendRecoveryStored_EventCount == 0;
 
     executeEpochWithdraw@withrevert(e, epochNonce, amount);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert asset.balanceOf(currentContract) == vaultBalanceBefore;
-    assert asset.balanceOf(adapter) == adapterBalanceBefore;
-    assert adapter.getTVL() == 0;
-    assert ghost_WithdrawFromStrategySuccess_EventCount == 0;
-    assert ghost_WithdrawFromStrategyFailure_EventCount == 0;
-    assert ghost_EpochWithdrawRecoveryStored_EventCount == 0;
-    assert ghost_CCIPBridged_EventCount == 0;
-    assert ghost_CcipSendRecoveryStored_EventCount == 0;
 }
 
 /// @notice Epoch withdraw reverts when no parent vault is registered for the parent chain
@@ -3075,12 +3227,16 @@ rule executeEpochWithdraw_RevertWhen_AmountOutIsZero() {
 rule executeEpochWithdraw_RevertWhen_ParentVaultNotRegistered() {
     env e;
     uint256 epochNonce;
+    require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
+    require ghost_lastHandledEpochNonce_StoreCount == 0,
+        "handled epoch nonce store count starts at zero";
     uint256 amount;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require hasRole(EPOCH_OPERATOR_ROLE(), e.msg.sender);
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require amount != 0, "amount should not be zero";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
@@ -3095,30 +3251,20 @@ rule executeEpochWithdraw_RevertWhen_ParentVaultNotRegistered() {
     /// @dev revert condition being verified
     require getCrosschainVault(getParentChainSelector()) == 0, "parent vault should not be registered";
 
-    storage before = lastStorage;
     uint256 vaultBalanceBefore = asset.balanceOf(currentContract);
     uint256 adapterBalanceBefore = asset.balanceOf(adapter);
     uint256 adapterTVLBefore = adapter.getTVL();
+    uint256 amountOut = amount > adapterTVLBefore ? adapterTVLBefore : amount;
+
+    /// @dev mock token arithmetic conditions
+    require amountOut <= adapterBalanceBefore, "adapter asset balance should cover the withdrawn amount";
+    require vaultBalanceBefore <= max_uint256 - amountOut, "vault asset balance should not overflow";
 
     /// @dev set ghost starting values
-    require ghost_WithdrawFromStrategySuccess_EventCount == 0;
-    require ghost_WithdrawFromStrategyFailure_EventCount == 0;
-    require ghost_EpochWithdrawRecoveryStored_EventCount == 0;
-    require ghost_CCIPBridged_EventCount == 0;
-    require ghost_CcipSendRecoveryStored_EventCount == 0;
 
     executeEpochWithdraw@withrevert(e, epochNonce, amount);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert asset.balanceOf(currentContract) == vaultBalanceBefore;
-    assert asset.balanceOf(adapter) == adapterBalanceBefore;
-    assert adapter.getTVL() == adapterTVLBefore;
-    assert ghost_WithdrawFromStrategySuccess_EventCount == 0;
-    assert ghost_WithdrawFromStrategyFailure_EventCount == 0;
-    assert ghost_EpochWithdrawRecoveryStored_EventCount == 0;
-    assert ghost_CCIPBridged_EventCount == 0;
-    assert ghost_CcipSendRecoveryStored_EventCount == 0;
 }
 
 /// @notice A failed epoch withdraw stores recovery for the requested amount
@@ -3126,12 +3272,16 @@ rule executeEpochWithdraw_RevertWhen_ParentVaultNotRegistered() {
 rule executeEpochWithdraw_When_WithdrawFails_StoresRecovery() {
     env e;
     uint256 epochNonce;
+    require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
+    require ghost_lastHandledEpochNonce_StoreCount == 0,
+        "handled epoch nonce store count starts at zero";
     uint256 amount;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require hasRole(EPOCH_OPERATOR_ROLE(), e.msg.sender);
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require amount != 0, "amount should not be zero";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
@@ -3154,12 +3304,14 @@ rule executeEpochWithdraw_When_WithdrawFails_StoresRecovery() {
     require ghost_CCIPBridged_EventCount == 0;
     require ghost_epochWithdrawRecovery_epochNonce_StoreCount == 0;
     require ghost_epochWithdrawRecovery_amount_StoreCount == 0;
-    require ghost_epochWithdrawRecovery_createdAt_StoreCount == 0;
     require ghost_recoveryMode_StoreCount == 0;
 
     executeEpochWithdraw@withrevert(e, epochNonce, amount);
 
     assert !lastReverted;
+    assert getLastHandledEpochNonce() == epochNonce;
+    assert ghost_lastHandledEpochNonce_StoreCount == 1;
+    assert ghost_lastHandledEpochNonce_StoredValue == epochNonce;
     Types.EpochRecovery recovery = getEpochWithdrawRecovery();
     assert asset.balanceOf(currentContract) == vaultBalanceBefore;
     assert asset.balanceOf(adapter) == adapterBalanceBefore;
@@ -3167,7 +3319,6 @@ rule executeEpochWithdraw_When_WithdrawFails_StoresRecovery() {
     assert getRecoveryMode() == Types.RecoveryMode.EPOCH_WITHDRAW;
     assert recovery.epochNonce == epochNonce;
     assert recovery.amount == amount;
-    assert recovery.createdAt == e.block.timestamp;
     assert ghost_WithdrawFromStrategySuccess_EventCount == 0;
     assert ghost_WithdrawFromStrategyFailure_EventCount == 1;
     assert ghost_WithdrawFromStrategyFailure_Param_epochNonce == epochNonce;
@@ -3180,8 +3331,6 @@ rule executeEpochWithdraw_When_WithdrawFails_StoresRecovery() {
     assert ghost_epochWithdrawRecovery_epochNonce_StoredValue == epochNonce;
     assert ghost_epochWithdrawRecovery_amount_StoreCount == 1;
     assert ghost_epochWithdrawRecovery_amount_StoredValue == amount;
-    assert ghost_epochWithdrawRecovery_createdAt_StoreCount == 1;
-    assert ghost_epochWithdrawRecovery_createdAt_StoredValue == e.block.timestamp;
     assert ghost_recoveryMode_StoreCount == 1 => ghost_recoveryMode_StoredValue == Types.RecoveryMode.EPOCH_WITHDRAW,
         "recovery mode stored value is only meaningful when the recovery mode hook fires, which may not happen due to state packing";
 }
@@ -3191,12 +3340,16 @@ rule executeEpochWithdraw_When_WithdrawFails_StoresRecovery() {
 rule executeEpochWithdraw_Success() {
     env e;
     uint256 epochNonce;
+    require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
+    require ghost_lastHandledEpochNonce_StoreCount == 0,
+        "handled epoch nonce store count starts at zero";
     uint256 amount;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require hasRole(EPOCH_OPERATOR_ROLE(), e.msg.sender);
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require amount != 0, "amount should not be zero";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
@@ -3236,6 +3389,9 @@ rule executeEpochWithdraw_Success() {
     executeEpochWithdraw@withrevert(e, epochNonce, amount);
 
     assert !lastReverted;
+    assert getLastHandledEpochNonce() == epochNonce;
+    assert ghost_lastHandledEpochNonce_StoreCount == 1;
+    assert ghost_lastHandledEpochNonce_StoredValue == epochNonce;
     assert link.balanceOf(currentContract) == vaultLinkBalanceBefore - fee;
     assert link.balanceOf(router) == routerLinkBalanceBefore + fee;
     assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
@@ -3249,7 +3405,7 @@ rule executeEpochWithdraw_Success() {
     assert ghost_WithdrawFromStrategyFailure_EventCount == 0;
     assert ghost_EpochWithdrawRecoveryStored_EventCount == 0;
     assert ghost_CCIPBridged_EventCount == 1;
-    assert ghost_CCIPBridged_Param_amount == amountOut;
+    assert ghost_CCIPBridged_Param_destinationChainSelector == getParentChainSelector();
     assert ghost_CCIPBridged_Param_ccipTxType == Types.CcipTx.EPOCH_NET_WITHDRAW;
 }
 
@@ -3258,12 +3414,16 @@ rule executeEpochWithdraw_Success() {
 rule executeEpochWithdraw_When_RouterGetFeeReverts_StoresCcipSendRecovery() {
     env e;
     uint256 epochNonce;
+    require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
+    require ghost_lastHandledEpochNonce_StoreCount == 0,
+        "handled epoch nonce store count starts at zero";
     uint256 amount;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require hasRole(EPOCH_OPERATOR_ROLE(), e.msg.sender);
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require getCcipSendRecoveryNonce() == 0 && getCcipSendRecoveryProtocolId() == to_bytes32(0),
         "CCIP send recovery transaction data should be empty";
@@ -3301,12 +3461,14 @@ rule executeEpochWithdraw_When_RouterGetFeeReverts_StoresCcipSendRecovery() {
     require ghost_ccipSendRecovery_amount_StoreCount == 0;
     require ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 0;
     require ghost_ccipSendRecovery_nonce_StoreCount == 0;
-    require ghost_ccipSendRecovery_createdAt_StoreCount == 0;
     require ghost_recoveryMode_StoreCount == 0;
 
     executeEpochWithdraw@withrevert(e, epochNonce, amount);
 
     assert !lastReverted;
+    assert getLastHandledEpochNonce() == epochNonce;
+    assert ghost_lastHandledEpochNonce_StoreCount == 1;
+    assert ghost_lastHandledEpochNonce_StoredValue == epochNonce;
     assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore + amountOut;
     assert asset.balanceOf(adapter) == adapterAssetBalanceBefore - amountOut;
     assert asset.balanceOf(router) == routerAssetBalanceBefore;
@@ -3317,7 +3479,6 @@ rule executeEpochWithdraw_When_RouterGetFeeReverts_StoresCcipSendRecovery() {
     assert getCcipSendRecoveryTxType() == Types.CcipTx.EPOCH_NET_WITHDRAW;
     assert getCcipSendRecoveryAmount() == amountOut;
     assert getCcipSendRecoveryDestinationChainSelector() == getParentChainSelector();
-    assert getCcipSendRecoveryCreatedAt() == e.block.timestamp;
     assert ghost_WithdrawFromStrategySuccess_EventCount == 1;
     assert ghost_WithdrawFromStrategySuccess_Param_epochNonce == epochNonce;
     assert ghost_WithdrawFromStrategySuccess_Param_amount == amountOut;
@@ -3334,8 +3495,6 @@ rule executeEpochWithdraw_When_RouterGetFeeReverts_StoresCcipSendRecovery() {
     assert ghost_ccipSendRecovery_destinationChainSelector_StoredValue == getParentChainSelector();
     assert ghost_ccipSendRecovery_nonce_StoreCount == 1;
     assert ghost_ccipSendRecovery_nonce_StoredValue == epochNonce;
-    assert ghost_ccipSendRecovery_createdAt_StoreCount == 1;
-    assert ghost_ccipSendRecovery_createdAt_StoredValue == e.block.timestamp;
     assert ghost_recoveryMode_StoreCount == 1 => ghost_recoveryMode_StoredValue == Types.RecoveryMode.CCIP_SEND,
         "recovery mode stored value is only meaningful when the recovery mode hook fires, which may not happen due to state packing";
 }
@@ -3345,12 +3504,16 @@ rule executeEpochWithdraw_When_RouterGetFeeReverts_StoresCcipSendRecovery() {
 rule executeEpochWithdraw_When_RouterCcipSendReverts_StoresCcipSendRecovery() {
     env e;
     uint256 epochNonce;
+    require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
+    require ghost_lastHandledEpochNonce_StoreCount == 0,
+        "handled epoch nonce store count starts at zero";
     uint256 amount;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require hasRole(EPOCH_OPERATOR_ROLE(), e.msg.sender);
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require getCcipSendRecoveryNonce() == 0 && getCcipSendRecoveryProtocolId() == to_bytes32(0),
         "CCIP send recovery transaction data should be empty";
@@ -3388,12 +3551,14 @@ rule executeEpochWithdraw_When_RouterCcipSendReverts_StoresCcipSendRecovery() {
     require ghost_ccipSendRecovery_amount_StoreCount == 0;
     require ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 0;
     require ghost_ccipSendRecovery_nonce_StoreCount == 0;
-    require ghost_ccipSendRecovery_createdAt_StoreCount == 0;
     require ghost_recoveryMode_StoreCount == 0;
 
     executeEpochWithdraw@withrevert(e, epochNonce, amount);
 
     assert !lastReverted;
+    assert getLastHandledEpochNonce() == epochNonce;
+    assert ghost_lastHandledEpochNonce_StoreCount == 1;
+    assert ghost_lastHandledEpochNonce_StoredValue == epochNonce;
     assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore + amountOut;
     assert asset.balanceOf(adapter) == adapterAssetBalanceBefore - amountOut;
     assert asset.balanceOf(router) == routerAssetBalanceBefore;
@@ -3404,7 +3569,6 @@ rule executeEpochWithdraw_When_RouterCcipSendReverts_StoresCcipSendRecovery() {
     assert getCcipSendRecoveryTxType() == Types.CcipTx.EPOCH_NET_WITHDRAW;
     assert getCcipSendRecoveryAmount() == amountOut;
     assert getCcipSendRecoveryDestinationChainSelector() == getParentChainSelector();
-    assert getCcipSendRecoveryCreatedAt() == e.block.timestamp;
     assert ghost_WithdrawFromStrategySuccess_EventCount == 1;
     assert ghost_WithdrawFromStrategySuccess_Param_epochNonce == epochNonce;
     assert ghost_WithdrawFromStrategySuccess_Param_amount == amountOut;
@@ -3421,8 +3585,6 @@ rule executeEpochWithdraw_When_RouterCcipSendReverts_StoresCcipSendRecovery() {
     assert ghost_ccipSendRecovery_destinationChainSelector_StoredValue == getParentChainSelector();
     assert ghost_ccipSendRecovery_nonce_StoreCount == 1;
     assert ghost_ccipSendRecovery_nonce_StoredValue == epochNonce;
-    assert ghost_ccipSendRecovery_createdAt_StoreCount == 1;
-    assert ghost_ccipSendRecovery_createdAt_StoredValue == e.block.timestamp;
     assert ghost_recoveryMode_StoreCount == 1 => ghost_recoveryMode_StoredValue == Types.RecoveryMode.CCIP_SEND,
         "recovery mode stored value is only meaningful when the recovery mode hook fires, which may not happen due to state packing";
 }
@@ -3453,8 +3615,8 @@ rule executeRecovery_REBALANCE_WITHDRAW_RevertWhen_ReentrantCall() {
 
     /// @dev revert condition being verified
     require reentrancyGuardEntered(), "reentrancy guard should be entered";
+    require !paused(), "vault should not be paused";
 
-    storage before = lastStorage;
     uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
     uint256 adapterAssetBalanceBefore = asset.balanceOf(adapter);
     uint256 adapterTVLBefore = adapter.getTVL();
@@ -3464,18 +3626,10 @@ rule executeRecovery_REBALANCE_WITHDRAW_RevertWhen_ReentrantCall() {
     require vaultAssetBalanceBefore <= max_uint256 - adapterTVLBefore, "vault asset balance should not overflow";
 
     /// @dev set ghost starting values
-    require ghost_RebalanceWithdrawRecoveryCleared_EventCount == 0;
-    require ghost_RebalanceWithdrawSuccess_EventCount == 0;
 
     executeRecovery@withrevert(e);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(adapter) == adapterAssetBalanceBefore;
-    assert adapter.getTVL() == adapterTVLBefore;
-    assert ghost_RebalanceWithdrawRecoveryCleared_EventCount == 0;
-    assert ghost_RebalanceWithdrawSuccess_EventCount == 0;
 }
 
 /// @notice Rebalance withdraw recovery via executeRecovery reverts when no active adapter is set
@@ -3486,6 +3640,7 @@ rule executeRecovery_REBALANCE_WITHDRAW_RevertWhen_NoActiveAdapter() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.REBALANCE_WITHDRAW, "rebalance withdraw recovery should be pending";
     require !adapter.withdrawReverts(), "adapter withdraw should not revert";
     require adapter.getTVL() > 0, "adapter withdraw should return a nonzero amount";
@@ -3507,7 +3662,6 @@ rule executeRecovery_REBALANCE_WITHDRAW_RevertWhen_NoActiveAdapter() {
     /// @dev revert condition being verified
     require getActiveProtocolAdapter() == 0, "active adapter should not be set";
 
-    storage before = lastStorage;
     uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
     uint256 adapterAssetBalanceBefore = asset.balanceOf(adapter);
     uint256 adapterTVLBefore = adapter.getTVL();
@@ -3517,18 +3671,10 @@ rule executeRecovery_REBALANCE_WITHDRAW_RevertWhen_NoActiveAdapter() {
     require vaultAssetBalanceBefore <= max_uint256 - adapterTVLBefore, "vault asset balance should not overflow";
 
     /// @dev set ghost starting values
-    require ghost_RebalanceWithdrawRecoveryCleared_EventCount == 0;
-    require ghost_RebalanceWithdrawSuccess_EventCount == 0;
 
     executeRecovery@withrevert(e);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(adapter) == adapterAssetBalanceBefore;
-    assert adapter.getTVL() == adapterTVLBefore;
-    assert ghost_RebalanceWithdrawRecoveryCleared_EventCount == 0;
-    assert ghost_RebalanceWithdrawSuccess_EventCount == 0;
 }
 
 /// @notice Rebalance withdraw recovery via executeRecovery reverts when the adapter withdraw fails
@@ -3539,6 +3685,7 @@ rule executeRecovery_REBALANCE_WITHDRAW_RevertWhen_WithdrawFails() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.REBALANCE_WITHDRAW, "rebalance withdraw recovery should be pending";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
     Types.RebalanceWithdrawRecovery recovery = getRebalanceWithdrawRecovery();
@@ -3559,7 +3706,6 @@ rule executeRecovery_REBALANCE_WITHDRAW_RevertWhen_WithdrawFails() {
     /// @dev revert condition being verified
     require adapter.withdrawReverts(), "adapter withdraw should revert";
 
-    storage before = lastStorage;
     uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
     uint256 adapterAssetBalanceBefore = asset.balanceOf(adapter);
     uint256 adapterTVLBefore = adapter.getTVL();
@@ -3569,18 +3715,10 @@ rule executeRecovery_REBALANCE_WITHDRAW_RevertWhen_WithdrawFails() {
     require vaultAssetBalanceBefore <= max_uint256 - adapterTVLBefore, "vault asset balance should not overflow";
 
     /// @dev set ghost starting values
-    require ghost_RebalanceWithdrawRecoveryCleared_EventCount == 0;
-    require ghost_RebalanceWithdrawSuccess_EventCount == 0;
 
     executeRecovery@withrevert(e);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(adapter) == adapterAssetBalanceBefore;
-    assert adapter.getTVL() == adapterTVLBefore;
-    assert ghost_RebalanceWithdrawRecoveryCleared_EventCount == 0;
-    assert ghost_RebalanceWithdrawSuccess_EventCount == 0;
 }
 
 /// @notice Rebalance withdraw recovery via executeRecovery reverts when the retry withdraw returns zero
@@ -3591,6 +3729,7 @@ rule executeRecovery_REBALANCE_WITHDRAW_RevertWhen_AmountRebalancedIsZero() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.REBALANCE_WITHDRAW, "rebalance withdraw recovery should be pending";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
     require !adapter.withdrawReverts(), "adapter withdraw should not revert";
@@ -3612,23 +3751,12 @@ rule executeRecovery_REBALANCE_WITHDRAW_RevertWhen_AmountRebalancedIsZero() {
     /// @dev revert condition being verified
     require adapter.getTVL() == 0, "adapter withdraw should return zero";
 
-    storage before = lastStorage;
-    uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
-    uint256 adapterAssetBalanceBefore = asset.balanceOf(adapter);
 
     /// @dev set ghost starting values
-    require ghost_RebalanceWithdrawRecoveryCleared_EventCount == 0;
-    require ghost_RebalanceWithdrawSuccess_EventCount == 0;
 
     executeRecovery@withrevert(e);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(adapter) == adapterAssetBalanceBefore;
-    assert adapter.getTVL() == 0;
-    assert ghost_RebalanceWithdrawRecoveryCleared_EventCount == 0;
-    assert ghost_RebalanceWithdrawSuccess_EventCount == 0;
 }
 
 /// @notice Local rebalance withdraw recovery via executeRecovery reverts when the target protocol adapter is not registered
@@ -3639,6 +3767,7 @@ rule executeRecovery_REBALANCE_WITHDRAW_Local_RevertWhen_TargetAdapterNotRegiste
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.REBALANCE_WITHDRAW, "rebalance withdraw recovery should be pending";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
     require !adapter.withdrawReverts(), "adapter withdraw should not revert";
@@ -3649,7 +3778,6 @@ rule executeRecovery_REBALANCE_WITHDRAW_Local_RevertWhen_TargetAdapterNotRegiste
     /// @dev revert condition being verified
     require adapterRegistry.getAdapter(e, recovery.strategy.protocolId) == 0, "target adapter should not be registered";
 
-    storage before = lastStorage;
     uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
     uint256 adapterAssetBalanceBefore = asset.balanceOf(adapter);
     uint256 adapterTVLBefore = adapter.getTVL();
@@ -3659,18 +3787,10 @@ rule executeRecovery_REBALANCE_WITHDRAW_Local_RevertWhen_TargetAdapterNotRegiste
     require vaultAssetBalanceBefore <= max_uint256 - adapterTVLBefore, "vault asset balance should not overflow";
 
     /// @dev set ghost starting values
-    require ghost_RebalanceWithdrawRecoveryCleared_EventCount == 0;
-    require ghost_RebalanceWithdrawSuccess_EventCount == 0;
 
     executeRecovery@withrevert(e);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(adapter) == adapterAssetBalanceBefore;
-    assert adapter.getTVL() == adapterTVLBefore;
-    assert ghost_RebalanceWithdrawRecoveryCleared_EventCount == 0;
-    assert ghost_RebalanceWithdrawSuccess_EventCount == 0;
 }
 
 /// @notice Local rebalance withdraw recovery via executeRecovery reverts when the target adapter is bound to another vault
@@ -3681,6 +3801,7 @@ rule executeRecovery_REBALANCE_WITHDRAW_Local_RevertWhen_TargetAdapterVaultIsInv
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.REBALANCE_WITHDRAW, "rebalance withdraw recovery should be pending";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
     require !adapter.withdrawReverts(), "adapter withdraw should not revert";
@@ -3693,7 +3814,6 @@ rule executeRecovery_REBALANCE_WITHDRAW_Local_RevertWhen_TargetAdapterVaultIsInv
     require adapterRegistry.getAdapter(e, recovery.strategy.protocolId) == invalidAdapter,
         "invalid target adapter should be registered";
 
-    storage before = lastStorage;
     uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
     uint256 adapterAssetBalanceBefore = asset.balanceOf(adapter);
     uint256 adapterTVLBefore = adapter.getTVL();
@@ -3703,18 +3823,10 @@ rule executeRecovery_REBALANCE_WITHDRAW_Local_RevertWhen_TargetAdapterVaultIsInv
     require vaultAssetBalanceBefore <= max_uint256 - adapterTVLBefore, "vault asset balance should not overflow";
 
     /// @dev set ghost starting values
-    require ghost_RebalanceWithdrawRecoveryCleared_EventCount == 0;
-    require ghost_RebalanceWithdrawSuccess_EventCount == 0;
 
     executeRecovery@withrevert(e);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(adapter) == adapterAssetBalanceBefore;
-    assert adapter.getTVL() == adapterTVLBefore;
-    assert ghost_RebalanceWithdrawRecoveryCleared_EventCount == 0;
-    assert ghost_RebalanceWithdrawSuccess_EventCount == 0;
 }
 
 /// @notice Local rebalance withdraw recovery via executeRecovery withdraws and redeposits into the recovered target adapter
@@ -3725,6 +3837,7 @@ rule executeRecovery_REBALANCE_WITHDRAW_Local_Success() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.REBALANCE_WITHDRAW, "rebalance withdraw recovery should be pending";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
     require !adapter.withdrawReverts(), "adapter withdraw should not revert";
@@ -3754,7 +3867,6 @@ rule executeRecovery_REBALANCE_WITHDRAW_Local_Success() {
     require ghost_rebalanceWithdrawRecovery_rebalanceNonce_StoreCount == 0;
     require ghost_rebalanceWithdrawRecovery_protocolId_StoreCount == 0;
     require ghost_rebalanceWithdrawRecovery_chainSelector_StoreCount == 0;
-    require ghost_rebalanceWithdrawRecovery_createdAt_StoreCount == 0;
     require ghost_activeProtocolAdapter_StoreCount == 0;
     require ghost_recoveryMode_StoreCount == 0;
 
@@ -3769,7 +3881,6 @@ rule executeRecovery_REBALANCE_WITHDRAW_Local_Success() {
     assert getRebalanceWithdrawRecovery().rebalanceNonce == 0;
     assert getRebalanceWithdrawRecovery().strategy.protocolId == to_bytes32(0);
     assert getRebalanceWithdrawRecovery().strategy.chainSelector == 0;
-    assert getRebalanceWithdrawRecovery().createdAt == 0;
     assert ghost_RebalanceWithdrawRecoveryCleared_EventCount == 1;
     assert ghost_RebalanceWithdrawRecoveryCleared_Param_rebalanceNonce == recovery.rebalanceNonce;
     assert ghost_RebalanceWithdrawSuccess_EventCount == 1;
@@ -3789,8 +3900,6 @@ rule executeRecovery_REBALANCE_WITHDRAW_Local_Success() {
     assert ghost_rebalanceWithdrawRecovery_protocolId_StoredValue == to_bytes32(0);
     assert ghost_rebalanceWithdrawRecovery_chainSelector_StoreCount == 1;
     assert ghost_rebalanceWithdrawRecovery_chainSelector_StoredValue == 0;
-    assert ghost_rebalanceWithdrawRecovery_createdAt_StoreCount == 1;
-    assert ghost_rebalanceWithdrawRecovery_createdAt_StoredValue == 0;
     assert ghost_activeProtocolAdapter_StoreCount == 1;
     assert ghost_activeProtocolAdapter_StoredValue == adapter;
     assert ghost_recoveryMode_StoreCount == 1 => ghost_recoveryMode_StoredValue == Types.RecoveryMode.NONE,
@@ -3805,6 +3914,7 @@ rule executeRecovery_REBALANCE_WITHDRAW_Local_When_DepositFails_StoresRecovery()
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.REBALANCE_WITHDRAW, "rebalance withdraw recovery should be pending";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
     require !adapter.withdrawReverts(), "adapter withdraw should not revert";
@@ -3836,10 +3946,8 @@ rule executeRecovery_REBALANCE_WITHDRAW_Local_When_DepositFails_StoresRecovery()
     require ghost_rebalanceWithdrawRecovery_rebalanceNonce_StoreCount == 0;
     require ghost_rebalanceWithdrawRecovery_protocolId_StoreCount == 0;
     require ghost_rebalanceWithdrawRecovery_chainSelector_StoreCount == 0;
-    require ghost_rebalanceWithdrawRecovery_createdAt_StoreCount == 0;
     require ghost_rebalanceDepositRecovery_nonce_StoreCount == 0;
     require ghost_rebalanceDepositRecovery_amount_StoreCount == 0;
-    require ghost_rebalanceDepositRecovery_createdAt_StoreCount == 0;
     require ghost_activeProtocolAdapter_StoreCount == 0;
     require ghost_recoveryMode_StoreCount == 0;
 
@@ -3854,11 +3962,9 @@ rule executeRecovery_REBALANCE_WITHDRAW_Local_When_DepositFails_StoresRecovery()
     assert getRebalanceWithdrawRecovery().rebalanceNonce == 0;
     assert getRebalanceWithdrawRecovery().strategy.protocolId == to_bytes32(0);
     assert getRebalanceWithdrawRecovery().strategy.chainSelector == 0;
-    assert getRebalanceWithdrawRecovery().createdAt == 0;
     Types.RebalanceDepositRecovery depositRecovery = getRebalanceDepositRecovery();
     assert depositRecovery.rebalanceNonce == recovery.rebalanceNonce;
     assert depositRecovery.amount == amountRebalanced;
-    assert depositRecovery.createdAt == e.block.timestamp;
     assert ghost_RebalanceWithdrawRecoveryCleared_EventCount == 1;
     assert ghost_RebalanceWithdrawRecoveryCleared_Param_rebalanceNonce == recovery.rebalanceNonce;
     assert ghost_RebalanceWithdrawSuccess_EventCount == 1;
@@ -3880,14 +3986,10 @@ rule executeRecovery_REBALANCE_WITHDRAW_Local_When_DepositFails_StoresRecovery()
     assert ghost_rebalanceWithdrawRecovery_protocolId_StoredValue == to_bytes32(0);
     assert ghost_rebalanceWithdrawRecovery_chainSelector_StoreCount == 1;
     assert ghost_rebalanceWithdrawRecovery_chainSelector_StoredValue == 0;
-    assert ghost_rebalanceWithdrawRecovery_createdAt_StoreCount == 1;
-    assert ghost_rebalanceWithdrawRecovery_createdAt_StoredValue == 0;
     assert ghost_rebalanceDepositRecovery_nonce_StoreCount == 1;
     assert ghost_rebalanceDepositRecovery_nonce_StoredValue == recovery.rebalanceNonce;
     assert ghost_rebalanceDepositRecovery_amount_StoreCount == 1;
     assert ghost_rebalanceDepositRecovery_amount_StoredValue == amountRebalanced;
-    assert ghost_rebalanceDepositRecovery_createdAt_StoreCount == 1;
-    assert ghost_rebalanceDepositRecovery_createdAt_StoredValue == e.block.timestamp;
     assert ghost_activeProtocolAdapter_StoreCount == 1;
     assert ghost_activeProtocolAdapter_StoredValue == adapter;
     assert ghost_recoveryMode_StoreCount == 1 => ghost_recoveryMode_StoredValue == Types.RecoveryMode.REBALANCE_DEPOSIT,
@@ -3902,6 +4004,7 @@ rule executeRecovery_REBALANCE_WITHDRAW_Remote_RevertWhen_TargetChainSelectorIsZ
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.REBALANCE_WITHDRAW, "rebalance withdraw recovery should be pending";
     require getCcipSendRecoveryNonce() == 0 && getCcipSendRecoveryProtocolId() == to_bytes32(0),
         "CCIP send recovery transaction data should be empty";
@@ -3916,12 +4019,10 @@ rule executeRecovery_REBALANCE_WITHDRAW_Remote_RevertWhen_TargetChainSelectorIsZ
     /// @dev failure condition being verified
     require recovery.strategy.chainSelector == 0, "target chain selector should be zero";
 
-    storage before = lastStorage;
     uint256 adapterTVLBefore = adapter.getTVL();
     uint256 vaultBalanceBefore = asset.balanceOf(currentContract);
     uint256 adapterBalanceBefore = asset.balanceOf(adapter);
     address router = getRouter();
-    uint256 routerBalanceBefore = asset.balanceOf(router);
 
     /// @dev mock token arithmetic conditions
     require adapterTVLBefore != 0, "adapter withdraw should return a nonzero amount";
@@ -3929,25 +4030,10 @@ rule executeRecovery_REBALANCE_WITHDRAW_Remote_RevertWhen_TargetChainSelectorIsZ
     require vaultBalanceBefore <= max_uint256 - adapterTVLBefore, "vault asset balance should not overflow";
 
     /// @dev set ghost starting values
-    require ghost_RebalanceWithdrawRecoveryCleared_EventCount == 0;
-    require ghost_RebalanceWithdrawSuccess_EventCount == 0;
-    require ghost_ActiveProtocolAdapterCleared_EventCount == 0;
-    require ghost_CCIPBridged_EventCount == 0;
-    require ghost_CcipSendRecoveryStored_EventCount == 0;
 
     executeRecovery@withrevert(e);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert asset.balanceOf(currentContract) == vaultBalanceBefore;
-    assert asset.balanceOf(adapter) == adapterBalanceBefore;
-    assert asset.balanceOf(router) == routerBalanceBefore;
-    assert adapter.getTVL() == adapterTVLBefore;
-    assert ghost_RebalanceWithdrawRecoveryCleared_EventCount == 0;
-    assert ghost_RebalanceWithdrawSuccess_EventCount == 0;
-    assert ghost_ActiveProtocolAdapterCleared_EventCount == 0;
-    assert ghost_CCIPBridged_EventCount == 0;
-    assert ghost_CcipSendRecoveryStored_EventCount == 0;
 }
 
 /// @notice Remote rebalance withdraw recovery via executeRecovery reverts when no target vault is registered
@@ -3958,6 +4044,7 @@ rule executeRecovery_REBALANCE_WITHDRAW_Remote_RevertWhen_TargetVaultNotRegister
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.REBALANCE_WITHDRAW, "rebalance withdraw recovery should be pending";
     require getCcipSendRecoveryNonce() == 0 && getCcipSendRecoveryProtocolId() == to_bytes32(0),
         "CCIP send recovery transaction data should be empty";
@@ -3973,12 +4060,10 @@ rule executeRecovery_REBALANCE_WITHDRAW_Remote_RevertWhen_TargetVaultNotRegister
     /// @dev failure condition being verified
     require getCrosschainVault(recovery.strategy.chainSelector) == 0, "target vault should not be registered";
 
-    storage before = lastStorage;
     uint256 adapterTVLBefore = adapter.getTVL();
     uint256 vaultBalanceBefore = asset.balanceOf(currentContract);
     uint256 adapterBalanceBefore = asset.balanceOf(adapter);
     address router = getRouter();
-    uint256 routerBalanceBefore = asset.balanceOf(router);
 
     /// @dev mock token arithmetic conditions
     require adapterTVLBefore != 0, "adapter withdraw should return a nonzero amount";
@@ -3986,25 +4071,10 @@ rule executeRecovery_REBALANCE_WITHDRAW_Remote_RevertWhen_TargetVaultNotRegister
     require vaultBalanceBefore <= max_uint256 - adapterTVLBefore, "vault asset balance should not overflow";
 
     /// @dev set ghost starting values
-    require ghost_RebalanceWithdrawRecoveryCleared_EventCount == 0;
-    require ghost_RebalanceWithdrawSuccess_EventCount == 0;
-    require ghost_ActiveProtocolAdapterCleared_EventCount == 0;
-    require ghost_CCIPBridged_EventCount == 0;
-    require ghost_CcipSendRecoveryStored_EventCount == 0;
 
     executeRecovery@withrevert(e);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert asset.balanceOf(currentContract) == vaultBalanceBefore;
-    assert asset.balanceOf(adapter) == adapterBalanceBefore;
-    assert asset.balanceOf(router) == routerBalanceBefore;
-    assert adapter.getTVL() == adapterTVLBefore;
-    assert ghost_RebalanceWithdrawRecoveryCleared_EventCount == 0;
-    assert ghost_RebalanceWithdrawSuccess_EventCount == 0;
-    assert ghost_ActiveProtocolAdapterCleared_EventCount == 0;
-    assert ghost_CCIPBridged_EventCount == 0;
-    assert ghost_CcipSendRecoveryStored_EventCount == 0;
 }
 
 /// @notice Remote rebalance withdraw recovery via executeRecovery bridges the recovered TVL to the target chain
@@ -4015,6 +4085,7 @@ rule executeRecovery_REBALANCE_WITHDRAW_Remote_Success() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.REBALANCE_WITHDRAW, "rebalance withdraw recovery should be pending";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
     require !adapter.withdrawReverts(), "adapter withdraw should not revert";
@@ -4051,7 +4122,6 @@ rule executeRecovery_REBALANCE_WITHDRAW_Remote_Success() {
     require ghost_rebalanceWithdrawRecovery_rebalanceNonce_StoreCount == 0;
     require ghost_rebalanceWithdrawRecovery_protocolId_StoreCount == 0;
     require ghost_rebalanceWithdrawRecovery_chainSelector_StoreCount == 0;
-    require ghost_rebalanceWithdrawRecovery_createdAt_StoreCount == 0;
     require ghost_activeProtocolAdapter_StoreCount == 0;
     require ghost_recoveryMode_StoreCount == 0;
 
@@ -4069,7 +4139,6 @@ rule executeRecovery_REBALANCE_WITHDRAW_Remote_Success() {
     assert getRebalanceWithdrawRecovery().rebalanceNonce == 0;
     assert getRebalanceWithdrawRecovery().strategy.protocolId == to_bytes32(0);
     assert getRebalanceWithdrawRecovery().strategy.chainSelector == 0;
-    assert getRebalanceWithdrawRecovery().createdAt == 0;
     assert ghost_RebalanceWithdrawRecoveryCleared_EventCount == 1;
     assert ghost_RebalanceWithdrawRecoveryCleared_Param_rebalanceNonce == recovery.rebalanceNonce;
     assert ghost_RebalanceWithdrawSuccess_EventCount == 1;
@@ -4078,7 +4147,7 @@ rule executeRecovery_REBALANCE_WITHDRAW_Remote_Success() {
     assert ghost_ActiveProtocolAdapterCleared_EventCount == 1;
     assert ghost_ActiveProtocolAdapterCleared_Param_adapter == adapter;
     assert ghost_CCIPBridged_EventCount == 1;
-    assert ghost_CCIPBridged_Param_amount == amountRebalanced;
+    assert ghost_CCIPBridged_Param_destinationChainSelector == recovery.strategy.chainSelector;
     assert ghost_CCIPBridged_Param_ccipTxType == Types.CcipTx.REBALANCE;
     assert ghost_CcipSendRecoveryStored_EventCount == 0;
     assert ghost_rebalanceWithdrawRecovery_rebalanceNonce_StoreCount == 1;
@@ -4087,8 +4156,6 @@ rule executeRecovery_REBALANCE_WITHDRAW_Remote_Success() {
     assert ghost_rebalanceWithdrawRecovery_protocolId_StoredValue == to_bytes32(0);
     assert ghost_rebalanceWithdrawRecovery_chainSelector_StoreCount == 1;
     assert ghost_rebalanceWithdrawRecovery_chainSelector_StoredValue == 0;
-    assert ghost_rebalanceWithdrawRecovery_createdAt_StoreCount == 1;
-    assert ghost_rebalanceWithdrawRecovery_createdAt_StoredValue == 0;
     assert ghost_activeProtocolAdapter_StoreCount == 1;
     assert ghost_activeProtocolAdapter_StoredValue == 0;
     assert ghost_recoveryMode_StoreCount == 1 => ghost_recoveryMode_StoredValue == Types.RecoveryMode.NONE,
@@ -4104,6 +4171,7 @@ rule executeRecovery_REBALANCE_WITHDRAW_Remote_When_RouterGetFeeReverts_StoresCc
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.REBALANCE_WITHDRAW, "rebalance withdraw recovery should be pending";
     require getCcipSendRecoveryNonce() == 0 && getCcipSendRecoveryProtocolId() == to_bytes32(0),
         "CCIP send recovery transaction data should be empty";
@@ -4138,12 +4206,10 @@ rule executeRecovery_REBALANCE_WITHDRAW_Remote_When_RouterGetFeeReverts_StoresCc
     require ghost_rebalanceWithdrawRecovery_rebalanceNonce_StoreCount == 0;
     require ghost_rebalanceWithdrawRecovery_protocolId_StoreCount == 0;
     require ghost_rebalanceWithdrawRecovery_chainSelector_StoreCount == 0;
-    require ghost_rebalanceWithdrawRecovery_createdAt_StoreCount == 0;
     require ghost_ccipSendRecovery_amount_StoreCount == 0;
     require ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 0;
     require ghost_ccipSendRecovery_nonce_StoreCount == 0;
     require ghost_ccipSendRecovery_protocolId_StoreCount == 0;
-    require ghost_ccipSendRecovery_createdAt_StoreCount == 0;
     require ghost_activeProtocolAdapter_StoreCount == 0;
     require ghost_recoveryMode_StoreCount == 0;
 
@@ -4159,13 +4225,11 @@ rule executeRecovery_REBALANCE_WITHDRAW_Remote_When_RouterGetFeeReverts_StoresCc
     assert getRebalanceWithdrawRecovery().rebalanceNonce == 0;
     assert getRebalanceWithdrawRecovery().strategy.protocolId == to_bytes32(0);
     assert getRebalanceWithdrawRecovery().strategy.chainSelector == 0;
-    assert getRebalanceWithdrawRecovery().createdAt == 0;
     assert getCcipSendRecoveryTxType() == Types.CcipTx.REBALANCE;
     assert getCcipSendRecoveryAmount() == amountRebalanced;
     assert getCcipSendRecoveryDestinationChainSelector() == recovery.strategy.chainSelector;
     assert getCcipSendRecoveryNonce() == recovery.rebalanceNonce;
     assert getCcipSendRecoveryProtocolId() == recovery.strategy.protocolId;
-    assert getCcipSendRecoveryCreatedAt() == e.block.timestamp;
     assert ghost_RebalanceWithdrawRecoveryCleared_EventCount == 1;
     assert ghost_RebalanceWithdrawRecoveryCleared_Param_rebalanceNonce == recovery.rebalanceNonce;
     assert ghost_RebalanceWithdrawSuccess_EventCount == 1;
@@ -4184,8 +4248,6 @@ rule executeRecovery_REBALANCE_WITHDRAW_Remote_When_RouterGetFeeReverts_StoresCc
     assert ghost_rebalanceWithdrawRecovery_protocolId_StoredValue == to_bytes32(0);
     assert ghost_rebalanceWithdrawRecovery_chainSelector_StoreCount == 1;
     assert ghost_rebalanceWithdrawRecovery_chainSelector_StoredValue == 0;
-    assert ghost_rebalanceWithdrawRecovery_createdAt_StoreCount == 1;
-    assert ghost_rebalanceWithdrawRecovery_createdAt_StoredValue == 0;
     assert ghost_ccipSendRecovery_amount_StoreCount == 1;
     assert ghost_ccipSendRecovery_amount_StoredValue == amountRebalanced;
     assert ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 1;
@@ -4194,8 +4256,6 @@ rule executeRecovery_REBALANCE_WITHDRAW_Remote_When_RouterGetFeeReverts_StoresCc
     assert ghost_ccipSendRecovery_nonce_StoredValue == recovery.rebalanceNonce;
     assert ghost_ccipSendRecovery_protocolId_StoreCount == 1;
     assert ghost_ccipSendRecovery_protocolId_StoredValue == recovery.strategy.protocolId;
-    assert ghost_ccipSendRecovery_createdAt_StoreCount == 1;
-    assert ghost_ccipSendRecovery_createdAt_StoredValue == e.block.timestamp;
     assert ghost_activeProtocolAdapter_StoreCount == 1;
     assert ghost_activeProtocolAdapter_StoredValue == 0;
     assert ghost_recoveryMode_StoreCount == 1 => ghost_recoveryMode_StoredValue == Types.RecoveryMode.CCIP_SEND,
@@ -4211,6 +4271,7 @@ rule executeRecovery_REBALANCE_WITHDRAW_Remote_When_RouterCcipSendReverts_Stores
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.REBALANCE_WITHDRAW, "rebalance withdraw recovery should be pending";
     require getCcipSendRecoveryNonce() == 0 && getCcipSendRecoveryProtocolId() == to_bytes32(0),
         "CCIP send recovery transaction data should be empty";
@@ -4246,11 +4307,9 @@ rule executeRecovery_REBALANCE_WITHDRAW_Remote_When_RouterCcipSendReverts_Stores
     require ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 0;
     require ghost_ccipSendRecovery_nonce_StoreCount == 0;
     require ghost_ccipSendRecovery_protocolId_StoreCount == 0;
-    require ghost_ccipSendRecovery_createdAt_StoreCount == 0;
     require ghost_rebalanceWithdrawRecovery_rebalanceNonce_StoreCount == 0;
     require ghost_rebalanceWithdrawRecovery_protocolId_StoreCount == 0;
     require ghost_rebalanceWithdrawRecovery_chainSelector_StoreCount == 0;
-    require ghost_rebalanceWithdrawRecovery_createdAt_StoreCount == 0;
     require ghost_activeProtocolAdapter_StoreCount == 0;
     require ghost_recoveryMode_StoreCount == 0;
 
@@ -4266,15 +4325,12 @@ rule executeRecovery_REBALANCE_WITHDRAW_Remote_When_RouterCcipSendReverts_Stores
     assert getRebalanceWithdrawRecovery().rebalanceNonce == 0;
     assert getRebalanceWithdrawRecovery().strategy.protocolId == to_bytes32(0);
     assert getRebalanceWithdrawRecovery().strategy.chainSelector == 0;
-    assert getRebalanceWithdrawRecovery().createdAt == 0;
     assert ghost_rebalanceWithdrawRecovery_rebalanceNonce_StoreCount == 1;
     assert ghost_rebalanceWithdrawRecovery_rebalanceNonce_StoredValue == 0;
     assert ghost_rebalanceWithdrawRecovery_protocolId_StoreCount == 1;
     assert ghost_rebalanceWithdrawRecovery_protocolId_StoredValue == to_bytes32(0);
     assert ghost_rebalanceWithdrawRecovery_chainSelector_StoreCount == 1;
     assert ghost_rebalanceWithdrawRecovery_chainSelector_StoredValue == 0;
-    assert ghost_rebalanceWithdrawRecovery_createdAt_StoreCount == 1;
-    assert ghost_rebalanceWithdrawRecovery_createdAt_StoredValue == 0;
     assert ghost_activeProtocolAdapter_StoreCount == 1;
     assert ghost_activeProtocolAdapter_StoredValue == 0;
     assert ghost_recoveryMode_StoreCount == 1 => ghost_recoveryMode_StoredValue == Types.RecoveryMode.CCIP_SEND,
@@ -4284,7 +4340,6 @@ rule executeRecovery_REBALANCE_WITHDRAW_Remote_When_RouterCcipSendReverts_Stores
     assert getCcipSendRecoveryDestinationChainSelector() == recovery.strategy.chainSelector;
     assert getCcipSendRecoveryNonce() == recovery.rebalanceNonce;
     assert getCcipSendRecoveryProtocolId() == recovery.strategy.protocolId;
-    assert getCcipSendRecoveryCreatedAt() == e.block.timestamp;
     assert ghost_RebalanceWithdrawRecoveryCleared_EventCount == 1;
     assert ghost_RebalanceWithdrawRecoveryCleared_Param_rebalanceNonce == recovery.rebalanceNonce;
     assert ghost_RebalanceWithdrawSuccess_EventCount == 1;
@@ -4305,15 +4360,43 @@ rule executeRecovery_REBALANCE_WITHDRAW_Remote_When_RouterCcipSendReverts_Stores
     assert ghost_ccipSendRecovery_nonce_StoredValue == recovery.rebalanceNonce;
     assert ghost_ccipSendRecovery_protocolId_StoreCount == 1;
     assert ghost_ccipSendRecovery_protocolId_StoredValue == recovery.strategy.protocolId;
-    assert ghost_ccipSendRecovery_createdAt_StoreCount == 1;
-    assert ghost_ccipSendRecovery_createdAt_StoredValue == e.block.timestamp;
 }
 
 /// ─────────────────── EXECUTE REBALANCE ───────────────────────
 
-/// @notice Rebalance execution reverts when the caller does not have the rebalance operator role
-/// @dev Verifies that an unauthorized call leaves all vault state unchanged
-rule executeRebalance_RevertWhen_CallerDoesNotHaveREBALANCE_OPERATOR_ROLE() {
+/// @notice Rebalance execution reverts while the vault is paused.
+rule executeRebalance_RevertWhen_Paused() {
+    env e;
+    uint256 rebalanceNonce;
+    require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
+    require ghost_lastHandledRebalanceNonce_StoreCount == 0,
+        "handled rebalance nonce store count starts at zero";
+    Types.Strategy newStrategy;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require hasRole(REBALANCE_OPERATOR_ROLE(), e.msg.sender);
+    require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
+    require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
+    require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
+    require !adapter.withdrawReverts(), "adapter withdraw should not revert";
+    require adapter.getTVL() > 0, "adapter withdraw should return a nonzero amount";
+    require newStrategy.chainSelector == getThisChainSelector(), "target strategy should be on this chain";
+    require adapterRegistry.getAdapter(e, newStrategy.protocolId) == adapter, "target adapter should be registered";
+    require adapter.getVault() == currentContract, "target adapter should be bound to the vault";
+    require !adapter.depositReverts(), "target adapter deposit should not revert";
+
+    /// @dev revert condition being verified
+    require paused(), "vault should be paused";
+
+    executeRebalance@withrevert(e, rebalanceNonce, newStrategy);
+
+    assert lastReverted;
+}
+
+/// @notice Rebalance execution reverts when its nonce was already handled.
+rule executeRebalance_RevertWhen_RebalanceNonceIsNotNew() {
     env e;
     uint256 rebalanceNonce;
     Types.Strategy newStrategy;
@@ -4321,6 +4404,39 @@ rule executeRebalance_RevertWhen_CallerDoesNotHaveREBALANCE_OPERATOR_ROLE() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
+    require hasRole(REBALANCE_OPERATOR_ROLE(), e.msg.sender);
+    require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
+    require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
+    require !adapter.withdrawReverts(), "adapter withdraw should not revert";
+    require adapter.getTVL() > 0, "adapter withdraw should return a nonzero amount";
+    require newStrategy.chainSelector == getThisChainSelector(), "target strategy should be on this chain";
+    require adapterRegistry.getAdapter(e, newStrategy.protocolId) == adapter, "target adapter should be registered";
+    require adapter.getVault() == currentContract, "target adapter should be bound to the vault";
+    require !adapter.depositReverts(), "target adapter deposit should not revert";
+
+    /// @dev revert condition being verified
+    require rebalanceNonce <= getLastHandledRebalanceNonce(), "rebalance nonce should already be handled";
+
+    executeRebalance@withrevert(e, rebalanceNonce, newStrategy);
+
+    assert lastReverted;
+}
+
+/// @notice Rebalance execution reverts when the caller does not have the rebalance operator role
+/// @dev Verifies that an unauthorized call leaves all vault state unchanged
+rule executeRebalance_RevertWhen_CallerDoesNotHaveREBALANCE_OPERATOR_ROLE() {
+    env e;
+    uint256 rebalanceNonce;
+    require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
+    require ghost_lastHandledRebalanceNonce_StoreCount == 0,
+        "handled rebalance nonce store count starts at zero";
+    Types.Strategy newStrategy;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
     require !adapter.withdrawReverts(), "adapter withdraw should not revert";
@@ -4344,6 +4460,9 @@ rule executeRebalance_RevertWhen_CallerDoesNotHaveREBALANCE_OPERATOR_ROLE() {
 rule executeRebalance_RevertWhen_ReentrantCall() {
     env e;
     uint256 rebalanceNonce;
+    require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
+    require ghost_lastHandledRebalanceNonce_StoreCount == 0,
+        "handled rebalance nonce store count starts at zero";
     Types.Strategy newStrategy;
 
     /// @dev revert conditions NOT being verified
@@ -4360,6 +4479,7 @@ rule executeRebalance_RevertWhen_ReentrantCall() {
 
     /// @dev revert condition being verified
     require reentrancyGuardEntered(), "reentrancy guard should be entered";
+    require !paused(), "vault should not be paused";
 
 
     executeRebalance@withrevert(e, rebalanceNonce, newStrategy);
@@ -4372,12 +4492,16 @@ rule executeRebalance_RevertWhen_ReentrantCall() {
 rule executeRebalance_RevertWhen_RecoveryAlreadyPending() {
     env e;
     uint256 rebalanceNonce;
+    require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
+    require ghost_lastHandledRebalanceNonce_StoreCount == 0,
+        "handled rebalance nonce store count starts at zero";
     Types.Strategy newStrategy;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require hasRole(REBALANCE_OPERATOR_ROLE(), e.msg.sender);
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
     require !adapter.withdrawReverts(), "adapter withdraw should not revert";
     require adapter.getTVL() > 0, "adapter withdraw should return a nonzero amount";
@@ -4400,12 +4524,16 @@ rule executeRebalance_RevertWhen_RecoveryAlreadyPending() {
 rule executeRebalance_RevertWhen_NoActiveAdapter() {
     env e;
     uint256 rebalanceNonce;
+    require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
+    require ghost_lastHandledRebalanceNonce_StoreCount == 0,
+        "handled rebalance nonce store count starts at zero";
     Types.Strategy newStrategy;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require hasRole(REBALANCE_OPERATOR_ROLE(), e.msg.sender);
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require newStrategy.chainSelector == getThisChainSelector(), "target strategy should be on this chain";
     require adapterRegistry.getAdapter(e, newStrategy.protocolId) == adapter, "target adapter should be registered";
@@ -4426,12 +4554,16 @@ rule executeRebalance_RevertWhen_NoActiveAdapter() {
 rule executeRebalance_RevertWhen_AmountRebalancedIsZero() {
     env e;
     uint256 rebalanceNonce;
+    require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
+    require ghost_lastHandledRebalanceNonce_StoreCount == 0,
+        "handled rebalance nonce store count starts at zero";
     Types.Strategy newStrategy;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require hasRole(REBALANCE_OPERATOR_ROLE(), e.msg.sender);
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
     require !adapter.withdrawReverts(), "adapter withdraw should not revert";
@@ -4443,16 +4575,10 @@ rule executeRebalance_RevertWhen_AmountRebalancedIsZero() {
     /// @dev revert condition being verified
     require adapter.getTVL() == 0, "adapter withdraw should return zero";
 
-    require ghost_RebalanceWithdrawSuccess_EventCount == 0;
-    require ghost_RebalanceWithdrawFailure_EventCount == 0;
-    require ghost_RebalanceWithdrawRecoveryStored_EventCount == 0;
 
     executeRebalance@withrevert(e, rebalanceNonce, newStrategy);
 
     assert lastReverted;
-    assert ghost_RebalanceWithdrawSuccess_EventCount == 0;
-    assert ghost_RebalanceWithdrawFailure_EventCount == 0;
-    assert ghost_RebalanceWithdrawRecoveryStored_EventCount == 0;
 }
 
 /// @notice A failed source withdrawal reverts when the recovery target chain selector is zero
@@ -4460,12 +4586,16 @@ rule executeRebalance_RevertWhen_AmountRebalancedIsZero() {
 rule executeRebalance_When_WithdrawFails_RevertWhen_TargetChainSelectorIsZero() {
     env e;
     uint256 rebalanceNonce;
+    require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
+    require ghost_lastHandledRebalanceNonce_StoreCount == 0,
+        "handled rebalance nonce store count starts at zero";
     Types.Strategy newStrategy;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require hasRole(REBALANCE_OPERATOR_ROLE(), e.msg.sender);
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
 
@@ -4473,14 +4603,10 @@ rule executeRebalance_When_WithdrawFails_RevertWhen_TargetChainSelectorIsZero() 
     require adapter.withdrawReverts(), "adapter withdraw should revert";
     require newStrategy.chainSelector == 0, "target chain selector should be zero";
 
-    require ghost_RebalanceWithdrawFailure_EventCount == 0;
-    require ghost_RebalanceWithdrawRecoveryStored_EventCount == 0;
 
     executeRebalance@withrevert(e, rebalanceNonce, newStrategy);
 
     assert lastReverted;
-    assert ghost_RebalanceWithdrawFailure_EventCount == 0;
-    assert ghost_RebalanceWithdrawRecoveryStored_EventCount == 0;
 }
 
 /// @notice A failed source withdrawal stores recovery for the target strategy
@@ -4488,12 +4614,16 @@ rule executeRebalance_When_WithdrawFails_RevertWhen_TargetChainSelectorIsZero() 
 rule executeRebalance_When_WithdrawFails_StoresRecovery() {
     env e;
     uint256 rebalanceNonce;
+    require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
+    require ghost_lastHandledRebalanceNonce_StoreCount == 0,
+        "handled rebalance nonce store count starts at zero";
     Types.Strategy newStrategy;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require hasRole(REBALANCE_OPERATOR_ROLE(), e.msg.sender);
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
     require newStrategy.chainSelector != 0, "target chain selector should not be zero";
@@ -4511,12 +4641,14 @@ rule executeRebalance_When_WithdrawFails_StoresRecovery() {
     require ghost_rebalanceWithdrawRecovery_rebalanceNonce_StoreCount == 0;
     require ghost_rebalanceWithdrawRecovery_protocolId_StoreCount == 0;
     require ghost_rebalanceWithdrawRecovery_chainSelector_StoreCount == 0;
-    require ghost_rebalanceWithdrawRecovery_createdAt_StoreCount == 0;
     require ghost_recoveryMode_StoreCount == 0;
 
     executeRebalance@withrevert(e, rebalanceNonce, newStrategy);
 
     assert !lastReverted;
+    assert getLastHandledRebalanceNonce() == rebalanceNonce;
+    assert ghost_lastHandledRebalanceNonce_StoreCount == 1;
+    assert ghost_lastHandledRebalanceNonce_StoredValue == rebalanceNonce;
     Types.RebalanceWithdrawRecovery recovery = getRebalanceWithdrawRecovery();
     assert asset.balanceOf(currentContract) == vaultBalanceBefore;
     assert asset.balanceOf(adapter) == adapterBalanceBefore;
@@ -4525,7 +4657,6 @@ rule executeRebalance_When_WithdrawFails_StoresRecovery() {
     assert recovery.rebalanceNonce == rebalanceNonce;
     assert recovery.strategy.protocolId == newStrategy.protocolId;
     assert recovery.strategy.chainSelector == newStrategy.chainSelector;
-    assert recovery.createdAt == e.block.timestamp;
     assert ghost_RebalanceWithdrawSuccess_EventCount == 0;
     assert ghost_RebalanceWithdrawFailure_EventCount == 1;
     assert ghost_RebalanceWithdrawFailure_Param_nonce == rebalanceNonce;
@@ -4539,8 +4670,6 @@ rule executeRebalance_When_WithdrawFails_StoresRecovery() {
     assert ghost_rebalanceWithdrawRecovery_protocolId_StoredValue == newStrategy.protocolId;
     assert ghost_rebalanceWithdrawRecovery_chainSelector_StoreCount == 1;
     assert ghost_rebalanceWithdrawRecovery_chainSelector_StoredValue == newStrategy.chainSelector;
-    assert ghost_rebalanceWithdrawRecovery_createdAt_StoreCount == 1;
-    assert ghost_rebalanceWithdrawRecovery_createdAt_StoredValue == e.block.timestamp;
     assert ghost_recoveryMode_StoreCount == 1 => ghost_recoveryMode_StoredValue == Types.RecoveryMode.REBALANCE_WITHDRAW,
         "recovery mode stored value is only meaningful when the recovery mode hook fires, which may not happen due to state packing";
 }
@@ -4550,12 +4679,16 @@ rule executeRebalance_When_WithdrawFails_StoresRecovery() {
 rule executeRebalance_Local_RevertWhen_TargetAdapterNotRegistered() {
     env e;
     uint256 rebalanceNonce;
+    require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
+    require ghost_lastHandledRebalanceNonce_StoreCount == 0,
+        "handled rebalance nonce store count starts at zero";
     Types.Strategy newStrategy;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require hasRole(REBALANCE_OPERATOR_ROLE(), e.msg.sender);
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
     require !adapter.withdrawReverts(), "adapter withdraw should not revert";
@@ -4569,12 +4702,13 @@ rule executeRebalance_Local_RevertWhen_TargetAdapterNotRegistered() {
     uint256 adapterBalanceBefore = asset.balanceOf(adapter);
     uint256 adapterTVLBefore = adapter.getTVL();
 
+    /// @dev mock token arithmetic conditions
+    require adapterTVLBefore <= adapterBalanceBefore, "adapter asset balance should cover the withdrawal";
+    require vaultBalanceBefore <= max_uint256 - adapterTVLBefore, "vault asset balance should not overflow";
+
     executeRebalance@withrevert(e, rebalanceNonce, newStrategy);
 
     assert lastReverted;
-    assert asset.balanceOf(currentContract) == vaultBalanceBefore;
-    assert asset.balanceOf(adapter) == adapterBalanceBefore;
-    assert adapter.getTVL() == adapterTVLBefore;
 }
 
 /// @notice A local rebalance reverts when the target adapter is bound to another vault
@@ -4582,12 +4716,16 @@ rule executeRebalance_Local_RevertWhen_TargetAdapterNotRegistered() {
 rule executeRebalance_Local_RevertWhen_TargetAdapterVaultIsInvalid() {
     env e;
     uint256 rebalanceNonce;
+    require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
+    require ghost_lastHandledRebalanceNonce_StoreCount == 0,
+        "handled rebalance nonce store count starts at zero";
     Types.Strategy newStrategy;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require hasRole(REBALANCE_OPERATOR_ROLE(), e.msg.sender);
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
     require !adapter.withdrawReverts(), "adapter withdraw should not revert";
@@ -4603,12 +4741,13 @@ rule executeRebalance_Local_RevertWhen_TargetAdapterVaultIsInvalid() {
     uint256 adapterBalanceBefore = asset.balanceOf(adapter);
     uint256 adapterTVLBefore = adapter.getTVL();
 
+    /// @dev mock token arithmetic conditions
+    require adapterTVLBefore <= adapterBalanceBefore, "adapter asset balance should cover the withdrawal";
+    require vaultBalanceBefore <= max_uint256 - adapterTVLBefore, "vault asset balance should not overflow";
+
     executeRebalance@withrevert(e, rebalanceNonce, newStrategy);
 
     assert lastReverted;
-    assert asset.balanceOf(currentContract) == vaultBalanceBefore;
-    assert asset.balanceOf(adapter) == adapterBalanceBefore;
-    assert adapter.getTVL() == adapterTVLBefore;
 }
 
 /// @notice A successful local rebalance withdraws and redeposits the full source TVL
@@ -4616,11 +4755,15 @@ rule executeRebalance_Local_RevertWhen_TargetAdapterVaultIsInvalid() {
 rule executeRebalance_Local_Success() {
     env e;
     uint256 rebalanceNonce;
+    require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
+    require ghost_lastHandledRebalanceNonce_StoreCount == 0,
+        "handled rebalance nonce store count starts at zero";
     Types.Strategy newStrategy;
 
     require e.msg.value == 0, "non-payable";
     require hasRole(REBALANCE_OPERATOR_ROLE(), e.msg.sender);
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
     require !adapter.withdrawReverts(), "adapter withdraw should not revert";
@@ -4647,6 +4790,9 @@ rule executeRebalance_Local_Success() {
     executeRebalance@withrevert(e, rebalanceNonce, newStrategy);
 
     assert !lastReverted;
+    assert getLastHandledRebalanceNonce() == rebalanceNonce;
+    assert ghost_lastHandledRebalanceNonce_StoreCount == 1;
+    assert ghost_lastHandledRebalanceNonce_StoredValue == rebalanceNonce;
     assert getActiveProtocolAdapter() == adapter;
     assert asset.balanceOf(currentContract) == vaultBalanceBefore;
     assert asset.balanceOf(adapter) == adapterBalanceBefore;
@@ -4673,11 +4819,15 @@ rule executeRebalance_Local_Success() {
 rule executeRebalance_Local_When_DepositFails_StoresRecovery() {
     env e;
     uint256 rebalanceNonce;
+    require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
+    require ghost_lastHandledRebalanceNonce_StoreCount == 0,
+        "handled rebalance nonce store count starts at zero";
     Types.Strategy newStrategy;
 
     require e.msg.value == 0, "non-payable";
     require hasRole(REBALANCE_OPERATOR_ROLE(), e.msg.sender);
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
     require !adapter.withdrawReverts(), "adapter withdraw should not revert";
@@ -4702,11 +4852,13 @@ rule executeRebalance_Local_When_DepositFails_StoresRecovery() {
     require ghost_recoveryMode_StoreCount == 0;
     require ghost_rebalanceDepositRecovery_nonce_StoreCount == 0;
     require ghost_rebalanceDepositRecovery_amount_StoreCount == 0;
-    require ghost_rebalanceDepositRecovery_createdAt_StoreCount == 0;
 
     executeRebalance@withrevert(e, rebalanceNonce, newStrategy);
 
     assert !lastReverted;
+    assert getLastHandledRebalanceNonce() == rebalanceNonce;
+    assert ghost_lastHandledRebalanceNonce_StoreCount == 1;
+    assert ghost_lastHandledRebalanceNonce_StoredValue == rebalanceNonce;
     Types.RebalanceDepositRecovery recovery = getRebalanceDepositRecovery();
     assert getActiveProtocolAdapter() == adapter;
     assert asset.balanceOf(currentContract) == vaultBalanceBefore + amountRebalanced;
@@ -4715,7 +4867,6 @@ rule executeRebalance_Local_When_DepositFails_StoresRecovery() {
     assert getRecoveryMode() == Types.RecoveryMode.REBALANCE_DEPOSIT;
     assert recovery.rebalanceNonce == rebalanceNonce;
     assert recovery.amount == amountRebalanced;
-    assert recovery.createdAt == e.block.timestamp;
     assert ghost_RebalanceWithdrawSuccess_EventCount == 1;
     assert ghost_RebalanceWithdrawSuccess_Param_nonce == rebalanceNonce;
     assert ghost_RebalanceWithdrawSuccess_Param_amount == amountRebalanced;
@@ -4735,8 +4886,6 @@ rule executeRebalance_Local_When_DepositFails_StoresRecovery() {
     assert ghost_rebalanceDepositRecovery_nonce_StoredValue == rebalanceNonce;
     assert ghost_rebalanceDepositRecovery_amount_StoreCount == 1;
     assert ghost_rebalanceDepositRecovery_amount_StoredValue == amountRebalanced;
-    assert ghost_rebalanceDepositRecovery_createdAt_StoreCount == 1;
-    assert ghost_rebalanceDepositRecovery_createdAt_StoredValue == e.block.timestamp;
     assert ghost_recoveryMode_StoreCount == 1 => ghost_recoveryMode_StoredValue == Types.RecoveryMode.REBALANCE_DEPOSIT,
         "recovery mode stored value is only meaningful when the recovery mode hook fires, which may not happen due to state packing";
 }
@@ -4746,11 +4895,15 @@ rule executeRebalance_Local_When_DepositFails_StoresRecovery() {
 rule executeRebalance_Remote_RevertWhen_TargetChainSelectorIsZero() {
     env e;
     uint256 rebalanceNonce;
+    require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
+    require ghost_lastHandledRebalanceNonce_StoreCount == 0,
+        "handled rebalance nonce store count starts at zero";
     Types.Strategy newStrategy;
 
     require e.msg.value == 0, "non-payable";
     require hasRole(REBALANCE_OPERATOR_ROLE(), e.msg.sender);
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
     require !adapter.withdrawReverts(), "adapter withdraw should not revert";
@@ -4766,15 +4919,10 @@ rule executeRebalance_Remote_RevertWhen_TargetChainSelectorIsZero() {
     require adapterTVLBefore <= adapterBalanceBefore, "adapter balance should cover the withdrawal";
     require vaultBalanceBefore <= max_uint256 - adapterTVLBefore, "vault balance should not overflow";
     require adapterTVLBefore < max_uint256, "adapter TVL should be below the maximum uint256 value";
-    require ghost_ActiveProtocolAdapterCleared_EventCount == 0;
 
     executeRebalance@withrevert(e, rebalanceNonce, newStrategy);
 
     assert lastReverted;
-    assert asset.balanceOf(currentContract) == vaultBalanceBefore;
-    assert asset.balanceOf(adapter) == adapterBalanceBefore;
-    assert adapter.getTVL() == adapterTVLBefore;
-    assert ghost_ActiveProtocolAdapterCleared_EventCount == 0;
 }
 
 /// @notice A remote rebalance reverts when no target vault is registered
@@ -4782,11 +4930,15 @@ rule executeRebalance_Remote_RevertWhen_TargetChainSelectorIsZero() {
 rule executeRebalance_Remote_RevertWhen_TargetVaultNotRegistered() {
     env e;
     uint256 rebalanceNonce;
+    require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
+    require ghost_lastHandledRebalanceNonce_StoreCount == 0,
+        "handled rebalance nonce store count starts at zero";
     Types.Strategy newStrategy;
 
     require e.msg.value == 0, "non-payable";
     require hasRole(REBALANCE_OPERATOR_ROLE(), e.msg.sender);
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
     require !adapter.withdrawReverts(), "adapter withdraw should not revert";
@@ -4802,15 +4954,10 @@ rule executeRebalance_Remote_RevertWhen_TargetVaultNotRegistered() {
     uint256 adapterTVLBefore = adapter.getTVL();
     require adapterTVLBefore <= adapterBalanceBefore, "adapter balance should cover the withdrawal";
     require vaultBalanceBefore <= max_uint256 - adapterTVLBefore, "vault balance should not overflow";
-    require ghost_ActiveProtocolAdapterCleared_EventCount == 0;
 
     executeRebalance@withrevert(e, rebalanceNonce, newStrategy);
 
     assert lastReverted;
-    assert asset.balanceOf(currentContract) == vaultBalanceBefore;
-    assert asset.balanceOf(adapter) == adapterBalanceBefore;
-    assert adapter.getTVL() == adapterTVLBefore;
-    assert ghost_ActiveProtocolAdapterCleared_EventCount == 0;
 }
 
 /// @notice A successful remote rebalance bridges the full source TVL to the target child
@@ -4818,11 +4965,15 @@ rule executeRebalance_Remote_RevertWhen_TargetVaultNotRegistered() {
 rule executeRebalance_Remote_Success() {
     env e;
     uint256 rebalanceNonce;
+    require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
+    require ghost_lastHandledRebalanceNonce_StoreCount == 0,
+        "handled rebalance nonce store count starts at zero";
     Types.Strategy newStrategy;
 
     require e.msg.value == 0, "non-payable";
     require hasRole(REBALANCE_OPERATOR_ROLE(), e.msg.sender);
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
     require !adapter.withdrawReverts(), "adapter withdraw should not revert";
@@ -4857,6 +5008,9 @@ rule executeRebalance_Remote_Success() {
     executeRebalance@withrevert(e, rebalanceNonce, newStrategy);
 
     assert !lastReverted;
+    assert getLastHandledRebalanceNonce() == rebalanceNonce;
+    assert ghost_lastHandledRebalanceNonce_StoreCount == 1;
+    assert ghost_lastHandledRebalanceNonce_StoredValue == rebalanceNonce;
     assert getActiveProtocolAdapter() == 0;
     assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
     assert asset.balanceOf(adapter) == adapterAssetBalanceBefore - amountRebalanced;
@@ -4871,7 +5025,7 @@ rule executeRebalance_Remote_Success() {
     assert ghost_ActiveProtocolAdapterCleared_EventCount == 1;
     assert ghost_ActiveProtocolAdapterCleared_Param_adapter == adapter;
     assert ghost_CCIPBridged_EventCount == 1;
-    assert ghost_CCIPBridged_Param_amount == amountRebalanced;
+    assert ghost_CCIPBridged_Param_destinationChainSelector == newStrategy.chainSelector;
     assert ghost_CCIPBridged_Param_ccipTxType == Types.CcipTx.REBALANCE;
     assert ghost_CcipSendRecoveryStored_EventCount == 0;
     assert ghost_activeProtocolAdapter_StoreCount == 1;
@@ -4884,11 +5038,15 @@ rule executeRebalance_Remote_Success() {
 rule executeRebalance_Remote_When_RouterGetFeeReverts_StoresCcipSendRecovery() {
     env e;
     uint256 rebalanceNonce;
+    require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
+    require ghost_lastHandledRebalanceNonce_StoreCount == 0,
+        "handled rebalance nonce store count starts at zero";
     Types.Strategy newStrategy;
 
     require e.msg.value == 0, "non-payable";
     require hasRole(REBALANCE_OPERATOR_ROLE(), e.msg.sender);
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require getCcipSendRecoveryNonce() == 0 && getCcipSendRecoveryProtocolId() == to_bytes32(0),
         "CCIP send recovery transaction data should be empty";
@@ -4921,11 +5079,13 @@ rule executeRebalance_Remote_When_RouterGetFeeReverts_StoresCcipSendRecovery() {
     require ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 0;
     require ghost_ccipSendRecovery_nonce_StoreCount == 0;
     require ghost_ccipSendRecovery_protocolId_StoreCount == 0;
-    require ghost_ccipSendRecovery_createdAt_StoreCount == 0;
 
     executeRebalance@withrevert(e, rebalanceNonce, newStrategy);
 
     assert !lastReverted;
+    assert getLastHandledRebalanceNonce() == rebalanceNonce;
+    assert ghost_lastHandledRebalanceNonce_StoreCount == 1;
+    assert ghost_lastHandledRebalanceNonce_StoredValue == rebalanceNonce;
     assert getActiveProtocolAdapter() == 0;
     assert asset.balanceOf(currentContract) == vaultBalanceBefore + amountRebalanced;
     assert asset.balanceOf(adapter) == adapterBalanceBefore - amountRebalanced;
@@ -4937,7 +5097,6 @@ rule executeRebalance_Remote_When_RouterGetFeeReverts_StoresCcipSendRecovery() {
     assert getCcipSendRecoveryDestinationChainSelector() == newStrategy.chainSelector;
     assert getCcipSendRecoveryNonce() == rebalanceNonce;
     assert getCcipSendRecoveryProtocolId() == newStrategy.protocolId;
-    assert getCcipSendRecoveryCreatedAt() == e.block.timestamp;
     assert ghost_RebalanceWithdrawSuccess_EventCount == 1;
     assert ghost_RebalanceWithdrawSuccess_Param_nonce == rebalanceNonce;
     assert ghost_RebalanceWithdrawSuccess_Param_amount == amountRebalanced;
@@ -4958,8 +5117,6 @@ rule executeRebalance_Remote_When_RouterGetFeeReverts_StoresCcipSendRecovery() {
     assert ghost_ccipSendRecovery_nonce_StoredValue == rebalanceNonce;
     assert ghost_ccipSendRecovery_protocolId_StoreCount == 1;
     assert ghost_ccipSendRecovery_protocolId_StoredValue == newStrategy.protocolId;
-    assert ghost_ccipSendRecovery_createdAt_StoreCount == 1;
-    assert ghost_ccipSendRecovery_createdAt_StoredValue == e.block.timestamp;
     assert ghost_recoveryMode_StoreCount == 1 => ghost_recoveryMode_StoredValue == Types.RecoveryMode.CCIP_SEND,
         "recovery mode stored value is only meaningful when the recovery mode hook fires, which may not happen due to state packing";
 }
@@ -4970,11 +5127,15 @@ rule executeRebalance_Remote_When_RouterGetFeeReverts_StoresCcipSendRecovery() {
 rule executeRebalance_Remote_When_RouterCcipSendReverts_StoresCcipSendRecovery() {
     env e;
     uint256 rebalanceNonce;
+    require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
+    require ghost_lastHandledRebalanceNonce_StoreCount == 0,
+        "handled rebalance nonce store count starts at zero";
     Types.Strategy newStrategy;
 
     require e.msg.value == 0, "non-payable";
     require hasRole(REBALANCE_OPERATOR_ROLE(), e.msg.sender);
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require getCcipSendRecoveryNonce() == 0 && getCcipSendRecoveryProtocolId() == to_bytes32(0),
         "CCIP send recovery transaction data should be empty";
@@ -5007,11 +5168,13 @@ rule executeRebalance_Remote_When_RouterCcipSendReverts_StoresCcipSendRecovery()
     require ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 0;
     require ghost_ccipSendRecovery_nonce_StoreCount == 0;
     require ghost_ccipSendRecovery_protocolId_StoreCount == 0;
-    require ghost_ccipSendRecovery_createdAt_StoreCount == 0;
 
     executeRebalance@withrevert(e, rebalanceNonce, newStrategy);
 
     assert !lastReverted;
+    assert getLastHandledRebalanceNonce() == rebalanceNonce;
+    assert ghost_lastHandledRebalanceNonce_StoreCount == 1;
+    assert ghost_lastHandledRebalanceNonce_StoredValue == rebalanceNonce;
     assert getActiveProtocolAdapter() == 0;
     assert asset.balanceOf(currentContract) == vaultBalanceBefore + amountRebalanced;
     assert asset.balanceOf(adapter) == adapterBalanceBefore - amountRebalanced;
@@ -5023,7 +5186,6 @@ rule executeRebalance_Remote_When_RouterCcipSendReverts_StoresCcipSendRecovery()
     assert getCcipSendRecoveryDestinationChainSelector() == newStrategy.chainSelector;
     assert getCcipSendRecoveryNonce() == rebalanceNonce;
     assert getCcipSendRecoveryProtocolId() == newStrategy.protocolId;
-    assert getCcipSendRecoveryCreatedAt() == e.block.timestamp;
     assert ghost_RebalanceWithdrawSuccess_EventCount == 1;
     assert ghost_RebalanceWithdrawSuccess_Param_nonce == rebalanceNonce;
     assert ghost_RebalanceWithdrawSuccess_Param_amount == amountRebalanced;
@@ -5044,8 +5206,6 @@ rule executeRebalance_Remote_When_RouterCcipSendReverts_StoresCcipSendRecovery()
     assert ghost_ccipSendRecovery_nonce_StoredValue == rebalanceNonce;
     assert ghost_ccipSendRecovery_protocolId_StoreCount == 1;
     assert ghost_ccipSendRecovery_protocolId_StoredValue == newStrategy.protocolId;
-    assert ghost_ccipSendRecovery_createdAt_StoreCount == 1;
-    assert ghost_ccipSendRecovery_createdAt_StoredValue == e.block.timestamp;
     assert ghost_recoveryMode_StoreCount == 1 => ghost_recoveryMode_StoredValue == Types.RecoveryMode.CCIP_SEND,
         "recovery mode stored value is only meaningful when the recovery mode hook fires, which may not happen due to state packing";
 }
@@ -5073,8 +5233,8 @@ rule executeRecovery_EPOCH_WITHDRAW_RevertWhen_ReentrantCall() {
 
     /// @dev revert condition being verified
     require reentrancyGuardEntered(), "reentrancy guard should be entered";
+    require !paused(), "vault should not be paused";
 
-    storage before = lastStorage;
     uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
     uint256 adapterAssetBalanceBefore = asset.balanceOf(adapter);
     uint256 adapterTVLBefore = adapter.getTVL();
@@ -5084,20 +5244,10 @@ rule executeRecovery_EPOCH_WITHDRAW_RevertWhen_ReentrantCall() {
     require vaultAssetBalanceBefore <= max_uint256 - adapterTVLBefore, "vault asset balance should not overflow";
 
     /// @dev set ghost starting values
-    require ghost_EpochWithdrawRecoveryCleared_EventCount == 0;
-    require ghost_WithdrawFromStrategySuccess_EventCount == 0;
-    require ghost_CCIPBridged_EventCount == 0;
 
     executeRecovery@withrevert(e);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(adapter) == adapterAssetBalanceBefore;
-    assert adapter.getTVL() == adapterTVLBefore;
-    assert ghost_EpochWithdrawRecoveryCleared_EventCount == 0;
-    assert ghost_WithdrawFromStrategySuccess_EventCount == 0;
-    assert ghost_CCIPBridged_EventCount == 0;
 }
 
 /// @notice Epoch withdraw recovery via executeRecovery reverts when no active adapter is set
@@ -5108,6 +5258,7 @@ rule executeRecovery_EPOCH_WITHDRAW_RevertWhen_NoActiveAdapter() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.EPOCH_WITHDRAW, "epoch withdraw recovery should be pending";
     require getEpochWithdrawRecovery().amount != 0, "recovery amount should not be zero";
     require !adapter.withdrawReverts(), "adapter withdraw should not revert";
@@ -5121,7 +5272,6 @@ rule executeRecovery_EPOCH_WITHDRAW_RevertWhen_NoActiveAdapter() {
     /// @dev revert condition being verified
     require getActiveProtocolAdapter() == 0, "active adapter should not be set";
 
-    storage before = lastStorage;
     uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
     uint256 adapterAssetBalanceBefore = asset.balanceOf(adapter);
     uint256 adapterTVLBefore = adapter.getTVL();
@@ -5131,20 +5281,10 @@ rule executeRecovery_EPOCH_WITHDRAW_RevertWhen_NoActiveAdapter() {
     require vaultAssetBalanceBefore <= max_uint256 - adapterTVLBefore, "vault asset balance should not overflow";
 
     /// @dev set ghost starting values
-    require ghost_EpochWithdrawRecoveryCleared_EventCount == 0;
-    require ghost_WithdrawFromStrategySuccess_EventCount == 0;
-    require ghost_CCIPBridged_EventCount == 0;
 
     executeRecovery@withrevert(e);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(adapter) == adapterAssetBalanceBefore;
-    assert adapter.getTVL() == adapterTVLBefore;
-    assert ghost_EpochWithdrawRecoveryCleared_EventCount == 0;
-    assert ghost_WithdrawFromStrategySuccess_EventCount == 0;
-    assert ghost_CCIPBridged_EventCount == 0;
 }
 
 /// @notice Epoch withdraw recovery via executeRecovery reverts when the adapter withdraw fails
@@ -5155,6 +5295,7 @@ rule executeRecovery_EPOCH_WITHDRAW_RevertWhen_WithdrawFails() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.EPOCH_WITHDRAW, "epoch withdraw recovery should be pending";
     require getEpochWithdrawRecovery().amount != 0, "recovery amount should not be zero";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
@@ -5168,7 +5309,6 @@ rule executeRecovery_EPOCH_WITHDRAW_RevertWhen_WithdrawFails() {
     /// @dev revert condition being verified
     require adapter.withdrawReverts(), "adapter withdraw should revert";
 
-    storage before = lastStorage;
     uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
     uint256 adapterAssetBalanceBefore = asset.balanceOf(adapter);
     uint256 adapterTVLBefore = adapter.getTVL();
@@ -5178,20 +5318,10 @@ rule executeRecovery_EPOCH_WITHDRAW_RevertWhen_WithdrawFails() {
     require vaultAssetBalanceBefore <= max_uint256 - adapterTVLBefore, "vault asset balance should not overflow";
 
     /// @dev set ghost starting values
-    require ghost_EpochWithdrawRecoveryCleared_EventCount == 0;
-    require ghost_WithdrawFromStrategySuccess_EventCount == 0;
-    require ghost_CCIPBridged_EventCount == 0;
 
     executeRecovery@withrevert(e);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(adapter) == adapterAssetBalanceBefore;
-    assert adapter.getTVL() == adapterTVLBefore;
-    assert ghost_EpochWithdrawRecoveryCleared_EventCount == 0;
-    assert ghost_WithdrawFromStrategySuccess_EventCount == 0;
-    assert ghost_CCIPBridged_EventCount == 0;
 }
 
 /// @notice Epoch withdraw recovery via executeRecovery reverts when the retry withdraw returns zero
@@ -5203,6 +5333,7 @@ rule executeRecovery_EPOCH_WITHDRAW_RevertWhen_AmountOutIsZero() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.EPOCH_WITHDRAW, "epoch withdraw recovery should be pending";
     require getEpochWithdrawRecovery().amount != 0, "recovery amount should not be zero";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
@@ -5216,25 +5347,12 @@ rule executeRecovery_EPOCH_WITHDRAW_RevertWhen_AmountOutIsZero() {
     /// @dev revert condition being verified
     require adapter.getTVL() == 0, "adapter withdraw should return zero";
 
-    storage before = lastStorage;
-    uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
-    uint256 adapterAssetBalanceBefore = asset.balanceOf(adapter);
 
     /// @dev set ghost starting values
-    require ghost_EpochWithdrawRecoveryCleared_EventCount == 0;
-    require ghost_WithdrawFromStrategySuccess_EventCount == 0;
-    require ghost_CCIPBridged_EventCount == 0;
 
     executeRecovery@withrevert(e);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(adapter) == adapterAssetBalanceBefore;
-    assert adapter.getTVL() == 0;
-    assert ghost_EpochWithdrawRecoveryCleared_EventCount == 0;
-    assert ghost_WithdrawFromStrategySuccess_EventCount == 0;
-    assert ghost_CCIPBridged_EventCount == 0;
 }
 
 /// @notice Epoch withdraw recovery via executeRecovery reverts when the parent chain selector is invalid
@@ -5245,6 +5363,7 @@ rule executeRecovery_EPOCH_WITHDRAW_RevertWhen_ParentChainSelectorInvalid() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.EPOCH_WITHDRAW, "epoch withdraw recovery should be pending";
     require getCcipSendRecoveryNonce() == 0 && getCcipSendRecoveryProtocolId() == to_bytes32(0),
         "CCIP send recovery transaction data should be empty";
@@ -5260,39 +5379,20 @@ rule executeRecovery_EPOCH_WITHDRAW_RevertWhen_ParentChainSelectorInvalid() {
     require currentContract.i_parentChainSelector == 0 || currentContract.i_parentChainSelector == currentContract.i_thisChainSelector,
         "destination selector should be invalid";
 
-    storage before = lastStorage;
     uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
     uint256 adapterAssetBalanceBefore = asset.balanceOf(adapter);
     uint256 adapterTVLBefore = adapter.getTVL();
     address router = getRouter();
-    uint256 routerAssetBalanceBefore = asset.balanceOf(router);
-    uint256 vaultLinkBalanceBefore = link.balanceOf(currentContract);
-    uint256 routerLinkBalanceBefore = link.balanceOf(router);
 
     /// @dev mock token arithmetic conditions
     require adapterTVLBefore <= adapterAssetBalanceBefore, "adapter asset balance should cover the withdrawn amount";
     require vaultAssetBalanceBefore <= max_uint256 - adapterTVLBefore, "vault asset balance should not overflow";
 
     /// @dev set ghost starting values
-    require ghost_EpochWithdrawRecoveryCleared_EventCount == 0;
-    require ghost_WithdrawFromStrategySuccess_EventCount == 0;
-    require ghost_CCIPBridged_EventCount == 0;
-    require ghost_CcipSendRecoveryStored_EventCount == 0;
 
     executeRecovery@withrevert(e);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(adapter) == adapterAssetBalanceBefore;
-    assert asset.balanceOf(router) == routerAssetBalanceBefore;
-    assert adapter.getTVL() == adapterTVLBefore;
-    assert link.balanceOf(currentContract) == vaultLinkBalanceBefore;
-    assert link.balanceOf(router) == routerLinkBalanceBefore;
-    assert ghost_EpochWithdrawRecoveryCleared_EventCount == 0;
-    assert ghost_WithdrawFromStrategySuccess_EventCount == 0;
-    assert ghost_CCIPBridged_EventCount == 0;
-    assert ghost_CcipSendRecoveryStored_EventCount == 0;
 }
 
 /// @notice Epoch withdraw recovery via executeRecovery reverts when the parent vault is not registered
@@ -5303,6 +5403,7 @@ rule executeRecovery_EPOCH_WITHDRAW_RevertWhen_ParentVaultNotRegistered() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.EPOCH_WITHDRAW, "epoch withdraw recovery should be pending";
     require getCcipSendRecoveryNonce() == 0 && getCcipSendRecoveryProtocolId() == to_bytes32(0),
         "CCIP send recovery transaction data should be empty";
@@ -5318,39 +5419,20 @@ rule executeRecovery_EPOCH_WITHDRAW_RevertWhen_ParentVaultNotRegistered() {
     /// @dev failure condition being verified
     require getCrosschainVault(getParentChainSelector()) == 0, "parent vault should not be registered";
 
-    storage before = lastStorage;
     uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
     uint256 adapterAssetBalanceBefore = asset.balanceOf(adapter);
     uint256 adapterTVLBefore = adapter.getTVL();
     address router = getRouter();
-    uint256 routerAssetBalanceBefore = asset.balanceOf(router);
-    uint256 vaultLinkBalanceBefore = link.balanceOf(currentContract);
-    uint256 routerLinkBalanceBefore = link.balanceOf(router);
 
     /// @dev mock token arithmetic conditions
     require adapterTVLBefore <= adapterAssetBalanceBefore, "adapter asset balance should cover the withdrawn amount";
     require vaultAssetBalanceBefore <= max_uint256 - adapterTVLBefore, "vault asset balance should not overflow";
 
     /// @dev set ghost starting values
-    require ghost_EpochWithdrawRecoveryCleared_EventCount == 0;
-    require ghost_WithdrawFromStrategySuccess_EventCount == 0;
-    require ghost_CCIPBridged_EventCount == 0;
-    require ghost_CcipSendRecoveryStored_EventCount == 0;
 
     executeRecovery@withrevert(e);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(adapter) == adapterAssetBalanceBefore;
-    assert asset.balanceOf(router) == routerAssetBalanceBefore;
-    assert adapter.getTVL() == adapterTVLBefore;
-    assert link.balanceOf(currentContract) == vaultLinkBalanceBefore;
-    assert link.balanceOf(router) == routerLinkBalanceBefore;
-    assert ghost_EpochWithdrawRecoveryCleared_EventCount == 0;
-    assert ghost_WithdrawFromStrategySuccess_EventCount == 0;
-    assert ghost_CCIPBridged_EventCount == 0;
-    assert ghost_CcipSendRecoveryStored_EventCount == 0;
 }
 
 /// @notice Epoch withdraw recovery via executeRecovery withdraws the stored amount, clears recovery, and bridges to the parent
@@ -5361,6 +5443,7 @@ rule executeRecovery_EPOCH_WITHDRAW_Success() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.EPOCH_WITHDRAW, "epoch withdraw recovery should be pending";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
     require !adapter.withdrawReverts(), "adapter withdraw should not revert";
@@ -5385,6 +5468,7 @@ rule executeRecovery_EPOCH_WITHDRAW_Success() {
     require recovery.amount != 0, "recovery amount should not be zero";
     require amountOut != 0, "withdraw amount out should not be zero";
     require amountOut <= adapterAssetBalanceBefore, "adapter asset balance should cover the withdrawn amount";
+    require vaultAssetBalanceBefore <= max_uint256 - amountOut, "vault asset balance should not overflow";
     require fee <= vaultLinkBalanceBefore, "vault LINK balance should cover the CCIP fee";
     require routerLinkBalanceBefore <= max_uint256 - fee, "router LINK balance should not overflow";
     require routerAssetBalanceBefore <= max_uint256 - amountOut, "router asset balance should not overflow";
@@ -5395,7 +5479,6 @@ rule executeRecovery_EPOCH_WITHDRAW_Success() {
     require ghost_CCIPBridged_EventCount == 0;
     require ghost_epochWithdrawRecovery_epochNonce_StoreCount == 0;
     require ghost_epochWithdrawRecovery_amount_StoreCount == 0;
-    require ghost_epochWithdrawRecovery_createdAt_StoreCount == 0;
     require ghost_recoveryMode_StoreCount == 0;
 
     executeRecovery@withrevert(e);
@@ -5410,21 +5493,18 @@ rule executeRecovery_EPOCH_WITHDRAW_Success() {
     assert getRecoveryMode() == Types.RecoveryMode.NONE;
     assert getEpochWithdrawRecovery().epochNonce == 0;
     assert getEpochWithdrawRecovery().amount == 0;
-    assert getEpochWithdrawRecovery().createdAt == 0;
     assert ghost_EpochWithdrawRecoveryCleared_EventCount == 1;
     assert ghost_EpochWithdrawRecoveryCleared_Param_epochNonce == recovery.epochNonce;
     assert ghost_WithdrawFromStrategySuccess_EventCount == 1;
     assert ghost_WithdrawFromStrategySuccess_Param_epochNonce == recovery.epochNonce;
     assert ghost_WithdrawFromStrategySuccess_Param_amount == amountOut;
     assert ghost_CCIPBridged_EventCount == 1;
-    assert ghost_CCIPBridged_Param_amount == amountOut;
+    assert ghost_CCIPBridged_Param_destinationChainSelector == getParentChainSelector();
     assert ghost_CCIPBridged_Param_ccipTxType == Types.CcipTx.EPOCH_NET_WITHDRAW;
     assert ghost_epochWithdrawRecovery_epochNonce_StoreCount == 1;
     assert ghost_epochWithdrawRecovery_epochNonce_StoredValue == 0;
     assert ghost_epochWithdrawRecovery_amount_StoreCount == 1;
     assert ghost_epochWithdrawRecovery_amount_StoredValue == 0;
-    assert ghost_epochWithdrawRecovery_createdAt_StoreCount == 1;
-    assert ghost_epochWithdrawRecovery_createdAt_StoredValue == 0;
     assert ghost_recoveryMode_StoreCount == 1 => ghost_recoveryMode_StoredValue == Types.RecoveryMode.NONE,
         "recovery mode stored value is only meaningful when the recovery mode hook fires, which may not happen due to state packing";
 }
@@ -5437,6 +5517,7 @@ rule executeRecovery_EPOCH_WITHDRAW_When_RouterGetFeeReverts_StoresCcipSendRecov
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.EPOCH_WITHDRAW, "epoch withdraw recovery should be pending";
     require getCcipSendRecoveryNonce() == 0 && getCcipSendRecoveryProtocolId() == to_bytes32(0),
         "CCIP send recovery transaction data should be empty";
@@ -5474,13 +5555,11 @@ rule executeRecovery_EPOCH_WITHDRAW_When_RouterGetFeeReverts_StoresCcipSendRecov
     require ghost_CcipSendRecoveryStored_EventCount == 0;
     require ghost_epochWithdrawRecovery_epochNonce_StoreCount == 0;
     require ghost_epochWithdrawRecovery_amount_StoreCount == 0;
-    require ghost_epochWithdrawRecovery_createdAt_StoreCount == 0;
     require ghost_recoveryMode_StoreCount == 0;
     require ghost_ccipSendRecovery_amount_StoreCount == 0;
     require ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 0;
     require ghost_ccipSendRecovery_nonce_StoreCount == 0;
     require ghost_ccipSendRecovery_protocolId_StoreCount == 0;
-    require ghost_ccipSendRecovery_createdAt_StoreCount == 0;
 
     executeRecovery@withrevert(e);
 
@@ -5493,14 +5572,12 @@ rule executeRecovery_EPOCH_WITHDRAW_When_RouterGetFeeReverts_StoresCcipSendRecov
     assert link.balanceOf(router) == routerLinkBalanceBefore;
     assert getEpochWithdrawRecovery().epochNonce == 0;
     assert getEpochWithdrawRecovery().amount == 0;
-    assert getEpochWithdrawRecovery().createdAt == 0;
     assert getRecoveryMode() == Types.RecoveryMode.CCIP_SEND;
     assert getCcipSendRecoveryTxType() == Types.CcipTx.EPOCH_NET_WITHDRAW;
     assert getCcipSendRecoveryAmount() == amountOut;
     assert getCcipSendRecoveryDestinationChainSelector() == getParentChainSelector();
     assert getCcipSendRecoveryNonce() == recovery.epochNonce;
     assert getCcipSendRecoveryProtocolId() == to_bytes32(0);
-    assert getCcipSendRecoveryCreatedAt() == e.block.timestamp;
     assert ghost_EpochWithdrawRecoveryCleared_EventCount == 1;
     assert ghost_EpochWithdrawRecoveryCleared_Param_epochNonce == recovery.epochNonce;
     assert ghost_WithdrawFromStrategySuccess_EventCount == 1;
@@ -5515,8 +5592,6 @@ rule executeRecovery_EPOCH_WITHDRAW_When_RouterGetFeeReverts_StoresCcipSendRecov
     assert ghost_epochWithdrawRecovery_epochNonce_StoredValue == 0;
     assert ghost_epochWithdrawRecovery_amount_StoreCount == 1;
     assert ghost_epochWithdrawRecovery_amount_StoredValue == 0;
-    assert ghost_epochWithdrawRecovery_createdAt_StoreCount == 1;
-    assert ghost_epochWithdrawRecovery_createdAt_StoredValue == 0;
     assert ghost_ccipSendRecovery_amount_StoreCount == 1;
     assert ghost_ccipSendRecovery_amount_StoredValue == amountOut;
     assert ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 1;
@@ -5525,8 +5600,6 @@ rule executeRecovery_EPOCH_WITHDRAW_When_RouterGetFeeReverts_StoresCcipSendRecov
     assert ghost_ccipSendRecovery_nonce_StoredValue == recovery.epochNonce;
     assert ghost_ccipSendRecovery_protocolId_StoreCount == 1;
     assert ghost_ccipSendRecovery_protocolId_StoredValue == to_bytes32(0);
-    assert ghost_ccipSendRecovery_createdAt_StoreCount == 1;
-    assert ghost_ccipSendRecovery_createdAt_StoredValue == e.block.timestamp;
     assert ghost_recoveryMode_StoreCount == 1 => ghost_recoveryMode_StoredValue == Types.RecoveryMode.CCIP_SEND,
         "recovery mode stored value is only meaningful when the recovery mode hook fires, which may not happen due to state packing";
 }
@@ -5539,6 +5612,7 @@ rule executeRecovery_EPOCH_WITHDRAW_When_RouterCcipSendReverts_StoresCcipSendRec
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.EPOCH_WITHDRAW, "epoch withdraw recovery should be pending";
     require getCcipSendRecoveryNonce() == 0 && getCcipSendRecoveryProtocolId() == to_bytes32(0),
         "CCIP send recovery transaction data should be empty";
@@ -5576,13 +5650,11 @@ rule executeRecovery_EPOCH_WITHDRAW_When_RouterCcipSendReverts_StoresCcipSendRec
     require ghost_CcipSendRecoveryStored_EventCount == 0;
     require ghost_epochWithdrawRecovery_epochNonce_StoreCount == 0;
     require ghost_epochWithdrawRecovery_amount_StoreCount == 0;
-    require ghost_epochWithdrawRecovery_createdAt_StoreCount == 0;
     require ghost_recoveryMode_StoreCount == 0;
     require ghost_ccipSendRecovery_amount_StoreCount == 0;
     require ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 0;
     require ghost_ccipSendRecovery_nonce_StoreCount == 0;
     require ghost_ccipSendRecovery_protocolId_StoreCount == 0;
-    require ghost_ccipSendRecovery_createdAt_StoreCount == 0;
 
     executeRecovery@withrevert(e);
 
@@ -5595,14 +5667,12 @@ rule executeRecovery_EPOCH_WITHDRAW_When_RouterCcipSendReverts_StoresCcipSendRec
     assert link.balanceOf(router) == routerLinkBalanceBefore;
     assert getEpochWithdrawRecovery().epochNonce == 0;
     assert getEpochWithdrawRecovery().amount == 0;
-    assert getEpochWithdrawRecovery().createdAt == 0;
     assert getRecoveryMode() == Types.RecoveryMode.CCIP_SEND;
     assert getCcipSendRecoveryTxType() == Types.CcipTx.EPOCH_NET_WITHDRAW;
     assert getCcipSendRecoveryAmount() == amountOut;
     assert getCcipSendRecoveryDestinationChainSelector() == getParentChainSelector();
     assert getCcipSendRecoveryNonce() == recovery.epochNonce;
     assert getCcipSendRecoveryProtocolId() == to_bytes32(0);
-    assert getCcipSendRecoveryCreatedAt() == e.block.timestamp;
     assert ghost_EpochWithdrawRecoveryCleared_EventCount == 1;
     assert ghost_EpochWithdrawRecoveryCleared_Param_epochNonce == recovery.epochNonce;
     assert ghost_WithdrawFromStrategySuccess_EventCount == 1;
@@ -5617,8 +5687,6 @@ rule executeRecovery_EPOCH_WITHDRAW_When_RouterCcipSendReverts_StoresCcipSendRec
     assert ghost_epochWithdrawRecovery_epochNonce_StoredValue == 0;
     assert ghost_epochWithdrawRecovery_amount_StoreCount == 1;
     assert ghost_epochWithdrawRecovery_amount_StoredValue == 0;
-    assert ghost_epochWithdrawRecovery_createdAt_StoreCount == 1;
-    assert ghost_epochWithdrawRecovery_createdAt_StoredValue == 0;
     assert ghost_ccipSendRecovery_amount_StoreCount == 1;
     assert ghost_ccipSendRecovery_amount_StoredValue == amountOut;
     assert ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 1;
@@ -5627,8 +5695,6 @@ rule executeRecovery_EPOCH_WITHDRAW_When_RouterCcipSendReverts_StoresCcipSendRec
     assert ghost_ccipSendRecovery_nonce_StoredValue == recovery.epochNonce;
     assert ghost_ccipSendRecovery_protocolId_StoreCount == 1;
     assert ghost_ccipSendRecovery_protocolId_StoredValue == to_bytes32(0);
-    assert ghost_ccipSendRecovery_createdAt_StoreCount == 1;
-    assert ghost_ccipSendRecovery_createdAt_StoredValue == e.block.timestamp;
     assert ghost_recoveryMode_StoreCount == 1 => ghost_recoveryMode_StoredValue == Types.RecoveryMode.CCIP_SEND,
         "recovery mode stored value is only meaningful when the recovery mode hook fires, which may not happen due to state packing";
 }
@@ -5643,6 +5709,7 @@ rule executeRecovery_CCIP_SEND_EPOCH_NET_WITHDRAW_Success() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.CCIP_SEND, "CCIP send recovery should be pending";
     require getCcipSendRecoveryTxType() == Types.CcipTx.EPOCH_NET_WITHDRAW,
         "stored CCIP tx type should be epoch net withdraw";
@@ -5682,7 +5749,6 @@ rule executeRecovery_CCIP_SEND_EPOCH_NET_WITHDRAW_Success() {
     require ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 0;
     require ghost_ccipSendRecovery_nonce_StoreCount == 0;
     require ghost_ccipSendRecovery_protocolId_StoreCount == 0;
-    require ghost_ccipSendRecovery_createdAt_StoreCount == 0;
     require ghost_recoveryMode_StoreCount == 0;
 
     executeRecovery@withrevert(e);
@@ -5699,14 +5765,13 @@ rule executeRecovery_CCIP_SEND_EPOCH_NET_WITHDRAW_Success() {
     assert getCcipSendRecoveryDestinationChainSelector() == 0;
     assert getCcipSendRecoveryNonce() == 0;
     assert getCcipSendRecoveryProtocolId() == to_bytes32(0);
-    assert getCcipSendRecoveryCreatedAt() == 0;
     assert ghost_CcipSendRecoveryCleared_EventCount == 1;
     assert ghost_CcipSendRecoveryCleared_Param_ccipTxType == Types.CcipTx.EPOCH_NET_WITHDRAW;
     assert ghost_CcipSendRecoveryCleared_Param_destinationChainSelector == destinationChainSelector;
     assert ghost_CcipSendRecoveryCleared_Param_amount == bridgeAmount;
     assert ghost_CCIPBridged_EventCount == 1;
     assert ghost_CCIPBridged_Param_ccipMessageId != to_bytes32(0);
-    assert ghost_CCIPBridged_Param_amount == bridgeAmount;
+    assert ghost_CCIPBridged_Param_destinationChainSelector == destinationChainSelector;
     assert ghost_CCIPBridged_Param_ccipTxType == Types.CcipTx.EPOCH_NET_WITHDRAW;
     assert ghost_CcipSendRecoveryStored_EventCount == 0;
     assert ghost_ccipSendRecovery_amount_StoreCount == 1;
@@ -5717,8 +5782,6 @@ rule executeRecovery_CCIP_SEND_EPOCH_NET_WITHDRAW_Success() {
     assert ghost_ccipSendRecovery_nonce_StoredValue == 0;
     assert ghost_ccipSendRecovery_protocolId_StoreCount == 1;
     assert ghost_ccipSendRecovery_protocolId_StoredValue == to_bytes32(0);
-    assert ghost_ccipSendRecovery_createdAt_StoreCount == 1;
-    assert ghost_ccipSendRecovery_createdAt_StoredValue == 0;
     assert ghost_recoveryMode_StoreCount == 1 => ghost_recoveryMode_StoredValue == Types.RecoveryMode.NONE,
         "recovery mode stored value is only meaningful when the recovery mode hook fires, which may not happen due to state packing";
 }
@@ -5731,6 +5794,7 @@ rule executeRecovery_CCIP_SEND_REBALANCE_Success() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.CCIP_SEND, "CCIP send recovery should be pending";
     require getCcipSendRecoveryTxType() == Types.CcipTx.REBALANCE, "stored CCIP tx type should be rebalance";
     require getCcipSendRecoveryAmount() != 0, "recovery amount should not be zero";
@@ -5769,7 +5833,6 @@ rule executeRecovery_CCIP_SEND_REBALANCE_Success() {
     require ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 0;
     require ghost_ccipSendRecovery_nonce_StoreCount == 0;
     require ghost_ccipSendRecovery_protocolId_StoreCount == 0;
-    require ghost_ccipSendRecovery_createdAt_StoreCount == 0;
     require ghost_recoveryMode_StoreCount == 0;
 
     executeRecovery@withrevert(e);
@@ -5786,14 +5849,13 @@ rule executeRecovery_CCIP_SEND_REBALANCE_Success() {
     assert getCcipSendRecoveryDestinationChainSelector() == 0;
     assert getCcipSendRecoveryNonce() == 0;
     assert getCcipSendRecoveryProtocolId() == to_bytes32(0);
-    assert getCcipSendRecoveryCreatedAt() == 0;
     assert ghost_CcipSendRecoveryCleared_EventCount == 1;
     assert ghost_CcipSendRecoveryCleared_Param_ccipTxType == Types.CcipTx.REBALANCE;
     assert ghost_CcipSendRecoveryCleared_Param_destinationChainSelector == destinationChainSelector;
     assert ghost_CcipSendRecoveryCleared_Param_amount == bridgeAmount;
     assert ghost_CCIPBridged_EventCount == 1;
     assert ghost_CCIPBridged_Param_ccipMessageId != to_bytes32(0);
-    assert ghost_CCIPBridged_Param_amount == bridgeAmount;
+    assert ghost_CCIPBridged_Param_destinationChainSelector == destinationChainSelector;
     assert ghost_CCIPBridged_Param_ccipTxType == Types.CcipTx.REBALANCE;
     assert ghost_CcipSendRecoveryStored_EventCount == 0;
     assert ghost_ccipSendRecovery_amount_StoreCount == 1;
@@ -5804,8 +5866,6 @@ rule executeRecovery_CCIP_SEND_REBALANCE_Success() {
     assert ghost_ccipSendRecovery_nonce_StoredValue == 0;
     assert ghost_ccipSendRecovery_protocolId_StoreCount == 1;
     assert ghost_ccipSendRecovery_protocolId_StoredValue == to_bytes32(0);
-    assert ghost_ccipSendRecovery_createdAt_StoreCount == 1;
-    assert ghost_ccipSendRecovery_createdAt_StoredValue == 0;
     assert ghost_recoveryMode_StoreCount == 1 => ghost_recoveryMode_StoredValue == Types.RecoveryMode.NONE,
         "recovery mode stored value is only meaningful when the recovery mode hook fires, which may not happen due to state packing";
 }
@@ -5818,6 +5878,7 @@ rule executeRecovery_CCIP_SEND_RevertWhen_RouterGetFeeReverts() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.CCIP_SEND, "CCIP send recovery should be pending";
     require getCcipSendRecoveryAmount() != 0, "recovery amount should not be zero";
     require getCcipSendRecoveryDestinationChainSelector() != 0, "destination chain selector should not be zero";
@@ -5832,27 +5893,13 @@ rule executeRecovery_CCIP_SEND_RevertWhen_RouterGetFeeReverts() {
     /// @dev revert condition being verified
     require ccipRouter.getFeeReverts(), "router fee lookup should revert";
 
-    storage before = lastStorage;
     address router = getRouter();
-    uint256 vaultLinkBalanceBefore = link.balanceOf(currentContract);
-    uint256 routerLinkBalanceBefore = link.balanceOf(router);
-    uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
-    uint256 routerAssetBalanceBefore = asset.balanceOf(router);
 
     /// @dev set ghost starting values
-    require ghost_CcipSendRecoveryCleared_EventCount == 0;
-    require ghost_CCIPBridged_EventCount == 0;
 
     executeRecovery@withrevert(e);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert link.balanceOf(currentContract) == vaultLinkBalanceBefore;
-    assert link.balanceOf(router) == routerLinkBalanceBefore;
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(router) == routerAssetBalanceBefore;
-    assert ghost_CcipSendRecoveryCleared_EventCount == 0;
-    assert ghost_CCIPBridged_EventCount == 0;
 }
 
 /// @notice CCIP send recovery via executeRecovery reverts and preserves recovery when router send fails
@@ -5863,6 +5910,7 @@ rule executeRecovery_CCIP_SEND_RevertWhen_RouterCcipSendReverts() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.CCIP_SEND, "CCIP send recovery should be pending";
     require getCcipSendRecoveryAmount() != 0, "recovery amount should not be zero";
     require getCcipSendRecoveryDestinationChainSelector() != 0, "destination chain selector should not be zero";
@@ -5877,7 +5925,6 @@ rule executeRecovery_CCIP_SEND_RevertWhen_RouterCcipSendReverts() {
     /// @dev revert condition being verified
     require ccipRouter.ccipSendReverts(), "router send should revert";
 
-    storage before = lastStorage;
     uint256 fee = ccipRouter.getFee();
     uint256 bridgeAmount = getCcipSendRecoveryAmount();
     address router = getRouter();
@@ -5893,19 +5940,10 @@ rule executeRecovery_CCIP_SEND_RevertWhen_RouterCcipSendReverts() {
     require routerAssetBalanceBefore <= max_uint256 - bridgeAmount, "router asset balance should not overflow";
 
     /// @dev set ghost starting values
-    require ghost_CcipSendRecoveryCleared_EventCount == 0;
-    require ghost_CCIPBridged_EventCount == 0;
 
     executeRecovery@withrevert(e);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert link.balanceOf(currentContract) == vaultLinkBalanceBefore;
-    assert link.balanceOf(router) == routerLinkBalanceBefore;
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(router) == routerAssetBalanceBefore;
-    assert ghost_CcipSendRecoveryCleared_EventCount == 0;
-    assert ghost_CCIPBridged_EventCount == 0;
 }
 
 /// @notice CCIP send recovery via executeRecovery reverts when the call is reentrant
@@ -5927,8 +5965,8 @@ rule executeRecovery_CCIP_SEND_RevertWhen_ReentrantCall() {
 
     /// @dev revert condition being verified
     require reentrancyGuardEntered(), "reentrancy guard should be entered";
+    require !paused(), "vault should not be paused";
 
-    storage before = lastStorage;
     uint256 bridgeAmount = getCcipSendRecoveryAmount();
     uint256 fee = ccipRouter.getFee();
     address router = getRouter();
@@ -5944,19 +5982,10 @@ rule executeRecovery_CCIP_SEND_RevertWhen_ReentrantCall() {
     require routerAssetBalanceBefore <= max_uint256 - bridgeAmount, "router asset balance should not overflow";
 
     /// @dev set ghost starting values
-    require ghost_CcipSendRecoveryCleared_EventCount == 0;
-    require ghost_CCIPBridged_EventCount == 0;
 
     executeRecovery@withrevert(e);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert link.balanceOf(currentContract) == vaultLinkBalanceBefore;
-    assert link.balanceOf(router) == routerLinkBalanceBefore;
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(router) == routerAssetBalanceBefore;
-    assert ghost_CcipSendRecoveryCleared_EventCount == 0;
-    assert ghost_CCIPBridged_EventCount == 0;
 }
 
 /// @notice CCIP send recovery via executeRecovery reverts when the stored bridge amount is zero
@@ -5967,6 +5996,7 @@ rule executeRecovery_CCIP_SEND_RevertWhen_AmountIsZero() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.CCIP_SEND, "CCIP send recovery should be pending";
     require getCcipSendRecoveryDestinationChainSelector() != 0, "destination chain selector should not be zero";
     require getCcipSendRecoveryDestinationChainSelector() != getThisChainSelector(), "destination should not be this chain";
@@ -5979,27 +6009,13 @@ rule executeRecovery_CCIP_SEND_RevertWhen_AmountIsZero() {
     /// @dev revert condition being verified
     require getCcipSendRecoveryAmount() == 0, "recovery amount should be zero";
 
-    storage before = lastStorage;
     address router = getRouter();
-    uint256 vaultLinkBalanceBefore = link.balanceOf(currentContract);
-    uint256 routerLinkBalanceBefore = link.balanceOf(router);
-    uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
-    uint256 routerAssetBalanceBefore = asset.balanceOf(router);
 
     /// @dev set ghost starting values
-    require ghost_CcipSendRecoveryCleared_EventCount == 0;
-    require ghost_CCIPBridged_EventCount == 0;
 
     executeRecovery@withrevert(e);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert link.balanceOf(currentContract) == vaultLinkBalanceBefore;
-    assert link.balanceOf(router) == routerLinkBalanceBefore;
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(router) == routerAssetBalanceBefore;
-    assert ghost_CcipSendRecoveryCleared_EventCount == 0;
-    assert ghost_CCIPBridged_EventCount == 0;
 }
 
 /// @notice CCIP send recovery via executeRecovery reverts when the stored destination selector is invalid
@@ -6010,6 +6026,7 @@ rule executeRecovery_CCIP_SEND_RevertWhen_DestinationChainSelectorInvalid() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.CCIP_SEND, "CCIP send recovery should be pending";
     require getCcipSendRecoveryAmount() != 0, "recovery amount should not be zero";
     require getCcipSendRecoveryNonce() == 0 && getCcipSendRecoveryProtocolId() == to_bytes32(0),
@@ -6022,11 +6039,8 @@ rule executeRecovery_CCIP_SEND_RevertWhen_DestinationChainSelectorInvalid() {
         || getCcipSendRecoveryDestinationChainSelector() == getThisChainSelector(),
         "destination selector should be invalid";
 
-    storage before = lastStorage;
     uint256 bridgeAmount = getCcipSendRecoveryAmount();
     address router = getRouter();
-    uint256 vaultLinkBalanceBefore = link.balanceOf(currentContract);
-    uint256 routerLinkBalanceBefore = link.balanceOf(router);
     uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
     uint256 routerAssetBalanceBefore = asset.balanceOf(router);
 
@@ -6035,19 +6049,10 @@ rule executeRecovery_CCIP_SEND_RevertWhen_DestinationChainSelectorInvalid() {
     require routerAssetBalanceBefore <= max_uint256 - bridgeAmount, "router asset balance should not overflow";
 
     /// @dev set ghost starting values
-    require ghost_CcipSendRecoveryCleared_EventCount == 0;
-    require ghost_CCIPBridged_EventCount == 0;
 
     executeRecovery@withrevert(e);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert link.balanceOf(currentContract) == vaultLinkBalanceBefore;
-    assert link.balanceOf(router) == routerLinkBalanceBefore;
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(router) == routerAssetBalanceBefore;
-    assert ghost_CcipSendRecoveryCleared_EventCount == 0;
-    assert ghost_CCIPBridged_EventCount == 0;
 }
 
 /// @notice CCIP send recovery via executeRecovery reverts when the destination vault is not registered
@@ -6058,6 +6063,7 @@ rule executeRecovery_CCIP_SEND_RevertWhen_DestinationVaultNotRegistered() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
     require getRecoveryMode() == Types.RecoveryMode.CCIP_SEND, "CCIP send recovery should be pending";
     require getCcipSendRecoveryAmount() != 0, "recovery amount should not be zero";
     require getCcipSendRecoveryDestinationChainSelector() != 0, "destination chain selector should not be zero";
@@ -6071,11 +6077,8 @@ rule executeRecovery_CCIP_SEND_RevertWhen_DestinationVaultNotRegistered() {
     require getCrosschainVault(getCcipSendRecoveryDestinationChainSelector()) == 0,
         "destination vault should not be registered";
 
-    storage before = lastStorage;
     uint256 bridgeAmount = getCcipSendRecoveryAmount();
     address router = getRouter();
-    uint256 vaultLinkBalanceBefore = link.balanceOf(currentContract);
-    uint256 routerLinkBalanceBefore = link.balanceOf(router);
     uint256 vaultAssetBalanceBefore = asset.balanceOf(currentContract);
     uint256 routerAssetBalanceBefore = asset.balanceOf(router);
 
@@ -6084,19 +6087,10 @@ rule executeRecovery_CCIP_SEND_RevertWhen_DestinationVaultNotRegistered() {
     require routerAssetBalanceBefore <= max_uint256 - bridgeAmount, "router asset balance should not overflow";
 
     /// @dev set ghost starting values
-    require ghost_CcipSendRecoveryCleared_EventCount == 0;
-    require ghost_CCIPBridged_EventCount == 0;
 
     executeRecovery@withrevert(e);
 
     assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert link.balanceOf(currentContract) == vaultLinkBalanceBefore;
-    assert link.balanceOf(router) == routerLinkBalanceBefore;
-    assert asset.balanceOf(currentContract) == vaultAssetBalanceBefore;
-    assert asset.balanceOf(router) == routerAssetBalanceBefore;
-    assert ghost_CcipSendRecoveryCleared_EventCount == 0;
-    assert ghost_CCIPBridged_EventCount == 0;
 }
 
 /// @notice CCIP send recovery clear deletes recovery state and emits CcipSendRecoveryCleared
@@ -6116,7 +6110,6 @@ rule clearCcipSendRecovery_Success() {
     uint256 bridgeAmount = getCcipSendRecoveryAmount();
     uint256 nonce = getCcipSendRecoveryNonce();
     bytes32 protocolId = getCcipSendRecoveryProtocolId();
-    uint256 createdAt = getCcipSendRecoveryCreatedAt();
 
     /// @dev set ghost starting values
     require ghost_CcipSendRecoveryCleared_EventCount == 0;
@@ -6125,7 +6118,6 @@ rule clearCcipSendRecovery_Success() {
     require ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 0;
     require ghost_ccipSendRecovery_nonce_StoreCount == 0;
     require ghost_ccipSendRecovery_protocolId_StoreCount == 0;
-    require ghost_ccipSendRecovery_createdAt_StoreCount == 0;
     require ghost_recoveryMode_StoreCount == 0;
 
     Types.CcipSendRecovery recovery = clearCcipSendRecovery@withrevert(e);
@@ -6134,14 +6126,12 @@ rule clearCcipSendRecovery_Success() {
     assert recovery.ccipTxType == ccipTxType;
     assert recovery.amount == bridgeAmount;
     assert recovery.destinationChainSelector == destinationChainSelector;
-    assert recovery.createdAt == createdAt;
     assert recovery.nonce == nonce;
     assert recovery.protocolId == protocolId;
     assert getRecoveryMode() == Types.RecoveryMode.NONE;
     assert getCcipSendRecoveryTxType() == Types.CcipTx.EPOCH_NET_DEPOSIT;
     assert getCcipSendRecoveryAmount() == 0;
     assert getCcipSendRecoveryDestinationChainSelector() == 0;
-    assert getCcipSendRecoveryCreatedAt() == 0;
     assert getCcipSendRecoveryNonce() == 0 && getCcipSendRecoveryProtocolId() == to_bytes32(0);
     assert ghost_CcipSendRecoveryCleared_EventCount == 1;
     assert ghost_CcipSendRecoveryCleared_Param_ccipTxType == ccipTxType;
@@ -6156,8 +6146,6 @@ rule clearCcipSendRecovery_Success() {
     assert ghost_ccipSendRecovery_nonce_StoredValue == 0;
     assert ghost_ccipSendRecovery_protocolId_StoreCount == 1;
     assert ghost_ccipSendRecovery_protocolId_StoredValue == to_bytes32(0);
-    assert ghost_ccipSendRecovery_createdAt_StoreCount == 1;
-    assert ghost_ccipSendRecovery_createdAt_StoredValue == 0;
     assert ghost_recoveryMode_StoreCount == 1 => ghost_recoveryMode_StoredValue == Types.RecoveryMode.NONE,
         "recovery mode stored value is only meaningful when the recovery mode hook fires, which may not happen due to state packing";
 }

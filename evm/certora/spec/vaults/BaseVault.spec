@@ -16,17 +16,16 @@ methods {
                         HARNESS INTERNAL WRAPPERS
     //////////////////////////////////////////////////////////////*/
     function clearRebalanceDepositRecovery() external envfree;
-    function requireRebalanceDepositRecovery() external returns (Types.RebalanceDepositRecovery) envfree;
     function recoverFailedRebalanceDepositInternal() external returns (uint256, uint256);
     function storeRebalanceDepositRecovery(uint256, uint256) external;
     function executeDeposit(uint256, bool) external returns (bool);
     function executeWithdraw(uint256, bool) external returns (bool, uint256);
     function handleCCIPRebalance(uint256, bytes32, uint256) external returns (bool);
+    function clearActiveAdapter(address) external;
     function revertIfZeroAddress(address) external;
     function revertIfZeroAmount(uint256) external;
     function revertIfZeroChainSelector(uint64) external;
     function requireNoRecovery() external;
-    function requireRecoveryMode(Types.RecoveryMode) external;
     function authorizeUpgrade(address) external;
     function initializeBaseVault(BaseVault.InitParams) external;
 
@@ -35,8 +34,6 @@ methods {
     //////////////////////////////////////////////////////////////*/
     function getRecoveryRebalanceNonce() external returns (uint256) envfree;
     function getRecoveryAmount() external returns (uint256) envfree;
-    function getRecoveryCreatedAt() external returns (uint256) envfree;
-    function reentrancyGuardEntered() external returns (bool) envfree;
     function isInitialized() external returns (bool) envfree;
     function isInitializing() external returns (bool) envfree;
 
@@ -54,7 +51,6 @@ methods {
     function adapter.setTVL(uint256) external;
     function hasRole(bytes32, address) external returns (bool) envfree;
     function paused() external returns (bool) envfree;
-    function owner() external returns (address) envfree;
     function defaultAdmin() external returns (address) envfree;
     function getTVL() external returns (uint256) envfree;
     function supportsInterface(bytes4) external returns (bool) envfree;
@@ -69,9 +65,8 @@ methods {
     function getCrosschainVault(uint64) external returns (address) envfree;
     function getCcipGasLimit(uint64) external returns (uint256) envfree;
     function getDefaultCcipGasLimit() external returns (uint256) envfree;
-    function getEmergencyReceiver() external returns (address) envfree;
-    function getPausedAt() external returns (uint256) envfree;
     function getActiveProtocolAdapter() external returns (address) envfree;
+    function getRebalanceDepositRecovery() external returns (Types.RebalanceDepositRecovery) envfree;
     function getRecoveryMode() external returns (Types.RecoveryMode) envfree;
 
     /*//////////////////////////////////////////////////////////////
@@ -81,8 +76,6 @@ methods {
     function UNPAUSER_ROLE() external returns (bytes32) envfree;
     function CONFIG_OPERATOR_ROLE() external returns (bytes32) envfree;
     function LINK_OPERATOR_ROLE() external returns (bytes32) envfree;
-    function DONATE_OPERATOR_ROLE() external returns (bytes32) envfree;
-    function EMERGENCY_DRAINER_ROLE() external returns (bytes32) envfree;
     function UPGRADER_ROLE() external returns (bytes32) envfree;
 
     /// @dev HelperHarness bytes32→* conversion used in LOG hooks
@@ -114,6 +107,77 @@ methods {
 /*//////////////////////////////////////////////////////////////
                          DEFINITIONS
 //////////////////////////////////////////////////////////////*/
+/// @notice ChildVaultHarness/ParentVaultHarness/HelperHarness functions that exist only for isolated
+///         CVL testing and are never callable through the real, deployed Child/Parent Vault interface
+/// @dev Excluded from parametric "any method" invariants below: enumerating them alongside real entry
+///      points only inflates the method count with calls no real caller could ever make. Built only
+///      from wrappers/helpers verified present identically on both ChildVaultHarness and
+///      ParentVaultHarness (HelperHarness is shared by both; each harness's own wrappers were written
+///      to match) - deliberately excludes each harness's few harness-specific extras (e.g.
+///      ChildVaultHarness's ccipSend/clearCcipSendRecovery/getCcipSendRecovery* helpers,
+///      ParentVaultHarness's policyProtectedInterfaceId) since referencing a selector that doesn't
+///      exist on the other conf's verification target would fail to resolve there.
+definition isHarnessHelper(method f) returns bool =
+    // Harness internal-logic wrappers (present on both ChildVaultHarness and ParentVaultHarness)
+    f.selector == sig:initializeBaseVault(BaseVault.InitParams).selector ||
+    f.selector == sig:isInitialized().selector ||
+    f.selector == sig:isInitializing().selector ||
+    f.selector == sig:revertIfZeroAddress(address).selector ||
+    f.selector == sig:revertIfZeroAmount(uint256).selector ||
+    f.selector == sig:revertIfZeroChainSelector(uint64).selector ||
+    f.selector == sig:storeRebalanceDepositRecovery(uint256,uint256).selector ||
+    f.selector == sig:clearRebalanceDepositRecovery().selector ||
+    f.selector == sig:recoverFailedRebalanceDepositInternal().selector ||
+    f.selector == sig:executeDeposit(uint256,bool).selector ||
+    f.selector == sig:executeWithdraw(uint256,bool).selector ||
+    f.selector == sig:clearActiveAdapter(address).selector ||
+    f.selector == sig:handleCCIPRebalance(uint256,bytes32,uint256).selector ||
+    f.selector == sig:requireNoRecovery().selector ||
+    f.selector == sig:authorizeUpgrade(address).selector ||
+    f.selector == sig:getRecoveryRebalanceNonce().selector ||
+    f.selector == sig:getRecoveryAmount().selector ||
+    // HelperHarness generic encode/decode/introspection utilities
+    f.selector == sig:reentrancyGuardEntered().selector ||
+    f.selector == sig:bytes32ToAddress(bytes32).selector ||
+    f.selector == sig:bytes32ToUint256(bytes32).selector ||
+    f.selector == sig:bytes32ToUint8(bytes32).selector ||
+    f.selector == sig:uint8ToCcipTxType(uint8).selector ||
+    f.selector == sig:bytes32ToUint64(bytes32).selector ||
+    f.selector == sig:bytes32ToBytes4(bytes32).selector ||
+    f.selector == sig:bytes32ToBytes10(bytes32).selector ||
+    f.selector == sig:bytes32ToBool(bytes32).selector ||
+    f.selector == sig:bytesToAddress(bytes).selector ||
+    f.selector == sig:bytesToAddressArray(bytes).selector ||
+    f.selector == sig:encodeAddress(address).selector ||
+    f.selector == sig:encodeEpochNonce(uint256).selector ||
+    f.selector == sig:encodeRebalanceData(uint256,bytes32).selector ||
+    f.selector == sig:encodeCcipTxData(Types.CcipTx,bytes).selector ||
+    f.selector == sig:encodeCcipExtraArgs(uint256).selector ||
+    f.selector == sig:hashBytes(bytes).selector ||
+    f.selector == sig:encodeRawCcipTxData(uint256,bytes).selector ||
+    f.selector == sig:decodeCcipTxType(bytes).selector ||
+    f.selector == sig:decodeCcipTxPayload(bytes).selector ||
+    f.selector == sig:emptyParameters().selector ||
+    f.selector == sig:erc165InterfaceId().selector ||
+    f.selector == sig:accessControlDefaultAdminRulesInterfaceId().selector ||
+    f.selector == sig:any2EVMMessageReceiverInterfaceId().selector ||
+    // HelperHarness role-hash getters
+    f.selector == sig:UPGRADER_ROLE().selector ||
+    f.selector == sig:PAUSER_ROLE().selector ||
+    f.selector == sig:UNPAUSER_ROLE().selector ||
+    f.selector == sig:CONFIG_OPERATOR_ROLE().selector ||
+    f.selector == sig:REBALANCE_OPERATOR_ROLE().selector ||
+    f.selector == sig:EPOCH_OPERATOR_ROLE().selector ||
+    f.selector == sig:LINK_OPERATOR_ROLE().selector ||
+    f.selector == sig:DONATE_OPERATOR_ROLE().selector ||
+    f.selector == sig:COMPLIANCE_OPERATOR_ROLE().selector ||
+    f.selector == sig:EMERGENCY_DRAINER_ROLE().selector ||
+    f.selector == sig:KEYSTONE_FORWARDER_ROLE().selector ||
+    f.selector == sig:POLICY_ENGINE_MANAGER_ROLE().selector ||
+    f.selector == sig:MINTER_ROLE().selector ||
+    f.selector == sig:BURNER_ROLE().selector ||
+    f.selector == sig:REWARDS_OPERATOR_ROLE().selector;
+
 definition PausedEvent() returns bytes32 =
 // keccak256("Paused(address)")
     to_bytes32(0x62e78cea01bee320cd4e420270b5ea74000d11b0c9f74754ebdbfc544b05a258);
@@ -134,21 +198,9 @@ definition DefaultCcipGasLimitSetEvent() returns bytes32 =
 // keccak256("DefaultCcipGasLimitSet(uint256)")
     to_bytes32(0xa28a825dc81451cace7e1074e39ddef702d1f349df63ca5fb8ed608cdc36f8ce);
 
-definition EmergencyReceiverSetEvent() returns bytes32 =
-// keccak256("EmergencyReceiverSet(address)")
-    to_bytes32(0x6593318d596caeffa78d1e99d1438920e5fe28734e4cd9eb3004cfd281600b5a);
-
 definition LinkWithdrawnEvent() returns bytes32 =
 // keccak256("LinkWithdrawn(address,uint256)")
     to_bytes32(0xcb1436249a1dd8cf93362c28d79a4e20dc54398b6c49e30316e8396e72a584b0);
-
-definition DonationEvent() returns bytes32 =
-// keccak256("Donation(address,uint256)")
-    to_bytes32(0x5d8bc849764969eb1bcc6d0a2f55999d0167c1ccec240a4f39cf664ca9c4148e);
-
-definition EmergencyDrainExecutedEvent() returns bytes32 =
-// keccak256("EmergencyDrainExecuted(address,uint256)")
-    to_bytes32(0x517a6dbf5feae7fb9be64537a8c6dd21b71279ae57631e471cf6667919ec971a);
 
 definition ActiveProtocolAdapterSetEvent() returns bytes32 =
 // keccak256("ActiveProtocolAdapterSet(bytes32,address)")
@@ -166,15 +218,6 @@ definition RebalanceDepositRecoveryClearedEvent() returns bytes32 =
 // keccak256("RebalanceDepositRecoveryCleared(uint256)")
     to_bytes32(0xfd0affe04f47c983df51f211349e202dc404654e6851f1ad16dc04aa5c683e6f);
 
-definition DepositToStrategySuccessEvent() returns bytes32 =
-// keccak256("DepositToStrategySuccess(uint256,uint256)")
-    to_bytes32(0x822db7c313fcf6d7b9ea5da5e0e6f3d27317446731e4016faa07a1127bb0a1c4);
-
-definition WithdrawFromStrategySuccessEvent() returns bytes32 =
-// keccak256("WithdrawFromStrategySuccess(uint256,uint256)")
-    to_bytes32(0xb38981e8f1428114c35ad63ef9ab14a90a34bc12cac0782d420baab4522a659f);
-
-/// Deferred to ChildVault.spec — infrastructure only, no active rules here
 definition RebalanceDepositSuccessEvent() returns bytes32 =
 // keccak256("RebalanceDepositSuccess(uint256,uint256)")
     to_bytes32(0x2db49c393972e05db516ff3191339f00472c21c0c8a0dba6cdc7fdcc60cc0f7f);
@@ -182,10 +225,6 @@ definition RebalanceDepositSuccessEvent() returns bytes32 =
 definition RebalanceDepositFailureEvent() returns bytes32 =
 // keccak256("RebalanceDepositFailure(uint256,uint256)")
     to_bytes32(0xaf33555f3c66bb0a023d6b759e182afe00eb0b37fa2bbb17ad7d1f7618eb0e7c);
-
-definition RebalanceWithdrawSuccessEvent() returns bytes32 =
-// keccak256("RebalanceWithdrawSuccess(uint256,uint256)")
-    to_bytes32(0xbda9c2bb85185244245a5c12fdd1e1107c46dc54a6d54d015bccf78aec5a8668);
 
 /// RecoveryMode enum values — match Solidity enum type for getRecoveryMode() comparisons
 definition RECOVERY_NONE()              returns Types.RecoveryMode = Types.RecoveryMode.NONE;
@@ -212,14 +251,6 @@ ghost address  ghost_crosschainVaults_StoredValue { init_state axiom ghost_cross
 ghost mathint ghost_activeProtocolAdapter_StoreCount { init_state axiom ghost_activeProtocolAdapter_StoreCount == 0; }
 ghost address  ghost_activeProtocolAdapter_StoredValue { init_state axiom ghost_activeProtocolAdapter_StoredValue == 0; }
 
-/// ─── s_pausedAt ──────────────────────────────────────────────
-ghost mathint ghost_pausedAt_StoreCount { init_state axiom ghost_pausedAt_StoreCount == 0; }
-ghost uint96   ghost_pausedAt_StoredValue { init_state axiom ghost_pausedAt_StoredValue == 0; }
-
-/// ─── s_emergencyReceiver ─────────────────────────────────────
-ghost mathint ghost_emergencyReceiver_StoreCount { init_state axiom ghost_emergencyReceiver_StoreCount == 0; }
-ghost address  ghost_emergencyReceiver_StoredValue { init_state axiom ghost_emergencyReceiver_StoredValue == 0; }
-
 /// ─── s_recoveryMode ──────────────────────────────────────────
 ghost mathint           ghost_recoveryMode_StoreCount { init_state axiom ghost_recoveryMode_StoreCount == 0; }
 ghost Types.RecoveryMode ghost_recoveryMode_StoredValue { init_state axiom ghost_recoveryMode_StoredValue == Types.RecoveryMode.NONE; }
@@ -231,10 +262,6 @@ ghost uint256  ghost_rebalanceDepositRecovery_nonce_StoredValue { init_state axi
 /// ─── s_rebalanceDepositRecovery.amount ───────────────────────
 ghost mathint ghost_rebalanceDepositRecovery_amount_StoreCount { init_state axiom ghost_rebalanceDepositRecovery_amount_StoreCount == 0; }
 ghost uint256  ghost_rebalanceDepositRecovery_amount_StoredValue { init_state axiom ghost_rebalanceDepositRecovery_amount_StoredValue == 0; }
-
-/// ─── s_rebalanceDepositRecovery.createdAt ────────────────────
-ghost mathint ghost_rebalanceDepositRecovery_createdAt_StoreCount { init_state axiom ghost_rebalanceDepositRecovery_createdAt_StoreCount == 0; }
-ghost uint256  ghost_rebalanceDepositRecovery_createdAt_StoredValue { init_state axiom ghost_rebalanceDepositRecovery_createdAt_StoredValue == 0; }
 
 /// ─── Event: Paused ───────────────────────────────────────────
 ghost mathint ghost_Paused_EventCount { init_state axiom ghost_Paused_EventCount == 0; }
@@ -256,24 +283,10 @@ ghost uint256 ghost_CcipGasLimitSet_Param_gasLimit { init_state axiom ghost_Ccip
 ghost mathint ghost_DefaultCcipGasLimitSet_EventCount { init_state axiom ghost_DefaultCcipGasLimitSet_EventCount == 0; }
 ghost uint256 ghost_DefaultCcipGasLimitSet_Param_gasLimit { init_state axiom ghost_DefaultCcipGasLimitSet_Param_gasLimit == 0; }
 
-/// ─── Event: EmergencyReceiverSet ─────────────────────────────
-ghost mathint ghost_EmergencyReceiverSet_EventCount { init_state axiom ghost_EmergencyReceiverSet_EventCount == 0; }
-ghost address ghost_EmergencyReceiverSet_Param_receiver { init_state axiom ghost_EmergencyReceiverSet_Param_receiver == 0; }
-
 /// ─── Event: LinkWithdrawn ────────────────────────────────────
 ghost mathint ghost_LinkWithdrawn_EventCount { init_state axiom ghost_LinkWithdrawn_EventCount == 0; }
 ghost address ghost_LinkWithdrawn_Param_operator { init_state axiom ghost_LinkWithdrawn_Param_operator == 0; }
 ghost uint256 ghost_LinkWithdrawn_Param_amount { init_state axiom ghost_LinkWithdrawn_Param_amount == 0; }
-
-/// ─── Event: Donation ─────────────────────────────────────────
-ghost mathint ghost_Donation_EventCount { init_state axiom ghost_Donation_EventCount == 0; }
-ghost address ghost_Donation_Param_donor { init_state axiom ghost_Donation_Param_donor == 0; }
-ghost uint256 ghost_Donation_Param_amount { init_state axiom ghost_Donation_Param_amount == 0; }
-
-/// ─── Event: EmergencyDrainExecuted ───────────────────────────
-ghost mathint ghost_EmergencyDrainExecuted_EventCount { init_state axiom ghost_EmergencyDrainExecuted_EventCount == 0; }
-ghost address ghost_EmergencyDrainExecuted_Param_receiver { init_state axiom ghost_EmergencyDrainExecuted_Param_receiver == 0; }
-ghost uint256 ghost_EmergencyDrainExecuted_Param_amount { init_state axiom ghost_EmergencyDrainExecuted_Param_amount == 0; }
 
 /// ─── Event: ActiveProtocolAdapterSet ─────────────────────────
 ghost mathint ghost_ActiveProtocolAdapterSet_EventCount { init_state axiom ghost_ActiveProtocolAdapterSet_EventCount == 0; }
@@ -293,15 +306,6 @@ ghost uint256 ghost_RebalanceDepositRecoveryStored_Param_amount { init_state axi
 ghost mathint ghost_RebalanceDepositRecoveryCleared_EventCount { init_state axiom ghost_RebalanceDepositRecoveryCleared_EventCount == 0; }
 ghost uint256 ghost_RebalanceDepositRecoveryCleared_Param_nonce { init_state axiom ghost_RebalanceDepositRecoveryCleared_Param_nonce == 0; }
 
-/// ─── Event: DepositToStrategySuccess ─────────────────────────
-ghost mathint ghost_DepositToStrategySuccess_EventCount { init_state axiom ghost_DepositToStrategySuccess_EventCount == 0; }
-ghost uint256 ghost_DepositToStrategySuccess_Param_epochNonce { init_state axiom ghost_DepositToStrategySuccess_Param_epochNonce == 0; }
-ghost uint256 ghost_DepositToStrategySuccess_Param_amount { init_state axiom ghost_DepositToStrategySuccess_Param_amount == 0; }
-
-/// ─── Event: WithdrawFromStrategySuccess ──────────────────────
-ghost mathint ghost_WithdrawFromStrategySuccess_EventCount { init_state axiom ghost_WithdrawFromStrategySuccess_EventCount == 0; }
-ghost uint256 ghost_WithdrawFromStrategySuccess_Param_epochNonce { init_state axiom ghost_WithdrawFromStrategySuccess_Param_epochNonce == 0; }
-
 /// ─── Event: RebalanceDepositSuccess events ────────────────────────────────
 ghost mathint ghost_RebalanceDepositSuccess_EventCount { init_state axiom ghost_RebalanceDepositSuccess_EventCount == 0; }
 ghost uint256 ghost_RebalanceDepositSuccess_Param_nonce { init_state axiom ghost_RebalanceDepositSuccess_Param_nonce == 0; }
@@ -311,9 +315,6 @@ ghost uint256 ghost_RebalanceDepositSuccess_Param_amount { init_state axiom ghos
 ghost mathint ghost_RebalanceDepositFailure_EventCount { init_state axiom ghost_RebalanceDepositFailure_EventCount == 0; }
 ghost uint256 ghost_RebalanceDepositFailure_Param_nonce { init_state axiom ghost_RebalanceDepositFailure_Param_nonce == 0; }
 ghost uint256 ghost_RebalanceDepositFailure_Param_amount { init_state axiom ghost_RebalanceDepositFailure_Param_amount == 0; }
-
-/// ─── Event: RebalanceWithdrawSuccess ─────────────────────────
-ghost mathint ghost_RebalanceWithdrawSuccess_EventCount { init_state axiom ghost_RebalanceWithdrawSuccess_EventCount == 0; }
 
 /*//////////////////////////////////////////////////////////////
                              HOOKS
@@ -342,16 +343,6 @@ hook Sstore currentContract.ext_yieldcoin_storage_BaseVault.s_activeProtocolAdap
     ghost_activeProtocolAdapter_StoredValue = newValue;
 }
 
-hook Sstore currentContract.ext_yieldcoin_storage_BaseVault.s_pausedAt uint96 newValue {
-    ghost_pausedAt_StoreCount = ghost_pausedAt_StoreCount + 1;
-    ghost_pausedAt_StoredValue = newValue;
-}
-
-hook Sstore currentContract.ext_yieldcoin_storage_BaseVault.s_emergencyReceiver address newValue {
-    ghost_emergencyReceiver_StoreCount = ghost_emergencyReceiver_StoreCount + 1;
-    ghost_emergencyReceiver_StoredValue = newValue;
-}
-
 hook Sstore currentContract.ext_yieldcoin_storage_BaseVault.s_recoveryMode Types.RecoveryMode newValue {
     ghost_recoveryMode_StoreCount = ghost_recoveryMode_StoreCount + 1;
     ghost_recoveryMode_StoredValue = newValue;
@@ -365,11 +356,6 @@ hook Sstore currentContract.ext_yieldcoin_storage_BaseVault.s_rebalanceDepositRe
 hook Sstore currentContract.ext_yieldcoin_storage_BaseVault.s_rebalanceDepositRecovery.amount uint256 newValue {
     ghost_rebalanceDepositRecovery_amount_StoreCount = ghost_rebalanceDepositRecovery_amount_StoreCount + 1;
     ghost_rebalanceDepositRecovery_amount_StoredValue = newValue;
-}
-
-hook Sstore currentContract.ext_yieldcoin_storage_BaseVault.s_rebalanceDepositRecovery.createdAt uint256 newValue {
-    ghost_rebalanceDepositRecovery_createdAt_StoreCount = ghost_rebalanceDepositRecovery_createdAt_StoreCount + 1;
-    ghost_rebalanceDepositRecovery_createdAt_StoredValue = newValue;
 }
 
 /// ─── LOG hooks ───────────────────────────────────────────────
@@ -388,10 +374,6 @@ hook LOG2(uint offset, uint length, bytes32 t0, bytes32 t1) {
     if (t0 == DefaultCcipGasLimitSetEvent()) {
         ghost_DefaultCcipGasLimitSet_EventCount = ghost_DefaultCcipGasLimitSet_EventCount + 1;
         ghost_DefaultCcipGasLimitSet_Param_gasLimit = bytes32ToUint256(t1);
-    }
-    if (t0 == EmergencyReceiverSetEvent()) {
-        ghost_EmergencyReceiverSet_EventCount = ghost_EmergencyReceiverSet_EventCount + 1;
-        ghost_EmergencyReceiverSet_Param_receiver = bytes32ToAddress(t1);
     }
     if (t0 == ActiveProtocolAdapterClearedEvent()) {
         ghost_ActiveProtocolAdapterCleared_EventCount = ghost_ActiveProtocolAdapterCleared_EventCount + 1;
@@ -420,16 +402,6 @@ hook LOG3(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2) {
         ghost_LinkWithdrawn_Param_operator = bytes32ToAddress(t1);
         ghost_LinkWithdrawn_Param_amount = bytes32ToUint256(t2);
     }
-    if (t0 == DonationEvent()) {
-        ghost_Donation_EventCount = ghost_Donation_EventCount + 1;
-        ghost_Donation_Param_donor = bytes32ToAddress(t1);
-        ghost_Donation_Param_amount = bytes32ToUint256(t2);
-    }
-    if (t0 == EmergencyDrainExecutedEvent()) {
-        ghost_EmergencyDrainExecuted_EventCount = ghost_EmergencyDrainExecuted_EventCount + 1;
-        ghost_EmergencyDrainExecuted_Param_receiver = bytes32ToAddress(t1);
-        ghost_EmergencyDrainExecuted_Param_amount = bytes32ToUint256(t2);
-    }
     if (t0 == ActiveProtocolAdapterSetEvent()) {
         ghost_ActiveProtocolAdapterSet_EventCount = ghost_ActiveProtocolAdapterSet_EventCount + 1;
         ghost_ActiveProtocolAdapterSet_Param_protocolId = t1;
@@ -439,15 +411,6 @@ hook LOG3(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2) {
         ghost_RebalanceDepositRecoveryStored_EventCount = ghost_RebalanceDepositRecoveryStored_EventCount + 1;
         ghost_RebalanceDepositRecoveryStored_Param_nonce = bytes32ToUint256(t1);
         ghost_RebalanceDepositRecoveryStored_Param_amount = bytes32ToUint256(t2);
-    }
-    if (t0 == DepositToStrategySuccessEvent()) {
-        ghost_DepositToStrategySuccess_EventCount = ghost_DepositToStrategySuccess_EventCount + 1;
-        ghost_DepositToStrategySuccess_Param_epochNonce = bytes32ToUint256(t1);
-        ghost_DepositToStrategySuccess_Param_amount = bytes32ToUint256(t2);
-    }
-    if (t0 == WithdrawFromStrategySuccessEvent()) {
-        ghost_WithdrawFromStrategySuccess_EventCount = ghost_WithdrawFromStrategySuccess_EventCount + 1;
-        ghost_WithdrawFromStrategySuccess_Param_epochNonce = bytes32ToUint256(t1);
     }
     if (t0 == RebalanceDepositSuccessEvent()) {
         ghost_RebalanceDepositSuccess_EventCount = ghost_RebalanceDepositSuccess_EventCount + 1;
@@ -459,26 +422,25 @@ hook LOG3(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2) {
         ghost_RebalanceDepositFailure_Param_nonce = bytes32ToUint256(t1);
         ghost_RebalanceDepositFailure_Param_amount = bytes32ToUint256(t2);
     }
-    if (t0 == RebalanceWithdrawSuccessEvent()) {
-        ghost_RebalanceWithdrawSuccess_EventCount = ghost_RebalanceWithdrawSuccess_EventCount + 1;
-    }
 }
 
 /*//////////////////////////////////////////////////////////////
                            INVARIANTS
 //////////////////////////////////////////////////////////////*/
-/// @dev filtered: upgradeToAndCall to stop delegatecall havocing immutable state.
+/// @dev filtered: upgradeToAndCall to stop delegatecall havocing immutable state; harness helpers
+///      excluded so only real, production-callable entry points are explored.
 invariant noZeroChainSelector()
     currentContract.i_thisChainSelector != 0
     filtered {
-        f -> f.selector != sig:upgradeToAndCall(address,bytes).selector
+        f -> !isHarnessHelper(f) && f.selector != sig:upgradeToAndCall(address,bytes).selector
     }
 
-/// @dev filtered: upgradeToAndCall to stop delegatecall havocing immutable state.
+/// @dev filtered: upgradeToAndCall to stop delegatecall havocing immutable state; harness helpers
+///      excluded so only real, production-callable entry points are explored.
 invariant noZeroAssetPrecision(env e)
     asset.decimals(e) > 0 => currentContract.i_assetPrecision != 0
     filtered {
-        f -> f.selector != sig:upgradeToAndCall(address,bytes).selector
+        f -> !isHarnessHelper(f) && f.selector != sig:upgradeToAndCall(address,bytes).selector
     }
 
 /*//////////////////////////////////////////////////////////////
@@ -518,7 +480,6 @@ rule initializeBaseVault_RevertWhen_DefaultAdminIsZeroAddress() {
     require params.pauser != 0, "pauser should not be zero";
     require params.unpauser != 0, "unpauser should not be zero";
     require params.configOperator != 0, "config operator should not be zero";
-    require params.emergencyReceiver != 0, "emergency receiver should not be zero";
     require params.upgrader != 0, "upgrader should not be zero";
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require defaultAdmin() == 0, "default admin should not be initialized";
@@ -547,7 +508,6 @@ rule initializeBaseVault_RevertWhen_PauserIsZeroAddress() {
     require params.defaultAdmin != 0, "default admin should not be zero";
     require params.unpauser != 0, "unpauser should not be zero";
     require params.configOperator != 0, "config operator should not be zero";
-    require params.emergencyReceiver != 0, "emergency receiver should not be zero";
     require params.upgrader != 0, "upgrader should not be zero";
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require defaultAdmin() == 0, "default admin should not be initialized";
@@ -576,7 +536,6 @@ rule initializeBaseVault_RevertWhen_UnpauserIsZeroAddress() {
     require params.defaultAdmin != 0, "default admin should not be zero";
     require params.pauser != 0, "pauser should not be zero";
     require params.configOperator != 0, "config operator should not be zero";
-    require params.emergencyReceiver != 0, "emergency receiver should not be zero";
     require params.upgrader != 0, "upgrader should not be zero";
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require defaultAdmin() == 0, "default admin should not be initialized";
@@ -605,42 +564,12 @@ rule initializeBaseVault_RevertWhen_ConfigOperatorIsZeroAddress() {
     require params.defaultAdmin != 0, "default admin should not be zero";
     require params.pauser != 0, "pauser should not be zero";
     require params.unpauser != 0, "unpauser should not be zero";
-    require params.emergencyReceiver != 0, "emergency receiver should not be zero";
     require params.upgrader != 0, "upgrader should not be zero";
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require defaultAdmin() == 0, "default admin should not be initialized";
 
     /// @dev revert condition being verified
     require params.configOperator == 0, "config operator should be zero";
-
-    storage before = lastStorage;
-
-    initializeBaseVault@withrevert(e, params);
-
-    assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-}
-
-/// @notice BaseVault initialization reverts when the emergency receiver is the zero address
-/// @dev Verifies that initialization is rolled back and mutable BaseVault configuration remains unchanged
-rule initializeBaseVault_RevertWhen_EmergencyReceiverIsZeroAddress() {
-    env e;
-    BaseVault.InitParams params;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require !isInitialized(), "contract should not be initialized";
-    require !isInitializing(), "contract should not be initializing";
-    require params.defaultAdmin != 0, "default admin should not be zero";
-    require params.pauser != 0, "pauser should not be zero";
-    require params.unpauser != 0, "unpauser should not be zero";
-    require params.configOperator != 0, "config operator should not be zero";
-    require params.upgrader != 0, "upgrader should not be zero";
-    require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
-    require defaultAdmin() == 0, "default admin should not be initialized";
-
-    /// @dev revert condition being verified
-    require params.emergencyReceiver == 0, "emergency receiver should be zero";
 
     storage before = lastStorage;
 
@@ -664,7 +593,6 @@ rule initializeBaseVault_RevertWhen_UpgraderIsZeroAddress() {
     require params.pauser != 0, "pauser should not be zero";
     require params.unpauser != 0, "unpauser should not be zero";
     require params.configOperator != 0, "config operator should not be zero";
-    require params.emergencyReceiver != 0, "emergency receiver should not be zero";
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require defaultAdmin() == 0, "default admin should not be initialized";
 
@@ -693,7 +621,6 @@ rule initializeBaseVault_RevertWhen_InitialDefaultCcipGasLimitIsZero() {
     require params.pauser != 0, "pauser should not be zero";
     require params.unpauser != 0, "unpauser should not be zero";
     require params.configOperator != 0, "config operator should not be zero";
-    require params.emergencyReceiver != 0, "emergency receiver should not be zero";
     require params.upgrader != 0, "upgrader should not be zero";
     require defaultAdmin() == 0, "default admin should not be initialized";
 
@@ -720,7 +647,6 @@ rule initializeBaseVault_RevertWhen_AlreadyInitialized() {
     require params.pauser != 0, "pauser should not be zero";
     require params.unpauser != 0, "unpauser should not be zero";
     require params.configOperator != 0, "config operator should not be zero";
-    require params.emergencyReceiver != 0, "emergency receiver should not be zero";
     require params.upgrader != 0, "upgrader should not be zero";
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
 
@@ -749,11 +675,9 @@ rule initializeBaseVault_Success() {
     require params.pauser != 0, "pauser should not be zero";
     require params.unpauser != 0, "unpauser should not be zero";
     require params.configOperator != 0, "config operator should not be zero";
-    require params.emergencyReceiver != 0, "emergency receiver should not be zero";
     require params.upgrader != 0, "upgrader should not be zero";
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require defaultAdmin() == 0, "default admin should not be initialized";
-    require getEmergencyReceiver() == 0, "emergency receiver should not be initialized";
     require getDefaultCcipGasLimit() == 0, "default CCIP gas limit should not be initialized";
     require !paused(), "vault should not be paused";
     require getRecoveryMode() == RECOVERY_NONE(), "recovery should not be pending";
@@ -764,7 +688,6 @@ rule initializeBaseVault_Success() {
     require !hasRole(UPGRADER_ROLE(), params.upgrader), "upgrader role should not be granted";
 
     /// @dev set ghost starting values
-    require ghost_emergencyReceiver_StoreCount == 0;
     require ghost_defaultCcipGasLimit_StoreCount == 0;
 
     initializeBaseVault@withrevert(e, params);
@@ -774,7 +697,6 @@ rule initializeBaseVault_Success() {
     assert !isInitializing();
     assert !paused();
     assert getRecoveryMode() == RECOVERY_NONE();
-    assert getEmergencyReceiver() == params.emergencyReceiver;
     assert getDefaultCcipGasLimit() == params.initialDefaultCcipGasLimit;
     assert defaultAdmin() == params.defaultAdmin;
     assert hasRole(to_bytes32(0), params.defaultAdmin);
@@ -782,8 +704,6 @@ rule initializeBaseVault_Success() {
     assert hasRole(UNPAUSER_ROLE(), params.unpauser);
     assert hasRole(CONFIG_OPERATOR_ROLE(), params.configOperator);
     assert hasRole(UPGRADER_ROLE(), params.upgrader);
-    assert ghost_emergencyReceiver_StoreCount == 1;
-    assert ghost_emergencyReceiver_StoredValue == params.emergencyReceiver;
     assert ghost_defaultCcipGasLimit_StoreCount == 1;
     assert ghost_defaultCcipGasLimit_StoredValue == params.initialDefaultCcipGasLimit;
 }
@@ -802,13 +722,31 @@ rule PAUSE_001_pause_RevertWhen_CallerDoesNotHavePAUSER_ROLE() {
 
     /// @dev set ghost starting values
     require ghost_Paused_EventCount == 0;
-    require ghost_pausedAt_StoreCount == 0;
 
     pause@withrevert(e);
 
     assert lastReverted;
     assert ghost_Paused_EventCount == 0;
-    assert ghost_pausedAt_StoreCount == 0;
+}
+
+/// @notice Pausing reverts when the vault is already paused (OZ Pausable's EnforcedPause)
+rule pause_RevertWhen_AlreadyPaused() {
+    env e;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require hasRole(PAUSER_ROLE(), e.msg.sender);
+
+    /// @dev revert condition being verified
+    require paused(), "should already be paused";
+
+    /// @dev set ghost starting values
+    require ghost_Paused_EventCount == 0;
+
+    pause@withrevert(e);
+
+    assert lastReverted;
+    assert ghost_Paused_EventCount == 0;
 }
 
 rule pause_Success() {
@@ -821,19 +759,12 @@ rule pause_Success() {
 
     /// @dev set ghost starting values
     require ghost_Paused_EventCount == 0;
-    require ghost_pausedAt_StoreCount == 0;
-    require ghost_activeProtocolAdapter_StoreCount == 0;
 
     pause@withrevert(e);
 
     assert !lastReverted;
     assert paused();
-    assert getPausedAt() == require_uint96(e.block.timestamp);
     assert ghost_Paused_EventCount == 1;
-    assert ghost_pausedAt_StoreCount == 1 || ghost_activeProtocolAdapter_StoreCount == 1,
-        "pausedAt may be packed with active protocol adapter when this spec is run against ChildVault, but not ParentVault";
-    assert ghost_pausedAt_StoreCount == 1 => ghost_pausedAt_StoredValue == require_uint96(e.block.timestamp),
-        "pausedAt stored value is only meaningful when the pausedAt hook fires";
 }
 
 /// ─────────────────── UNPAUSE ─────────────────────────────────
@@ -857,9 +788,29 @@ rule PAUSE_002_unpause_RevertWhen_CallerDoesNotHaveUNPAUSER_ROLE() {
     assert ghost_Unpaused_EventCount == 0;
 }
 
+/// @notice Unpausing reverts when the vault is not paused (OZ Pausable's ExpectedPause)
+rule unpause_RevertWhen_NotPaused() {
+    env e;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require hasRole(UNPAUSER_ROLE(), e.msg.sender);
+
+    /// @dev revert condition being verified
+    require !paused(), "should not be paused";
+
+    /// @dev set ghost starting values
+    require ghost_Unpaused_EventCount == 0;
+
+    unpause@withrevert(e);
+
+    assert lastReverted;
+    assert ghost_Unpaused_EventCount == 0;
+}
+
 rule unpause_Success() {
     env e;
-    
+
      /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require paused(), "should be paused";
@@ -867,88 +818,12 @@ rule unpause_Success() {
 
     /// @dev set ghost starting values
     require ghost_Unpaused_EventCount == 0;
-    require ghost_pausedAt_StoreCount == 0;
-    require ghost_activeProtocolAdapter_StoreCount == 0;
 
     unpause@withrevert(e);
 
     assert !lastReverted;
     assert !paused();
-    assert getPausedAt() == 0;
     assert ghost_Unpaused_EventCount == 1;
-    assert ghost_pausedAt_StoreCount == 1 || ghost_activeProtocolAdapter_StoreCount == 1,
-        "pausedAt may be packed with active protocol adapter when this spec is run against ChildVault, but not ParentVault";
-    assert ghost_pausedAt_StoreCount == 1 => ghost_pausedAt_StoredValue == 0,
-        "pausedAt stored value is only meaningful when the pausedAt hook fires";
-}
-
-/// ─────────────────── SET EMERGENCY RECEIVER ──────────────────
-
-rule setEmergencyReceiver_RevertWhen_CallerDoesNotHaveCONFIG_OPERATOR_ROLE() {
-    env e;
-    address receiver;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require receiver != 0, "receiver should not be zero address";
-
-    /// @dev revert condition being verified
-    require !hasRole(CONFIG_OPERATOR_ROLE(), e.msg.sender);
-
-    /// @dev set ghost starting values
-    require ghost_EmergencyReceiverSet_EventCount == 0;
-    require ghost_emergencyReceiver_StoreCount == 0;
-
-    setEmergencyReceiver@withrevert(e, receiver);
-
-    assert lastReverted;
-    assert ghost_EmergencyReceiverSet_EventCount == 0;
-    assert ghost_emergencyReceiver_StoreCount == 0;
-}
-
-rule setEmergencyReceiver_RevertWhen_ReceiverIsZeroAddress() {
-    env e;
-    address receiver;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require hasRole(CONFIG_OPERATOR_ROLE(), e.msg.sender);
-
-    /// @dev revert condition being verified
-    require receiver == 0, "receiver should be zero address";
-
-    /// @dev set ghost starting values
-    require ghost_EmergencyReceiverSet_EventCount == 0;
-    require ghost_emergencyReceiver_StoreCount == 0;
-
-    setEmergencyReceiver@withrevert(e, receiver);
-
-    assert lastReverted;
-    assert ghost_EmergencyReceiverSet_EventCount == 0;
-    assert ghost_emergencyReceiver_StoreCount == 0;
-}
-
-rule setEmergencyReceiver_Success() {
-    env e;
-    address receiver;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require hasRole(CONFIG_OPERATOR_ROLE(), e.msg.sender);
-    require receiver != 0, "receiver should not be zero address";
-
-    /// @dev set ghost starting values
-    require ghost_EmergencyReceiverSet_EventCount == 0;
-    require ghost_emergencyReceiver_StoreCount == 0;
-
-    setEmergencyReceiver@withrevert(e, receiver);
-
-    assert !lastReverted;
-    assert getEmergencyReceiver() == receiver;
-    assert ghost_EmergencyReceiverSet_EventCount == 1;
-    assert ghost_EmergencyReceiverSet_Param_receiver == receiver;
-    assert ghost_emergencyReceiver_StoreCount == 1;
-    assert ghost_emergencyReceiver_StoredValue == receiver;
 }
 
 /// ─────────────────── SET DEFAULT CCIP GAS LIMIT ──────────────
@@ -1300,457 +1175,6 @@ rule withdrawLink_Success() {
     assert ghost_LinkWithdrawn_Param_amount == amount;
 }
 
-/// ─────────────────── DONATE ──────────────────────────────────
-
-rule DONATE_005_donate_RevertWhen_CallerDoesNotHaveDONATE_OPERATOR_ROLE() {
-    env e;
-    uint256 amount;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require amount != 0, "amount should not be zero";
-    require getActiveProtocolAdapter() != 0, "active adapter should not be zero";
-    require !adapter.depositReverts();
-    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
-
-    /// @dev revert condition being verified
-    require !hasRole(DONATE_OPERATOR_ROLE(), e.msg.sender);
-
-    /// @dev set ghost starting values
-    require ghost_Donation_EventCount == 0;
-
-    donate@withrevert(e, amount);
-
-    assert lastReverted;
-    assert ghost_Donation_EventCount == 0;
-}
-
-rule donate_RevertWhen_AmountIsZero() {
-    env e;
-    uint256 amount;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require hasRole(DONATE_OPERATOR_ROLE(), e.msg.sender);
-    require getActiveProtocolAdapter() != 0, "active adapter should not be zero";
-    require !adapter.depositReverts();
-    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
-
-    /// @dev revert condition being verified
-    require amount == 0, "amount should be zero";
-
-    /// @dev set ghost starting values
-    require ghost_Donation_EventCount == 0;
-
-    donate@withrevert(e, amount);
-
-    assert lastReverted;
-    assert ghost_Donation_EventCount == 0;
-}
-
-rule donate_RevertWhen_NoActiveAdapter() {
-    env e;
-    uint256 amount;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require hasRole(DONATE_OPERATOR_ROLE(), e.msg.sender);
-    require amount != 0, "amount should not be zero";
-    require !adapter.depositReverts();
-    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
-
-    /// @dev revert condition being verified
-    require getActiveProtocolAdapter() == 0, "active adapter should be zero";
-
-    uint256 donorBalanceBefore = asset.balanceOf(e.msg.sender);
-    uint256 vaultBalanceBefore = asset.balanceOf(currentContract);
-    require donorBalanceBefore >= amount, "donor asset balance should cover donation";
-    require asset.allowance(e.msg.sender, currentContract) >= amount,
-        "vault should be approved to pull the donation";
-    require vaultBalanceBefore <= max_uint256 - amount, "vault asset balance should not overflow";
-
-    /// @dev set ghost starting values
-    require ghost_Donation_EventCount == 0;
-
-    donate@withrevert(e, amount);
-
-    assert lastReverted;
-    assert ghost_Donation_EventCount == 0;
-}
-
-rule donate_RevertWhen_ReentrantCall() {
-    env e;
-    uint256 amount;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require hasRole(DONATE_OPERATOR_ROLE(), e.msg.sender);
-    require amount != 0, "amount should not be zero";
-    require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
-    require !adapter.depositReverts();
-
-    /// @dev revert condition being verified
-    require reentrancyGuardEntered(), "reentrancy guard should be entered";
-
-    /// @dev set ghost starting values
-    require ghost_Donation_EventCount == 0;
-
-    donate@withrevert(e, amount);
-
-    assert lastReverted;
-    assert ghost_Donation_EventCount == 0;
-}
-
-rule donate_RevertWhen_DepositFails() {
-    env e;
-    uint256 amount;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require hasRole(DONATE_OPERATOR_ROLE(), e.msg.sender);
-    require amount != 0, "amount should not be zero";
-    require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
-    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
-
-    /// @dev revert condition being verified
-    require adapter.depositReverts();
-
-    uint256 donorBalanceBefore = asset.balanceOf(e.msg.sender);
-    uint256 vaultBalanceBefore = asset.balanceOf(currentContract);
-    uint256 adapterBalanceBefore = asset.balanceOf(adapter);
-    require donorBalanceBefore >= amount, "donor asset balance should cover donation";
-    require asset.allowance(e.msg.sender, currentContract) >= amount,
-        "vault should be approved to pull the donation";
-    require vaultBalanceBefore <= max_uint256 - amount, "vault asset balance should not overflow";
-    require vaultBalanceBefore + amount >= amount, "vault should hold enough asset for adapter deposit";
-    require adapterBalanceBefore <= max_uint256 - amount, "adapter asset balance should not overflow";
-
-    /// @dev set ghost starting values
-    require ghost_Donation_EventCount == 0;
-
-    donate@withrevert(e, amount);
-
-    assert lastReverted;
-    assert ghost_Donation_EventCount == 0;
-}
-
-rule donate_Success() {
-    env e;
-    uint256 amount;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require hasRole(DONATE_OPERATOR_ROLE(), e.msg.sender);
-    require amount != 0, "amount should not be zero";
-    require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
-    require adapter != currentContract, "adapter should not be the vault";
-    require e.msg.sender != currentContract, "donor should not be the vault";
-    require e.msg.sender != adapter, "donor should not be the adapter";
-    require !adapter.depositReverts();
-    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
-
-    uint256 donorBalanceBefore = asset.balanceOf(e.msg.sender);
-    uint256 vaultBalanceBefore = asset.balanceOf(currentContract);
-    uint256 adapterBalanceBefore = asset.balanceOf(adapter);
-    uint256 preTVL = adapter.getTVL();
-    require donorBalanceBefore >= amount, "donor asset balance should cover donation";
-    require asset.allowance(e.msg.sender, currentContract) >= amount,
-        "vault should be approved to pull the donation";
-    require vaultBalanceBefore <= max_uint256 - amount, "vault asset balance should not overflow";
-    require vaultBalanceBefore + amount >= amount, "vault should hold enough asset for adapter deposit";
-    require adapterBalanceBefore <= max_uint256 - amount, "adapter asset balance should not overflow";
-    require preTVL <= max_uint256 - amount, "adapter TVL should not overflow";
-
-    /// @dev set ghost starting values
-    require ghost_Donation_EventCount == 0;
-
-    donate@withrevert(e, amount);
-
-    assert !lastReverted;
-    assert adapter.getTVL() == preTVL + amount;
-    assert asset.balanceOf(e.msg.sender) == donorBalanceBefore - amount;
-    assert asset.balanceOf(currentContract) == vaultBalanceBefore;
-    assert asset.balanceOf(adapter) == adapterBalanceBefore + amount;
-    assert ghost_Donation_EventCount == 1;
-    assert ghost_Donation_Param_donor == e.msg.sender;
-    assert ghost_Donation_Param_amount == amount;
-}
-
-/// donate does NOT require whenNotPaused — succeeds even when paused
-rule donate_Success_WhenPaused() {
-    env e;
-    uint256 amount;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require hasRole(DONATE_OPERATOR_ROLE(), e.msg.sender);
-    require amount != 0, "amount should not be zero";
-    require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
-    require adapter != currentContract, "adapter should not be the vault";
-    require e.msg.sender != currentContract, "donor should not be the vault";
-    require e.msg.sender != adapter, "donor should not be the adapter";
-    require !adapter.depositReverts();
-    require paused(), "should be paused";
-    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
-
-    uint256 donorBalanceBefore = asset.balanceOf(e.msg.sender);
-    uint256 vaultBalanceBefore = asset.balanceOf(currentContract);
-    uint256 adapterBalanceBefore = asset.balanceOf(adapter);
-    uint256 preTVL = adapter.getTVL();
-    require donorBalanceBefore >= amount, "donor asset balance should cover donation";
-    require asset.allowance(e.msg.sender, currentContract) >= amount,
-        "vault should be approved to pull the donation";
-    require vaultBalanceBefore <= max_uint256 - amount, "vault asset balance should not overflow";
-    require vaultBalanceBefore + amount >= amount, "vault should hold enough asset for adapter deposit";
-    require adapterBalanceBefore <= max_uint256 - amount, "adapter asset balance should not overflow";
-    require preTVL <= max_uint256 - amount, "adapter TVL should not overflow";
-
-    /// @dev set ghost starting values
-    require ghost_Donation_EventCount == 0;
-
-    donate@withrevert(e, amount);
-
-    assert !lastReverted;
-    assert paused();
-    assert adapter.getTVL() == preTVL + amount;
-    assert asset.balanceOf(e.msg.sender) == donorBalanceBefore - amount;
-    assert asset.balanceOf(currentContract) == vaultBalanceBefore;
-    assert asset.balanceOf(adapter) == adapterBalanceBefore + amount;
-    assert ghost_Donation_EventCount == 1;
-    assert ghost_Donation_Param_donor == e.msg.sender;
-    assert ghost_Donation_Param_amount == amount;
-}
-
-/// ─────────────────── EMERGENCY DRAIN ─────────────────────────
-
-rule PAUSE_004_emergencyDrain_RevertWhen_CallerDoesNotHaveEMERGENCY_DRAINER_ROLE() {
-    env e;
-    bool revertOnFailure;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require paused(), "should be paused";
-    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
-    uint256 pausedAt = getPausedAt();
-    require e.block.timestamp >= pausedAt, "timestamp should not precede pause";
-    require e.block.timestamp - pausedAt >= 86400, "emergency drain delay should be met";
-
-    /// @dev revert condition being verified
-    require !hasRole(EMERGENCY_DRAINER_ROLE(), e.msg.sender);
-
-    /// @dev set ghost starting values
-    require ghost_EmergencyDrainExecuted_EventCount == 0;
-
-    emergencyDrain@withrevert(e, revertOnFailure);
-
-    assert lastReverted;
-    assert ghost_EmergencyDrainExecuted_EventCount == 0;
-}
-
-rule emergencyDrain_RevertWhen_NotPaused() {
-    env e;
-    bool revertOnFailure;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require hasRole(EMERGENCY_DRAINER_ROLE(), e.msg.sender);
-    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
-
-    /// @dev revert condition being verified
-    require !paused(), "should not be paused";
-
-    /// @dev set ghost starting values
-    require ghost_EmergencyDrainExecuted_EventCount == 0;
-
-    emergencyDrain@withrevert(e, revertOnFailure);
-
-    assert lastReverted;
-    assert ghost_EmergencyDrainExecuted_EventCount == 0;
-}
-
-rule emergencyDrain_RevertWhen_ReentrantCall() {
-    env e;
-    bool revertOnFailure;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require hasRole(EMERGENCY_DRAINER_ROLE(), e.msg.sender);
-    require paused(), "should be paused";
-    uint256 pausedAt = getPausedAt();
-    require e.block.timestamp >= pausedAt, "timestamp should not precede pause";
-    require e.block.timestamp - pausedAt >= 86400, "emergency drain delay should be met";
-
-    /// @dev revert condition being verified
-    require reentrancyGuardEntered(), "reentrancy guard should be entered";
-
-    /// @dev set ghost starting values
-    require ghost_EmergencyDrainExecuted_EventCount == 0;
-
-    emergencyDrain@withrevert(e, revertOnFailure);
-
-    assert lastReverted;
-    assert ghost_EmergencyDrainExecuted_EventCount == 0;
-}
-
-/// EMERGENCY_DRAIN_DELAY = 1 days = 86400 seconds
-rule PAUSE_004_emergencyDrain_RevertWhen_DelayNotMet() {
-    env e;
-    bool revertOnFailure;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require hasRole(EMERGENCY_DRAINER_ROLE(), e.msg.sender);
-    require paused(), "should be paused";
-    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
-    uint256 pausedAt = getPausedAt();
-    require e.block.timestamp >= pausedAt, "timestamp should not precede pause";
-
-    /// @dev revert condition being verified
-    require e.block.timestamp - pausedAt < 86400, "emergency drain delay should not be met";
-
-    /// @dev set ghost starting values
-    require ghost_EmergencyDrainExecuted_EventCount == 0;
-
-    emergencyDrain@withrevert(e, revertOnFailure);
-
-    assert lastReverted;
-    assert ghost_EmergencyDrainExecuted_EventCount == 0;
-}
-
-rule emergencyDrain_RevertWhen_WithdrawFailsAndRevertOnFailureIsTrue() {
-    env e;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require hasRole(EMERGENCY_DRAINER_ROLE(), e.msg.sender);
-    require paused(), "should be paused";
-    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
-    uint256 pausedAt = getPausedAt();
-    require e.block.timestamp >= pausedAt, "timestamp should not precede pause";
-    require e.block.timestamp - pausedAt >= 86400, "emergency drain delay should be met";
-    require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
-    require getTVL() > 0, "TVL should be greater than zero";
-
-    /// @dev revert conditions being verified
-    bool revertOnFailure = true;
-    require adapter.withdrawReverts(), "strategy withdraw should revert";
-
-    /// @dev set ghost starting values
-    require ghost_EmergencyDrainExecuted_EventCount == 0;
-
-    emergencyDrain@withrevert(e, revertOnFailure);
-
-    assert lastReverted;
-    assert ghost_EmergencyDrainExecuted_EventCount == 0;
-}
-
-rule emergencyDrain_Success_WhenTVLIsZero() {
-    env e;
-    bool revertOnFailure;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require hasRole(EMERGENCY_DRAINER_ROLE(), e.msg.sender);
-    require paused(), "should be paused";
-    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
-    uint256 pausedAt = getPausedAt();
-    require e.block.timestamp >= pausedAt, "timestamp should not precede pause";
-    require e.block.timestamp - pausedAt >= 86400, "emergency drain delay should be met";
-    require getTVL() == 0, "TVL should be zero";
-    address emergencyReceiver = getEmergencyReceiver();
-    require emergencyReceiver != currentContract, "emergency receiver should not be the vault";
-    uint256 vaultBalanceBefore = asset.balanceOf(currentContract);
-    uint256 receiverBalanceBefore = asset.balanceOf(emergencyReceiver);
-    require receiverBalanceBefore <= max_uint256 - vaultBalanceBefore, "receiver asset balance should not overflow";
-
-    /// @dev set ghost starting values
-    require ghost_EmergencyDrainExecuted_EventCount == 0;
-
-    emergencyDrain@withrevert(e, revertOnFailure);
-
-    assert !lastReverted;
-    assert asset.balanceOf(currentContract) == 0;
-    assert asset.balanceOf(emergencyReceiver) == receiverBalanceBefore + vaultBalanceBefore;
-    assert ghost_EmergencyDrainExecuted_EventCount == 1;
-    assert ghost_EmergencyDrainExecuted_Param_receiver == emergencyReceiver;
-    assert ghost_EmergencyDrainExecuted_Param_amount == vaultBalanceBefore;
-}
-
-rule emergencyDrain_Success_WhenWithdrawFailsAndRevertOnFailureIsFalse() {
-    env e;
-    bool revertOnFailure;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require hasRole(EMERGENCY_DRAINER_ROLE(), e.msg.sender);
-    require paused(), "should be paused";
-    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
-    uint256 pausedAt = getPausedAt();
-    require e.block.timestamp >= pausedAt, "timestamp should not precede pause";
-    require e.block.timestamp - pausedAt >= 86400, "emergency drain delay should be met";
-    require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
-    require getTVL() > 0, "TVL should be greater than zero";
-    require adapter.withdrawReverts(), "strategy withdraw should revert";
-    require !revertOnFailure, "should not revert on withdraw failure";
-    address emergencyReceiver = getEmergencyReceiver();
-    require emergencyReceiver != currentContract, "emergency receiver should not be the vault";
-    uint256 vaultBalanceBefore = asset.balanceOf(currentContract);
-    uint256 receiverBalanceBefore = asset.balanceOf(emergencyReceiver);
-    require receiverBalanceBefore <= max_uint256 - vaultBalanceBefore, "receiver asset balance should not overflow";
-
-    /// @dev set ghost starting values
-    require ghost_EmergencyDrainExecuted_EventCount == 0;
-
-    emergencyDrain@withrevert(e, revertOnFailure);
-
-    assert !lastReverted;
-    assert asset.balanceOf(currentContract) == 0;
-    assert asset.balanceOf(emergencyReceiver) == receiverBalanceBefore + vaultBalanceBefore;
-    assert ghost_EmergencyDrainExecuted_EventCount == 1;
-    assert ghost_EmergencyDrainExecuted_Param_receiver == emergencyReceiver;
-    assert ghost_EmergencyDrainExecuted_Param_amount == vaultBalanceBefore;
-}
-
-rule emergencyDrain_Success_WhenWithdrawSucceeds() {
-    env e;
-    bool revertOnFailure;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require hasRole(EMERGENCY_DRAINER_ROLE(), e.msg.sender);
-    require paused(), "should be paused";
-    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
-    uint256 pausedAt = getPausedAt();
-    require e.block.timestamp >= pausedAt, "timestamp should not precede pause";
-    require e.block.timestamp - pausedAt >= 86400, "emergency drain delay should be met";
-    require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
-    require getTVL() > 0, "TVL should be greater than zero";
-    require !adapter.withdrawReverts(), "strategy withdraw should not revert";
-    address emergencyReceiver = getEmergencyReceiver();
-    require emergencyReceiver != currentContract, "emergency receiver should not be the vault";
-    require emergencyReceiver != adapter, "emergency receiver should not be the adapter";
-    uint256 vaultBalanceBefore = asset.balanceOf(currentContract);
-    uint256 adapterTVLBefore = adapter.getTVL();
-    require adapterTVLBefore <= asset.balanceOf(adapter), "adapter asset balance should cover its TVL";
-    require vaultBalanceBefore <= max_uint256 - adapterTVLBefore, "vault asset balance should not overflow";
-    mathint drainedAmount = vaultBalanceBefore + adapterTVLBefore;
-    uint256 receiverBalanceBefore = asset.balanceOf(emergencyReceiver);
-    require receiverBalanceBefore <= max_uint256 - drainedAmount, "receiver asset balance should not overflow";
-
-    /// @dev set ghost starting values
-    require ghost_EmergencyDrainExecuted_EventCount == 0;
-
-    emergencyDrain@withrevert(e, revertOnFailure);
-
-    assert !lastReverted;
-    assert adapter.getTVL() == 0;
-    assert asset.balanceOf(currentContract) == 0;
-    assert asset.balanceOf(emergencyReceiver) == receiverBalanceBefore + drainedAmount;
-    assert ghost_EmergencyDrainExecuted_EventCount == 1;
-    assert ghost_EmergencyDrainExecuted_Param_receiver == emergencyReceiver;
-    assert ghost_EmergencyDrainExecuted_Param_amount == drainedAmount;
-}
-
 /// ─────────────────── TRY DEPOSIT TO ADAPTER ──────────────────
 
 rule tryDepositToAdapter_RevertWhen_CallerIsNotSelf() {
@@ -1819,85 +1243,15 @@ rule tryDepositToAdapter_Success() {
 
 /// ─────────────────── STORE REBALANCE DEPOSIT RECOVERY ────────
 
-/// @notice Storing recovery state reverts when another recovery is already pending
-/// @dev Verifies that the existing recovery state is unchanged and no event is emitted
-rule REC_005a_storeRebalanceDepositRecovery_RevertWhen_RecoveryAlreadyPending() {
-    env e;
-    uint256 rebalanceNonce;
-    uint256 amount;
+/// @notice _storeRebalanceDepositRecovery does not itself validate "no recovery pending" or
+/// "amount != 0" - per its own @dev comment, both are preconditions enforced upstream by every
+/// caller (_ccipReceive's _requireNoRecovery/_validateReceivedTokenAndGetAmount on Child and
+/// Parent, and _rebalanceToNewStrategy's BaseVault__ZeroRecoveryAmount check). Calling this
+/// harness wrapper directly with either condition violated does not revert. That caller-level
+/// enforcement belongs to the ChildVault/ParentVault rules checkpoints, not here.
 
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require amount != 0, "amount should not be zero";
-
-    /// @dev revert condition being verified
-    require getRecoveryMode() != RECOVERY_NONE(), "recovery should already be pending";
-
-    Types.RecoveryMode recoveryModeBefore = getRecoveryMode();
-    uint256 recoveryNonceBefore = getRecoveryRebalanceNonce();
-    uint256 recoveryAmountBefore = getRecoveryAmount();
-    uint256 recoveryCreatedAtBefore = getRecoveryCreatedAt();
-
-    /// @dev set ghost starting values
-    require ghost_RebalanceDepositRecoveryStored_EventCount == 0;
-    require ghost_rebalanceDepositRecovery_nonce_StoreCount == 0;
-    require ghost_rebalanceDepositRecovery_amount_StoreCount == 0;
-    require ghost_rebalanceDepositRecovery_createdAt_StoreCount == 0;
-    require ghost_recoveryMode_StoreCount == 0;
-
-    storeRebalanceDepositRecovery@withrevert(e, rebalanceNonce, amount);
-
-    assert lastReverted;
-    assert getRecoveryMode() == recoveryModeBefore;
-    assert getRecoveryRebalanceNonce() == recoveryNonceBefore;
-    assert getRecoveryAmount() == recoveryAmountBefore;
-    assert getRecoveryCreatedAt() == recoveryCreatedAtBefore;
-    assert ghost_RebalanceDepositRecoveryStored_EventCount == 0;
-    assert ghost_rebalanceDepositRecovery_nonce_StoreCount == 0;
-    assert ghost_rebalanceDepositRecovery_amount_StoreCount == 0;
-    assert ghost_rebalanceDepositRecovery_createdAt_StoreCount == 0;
-    assert ghost_recoveryMode_StoreCount == 0;
-}
-
-/// @notice Storing recovery state reverts when the recovery amount is zero
-/// @dev Verifies that recovery state remains empty and no event is emitted
-rule storeRebalanceDepositRecovery_RevertWhen_AmountIsZero() {
-    env e;
-    uint256 rebalanceNonce;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require getRecoveryMode() == RECOVERY_NONE(), "recovery should not be pending";
-
-    /// @dev revert condition being verified
-    uint256 amount = 0;
-
-    uint256 recoveryNonceBefore = getRecoveryRebalanceNonce();
-    uint256 recoveryAmountBefore = getRecoveryAmount();
-    uint256 recoveryCreatedAtBefore = getRecoveryCreatedAt();
-
-    /// @dev set ghost starting values
-    require ghost_RebalanceDepositRecoveryStored_EventCount == 0;
-    require ghost_rebalanceDepositRecovery_nonce_StoreCount == 0;
-    require ghost_rebalanceDepositRecovery_amount_StoreCount == 0;
-    require ghost_rebalanceDepositRecovery_createdAt_StoreCount == 0;
-    require ghost_recoveryMode_StoreCount == 0;
-
-    storeRebalanceDepositRecovery@withrevert(e, rebalanceNonce, amount);
-
-    assert lastReverted;
-    assert getRecoveryMode() == RECOVERY_NONE();
-    assert getRecoveryRebalanceNonce() == recoveryNonceBefore;
-    assert getRecoveryAmount() == recoveryAmountBefore;
-    assert getRecoveryCreatedAt() == recoveryCreatedAtBefore;
-    assert ghost_RebalanceDepositRecoveryStored_EventCount == 0;
-    assert ghost_rebalanceDepositRecovery_nonce_StoreCount == 0;
-    assert ghost_rebalanceDepositRecovery_amount_StoreCount == 0;
-    assert ghost_rebalanceDepositRecovery_createdAt_StoreCount == 0;
-    assert ghost_recoveryMode_StoreCount == 0;
-}
-
-/// @notice A nonzero rebalance deposit recovery is stored when no recovery is pending
+/// @notice Storing a rebalance deposit recovery unconditionally overwrites any existing recovery
+/// state - callers are responsible for checking no recovery is already pending and amount != 0
 /// @dev Verifies the recovery fields, recovery mode, storage writes, and emitted event
 rule storeRebalanceDepositRecovery_Success() {
     env e;
@@ -1906,16 +1260,12 @@ rule storeRebalanceDepositRecovery_Success() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
-    require amount != 0, "amount should not be zero";
-    require getRecoveryMode() == RECOVERY_NONE(), "recovery should not be pending";
 
     /// @dev set ghost starting values
     require ghost_RebalanceDepositRecoveryStored_EventCount == 0;
     require ghost_rebalanceDepositRecovery_nonce_StoreCount == 0;
     require ghost_rebalanceDepositRecovery_amount_StoreCount == 0;
-    require ghost_rebalanceDepositRecovery_createdAt_StoreCount == 0;
     require ghost_recoveryMode_StoreCount == 0;
-    require ghost_emergencyReceiver_StoreCount == 0;
 
     storeRebalanceDepositRecovery@withrevert(e, rebalanceNonce, amount);
 
@@ -1923,7 +1273,9 @@ rule storeRebalanceDepositRecovery_Success() {
     assert getRecoveryMode() == RECOVERY_REBALANCE_DEPOSIT();
     assert getRecoveryRebalanceNonce() == rebalanceNonce;
     assert getRecoveryAmount() == amount;
-    assert getRecoveryCreatedAt() == e.block.timestamp;
+    Types.RebalanceDepositRecovery recovery = getRebalanceDepositRecovery();
+    assert recovery.rebalanceNonce == rebalanceNonce;
+    assert recovery.amount == amount;
     assert ghost_RebalanceDepositRecoveryStored_EventCount == 1;
     assert ghost_RebalanceDepositRecoveryStored_Param_nonce == rebalanceNonce;
     assert ghost_RebalanceDepositRecoveryStored_Param_amount == amount;
@@ -1931,52 +1283,11 @@ rule storeRebalanceDepositRecovery_Success() {
     assert ghost_rebalanceDepositRecovery_nonce_StoredValue == rebalanceNonce;
     assert ghost_rebalanceDepositRecovery_amount_StoreCount == 1;
     assert ghost_rebalanceDepositRecovery_amount_StoredValue == amount;
-    assert ghost_rebalanceDepositRecovery_createdAt_StoreCount == 1;
-    assert ghost_rebalanceDepositRecovery_createdAt_StoredValue == e.block.timestamp;
-    assert ghost_recoveryMode_StoreCount == 1 || ghost_emergencyReceiver_StoreCount == 1,
-        "recovery mode enum may be packed with emergency receiver when this spec is run against ChildVault, but not ParentVault";
-    assert ghost_recoveryMode_StoreCount == 1 => ghost_recoveryMode_StoredValue == Types.RecoveryMode.REBALANCE_DEPOSIT,
-        "recovery mode stored value is only meaningful when the recovery mode hook fires";
+    assert ghost_recoveryMode_StoreCount == 1;
+    assert ghost_recoveryMode_StoredValue == Types.RecoveryMode.REBALANCE_DEPOSIT;
 }
 
 /// ─────────────────── CLEAR REBALANCE DEPOSIT RECOVERY ────────
-
-/// @notice Clearing rebalance deposit recovery reverts unless that recovery mode is active
-/// @dev Verifies that the existing recovery state is unchanged and no event is emitted
-rule clearRebalanceDepositRecovery_RevertWhen_NoPendingRecovery() {
-    env e;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-
-    /// @dev revert condition being verified
-    require getRecoveryMode() != RECOVERY_REBALANCE_DEPOSIT(), "rebalance deposit recovery should not be pending";
-
-    Types.RecoveryMode recoveryModeBefore = getRecoveryMode();
-    uint256 recoveryNonceBefore = getRecoveryRebalanceNonce();
-    uint256 recoveryAmountBefore = getRecoveryAmount();
-    uint256 recoveryCreatedAtBefore = getRecoveryCreatedAt();
-
-    /// @dev set ghost starting values
-    require ghost_RebalanceDepositRecoveryCleared_EventCount == 0;
-    require ghost_rebalanceDepositRecovery_nonce_StoreCount == 0;
-    require ghost_rebalanceDepositRecovery_amount_StoreCount == 0;
-    require ghost_rebalanceDepositRecovery_createdAt_StoreCount == 0;
-    require ghost_recoveryMode_StoreCount == 0;
-
-    clearRebalanceDepositRecovery@withrevert(e);
-
-    assert lastReverted;
-    assert getRecoveryMode() == recoveryModeBefore;
-    assert getRecoveryRebalanceNonce() == recoveryNonceBefore;
-    assert getRecoveryAmount() == recoveryAmountBefore;
-    assert getRecoveryCreatedAt() == recoveryCreatedAtBefore;
-    assert ghost_RebalanceDepositRecoveryCleared_EventCount == 0;
-    assert ghost_rebalanceDepositRecovery_nonce_StoreCount == 0;
-    assert ghost_rebalanceDepositRecovery_amount_StoreCount == 0;
-    assert ghost_rebalanceDepositRecovery_createdAt_StoreCount == 0;
-    assert ghost_recoveryMode_StoreCount == 0;
-}
 
 /// @notice Clearing an active rebalance deposit recovery deletes its state
 /// @dev Verifies the recovery fields, recovery mode, storage writes, and emitted event
@@ -1993,9 +1304,7 @@ rule clearRebalanceDepositRecovery_Success() {
     require ghost_RebalanceDepositRecoveryCleared_EventCount == 0;
     require ghost_rebalanceDepositRecovery_nonce_StoreCount == 0;
     require ghost_rebalanceDepositRecovery_amount_StoreCount == 0;
-    require ghost_rebalanceDepositRecovery_createdAt_StoreCount == 0;
     require ghost_recoveryMode_StoreCount == 0;
-    require ghost_emergencyReceiver_StoreCount == 0;
 
     clearRebalanceDepositRecovery@withrevert(e);
 
@@ -2003,99 +1312,27 @@ rule clearRebalanceDepositRecovery_Success() {
     assert getRecoveryMode() == RECOVERY_NONE();
     assert getRecoveryRebalanceNonce() == 0;
     assert getRecoveryAmount() == 0;
-    assert getRecoveryCreatedAt() == 0;
+    Types.RebalanceDepositRecovery recovery = getRebalanceDepositRecovery();
+    assert recovery.rebalanceNonce == 0;
+    assert recovery.amount == 0;
     assert ghost_RebalanceDepositRecoveryCleared_EventCount == 1;
     assert ghost_RebalanceDepositRecoveryCleared_Param_nonce == recoveryNonceBefore;
     assert ghost_rebalanceDepositRecovery_nonce_StoreCount == 1;
     assert ghost_rebalanceDepositRecovery_nonce_StoredValue == 0;
     assert ghost_rebalanceDepositRecovery_amount_StoreCount == 1;
     assert ghost_rebalanceDepositRecovery_amount_StoredValue == 0;
-    assert ghost_rebalanceDepositRecovery_createdAt_StoreCount == 1;
-    assert ghost_rebalanceDepositRecovery_createdAt_StoredValue == 0;
-    assert ghost_recoveryMode_StoreCount == 1 || ghost_emergencyReceiver_StoreCount == 1,
-        "recovery mode enum may be packed with emergency receiver when this spec is run against ChildVault, but not ParentVault";
-    assert ghost_recoveryMode_StoreCount == 1 => ghost_recoveryMode_StoredValue == Types.RecoveryMode.NONE,
-        "recovery mode stored value is only meaningful when the recovery mode hook fires";
-}
-
-/// ─────────────────── REQUIRE REBALANCE DEPOSIT RECOVERY ─────
-
-/// @notice Requiring rebalance deposit recovery reverts unless that recovery mode is active
-/// @dev Verifies that recovery validation does not modify vault storage
-rule requireRebalanceDepositRecovery_RevertWhen_NoPendingRecovery() {
-    env e;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-
-    /// @dev revert condition being verified
-    require getRecoveryMode() != RECOVERY_REBALANCE_DEPOSIT(), "rebalance deposit recovery should not be pending";
-
-    storage before = lastStorage;
-
-    requireRebalanceDepositRecovery@withrevert(e);
-
-    assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-}
-
-/// @notice Requiring active rebalance deposit recovery returns the stored recovery record
-/// @dev Verifies all returned fields and that recovery validation does not modify vault storage
-rule requireRebalanceDepositRecovery_Success() {
-    env e;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require getRecoveryMode() == RECOVERY_REBALANCE_DEPOSIT(), "rebalance deposit recovery should be pending";
-
-    uint256 expectedNonce = getRecoveryRebalanceNonce();
-    uint256 expectedAmount = getRecoveryAmount();
-    uint256 expectedCreatedAt = getRecoveryCreatedAt();
-    storage before = lastStorage;
-
-    Types.RebalanceDepositRecovery recovery = requireRebalanceDepositRecovery@withrevert(e);
-
-    assert !lastReverted;
-    assert recovery.rebalanceNonce == expectedNonce;
-    assert recovery.amount == expectedAmount;
-    assert recovery.createdAt == expectedCreatedAt;
-    assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_recoveryMode_StoreCount == 1;
+    assert ghost_recoveryMode_StoredValue == Types.RecoveryMode.NONE;
 }
 
 /// ─────────────────── RECOVER FAILED REBALANCE DEPOSIT ───────
 
-/// @notice Recovering a failed rebalance deposit reverts unless that recovery mode is active
-/// @dev Verifies that recovery state, balances, TVL, and events remain unchanged
-rule recoverFailedRebalanceDepositInternal_RevertWhen_NoPendingRecovery() {
-    env e;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
-    require !adapter.depositReverts(), "adapter deposit should not revert";
-
-    /// @dev revert condition being verified
-    require getRecoveryMode() != RECOVERY_REBALANCE_DEPOSIT(), "rebalance deposit recovery should not be pending";
-
-    storage before = lastStorage;
-    uint256 vaultBalanceBefore = asset.balanceOf(currentContract);
-    uint256 adapterBalanceBefore = asset.balanceOf(adapter);
-    uint256 adapterTVLBefore = adapter.getTVL();
-
-    /// @dev set ghost starting values
-    require ghost_RebalanceDepositRecoveryCleared_EventCount == 0;
-    require ghost_RebalanceDepositSuccess_EventCount == 0;
-
-    recoverFailedRebalanceDepositInternal@withrevert(e);
-
-    assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert asset.balanceOf(currentContract) == vaultBalanceBefore;
-    assert asset.balanceOf(adapter) == adapterBalanceBefore;
-    assert adapter.getTVL() == adapterTVLBefore;
-    assert ghost_RebalanceDepositRecoveryCleared_EventCount == 0;
-    assert ghost_RebalanceDepositSuccess_EventCount == 0;
-}
+/// @notice _recoverFailedRebalanceDeposit does not itself check that a rebalance deposit recovery
+/// is pending - per its own @dev comment this is a precondition enforced by the caller
+/// (executeRecovery dispatches to it only when s_recoveryMode == REBALANCE_DEPOSIT). Calling this
+/// harness wrapper with no recovery pending reads an empty recovery record and deposits amount 0,
+/// which MockProtocolAdapter accepts, so it does not revert. That caller-level dispatch belongs to
+/// the ChildVault/ParentVault rules checkpoints, not here.
 
 /// @notice Recovering a failed rebalance deposit reverts when no active adapter is set
 /// @dev Verifies that recovery state, balances, TVL, and events remain unchanged
@@ -2191,9 +1428,7 @@ rule recoverFailedRebalanceDepositInternal_Success() {
     require ghost_RebalanceDepositSuccess_EventCount == 0;
     require ghost_rebalanceDepositRecovery_nonce_StoreCount == 0;
     require ghost_rebalanceDepositRecovery_amount_StoreCount == 0;
-    require ghost_rebalanceDepositRecovery_createdAt_StoreCount == 0;
     require ghost_recoveryMode_StoreCount == 0;
-    require ghost_emergencyReceiver_StoreCount == 0;
 
     uint256 returnedNonce;
     uint256 returnedAmount;
@@ -2208,7 +1443,6 @@ rule recoverFailedRebalanceDepositInternal_Success() {
     assert getRecoveryMode() == RECOVERY_NONE();
     assert getRecoveryRebalanceNonce() == 0;
     assert getRecoveryAmount() == 0;
-    assert getRecoveryCreatedAt() == 0;
     assert ghost_RebalanceDepositRecoveryCleared_EventCount == 1;
     assert ghost_RebalanceDepositRecoveryCleared_Param_nonce == recoveryNonceBefore;
     assert ghost_RebalanceDepositSuccess_EventCount == 1;
@@ -2218,12 +1452,8 @@ rule recoverFailedRebalanceDepositInternal_Success() {
     assert ghost_rebalanceDepositRecovery_nonce_StoredValue == 0;
     assert ghost_rebalanceDepositRecovery_amount_StoreCount == 1;
     assert ghost_rebalanceDepositRecovery_amount_StoredValue == 0;
-    assert ghost_rebalanceDepositRecovery_createdAt_StoreCount == 1;
-    assert ghost_rebalanceDepositRecovery_createdAt_StoredValue == 0;
-    assert ghost_recoveryMode_StoreCount == 1 || ghost_emergencyReceiver_StoreCount == 1,
-        "recovery mode enum may be packed with emergency receiver when this spec is run against ChildVault, but not ParentVault";
-    assert ghost_recoveryMode_StoreCount == 1 => ghost_recoveryMode_StoredValue == Types.RecoveryMode.NONE,
-        "recovery mode stored value is only meaningful when the recovery mode hook fires";
+    assert ghost_recoveryMode_StoreCount == 1;
+    assert ghost_recoveryMode_StoredValue == Types.RecoveryMode.NONE;
 }
 
 /// ─────────────────── AUTHORIZE UPGRADE ─────────────────────
@@ -2575,88 +1805,12 @@ rule handleCCIPRebalance_RevertWhen_AdapterVaultIsInvalid() {
     assert ghost_activeProtocolAdapter_StoreCount == 0;
 }
 
-/// @notice Handling a CCIP rebalance reverts when a zero-amount deposit fails
-/// @dev Recovery storage rejects the zero amount and rolls back adapter selection and all events
-rule handleCCIPRebalance_RevertWhen_FailedDepositAmountIsZero() {
-    env e;
-    uint256 rebalanceNonce;
-    bytes32 protocolId;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require adapterRegistry.getAdapter(e, protocolId) == adapter;
-    require adapter.getVault() == currentContract, "adapter should be bound to the vault";
-    require adapter.depositReverts(), "adapter deposit should revert";
-    require getRecoveryMode() == RECOVERY_NONE(), "recovery should not be pending";
-
-    /// @dev revert condition being verified
-    uint256 amount = 0;
-
-    storage before = lastStorage;
-    uint256 vaultBalanceBefore = asset.balanceOf(currentContract);
-    uint256 adapterBalanceBefore = asset.balanceOf(adapter);
-    uint256 adapterTVLBefore = adapter.getTVL();
-
-    /// @dev set ghost starting values
-    require ghost_ActiveProtocolAdapterSet_EventCount == 0;
-    require ghost_RebalanceDepositSuccess_EventCount == 0;
-    require ghost_RebalanceDepositFailure_EventCount == 0;
-    require ghost_RebalanceDepositRecoveryStored_EventCount == 0;
-
-    handleCCIPRebalance@withrevert(e, rebalanceNonce, protocolId, amount);
-
-    assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert asset.balanceOf(currentContract) == vaultBalanceBefore;
-    assert asset.balanceOf(adapter) == adapterBalanceBefore;
-    assert adapter.getTVL() == adapterTVLBefore;
-    assert ghost_ActiveProtocolAdapterSet_EventCount == 0;
-    assert ghost_RebalanceDepositSuccess_EventCount == 0;
-    assert ghost_RebalanceDepositFailure_EventCount == 0;
-    assert ghost_RebalanceDepositRecoveryStored_EventCount == 0;
-}
-
-/// @notice Handling a CCIP rebalance reverts when a failed deposit conflicts with pending recovery
-/// @dev Recovery storage rejects the conflict and rolls back adapter selection and all events
-rule handleCCIPRebalance_RevertWhen_RecoveryAlreadyPending() {
-    env e;
-    uint256 rebalanceNonce;
-    bytes32 protocolId;
-    uint256 amount;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require adapterRegistry.getAdapter(e, protocolId) == adapter;
-    require adapter.getVault() == currentContract, "adapter should be bound to the vault";
-    require adapter.depositReverts(), "adapter deposit should revert";
-    require amount != 0, "amount should not be zero";
-
-    /// @dev revert condition being verified
-    require getRecoveryMode() != RECOVERY_NONE(), "recovery should already be pending";
-
-    storage before = lastStorage;
-    uint256 vaultBalanceBefore = asset.balanceOf(currentContract);
-    uint256 adapterBalanceBefore = asset.balanceOf(adapter);
-    uint256 adapterTVLBefore = adapter.getTVL();
-
-    /// @dev set ghost starting values
-    require ghost_ActiveProtocolAdapterSet_EventCount == 0;
-    require ghost_RebalanceDepositSuccess_EventCount == 0;
-    require ghost_RebalanceDepositFailure_EventCount == 0;
-    require ghost_RebalanceDepositRecoveryStored_EventCount == 0;
-
-    handleCCIPRebalance@withrevert(e, rebalanceNonce, protocolId, amount);
-
-    assert lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-    assert asset.balanceOf(currentContract) == vaultBalanceBefore;
-    assert asset.balanceOf(adapter) == adapterBalanceBefore;
-    assert adapter.getTVL() == adapterTVLBefore;
-    assert ghost_ActiveProtocolAdapterSet_EventCount == 0;
-    assert ghost_RebalanceDepositSuccess_EventCount == 0;
-    assert ghost_RebalanceDepositFailure_EventCount == 0;
-    assert ghost_RebalanceDepositRecoveryStored_EventCount == 0;
-}
+/// @notice _handleCCIPRebalance/_handleCCIPRebalanceDeposit/_storeRebalanceDepositRecovery do not
+/// themselves validate amount != 0 or "no recovery pending" - both are preconditions enforced by
+/// the caller (_ccipReceive's _validateReceivedTokenAndGetAmount and _requireNoRecovery on Child
+/// and Parent). Calling this harness wrapper directly with either condition violated does not
+/// revert; it stores a zero-amount recovery or overwrites the pending one. That caller-level
+/// enforcement belongs to the ChildVault/ParentVault rules checkpoints, not here.
 
 /// @notice A successful CCIP rebalance selects the adapter and deposits the bridged asset
 /// @dev Verifies return value, balances, TVL, recovery preservation, storage writes, and events
@@ -2676,7 +1830,6 @@ rule handleCCIPRebalance_Success() {
     Types.RecoveryMode recoveryModeBefore = getRecoveryMode();
     uint256 recoveryNonceBefore = getRecoveryRebalanceNonce();
     uint256 recoveryAmountBefore = getRecoveryAmount();
-    uint256 recoveryCreatedAtBefore = getRecoveryCreatedAt();
     uint256 vaultBalanceBefore = asset.balanceOf(currentContract);
     uint256 adapterBalanceBefore = asset.balanceOf(adapter);
     uint256 adapterTVLBefore = adapter.getTVL();
@@ -2695,7 +1848,6 @@ rule handleCCIPRebalance_Success() {
     require ghost_recoveryMode_StoreCount == 0;
     require ghost_rebalanceDepositRecovery_nonce_StoreCount == 0;
     require ghost_rebalanceDepositRecovery_amount_StoreCount == 0;
-    require ghost_rebalanceDepositRecovery_createdAt_StoreCount == 0;
 
     bool success = handleCCIPRebalance@withrevert(e, rebalanceNonce, protocolId, amount);
 
@@ -2708,7 +1860,6 @@ rule handleCCIPRebalance_Success() {
     assert getRecoveryMode() == recoveryModeBefore;
     assert getRecoveryRebalanceNonce() == recoveryNonceBefore;
     assert getRecoveryAmount() == recoveryAmountBefore;
-    assert getRecoveryCreatedAt() == recoveryCreatedAtBefore;
     assert ghost_ActiveProtocolAdapterSet_EventCount == 1;
     assert ghost_ActiveProtocolAdapterSet_Param_protocolId == protocolId;
     assert ghost_ActiveProtocolAdapterSet_Param_adapter == adapter;
@@ -2722,7 +1873,6 @@ rule handleCCIPRebalance_Success() {
     assert ghost_recoveryMode_StoreCount == 0;
     assert ghost_rebalanceDepositRecovery_nonce_StoreCount == 0;
     assert ghost_rebalanceDepositRecovery_amount_StoreCount == 0;
-    assert ghost_rebalanceDepositRecovery_createdAt_StoreCount == 0;
 }
 
 /// @notice A failed CCIP rebalance deposit stores recovery and returns false
@@ -2751,12 +1901,9 @@ rule handleCCIPRebalance_FailedDepositStoresRecovery() {
     require ghost_RebalanceDepositFailure_EventCount == 0;
     require ghost_RebalanceDepositRecoveryStored_EventCount == 0;
     require ghost_activeProtocolAdapter_StoreCount == 0;
-    require ghost_pausedAt_StoreCount == 0;
     require ghost_recoveryMode_StoreCount == 0;
-    require ghost_emergencyReceiver_StoreCount == 0;
     require ghost_rebalanceDepositRecovery_nonce_StoreCount == 0;
     require ghost_rebalanceDepositRecovery_amount_StoreCount == 0;
-    require ghost_rebalanceDepositRecovery_createdAt_StoreCount == 0;
 
     bool success = handleCCIPRebalance@withrevert(e, rebalanceNonce, protocolId, amount);
 
@@ -2769,7 +1916,6 @@ rule handleCCIPRebalance_FailedDepositStoresRecovery() {
     assert getRecoveryMode() == RECOVERY_REBALANCE_DEPOSIT();
     assert getRecoveryRebalanceNonce() == rebalanceNonce;
     assert getRecoveryAmount() == amount;
-    assert getRecoveryCreatedAt() == e.block.timestamp;
     assert ghost_ActiveProtocolAdapterSet_EventCount == 1;
     assert ghost_ActiveProtocolAdapterSet_Param_protocolId == protocolId;
     assert ghost_ActiveProtocolAdapterSet_Param_adapter == adapter;
@@ -2780,20 +1926,44 @@ rule handleCCIPRebalance_FailedDepositStoresRecovery() {
     assert ghost_RebalanceDepositRecoveryStored_EventCount == 1;
     assert ghost_RebalanceDepositRecoveryStored_Param_nonce == rebalanceNonce;
     assert ghost_RebalanceDepositRecoveryStored_Param_amount == amount;
-    assert ghost_activeProtocolAdapter_StoreCount == 1 || ghost_pausedAt_StoreCount == 1,
-        "active adapter may be packed with pausedAt when this spec is run against ChildVault, but not ParentVault";
+    /// @dev s_activeProtocolAdapter and s_recoveryMode are adjacent in BaseVaultStorage and may share a
+    ///      storage slot; both fields are written in this call, so only one Sstore hook may fire.
+    assert ghost_activeProtocolAdapter_StoreCount == 1 || ghost_recoveryMode_StoreCount == 1,
+        "activeProtocolAdapter may be packed with recoveryMode in the current BaseVaultStorage layout";
     assert ghost_activeProtocolAdapter_StoreCount == 1 => ghost_activeProtocolAdapter_StoredValue == adapter,
         "active adapter stored value is only meaningful when the active adapter hook fires";
-    assert ghost_recoveryMode_StoreCount == 1 || ghost_emergencyReceiver_StoreCount == 1,
-        "recovery mode enum may be packed with emergency receiver when this spec is run against ChildVault, but not ParentVault";
     assert ghost_recoveryMode_StoreCount == 1 => ghost_recoveryMode_StoredValue == Types.RecoveryMode.REBALANCE_DEPOSIT,
         "recovery mode stored value is only meaningful when the recovery mode hook fires";
     assert ghost_rebalanceDepositRecovery_nonce_StoreCount == 1;
     assert ghost_rebalanceDepositRecovery_nonce_StoredValue == rebalanceNonce;
     assert ghost_rebalanceDepositRecovery_amount_StoreCount == 1;
     assert ghost_rebalanceDepositRecovery_amount_StoredValue == amount;
-    assert ghost_rebalanceDepositRecovery_createdAt_StoreCount == 1;
-    assert ghost_rebalanceDepositRecovery_createdAt_StoredValue == e.block.timestamp;
+}
+
+/// ─────────────────── CLEAR ACTIVE ADAPTER ────────────────────
+
+/// @notice Clearing the active adapter unconditionally zeroes it and emits the caller-supplied
+/// adapter, regardless of the currently stored active adapter (mirrors BaseVaultStrategyLib.spec's
+/// already-proven library behavior; this rule verifies BaseVault's wiring reaches it)
+rule clearActiveAdapter_Success() {
+    env e;
+    address clearedAdapter;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+
+    /// @dev set ghost starting values
+    require ghost_ActiveProtocolAdapterCleared_EventCount == 0;
+    require ghost_activeProtocolAdapter_StoreCount == 0;
+
+    clearActiveAdapter@withrevert(e, clearedAdapter);
+
+    assert !lastReverted;
+    assert getActiveProtocolAdapter() == 0;
+    assert ghost_ActiveProtocolAdapterCleared_EventCount == 1;
+    assert ghost_ActiveProtocolAdapterCleared_Param_adapter == clearedAdapter;
+    assert ghost_activeProtocolAdapter_StoreCount == 1;
+    assert ghost_activeProtocolAdapter_StoredValue == 0;
 }
 
 /// ─────────────────── REVERT IF ZERO ADDRESS ──────────────────
@@ -2870,45 +2040,6 @@ rule requireNoRecovery_SuccessWhen_NoRecoveryIsPending() {
     assert !lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
 }
-
-/// ─────────────────── REQUIRE RECOVERY MODE ──────────────────
-
-/// @notice Recovery-mode validation reverts when the active mode does not match the expected mode
-rule requireRecoveryMode_RevertWhen_RecoveryModeDoesNotMatch() {
-    env e;
-    Types.RecoveryMode expected;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-
-    /// @dev revert condition being verified
-    require getRecoveryMode() != expected, "active recovery mode should not match the expected mode";
-
-    requireRecoveryMode@withrevert(e, expected);
-
-    assert lastReverted;
-}
-
-/// @notice Recovery-mode validation succeeds when the active mode matches the expected mode
-/// @dev Verifies that successful recovery validation does not modify vault storage
-rule requireRecoveryMode_SuccessWhen_RecoveryModeMatches() {
-    env e;
-    Types.RecoveryMode expected;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-
-    /// @dev success condition being verified
-    require getRecoveryMode() == expected, "active recovery mode should match the expected mode";
-
-    storage before = lastStorage;
-
-    requireRecoveryMode@withrevert(e, expected);
-
-    assert !lastReverted;
-    assert before[currentContract] == lastStorage[currentContract];
-}
-
 
 // /// ─────────────────── SUPPORTS INTERFACE ──────────────────────
 

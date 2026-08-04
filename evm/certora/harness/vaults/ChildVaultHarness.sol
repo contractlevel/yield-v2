@@ -4,7 +4,6 @@ pragma solidity 0.8.34;
 import {HelperHarness} from "../HelperHarness.sol";
 import {ChildVault} from "../../../src/vaults/ChildVault.sol";
 import {BaseVault} from "../../../src/vaults/BaseVault.sol";
-import {BaseVaultStrategyLib} from "../../../src/libraries/vaults/BaseVaultStrategyLib.sol";
 import {Types} from "../../../src/libraries/Types.sol";
 
 contract ChildVaultHarness is ChildVault, HelperHarness {
@@ -50,36 +49,30 @@ contract ChildVaultHarness is ChildVault, HelperHarness {
     }
 
     function storeRebalanceDepositRecovery(uint256 rebalanceNonce, uint256 amount) external {
-        _storeRebalanceDepositRecovery(rebalanceNonce, amount);
+        _storeRebalanceDepositRecovery(_baseVaultStorage(), rebalanceNonce, amount);
     }
 
     function clearRebalanceDepositRecovery() external {
-        _clearRebalanceDepositRecovery();
-    }
-
-    function requireRebalanceDepositRecovery()
-        external
-        view
-        returns (Types.RebalanceDepositRecovery memory recovery)
-    {
-        recovery = _requireRebalanceDepositRecovery();
+        uint256 rebalanceNonce = _baseVaultStorage().s_rebalanceDepositRecovery.rebalanceNonce;
+        _clearRebalanceDepositRecovery(_baseVaultStorage(), rebalanceNonce);
     }
 
     function recoverFailedRebalanceDepositInternal() external returns (uint256 rebalanceNonce, uint256 amount) {
-        (rebalanceNonce, amount) = _recoverFailedRebalanceDeposit();
+        (rebalanceNonce, amount) = _recoverFailedRebalanceDeposit(_baseVaultStorage());
     }
 
     function clearCcipSendRecovery() external returns (Types.CcipSendRecovery memory recovery) {
-        recovery = _clearCcipSendRecovery();
+        recovery = _clearCcipSendRecovery(_childVaultStorage(), _baseVaultStorage());
     }
 
     function ccipSend(
         uint256 bridgeAmount,
         uint64 destSelector,
         Types.CcipTx ccipTxType,
-        bytes calldata txData
+        uint256 nonce,
+        bytes32 protocolId
     ) external {
-        _ccipSend(bridgeAmount, destSelector, ccipTxType, txData);
+        _ccipSend(bridgeAmount, destSelector, ccipTxType, nonce, protocolId);
     }
 
     function getCcipSendRecoveryTxType() external view returns (Types.CcipTx ccipTxType) {
@@ -94,10 +87,6 @@ contract ChildVaultHarness is ChildVault, HelperHarness {
         destinationChainSelector = _childVaultStorage().s_ccipSendRecovery.destinationChainSelector;
     }
 
-    function getCcipSendRecoveryCreatedAt() external view returns (uint256 createdAt) {
-        createdAt = _childVaultStorage().s_ccipSendRecovery.createdAt;
-    }
-
     function getCcipSendRecoveryNonce() external view returns (uint256 nonce) {
         nonce = _childVaultStorage().s_ccipSendRecovery.nonce;
     }
@@ -107,28 +96,28 @@ contract ChildVaultHarness is ChildVault, HelperHarness {
     }
 
     function executeDeposit(uint256 amount, bool revertOnFailure) external returns (bool success) {
-        success = _executeDeposit(amount, revertOnFailure);
+        success = _executeDeposit(amount, revertOnFailure, _baseVaultStorage().s_activeProtocolAdapter);
     }
 
     function executeWithdraw(uint256 amount, bool revertOnFailure) external returns (bool success, uint256 amountOut) {
-        (success, amountOut) = _executeWithdraw(amount, revertOnFailure);
+        (success, amountOut) = _executeWithdraw(amount, revertOnFailure, _baseVaultStorage().s_activeProtocolAdapter);
+    }
+
+    function clearActiveAdapter(address adapter) external {
+        _clearActiveAdapter(adapter);
     }
 
     function handleCCIPRebalance(uint256 rebalanceNonce, bytes32 protocolId, uint256 amount)
         external
         returns (bool success)
     {
-        /// @dev Certora cannot link external libraries, so model only the active-adapter boundary here.
-        BaseVaultStrategyLib._setActiveAdapter(_baseVaultStorage(), protocolId, i_adapterRegistry, address(this));
-        success = _handleCCIPRebalanceDeposit(rebalanceNonce, amount);
+        /// @dev ChildVault's _setActiveAdapter override already calls BaseVaultStrategyLib's internal
+        ///      form, avoiding the unresolved external library call Certora cannot link.
+        success = _handleCCIPRebalance(rebalanceNonce, protocolId, amount);
     }
 
     function requireNoRecovery() external view {
-        _requireNoRecovery();
-    }
-
-    function requireRecoveryMode(Types.RecoveryMode expected) external view {
-        _requireRecoveryMode(expected);
+        _requireNoRecovery(_baseVaultStorage());
     }
 
     function authorizeUpgrade(address newImplementation) external {
@@ -141,9 +130,5 @@ contract ChildVaultHarness is ChildVault, HelperHarness {
 
     function getRecoveryAmount() external view returns (uint256) {
         return _baseVaultStorage().s_rebalanceDepositRecovery.amount;
-    }
-
-    function getRecoveryCreatedAt() external view returns (uint256) {
-        return _baseVaultStorage().s_rebalanceDepositRecovery.createdAt;
     }
 }

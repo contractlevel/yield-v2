@@ -313,18 +313,6 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         }
     }
 
-    /// @notice Sets the active strategy protocol adapter
-    /// @param protocolId The protocol ID of the strategy
-    /// @return adapter The address of the active strategy protocol adapter
-    /// @dev Precondition: the protocol ID must have a registered adapter
-    /// @dev Precondition: the registered adapter must be bound to this vault
-    /// @dev ChildVault has enough bytecode headroom to inline the library implementation,
-    ///      which also avoids unresolved external library calls in ChildVault verification.
-    function _setActiveAdapter(bytes32 protocolId) internal override returns (address adapter) {
-        adapter =
-            BaseVaultStrategyLib._setActiveAdapter(_baseVaultStorage(), protocolId, i_adapterRegistry, address(this));
-    }
-
     /*//////////////////////////////////////////////////////////////
                                 RECOVERY
     //////////////////////////////////////////////////////////////*/
@@ -698,5 +686,25 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
             ///      are still held locally and tracked by s_ccipSendRecovery.amount (0 if no recovery is pending).
             tvl = $.s_ccipSendRecovery.amount;
         }
+    }
+
+    /// @notice Sets the active strategy protocol adapter
+    /// @param protocolId The protocol ID of the strategy
+    /// @return adapter The address of the active strategy protocol adapter
+    /// @dev Precondition: the protocol ID must have a registered adapter
+    /// @dev Precondition: the registered adapter must be bound to this vault
+    /// @dev ChildVault has enough bytecode headroom to inline the library implementation,
+    ///      which also avoids unresolved external library calls in ChildVault verification.
+    function _setActiveAdapter(bytes32 protocolId) internal override returns (address adapter) {
+        adapter =
+            BaseVaultStrategyLib._setActiveAdapter(_baseVaultStorage(), protocolId, i_adapterRegistry, address(this));
+    }
+
+    /// @notice Clears the active strategy protocol adapter for this chain, given a known adapter
+    /// @param adapter The active strategy adapter being cleared, already known by the caller
+    /// @dev ChildVault has enough bytecode headroom to inline the library implementation,
+    ///      which also avoids unresolved external library calls in ChildVault verification.
+    function _clearActiveAdapter(address adapter) internal override {
+        BaseVaultStrategyLib._clearActiveAdapter(_baseVaultStorage(), adapter);
     }
 }
