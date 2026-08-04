@@ -134,7 +134,9 @@ certoraRun certora/conf/libraries/ParentVaultUserEpochLib.conf
 certoraRun certora/conf/vaults/ChildVault.BaseVault.conf
 certoraRun certora/conf/vaults/ParentVault.BaseVault.conf
 
-certoraRun certora/conf/vaults/ChildVault.conf
+certoraRun certora/conf/vaults/ChildVault.rules.conf
+certoraRun certora/conf/vaults/ChildVault.invariants.conf
+
 certoraRun certora/conf/vaults/ParentVault.conf
 
 certoraRun certora/conf/vaults/ParentVault.conf --rule SOLV_001_parentCoversClaimableWithdrawObligations SOLV_003_shareEscrowAttributableToWithdrawIntents SHARE_001_totalSupplyReconcilesWithTotalShares

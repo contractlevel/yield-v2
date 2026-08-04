@@ -122,71 +122,6 @@ methods {
 /*//////////////////////////////////////////////////////////////
                          DEFINITIONS
 //////////////////////////////////////////////////////////////*/
-/// @notice Functions exposed only by ChildVaultHarness or HelperHarness for isolated verification.
-definition isHarnessHelper(method f) returns bool =
-    f.selector == sig:initializeBaseVault(BaseVault.InitParams).selector ||
-    f.selector == sig:isInitialized().selector ||
-    f.selector == sig:isInitializing().selector ||
-    f.selector == sig:revertIfZeroAddress(address).selector ||
-    f.selector == sig:revertIfZeroAmount(uint256).selector ||
-    f.selector == sig:revertIfZeroChainSelector(uint64).selector ||
-    f.selector == sig:storeRebalanceDepositRecovery(uint256,uint256).selector ||
-    f.selector == sig:clearRebalanceDepositRecovery().selector ||
-    f.selector == sig:recoverFailedRebalanceDepositInternal().selector ||
-    f.selector == sig:ccipSend(uint256,uint64,Types.CcipTx,uint256,bytes32).selector ||
-    f.selector == sig:clearCcipSendRecovery().selector ||
-    f.selector == sig:getCcipSendRecoveryTxType().selector ||
-    f.selector == sig:getCcipSendRecoveryAmount().selector ||
-    f.selector == sig:getCcipSendRecoveryDestinationChainSelector().selector ||
-    f.selector == sig:getCcipSendRecoveryNonce().selector ||
-    f.selector == sig:getCcipSendRecoveryProtocolId().selector ||
-    f.selector == sig:executeDeposit(uint256,bool).selector ||
-    f.selector == sig:executeWithdraw(uint256,bool).selector ||
-    f.selector == sig:clearActiveAdapter(address).selector ||
-    f.selector == sig:handleCCIPRebalance(uint256,bytes32,uint256).selector ||
-    f.selector == sig:requireNoRecovery().selector ||
-    f.selector == sig:authorizeUpgrade(address).selector ||
-    f.selector == sig:getRecoveryRebalanceNonce().selector ||
-    f.selector == sig:getRecoveryAmount().selector ||
-    f.selector == sig:reentrancyGuardEntered().selector ||
-    f.selector == sig:bytes32ToAddress(bytes32).selector ||
-    f.selector == sig:bytes32ToUint256(bytes32).selector ||
-    f.selector == sig:bytes32ToUint8(bytes32).selector ||
-    f.selector == sig:uint8ToCcipTxType(uint8).selector ||
-    f.selector == sig:bytes32ToUint64(bytes32).selector ||
-    f.selector == sig:bytes32ToBytes4(bytes32).selector ||
-    f.selector == sig:bytes32ToBytes10(bytes32).selector ||
-    f.selector == sig:bytes32ToBool(bytes32).selector ||
-    f.selector == sig:bytesToAddress(bytes).selector ||
-    f.selector == sig:bytesToAddressArray(bytes).selector ||
-    f.selector == sig:encodeAddress(address).selector ||
-    f.selector == sig:encodeEpochNonce(uint256).selector ||
-    f.selector == sig:encodeRebalanceData(uint256,bytes32).selector ||
-    f.selector == sig:encodeCcipTxData(Types.CcipTx,bytes).selector ||
-    f.selector == sig:encodeCcipExtraArgs(uint256).selector ||
-    f.selector == sig:hashBytes(bytes).selector ||
-    f.selector == sig:encodeRawCcipTxData(uint256,bytes).selector ||
-    f.selector == sig:decodeCcipTxType(bytes).selector ||
-    f.selector == sig:decodeCcipTxPayload(bytes).selector ||
-    f.selector == sig:emptyParameters().selector ||
-    f.selector == sig:erc165InterfaceId().selector ||
-    f.selector == sig:accessControlDefaultAdminRulesInterfaceId().selector ||
-    f.selector == sig:any2EVMMessageReceiverInterfaceId().selector ||
-    f.selector == sig:UPGRADER_ROLE().selector ||
-    f.selector == sig:PAUSER_ROLE().selector ||
-    f.selector == sig:UNPAUSER_ROLE().selector ||
-    f.selector == sig:CONFIG_OPERATOR_ROLE().selector ||
-    f.selector == sig:REBALANCE_OPERATOR_ROLE().selector ||
-    f.selector == sig:EPOCH_OPERATOR_ROLE().selector ||
-    f.selector == sig:LINK_OPERATOR_ROLE().selector ||
-    f.selector == sig:DONATE_OPERATOR_ROLE().selector ||
-    f.selector == sig:COMPLIANCE_OPERATOR_ROLE().selector ||
-    f.selector == sig:EMERGENCY_DRAINER_ROLE().selector ||
-    f.selector == sig:KEYSTONE_FORWARDER_ROLE().selector ||
-    f.selector == sig:POLICY_ENGINE_MANAGER_ROLE().selector ||
-    f.selector == sig:MINTER_ROLE().selector ||
-    f.selector == sig:BURNER_ROLE().selector ||
-    f.selector == sig:REWARDS_OPERATOR_ROLE().selector;
 
 definition EpochDepositRecoveryStoredEvent() returns bytes32 =
 // keccak256("EpochDepositRecoveryStored(uint256,uint256)")
@@ -673,25 +608,6 @@ hook LOG4(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2, bytes32 
         ghost_CcipSendRecoveryCleared_Param_amount = bytes32ToUint256(t3);
     }
 }
-
-/*//////////////////////////////////////////////////////////////
-                           INVARIANTS
-//////////////////////////////////////////////////////////////*/
-/// @dev Harness-only selectors are excluded because they are not part of the deployed ChildVault ABI.
-///      upgradeToAndCall is excluded because its delegatecall may legitimately replace implementation behavior.
-///      Certora storage-extension analysis fails on the remaining explicitly filtered ChildVault paths even
-///      though Solidity immutables cannot be written by them; retain those filters as a prover-model limitation.
-invariant validParentChainSelector()
-    currentContract.i_parentChainSelector != 0
-    && currentContract.i_parentChainSelector != currentContract.i_thisChainSelector
-    filtered {
-        f -> f.selector != sig:upgradeToAndCall(address,bytes).selector
-            && !isHarnessHelper(f)
-            && f.selector != sig:ccipSend(uint256,uint64,Types.CcipTx,uint256,bytes32).selector
-            && f.selector != sig:executeRebalance(uint256,Types.Strategy).selector
-            && f.selector != sig:executeRecovery().selector
-            && f.selector != sig:executeEpochWithdraw(uint256,uint256).selector
-    }
 
 /*//////////////////////////////////////////////////////////////
                              RULES
