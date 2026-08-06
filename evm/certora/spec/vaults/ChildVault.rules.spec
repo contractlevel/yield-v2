@@ -4078,7 +4078,6 @@ rule executeRecovery_REBALANCE_WITHDRAW_Remote_Success() {
         "recovery mode stored value is only meaningful when the recovery mode hook fires, which may not happen due to state packing";
 }
 
-// @review vacuous
 /// @notice Remote rebalance withdraw recovery via executeRecovery stores CCIP recovery when the router fee lookup fails
 /// @dev Verifies that withdrawal and active adapter clearing remain committed
 rule executeRecovery_REBALANCE_WITHDRAW_Remote_When_RouterGetFeeReverts_StoresCcipSendRecovery() {
@@ -4178,7 +4177,6 @@ rule executeRecovery_REBALANCE_WITHDRAW_Remote_When_RouterGetFeeReverts_StoresCc
         "recovery mode stored value is only meaningful when the recovery mode hook fires, which may not happen due to state packing";
 }
 
-// @review vacuous
 /// @notice Remote rebalance withdraw recovery via executeRecovery stores CCIP recovery when the router send fails
 /// @dev Verifies atomic send rollback while preserving withdrawal and active adapter clearing
 rule executeRecovery_REBALANCE_WITHDRAW_Remote_When_RouterCcipSendReverts_StoresCcipSendRecovery() {
@@ -4948,7 +4946,6 @@ rule executeRebalance_Remote_Success() {
     assert ghost_activeProtocolAdapter_StoredValue == 0;
 }
 
-// @review vacuous
 /// @notice A remote rebalance stores CCIP recovery when the router fee lookup fails
 /// @dev Verifies that withdrawal and active adapter clearing remain committed
 rule executeRebalance_Remote_When_RouterGetFeeReverts_StoresCcipSendRecovery() {
@@ -5037,7 +5034,6 @@ rule executeRebalance_Remote_When_RouterGetFeeReverts_StoresCcipSendRecovery() {
         "recovery mode stored value is only meaningful when the recovery mode hook fires, which may not happen due to state packing";
 }
 
-// @review vacuous
 /// @notice A remote rebalance stores CCIP recovery when the router send fails
 /// @dev Verifies atomic send rollback while preserving withdrawal and active adapter clearing
 rule executeRebalance_Remote_When_RouterCcipSendReverts_StoresCcipSendRecovery() {

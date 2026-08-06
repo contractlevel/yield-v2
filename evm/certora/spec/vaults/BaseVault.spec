@@ -2040,17 +2040,3 @@ rule requireNoRecovery_SuccessWhen_NoRecoveryIsPending() {
     assert !lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
 }
-
-// /// ─────────────────── SUPPORTS INTERFACE ──────────────────────
-
-// @review this is ai slop, we can make helpers in HelperHarness for returning bytes4 literals. but we should defer assertions to parent/child specs because they use different implementations
-// /// For any bytes4 id that the contract does NOT explicitly support,
-// /// supportsInterface must return false.  CVL cannot write bytes4 literals,
-// /// so we check the contrapositive: if supportsInterface returns true,
-// /// Certora must be able to construct a concrete id — if it can't the rule passes.
-// rule supportsInterface_ReturnsFalse_ForUnknownInterface() {
-//     bytes4 id;
-//     bool result = supportsInterface(id);
-//     /// Satisfy: result == false is reachable (not always-true)
-//     satisfy !result;
-// }

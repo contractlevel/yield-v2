@@ -278,7 +278,6 @@ rule inheritedInitialize_AlwaysReverts() {
     assert lastReverted;
 }
 
-// @review vacuous
 rule setCCIPAdmin_RevertWhen_PolicyEngineUndefined() {
     env e;
     address newAdmin;
