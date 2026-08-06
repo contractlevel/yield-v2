@@ -137,7 +137,21 @@ certoraRun certora/conf/vaults/ParentVault.BaseVault.conf
 certoraRun certora/conf/vaults/ChildVault.rules.conf
 certoraRun certora/conf/vaults/ChildVault.invariants.conf
 
-certoraRun certora/conf/vaults/ParentVault.conf
+/// @notice ParentVault::_finalizeRebalance() should be marked virtual and overridden in the harness with internal library implementation
+///         to avoid havoc issues for ccipReceive_REBALANCE_* rules!
+
+/// @notice ParentVault::_finalizeLocalToLocalRebalance() should be marked virtual and overridden in the harness with internal library implementation
+///         to avoid havoc issues for initiateRebalance rules!
+
+certoraRun certora/conf/vaults/ParentVault.rules.conf
+certoraRun certora/conf/vaults/ParentVault.localAdapter.conf
+certoraRun certora/conf/vaults/ParentVault.invariants.conf
+
+`ParentVault.localAdapter.conf` runs rules that require a concrete local active adapter. It links the
+`s_activeProtocolAdapter` storage path to `MockProtocolAdapter` so Certora can resolve local strategy
+deposit and withdrawal calls. Keep this mutable-storage link out of the shared ParentVault
+configurations. The shared rules conf excludes these rules so they are verified only by the
+dedicated target.
 
 certoraRun certora/conf/vaults/ParentVault.conf --rule SOLV_001_parentCoversClaimableWithdrawObligations SOLV_003_shareEscrowAttributableToWithdrawIntents SHARE_001_totalSupplyReconcilesWithTotalShares
 

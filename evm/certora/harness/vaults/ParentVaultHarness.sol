@@ -5,7 +5,10 @@ import {HelperHarness} from "../HelperHarness.sol";
 import {ParentVault} from "../../../src/vaults/ParentVault.sol";
 import {BaseVault} from "../../../src/vaults/BaseVault.sol";
 import {BaseVaultStrategyLib} from "../../../src/libraries/vaults/BaseVaultStrategyLib.sol";
+import {BaseVaultCcipLib} from "../../../src/libraries/vaults/BaseVaultCcipLib.sol";
+import {ParentVaultRebalanceLib} from "../../../src/libraries/vaults/ParentVaultRebalanceLib.sol";
 import {Types} from "../../../src/libraries/Types.sol";
+import {Roles} from "../../../src/libraries/Roles.sol";
 import {IPolicyProtected} from "@chainlink/policy-management/interfaces/IPolicyProtected.sol";
 
 contract ParentVaultHarness is ParentVault, HelperHarness {
@@ -77,9 +80,15 @@ contract ParentVaultHarness is ParentVault, HelperHarness {
     function clearActiveAdapter(address adapter) external {
         _clearActiveAdapter(adapter);
     }
-  
+
     function _clearActiveAdapter(address adapter) internal override {
         BaseVaultStrategyLib._clearActiveAdapter(_baseVaultStorage(), adapter);
+    }
+
+    /// @dev Certora cannot resolve the public library delegatecall from BaseVault._onlyAllowedSender.
+    ///      Dispatch to the equivalent internal implementation without changing production behavior.
+    function _onlyAllowedSender(address sender, uint64 srcChainSelector) internal view override {
+        BaseVaultCcipLib._onlyAllowedSender(_baseVaultStorage(), sender, srcChainSelector);
     }
 
     function handleCCIPRebalance(uint256 rebalanceNonce, bytes32 protocolId, uint256 amount)
@@ -96,6 +105,23 @@ contract ParentVaultHarness is ParentVault, HelperHarness {
     ///      Parent is near the contract size limit and can't inline this like ChildVault does.
     function _setActiveAdapter(bytes32 protocolId) internal override returns (address adapter) {
         adapter = BaseVaultStrategyLib._setActiveAdapter(_baseVaultStorage(), protocolId, i_adapterRegistry, address(this));
+    }
+
+    /// @dev Avoid unresolved public library calls while exercising the identical implementation.
+    function _finalizeRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy) internal override {
+        ParentVaultRebalanceLib._finalizeRebalance(
+            _parentVaultStorage(), i_share, rebalanceNonce, newStrategy, false
+        );
+    }
+
+    /// @dev Avoid unresolved public library calls while exercising the identical implementation.
+    function _finalizeLocalToLocalRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy)
+        internal
+        override
+    {
+        ParentVaultRebalanceLib._finalizeRebalance(
+            _parentVaultStorage(), i_share, rebalanceNonce, newStrategy, true
+        );
     }
 
     function requireNoRecovery() external view {
@@ -116,5 +142,9 @@ contract ParentVaultHarness is ParentVault, HelperHarness {
 
     function policyProtectedInterfaceId() external pure returns (bytes4) {
         return type(IPolicyProtected).interfaceId;
+    }
+
+    function CANCEL_DEPOSIT_OPERATOR_ROLE() external pure returns (bytes32) {
+        return Roles.CANCEL_DEPOSIT_OPERATOR_ROLE;
     }
 }

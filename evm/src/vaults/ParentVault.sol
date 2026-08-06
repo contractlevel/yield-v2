@@ -287,12 +287,13 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         }
 
         _requireNoRecovery(_baseVaultStorage());
-        uint256 receivedAmount = BaseVaultCcipLib.validateReceivedTokenAndGetAmount(message, i_asset);
+        /// @dev We can afford to inline these lib calls. It makes Certora verification easier, but should be revisited if size becomes an issue.
+        uint256 receivedAmount = BaseVaultCcipLib._validateReceivedTokenAndGetAmount(message, i_asset);
 
         /// @dev data decodes to a uint256 epochNonce for epoch net withdraws and a (uint256 rebalanceNonce, bytes32 protocolId) for rebalances
         (Types.CcipTx ccipTxType, bytes memory data) = abi.decode(message.data, (Types.CcipTx, bytes));
         (uint256 rebalanceNonce, bytes32 protocolId) =
-            ParentVaultCcipLib.receiveCcip($, ccipTxType, data, receivedAmount);
+            ParentVaultCcipLib._receiveCcip($, ccipTxType, data, receivedAmount);
         if (rebalanceNonce != 0) {
             bool success = _handleCCIPRebalance(rebalanceNonce, protocolId, receivedAmount);
             /// @dev _ccipReceive only runs on the chain a rebalance CCIP message was sent to, so the
@@ -469,7 +470,9 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     ///      see `_finalizeLocalToLocalRebalance` below.
     /// @param rebalanceNonce The current `s_rebalance.nonce`
     /// @param newStrategy The current `s_rebalance.pendingStrategy`
-    function _finalizeRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy) internal {
+    /// @dev Virtual so verification harnesses can call the equivalent internal library implementation.
+    // @review remove virtual before deployment
+    function _finalizeRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy) internal virtual {
         ParentVaultRebalanceLib.finalizeRebalance(_parentVaultStorage(), i_share, rebalanceNonce, newStrategy, false);
     }
 
@@ -478,7 +481,12 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     ///         persisted, so there is nothing to validate or clear.
     /// @param rebalanceNonce The rebalance nonce, already known by the caller
     /// @param newStrategy The new strategy, already known by the caller
-    function _finalizeLocalToLocalRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy) internal {
+    /// @dev Virtual so verification harnesses can call the equivalent internal library implementation.
+    // @review remove virtual before deployment
+    function _finalizeLocalToLocalRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy)
+        internal
+        virtual
+    {
         ParentVaultRebalanceLib.finalizeRebalance(_parentVaultStorage(), i_share, rebalanceNonce, newStrategy, true);
     }
 
