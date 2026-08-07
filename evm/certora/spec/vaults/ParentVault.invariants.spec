@@ -857,17 +857,9 @@ rule EPOCH_002_epochTransitionsAreValid(method f, uint256 epochNonce) filtered {
 
 /// @notice Outside authorized force-cancellation, a caller cannot alter another user's escrowed
 ///         deposit or withdrawal entry for any epoch
-/// @dev This is NOT a verification of docs/INVARIANTS.md SOLV-005. The full SOLV-005 claim (a
-///      user's total entitlement across wallet shares, open/claimable deposit and withdraw state,
-///      and already-claimed asset covers their contributed principal net of fees and dust) requires
-///      per-epoch price-per-share conversion and fee-dilution modeling beyond this checkpoint's
-///      tractable single-transition state model. This rule instead
-///      verifies a narrower, complementary property in its own right: every included function that
-///      writes s_deposits[user][epochNonce] or s_withdraws[user][epochNonce] keys the user from
-///      msg.sender, so no third party can interfere with another user's entry. forceCancelDeposit is
-///      the intentional exception and is excluded here; its operator authorization and exact refund
-///      effects are verified by its dedicated rules. Owner-driven updates are likewise covered by
-///      the corresponding deposit, cancel, and claim success rules.
+/// @dev Every included function writing s_deposits or s_withdraws derives the affected user from
+///      msg.sender. forceCancelDeposit is the intentional exception and is excluded here; its
+///      authorization, target-user handling, and exact refund effects are verified separately.
 rule userEpochEscrowOnlyChangedByOwnerOutsideForceCancel(method f, address user, uint256 epochNonce) filtered {
     f -> isInvariantPreservationMethod(f)
         && f.selector != sig:forceCancelDeposit(address).selector
