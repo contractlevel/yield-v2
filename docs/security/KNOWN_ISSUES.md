@@ -6,6 +6,8 @@ Entries here are intentionally **not assigned a severity rating** — they are a
 
 IDs are stable. Once assigned, a KI-XXX identifier is never reused or renumbered, even after the underlying issue is resolved. Resolved issues remain in this document with their status updated.
 
+Several entries below trace to a deliberate architectural choice rather than a residual risk that stands alone — where that's the case, the entry cross-references the relevant decision in [`DECISIONS.md`](../protocol/DECISIONS.md), which is the canonical source for *why* the system is built that way, not just that the resulting risk is accepted.
+
 ---
 
 ## KI-001 — Centralized trust in privileged operator/admin roles
@@ -864,6 +866,38 @@ The stalls that make this material (`KI-007`, `KI-013`, `KI-014`) are already ac
 - Product requirements demand a self-service exit for users caught in a stalled epoch, rather than relying on the stall itself resolving.
 - A scoped-cancellation design becomes available that can unwind a single participant's contribution from an epoch's shared settlement pool without breaking the shrinking-pool invariants (`EPOCH-008`, `EPOCH-011`).
 - Stalls covered by `KI-007`, `KI-013`, or `KI-014` become frequent enough that "no cancellation while stuck" materially affects user experience rather than remaining a rare tail event.
+
+---
+
+## KI-018 — Management fee is billed against a point-in-time share snapshot, not time-weighted per holder
+
+**Status:** Accepted — inherent to a periodic AUM-style fee with no per-holder accrual ledger.
+
+**Last reviewed:** 2026-08-08
+
+**Component:** `ParentVaultFeesLib._collectManagementFee`, invoked from `ParentVaultRebalanceLib._finalizeRebalance`.
+
+### Summary
+
+`_collectManagementFee` computes the fee as `s_totalShares` (read at collection time) × `MANAGEMENT_FEE_BPS` × elapsed time since the previous rebalance completed, capped at 365 days, and mints the resulting shares to the treasury from whichever shares happen to be outstanding at that moment. There is no per-holder join timestamp anywhere in share accounting, so the fee cannot distinguish a holder present for the full elapsed window from one who joined the day before, and it entirely misses anyone who fully exited earlier in that window.
+
+This is the general form of two already-documented symptoms of the same design: [KI-006](#ki-006--management-fee-accumulator-includes-vault-pause-duration) (pause duration counted in the elapsed-time base) and [KI-009](#ki-009--management-fee-base-includes-shares-escrowed-for-pending-withdraw-intents) (pending-withdraw shares counted in the totalShares base). Both describe *what* gets included in a single fee calculation; this entry describes the underlying reason a single calculation can misattribute the fee across holders at all.
+
+### Why this is accepted, not mitigated
+
+Per [DD-010](../protocol/DECISIONS.md#dd-010---management-fee-accrual-is-gated-on-rebalance-finalization), management fee is deliberately modeled as a coarse, rebalance-gated AUM charge rather than a continuously-accruing per-holder fee, to keep share accounting simple. Attributing fee liability to each holder's actual entry/exit window would require tracking a per-user accrual checkpoint (or moving to a share-index/rebase model) — additional state written on every deposit, withdraw, cancel, and claim, purely to serve this one fee calculation. That cost is judged disproportionate to the fee's purpose: it would meaningfully complicate the core deposit/withdraw/claim paths to fix a redistribution effect that is bounded, non-adversarial (no party profits by causing it — it's a byproduct of ordinary timing), and doesn't threaten solvency.
+
+### Residual risk
+
+- With rebalances expected roughly daily, each fee collection's elapsed window is typically ~1 day, so any single misattribution (a holder billed for time they didn't hold, or a holder escaping the fee entirely) is naturally bounded to about a day's worth of fee — small in absolute terms under normal operation.
+- The effect only grows if actual rebalance cadence drifts materially longer than the daily target — e.g. during an extended period with no sufficiently large APY differential to trigger a rebalance, or during a CRE/liveness stall (see [KI-007](#ki-007--epoch-close-depends-on-cre-workflow-execution)). In those windows the same mechanism applies at whatever elapsed duration has actually accumulated.
+- Net effect: passive, long-term holders who happen to be present at finalization subsidize short-term holders who aren't, in proportion to how long the actual gap since the last rebalance was — bounded by design under expected daily cadence, larger only when cadence degrades. Not a solvency or fund-safety issue — aggregate accounting stays correct throughout.
+
+### Conditions that would warrant revisiting
+
+- Actual rebalance cadence departs materially from the daily target for sustained periods (e.g. low-APY-differential regimes, or CRE liveness degradation per KI-007), making the per-instance redistribution effect large enough to matter economically.
+- Product requirements change to require fee attribution proportional to actual holding time regardless of cadence.
+- A per-holder accrual mechanism is added to the vault for an unrelated reason (e.g. vesting, streaming rewards), at which point extending it to management fees would be close to free.
 
 ---
 

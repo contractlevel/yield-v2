@@ -150,3 +150,15 @@ Trusted configuration setters may accept and re-emit an unchanged value. This ke
 `YieldcoinShare.attachPolicyEngine` is intentionally authorized by the currently attached ACE policy engine. During normal operation, `POLICY_ENGINE_MANAGER_ROLE` can replace the engine without a contract upgrade.
 
 If the current engine cannot authorize its replacement, recovery requires an owner-authorized UUPS upgrade. The independent upgrader is the break-glass authority for this failure mode.
+
+## DD-016 - `executeRebalance` Trusts CRE-Supplied Target Strategy
+
+`ChildVault.executeRebalance(rebalanceNonce, newStrategy)` does not independently verify `newStrategy` against `ParentVault.s_rebalance.pendingStrategy` before withdrawing from the old strategy and routing funds toward it.
+
+This is deliberate, and structural: `executeRebalance` is called directly by `WorkflowRouter` off a CRE report, on a different chain than the one holding `s_rebalance.pendingStrategy`. Unlike `ParentVaultCcipLib._validateRebalance` — which checks a CCIP-delivered `protocolId` against Parent's own local storage as a defense-in-depth consistency check on top of CCIP's own sender authentication — `ChildVault` has no on-chain copy of Parent's pending strategy to check against at this entry point. Routing `newStrategy` through an authenticated CCIP message instead of a direct CRE-dispatched call would close this gap, but would also change the deliberately-direct (non-CCIP) design of the `Child→Parent`, `Child→same Child`, and `Child A→Child B` rebalance topologies documented in `PATHS.md`.
+
+This is the same trust class as [DD-006](#dd-006---closeepoch-trusts-cre-supplied-tvl): the contracts intentionally do not duplicate CRE's job of deriving the correct value, because there is no cheap on-chain source of truth available at every topology this function must support. A CRE workflow bug or misconfiguration that submits the wrong `newStrategy` is not caught on-chain; it results in the vault's real position diverging from what `ParentVault.s_rebalance.activeStrategy` believes is active until reconciled operationally.
+
+Because there is no contract-side backstop here, correctness depends entirely on the CRE `RebalanceExecutor` sub-workflow deriving `newStrategy` from a value it can trust — in practice, reading it directly from the `RebalanceInitiated(rebalanceNonce, protocolId, chainSelector)` event that triggered the workflow, rather than re-deriving or caching it from other state. Get this wrong in the workflow and there is no on-chain check that will catch it.
+
+See [DD-005](#dd-005---cre-is-the-automation-and-tvl-reporting-layer), [DD-006](#dd-006---closeepoch-trusts-cre-supplied-tvl), and [KI-007](../security/KNOWN_ISSUES.md#ki-007--epoch-close-depends-on-cre-workflow-execution).
