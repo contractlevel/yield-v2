@@ -4,6 +4,12 @@ AaveV4Adapter_withdraw
   ├── when the amount is type(uint256).max
   │   ├── when the actual withdrawn amount is less than the TVL
   │   │   └── it should revert
+  │   ├── when the withdrawn shortfall exceeds the rounding tolerance
+  │   │   └── it should revert
+  │   ├── when the withdrawn shortfall is within the rounding tolerance
+  │   │   └── it should succeed
+  │   ├── when the withdrawn amount is zero
+  │   │   └── it should revert
   │   └── when the actual withdrawn amount is gte the TVL
   │       ├── it should emit a Withdraw event
   │       └── it should transfer USDC to the vault
@@ -11,6 +17,12 @@ AaveV4Adapter_withdraw
       ├── when the amount exceeds the TVL
       │   └── it should revert
       ├── when the actual withdrawn amount is less than the requested amount
+      │   └── it should revert
+      ├── when the withdrawn shortfall exceeds the rounding tolerance
+      │   └── it should revert
+      ├── when the withdrawn shortfall equals the rounding tolerance
+      │   └── it should succeed
+      ├── when the withdrawn amount is zero
       │   └── it should revert
       └── when the actual withdrawn amount is gte the requested amount
           ├── it should emit a Withdraw event

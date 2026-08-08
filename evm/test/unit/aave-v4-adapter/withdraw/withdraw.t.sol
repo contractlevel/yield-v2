@@ -14,6 +14,8 @@ contract AaveV4Adapter_WithdrawUnitTest is BaseAaveV4AdapterUnitTest {
     uint256 internal constant WITHDRAW_AMOUNT = 500 * 1e6;
     uint256 internal constant INSUFFICIENT_AMOUNT = 400 * 1e6;
     uint256 internal constant EXCESS_AMOUNT = 600 * 1e6;
+    uint256 internal constant TOLERANCE_SHORTFALL_TVL = TVL - 100;
+    uint256 internal constant EXCESSIVE_SHORTFALL_TVL = TVL - 101;
 
     function setUp() public {
         _changePrank(address(s_parentVault));
@@ -32,6 +34,35 @@ contract AaveV4Adapter_WithdrawUnitTest is BaseAaveV4AdapterUnitTest {
         deal(address(s_mockUsdc), address(underpayingSpoke), INSUFFICIENT_AMOUNT);
 
         vm.expectRevert(IProtocolAdapter.ProtocolAdapter__IncorrectWithdrawAmount.selector);
+        adapter.withdraw(type(uint256).max);
+    }
+
+    function test_AaveV4Adapter_withdraw_RevertWhen_RebalanceWithdrawShortfallExceedsRoundingTolerance() external {
+        UnderpayingAaveV4Spoke underpayingSpoke =
+            new UnderpayingAaveV4Spoke(address(s_mockUsdc), TVL, EXCESSIVE_SHORTFALL_TVL);
+        AaveV4Adapter adapter = new AaveV4Adapter(address(s_parentVault), address(underpayingSpoke));
+        deal(address(s_mockUsdc), address(underpayingSpoke), EXCESSIVE_SHORTFALL_TVL);
+
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__IncorrectWithdrawAmount.selector);
+        adapter.withdraw(type(uint256).max);
+    }
+
+    function test_AaveV4Adapter_withdraw_SucceedsWhen_RebalanceWithdrawShortfallEqualsRoundingTolerance() external {
+        UnderpayingAaveV4Spoke underpayingSpoke =
+            new UnderpayingAaveV4Spoke(address(s_mockUsdc), TVL, TOLERANCE_SHORTFALL_TVL);
+        AaveV4Adapter adapter = new AaveV4Adapter(address(s_parentVault), address(underpayingSpoke));
+        deal(address(s_mockUsdc), address(underpayingSpoke), TOLERANCE_SHORTFALL_TVL);
+
+        uint256 actualAmount = adapter.withdraw(type(uint256).max);
+
+        assertEq(actualAmount, TOLERANCE_SHORTFALL_TVL);
+    }
+
+    function test_AaveV4Adapter_withdraw_RevertWhen_RebalanceWithdrawReturnsZero() external {
+        UnderpayingAaveV4Spoke underpayingSpoke = new UnderpayingAaveV4Spoke(address(s_mockUsdc), TVL, 0);
+        AaveV4Adapter adapter = new AaveV4Adapter(address(s_parentVault), address(underpayingSpoke));
+
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__NoZeroAmount.selector);
         adapter.withdraw(type(uint256).max);
     }
 
@@ -65,6 +96,33 @@ contract AaveV4Adapter_WithdrawUnitTest is BaseAaveV4AdapterUnitTest {
 
         vm.expectRevert(IProtocolAdapter.ProtocolAdapter__IncorrectWithdrawAmount.selector);
         s_aaveV4Adapter.withdraw(WITHDRAW_AMOUNT);
+    }
+
+    function test_AaveV4Adapter_withdraw_RevertWhen_EpochWithdrawShortfallExceedsRoundingTolerance() external {
+        s_mockAaveV4Spoke.setUserSuppliedAssets(s_aaveV4Adapter.getReserveId(), address(s_aaveV4Adapter), TVL);
+        deal(address(s_mockUsdc), address(s_mockAaveV4Spoke), EXCESSIVE_SHORTFALL_TVL);
+        s_mockAaveV4Spoke.setWithdrawReturn(EXCESSIVE_SHORTFALL_TVL);
+
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__IncorrectWithdrawAmount.selector);
+        s_aaveV4Adapter.withdraw(TVL);
+    }
+
+    function test_AaveV4Adapter_withdraw_SucceedsWhen_EpochWithdrawShortfallEqualsRoundingTolerance() external {
+        s_mockAaveV4Spoke.setUserSuppliedAssets(s_aaveV4Adapter.getReserveId(), address(s_aaveV4Adapter), TVL);
+        deal(address(s_mockUsdc), address(s_mockAaveV4Spoke), TOLERANCE_SHORTFALL_TVL);
+        s_mockAaveV4Spoke.setWithdrawReturn(TOLERANCE_SHORTFALL_TVL);
+
+        uint256 actualAmount = s_aaveV4Adapter.withdraw(TVL);
+
+        assertEq(actualAmount, TOLERANCE_SHORTFALL_TVL);
+    }
+
+    function test_AaveV4Adapter_withdraw_RevertWhen_EpochWithdrawReturnsZero() external {
+        s_mockAaveV4Spoke.setUserSuppliedAssets(s_aaveV4Adapter.getReserveId(), address(s_aaveV4Adapter), TVL);
+        s_mockAaveV4Spoke.setWithdrawReturn(0);
+
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__NoZeroAmount.selector);
+        s_aaveV4Adapter.withdraw(TVL);
     }
 
     function test_AaveV4Adapter_withdraw_Success_EpochWithdraw() external {

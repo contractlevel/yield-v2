@@ -12,9 +12,9 @@ abstract contract ProtocolAdapter is IProtocolAdapter, ReentrancyGuard {
     /*//////////////////////////////////////////////////////////////
                                CONSTANTS
     //////////////////////////////////////////////////////////////*/
-    /// @dev Small tolerance for protocol-side share/index rounding on deposit (e.g. Aave's
+    /// @dev Small tolerance for protocol-side share/index rounding on deposit and withdraw (e.g. Aave's
     /// ray-scaled aToken mint/balanceOf round-trip, Compound's base-index principal rounding)
-    uint256 internal constant DEPOSIT_ROUNDING_TOLERANCE_WEI = 100;
+    uint256 internal constant WEI_TOLERANCE = 100;
 
     /*//////////////////////////////////////////////////////////////
                                IMMUTABLE
@@ -64,15 +64,19 @@ abstract contract ProtocolAdapter is IProtocolAdapter, ReentrancyGuard {
         if (tvlAfter < tvlBefore) revert ProtocolAdapter__TVLDecreasedOnDeposit();
 
         uint256 creditedAmount = tvlAfter - tvlBefore;
-        if (creditedAmount < amount && amount - creditedAmount > DEPOSIT_ROUNDING_TOLERANCE_WEI) {
+        if (creditedAmount < amount && amount - creditedAmount > WEI_TOLERANCE) {
             revert ProtocolAdapter__IncompleteDeposit();
         }
     }
 
-    // @review
-    function _revertIfIncompleteWithdraw() internal pure {
-        // revert if amountOut is less than expected - WEI_TOLERANCE
-        // revert if amountOut == 0
+    /// @notice Reverts when the protocol returns less than the expected amount on withdraw, beyond rounding tolerance
+    /// @param expectedAmount The expected withdrawn amount (requested amount, or TVL for full withdrawals)
+    /// @param actualAmount The actual amount withdrawn from the protocol
+    function _revertIfIncompleteWithdraw(uint256 expectedAmount, uint256 actualAmount) internal pure {
+        if (actualAmount == 0) revert ProtocolAdapter__NoZeroAmount();
+        if (actualAmount < expectedAmount && expectedAmount - actualAmount > WEI_TOLERANCE) {
+            revert ProtocolAdapter__IncorrectWithdrawAmount();
+        }
     }
 
     /*//////////////////////////////////////////////////////////////

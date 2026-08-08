@@ -77,8 +77,8 @@ contract AaveV3Adapter is ProtocolAdapter, IAaveV3Adapter {
             _revertIfEpochWithdrawAmountExceedsTVL(amount, _getTVL(pool));
 
             actualWithdrawnAmount = IPool(pool).withdraw(i_asset, amount, address(this));
-            /// @dev Precondition: the actual withdrawn amount must not be less than the requested amount
-            if (actualWithdrawnAmount < amount) revert ProtocolAdapter__IncorrectWithdrawAmount();
+            /// @dev Precondition: the actual withdrawn amount must not be less than the requested amount, beyond tolerance
+            _revertIfIncompleteWithdraw(amount, actualWithdrawnAmount);
         }
         /// @dev Scenario 2: Rebalance Withdraw - when the amount is type(uint256).max
         else {
@@ -86,8 +86,8 @@ contract AaveV3Adapter is ProtocolAdapter, IAaveV3Adapter {
 
             actualWithdrawnAmount = IPool(pool).withdraw(i_asset, amount, address(this));
 
-            /// @dev Precondition: the actual withdrawn amount must not be less than the TVL
-            if (actualWithdrawnAmount < tvl) revert ProtocolAdapter__IncorrectWithdrawAmount();
+            /// @dev Precondition: the actual withdrawn amount must not be less than the TVL, beyond tolerance
+            _revertIfIncompleteWithdraw(tvl, actualWithdrawnAmount);
         }
         emit Withdraw(actualWithdrawnAmount);
         IERC20(i_asset).safeTransfer(i_vault, actualWithdrawnAmount);
@@ -105,7 +105,7 @@ contract AaveV3Adapter is ProtocolAdapter, IAaveV3Adapter {
     /// @notice Gets the TVL in the Aave V3 pool
     /// @param pool The Aave V3 pool address. Fetched from _getAavePool()
     /// @return tvl The TVL of the Aave V3 pool
-    /// @dev Reading aToken balance can slightly overstate available value. Bounded by Aave treasury fee rate (approximately 2-4 bps of TVL).
+    /// @dev Reading aToken balance can slightly overstate available value. Bounded by Aave treasury fee rate.
     function _getTVL(address pool) internal view returns (uint256 tvl) {
         DataTypes.ReserveDataLegacy memory reserveData = IPool(pool).getReserveData(i_asset);
         address aTokenAddress = reserveData.aTokenAddress;

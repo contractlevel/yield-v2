@@ -91,7 +91,8 @@ contract CompoundV3Adapter is ProtocolAdapter, ICompoundV3Adapter {
             /// @dev calculate actual amount received from withdrawing
             uint256 balanceAfter = IERC20(i_asset).balanceOf(address(this));
             actualWithdrawnAmount = balanceAfter - balanceBefore;
-            if (actualWithdrawnAmount < amount) revert ProtocolAdapter__IncorrectWithdrawAmount();
+            /// @dev Precondition: the actual withdrawn amount must not be less than the requested amount, beyond tolerance
+            _revertIfIncompleteWithdraw(amount, actualWithdrawnAmount);
         }
         /// @dev Scenario 2: Rebalance Withdraw - when the amount is type(uint256).max
         else {
@@ -101,7 +102,8 @@ contract CompoundV3Adapter is ProtocolAdapter, ICompoundV3Adapter {
             uint256 balanceAfter = IERC20(i_asset).balanceOf(address(this));
             actualWithdrawnAmount = balanceAfter - balanceBefore;
 
-            if (actualWithdrawnAmount < tvl) revert ProtocolAdapter__IncorrectWithdrawAmount();
+            /// @dev Precondition: the actual withdrawn amount must not be less than the TVL, beyond tolerance
+            _revertIfIncompleteWithdraw(tvl, actualWithdrawnAmount);
         }
 
         emit Withdraw(actualWithdrawnAmount);

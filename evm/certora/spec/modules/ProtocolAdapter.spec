@@ -245,7 +245,9 @@ rule ADAPTER_004_withdraw_RevertWhen_CallerIsNotVault() {
     require currentContract._status == 1, "withdraw is nonReentrant";
     require amount != max_uint256, "exercise epoch withdraw path";
     require amount <= tvlBefore, "amount does not exceed TVL";
-    require amountOut >= amount, "actual withdraw amount is sufficient";
+    require amountOut != 0, "actual withdraw amount is nonzero";
+    require amountOut >= amount || amount - amountOut <= 100,
+        "actual withdraw amount is sufficient or within tolerance";
     require asset.balanceOf(currentContract) <= max_uint256 - amountOut, "adapter can receive withdrawn asset";
     require asset.balanceOf(getVault()) <= max_uint256 - amountOut, "vault can receive withdrawn asset";
     require asset.balanceOf(getProtocolPool()) >= amountOut, "protocol asset balance covers withdraw";
@@ -273,13 +275,48 @@ rule withdraw_RevertWhen_ReentrancyGuardIsEntered() {
     require e.msg.sender == getVault(), "caller is vault";
     require amount != max_uint256, "exercise epoch withdraw path";
     require amount <= tvlBefore, "amount does not exceed TVL";
-    require amountOut >= amount, "actual withdraw amount is sufficient";
+    require amountOut != 0, "actual withdraw amount is nonzero";
+    require amountOut >= amount || amount - amountOut <= 100,
+        "actual withdraw amount is sufficient or within tolerance";
     require asset.balanceOf(currentContract) <= max_uint256 - amountOut, "adapter can receive withdrawn asset";
     require asset.balanceOf(getVault()) <= max_uint256 - amountOut, "vault can receive withdrawn asset";
     require asset.balanceOf(getProtocolPool()) >= amountOut, "protocol asset balance covers withdraw";
 
     /// @dev revert condition being verified
     require currentContract._status == 2, "reentrancy guard is entered";
+
+    /// @dev ghost starting values
+    require ghost_Withdraw_EventCount == 0, "Withdraw event count starts at zero";
+
+    withdraw@withrevert(e, amount);
+
+    assert lastReverted;
+    assert ghost_Withdraw_EventCount == 0;
+}
+
+/// @notice Epoch withdrawals revert when the protocol returns zero assets.
+/// @dev Zero is never accepted by the shared withdrawal tolerance check.
+rule withdraw_Epoch_RevertWhen_ActualWithdrawnAmountIsZero() {
+    env e;
+    uint256 amount;
+    uint256 tvlBefore = getTVL();
+    uint256 amountOut = mockWithdrawAmount();
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "withdraw is nonpayable";
+    require e.msg.sender == getVault(), "caller is vault";
+    require currentContract._status == 1, "withdraw is nonReentrant";
+    require amount != max_uint256, "amount is not max uint256";
+    require amount <= tvlBefore, "amount does not exceed TVL";
+    require asset.balanceOf(currentContract) <= max_uint256 - amountOut,
+        "adapter can receive withdrawn asset";
+    require asset.balanceOf(getVault()) <= max_uint256 - amountOut,
+        "vault can receive withdrawn asset";
+    require asset.balanceOf(getProtocolPool()) >= amountOut,
+        "protocol asset balance covers withdraw";
+
+    /// @dev revert condition being verified
+    require amountOut == 0, "actual withdrawn amount is zero";
 
     /// @dev ghost starting values
     require ghost_Withdraw_EventCount == 0, "Withdraw event count starts at zero";
@@ -335,7 +372,9 @@ rule withdraw_Epoch_RevertWhen_ActualWithdrawnAmountIsInsufficient() {
     require asset.balanceOf(getProtocolPool()) >= amountOut, "protocol asset balance covers withdraw";
 
     /// @dev revert condition being verified
+    require amountOut != 0, "actual withdrawn amount is nonzero";
     require amountOut < amount, "actual withdrawn amount is insufficient";
+    require amount - amountOut > 100, "shortfall exceeds rounding tolerance";
 
     /// @dev ghost starting values
     require ghost_Withdraw_EventCount == 0, "Withdraw event count starts at zero";
@@ -360,7 +399,9 @@ rule withdraw_Epoch_Success() {
     require currentContract._status == 1, "withdraw is nonReentrant";
     require amount != max_uint256, "amount is not max uint256";
     require amount <= tvlBefore, "amount does not exceed TVL";
-    require expectedAmountOut >= amount, "actual withdrawn amount is sufficient";
+    require expectedAmountOut != 0, "actual withdrawn amount is nonzero";
+    require expectedAmountOut >= amount || amount - expectedAmountOut <= 100,
+        "actual withdrawn amount is sufficient or within tolerance";
     require adapterBalanceBefore <= max_uint256 - expectedAmountOut, "adapter can receive withdrawn asset";
     require vaultBalanceBefore <= max_uint256 - expectedAmountOut, "vault can receive withdrawn asset";
     require asset.balanceOf(getProtocolPool()) >= expectedAmountOut, "protocol asset balance covers withdraw";
@@ -394,7 +435,39 @@ rule withdraw_Rebalance_RevertWhen_ActualWithdrawnAmountIsInsufficient() {
     require asset.balanceOf(getProtocolPool()) >= amountOut, "protocol asset balance covers withdraw";
 
     /// @dev revert condition being verified
+    require amountOut != 0, "actual withdrawn amount is nonzero";
     require amountOut < tvlBefore, "actual withdrawn amount is less than pre-withdraw TVL";
+    require tvlBefore - amountOut > 100, "shortfall exceeds rounding tolerance";
+
+    /// @dev ghost starting values
+    require ghost_Withdraw_EventCount == 0, "Withdraw event count starts at zero";
+
+    withdraw@withrevert(e, max_uint256);
+
+    assert lastReverted;
+    assert ghost_Withdraw_EventCount == 0;
+}
+
+/// @notice Full-position withdrawals revert when the protocol returns zero assets.
+/// @dev Zero is never accepted by the shared withdrawal tolerance check.
+rule withdraw_Rebalance_RevertWhen_ActualWithdrawnAmountIsZero() {
+    env e;
+    uint256 tvlBefore = getTVL();
+    uint256 amountOut = mockWithdrawAmount();
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "withdraw is nonpayable";
+    require e.msg.sender == getVault(), "caller is vault";
+    require currentContract._status == 1, "withdraw is nonReentrant";
+    require asset.balanceOf(currentContract) <= max_uint256 - amountOut,
+        "adapter can receive withdrawn asset";
+    require asset.balanceOf(getVault()) <= max_uint256 - amountOut,
+        "vault can receive withdrawn asset";
+    require asset.balanceOf(getProtocolPool()) >= amountOut,
+        "protocol asset balance covers withdraw";
+
+    /// @dev revert condition being verified
+    require amountOut == 0, "actual withdrawn amount is zero";
 
     /// @dev ghost starting values
     require ghost_Withdraw_EventCount == 0, "Withdraw event count starts at zero";
@@ -416,7 +489,9 @@ rule withdraw_Rebalance_Success() {
     require e.msg.value == 0, "withdraw is nonpayable";
     require e.msg.sender == getVault(), "caller is vault";
     require currentContract._status == 1, "withdraw is nonReentrant";
-    require expectedAmountOut >= tvlBefore, "actual withdrawn amount covers pre-withdraw TVL";
+    require expectedAmountOut != 0, "actual withdrawn amount is nonzero";
+    require expectedAmountOut >= tvlBefore || tvlBefore - expectedAmountOut <= 100,
+        "actual withdrawn amount covers TVL or is within tolerance";
     require adapterBalanceBefore <= max_uint256 - expectedAmountOut, "adapter can receive withdrawn asset";
     require vaultBalanceBefore <= max_uint256 - expectedAmountOut, "vault can receive withdrawn asset";
     require asset.balanceOf(getProtocolPool()) >= expectedAmountOut, "protocol asset balance covers withdraw";

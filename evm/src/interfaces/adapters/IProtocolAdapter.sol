@@ -12,6 +12,8 @@ interface IProtocolAdapter {
     error ProtocolAdapter__OnlyVault();
     /// @dev Thrown when the zero address is provided
     error ProtocolAdapter__NoZeroAddress();
+    /// @dev Thrown when a protocol withdrawal returns zero assets
+    error ProtocolAdapter__NoZeroAmount();
     /// @dev Thrown when an epoch withdraw amount exceeds the adapter TVL
     error ProtocolAdapter__WithdrawAmountExceedsTotalValue();
     /// @dev Thrown when the wired protocol's configured asset does not match the adapter's underlying asset

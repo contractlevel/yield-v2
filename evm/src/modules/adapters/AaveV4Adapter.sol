@@ -74,8 +74,8 @@ contract AaveV4Adapter is ProtocolAdapter, IAaveV4Adapter {
 
             //slither-disable-next-line unused-return
             (, actualWithdrawnAmount) = IAaveV4Spoke(i_spoke).withdraw(i_reserveId, amount, address(this));
-            /// @dev Precondition: the actual withdrawn amount must not be less than the requested amount
-            if (actualWithdrawnAmount < amount) revert ProtocolAdapter__IncorrectWithdrawAmount();
+            /// @dev Precondition: the actual withdrawn amount must not be less than the requested amount, beyond tolerance
+            _revertIfIncompleteWithdraw(amount, actualWithdrawnAmount);
         }
         /// @dev Scenario 2: Rebalance Withdraw - when the amount is type(uint256).max
         else {
@@ -84,8 +84,8 @@ contract AaveV4Adapter is ProtocolAdapter, IAaveV4Adapter {
             //slither-disable-next-line unused-return
             (, actualWithdrawnAmount) = IAaveV4Spoke(i_spoke).withdraw(i_reserveId, amount, address(this));
 
-            /// @dev Precondition: the actual withdrawn amount must not be less than the TVL
-            if (actualWithdrawnAmount < tvl) revert ProtocolAdapter__IncorrectWithdrawAmount();
+            /// @dev Precondition: the actual withdrawn amount must not be less than the TVL, beyond tolerance
+            _revertIfIncompleteWithdraw(tvl, actualWithdrawnAmount);
         }
         emit Withdraw(actualWithdrawnAmount);
         IERC20(i_asset).safeTransfer(i_vault, actualWithdrawnAmount);
