@@ -69,6 +69,12 @@ abstract contract ProtocolAdapter is IProtocolAdapter, ReentrancyGuard {
         }
     }
 
+    // @review
+    function _revertIfIncompleteWithdraw() internal pure {
+        // revert if amountOut is less than expected - WEI_TOLERANCE
+        // revert if amountOut == 0
+    }
+
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
     //////////////////////////////////////////////////////////////*/

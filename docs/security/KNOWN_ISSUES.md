@@ -316,7 +316,7 @@ The failure mode is delayed settlement:
 - For remote-strategy net-withdraw epochs, the second CRE step (`EpochWithdrawExecuting` log handling on the child chain) is required before the parent epoch can become claimable.
 - For remote-strategy net-deposit epochs, CRE must observe the destination ChildVault's `EpochDepositToStrategySuccess` event and submit `completeEpochDeposit()` before the parent epoch can become claimable.
 
-This does not by itself create an accounting inconsistency or direct loss of funds. User deposits and withdraw-intent shares remain escrowed by the protocol. While the epoch is still open, users may cancel their current-epoch deposit or withdraw intent through the normal cancellation functions, subject to the usual pause and policy checks.
+This does not by itself create an accounting inconsistency or direct loss of funds. User deposits and withdraw-intent shares remain escrowed by the protocol. While the epoch is still open, users may cancel their current-epoch deposit or withdraw intent through the normal cancellation functions, subject to the usual pause and policy checks. Once the epoch itself is no longer open — including the `EXECUTING` window described above — cancellation is not available either; see [KI-017](#ki-017--deposit-and-withdraw-cancellation-is-scoped-to-the-current-epoch-only).
 
 ### Why this is accepted, not mitigated on-chain
 
@@ -668,6 +668,8 @@ An affected epoch or rebalance can remain in progress indefinitely while the chi
 
 The failure mode is availability and operational delay. The pause-triggered revert occurs before strategy or CCIP side effects and does not itself corrupt accounting or cause a direct loss of funds. Operational error during manual reconciliation remains part of the privileged-operator trust assumption documented in [KI-001](#ki-001--centralized-trust-in-privileged-operatoradmin-roles).
 
+For the epoch-`EXECUTING` case specifically, depositors and withdrawers whose intent belongs to the affected, already-closed epoch have no cancellation path during the stall — see [KI-017](#ki-017--deposit-and-withdraw-cancellation-is-scoped-to-the-current-epoch-only). This does not apply to the `REBALANCING` case above: while a rebalance is stuck, `closeEpoch` cannot run at all, so the *current* epoch remains `OPEN` and its own depositors/withdrawers retain normal cancellation.
+
 ### Conditions that would warrant revisiting
 
 - Product requirements no longer permit an in-progress epoch or rebalance to wait for operator intervention during a child-vault pause.
@@ -703,6 +705,7 @@ This is an availability limitation rather than an accounting or custody failure:
 - The ChildVault remains in `EPOCH_WITHDRAW` or `REBALANCE_WITHDRAW` recovery mode.
 - The normal CRE path detects the outstanding recovery and skips new fund-moving or state-creating operations across the configured deployment.
 - Repeated recovery attempts cannot make incremental progress when only part of the requested liquidity is available.
+- Depositors and withdrawers whose intent belongs to the affected, already-`EXECUTING` epoch (the `EPOCH_WITHDRAW` recovery case) have no cancellation path during the stall — see [KI-017](#ki-017--deposit-and-withdraw-cancellation-is-scoped-to-the-current-epoch-only). This does not apply to the `REBALANCE_WITHDRAW` recovery case: the current epoch cannot close while the rebalance is stuck, so it remains `OPEN` and its own depositors/withdrawers retain normal cancellation.
 
 Assets that could not be withdrawn remain accounted for in the existing strategy position. The recovery does not create an unbacked claim, discard the requested amount, or clear the active adapter. The operational delay can nevertheless be indefinite if the market never again makes the full withdrawal available in one transaction.
 
@@ -778,3 +781,90 @@ An incorrect or incomplete route change can leave an epoch or rebalance in progr
 - CCIP exposes an on-chain mechanism that lets the vault reliably enumerate or prove all messages still in flight for a route.
 
 ---
+
+## KI-016 — Local-strategy epoch and rebalance calls revert atomically with no stored recovery, allowing cost-bounded settlement griefing
+
+**Status:** Accepted — atomic revert is the deliberate design for parent-chain-only failures; no cross-chain or partially-executed state exists to recover.
+
+**Last reviewed:** 2026-08-08
+
+**Component:** `ParentVault.closeEpoch` (`DEPOSIT_TO_LOCAL_STRATEGY` / `WITHDRAW_FROM_LOCAL_STRATEGY` branches), `ParentVault.initiateRebalance` (local-to-local and local-withdraw branches), `BaseVault._executeDeposit` / `_executeWithdraw` (`revertOnFailure == true` path), and whichever strategy adapter is locally active on the parent chain.
+
+### Summary
+
+When ParentVault's active strategy is local to the parent chain, `closeEpoch` and `initiateRebalance` call the active adapter's `deposit()`/`withdraw()` with `revertOnFailure = true`. If the adapter call fails — for example the underlying Aave/Compound reserve cannot supply the requested withdrawal liquidity, or a deposit cannot be credited because a supply cap is reached — `BaseVault` re-reverts the whole transaction (`BaseVault__DepositFailed` / `BaseVault__WithdrawFailed`) instead of catching the failure and storing typed recovery state the way every equivalent `ChildVault` call site does (`REBALANCE_WITHDRAW`, `REBALANCE_DEPOSIT`, `EPOCH_DEPOSIT`, `EPOCH_WITHDRAW`, `CCIP_SEND`).
+
+This is intentional, not an oversight: per `docs/concepts/RECOVERY.md`, "other parent-chain failures generally revert atomically. In those cases, no cross-chain state has escaped and the transaction can leave clean state without storing recovery," and `INVARIANTS.md` `REC-009` documents and Foundry/Medusa-tests this exact behavior — Parent's synchronous local strategy calls use `revertOnFailure == true` so a caught adapter failure is rethrown and the transaction reverts, creating no recovery state.
+
+Because the revert is atomic, nothing partially executed: the epoch remains `OPEN` (or the rebalance never leaves `NONE`), and the next attempt — the following CRE cron cycle calling `closeEpoch`/`initiateRebalance` again — is a complete, ordinary retry, not a specialized recovery path. This is architecturally different from `ChildVault`, where a caught failure follows funds that have already left the source chain (or already landed as an incoming CCIP transfer) and therefore do need stored state to resume correctly.
+
+### Residual risk
+
+While no state is lost and no funds are misplaced, an actor can hold the local reserve in a condition that reliably fails the adapter call — for example borrowing against posted collateral to drive the reserve's utilization high enough that `withdraw()` cannot return the requested liquidity, or supplying directly to a capped reserve so `deposit()` cannot be credited. This capital is fully recoverable by the actor (cost is only borrow interest / opportunity cost), and sustaining the condition causes every `closeEpoch` and `initiateRebalance` attempt against the local strategy to revert for as long as it is maintained:
+
+- `closeEpoch` cannot settle the current epoch, so its depositors and withdrawers cannot claim (though they retain the ability to cancel their own current-epoch intent while it remains `OPEN`, the same escape hatch `KI-007` already documents).
+- `initiateRebalance`'s local-to-local and local-withdraw paths hit the same adapter and fail identically, so the protocol cannot rebalance away from the affected strategy either.
+
+The failure mode is availability and settlement delay, not loss of funds or accounting corruption — consistent with the general shape already accepted in `KI-007` (CRE liveness dependency) and `KI-014` (child-side recovery requires full market liquidity), but this specific parent-side, cost-bounded griefing mechanic was not previously named by either entry.
+
+### Why this is accepted, not mitigated on-chain
+
+Building a local recovery mode symmetric with `ChildVault`'s would mean storing and replaying state for a case where nothing needs replaying — the transaction already reverted cleanly with no committed side effects. Doing so would add a parallel state machine and reconciliation surface to `ParentVault`'s synchronous settlement path for no correctness benefit over simply retrying the same call once market conditions allow it, contrary to the project's simplicity priority. The atomic-revert design keeps parent state provably clean at every boundary, which the existing `REC-009`/`SOLV-*` invariant suite already relies on.
+
+### Operational mitigations
+
+- Monitor for repeated `closeEpoch`/`initiateRebalance` reverts against the local active adapter (distinguishable from other revert reasons via the `BaseVault__DepositFailed`/`BaseVault__WithdrawFailed` selectors).
+- Monitor local active-reserve utilization and available supply-cap headroom ahead of each scheduled epoch close or rebalance attempt, alongside the existing `KI-007` monitoring for epochs that fail to advance past their expected close window.
+- If sustained griefing is detected, operators can rebalance away from the affected local strategy once liquidity briefly recovers, or pause the vault while coordinating a response, consistent with the operator trust model in `KI-001`.
+
+### Conditions that would warrant revisiting
+
+- Local (parent-chain) active strategies become materially more common than remote ones, raising the practical exposure to this griefing pattern.
+- Monitoring cannot reliably distinguish this condition from ordinary market illiquidity in time to respond operationally.
+- A low-cost, symmetry-preserving way to add local recovery (without duplicating `ChildVault`'s state machine) becomes available.
+- Supported lending markets are observed to have utilization or supply-cap dynamics that make sustained griefing meaningfully cheaper than assumed here.
+
+---
+
+## KI-017 — Deposit and withdraw cancellation is scoped to the current epoch only
+
+**Status:** Accepted — cancellation is intentionally limited to the still-open, not-yet-settled epoch.
+
+**Last reviewed:** 2026-08-08
+
+**Component:** `ParentVaultUserEpochLib._cancelDepositCore` (shared by `cancelDeposit` and `forceCancelDeposit`), `ParentVaultUserEpochLib._cancelWithdraw`, and `ParentVault.cancelDeposit` / `cancelWithdraw`.
+
+### Summary
+
+`_cancelDepositCore` and `_cancelWithdraw` both derive the epoch to act on from `$.s_epochNonce` — the *current* epoch — and then require that epoch's status to be `OPEN`. Neither function takes an epoch nonce as a parameter, so cancellation can only ever reach whichever epoch is presently open. Once an epoch's own settlement moves it past `OPEN` (to `EXECUTING`, or directly to `CLAIMABLE`) and `closeEpoch` opens the next epoch, an intent recorded under the now-settled epoch is permanently outside the reach of these two functions. The position is not lost — it remains claimable once (and if) that epoch itself reaches `CLAIMABLE` — but it cannot be cancelled early.
+
+Under normal, healthy operation this has no visible effect: an epoch reaches `CLAIMABLE` promptly and its participants proceed straight to `claimShares`/`claimAsset`. The consequence only becomes material when an epoch's settlement stalls indefinitely for a reason documented elsewhere:
+
+- [KI-007](#ki-007--epoch-close-depends-on-cre-workflow-execution) — a remote net-deposit or net-withdraw epoch waiting on a second CRE step.
+- [KI-013](#ki-013--paused-child-vault-can-leave-a-parent-epoch-or-rebalance-in-progress) — a remote net-withdraw epoch stuck `EXECUTING` because the child vault is paused before `executeEpochWithdraw` runs.
+- [KI-014](#ki-014--strategy-withdraw-recovery-requires-full-market-liquidity) — a remote net-withdraw epoch stuck `EXECUTING` because the strategy cannot supply the full requested liquidity (`EPOCH_WITHDRAW` recovery).
+
+In each of these cases, depositors and withdrawers whose intent belongs to the affected epoch have no self-service path to their funds during the stall: not cancellation (their epoch is no longer `OPEN`) and not claiming (their epoch is not yet `CLAIMABLE`). Funds are fully inaccessible, not merely delayed, for the duration of the underlying stall.
+
+This does **not** apply when a *rebalance* alone is stuck (`REBALANCING`, or the `REBALANCE_WITHDRAW` recovery case in KI-014): `closeEpoch` cannot run at all while a rebalance is in progress, so the current epoch remains `OPEN` and its own depositors/withdrawers retain normal cancellation. The gap described here is specific to an epoch that has itself already left `OPEN`.
+
+### Why this is accepted, not mitigated
+
+Cancellation exists to let a user exit an intent before it has been priced or folded into shared settlement math. Once `closeEpoch` runs, a deposit or withdraw amount is no longer just that user's individual escrow — it becomes part of a shrinking-pool settlement structure shared with every other participant in that epoch (`remainingDepositClaimAmount`/`remainingShareMintAmount` on the deposit side, `remainingShareBurnAmount`/`remainingWithdrawClaimAmount` on the withdraw side). Supporting cancellation past that point would mean unwinding one participant's contribution out of an already-computed shared pool, which risks breaking the shrinking-pool invariants (`EPOCH-008`, `EPOCH-011`) that are otherwise Foundry/Medusa-verified. Scoping cancellation to the pre-settlement, still-`OPEN` window avoids that complexity entirely.
+
+The stalls that make this material (`KI-007`, `KI-013`, `KI-014`) are already accepted operational-liveness risks with their own monitoring and break-glass procedures. This entry's purpose is to make explicit that "no cancellation" is a strict, additional consequence whenever one of those stalls occurs, so operator response expectations are sized around "funds are fully locked until the stall resolves," not merely "settlement is delayed."
+
+### Operational mitigations
+
+- Treat any alert already raised under `KI-007`/`KI-013`/`KI-014` for an epoch stuck past its expected `EXECUTING` window as equivalent to "affected users have zero self-service exit," not just "settlement delayed," when sizing escalation urgency.
+- No additional monitoring beyond what `KI-007`/`KI-013`/`KI-014` already specify is needed to detect this condition — it is a direct consequence of the same stuck-epoch state those entries already watch for.
+
+### Conditions that would warrant revisiting
+
+- Product requirements demand a self-service exit for users caught in a stalled epoch, rather than relying on the stall itself resolving.
+- A scoped-cancellation design becomes available that can unwind a single participant's contribution from an epoch's shared settlement pool without breaking the shrinking-pool invariants (`EPOCH-008`, `EPOCH-011`).
+- Stalls covered by `KI-007`, `KI-013`, or `KI-014` become frequent enough that "no cancellation while stuck" materially affects user experience rather than remaining a rare tail event.
+
+---
+
+<!-- @review missing access control on initialize is accepted because of deploy script -->

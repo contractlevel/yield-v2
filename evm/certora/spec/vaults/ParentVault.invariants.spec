@@ -23,6 +23,10 @@ methods {
     function getAsset() external returns (address) envfree;
     function getRecoveryMode() external returns (Types.RecoveryMode) envfree;
     function getRebalanceDepositRecovery() external returns (Types.RebalanceDepositRecovery) envfree;
+    function getRebalance() external returns (Types.Rebalance) envfree;
+    function getSupportedProtocol(bytes32) external returns (bool) envfree;
+    function getThisChainSelector() external returns (uint64) envfree;
+    function getCrosschainVault(uint64) external returns (address) envfree;
 
     function asset.balanceOf(address) external returns (uint256) envfree;
     function share.balanceOf(address) external returns (uint256) envfree;
@@ -201,6 +205,86 @@ invariant recoveryModeIsRestrictedToRebalanceDeposit()
     getRecoveryMode() == Types.RecoveryMode.NONE || getRecoveryMode() == Types.RecoveryMode.REBALANCE_DEPOSIT
     filtered {
         f -> isInvariantPreservationMethod(f)
+    }
+
+/// @notice Protocol identifier zero is never enabled in ParentVault configuration
+/// @dev Supporting configuration invariant for REBAL-004. The zero protocol ID is the
+///      unset sentinel for Strategy.protocolId; the production setter rejects attempts to
+///      configure it, while initialization starts with the mapping unset.
+invariant CFG_zeroProtocolIsNeverSupported()
+    getTreasury() != 0 => !getSupportedProtocol(to_bytes32(0))
+    filtered {
+        f -> isInvariantPreservationMethod(f)
+    }
+
+/// @notice ParentVault's immutable chain selector is nonzero
+/// @dev Supporting configuration invariant for rebalance and CCIP destination validation.
+invariant CFG_parentChainSelectorIsNonzero()
+    getThisChainSelector() != 0
+    filtered {
+        f -> isInvariantPreservationMethod(f)
+    }
+
+/// @notice Chain selector zero is never registered as a cross-chain vault
+/// @dev Supporting configuration invariant for rebalance target-chain validation. Zero is the
+///      unset sentinel and BaseVaultConfigLib rejects it as a setter key.
+invariant CFG_zeroChainSelectorIsUnregistered()
+    getCrosschainVault(0) == 0
+    filtered {
+        f -> isInvariantPreservationMethod(f)
+    }
+    {
+        preserved initialize(
+            BaseVault.InitParams params,
+            address treasury,
+            address policyEngineManager,
+            address newPolicyEngine,
+            address cancelDepositOperator
+        ) with (env e) {
+            require !getSupportedProtocol(to_bytes32(0));
+        }
+
+        preserved setTreasury(address newTreasury) with (env e) {
+            require getTreasury() != 0;
+        }
+
+        preserved setSupportedProtocol(bytes32 protocolId, bool isSupported) with (env e) {
+            require protocolId != to_bytes32(0);
+        }
+    }
+
+/// @notice A persisted rebalance always has a nonempty pending strategy
+/// @dev Verifies the executable persisted-state portion of docs/security/INVARIANTS.md REBAL-004.
+///      Local-to-local rebalances are intentionally excluded from the converse: they finalize
+///      atomically and never persist REBALANCING or pendingStrategy. Clearing pendingStrategy when
+///      a persisted rebalance finalizes is covered by the ParentVault entry-point success rules.
+invariant REBAL_004_rebalancingStateHasPendingStrategy()
+    getTreasury() != 0 && getRebalance().state == Types.RebalanceState.REBALANCING
+        => getRebalance().pendingStrategy.protocolId != to_bytes32(0)
+            && getRebalance().pendingStrategy.chainSelector != 0
+    filtered {
+        f -> isInvariantPreservationMethod(f)
+    }
+    {
+        preserved {
+            requireInvariant CFG_zeroProtocolIsNeverSupported();
+            requireInvariant CFG_parentChainSelectorIsNonzero();
+            requireInvariant CFG_zeroChainSelectorIsUnregistered();
+        }
+        preserved initialize(
+            BaseVault.InitParams params,
+            address treasury,
+            address policyEngineManager,
+            address newPolicyEngine,
+            address cancelDepositOperator
+        ) with (env e) {
+            require getRebalance().state == Types.RebalanceState.NONE;
+            require getRebalance().pendingStrategy.protocolId == to_bytes32(0);
+            require getRebalance().pendingStrategy.chainSelector == 0;
+        }
+        preserved setTreasury(address newTreasury) with (env e) {
+            require getTreasury() != 0;
+        }
     }
 
 /// @notice The epoch nonce is strictly positive after initialization
