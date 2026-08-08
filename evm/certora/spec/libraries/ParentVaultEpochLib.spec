@@ -623,9 +623,9 @@ rule closeEpoch_RevertWhen_DepositWouldMintZeroShares() {
     mathint grossPricePerShare = tvl * sharePrecision / totalShares;
     require grossPricePerShare != 0, "gross price per share is nonzero";
     require getPerformanceFeeHighWaterMark() >= grossPricePerShare, "performance fee is not collected";
-    require getEpochTotalDepositAmount(epochNonce) <= max_uint256 / sharePrecision,
+    require getEpochTotalDepositAmount(epochNonce) <= max_uint256 / totalShares,
         "new share calculation does not overflow";
-    mathint newShares = getEpochTotalDepositAmount(epochNonce) * sharePrecision / grossPricePerShare;
+    mathint newShares = getEpochTotalDepositAmount(epochNonce) * totalShares / tvl;
 
     uint256 minDepositAmount = 1000000;
     require newShares <= max_uint256 / minDepositAmount, "zero-share guard multiplication does not overflow";
@@ -843,7 +843,7 @@ rule closeEpoch_RevertWhen_NewSharesOverflows() {
 }
 
 /// @notice Closing an epoch reverts when settlement price per share is zero.
-/// @dev Verifies the new-share division-by-zero path.
+/// @dev Verifies the explicit zero-price-per-share guard before new-share calculation.
 rule closeEpoch_RevertWhen_SettlementPricePerShareIsZero() {
     env e;
     uint256 tvl;

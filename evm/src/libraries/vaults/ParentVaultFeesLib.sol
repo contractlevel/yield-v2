@@ -85,6 +85,31 @@ library ParentVaultFeesLib {
         }
     }
 
+    /// @notice Calculates deposit shares directly from TVL and post-fee share supply.
+    /// @dev Avoids using a floored price-per-share as a divisor, which can compound rounding
+    ///      error and over-mint shares when the share price is small.
+    /// @param tvl The Total Value Locked in the active strategy
+    /// @param depositAmount The deposit amount being converted to shares
+    /// @param totalShares The total shares after performance-fee dilution
+    /// @param sharePrecision The share precision factor
+    /// @param assetPrecision The asset precision factor used for bootstrap pricing
+    /// @return newShares The number of shares to mint
+    function _calculateNewShares(
+        uint256 tvl,
+        uint256 depositAmount,
+        uint256 totalShares,
+        uint256 sharePrecision,
+        uint256 assetPrecision
+    ) internal pure returns (uint256 newShares) {
+        if (totalShares != 0 && tvl != 0) {
+            newShares = ParentVaultMathLib._mulDivDown(depositAmount, totalShares, tvl);
+        } else if (totalShares == 0) {
+            newShares = ParentVaultMathLib._mulDivDown(depositAmount, sharePrecision, assetPrecision);
+        } else {
+            revert IParentVault.ParentVault__ZeroTvlWithOutstandingShares();
+        }
+    }
+
     /// @notice Calculates and collects the management fee based on time elapsed since the last rebalance completed.
     /// @dev Elapsed time is capped at 365 days
     /// @param $ ParentVault namespaced storage

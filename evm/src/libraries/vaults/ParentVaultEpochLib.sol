@@ -143,7 +143,9 @@ library ParentVaultEpochLib {
             ParentVaultMathLib._mulDivDown(totalShareBurnAmount, settlementPricePerShare, sharePrecision);
         int256 netFlow = int256(totalDepositAmount) - int256(totalWithdraw);
 
-        uint256 newShares = ParentVaultMathLib._mulDivDown(totalDepositAmount, sharePrecision, settlementPricePerShare);
+        uint256 newShares = ParentVaultFeesLib._calculateNewShares(
+            tvl, totalDepositAmount, totalShares + feeShares, sharePrecision, assetPrecision
+        );
         if (totalDepositAmount != 0 && newShares * minDepositAmount < totalDepositAmount) {
             revert IParentVault.ParentVault__DepositWouldMintZeroShares();
         }

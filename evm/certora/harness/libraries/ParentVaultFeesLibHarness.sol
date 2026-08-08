@@ -32,6 +32,18 @@ contract ParentVaultFeesLibHarness is ParentVaultStore, HelperHarness {
         );
     }
 
+    function calculateNewShares(
+        uint256 tvl,
+        uint256 depositAmount,
+        uint256 totalShares,
+        uint256 sharePrecision,
+        uint256 assetPrecision
+    ) external pure returns (uint256 newShares) {
+        newShares = ParentVaultFeesLib._calculateNewShares(
+            tvl, depositAmount, totalShares, sharePrecision, assetPrecision
+        );
+    }
+
     function collectManagementFee(uint256 rebalanceNonce, uint256 lastRebalanceCompletedTimestamp) external {
         ParentVaultFeesLib._collectManagementFee(
             _parentVaultStorage(), rebalanceNonce, lastRebalanceCompletedTimestamp, i_share

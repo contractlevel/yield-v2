@@ -142,8 +142,7 @@ contract ParentVault_ClaimSharesUnitTest is BaseUnitTest {
         uint256 pricePerShare = 2 * ASSET_PRECISION;
         uint256 epochOneTotalMinted = epochOneTotalDeposit * SHARE_PRECISION / pricePerShare;
         uint256 firstMint = firstDeposit * epochOneTotalMinted / epochOneTotalDeposit;
-        uint256 epochTwoPricePerShare = tvl * SHARE_PRECISION / (totalShares + epochOneTotalMinted);
-        uint256 epochTwoTotalMinted = DEPOSIT_AMOUNT * SHARE_PRECISION / epochTwoPricePerShare;
+        uint256 epochTwoTotalMinted = DEPOSIT_AMOUNT * (totalShares + epochOneTotalMinted) / tvl;
 
         _setParentTotalShares(totalShares);
         _setParentPerformanceFeeHighWaterMark(pricePerShare);

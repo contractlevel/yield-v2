@@ -16,6 +16,8 @@ methods {
     // Library internal wrappers
     function calculatePricePerShare(uint256, uint256, uint256) external returns (uint256) envfree;
     function calculatePricePerSharePublic(uint256, uint256, uint256) external returns (uint256) envfree;
+    function calculateNewShares(uint256, uint256, uint256, uint256, uint256)
+        external returns (uint256) envfree;
     function collectManagementFee(uint256, uint256) external;
     function collectManagementFeePublic(uint256, uint256) external;
     function collectPerformanceFee(uint256, uint256, uint256, uint256, uint256, uint256)
@@ -399,6 +401,81 @@ rule calculatePricePerShare_Success_WhenSharesAndTvlExist() {
     assert pricePerShare == expectedPricePerShare;
     assert ghost_totalShares_StoreCount == 0;
     assert ghost_performanceFeeHighWaterMark_StoreCount == 0;
+}
+
+/// ─────────────────── NEW SHARE CALCULATION ──────────────────
+
+/// @notice New shares use one full-precision deposit/share-supply division.
+/// @dev The concrete witness has a price between asset units, where the former
+///      chained floor divisions produced a materially larger mint amount.
+rule calculateNewShares_Success_WhenSharesAndTvlExist() {
+    env e;
+    uint256 tvl;
+    uint256 depositAmount;
+    uint256 totalShares;
+    uint256 sharePrecision = 1000000000000000000;
+    uint256 assetPrecision = ASSET_PRECISION();
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "calculateNewShares is nonpayable";
+
+    /// @dev success conditions being verified
+    require tvl != 0, "tvl is nonzero";
+    require totalShares != 0, "shares are outstanding";
+    require depositAmount <= max_uint256 / totalShares, "share calculation does not overflow";
+    mathint expectedNewShares = depositAmount * totalShares / tvl;
+
+    uint256 newShares = calculateNewShares@withrevert(
+        e, tvl, depositAmount, totalShares, sharePrecision, assetPrecision
+    );
+
+    assert !lastReverted;
+    assert newShares == expectedNewShares;
+}
+
+/// @notice New shares use bootstrap pricing when no shares exist.
+rule calculateNewShares_Success_WhenNoShares() {
+    env e;
+    uint256 tvl;
+    uint256 depositAmount;
+    uint256 totalShares = 0;
+    uint256 sharePrecision = SHARE_PRECISION();
+    uint256 assetPrecision = ASSET_PRECISION();
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "calculateNewShares is nonpayable";
+
+    /// @dev success conditions being verified
+    require assetPrecision != 0, "bootstrap asset precision is nonzero";
+    require depositAmount * sharePrecision / assetPrecision <= max_uint256,
+        "bootstrap share calculation does not overflow";
+    mathint expectedNewShares = depositAmount * sharePrecision / assetPrecision;
+    uint256 newShares = calculateNewShares@withrevert(
+        e, tvl, depositAmount, totalShares, sharePrecision, assetPrecision
+    );
+
+    assert !lastReverted;
+    assert newShares == expectedNewShares;
+}
+
+/// @notice New-share calculation reverts when TVL is zero with outstanding shares.
+rule calculateNewShares_RevertWhen_ZeroTvlWithOutstandingShares() {
+    env e;
+    uint256 tvl = 0;
+    uint256 depositAmount;
+    uint256 totalShares;
+    uint256 sharePrecision = SHARE_PRECISION();
+    uint256 assetPrecision = ASSET_PRECISION();
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "calculateNewShares is nonpayable";
+
+    /// @dev revert condition being verified
+    require totalShares != 0, "shares should be outstanding";
+
+    calculateNewShares@withrevert(e, tvl, depositAmount, totalShares, sharePrecision, assetPrecision);
+
+    assert lastReverted;
 }
 
 /// ─────────────────── MANAGEMENT FEE ─────────────────────────

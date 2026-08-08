@@ -287,6 +287,63 @@ invariant REBAL_004_rebalancingStateHasPendingStrategy()
         }
     }
 
+/// @notice A non-rebalancing ParentVault has no persisted pending strategy
+/// @dev Completes docs/security/INVARIANTS.md REBAL-004 for persisted state. The local-to-local
+///      path also satisfies this because it never writes pendingStrategy before finalization.
+invariant REBAL_004_noneStateHasNoPendingStrategy()
+    getTreasury() != 0 && getRebalance().state == Types.RebalanceState.NONE
+        => getRebalance().pendingStrategy.protocolId == to_bytes32(0)
+            && getRebalance().pendingStrategy.chainSelector == 0
+    filtered {
+        f -> isInvariantPreservationMethod(f)
+    }
+    {
+        preserved initialize(
+            BaseVault.InitParams params,
+            address treasury,
+            address policyEngineManager,
+            address newPolicyEngine,
+            address cancelDepositOperator
+        ) with (env e) {
+            require getRebalance().state == Types.RebalanceState.NONE;
+            require getRebalance().pendingStrategy.protocolId == to_bytes32(0);
+            require getRebalance().pendingStrategy.chainSelector == 0;
+        }
+
+        preserved setTreasury(address newTreasury) with (env e) {
+            require getTreasury() != 0;
+        }
+    }
+
+/// @notice A persisted rebalance cannot coexist with an executing previous epoch
+/// @dev Verifies docs/security/INVARIANTS.md REBAL-009. The nonce guard avoids evaluating
+///      epochNonce - 1 before initialization; the treasury guard scopes the property to the
+///      initialized ParentVault state.
+invariant REBAL_009_rebalanceExcludesExecutingPreviousEpoch()
+    getTreasury() != 0
+        && getRebalance().state == Types.RebalanceState.REBALANCING
+        && getEpochNonce() > 1
+        => getEpoch(assert_uint256(getEpochNonce() - 1)).status != Types.EpochStatus.EXECUTING
+    filtered {
+        f -> isInvariantPreservationMethod(f)
+    }
+    {
+        preserved initialize(
+            BaseVault.InitParams params,
+            address treasury,
+            address policyEngineManager,
+            address newPolicyEngine,
+            address cancelDepositOperator
+        ) with (env e) {
+            require getRebalance().state == Types.RebalanceState.NONE;
+            require getEpochNonce() <= 1;
+        }
+
+        preserved setTreasury(address newTreasury) with (env e) {
+            require getTreasury() != 0;
+        }
+    }
+
 /// @notice The epoch nonce is strictly positive after initialization
 /// @dev Verifies s_epochNonce is never zero, supporting the `epochNonce - 1` arithmetic used
 ///      elsewhere in ParentVaultEpochLib and ParentVaultCcipLib. Guarded by getTreasury() != 0,
