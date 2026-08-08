@@ -367,7 +367,7 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         uint256 expectedFeeShares =
             _expectedPerformanceFeeShares(SEEDED_SHARES, tvl, grossPricePerShare, ASSET_PRECISION);
         uint256 settlementPricePerShare = _pricePerShare(tvl, SEEDED_SHARES + expectedFeeShares);
-        uint256 expectedDepositShares = DEPOSIT_AMOUNT * SHARE_PRECISION / settlementPricePerShare;
+        uint256 expectedDepositShares = DEPOSIT_AMOUNT * (SEEDED_SHARES + expectedFeeShares) / tvl;
 
         _setParentTotalShares(SEEDED_SHARES);
         _submitDeposit();
@@ -425,7 +425,7 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         uint256 highWaterMark = 105 * ASSET_PRECISION / 100;
         uint256 grossPricePerShare = 103 * ASSET_PRECISION / 100;
         uint256 tvl = SEEDED_SHARES * grossPricePerShare / SHARE_PRECISION;
-        uint256 expectedDepositShares = DEPOSIT_AMOUNT * SHARE_PRECISION / grossPricePerShare;
+        uint256 expectedDepositShares = DEPOSIT_AMOUNT * SEEDED_SHARES / tvl;
 
         _setParentTotalShares(SEEDED_SHARES);
         _setParentPerformanceFeeHighWaterMark(highWaterMark);
@@ -443,7 +443,7 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         uint256 tvl = SEEDED_SHARES * grossPricePerShare / SHARE_PRECISION;
         uint256 expectedFeeShares = _expectedPerformanceFeeShares(SEEDED_SHARES, tvl, grossPricePerShare, highWaterMark);
         uint256 settlementPricePerShare = _pricePerShare(tvl, SEEDED_SHARES + expectedFeeShares);
-        uint256 expectedDepositShares = DEPOSIT_AMOUNT * SHARE_PRECISION / settlementPricePerShare;
+        uint256 expectedDepositShares = DEPOSIT_AMOUNT * (SEEDED_SHARES + expectedFeeShares) / tvl;
 
         _setParentTotalShares(SEEDED_SHARES);
         _setParentPerformanceFeeHighWaterMark(highWaterMark);

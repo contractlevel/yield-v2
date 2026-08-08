@@ -52,7 +52,7 @@ contract SequentialEpochs_EpochIntegrationTest is BaseIntegrationTest {
         uint256 performanceFee = _mulDivUp(yieldAmount, PERFORMANCE_FEE_BPS, BPS_DENOMINATOR);
         uint256 feeShares = _mulDivUp(performanceFee, s_sharesA, epochTwoTvl - performanceFee);
         uint256 expectedPricePerShare = epochTwoTvl * YIELD_PRECISION / (s_sharesA + feeShares);
-        uint256 expectedRecipientShares = epochTwoDeposit * YIELD_PRECISION / expectedPricePerShare;
+        uint256 expectedRecipientShares = epochTwoDeposit * (s_sharesA + feeShares) / epochTwoTvl;
 
         _changePrank(i_recipient1);
         parent.vault.claimShares(2);
