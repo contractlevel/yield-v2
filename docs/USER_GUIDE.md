@@ -57,6 +57,6 @@ Yieldcoin share transfers and approvals are ACE-gated. Depending on the action, 
 
 ## Delays And Availability
 
-Epoch settlement and rebalancing are driven by Chainlink CRE. Cross-chain flows depend on CCIP. Some withdrawals can become claimable only after child-chain execution and CCIP return settlement complete.
+Epoch settlement and rebalancing are driven by Chainlink CRE. Cross-chain flows depend on CCIP. Some intents can only become claimable after child-chain execution and crosschain settlement is complete.
 
 For detailed protocol behavior, see [`concepts/EPOCH`](./concepts/EPOCH.md), [`concepts/REBALANCE`](./concepts/REBALANCE.md), and [`protocol/PATHS`](./protocol/PATHS.md).

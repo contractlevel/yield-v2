@@ -59,15 +59,15 @@ Vault configuration exists on both [`ParentVault`](../../evm/src/vaults/ParentVa
 
 Before changing cross-chain vaults or gas limits, confirm there is no active rebalance, no epoch waiting on cross-chain execution, and no stored recovery that depends on the old route. Removing a cross-chain vault can orphan in-flight CCIP messages.
 
-Before changing the treasury, verify the address is controlled by the intended custody process.
+Before changing the treasury, verify the address is controlled by the intended custody process and authorized by the ACE compliance process.
 
 ## Workflow Router Configuration
 
 [`WorkflowRouter`](../../evm/src/modules/WorkflowRouter.sol) validates Chainlink CRE reports before dispatching allowed calldata to the vault.
 
-| Function                                                     | Role                   | Purpose                                                                                                            |
-| ------------------------------------------------------------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `setWorkflowMetadata(workflowId, name, owner)`               | `CONFIG_OPERATOR_ROLE` | Registers or removes the expected workflow identity. Use zero `name` and zero `owner` together to remove metadata. |
+| Function                                                     | Role                   | Purpose                                                                                                                           |
+| ------------------------------------------------------------ | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `setWorkflowMetadata(workflowId, name, owner)`               | `CONFIG_OPERATOR_ROLE` | Registers or removes the expected workflow identity. Use zero `name` and zero `owner` together to remove metadata.                |
 | `setWorkflowSelectors(workflowId, selectors, isAllowlisted)` | `CONFIG_OPERATOR_ROLE` | Allows or removes specific vault function selectors for a workflow. Requires the workflow ID to already have registered metadata. |
 
 Workflow selector configuration is security-critical. The operator should allowlist only the selectors needed by the specific workflow, such as epoch or rebalance execution selectors, and should verify selector values before applying changes.
@@ -97,10 +97,10 @@ Before changing an adapter, verify it is deployed for the correct vault and unde
 
 ## Operational Functions
 
-| Function                          | Role                           | Applies to              | Purpose                                                                                                                                                                                  |
-| --------------------------------- | ------------------------------ | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `withdrawLink(amount)`            | `LINK_OPERATOR_ROLE`           | Parent and child vaults | Transfers LINK from the vault to the caller.                                                                                                                                             |
-| `forceCancelDeposit(user)`        | `CANCEL_DEPOSIT_OPERATOR_ROLE` | Parent only             | Cancels a user's current-epoch deposit and refunds the exact deposited asset amount.                                                                                                     |
+| Function                   | Role                           | Applies to              | Purpose                                                                              |
+| -------------------------- | ------------------------------ | ----------------------- | ------------------------------------------------------------------------------------ |
+| `withdrawLink(amount)`     | `LINK_OPERATOR_ROLE`           | Parent and child vaults | Transfers LINK from the vault to the caller.                                         |
+| `forceCancelDeposit(user)` | `CANCEL_DEPOSIT_OPERATOR_ROLE` | Parent only             | Cancels a user's current-epoch deposit and refunds the exact deposited asset amount. |
 
 `withdrawLink(amount)` only moves LINK, not the underlying asset. LINK is still operationally important because CCIP sends depend on LINK balances.
 

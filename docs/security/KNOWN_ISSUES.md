@@ -901,4 +901,25 @@ Per [DD-010](../protocol/DECISIONS.md#dd-010---management-fee-accrual-is-gated-o
 
 ---
 
-<!-- @review missing access control on initialize is accepted because of deploy script -->
+## KI-019 — `initialize` functions have no access control
+
+**Status:** Accepted — mitigated by atomic proxy deployment.
+
+**Last reviewed:** 2026-08-09
+
+**Component:** `ParentVault.initialize`, `ChildVault.initialize`, `YieldcoinShare.initialize`.
+
+### Summary
+
+`ParentVault`, `ChildVault`, and `YieldcoinShare` are deployed behind `ERC1967Proxy` and each expose an `initialize` function guarded only by OpenZeppelin's `initializer` modifier (single-call-only), not by any caller-restricting access control. In isolation, an uninitialized proxy could be front-run by anyone calling `initialize` first.
+
+### Why this is accepted, not mitigated
+
+Every deploy script (`DeployParent.s.sol`, `DeployChild.s.sol`) constructs the `ERC1967Proxy` with the `initialize` call encoded directly as the proxy constructor's `data` argument, so deployment and initialization happen in the same transaction, atomically. There is never a block in which the proxy exists on-chain without already being initialized, so there is no window for a third party to call `initialize` first. Each implementation contract's constructor also calls `_disableInitializers()`, so the implementation itself can never be initialized or hijacked directly.
+
+Adding caller-restricting access control (e.g. an `onlyOwner`/`onlyDeployer` check) to `initialize` would require passing and storing a deployer/owner address ahead of the very call that sets up roles, purely to guard against a front-running window that atomic proxy construction already eliminates. That's extra state and logic for no additional safety margin.
+
+### Conditions that would warrant revisiting
+
+- A future deployment path decouples proxy creation from the `initialize` call (e.g. a two-step deploy-then-initialize flow, or a factory that deploys proxies for later initialization by a separate transaction).
+- `initialize` is added to a contract that isn't deployed exclusively through the atomic `ERC1967Proxy` constructor-calldata pattern used today.
