@@ -80,7 +80,7 @@ contract YieldcoinShare_RbacPolicyIntegrationTest is BaseIntegrationTest {
         assertEq(parent.share.balanceOf(i_depositor), SHARE_AMOUNT - 3e18);
     }
 
-    function test_YieldcoinShare_setCCIPAdmin_RevertWhen_CallerIsNotConfigOperator() external {
+    function test_YieldcoinShare_TOKEN_001_setCCIPAdmin_RevertWhen_CallerIsNotConfigOperator() external {
         _assertShareRbacPolicy(
             YieldcoinShare.setCCIPAdmin.selector, Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator
         );
@@ -90,7 +90,7 @@ contract YieldcoinShare_RbacPolicyIntegrationTest is BaseIntegrationTest {
         parent.share.setCCIPAdmin(i_nonOwner);
     }
 
-    function test_YieldcoinShare_setCCIPAdmin_SucceedsWhen_CallerIsConfigOperator() external {
+    function test_YieldcoinShare_TOKEN_001_setCCIPAdmin_SucceedsWhen_CallerIsConfigOperator() external {
         _changePrank(networkConfig.roles.configOperator);
         parent.share.setCCIPAdmin(i_nonOwner);
 
@@ -142,7 +142,7 @@ contract YieldcoinShare_RbacPolicyIntegrationTest is BaseIntegrationTest {
         parent.share.unpause();
     }
 
-    function test_YieldcoinShare_attachPolicyEngine_RevertWhen_CallerIsNotPolicyEngineManager() external {
+    function test_YieldcoinShare_TOKEN_001_attachPolicyEngine_RevertWhen_CallerIsNotPolicyEngineManager() external {
         _assertShareRbacPolicy(
             YieldcoinShare.attachPolicyEngine.selector,
             Roles.POLICY_ENGINE_MANAGER_ROLE,

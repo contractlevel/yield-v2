@@ -11,12 +11,12 @@ import {
 } from "../../../../src/interfaces/policies/IYieldcoinShareFrozenAccountPolicy.sol";
 
 contract YieldcoinShareFrozenAccountPolicy_ConstructorUnitTest is BaseUnitTest {
-    function test_YieldcoinShareFrozenAccountPolicy_constructor_RevertWhen_ShareIsZeroAddress() external {
+    function test_YieldcoinShareFrozenAccountPolicy_TOKEN_005_constructor_RevertWhen_ShareIsZeroAddress() external {
         vm.expectRevert(IYieldcoinShareFrozenAccountPolicy.YieldcoinShareFrozenAccountPolicy__NoZeroAddress.selector);
         new YieldcoinShareFrozenAccountPolicy(address(0));
     }
 
-    function test_YieldcoinShareFrozenAccountPolicy_constructor_Success() external {
+    function test_YieldcoinShareFrozenAccountPolicy_TOKEN_005_constructor_Success() external {
         YieldcoinShareFrozenAccountPolicy policy = new YieldcoinShareFrozenAccountPolicy(address(s_yieldcoin));
 
         assertEq(policy.getShare(), address(s_yieldcoin));

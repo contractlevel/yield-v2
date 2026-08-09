@@ -259,7 +259,7 @@ hook LOG4(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2, bytes32 
 
 /// @notice Proportional amount reverts when denominator is zero and numerator is nonzero.
 /// @dev Verifies proportional division by zero.
-rule proportionalAmount_RevertWhen_DenominatorIsZero() {
+rule EPOCH_009_EPOCH_012_proportionalAmount_RevertWhen_DenominatorIsZero() {
     env e;
     uint256 userAmount;
     uint256 remainingNumerator;
@@ -279,7 +279,7 @@ rule proportionalAmount_RevertWhen_DenominatorIsZero() {
 
 /// @notice Proportional amount reverts when denominator is zero even when the product is zero.
 /// @dev Verifies zero-product division by zero.
-rule proportionalAmount_RevertWhen_ZeroProductAndDenominatorIsZero() {
+rule EPOCH_009_EPOCH_012_proportionalAmount_RevertWhen_ZeroProductAndDenominatorIsZero() {
     env e;
     uint256 userAmount;
     uint256 remainingNumerator;
@@ -298,7 +298,7 @@ rule proportionalAmount_RevertWhen_ZeroProductAndDenominatorIsZero() {
 
 /// @notice Proportional amount reverts when the full-precision result overflows uint256.
 /// @dev Verifies full-precision mulDivDown result overflow.
-rule proportionalAmount_RevertWhen_ResultOverflows() {
+rule EPOCH_009_EPOCH_012_proportionalAmount_RevertWhen_ResultOverflows() {
     env e;
     uint256 userAmount = max_uint256;
     uint256 remainingNumerator = max_uint256;
@@ -319,7 +319,7 @@ rule proportionalAmount_RevertWhen_ResultOverflows() {
 
 /// @notice Proportional amount returns user amount's floor share of the remaining numerator.
 /// @dev Verifies the proportional calculation branch.
-rule proportionalAmount_Success() {
+rule EPOCH_009_EPOCH_012_proportionalAmount_Success() {
     env e;
     uint256 userAmount;
     uint256 remainingNumerator;
@@ -346,7 +346,7 @@ rule proportionalAmount_Success() {
 
 /// @notice Depositing reverts when amount is less than the minimum.
 /// @dev Verifies minimum deposit guard.
-rule deposit_RevertWhen_AmountTooSmall() {
+rule EPOCH_015_deposit_RevertWhen_AmountTooSmall() {
     env e;
     address user;
     uint256 amount;
@@ -380,7 +380,7 @@ rule deposit_RevertWhen_AmountTooSmall() {
 
 /// @notice Depositing reverts when the current epoch is not open.
 /// @dev Verifies current epoch open guard.
-rule deposit_RevertWhen_EpochNotOpen() {
+rule EPOCH_005_deposit_RevertWhen_EpochNotOpen() {
     env e;
     address user;
     uint256 amount;
@@ -491,7 +491,7 @@ rule deposit_RevertWhen_EpochTotalDepositAdditionOverflows() {
 
 /// @notice Depositing succeeds and records asset deposit during an open epoch.
 /// @dev Verifies deposit storage, epoch total, token transfer, and DepositSubmitted event.
-rule deposit_Success() {
+rule EPOCH_005_deposit_Success() {
     env e;
     address user;
     uint256 amount;
@@ -537,7 +537,7 @@ rule deposit_Success() {
 
 /// @notice Withdrawing reverts when share burn amount is zero.
 /// @dev Verifies no-zero-amount guard.
-rule withdraw_RevertWhen_AmountIsZero() {
+rule EPOCH_015_withdraw_RevertWhen_AmountIsZero() {
     env e;
     address user;
     uint256 shareBurnAmount = 0;
@@ -567,7 +567,7 @@ rule withdraw_RevertWhen_AmountIsZero() {
 
 /// @notice Withdrawing reverts when the current epoch is not open.
 /// @dev Verifies current epoch open guard.
-rule withdraw_RevertWhen_EpochNotOpen() {
+rule EPOCH_005_withdraw_RevertWhen_EpochNotOpen() {
     env e;
     address user;
     uint256 shareBurnAmount;
@@ -681,7 +681,7 @@ rule withdraw_RevertWhen_EpochTotalShareBurnAdditionOverflows() {
 
 /// @notice Withdrawing succeeds and records share burn intent during an open epoch.
 /// @dev Verifies withdraw storage, epoch total, token transfer, and WithdrawSubmitted event.
-rule withdraw_Success() {
+rule EPOCH_005_withdraw_Success() {
     env e;
     address user;
     uint256 shareBurnAmount;
@@ -852,7 +852,7 @@ rule claimShares_RevertWhen_ProportionalResultOverflows() {
 
 /// @notice Claiming shares reverts when remaining deposit claim amount underflows.
 /// @dev Verifies remainingDepositClaimAmount subtraction underflow.
-rule claimShares_RevertWhen_RemainingDepositClaimAmountUnderflows() {
+rule EPOCH_008_claimShares_RevertWhen_RemainingDepositClaimAmountUnderflows() {
     env e;
     address user;
     uint256 epochNonce;
@@ -885,7 +885,7 @@ rule claimShares_RevertWhen_RemainingDepositClaimAmountUnderflows() {
 
 /// @notice Claiming shares succeeds for the final deposit claimant.
 /// @dev Verifies final-claim branch using all remaining share mint amount.
-rule claimShares_Success_WhenFinalDepositClaimant() {
+rule EPOCH_009_claimShares_Success_WhenFinalDepositClaimant() {
     env e;
     address user;
     uint256 epochNonce;
@@ -925,7 +925,7 @@ rule claimShares_Success_WhenFinalDepositClaimant() {
 
 /// @notice Claiming shares succeeds for a proportional deposit claimant.
 /// @dev Verifies proportional deposit claim branch.
-rule claimShares_Success_WhenProportionalDepositClaimant() {
+rule EPOCH_009_claimShares_Success_WhenProportionalDepositClaimant() {
     env e;
     address user;
     uint256 epochNonce;
@@ -1110,7 +1110,7 @@ rule claimAsset_RevertWhen_ProportionalResultOverflows() {
 
 /// @notice Claiming asset reverts when remaining share burn amount underflows.
 /// @dev Verifies remainingShareBurnAmount subtraction underflow.
-rule claimAsset_RevertWhen_RemainingShareBurnAmountUnderflows() {
+rule EPOCH_011_claimAsset_RevertWhen_RemainingShareBurnAmountUnderflows() {
     env e;
     address user;
     uint256 epochNonce;
@@ -1145,7 +1145,7 @@ rule claimAsset_RevertWhen_RemainingShareBurnAmountUnderflows() {
 
 /// @notice Claiming asset succeeds for the final withdraw claimant with nonzero asset amount.
 /// @dev Verifies final-claim branch and asset transfer branch.
-rule claimAsset_Success_WhenFinalWithdrawClaimantAndAmountNonzero() {
+rule EPOCH_012_claimAsset_Success_WhenFinalWithdrawClaimantAndAmountNonzero() {
     env e;
     address user;
     uint256 epochNonce;
@@ -1193,7 +1193,7 @@ rule claimAsset_Success_WhenFinalWithdrawClaimantAndAmountNonzero() {
 
 /// @notice Claiming asset succeeds for the final withdraw claimant with zero asset amount.
 /// @dev Verifies final-claim branch and skipped asset transfer branch.
-rule claimAsset_Success_WhenFinalWithdrawClaimantAndAmountZero() {
+rule EPOCH_012_claimAsset_Success_WhenFinalWithdrawClaimantAndAmountZero() {
     env e;
     address user;
     uint256 epochNonce;
@@ -1237,7 +1237,7 @@ rule claimAsset_Success_WhenFinalWithdrawClaimantAndAmountZero() {
 
 /// @notice Claiming asset succeeds for a proportional withdraw claimant with zero asset amount.
 /// @dev Verifies proportional withdraw claim branch and skipped asset transfer branch.
-rule claimAsset_Success_WhenProportionalWithdrawClaimantAndAmountZero() {
+rule EPOCH_012_claimAsset_Success_WhenProportionalWithdrawClaimantAndAmountZero() {
     env e;
     address user;
     uint256 epochNonce;
@@ -1288,7 +1288,7 @@ rule claimAsset_Success_WhenProportionalWithdrawClaimantAndAmountZero() {
 
 /// @notice Claiming asset succeeds for a proportional withdraw claimant with nonzero asset amount.
 /// @dev Verifies proportional withdraw claim branch and asset transfer branch.
-rule claimAsset_Success_WhenProportionalWithdrawClaimantAndAmountNonzero() {
+rule EPOCH_012_claimAsset_Success_WhenProportionalWithdrawClaimantAndAmountNonzero() {
     env e;
     address user;
     uint256 epochNonce;
@@ -1348,7 +1348,7 @@ rule claimAsset_Success_WhenProportionalWithdrawClaimantAndAmountNonzero() {
 
 /// @notice Canceling a deposit reverts when the current epoch is not open.
 /// @dev Verifies current epoch open guard.
-rule cancelDeposit_RevertWhen_EpochNotOpen() {
+rule EPOCH_005_cancelDeposit_RevertWhen_EpochNotOpen() {
     env e;
     address user;
 
@@ -1413,7 +1413,7 @@ rule cancelDeposit_RevertWhen_NoDeposit() {
 
 /// @notice Canceling a deposit reverts when epoch total deposit underflows.
 /// @dev Verifies epoch total deposit subtraction underflow.
-rule cancelDeposit_RevertWhen_EpochTotalDepositUnderflows() {
+rule EPOCH_006a_cancelDeposit_RevertWhen_EpochTotalDepositUnderflows() {
     env e;
     address user;
 
@@ -1448,7 +1448,7 @@ rule cancelDeposit_RevertWhen_EpochTotalDepositUnderflows() {
 
 /// @notice Canceling a deposit succeeds and returns the deposited asset.
 /// @dev Verifies deposit deletion, epoch total decrease, asset transfer, and DepositCancelled event.
-rule cancelDeposit_Success() {
+rule EPOCH_006a_cancelDeposit_Success() {
     env e;
     address user;
 
@@ -1489,7 +1489,7 @@ rule cancelDeposit_Success() {
 
 /// @notice Force-canceling a deposit reverts when the current epoch is not open.
 /// @dev Verifies current epoch open guard and that neither cancellation event is emitted.
-rule forceCancelDeposit_RevertWhen_EpochNotOpen() {
+rule EPOCH_005_forceCancelDeposit_RevertWhen_EpochNotOpen() {
     env e;
     address user;
 
@@ -1549,7 +1549,7 @@ rule forceCancelDeposit_RevertWhen_NoDeposit() {
 
 /// @notice Force-canceling a deposit reverts when epoch total deposit accounting underflows.
 /// @dev Verifies the subtraction revert rolls back the deposit deletion and emits neither cancellation event.
-rule forceCancelDeposit_RevertWhen_EpochTotalDepositUnderflows() {
+rule EPOCH_006a_forceCancelDeposit_RevertWhen_EpochTotalDepositUnderflows() {
     env e;
     address user;
 
@@ -1582,7 +1582,7 @@ rule forceCancelDeposit_RevertWhen_EpochTotalDepositUnderflows() {
 
 /// @notice Force-canceling a deposit succeeds and returns the deposited asset to its owner.
 /// @dev Verifies exact state, balances, and DepositForceCancelled parameters without emitting DepositCancelled.
-rule forceCancelDeposit_Success() {
+rule EPOCH_006a_forceCancelDeposit_Success() {
     env e;
     address user;
 
@@ -1623,7 +1623,7 @@ rule forceCancelDeposit_Success() {
 
 /// @notice Canceling a withdraw reverts when the current epoch is not open.
 /// @dev Verifies current epoch open guard.
-rule cancelWithdraw_RevertWhen_EpochNotOpen() {
+rule EPOCH_005_cancelWithdraw_RevertWhen_EpochNotOpen() {
     env e;
     address user;
 
@@ -1684,7 +1684,7 @@ rule cancelWithdraw_RevertWhen_NoWithdraw() {
 
 /// @notice Canceling a withdraw reverts when epoch total share burn underflows.
 /// @dev Verifies epoch total share burn subtraction underflow.
-rule cancelWithdraw_RevertWhen_EpochTotalShareBurnUnderflows() {
+rule EPOCH_006b_cancelWithdraw_RevertWhen_EpochTotalShareBurnUnderflows() {
     env e;
     address user;
 
@@ -1717,7 +1717,7 @@ rule cancelWithdraw_RevertWhen_EpochTotalShareBurnUnderflows() {
 
 /// @notice Canceling a withdraw succeeds and returns the escrowed shares.
 /// @dev Verifies withdraw deletion, epoch total decrease, share transfer, and WithdrawCancelled event.
-rule cancelWithdraw_Success() {
+rule EPOCH_006b_cancelWithdraw_Success() {
     env e;
     address user;
 

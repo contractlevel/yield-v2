@@ -1235,7 +1235,7 @@ hook LOG4(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2, bytes32 
 
 /// ─────────────────── CONSTRUCTOR IMMUTABLES ──────────────────
 
-rule constructor_getShare() {
+rule CFG_001_UPGRADE_005_constructor_getShare() {
     assert getShare() == share;
 }
 
@@ -1346,7 +1346,7 @@ rule initialize_RevertWhen_DefaultAdminAlreadySet() {
 
 /// @notice ParentVault initialization reverts when the default admin is zero
 /// @dev Verifies both BaseVault's zero-address guard and Ownable's invalid-initial-owner condition
-rule initialize_RevertWhen_DefaultAdminIsZeroAddress() {
+rule CFG_001_initialize_RevertWhen_DefaultAdminIsZeroAddress() {
     env e;
     BaseVault.InitParams params;
     address treasury;
@@ -1379,7 +1379,7 @@ rule initialize_RevertWhen_DefaultAdminIsZeroAddress() {
 }
 
 /// @notice ParentVault initialization reverts when the pauser is zero
-rule initialize_RevertWhen_PauserIsZeroAddress() {
+rule CFG_001_initialize_RevertWhen_PauserIsZeroAddress() {
     env e;
     BaseVault.InitParams params;
     address treasury;
@@ -1412,7 +1412,7 @@ rule initialize_RevertWhen_PauserIsZeroAddress() {
 }
 
 /// @notice ParentVault initialization reverts when the unpauser is zero
-rule initialize_RevertWhen_UnpauserIsZeroAddress() {
+rule CFG_001_initialize_RevertWhen_UnpauserIsZeroAddress() {
     env e;
     BaseVault.InitParams params;
     address treasury;
@@ -1445,7 +1445,7 @@ rule initialize_RevertWhen_UnpauserIsZeroAddress() {
 }
 
 /// @notice ParentVault initialization reverts when the config operator is zero
-rule initialize_RevertWhen_ConfigOperatorIsZeroAddress() {
+rule CFG_001_initialize_RevertWhen_ConfigOperatorIsZeroAddress() {
     env e;
     BaseVault.InitParams params;
     address treasury;
@@ -1478,7 +1478,7 @@ rule initialize_RevertWhen_ConfigOperatorIsZeroAddress() {
 }
 
 /// @notice ParentVault initialization reverts when the upgrader is zero
-rule initialize_RevertWhen_UpgraderIsZeroAddress() {
+rule CFG_001_initialize_RevertWhen_UpgraderIsZeroAddress() {
     env e;
     BaseVault.InitParams params;
     address treasury;
@@ -1511,7 +1511,7 @@ rule initialize_RevertWhen_UpgraderIsZeroAddress() {
 }
 
 /// @notice ParentVault initialization reverts when the initial default CCIP gas limit is zero
-rule initialize_RevertWhen_InitialDefaultCcipGasLimitIsZero() {
+rule CFG_004_initialize_RevertWhen_InitialDefaultCcipGasLimitIsZero() {
     env e;
     BaseVault.InitParams params;
     address treasury;
@@ -1545,7 +1545,7 @@ rule initialize_RevertWhen_InitialDefaultCcipGasLimitIsZero() {
 
 /// @notice ParentVault initialization reverts when the contract has already been initialized
 /// @dev Verifies that repeated initialization leaves all vault state unchanged
-rule initialize_RevertWhen_AlreadyInitialized() {
+rule UPGRADE_002_initialize_RevertWhen_AlreadyInitialized() {
     env e;
     BaseVault.InitParams params;
     address treasury;
@@ -1578,7 +1578,7 @@ rule initialize_RevertWhen_AlreadyInitialized() {
 
 /// @notice ParentVault initialization reverts when the treasury address is zero
 /// @dev Verifies that a malformed treasury argument leaves all vault state unchanged
-rule initialize_RevertWhen_TreasuryIsZeroAddress() {
+rule CFG_001_initialize_RevertWhen_TreasuryIsZeroAddress() {
     env e;
     BaseVault.InitParams params;
     address treasury;
@@ -1612,7 +1612,7 @@ rule initialize_RevertWhen_TreasuryIsZeroAddress() {
 
 /// @notice ParentVault initialization reverts when the policy engine manager address is zero
 /// @dev Verifies that a malformed policyEngineManager argument leaves all vault state unchanged
-rule initialize_RevertWhen_PolicyEngineManagerIsZeroAddress() {
+rule CFG_001_initialize_RevertWhen_PolicyEngineManagerIsZeroAddress() {
     env e;
     BaseVault.InitParams params;
     address treasury;
@@ -1646,7 +1646,7 @@ rule initialize_RevertWhen_PolicyEngineManagerIsZeroAddress() {
 
 /// @notice ParentVault initialization reverts when the policy engine address is zero
 /// @dev Verifies that a malformed policyEngine argument leaves all vault state unchanged
-rule initialize_RevertWhen_PolicyEngineIsZeroAddress() {
+rule CFG_001_initialize_RevertWhen_PolicyEngineIsZeroAddress() {
     env e;
     BaseVault.InitParams params;
     address treasury;
@@ -1679,7 +1679,7 @@ rule initialize_RevertWhen_PolicyEngineIsZeroAddress() {
 }
 
 /// @notice ParentVault initialization reverts when the cancel-deposit operator is zero
-rule initialize_RevertWhen_CancelDepositOperatorIsZeroAddress() {
+rule CFG_001_initialize_RevertWhen_CancelDepositOperatorIsZeroAddress() {
     env e;
     BaseVault.InitParams params;
     address treasury;
@@ -1715,7 +1715,7 @@ rule initialize_RevertWhen_CancelDepositOperatorIsZeroAddress() {
 ///         mark, treasury, and grants POLICY_ENGINE_MANAGER_ROLE, and attaches the policy engine
 /// @dev __PolicyProtected_init attaches the policy engine as its very first attach (no prior engine),
 ///      so only PolicyEngineAttached fires, not PolicyEngineDetachFailed.
-rule initialize_Success() {
+rule NONCE_008_UPGRADE_003_initialize_Success() {
     env e;
     BaseVault.InitParams params;
     address treasury;
@@ -1820,7 +1820,7 @@ rule setInitialActiveProtocolAdapter_RevertWhen_ReentrantCall() {
 
 /// @notice Setting the initial active protocol adapter reverts when it has already been set
 /// @dev Verifies the one-time setter guard leaves all vault state unchanged
-rule setInitialActiveProtocolAdapter_RevertWhen_AlreadySet() {
+rule UPGRADE_004_setInitialActiveProtocolAdapter_RevertWhen_AlreadySet() {
     env e;
     bytes32 protocolId;
 
@@ -1841,7 +1841,7 @@ rule setInitialActiveProtocolAdapter_RevertWhen_AlreadySet() {
 
 /// @notice Setting the initial active protocol adapter reverts when the target protocol has no registered adapter
 /// @dev Verifies that an unregistered protocol leaves all vault state unchanged
-rule setInitialActiveProtocolAdapter_RevertWhen_TargetAdapterNotRegistered() {
+rule ADAPTER_002_setInitialActiveProtocolAdapter_RevertWhen_TargetAdapterNotRegistered() {
     env e;
     bytes32 protocolId;
 
@@ -1861,7 +1861,7 @@ rule setInitialActiveProtocolAdapter_RevertWhen_TargetAdapterNotRegistered() {
 
 /// @notice Setting the initial active protocol adapter reverts when the registered adapter is bound to another vault
 /// @dev Verifies that a misconfigured adapter registration leaves all vault state unchanged
-rule setInitialActiveProtocolAdapter_RevertWhen_TargetAdapterVaultIsInvalid() {
+rule ADAPTER_002_setInitialActiveProtocolAdapter_RevertWhen_TargetAdapterVaultIsInvalid() {
     env e;
     bytes32 protocolId;
 
@@ -1882,7 +1882,7 @@ rule setInitialActiveProtocolAdapter_RevertWhen_TargetAdapterVaultIsInvalid() {
 
 /// @notice Setting the initial active protocol adapter registers the adapter, marks the one-time setter as
 ///         used, and seeds the active strategy to this chain
-rule setInitialActiveProtocolAdapter_Success() {
+rule ADAPTER_002_UPGRADE_004_setInitialActiveProtocolAdapter_Success() {
     env e;
     bytes32 protocolId;
 
@@ -2150,7 +2150,7 @@ rule attachPolicyEngine_RevertWhen_CallerDoesNotHavePOLICY_ENGINE_MANAGER_ROLE()
 
 /// @notice Attaching a policy engine reverts when the new policy engine address is zero
 /// @dev Verifies that a malformed policy engine argument leaves all vault state unchanged
-rule attachPolicyEngine_RevertWhen_PolicyEngineIsZeroAddress() {
+rule CFG_001_attachPolicyEngine_RevertWhen_PolicyEngineIsZeroAddress() {
     env e;
     address newPolicyEngine;
 
@@ -2274,7 +2274,7 @@ rule owner_Success_AfterInitialize() {
 
 /// @notice ParentVault TVL is zero when this chain has no active strategy adapter
 /// @dev Verifies that the non-strategy-chain path returns zero and does not query an adapter
-rule getTVL_ReturnsZero_WhenNoActiveAdapter() {
+rule ADAPTER_003_ADAPTER_005_REBAL_008_getTVL_ReturnsZero_WhenNoActiveAdapter() {
     require getActiveProtocolAdapter() == 0, "active adapter should be unset";
 
     assert getTVL() == 0;
@@ -2282,7 +2282,7 @@ rule getTVL_ReturnsZero_WhenNoActiveAdapter() {
 
 /// @notice ParentVault TVL includes both active adapter TVL and pending rebalance deposit recovery
 /// @dev Verifies the strategy-chain path while excluding the checked-addition overflow case below
-rule getTVL_Success_WhenActiveAdapterIsSet() {
+rule ADAPTER_003_ADAPTER_005_REBAL_008_REC_006_getTVL_Success_WhenActiveAdapterIsSet() {
     uint256 adapterTVL = adapter.getTVL();
     uint256 recoveryAmount = getRebalanceDepositRecovery().amount;
 
@@ -2295,7 +2295,7 @@ rule getTVL_Success_WhenActiveAdapterIsSet() {
 
 /// @notice ParentVault TVL reverts when active adapter TVL plus rebalance recovery amount overflows
 /// @dev Verifies the checked arithmetic guard in ParentVault._getTVL
-rule getTVL_RevertWhen_TvlAdditionOverflows() {
+rule REBAL_008_getTVL_RevertWhen_TvlAdditionOverflows() {
     env e;
     uint256 adapterTVL = adapter.getTVL();
     uint256 recoveryAmount = getRebalanceDepositRecovery().amount;
@@ -2337,7 +2337,7 @@ rule deposit_RevertWhen_ReentrantCall() {
 
 /// @notice Deposit reverts when the vault is paused
 /// @dev Verifies that a paused vault leaves all vault state unchanged
-rule deposit_RevertWhen_Paused() {
+rule PAUSE_003_deposit_RevertWhen_Paused() {
     env e;
     uint256 amount;
 
@@ -2359,7 +2359,7 @@ rule deposit_RevertWhen_Paused() {
 /// @dev Verifies that a malformed amount leaves all vault state unchanged. This precondition is
 ///      checked in ParentVaultUserEpochLib before any external call, so it is not expected to hit
 ///      the unresolved-external-library-call issue that affects _setActiveAdapter.
-rule deposit_RevertWhen_AmountBelowMinimum() {
+rule EPOCH_015_deposit_RevertWhen_AmountBelowMinimum() {
     env e;
     uint256 amount;
 
@@ -2377,7 +2377,7 @@ rule deposit_RevertWhen_AmountBelowMinimum() {
     assert lastReverted;
 }
 
-rule deposit_RevertWhen_EpochNotOpen() {
+rule EPOCH_005_deposit_RevertWhen_EpochNotOpen() {
     env e;
     uint256 amount;
 
@@ -2401,7 +2401,7 @@ rule deposit_RevertWhen_EpochNotOpen() {
 ///      _setActiveAdapter (a public library function making a nested external call - here,
 ///      IERC20(asset).safeTransferFrom) - included to observe whether the same unresolved-callee
 ///      havoc reproduces for this call site.
-rule deposit_Success() {
+rule EPOCH_005_deposit_Success() {
     env e;
     uint256 amount;
 
@@ -2470,7 +2470,7 @@ rule withdraw_RevertWhen_ReentrantCall() {
 
 /// @notice Withdraw reverts when the vault is paused
 /// @dev Verifies that a paused vault leaves all vault state unchanged
-rule withdraw_RevertWhen_Paused() {
+rule PAUSE_003_withdraw_RevertWhen_Paused() {
     env e;
     uint256 shareBurnAmount;
 
@@ -2490,7 +2490,7 @@ rule withdraw_RevertWhen_Paused() {
 
 /// @notice Withdraw reverts when the share burn amount is zero
 /// @dev Verifies that a malformed amount leaves all vault state unchanged
-rule withdraw_RevertWhen_ShareBurnAmountIsZero() {
+rule EPOCH_015_withdraw_RevertWhen_ShareBurnAmountIsZero() {
     env e;
     uint256 shareBurnAmount;
 
@@ -2508,7 +2508,7 @@ rule withdraw_RevertWhen_ShareBurnAmountIsZero() {
     assert lastReverted;
 }
 
-rule withdraw_RevertWhen_EpochNotOpen() {
+rule EPOCH_005_withdraw_RevertWhen_EpochNotOpen() {
     env e;
     uint256 shareBurnAmount;
 
@@ -2528,7 +2528,7 @@ rule withdraw_RevertWhen_EpochNotOpen() {
 
 /// @notice Withdraw pulls the share burn amount from the withdrawer, accumulates the withdraw and
 ///         epoch totals, and emits WithdrawSubmitted
-rule withdraw_Success() {
+rule EPOCH_005_withdraw_Success() {
     env e;
     uint256 shareBurnAmount;
 
@@ -2597,7 +2597,7 @@ rule claimShares_RevertWhen_ReentrantCall() {
 
 /// @notice Claiming shares reverts when the vault is paused
 /// @dev Verifies that a paused vault leaves all vault state unchanged
-rule claimShares_RevertWhen_Paused() {
+rule PAUSE_003_claimShares_RevertWhen_Paused() {
     env e;
     uint256 epochNonce;
 
@@ -2657,7 +2657,7 @@ rule claimShares_RevertWhen_NoDeposit() {
 
 /// @notice Claiming shares mints the depositor's proportional (or fully remaining) share of the
 ///         epoch's minted shares, deletes their deposit entry, and emits DepositClaimed
-rule claimShares_Success() {
+rule EPOCH_009_claimShares_Success() {
     env e;
     uint256 epochNonce;
 
@@ -2736,7 +2736,7 @@ rule claimAsset_RevertWhen_ReentrantCall() {
 
 /// @notice Claiming asset reverts when the vault is paused
 /// @dev Verifies that a paused vault leaves all vault state unchanged
-rule claimAsset_RevertWhen_Paused() {
+rule PAUSE_003_claimAsset_RevertWhen_Paused() {
     env e;
     uint256 epochNonce;
 
@@ -2799,7 +2799,7 @@ rule claimAsset_RevertWhen_NoWithdraw() {
 ///         proportional (or fully remaining) asset amount, deletes their withdraw entry, and emits
 ///         WithdrawClaimed. The formula holds even in the withdrawAmount == 0 case, where the asset
 ///         transfer is skipped entirely (adding/subtracting zero is a no-op).
-rule claimAsset_Success() {
+rule EPOCH_012_claimAsset_Success() {
     env e;
     uint256 epochNonce;
 
@@ -2883,7 +2883,7 @@ rule cancelDeposit_RevertWhen_ReentrantCall() {
 
 /// @notice Cancelling a deposit reverts when the vault is paused
 /// @dev Verifies that a paused vault leaves all vault state unchanged
-rule cancelDeposit_RevertWhen_Paused() {
+rule PAUSE_003_cancelDeposit_RevertWhen_Paused() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -2903,7 +2903,7 @@ rule cancelDeposit_RevertWhen_Paused() {
 
 /// @notice Cancelling a deposit reverts when the current epoch is not open
 /// @dev Verifies that a stale cancellation attempt leaves all vault state unchanged
-rule cancelDeposit_RevertWhen_EpochNotOpen() {
+rule EPOCH_005_cancelDeposit_RevertWhen_EpochNotOpen() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -2941,7 +2941,7 @@ rule cancelDeposit_RevertWhen_NoDeposit() {
 
 /// @notice Cancelling a deposit deletes the depositor's entry, decrements the epoch total, refunds
 ///         the full deposit amount, and emits DepositCancelled
-rule cancelDeposit_Success() {
+rule EPOCH_006a_cancelDeposit_Success() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -3020,7 +3020,7 @@ rule forceCancelDeposit_RevertWhen_CallerDoesNotHaveCANCEL_DEPOSIT_OPERATOR_ROLE
     assert lastReverted;
 }
 
-rule forceCancelDeposit_RevertWhen_EpochNotOpen() {
+rule EPOCH_005_forceCancelDeposit_RevertWhen_EpochNotOpen() {
     env e;
     address user;
 
@@ -3056,7 +3056,7 @@ rule forceCancelDeposit_RevertWhen_NoDeposit() {
 }
 
 /// @notice Force cancellation refunds the named user even while paused and does not run policy
-rule forceCancelDeposit_Success() {
+rule EPOCH_006a_PAUSE_006_forceCancelDeposit_Success() {
     env e;
     address user;
 
@@ -3116,7 +3116,7 @@ rule cancelWithdraw_RevertWhen_ReentrantCall() {
 
 /// @notice Cancelling a withdraw reverts when the vault is paused
 /// @dev Verifies that a paused vault leaves all vault state unchanged
-rule cancelWithdraw_RevertWhen_Paused() {
+rule PAUSE_003_cancelWithdraw_RevertWhen_Paused() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -3136,7 +3136,7 @@ rule cancelWithdraw_RevertWhen_Paused() {
 
 /// @notice Cancelling a withdraw reverts when the current epoch is not open
 /// @dev Verifies that a stale cancellation attempt leaves all vault state unchanged
-rule cancelWithdraw_RevertWhen_EpochNotOpen() {
+rule EPOCH_005_cancelWithdraw_RevertWhen_EpochNotOpen() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -3174,7 +3174,7 @@ rule cancelWithdraw_RevertWhen_NoWithdraw() {
 
 /// @notice Cancelling a withdraw deletes the withdrawer's entry, decrements the epoch total, refunds
 ///         the full share burn amount, and emits WithdrawCancelled
-rule cancelWithdraw_Success() {
+rule EPOCH_006b_cancelWithdraw_Success() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -3219,7 +3219,7 @@ rule cancelWithdraw_Success() {
 
 /// @notice CCIP receive reverts when the caller is not the configured CCIP router
 /// @dev Verifies that an unauthorized delivery attempt leaves all vault state unchanged
-rule ccipReceive_RevertWhen_CallerIsNotCCIPRouter() {
+rule CCIP_001_ccipReceive_RevertWhen_CallerIsNotCCIPRouter() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -3281,7 +3281,7 @@ rule ccipReceive_RevertWhen_ReentrantCall() {
     assert lastReverted;
 }
 
-rule ccipReceive_RevertWhen_Paused() {
+rule PAUSE_003_ccipReceive_RevertWhen_Paused() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -3311,7 +3311,7 @@ rule ccipReceive_RevertWhen_Paused() {
     assert lastReverted;
 }
 
-rule ccipReceive_RevertWhen_SourceChainIsNotActiveStrategyChain() {
+rule CCIP_001_ccipReceive_RevertWhen_SourceChainIsNotActiveStrategyChain() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -3343,7 +3343,7 @@ rule ccipReceive_RevertWhen_SourceChainIsNotActiveStrategyChain() {
 
 /// @notice CCIP receive reverts when the decoded sender is not the registered vault for the source chain
 /// @dev Verifies that an unauthorized cross-chain sender leaves all vault state unchanged
-rule ccipReceive_RevertWhen_SenderIsNotAllowed() {
+rule CCIP_001_ccipReceive_RevertWhen_SenderIsNotAllowed() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -3374,7 +3374,7 @@ rule ccipReceive_RevertWhen_SenderIsNotAllowed() {
 
 /// @notice CCIP receive reverts when a zero sender is supplied for an unregistered source chain
 /// @dev Verifies that an unset cross-chain vault cannot authorize the zero address
-rule ccipReceive_RevertWhen_SenderAndRegisteredVaultAreZero() {
+rule CCIP_001_ccipReceive_RevertWhen_SenderAndRegisteredVaultAreZero() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -3406,7 +3406,7 @@ rule ccipReceive_RevertWhen_SenderAndRegisteredVaultAreZero() {
 
 /// @notice CCIP receive reverts when the encoded sender is too short to decode as an address
 /// @dev Verifies that malformed sender data leaves all vault state unchanged
-rule ccipReceive_RevertWhen_SenderEncodingIsMalformed() {
+rule CCIP_001_ccipReceive_RevertWhen_SenderEncodingIsMalformed() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -3435,7 +3435,7 @@ rule ccipReceive_RevertWhen_SenderEncodingIsMalformed() {
 
 /// @notice CCIP receive reverts when any recovery operation is already pending
 /// @dev Verifies that a pending recovery cannot be overwritten by a new delivery
-rule ccipReceive_RevertWhen_RecoveryAlreadyPending() {
+rule REC_003_ccipReceive_RevertWhen_RecoveryAlreadyPending() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -3467,7 +3467,7 @@ rule ccipReceive_RevertWhen_RecoveryAlreadyPending() {
 
 /// @notice CCIP receive reverts unless exactly one token amount is delivered
 /// @dev Verifies that an invalid token-amount array leaves all vault state unchanged
-rule ccipReceive_RevertWhen_TokenAmountsLengthIsInvalid() {
+rule CCIP_002_ccipReceive_RevertWhen_TokenAmountsLengthIsInvalid() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -3497,7 +3497,7 @@ rule ccipReceive_RevertWhen_TokenAmountsLengthIsInvalid() {
 
 /// @notice CCIP receive reverts when the delivered token is not the vault asset
 /// @dev Verifies that an invalid received token leaves all vault state unchanged
-rule ccipReceive_RevertWhen_ReceivedTokenIsInvalid() {
+rule CCIP_002_ccipReceive_RevertWhen_ReceivedTokenIsInvalid() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -3529,7 +3529,7 @@ rule ccipReceive_RevertWhen_ReceivedTokenIsInvalid() {
 
 /// @notice CCIP receive reverts when the delivered asset amount is zero
 /// @dev Verifies that a zero-value delivery leaves all vault state unchanged
-rule ccipReceive_RevertWhen_ReceivedAmountIsZero() {
+rule CCIP_002_ccipReceive_RevertWhen_ReceivedAmountIsZero() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -3561,7 +3561,7 @@ rule ccipReceive_RevertWhen_ReceivedAmountIsZero() {
 
 /// @notice CCIP receive reverts when the message data is too short to decode its transaction envelope
 /// @dev Verifies that malformed transaction data leaves all vault state unchanged
-rule ccipReceive_RevertWhen_TxDataEncodingIsMalformed() {
+rule CCIP_003_ccipReceive_RevertWhen_TxDataEncodingIsMalformed() {
     env e;
     Client.Any2EVMMessage message;
     uint256 singleValue;
@@ -3593,7 +3593,7 @@ rule ccipReceive_RevertWhen_TxDataEncodingIsMalformed() {
 
 /// @notice CCIP receive reverts when the encoded transaction type is outside the CcipTx enum
 /// @dev Verifies that an invalid enum discriminant leaves all vault state unchanged
-rule ccipReceive_RevertWhen_TxTypeEncodingIsOutOfRange() {
+rule CCIP_003_ccipReceive_RevertWhen_TxTypeEncodingIsOutOfRange() {
     env e;
     Client.Any2EVMMessage message;
     uint256 rawCcipTxType;
@@ -3628,7 +3628,7 @@ rule ccipReceive_RevertWhen_TxTypeEncodingIsOutOfRange() {
 /// @notice CCIP receive reverts when the transaction type is unsupported by ParentVault
 /// @dev Verifies that an unsupported transaction type (e.g. EPOCH_NET_DEPOSIT, which only
 ///      ChildVault handles) leaves all vault state unchanged
-rule CCIP_004_ccipReceive_RevertWhen_TxTypeIsInvalid() {
+rule CCIP_003_ccipReceive_RevertWhen_TxTypeIsInvalid() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -3664,7 +3664,7 @@ rule CCIP_004_ccipReceive_RevertWhen_TxTypeIsInvalid() {
 
 /// @notice CCIP epoch net withdraw reverts when its payload is too short to decode the epoch nonce
 /// @dev Verifies that malformed epoch data leaves all vault state unchanged
-rule ccipReceive_EPOCH_NET_WITHDRAW_RevertWhen_PayloadEncodingIsMalformed() {
+rule CCIP_003_ccipReceive_EPOCH_NET_WITHDRAW_RevertWhen_PayloadEncodingIsMalformed() {
     env e;
     Client.Any2EVMMessage message;
     bytes data;
@@ -3698,7 +3698,7 @@ rule ccipReceive_EPOCH_NET_WITHDRAW_RevertWhen_PayloadEncodingIsMalformed() {
 /// @notice CCIP epoch net withdraw reverts when the decoded epoch nonce does not match the
 ///         previous epoch
 /// @dev Verifies that a stale or malformed callback leaves all vault state unchanged
-rule ccipReceive_EPOCH_NET_WITHDRAW_RevertWhen_InvalidEpochNonce() {
+rule CCIP_004_EPOCH_014_NONCE_012_ccipReceive_EPOCH_NET_WITHDRAW_RevertWhen_InvalidEpochNonce() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -3732,7 +3732,7 @@ rule ccipReceive_EPOCH_NET_WITHDRAW_RevertWhen_InvalidEpochNonce() {
 
 /// @notice CCIP epoch net withdraw reverts when the previous epoch is not executing
 /// @dev Verifies that an out-of-sequence callback leaves all vault state unchanged
-rule ccipReceive_EPOCH_NET_WITHDRAW_RevertWhen_EpochNotExecuting() {
+rule CCIP_004_EPOCH_014_NONCE_012_ccipReceive_EPOCH_NET_WITHDRAW_RevertWhen_EpochNotExecuting() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -3768,7 +3768,7 @@ rule ccipReceive_EPOCH_NET_WITHDRAW_RevertWhen_EpochNotExecuting() {
 /// @notice A successful CCIP epoch net withdraw settles the epoch's withdraw totals, marks the
 ///         epoch claimable, and emits EpochWithdrawAmountShort when the delivered amount falls
 ///         short of what withdrawers are owed
-rule ccipReceive_EPOCH_NET_WITHDRAW_Success() {
+rule CCIP_003_CCIP_004_EPOCH_014_NONCE_012_ccipReceive_EPOCH_NET_WITHDRAW_Success() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -3846,7 +3846,7 @@ rule ccipReceive_EPOCH_NET_WITHDRAW_Success() {
 
 /// @notice CCIP rebalance callback reverts when no rebalance is in progress
 /// @dev Verifies that an unexpected callback leaves all vault state unchanged
-rule ccipReceive_REBALANCE_RevertWhen_NoRebalanceInProgress() {
+rule CCIP_004_NONCE_013_ccipReceive_REBALANCE_RevertWhen_NoRebalanceInProgress() {
     env e;
     Client.Any2EVMMessage message;
     uint256 rebalanceNonce;
@@ -3881,7 +3881,7 @@ rule ccipReceive_REBALANCE_RevertWhen_NoRebalanceInProgress() {
 /// @notice CCIP rebalance callback reverts when its payload is too short to decode the nonce and
 ///         protocol ID
 /// @dev Verifies that malformed rebalance data leaves all vault state unchanged
-rule ccipReceive_REBALANCE_RevertWhen_PayloadEncodingIsMalformed() {
+rule CCIP_003_ccipReceive_REBALANCE_RevertWhen_PayloadEncodingIsMalformed() {
     env e;
     Client.Any2EVMMessage message;
     bytes data;
@@ -3915,7 +3915,7 @@ rule ccipReceive_REBALANCE_RevertWhen_PayloadEncodingIsMalformed() {
 
 /// @notice CCIP rebalance callback reverts when the decoded rebalance nonce does not match
 /// @dev Verifies that a stale or malformed callback leaves all vault state unchanged
-rule ccipReceive_REBALANCE_RevertWhen_InvalidRebalanceNonce() {
+rule CCIP_004_NONCE_013_ccipReceive_REBALANCE_RevertWhen_InvalidRebalanceNonce() {
     env e;
     Client.Any2EVMMessage message;
     uint256 rebalanceNonce;
@@ -3951,7 +3951,7 @@ rule ccipReceive_REBALANCE_RevertWhen_InvalidRebalanceNonce() {
 /// @notice CCIP rebalance callback reverts when the decoded protocol ID does not match the
 ///         pending strategy
 /// @dev Verifies that a mismatched callback leaves all vault state unchanged
-rule ccipReceive_REBALANCE_RevertWhen_InvalidPendingProtocolId() {
+rule CCIP_004_NONCE_013_ccipReceive_REBALANCE_RevertWhen_InvalidPendingProtocolId() {
     env e;
     Client.Any2EVMMessage message;
     uint256 rebalanceNonce;
@@ -3990,7 +3990,7 @@ rule ccipReceive_REBALANCE_RevertWhen_InvalidPendingProtocolId() {
 
 /// @notice CCIP rebalance callback reverts when the target protocol adapter is not registered
 /// @dev Verifies that an unknown target protocol leaves all vault state unchanged
-rule ccipReceive_REBALANCE_RevertWhen_TargetAdapterNotRegistered() {
+rule REC_009_ccipReceive_REBALANCE_RevertWhen_TargetAdapterNotRegistered() {
     env e;
     Client.Any2EVMMessage message;
     uint256 rebalanceNonce;
@@ -4030,7 +4030,7 @@ rule ccipReceive_REBALANCE_RevertWhen_TargetAdapterNotRegistered() {
 
 /// @notice CCIP rebalance callback reverts when the registered adapter is bound to another vault
 /// @dev Verifies that a misconfigured adapter registration leaves all vault state unchanged
-rule ccipReceive_REBALANCE_RevertWhen_TargetAdapterVaultIsInvalid() {
+rule REC_009_ccipReceive_REBALANCE_RevertWhen_TargetAdapterVaultIsInvalid() {
     env e;
     Client.Any2EVMMessage message;
     uint256 rebalanceNonce;
@@ -4074,7 +4074,7 @@ rule ccipReceive_REBALANCE_RevertWhen_TargetAdapterVaultIsInvalid() {
 ///         state, and takes the zero-share management-fee path)
 /// @dev Management-fee calculation and collection are verified in ParentVaultFeesLib.spec and
 ///      ParentVaultRebalanceLib.spec; this rule verifies ParentVault's CCIP integration wiring.
-rule ccipReceive_REBALANCE_Success() {
+rule CCIP_003_CCIP_004_FEE_004_NONCE_011_NONCE_013_ccipReceive_REBALANCE_Success() {
     env e;
     Client.Any2EVMMessage message;
     uint256 rebalanceNonce;
@@ -4174,7 +4174,7 @@ rule ccipReceive_REBALANCE_Success() {
 
 /// @notice A CCIP rebalance callback whose strategy deposit fails sets the active adapter and
 ///         stores rebalance deposit recovery instead of finalizing the rebalance
-rule ccipReceive_REBALANCE_When_DepositFails_StoresRecovery() {
+rule REC_002_REC_009_ccipReceive_REBALANCE_When_DepositFails_StoresRecovery() {
     env e;
     Client.Any2EVMMessage message;
     uint256 rebalanceNonce;
@@ -4340,7 +4340,7 @@ rule initiateRebalance_RevertWhen_ReentrantCall() {
 
 /// @notice Initiating a rebalance reverts when the vault is paused
 /// @dev Verifies that a paused vault leaves all vault state unchanged
-rule initiateRebalance_RevertWhen_Paused() {
+rule PAUSE_003_initiateRebalance_RevertWhen_Paused() {
     env e;
     Types.Strategy newStrategy;
 
@@ -4374,7 +4374,7 @@ rule initiateRebalance_RevertWhen_Paused() {
 
 /// @notice Initiating a rebalance reverts when any recovery operation is already pending
 /// @dev Verifies that a pending recovery cannot be overwritten
-rule initiateRebalance_RevertWhen_RecoveryAlreadyPending() {
+rule REC_003_initiateRebalance_RevertWhen_RecoveryAlreadyPending() {
     env e;
     Types.Strategy newStrategy;
 
@@ -4421,7 +4421,7 @@ rule REBAL_002_initiateRebalance_RevertWhen_RebalanceInProgress() {
     assert lastReverted;
 }
 
-rule initiateRebalance_RevertWhen_RebalanceTooSoon() {
+rule REBAL_002_initiateRebalance_RevertWhen_RebalanceTooSoon() {
     env e;
     Types.Strategy newStrategy;
 
@@ -4446,7 +4446,7 @@ rule initiateRebalance_RevertWhen_RebalanceTooSoon() {
 
 /// @notice Initiating a rebalance reverts when the target strategy is already active
 /// @dev Verifies the same-strategy guard exposed through the ParentVault entry point
-rule REBAL_003_initiateRebalance_RevertWhen_SameStrategy() {
+rule REBAL_002_initiateRebalance_RevertWhen_SameStrategy() {
     env e;
     Types.Strategy newStrategy;
 
@@ -4475,7 +4475,7 @@ rule REBAL_003_initiateRebalance_RevertWhen_SameStrategy() {
 
 /// @notice Initiating a rebalance reverts when the target chain is not registered
 /// @dev Verifies the invalid-chain guard exposed through the ParentVault entry point
-rule initiateRebalance_RevertWhen_InvalidChainSelector() {
+rule REBAL_003_initiateRebalance_RevertWhen_InvalidChainSelector() {
     env e;
     Types.Strategy newStrategy;
 
@@ -4505,7 +4505,7 @@ rule initiateRebalance_RevertWhen_InvalidChainSelector() {
 
 /// @notice Initiating a rebalance reverts when the target protocol is unsupported
 /// @dev Verifies the invalid-protocol guard exposed through the ParentVault entry point
-rule initiateRebalance_RevertWhen_InvalidProtocolId() {
+rule REBAL_003_initiateRebalance_RevertWhen_InvalidProtocolId() {
     env e;
     Types.Strategy newStrategy;
 
@@ -4536,7 +4536,7 @@ rule initiateRebalance_RevertWhen_InvalidProtocolId() {
 
 /// @notice Initiating a rebalance reverts before any epoch has completed
 /// @dev Verifies the no-completed-epoch guard exposed through the ParentVault entry point
-rule initiateRebalance_RevertWhen_NoCompletedEpoch() {
+rule REBAL_010_initiateRebalance_RevertWhen_NoCompletedEpoch() {
     env e;
     Types.Strategy newStrategy;
 
@@ -4602,7 +4602,7 @@ rule initiateRebalance_RevertWhen_PreviousEpochExecuting() {
 
 /// @notice Initiating a local-source rebalance reverts when no active adapter is set
 /// @dev Verifies the _executeWithdraw NoActiveAdapter path after rebalance state is tentatively written
-rule initiateRebalance_WITHDRAW_LOCAL_RevertWhen_NoActiveAdapter() {
+rule REC_009_initiateRebalance_WITHDRAW_LOCAL_RevertWhen_NoActiveAdapter() {
     env e;
     Types.Strategy newStrategy;
 
@@ -4640,7 +4640,7 @@ rule initiateRebalance_WITHDRAW_LOCAL_RevertWhen_NoActiveAdapter() {
 
 /// @notice Initiating a local-source rebalance reverts when withdrawing from the old adapter fails
 /// @dev Verifies the _executeWithdraw revertOnFailure=true path and atomic rollback
-rule initiateRebalance_WITHDRAW_LOCAL_RevertWhen_WithdrawFails() {
+rule REC_009_initiateRebalance_WITHDRAW_LOCAL_RevertWhen_WithdrawFails() {
     env e;
     Types.Strategy newStrategy;
 
@@ -4677,7 +4677,7 @@ rule initiateRebalance_WITHDRAW_LOCAL_RevertWhen_WithdrawFails() {
     assert lastReverted;
 }
 
-rule initiateRebalance_WITHDRAW_LOCAL_RevertWhen_AmountOutIsZero() {
+rule REC_009_initiateRebalance_WITHDRAW_LOCAL_RevertWhen_AmountOutIsZero() {
     env e;
     Types.Strategy newStrategy;
 
@@ -4717,7 +4717,7 @@ rule initiateRebalance_WITHDRAW_LOCAL_RevertWhen_AmountOutIsZero() {
 
 /// @notice Initiating a local-to-local rebalance reverts when depositing into the new adapter fails
 /// @dev Verifies the _executeDeposit revertOnFailure=true path and atomic rollback
-rule initiateRebalance_LOCAL_TO_LOCAL_RevertWhen_DepositFails() {
+rule REC_009_initiateRebalance_LOCAL_TO_LOCAL_RevertWhen_DepositFails() {
     env e;
     Types.Strategy newStrategy;
 
@@ -4765,7 +4765,7 @@ rule initiateRebalance_LOCAL_TO_LOCAL_RevertWhen_DepositFails() {
 /// @notice Initiating a rebalance from a remote active strategy emits RebalanceInitiated without
 ///         taking a local external action
 /// @dev Pending-strategy state transitions are verified in ParentVaultRebalanceLib.spec.
-rule initiateRebalance_REMOTE_ACTIVE_Success() {
+rule NONCE_011_initiateRebalance_REMOTE_ACTIVE_Success() {
     env e;
     Types.Strategy newStrategy;
 
@@ -4816,7 +4816,7 @@ rule initiateRebalance_REMOTE_ACTIVE_Success() {
 
 /// @notice Initiating a local-to-remote rebalance withdraws local TVL, clears the active adapter,
 ///         bridges the asset to the target chain, and leaves the rebalance in progress
-rule initiateRebalance_LOCAL_TO_REMOTE_Success() {
+rule NONCE_011_initiateRebalance_LOCAL_TO_REMOTE_Success() {
     env e;
     Types.Strategy newStrategy;
 
@@ -4900,7 +4900,7 @@ rule initiateRebalance_LOCAL_TO_REMOTE_Success() {
 ///      ParentVaultRebalanceLib.spec; this rule verifies ParentVault's local integration wiring.
 /// @dev Run with ParentVault.localAdapter.conf, which links the initial active-adapter storage path
 ///      to MockProtocolAdapter so Certora can resolve the withdrawal before the adapter switch.
-rule initiateRebalance_LOCAL_TO_LOCAL_Success() {
+rule FEE_004_NONCE_011_initiateRebalance_LOCAL_TO_LOCAL_Success() {
     env e;
     Types.Strategy newStrategy;
 
@@ -5064,7 +5064,7 @@ rule closeEpoch_RevertWhen_ReentrantCall() {
 
 /// @notice Closing an epoch reverts when the vault is paused
 /// @dev Verifies that a paused vault leaves all vault state unchanged
-rule closeEpoch_RevertWhen_Paused() {
+rule PAUSE_003_closeEpoch_RevertWhen_Paused() {
     env e;
     uint256 tvl;
 
@@ -5098,7 +5098,7 @@ rule closeEpoch_RevertWhen_Paused() {
 /// @notice Closing an epoch reverts when any recovery operation is already pending
 /// @dev Verifies that a pending recovery cannot be overwritten by a new epoch close. This guard is
 ///      ParentVault-level (s_recoveryMode) and is not visible to ParentVaultEpochLib's own rules.
-rule closeEpoch_RevertWhen_RecoveryAlreadyPending() {
+rule REC_003_closeEpoch_RevertWhen_RecoveryAlreadyPending() {
     env e;
     uint256 tvl;
 
@@ -5120,7 +5120,7 @@ rule closeEpoch_RevertWhen_RecoveryAlreadyPending() {
 /// @notice Closing a net-deposit epoch with a local strategy deposits the delivered amount into the
 ///         active adapter and emits EpochDepositToStrategySuccess
 /// @dev Run with ParentVault.localAdapter.conf so Certora resolves the active-adapter call.
-rule closeEpoch_DEPOSIT_TO_LOCAL_STRATEGY_Success() {
+rule EPOCH_004_EPOCH_014_NONCE_010_closeEpoch_DEPOSIT_TO_LOCAL_STRATEGY_Success() {
     env e;
     uint256 tvl;
 
@@ -5181,7 +5181,7 @@ rule closeEpoch_DEPOSIT_TO_LOCAL_STRATEGY_Success() {
 /// @notice Closing a net-deposit epoch with a local strategy reverts atomically (no recovery) when
 ///         the adapter deposit fails, since closeEpoch calls _executeDeposit with revertOnFailure=true
 /// @dev Run with ParentVault.localAdapter.conf so Certora resolves the active-adapter call.
-rule closeEpoch_DEPOSIT_TO_LOCAL_STRATEGY_RevertWhen_DepositFails() {
+rule REC_009_closeEpoch_DEPOSIT_TO_LOCAL_STRATEGY_RevertWhen_DepositFails() {
     env e;
     uint256 tvl;
 
@@ -5233,7 +5233,7 @@ rule closeEpoch_DEPOSIT_TO_LOCAL_STRATEGY_RevertWhen_DepositFails() {
 ///      calculation, approvals, router success/failure) in isolation; this rule verifies that
 ///      closeEpoch correctly reaches and delegates to _ccipSend with the right arguments, and that
 ///      the resulting balance/event effects are visible through the full closeEpoch call.
-rule closeEpoch_SEND_DEPOSIT_TO_REMOTE_STRATEGY_Success() {
+rule EPOCH_004_EPOCH_014_NONCE_010_closeEpoch_SEND_DEPOSIT_TO_REMOTE_STRATEGY_Success() {
     env e;
     uint256 tvl;
 
@@ -5315,7 +5315,7 @@ rule closeEpoch_SEND_DEPOSIT_TO_REMOTE_STRATEGY_Success() {
 /// @notice Closing a net-withdraw epoch with a local strategy withdraws the net amount from the
 ///         active adapter, finalizes the epoch as claimable, and emits EpochWithdrawFromStrategySuccess
 /// @dev Run with ParentVault.localAdapter.conf so Certora resolves the active-adapter call.
-rule closeEpoch_WITHDRAW_FROM_LOCAL_STRATEGY_Success() {
+rule EPOCH_004_EPOCH_014_NONCE_010_closeEpoch_WITHDRAW_FROM_LOCAL_STRATEGY_Success() {
     env e;
     uint256 tvl;
 
@@ -5380,7 +5380,7 @@ rule closeEpoch_WITHDRAW_FROM_LOCAL_STRATEGY_Success() {
 /// @notice Closing a net-withdraw epoch with a local strategy reverts atomically (no recovery) when
 ///         the adapter withdraw fails, since closeEpoch calls _executeWithdraw with revertOnFailure=true
 /// @dev Run with ParentVault.localAdapter.conf so Certora resolves the active-adapter call.
-rule closeEpoch_WITHDRAW_FROM_LOCAL_STRATEGY_RevertWhen_WithdrawFails() {
+rule REC_009_closeEpoch_WITHDRAW_FROM_LOCAL_STRATEGY_RevertWhen_WithdrawFails() {
     env e;
     uint256 tvl;
 
@@ -5424,7 +5424,7 @@ rule closeEpoch_WITHDRAW_FROM_LOCAL_STRATEGY_RevertWhen_WithdrawFails() {
 
 /// @notice Closing a net-withdraw epoch with a remote strategy marks the epoch executing and emits
 ///         EpochWithdrawExecuting, without performing any external strategy action (CRE picks this up)
-rule closeEpoch_WAIT_FOR_REMOTE_WITHDRAW_Success() {
+rule EPOCH_004_EPOCH_014_NONCE_010_closeEpoch_WAIT_FOR_REMOTE_WITHDRAW_Success() {
     env e;
     uint256 tvl;
 
@@ -5517,7 +5517,7 @@ rule completeEpochDeposit_RevertWhen_CallerDoesNotHaveEPOCH_OPERATOR_ROLE() {
     assert lastReverted;
 }
 
-rule completeEpochDeposit_RevertWhen_NoCompletedEpoch() {
+rule EPOCH_014_completeEpochDeposit_RevertWhen_NoCompletedEpoch() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -5533,7 +5533,7 @@ rule completeEpochDeposit_RevertWhen_NoCompletedEpoch() {
     assert lastReverted;
 }
 
-rule completeEpochDeposit_RevertWhen_PreviousEpochIsNotNetDeposit() {
+rule EPOCH_014_completeEpochDeposit_RevertWhen_PreviousEpochIsNotNetDeposit() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -5552,7 +5552,7 @@ rule completeEpochDeposit_RevertWhen_PreviousEpochIsNotNetDeposit() {
     assert lastReverted;
 }
 
-rule completeEpochDeposit_RevertWhen_PreviousEpochIsNotExecuting() {
+rule EPOCH_014_completeEpochDeposit_RevertWhen_PreviousEpochIsNotExecuting() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -5574,7 +5574,7 @@ rule completeEpochDeposit_RevertWhen_PreviousEpochIsNotExecuting() {
 }
 
 /// @notice A confirmed remote deposit becomes claimable even while the vault is paused
-rule completeEpochDeposit_Success_WhenPaused() {
+rule EPOCH_014_PAUSE_006_completeEpochDeposit_Success_WhenPaused() {
     env e;
 
     /// @dev success conditions being verified
@@ -5648,7 +5648,7 @@ rule completeRebalance_RevertWhen_ReentrantCall() {
 /// @notice Completing a rebalance reverts when any recovery operation is already pending
 /// @dev Verifies that a pending recovery cannot be overwritten. This guard is ParentVault-level
 ///      (s_recoveryMode) and is not visible to ParentVaultRebalanceLib's own rules.
-rule completeRebalance_RevertWhen_RecoveryAlreadyPending() {
+rule REC_003_completeRebalance_RevertWhen_RecoveryAlreadyPending() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -5688,7 +5688,7 @@ rule completeRebalance_RevertWhen_NoRebalanceInProgress() {
 
 /// @notice Completing a rebalance activates the pending strategy, increments the rebalance nonce,
 ///         and mints the management fee to the treasury when fee shares are nonzero
-rule completeRebalance_Success_WhenManagementFeeSharesAreCollected() {
+rule FEE_002_FEE_004_NONCE_011_PAUSE_006_completeRebalance_Success_WhenManagementFeeSharesAreCollected() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -5774,7 +5774,7 @@ rule executeRecovery_RevertWhen_ReentrantCall() {
     assert lastReverted;
 }
 
-rule executeRecovery_RevertWhen_Paused() {
+rule PAUSE_003_REC_008_executeRecovery_RevertWhen_Paused() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -5795,7 +5795,7 @@ rule executeRecovery_RevertWhen_Paused() {
 /// @dev Verifies that ParentVault's own top-level guard (distinct from, but consistent with,
 ///      _requireRebalanceDepositRecovery's own check inside _recoverFailedRebalanceDeposit) leaves
 ///      all vault state unchanged
-rule executeRecovery_RevertWhen_NoPendingRecovery() {
+rule REC_008_executeRecovery_RevertWhen_NoPendingRecovery() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -5817,7 +5817,7 @@ rule executeRecovery_RevertWhen_NoPendingRecovery() {
 ///      (exhaustively covered in isolation in BaseVault.spec via recoverFailedRebalanceDepositInternal)
 ///      instead of chaining into finalizeRebalance, leaving all vault state - including the
 ///      rebalance nonce and state - unchanged
-rule executeRecovery_RevertWhen_NoActiveAdapter() {
+rule REC_005_REC_009_executeRecovery_RevertWhen_NoActiveAdapter() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -5842,7 +5842,7 @@ rule executeRecovery_RevertWhen_NoActiveAdapter() {
 ///      (exhaustively covered in isolation in BaseVault.spec via recoverFailedRebalanceDepositInternal)
 ///      instead of chaining into finalizeRebalance, leaving all vault state - including the
 ///      rebalance nonce and state - unchanged
-rule executeRecovery_RevertWhen_DepositFails() {
+rule REC_005_executeRecovery_RevertWhen_DepositFails() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -5864,7 +5864,7 @@ rule executeRecovery_RevertWhen_DepositFails() {
 
 /// @notice Executing recovery deposits the stored recovery amount into the active adapter, clears
 ///         the recovery, and finalizes the rebalance (activating the pending strategy)
-rule executeRecovery_Success() {
+rule FEE_004_NONCE_011_REC_001_REC_004_REC_007_executeRecovery_Success() {
     env e;
 
     /// @dev revert conditions NOT being verified

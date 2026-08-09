@@ -20,7 +20,7 @@ methods {
 /*//////////////////////////////////////////////////////////////
                              RULES
 //////////////////////////////////////////////////////////////*/
-rule run_RevertWhen_ParametersAreEmpty() {
+rule TOKEN_004_run_RevertWhen_ParametersAreEmpty() {
     env e;
     address caller;
     address subject;
@@ -39,7 +39,7 @@ rule run_RevertWhen_ParametersAreEmpty() {
     assert lastReverted;
 }
 
-rule run_RevertWhen_AccountListIsEmpty() {
+rule TOKEN_004_run_RevertWhen_AccountListIsEmpty() {
     env e;
     address caller;
     address subject;
@@ -60,7 +60,7 @@ rule run_RevertWhen_AccountListIsEmpty() {
     assert lastReverted;
 }
 
-rule run_RevertWhen_AccountListEncodingIsMalformed() {
+rule TOKEN_004_run_RevertWhen_AccountListEncodingIsMalformed() {
     env e;
     address caller;
     address subject;
@@ -80,7 +80,7 @@ rule run_RevertWhen_AccountListEncodingIsMalformed() {
     assert lastReverted;
 }
 
-rule run_RevertWhen_AccountInvalid() {
+rule TOKEN_004_run_RevertWhen_AccountInvalid() {
     env e;
     address caller;
     address subject;
@@ -103,7 +103,7 @@ rule run_RevertWhen_AccountInvalid() {
     assert lastReverted;
 }
 
-rule run_RevertWhen_NoCredentialRequirementsAreConfigured() {
+rule TOKEN_004_run_RevertWhen_NoCredentialRequirementsAreConfigured() {
     env e;
     address caller;
     address subject;
@@ -126,7 +126,7 @@ rule run_RevertWhen_NoCredentialRequirementsAreConfigured() {
     assert lastReverted;
 }
 
-rule run_Success() {
+rule TOKEN_004_run_Success() {
     env e;
     address caller;
     address subject;

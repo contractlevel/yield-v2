@@ -33,7 +33,7 @@ contract CredentialRegistryAccountListValidatorPolicy_RunUnitTest is BaseUnitTes
         s_policy = _deployPolicy();
     }
 
-    function test_CredentialRegistryAccountListValidatorPolicy_run_Success_WhenAllAccountsHaveKyc() external {
+    function test_CredentialRegistryAccountListValidatorPolicy_TOKEN_004_run_Success_WhenAllAccountsHaveKyc() external {
         address[] memory accounts = _accounts(i_accountOne, i_accountTwo);
         _setKyc(i_accountOne);
         _setKyc(i_accountTwo);
@@ -44,7 +44,9 @@ contract CredentialRegistryAccountListValidatorPolicy_RunUnitTest is BaseUnitTes
         assertEq(uint8(result), uint8(IPolicyEngine.PolicyResult.Continue));
     }
 
-    function test_CredentialRegistryAccountListValidatorPolicy_run_RevertWhen_AnyAccountDoesNotHaveKyc() external {
+    function test_CredentialRegistryAccountListValidatorPolicy_TOKEN_004_run_RevertWhen_AnyAccountDoesNotHaveKyc()
+        external
+    {
         address[] memory accounts = _accounts(i_accountOne, i_accountTwo);
         _setKyc(i_accountOne);
 
@@ -54,14 +56,16 @@ contract CredentialRegistryAccountListValidatorPolicy_RunUnitTest is BaseUnitTes
         s_policy.run(address(0), address(0), bytes4(0), _parameters(accounts), bytes(""));
     }
 
-    function test_CredentialRegistryAccountListValidatorPolicy_run_RevertWhen_ParametersAreEmpty() external {
+    function test_CredentialRegistryAccountListValidatorPolicy_TOKEN_004_run_RevertWhen_ParametersAreEmpty() external {
         bytes[] memory parameters = new bytes[](0);
 
         vm.expectRevert(abi.encodeWithSelector(Policy.InvalidParameters.selector, "expected kyc account list"));
         s_policy.run(address(0), address(0), bytes4(0), parameters, bytes(""));
     }
 
-    function test_CredentialRegistryAccountListValidatorPolicy_run_RevertWhen_ParametersHaveMultipleItems() external {
+    function test_CredentialRegistryAccountListValidatorPolicy_TOKEN_004_run_RevertWhen_ParametersHaveMultipleItems()
+        external
+    {
         bytes[] memory parameters = new bytes[](2);
         parameters[0] = abi.encode(_accounts(i_accountOne, i_accountTwo));
         parameters[1] = abi.encode(_accounts(i_accountOne, i_accountTwo));
@@ -70,14 +74,16 @@ contract CredentialRegistryAccountListValidatorPolicy_RunUnitTest is BaseUnitTes
         s_policy.run(address(0), address(0), bytes4(0), parameters, bytes(""));
     }
 
-    function test_CredentialRegistryAccountListValidatorPolicy_run_RevertWhen_AccountListIsEmpty() external {
+    function test_CredentialRegistryAccountListValidatorPolicy_TOKEN_004_run_RevertWhen_AccountListIsEmpty() external {
         address[] memory accounts = new address[](0);
 
         vm.expectRevert(abi.encodeWithSelector(Policy.InvalidParameters.selector, "expected at least 1 kyc account"));
         s_policy.run(address(0), address(0), bytes4(0), _parameters(accounts), bytes(""));
     }
 
-    function test_CredentialRegistryAccountListValidatorPolicy_run_RevertWhen_NoRequirementsConfigured() external {
+    function test_CredentialRegistryAccountListValidatorPolicy_TOKEN_004_run_RevertWhen_NoRequirementsConfigured()
+        external
+    {
         CredentialRegistryAccountListValidatorPolicy impl = new CredentialRegistryAccountListValidatorPolicy();
         ERC1967Proxy proxy = new ERC1967Proxy(
             address(impl),
@@ -95,7 +101,9 @@ contract CredentialRegistryAccountListValidatorPolicy_RunUnitTest is BaseUnitTes
         unconfiguredPolicy.run(address(0), address(0), bytes4(0), _parameters(accounts), bytes(""));
     }
 
-    function test_CredentialRegistryAccountListValidatorPolicy_run_RevertWhen_LastRequirementRemoved() external {
+    function test_CredentialRegistryAccountListValidatorPolicy_TOKEN_004_run_RevertWhen_LastRequirementRemoved()
+        external
+    {
         _changePrank(i_policyOwner);
         s_policy.removeCredentialRequirement(KYC_REQUIREMENT);
 

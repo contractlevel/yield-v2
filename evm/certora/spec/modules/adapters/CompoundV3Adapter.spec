@@ -13,9 +13,11 @@ methods {
     function getProtocolPool() external returns (address) envfree;
     function getCometRewards() external returns (address) envfree;
     function getVault() external returns (address) envfree;
+    function getAsset() external returns (address) envfree;
     function claimRewards(address) external;
 
     function comet.balanceOf(address) external returns (uint256) envfree;
+    function comet.baseToken() external returns (address) envfree;
     function cometRewards.s_lastComet() external returns (address) envfree;
     function cometRewards.s_lastSrc() external returns (address) envfree;
     function cometRewards.s_lastTo() external returns (address) envfree;
@@ -60,12 +62,16 @@ hook LOG2(uint offset, uint length, bytes32 t0, bytes32 t1) {
 /*//////////////////////////////////////////////////////////////
                              RULES
 //////////////////////////////////////////////////////////////*/
-rule getProtocolPool_EqualsComet() {
+rule CFG_001_getProtocolPool_EqualsComet() {
     assert getProtocolPool() == comet;
 }
 
-rule getCometRewards_ReturnsConfiguredRewards() {
+rule CFG_001_getCometRewards_ReturnsConfiguredRewards() {
     assert getCometRewards() == cometRewards;
+}
+
+rule ADAPTER_006_baseTokenMatchesAsset() {
+    assert comet.baseToken() == getAsset();
 }
 
 rule getTVL_EqualsCometBalance() {

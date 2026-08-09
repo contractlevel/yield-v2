@@ -12,6 +12,7 @@ methods {
     function getCCIPAdmin() external returns (address) envfree;
     function attachPolicyEngine(address) external;
     function renounceOwnership() external;
+    function authorizeUpgrade(address) external;
     function getPolicyEngine() external returns (address) envfree;
     function owner() external returns (address) envfree;
 
@@ -87,7 +88,7 @@ hook LOG3(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2) {
 /*//////////////////////////////////////////////////////////////
                              RULES
 //////////////////////////////////////////////////////////////*/
-rule renounceOwnership_AlwaysReverts() {
+rule UPGRADE_001_renounceOwnership_AlwaysReverts() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -97,7 +98,29 @@ rule renounceOwnership_AlwaysReverts() {
     assert lastReverted;
 }
 
-rule initialize_RevertWhen_AlreadyInitialized() {
+rule UPGRADE_001_authorizeUpgrade_RevertWhen_CallerIsNotOwner() {
+    env e;
+    address newImplementation;
+
+    require e.msg.value == 0, "non-payable";
+    require e.msg.sender != owner(), "caller should not be the owner";
+
+    authorizeUpgrade@withrevert(e, newImplementation);
+    assert lastReverted;
+}
+
+rule UPGRADE_001_authorizeUpgrade_Success_WhenCallerIsOwner() {
+    env e;
+    address newImplementation;
+
+    require e.msg.value == 0, "non-payable";
+    require e.msg.sender == owner(), "caller should be the owner";
+
+    authorizeUpgrade@withrevert(e, newImplementation);
+    assert !lastReverted;
+}
+
+rule UPGRADE_002_initialize_RevertWhen_AlreadyInitialized() {
     env e;
     address policyEngine;
     address ccipAdmin;
@@ -143,7 +166,7 @@ rule initialize_RevertWhen_AlreadyInitializing() {
     assert lastReverted;
 }
 
-rule initialize_RevertWhen_UpgraderIsZero() {
+rule CFG_001_initialize_RevertWhen_UpgraderIsZero() {
     env e;
     address policyEngine;
     address initialCcipAdmin;
@@ -163,7 +186,7 @@ rule initialize_RevertWhen_UpgraderIsZero() {
     assert lastReverted;
 }
 
-rule initialize_RevertWhen_PolicyEngineIsZero() {
+rule CFG_001_initialize_RevertWhen_PolicyEngineIsZero() {
     env e;
     address initialCcipAdmin;
     address upgrader;
@@ -183,7 +206,7 @@ rule initialize_RevertWhen_PolicyEngineIsZero() {
     assert lastReverted;
 }
 
-rule initialize_RevertWhen_InitialCcipAdminIsZero() {
+rule CFG_001_TOKEN_001_initialize_RevertWhen_InitialCcipAdminIsZero() {
     env e;
     address policyEngine;
     address upgrader;
@@ -226,7 +249,7 @@ rule initialize_RevertWhen_ReentrancyGuardIsEntered() {
     assert lastReverted;
 }
 
-rule initialize_Success() {
+rule TOKEN_001_initialize_Success() {
     env e;
     address policyEngine;
     address initialCcipAdmin;
@@ -264,7 +287,7 @@ rule initialize_Success() {
     assert ghost_ccipAdmin_StoredValue == initialCcipAdmin;
 }
 
-rule inheritedInitialize_AlwaysReverts() {
+rule UPGRADE_002_inheritedInitialize_AlwaysReverts() {
     env e;
     address policyEngine;
 
@@ -299,7 +322,7 @@ rule setCCIPAdmin_RevertWhen_PolicyEngineUndefined() {
     assert ghost_ccipAdmin_StoreCount == 0;
 }
 
-rule setCCIPAdmin_RevertWhen_NewAdminIsZero() {
+rule CFG_001_TOKEN_001_setCCIPAdmin_RevertWhen_NewAdminIsZero() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -317,7 +340,7 @@ rule setCCIPAdmin_RevertWhen_NewAdminIsZero() {
     assert ghost_ccipAdmin_StoreCount == 0;
 }
 
-rule setCCIPAdmin_Success() {
+rule TOKEN_001_setCCIPAdmin_Success() {
     env e;
     address newAdmin;
 
@@ -347,7 +370,7 @@ rule setCCIPAdmin_Success() {
     assert getCCIPAdmin() == newAdmin;
 }
 
-rule attachPolicyEngine_RevertWhen_NewPolicyEngineIsZero() {
+rule CFG_001_TOKEN_001_attachPolicyEngine_RevertWhen_NewPolicyEngineIsZero() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -359,7 +382,7 @@ rule attachPolicyEngine_RevertWhen_NewPolicyEngineIsZero() {
     assert lastReverted;
 }
 
-rule attachPolicyEngine_RevertWhen_PolicyEngineUndefined() {
+rule TOKEN_001_attachPolicyEngine_RevertWhen_PolicyEngineUndefined() {
     env e;
     address policyEngine;
 
@@ -374,7 +397,7 @@ rule attachPolicyEngine_RevertWhen_PolicyEngineUndefined() {
     assert lastReverted;
 }
 
-rule attachPolicyEngine_Success() {
+rule TOKEN_001_attachPolicyEngine_Success() {
     env e;
     address policyEngine;
 

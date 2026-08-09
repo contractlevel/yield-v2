@@ -235,7 +235,7 @@ invariant noZeroVault()
 /*//////////////////////////////////////////////////////////////
                              RULES
 //////////////////////////////////////////////////////////////*/
-rule getVault_ReturnsConfiguredVault() {
+rule CFG_001_UPGRADE_005_getVault_ReturnsConfiguredVault() {
     assert getVault() == currentContract.i_vault;
 }
 
@@ -267,7 +267,7 @@ rule setWorkflowSelectors_RevertWhen_CallerDoesNotHaveCONFIG_OPERATOR_ROLE() {
     assert lastReverted;
 }
 
-rule setWorkflowSelectors_RevertWhen_ZeroWorkflowId() {
+rule ROUTER_008_setWorkflowSelectors_RevertWhen_ZeroWorkflowId() {
     env e;
     bytes32 workflowId;
     bytes4[] selectors;
@@ -312,7 +312,7 @@ rule setWorkflowSelectors_RevertWhen_SelectorsAreEmpty() {
     assert lastReverted;
 }
 
-rule setWorkflowSelectors_RevertWhen_WorkflowIsNotRegistered() {
+rule ROUTER_008_setWorkflowSelectors_RevertWhen_WorkflowIsNotRegistered() {
     env e;
     bytes32 workflowId;
     bytes4[] selectors;
@@ -334,7 +334,7 @@ rule setWorkflowSelectors_RevertWhen_WorkflowIsNotRegistered() {
     assert lastReverted;
 }
 
-rule setWorkflowSelectors_Success() {
+rule ROUTER_008_setWorkflowSelectors_Success() {
     env e;
     bytes32 workflowId;
     bytes4[] selectors;
@@ -384,7 +384,7 @@ rule setWorkflowSelectors_Success() {
     assert getWorkflowGeneration(workflowId) == generationBefore;
 }
 
-rule PAUSE_003_pause_RevertWhen_CallerDoesNotHavePAUSER_ROLE() {
+rule PAUSE_002_pause_RevertWhen_CallerDoesNotHavePAUSER_ROLE() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -398,7 +398,7 @@ rule PAUSE_003_pause_RevertWhen_CallerDoesNotHavePAUSER_ROLE() {
     assert lastReverted;
 }
 
-rule pause_Success() {
+rule PAUSE_002_pause_Success() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -413,7 +413,7 @@ rule pause_Success() {
     assert ghost_Paused_EventCount == 1;
 }
 
-rule pause_RevertWhen_AlreadyPaused() {
+rule PAUSE_002_pause_RevertWhen_AlreadyPaused() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -427,7 +427,7 @@ rule pause_RevertWhen_AlreadyPaused() {
     assert lastReverted;
 }
 
-rule PAUSE_003_unpause_RevertWhen_CallerDoesNotHaveUNPAUSER_ROLE() {
+rule PAUSE_002_unpause_RevertWhen_CallerDoesNotHaveUNPAUSER_ROLE() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -441,7 +441,7 @@ rule PAUSE_003_unpause_RevertWhen_CallerDoesNotHaveUNPAUSER_ROLE() {
     assert lastReverted;
 }
 
-rule unpause_Success() {
+rule PAUSE_002_unpause_Success() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -456,7 +456,7 @@ rule unpause_Success() {
     assert ghost_Unpaused_EventCount == 1;
 }
 
-rule unpause_RevertWhen_NotPaused() {
+rule PAUSE_002_unpause_RevertWhen_NotPaused() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -491,7 +491,7 @@ rule setWorkflowMetadata_RevertWhen_CallerDoesNotHaveCONFIG_OPERATOR_ROLE() {
     assert lastReverted;
 }
 
-rule setWorkflowMetadata_RevertWhen_ZeroWorkflowId() {
+rule ROUTER_008_setWorkflowMetadata_RevertWhen_ZeroWorkflowId() {
     env e;
     bytes32 workflowId;
     bytes10 name;
@@ -512,7 +512,7 @@ rule setWorkflowMetadata_RevertWhen_ZeroWorkflowId() {
     assert lastReverted;
 }
 
-rule setWorkflowMetadata_RevertWhen_MismatchedZeroMetadata() {
+rule ROUTER_008_setWorkflowMetadata_RevertWhen_MismatchedZeroMetadata() {
     env e;
     bytes32 workflowId;
     bytes10 name;
@@ -533,7 +533,7 @@ rule setWorkflowMetadata_RevertWhen_MismatchedZeroMetadata() {
     assert lastReverted;
 }
 
-rule setWorkflowMetadata_RevertWhen_MetadataIsUnchanged() {
+rule ROUTER_008_setWorkflowMetadata_RevertWhen_MetadataIsUnchanged() {
     env e;
     bytes32 workflowId;
     bytes10 name;
@@ -577,7 +577,7 @@ rule setWorkflowMetadata_RevertWhen_GenerationOverflows() {
     assert lastReverted;
 }
 
-rule setWorkflowMetadata_Success() {
+rule ROUTER_005_ROUTER_008_setWorkflowMetadata_Success() {
     env e;
     bytes32 workflowId;
     bytes10 name;
@@ -635,7 +635,7 @@ rule setWorkflowMetadata_Success() {
     assert getWorkflowGeneration(otherWorkflowId) == otherGenerationBefore;
 }
 
-rule setWorkflowMetadata_Success_InvalidatesPreviousGenerationSelectors() {
+rule ROUTER_005_setWorkflowMetadata_Success_InvalidatesPreviousGenerationSelectors() {
     env e;
     bytes32 workflowId;
     bytes10 name;
@@ -664,7 +664,7 @@ rule setWorkflowMetadata_Success_InvalidatesPreviousGenerationSelectors() {
     assert getWorkflowSelectorAtGeneration(workflowId, generationBefore, selector);
 }
 
-rule ROUTER_002_onReport_RevertWhen_Paused() {
+rule PAUSE_005_ROUTER_002_onReport_RevertWhen_Paused() {
     env e;
     bytes32 workflowId;
     bytes10 workflowName;
@@ -720,7 +720,7 @@ rule ROUTER_001_onReport_RevertWhen_CallerDoesNotHaveKEYSTONE_FORWARDER_ROLE() {
     assert lastReverted;
 }
 
-rule onReport_RevertWhen_MetadataIsTooShort() {
+rule ROUTER_010_onReport_RevertWhen_MetadataIsTooShort() {
     env e;
     bytes32 workflowId;
     bytes10 workflowName;
@@ -748,7 +748,7 @@ rule onReport_RevertWhen_MetadataIsTooShort() {
     assert lastReverted;
 }
 
-rule onReport_RevertWhen_MetadataIsTooLong() {
+rule ROUTER_010_onReport_RevertWhen_MetadataIsTooLong() {
     env e;
     bytes32 workflowId;
     bytes10 workflowName;
@@ -776,7 +776,7 @@ rule onReport_RevertWhen_MetadataIsTooLong() {
     assert lastReverted;
 }
 
-rule onReport_RevertWhen_WorkflowIdIsZero() {
+rule ROUTER_003_onReport_RevertWhen_WorkflowIdIsZero() {
     env e;
     bytes32 workflowId;
     bytes10 workflowName;
@@ -804,7 +804,7 @@ rule onReport_RevertWhen_WorkflowIdIsZero() {
     assert lastReverted;
 }
 
-rule onReport_RevertWhen_WorkflowNameIsZero() {
+rule ROUTER_003_onReport_RevertWhen_WorkflowNameIsZero() {
     env e;
     bytes32 workflowId;
     bytes10 workflowName;
@@ -832,7 +832,7 @@ rule onReport_RevertWhen_WorkflowNameIsZero() {
     assert lastReverted;
 }
 
-rule onReport_RevertWhen_WorkflowOwnerIsZero() {
+rule ROUTER_003_onReport_RevertWhen_WorkflowOwnerIsZero() {
     env e;
     bytes32 workflowId;
     bytes10 workflowName;
@@ -888,7 +888,7 @@ rule ROUTER_003_onReport_RevertWhen_WorkflowMetadataDoesNotMatch() {
     assert lastReverted;
 }
 
-rule onReport_RevertWhen_ReportIsTooShort() {
+rule ROUTER_009_onReport_RevertWhen_ReportIsTooShort() {
     env e;
     bytes32 workflowId;
     bytes10 workflowName;

@@ -21,14 +21,14 @@ contract YieldcoinShareKycExtractor_ExtractUnitTest is BaseUnitTest {
         s_extractor = new YieldcoinShareKycExtractor();
     }
 
-    function test_YieldcoinShareKycExtractor_extract_Success_WhenSelectorIsTransfer() external view {
+    function test_YieldcoinShareKycExtractor_TOKEN_002_extract_Success_WhenSelectorIsTransfer() external view {
         IPolicyEngine.Parameter[] memory parameters =
             s_extractor.extract(_payload(ComplianceTokenERC3643.transfer.selector, abi.encode(i_to, uint256(1))));
 
         _assertKycAccounts(parameters, _accounts(i_sender, i_to));
     }
 
-    function test_YieldcoinShareKycExtractor_extract_Success_WhenSelectorIsTransferFrom() external view {
+    function test_YieldcoinShareKycExtractor_TOKEN_002_extract_Success_WhenSelectorIsTransferFrom() external view {
         IPolicyEngine.Parameter[] memory parameters = s_extractor.extract(
             _payload(ComplianceTokenERC3643.transferFrom.selector, abi.encode(i_from, i_to, uint256(1)))
         );
@@ -40,7 +40,7 @@ contract YieldcoinShareKycExtractor_ExtractUnitTest is BaseUnitTest {
         _assertKycAccounts(parameters, expectedAccounts);
     }
 
-    function test_YieldcoinShareKycExtractor_extract_Success_WhenSelectorIsBatchTransfer() external view {
+    function test_YieldcoinShareKycExtractor_TOKEN_002_extract_Success_WhenSelectorIsBatchTransfer() external view {
         address[] memory recipients = new address[](2);
         recipients[0] = i_recipientOne;
         recipients[1] = i_recipientTwo;
@@ -59,14 +59,14 @@ contract YieldcoinShareKycExtractor_ExtractUnitTest is BaseUnitTest {
         _assertKycAccounts(parameters, expectedAccounts);
     }
 
-    function test_YieldcoinShareKycExtractor_extract_Success_WhenSelectorIsApprove() external view {
+    function test_YieldcoinShareKycExtractor_TOKEN_002_extract_Success_WhenSelectorIsApprove() external view {
         IPolicyEngine.Parameter[] memory parameters =
             s_extractor.extract(_payload(ComplianceTokenERC3643.approve.selector, abi.encode(i_spender, uint256(1))));
 
         _assertKycAccounts(parameters, _accounts(i_sender, i_spender));
     }
 
-    function test_YieldcoinShareKycExtractor_extract_Success_WhenSelectorIsIncreaseAllowance() external view {
+    function test_YieldcoinShareKycExtractor_TOKEN_002_extract_Success_WhenSelectorIsIncreaseAllowance() external view {
         IPolicyEngine.Parameter[] memory parameters = s_extractor.extract(
             _payload(ComplianceTokenERC3643.increaseAllowance.selector, abi.encode(i_spender, uint256(1)))
         );
@@ -74,7 +74,7 @@ contract YieldcoinShareKycExtractor_ExtractUnitTest is BaseUnitTest {
         _assertKycAccounts(parameters, _accounts(i_sender, i_spender));
     }
 
-    function test_YieldcoinShareKycExtractor_extract_Success_WhenSelectorIsDecreaseAllowance() external view {
+    function test_YieldcoinShareKycExtractor_TOKEN_003_extract_Success_WhenSelectorIsDecreaseAllowance() external view {
         IPolicyEngine.Parameter[] memory parameters = s_extractor.extract(
             _payload(ComplianceTokenERC3643.decreaseAllowance.selector, abi.encode(i_spender, uint256(1)))
         );
@@ -84,7 +84,7 @@ contract YieldcoinShareKycExtractor_ExtractUnitTest is BaseUnitTest {
         _assertKycAccounts(parameters, expectedAccounts);
     }
 
-    function test_YieldcoinShareKycExtractor_extract_RevertWhen_SelectorIsUnsupported() external {
+    function test_YieldcoinShareKycExtractor_TOKEN_003_extract_RevertWhen_SelectorIsUnsupported() external {
         bytes4 selector = bytes4(keccak256("unsupported()"));
 
         vm.expectRevert(abi.encodeWithSelector(IPolicyEngine.UnsupportedSelector.selector, selector));

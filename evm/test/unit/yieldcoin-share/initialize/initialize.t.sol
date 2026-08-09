@@ -15,11 +15,11 @@ contract YieldcoinShare_InitializeUnitTest is BaseUnitTest {
         assertEq(s_yieldcoin.decimals(), 18);
     }
 
-    function test_YieldcoinShare_initialize_Success_SetsPolicyEngine() external view {
+    function test_YieldcoinShare_TOKEN_001_initialize_Success_SetsPolicyEngine() external view {
         assertEq(s_yieldcoin.getPolicyEngine(), address(s_mockPolicyEngine));
     }
 
-    function test_YieldcoinShare_initialize_Success_SetsCCIPAdmin() external view {
+    function test_YieldcoinShare_TOKEN_001_initialize_Success_SetsCCIPAdmin() external view {
         assertEq(s_yieldcoin.getCCIPAdmin(), i_configOperator);
     }
 
@@ -27,7 +27,7 @@ contract YieldcoinShare_InitializeUnitTest is BaseUnitTest {
         assertEq(s_yieldcoin.owner(), i_upgrader);
     }
 
-    function test_YieldcoinShare_initialize_Success_EmitsCCIPAdminTransferred() external {
+    function test_YieldcoinShare_TOKEN_001_initialize_Success_EmitsCCIPAdminTransferred() external {
         YieldcoinShare yieldcoinImpl = new YieldcoinShare();
 
         vm.recordLogs();
@@ -56,7 +56,7 @@ contract YieldcoinShare_InitializeUnitTest is BaseUnitTest {
         );
     }
 
-    function test_YieldcoinShare_initialize_RevertWhen_InitialCcipAdminIsZeroAddress() external {
+    function test_YieldcoinShare_TOKEN_001_initialize_RevertWhen_InitialCcipAdminIsZeroAddress() external {
         YieldcoinShare yieldcoinImpl = new YieldcoinShare();
 
         vm.expectRevert(YieldcoinShare.YieldcoinShare__NoZeroAddress.selector);

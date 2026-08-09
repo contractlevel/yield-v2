@@ -466,7 +466,7 @@ rule closeEpoch_RevertWhen_EpochOpenTimestampOverflows() {
 
 /// @notice Closing an epoch reverts when the minimum epoch period has not elapsed.
 /// @dev Verifies the targeted revert independently of competing conditions.
-rule closeEpoch_RevertWhen_EpochTooShort() {
+rule EPOCH_016_closeEpoch_RevertWhen_EpochTooShort() {
     env e;
     uint256 tvl;
     uint256 sharePrecision;
@@ -508,7 +508,7 @@ rule closeEpoch_RevertWhen_EpochTooShort() {
 
 /// @notice Closing an epoch reverts when it has no deposits and no share burns.
 /// @dev Verifies the targeted revert independently of competing conditions.
-rule closeEpoch_RevertWhen_EmptyEpoch() {
+rule EPOCH_016_closeEpoch_RevertWhen_EmptyEpoch() {
     env e;
     uint256 tvl;
     uint256 sharePrecision;
@@ -550,7 +550,7 @@ rule closeEpoch_RevertWhen_EmptyEpoch() {
 
 /// @notice Closing an epoch reverts when TVL is zero while shares are outstanding.
 /// @dev Verifies the targeted revert independently of competing conditions.
-rule closeEpoch_RevertWhen_ZeroTvlWithOutstandingShares() {
+rule EPOCH_017_closeEpoch_RevertWhen_ZeroTvlWithOutstandingShares() {
     env e;
     uint256 sharePrecision;
     uint256 minDepositAmount;
@@ -590,7 +590,7 @@ rule closeEpoch_RevertWhen_ZeroTvlWithOutstandingShares() {
 
 /// @notice Closing an epoch reverts when deposits would mint zero shares.
 /// @dev Verifies the explicit zero-share deposit guard, not fee collection behavior.
-rule closeEpoch_RevertWhen_DepositWouldMintZeroShares() {
+rule EPOCH_018_closeEpoch_RevertWhen_DepositWouldMintZeroShares() {
     env e;
     uint256 tvl;
     uint256 sharePrecision;
@@ -844,7 +844,7 @@ rule closeEpoch_RevertWhen_NewSharesOverflows() {
 
 /// @notice Closing an epoch reverts when settlement price per share is zero.
 /// @dev Verifies the explicit zero-price-per-share guard before new-share calculation.
-rule closeEpoch_RevertWhen_SettlementPricePerShareIsZero() {
+rule EPOCH_017_closeEpoch_RevertWhen_SettlementPricePerShareIsZero() {
     env e;
     uint256 tvl;
     uint256 sharePrecision;
@@ -1023,7 +1023,7 @@ rule closeEpoch_RevertWhen_TotalSharesSubtractionUnderflows() {
 
 /// @notice Closing a balanced epoch makes it claimable and returns no external action.
 /// @dev Verifies the net-zero branch with a concrete non-fee arithmetic witness.
-rule closeEpoch_Success_WhenNetFlowIsZero() {
+rule EPOCH_004_NONCE_010_SHARE_002_closeEpoch_Success_WhenNetFlowIsZero() {
     env e;
     uint256 sharePrecision = 1;
     bool isLocalStrategy = false;
@@ -1109,7 +1109,7 @@ rule closeEpoch_Success_WhenNetFlowIsZero() {
 
 /// @notice Closing an epoch folds performance-fee shares into the epoch's sole total-share write.
 /// @dev Verifies fee minting, dilution, epoch accounting, action, and both emitted events.
-rule closeEpoch_Success_WhenPerformanceFeeIsCollected() {
+rule EPOCH_004_NONCE_010_SHARE_002_closeEpoch_Success_WhenPerformanceFeeIsCollected() {
     env e;
     uint256 tvl = 2;
     uint256 sharePrecision = 10000;
@@ -1198,7 +1198,7 @@ rule closeEpoch_Success_WhenPerformanceFeeIsCollected() {
 
 /// @notice Closing a net-deposit epoch returns a local strategy deposit action when the strategy is local.
 /// @dev Verifies the positive-net-flow local branch with production share/asset precisions.
-rule closeEpoch_Success_WhenLocalNetDeposit() {
+rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenLocalNetDeposit() {
     env e;
     uint256 sharePrecision = 1000000000000000000;
     uint256 assetPrecision = 1000000;
@@ -1276,7 +1276,7 @@ rule closeEpoch_Success_WhenLocalNetDeposit() {
 
 /// @notice Closing a net-deposit epoch returns a remote strategy deposit action when the strategy is remote.
 /// @dev Verifies the positive-net-flow remote branch while fee collection is not active.
-rule closeEpoch_Success_WhenRemoteNetDeposit() {
+rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenRemoteNetDeposit() {
     env e;
     uint256 sharePrecision;
     uint256 minDepositAmount;
@@ -1361,7 +1361,7 @@ rule closeEpoch_Success_WhenRemoteNetDeposit() {
 
 /// @notice Closing a net-withdraw epoch returns a local strategy withdraw action when the strategy is local.
 /// @dev Verifies the negative-net-flow local branch with a concrete non-fee arithmetic witness.
-rule closeEpoch_Success_WhenLocalNetWithdraw() {
+rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenLocalNetWithdraw() {
     env e;
     uint256 sharePrecision = 1;
 
@@ -1451,7 +1451,7 @@ rule closeEpoch_Success_WhenLocalNetWithdraw() {
 
 /// @notice Closing a net-withdraw epoch returns a remote wait action when the strategy is remote.
 /// @dev Verifies the remote branch, executing status, and event with a concrete non-fee arithmetic witness.
-rule closeEpoch_Success_WhenRemoteNetWithdraw() {
+rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenRemoteNetWithdraw() {
     env e;
     uint256 sharePrecision = 1;
 
@@ -1538,7 +1538,7 @@ rule closeEpoch_Success_WhenRemoteNetWithdraw() {
 
 /// @notice Completing an epoch deposit reverts when the current epoch nonce is zero.
 /// @dev Verifies the checked subtraction used to access the previous epoch.
-rule completeEpochDeposit_RevertWhen_CurrentEpochNonceIsZero() {
+rule EPOCH_014_completeEpochDeposit_RevertWhen_CurrentEpochNonceIsZero() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -1558,7 +1558,7 @@ rule completeEpochDeposit_RevertWhen_CurrentEpochNonceIsZero() {
 
 /// @notice Completing an epoch deposit reverts before any epoch has completed.
 /// @dev Verifies the no-completed-epoch guard independently of later conditions.
-rule completeEpochDeposit_RevertWhen_NoCompletedEpoch() {
+rule EPOCH_014_completeEpochDeposit_RevertWhen_NoCompletedEpoch() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -1578,7 +1578,7 @@ rule completeEpochDeposit_RevertWhen_NoCompletedEpoch() {
 
 /// @notice Completing an epoch deposit reverts when the previous epoch is not a net deposit.
 /// @dev Verifies the net-deposit guard independently of the executing-status guard.
-rule completeEpochDeposit_RevertWhen_PreviousEpochIsNotNetDeposit() {
+rule EPOCH_014_completeEpochDeposit_RevertWhen_PreviousEpochIsNotNetDeposit() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -1603,7 +1603,7 @@ rule completeEpochDeposit_RevertWhen_PreviousEpochIsNotNetDeposit() {
 
 /// @notice Completing an epoch deposit reverts when the previous net-deposit epoch is not executing.
 /// @dev Verifies the shared epoch-finalization status guard.
-rule completeEpochDeposit_RevertWhen_PreviousEpochIsNotExecuting() {
+rule EPOCH_014_completeEpochDeposit_RevertWhen_PreviousEpochIsNotExecuting() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -1628,7 +1628,7 @@ rule completeEpochDeposit_RevertWhen_PreviousEpochIsNotExecuting() {
 
 /// @notice Completing the previous remote net-deposit epoch makes it claimable.
 /// @dev Verifies status transition and EpochClaimable event parameters.
-rule completeEpochDeposit_Success() {
+rule EPOCH_014_completeEpochDeposit_Success() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -1695,7 +1695,7 @@ rule finalizeLocalNetWithdraw_RevertWhen_SettledAmountOverflows() {
 
 /// @notice Finalizing local net-withdraw makes the epoch claimable with actual adapter output.
 /// @dev Verifies settled withdraw accounting, claimable status, and EpochClaimable event.
-rule finalizeLocalNetWithdraw_Success() {
+rule EPOCH_014_finalizeLocalNetWithdraw_Success() {
     env e;
     uint256 epochNonce;
     uint256 totalDepositAmount;
@@ -1764,7 +1764,7 @@ rule openNextEpoch_RevertWhen_EpochNonceOverflows() {
 
 /// @notice Opening the next epoch increments the nonce and marks the new epoch open.
 /// @dev Verifies nonce write, epoch status, opened timestamp, and EpochOpen event.
-rule openNextEpoch_Success() {
+rule EPOCH_004_NONCE_010_openNextEpoch_Success() {
     env e;
     uint256 epochNonce;
 

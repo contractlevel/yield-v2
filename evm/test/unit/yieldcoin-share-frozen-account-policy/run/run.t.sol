@@ -16,14 +16,16 @@ contract YieldcoinShareFrozenAccountPolicy_RunUnitTest is BaseUnitTest {
         s_policy = new YieldcoinShareFrozenAccountPolicy(address(s_yieldcoin));
     }
 
-    function test_YieldcoinShareFrozenAccountPolicy_run_RevertWhen_ParametersAreEmpty() external {
+    function test_YieldcoinShareFrozenAccountPolicy_TOKEN_005_run_RevertWhen_ParametersAreEmpty() external {
         bytes[] memory parameters = new bytes[](0);
 
         vm.expectRevert(abi.encodeWithSelector(Policy.InvalidParameters.selector, "expected account"));
         s_policy.run(address(0), address(0), bytes4(keccak256("someSelector()")), parameters, bytes(""));
     }
 
-    function test_YieldcoinShareFrozenAccountPolicy_run_RevertWhen_ParametersHaveMoreThanOneAccount() external {
+    function test_YieldcoinShareFrozenAccountPolicy_TOKEN_005_run_RevertWhen_ParametersHaveMoreThanOneAccount()
+        external
+    {
         bytes[] memory parameters = new bytes[](2);
         parameters[0] = abi.encode(i_depositor);
         parameters[1] = abi.encode(i_withdrawer);
@@ -32,7 +34,7 @@ contract YieldcoinShareFrozenAccountPolicy_RunUnitTest is BaseUnitTest {
         s_policy.run(address(0), address(0), bytes4(keccak256("someSelector()")), parameters, bytes(""));
     }
 
-    function test_YieldcoinShareFrozenAccountPolicy_run_RevertWhen_AccountIsFrozen() external {
+    function test_YieldcoinShareFrozenAccountPolicy_TOKEN_005_run_RevertWhen_AccountIsFrozen() external {
         _changePrank(i_complianceOperator);
         s_yieldcoin.setAddressFrozen(i_depositor, true);
 
@@ -43,7 +45,7 @@ contract YieldcoinShareFrozenAccountPolicy_RunUnitTest is BaseUnitTest {
         s_policy.run(address(0), address(0), bytes4(keccak256("someSelector()")), parameters, bytes(""));
     }
 
-    function test_YieldcoinShareFrozenAccountPolicy_run_Success_WhenAccountIsNotFrozen() external view {
+    function test_YieldcoinShareFrozenAccountPolicy_TOKEN_005_run_Success_WhenAccountIsNotFrozen() external view {
         bytes[] memory parameters = new bytes[](1);
         parameters[0] = abi.encode(i_depositor);
 

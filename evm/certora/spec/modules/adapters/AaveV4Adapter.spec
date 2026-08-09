@@ -19,11 +19,11 @@ methods {
 /*//////////////////////////////////////////////////////////////
                              RULES
 //////////////////////////////////////////////////////////////*/
-rule getProtocolPool_EqualsSpoke() {
+rule CFG_001_getProtocolPool_EqualsSpoke() {
     assert getProtocolPool() == aaveV4Spoke;
 }
 
-rule getReserveId_ResolvesAssetReserve() {
+rule ADAPTER_006_getReserveId_ResolvesAssetReserve() {
     uint256 reserveId = getReserveId();
 
     assert aaveV4Spoke.getReserve(reserveId).underlying == getAsset();

@@ -165,7 +165,7 @@ rule ADAPTER_002_setActiveAdapter_RevertWhen_AdapterVaultIsInvalid() {
 
 /// @notice Setting the active adapter succeeds when the protocol ID maps to an adapter bound to this harness.
 /// @dev Verifies returned adapter, storage write, and ActiveProtocolAdapterSet event parameters.
-rule setActiveAdapter_Success() {
+rule ADAPTER_002_setActiveAdapter_Success() {
     env e;
     bytes32 protocolId;
 

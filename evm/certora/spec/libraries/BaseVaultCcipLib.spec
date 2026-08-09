@@ -204,7 +204,7 @@ rule validateCcipSend_RevertWhen_BridgeAmountIsZero() {
 
 /// @notice CCIP send validation reverts when the destination chain selector is zero.
 /// @dev Verifies that validation does not modify harness storage.
-rule validateCcipSend_RevertWhen_DestinationChainIsZero() {
+rule CFG_004_validateCcipSend_RevertWhen_DestinationChainIsZero() {
     env e;
     uint256 bridgeAmount;
     uint64 thisChainSelector;
@@ -228,7 +228,7 @@ rule validateCcipSend_RevertWhen_DestinationChainIsZero() {
 
 /// @notice CCIP send validation reverts when the destination chain selector is this chain.
 /// @dev Verifies that validation does not modify harness storage.
-rule validateCcipSend_RevertWhen_DestinationIsSelfChain() {
+rule CFG_004_validateCcipSend_RevertWhen_DestinationIsSelfChain() {
     env e;
     uint256 bridgeAmount;
     uint64 thisChainSelector;
@@ -306,7 +306,7 @@ rule validateCcipSend_Success() {
 
 /// @notice Resolved CCIP gas limit returns the per-chain override when one is set.
 /// @dev Verifies override precedence over the default gas limit.
-rule getResolvedCcipGasLimit_ReturnsOverrideWhenSet() {
+rule CFG_004_getResolvedCcipGasLimit_ReturnsOverrideWhenSet() {
     uint64 chainSelector;
 
     /// @dev fallback condition NOT being verified
@@ -317,7 +317,7 @@ rule getResolvedCcipGasLimit_ReturnsOverrideWhenSet() {
 
 /// @notice Resolved CCIP gas limit returns the default gas limit when no override is set.
 /// @dev Verifies zero override values fall back to the default gas limit.
-rule getResolvedCcipGasLimit_ReturnsDefaultWhenOverrideUnset() {
+rule CFG_004_getResolvedCcipGasLimit_ReturnsDefaultWhenOverrideUnset() {
     uint64 chainSelector;
 
     /// @dev override condition NOT being verified
@@ -360,7 +360,7 @@ rule executeCcipSend_RevertWhen_BridgeAmountIsZero() {
 
 /// @notice Executing a CCIP send reverts when the destination chain selector is zero.
 /// @dev Verifies that no CCIPBridged event is emitted.
-rule executeCcipSend_RevertWhen_DestinationChainIsZero() {
+rule CFG_004_executeCcipSend_RevertWhen_DestinationChainIsZero() {
     env e;
     uint256 bridgeAmount;
     uint64 thisChainSelector;
@@ -397,7 +397,7 @@ rule executeCcipSend_RevertWhen_DestinationChainIsZero() {
 
 /// @notice Executing a CCIP send reverts when the destination is this chain.
 /// @dev Verifies that no CCIPBridged event is emitted.
-rule executeCcipSend_RevertWhen_DestinationIsSelfChain() {
+rule CFG_004_executeCcipSend_RevertWhen_DestinationIsSelfChain() {
     env e;
     uint256 bridgeAmount;
     uint64 thisChainSelector;
@@ -856,7 +856,7 @@ rule CCIP_002_validateReceivedTokenAndGetAmount_RevertWhen_TokenIsInvalid() {
 
 /// @notice Received-token validation reverts when the delivered asset amount is zero.
 /// @dev Verifies that validation does not modify harness storage.
-rule CCIP_003_validateReceivedTokenAndGetAmount_RevertWhen_AmountIsZero() {
+rule CCIP_002_validateReceivedTokenAndGetAmount_RevertWhen_AmountIsZero() {
     env e;
     Client.Any2EVMMessage message;
 
@@ -878,7 +878,7 @@ rule CCIP_003_validateReceivedTokenAndGetAmount_RevertWhen_AmountIsZero() {
 
 /// @notice Received-token validation returns the nonzero delivered asset amount.
 /// @dev Verifies the returned amount and that validation does not modify harness storage.
-rule validateReceivedTokenAndGetAmount_Success() {
+rule CCIP_002_validateReceivedTokenAndGetAmount_Success() {
     env e;
     Client.Any2EVMMessage message;
 

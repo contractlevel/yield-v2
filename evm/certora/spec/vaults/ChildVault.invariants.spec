@@ -13,6 +13,9 @@ methods {
     function getParentChainSelector() external returns (uint64) envfree;
     function getLastHandledEpochNonce() external returns (uint256) envfree;
     function getLastHandledRebalanceNonce() external returns (uint256) envfree;
+    function getRecoveryMode() external returns (Types.RecoveryMode) envfree;
+    function getCcipSendRecovery() external returns (Types.CcipSendRecovery) envfree;
+    function asset.balanceOf(address) external returns (uint256) envfree;
     function executeRecovery() external;
 
     /*//////////////////////////////////////////////////////////////
@@ -58,6 +61,18 @@ invariant validParentChainSelector()
         f -> f.selector != sig:upgradeToAndCall(address,bytes).selector && !isSelfCallBoundary(f)
     }
 
+/// @notice A pending CCIP send remains fully backed by liquid assets held by ChildVault
+/// @dev Verifies docs/security/INVARIANTS.md SOLV-004. Funds withdrawn from an adapter are held by
+///      ChildVault before the attempted send. If that send fails, the stored recovery amount cannot
+///      exceed the vault's asset balance and is not counted in the adapter. Successful recovery
+///      atomically clears the obligation as the funds leave the vault.
+invariant CCIP_006_REC_006_SOLV_004_ccipSendRecoveryIsFullyBacked()
+    getRecoveryMode() == Types.RecoveryMode.CCIP_SEND
+        => asset.balanceOf(currentContract) >= getCcipSendRecovery().amount
+    filtered {
+        f -> f.selector != sig:upgradeToAndCall(address,bytes).selector && !isSelfCallBoundary(f)
+    }
+
 /*//////////////////////////////////////////////////////////////
                         PARAMETRIC RULES
 //////////////////////////////////////////////////////////////*/
@@ -89,7 +104,7 @@ rule NONCE_002_rebalanceNonceNeverDecreases(method f) filtered {
 }
 
 /// @notice NONCE-004: changing either nonce domain leaves the other domain exactly unchanged.
-rule NONCE_004_changingOneNonceDomainPreservesTheOther(method f) filtered {
+rule NONCE_001_NONCE_004_changingOneNonceDomainPreservesTheOther(method f) filtered {
     f -> f.selector != sig:upgradeToAndCall(address,bytes).selector && !isSelfCallBoundary(f)
 } {
     uint256 epochNonceBefore = getLastHandledEpochNonce();
@@ -128,7 +143,7 @@ rule NONCE_004_onlyCommandIngressCanChangeNonce(method f) filtered {
 }
 
 /// @notice NONCE-006: retrying stored recovery never consumes a fresh command nonce.
-rule NONCE_006_executeRecoveryDoesNotAdvanceHandledNonces() {
+rule NONCE_005_NONCE_006_executeRecoveryDoesNotAdvanceHandledNonces() {
     uint256 epochNonceBefore = getLastHandledEpochNonce();
     uint256 rebalanceNonceBefore = getLastHandledRebalanceNonce();
 

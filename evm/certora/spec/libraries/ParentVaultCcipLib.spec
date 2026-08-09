@@ -163,7 +163,7 @@ hook LOG4(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2, bytes32 
 
 /// @notice ParentVault CCIP receive reverts when the transaction type is unsupported.
 /// @dev Verifies that unsupported valid enum values leave ParentVault storage unchanged.
-rule CCIP_004_receiveCcip_RevertWhen_TxTypeInvalid() {
+rule CCIP_003_receiveCcip_RevertWhen_TxTypeInvalid() {
     env e;
     bytes data;
     uint256 receivedAmount;
@@ -192,7 +192,7 @@ rule CCIP_004_receiveCcip_RevertWhen_TxTypeInvalid() {
 
 /// @notice Epoch net-withdraw handling reverts when the payload epoch nonce is not the most recently closed epoch.
 /// @dev Verifies that epoch settlement storage is unchanged.
-rule receiveCcip_EpochNetWithdraw_RevertWhen_EpochNonceInvalid() {
+rule CCIP_004_NONCE_012_receiveCcip_EpochNetWithdraw_RevertWhen_EpochNonceInvalid() {
     env e;
     uint256 epochNonce;
     uint256 receivedAmount;
@@ -227,7 +227,7 @@ rule receiveCcip_EpochNetWithdraw_RevertWhen_EpochNonceInvalid() {
 
 /// @notice Epoch net-withdraw handling reverts when the current epoch nonce is zero.
 /// @dev Verifies that the epoch nonce underflow path leaves ParentVault storage unchanged.
-rule receiveCcip_EpochNetWithdraw_RevertWhen_CurrentEpochNonceIsZero() {
+rule NONCE_012_receiveCcip_EpochNetWithdraw_RevertWhen_CurrentEpochNonceIsZero() {
     env e;
     uint256 epochNonce;
     uint256 receivedAmount;
@@ -263,7 +263,7 @@ rule receiveCcip_EpochNetWithdraw_RevertWhen_CurrentEpochNonceIsZero() {
 
 /// @notice Epoch net-withdraw handling reverts when the epoch payload cannot decode to a uint256.
 /// @dev Verifies that malformed payloads leave ParentVault storage unchanged.
-rule receiveCcip_EpochNetWithdraw_RevertWhen_DataIsMalformed() {
+rule CCIP_003_receiveCcip_EpochNetWithdraw_RevertWhen_DataIsMalformed() {
     env e;
     bytes data;
     uint256 receivedAmount;
@@ -290,7 +290,7 @@ rule receiveCcip_EpochNetWithdraw_RevertWhen_DataIsMalformed() {
 
 /// @notice Epoch net-withdraw handling reverts when the target epoch is not executing.
 /// @dev Verifies that epoch settlement storage is unchanged after rollback.
-rule receiveCcip_EpochNetWithdraw_RevertWhen_EpochNotExecuting() {
+rule CCIP_004_NONCE_012_receiveCcip_EpochNetWithdraw_RevertWhen_EpochNotExecuting() {
     env e;
     uint256 epochNonce;
     uint256 receivedAmount;
@@ -392,7 +392,7 @@ rule receiveCcip_EpochNetWithdraw_RevertWhen_SettledAmountOverflows() {
 
 /// @notice Epoch net-withdraw handling succeeds and emits EpochWithdrawAmountShort when received amount is below expected.
 /// @dev Verifies settled withdraw accounting, claimable status, and emitted event parameters.
-rule receiveCcip_EpochNetWithdraw_Success_WhenReceivedAmountIsShort() {
+rule CCIP_003_CCIP_004_NONCE_012_receiveCcip_EpochNetWithdraw_Success_WhenReceivedAmountIsShort() {
     env e;
     uint256 epochNonce;
     uint256 receivedAmount;
@@ -453,7 +453,7 @@ rule receiveCcip_EpochNetWithdraw_Success_WhenReceivedAmountIsShort() {
 
 /// @notice Epoch net-withdraw handling succeeds without a shortfall event when received amount covers expected.
 /// @dev Verifies settled withdraw accounting, claimable status, and EpochClaimable event parameters.
-rule receiveCcip_EpochNetWithdraw_Success_WhenReceivedAmountCoversExpected() {
+rule CCIP_003_CCIP_004_NONCE_012_receiveCcip_EpochNetWithdraw_Success_WhenReceivedAmountCoversExpected() {
     env e;
     uint256 epochNonce;
     uint256 receivedAmount;
@@ -513,7 +513,7 @@ rule receiveCcip_EpochNetWithdraw_Success_WhenReceivedAmountCoversExpected() {
 
 /// @notice Rebalance CCIP validation reverts when no rebalance is in progress.
 /// @dev Verifies that no ParentVault storage is modified.
-rule receiveCcip_Rebalance_RevertWhen_NoRebalanceInProgress() {
+rule CCIP_004_NONCE_013_receiveCcip_Rebalance_RevertWhen_NoRebalanceInProgress() {
     env e;
     uint256 receivedAmount;
 
@@ -541,7 +541,7 @@ rule receiveCcip_Rebalance_RevertWhen_NoRebalanceInProgress() {
 
 /// @notice Rebalance CCIP validation reverts when the rebalance payload cannot decode to nonce and protocol ID.
 /// @dev Verifies that malformed payloads leave ParentVault storage unchanged.
-rule receiveCcip_Rebalance_RevertWhen_DataIsMalformed() {
+rule CCIP_003_receiveCcip_Rebalance_RevertWhen_DataIsMalformed() {
     env e;
     bytes data;
     uint256 receivedAmount;
@@ -569,7 +569,7 @@ rule receiveCcip_Rebalance_RevertWhen_DataIsMalformed() {
 
 /// @notice Rebalance CCIP validation reverts when the payload rebalance nonce is invalid.
 /// @dev Verifies that no ParentVault storage is modified.
-rule receiveCcip_Rebalance_RevertWhen_RebalanceNonceInvalid() {
+rule CCIP_004_NONCE_013_receiveCcip_Rebalance_RevertWhen_RebalanceNonceInvalid() {
     env e;
     uint256 rebalanceNonce;
     bytes32 protocolId;
@@ -601,7 +601,7 @@ rule receiveCcip_Rebalance_RevertWhen_RebalanceNonceInvalid() {
 
 /// @notice Rebalance CCIP validation reverts when the payload protocol ID is not the pending strategy.
 /// @dev Verifies that no ParentVault storage is modified.
-rule receiveCcip_Rebalance_RevertWhen_PendingProtocolIdInvalid() {
+rule CCIP_004_NONCE_013_receiveCcip_Rebalance_RevertWhen_PendingProtocolIdInvalid() {
     env e;
     bytes32 protocolId;
     uint256 receivedAmount;
@@ -633,7 +633,7 @@ rule receiveCcip_Rebalance_RevertWhen_PendingProtocolIdInvalid() {
 
 /// @notice Rebalance CCIP validation returns the payload nonce and pending protocol ID when they match storage.
 /// @dev Verifies that no ParentVault storage is modified.
-rule receiveCcip_Rebalance_Success() {
+rule CCIP_003_CCIP_004_NONCE_013_receiveCcip_Rebalance_Success() {
     env e;
     uint256 receivedAmount;
 

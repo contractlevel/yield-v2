@@ -620,7 +620,7 @@ hook LOG4(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2, bytes32 
 ///      Funds cleared from the active adapter before a rebalance-away CCIP send remain counted via
 ///      s_ccipSendRecovery.amount if that send failed (0 if no such recovery is pending), so TVL is
 ///      not unconditionally zero here.
-rule getTVL_EqualsCcipSendRecovery_WhenNoActiveAdapter() {
+rule ADAPTER_003_ADAPTER_005_REBAL_008_REC_006_getTVL_EqualsCcipSendRecovery_WhenNoActiveAdapter() {
     /// @dev condition being verified
     require getActiveProtocolAdapter() == 0, "active adapter should not be set";
 
@@ -629,7 +629,7 @@ rule getTVL_EqualsCcipSendRecovery_WhenNoActiveAdapter() {
 
 /// @notice ChildVault TVL includes active adapter TVL and pending recovery amounts
 /// @dev Verifies the ChildVault _getTVL override through the public BaseVault.getTVL entry point.
-rule getTVL_IncludesAdapterTVLAndRecoveries() {
+rule ADAPTER_003_ADAPTER_005_REBAL_008_REC_006_getTVL_IncludesAdapterTVLAndRecoveries() {
     /// @dev condition being verified
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
 
@@ -656,7 +656,7 @@ rule getTVL_IncludesAdapterTVLAndRecoveries() {
 
 /// @notice ChildVault TVL reverts when adapter TVL plus pending recovery amounts overflows
 /// @dev Verifies the checked-arithmetic revert boundary in ChildVault._getTVL
-rule getTVL_RevertWhen_TotalOverflows() {
+rule REBAL_008_getTVL_RevertWhen_TotalOverflows() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -715,7 +715,7 @@ rule supportsInterface_ReturnsFalse_WhenInterfaceIsNotSupported() {
 
 /// @notice ChildVault initialization reverts when the contract has already been initialized
 /// @dev Verifies that repeated initialization leaves all vault state unchanged
-rule initialize_RevertWhen_AlreadyInitialized() {
+rule UPGRADE_002_initialize_RevertWhen_AlreadyInitialized() {
     env e;
     BaseVault.InitParams params;
 
@@ -771,7 +771,7 @@ rule initialize_RevertWhen_ReentrantCall() {
 ///      are already comprehensively verified in BaseVault.spec via the harness's initializeBaseVault
 ///      bypass wrapper; this rule only confirms initialize()'s own modifiers (nonReentrant,
 ///      initializer) don't block the real entry point from reaching __BaseVault_init and completing.
-rule initialize_Success() {
+rule NONCE_001_initialize_Success() {
     env e;
     BaseVault.InitParams params;
 
@@ -798,7 +798,7 @@ rule initialize_Success() {
 
 /// @notice CCIP receive reverts when the caller is not the configured CCIP router
 /// @dev Verifies that an unauthorized delivery attempt leaves all vault state unchanged
-rule ccipReceive_RevertWhen_CallerIsNotCCIPRouter() {
+rule CCIP_001_ccipReceive_RevertWhen_CallerIsNotCCIPRouter() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -876,7 +876,7 @@ rule ccipReceive_RevertWhen_ReentrantCall() {
 
 /// @notice CCIP receive reverts when the vault is paused
 /// @dev Verifies that a delivery attempt while paused leaves all vault state unchanged
-rule ccipReceive_RevertWhen_Paused() {
+rule PAUSE_004_ccipReceive_RevertWhen_Paused() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -915,7 +915,7 @@ rule ccipReceive_RevertWhen_Paused() {
 
 /// @notice CCIP receive reverts when the decoded sender is not the registered vault for the source chain
 /// @dev Verifies that an unauthorized cross-chain sender leaves all vault state unchanged
-rule ccipReceive_RevertWhen_SenderIsNotAllowed() {
+rule CCIP_001_ccipReceive_RevertWhen_SenderIsNotAllowed() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -953,7 +953,7 @@ rule ccipReceive_RevertWhen_SenderIsNotAllowed() {
 
 /// @notice CCIP receive reverts when a zero sender is supplied for an unregistered source chain
 /// @dev Verifies that an unset cross-chain vault cannot authorize the zero address
-rule ccipReceive_RevertWhen_SenderAndRegisteredVaultAreZero() {
+rule CCIP_001_ccipReceive_RevertWhen_SenderAndRegisteredVaultAreZero() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -993,7 +993,7 @@ rule ccipReceive_RevertWhen_SenderAndRegisteredVaultAreZero() {
 
 /// @notice CCIP receive reverts when the encoded sender is too short to decode as an address
 /// @dev Verifies that malformed sender data leaves all vault state unchanged
-rule ccipReceive_RevertWhen_SenderEncodingIsMalformed() {
+rule CCIP_001_ccipReceive_RevertWhen_SenderEncodingIsMalformed() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -1027,7 +1027,7 @@ rule ccipReceive_RevertWhen_SenderEncodingIsMalformed() {
 
 /// @notice CCIP receive reverts when any recovery operation is already pending
 /// @dev Verifies that a pending recovery cannot be overwritten by a new delivery
-rule ccipReceive_RevertWhen_RecoveryAlreadyPending() {
+rule NONCE_007_REC_003_ccipReceive_RevertWhen_RecoveryAlreadyPending() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -1066,7 +1066,7 @@ rule ccipReceive_RevertWhen_RecoveryAlreadyPending() {
 
 /// @notice CCIP receive reverts unless exactly one token amount is delivered
 /// @dev Verifies that an invalid token-amount array leaves all vault state unchanged
-rule ccipReceive_RevertWhen_TokenAmountsLengthIsInvalid() {
+rule CCIP_002_ccipReceive_RevertWhen_TokenAmountsLengthIsInvalid() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -1103,7 +1103,7 @@ rule ccipReceive_RevertWhen_TokenAmountsLengthIsInvalid() {
 
 /// @notice CCIP receive reverts when the delivered token is not the vault asset
 /// @dev Verifies that an invalid received token leaves all vault state unchanged
-rule ccipReceive_RevertWhen_ReceivedTokenIsInvalid() {
+rule CCIP_002_ccipReceive_RevertWhen_ReceivedTokenIsInvalid() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -1142,7 +1142,7 @@ rule ccipReceive_RevertWhen_ReceivedTokenIsInvalid() {
 
 /// @notice CCIP receive reverts when the delivered asset amount is zero
 /// @dev Verifies that a zero-value delivery leaves all vault state unchanged
-rule ccipReceive_RevertWhen_ReceivedAmountIsZero() {
+rule CCIP_002_ccipReceive_RevertWhen_ReceivedAmountIsZero() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -1181,7 +1181,7 @@ rule ccipReceive_RevertWhen_ReceivedAmountIsZero() {
 
 /// @notice CCIP receive reverts when the message data is too short to decode its transaction envelope
 /// @dev Verifies that malformed transaction data leaves all vault state unchanged
-rule ccipReceive_RevertWhen_TxDataEncodingIsMalformed() {
+rule CCIP_003_ccipReceive_RevertWhen_TxDataEncodingIsMalformed() {
     env e;
     Client.Any2EVMMessage message;
     uint256 singleValue;
@@ -1213,7 +1213,7 @@ rule ccipReceive_RevertWhen_TxDataEncodingIsMalformed() {
 
 /// @notice CCIP receive reverts when the encoded transaction type is outside the CcipTx enum
 /// @dev Verifies that an invalid enum discriminant leaves all vault state unchanged
-rule ccipReceive_RevertWhen_TxTypeEncodingIsOutOfRange() {
+rule CCIP_003_ccipReceive_RevertWhen_TxTypeEncodingIsOutOfRange() {
     env e;
     Client.Any2EVMMessage message;
     uint256 rawCcipTxType;
@@ -1252,7 +1252,7 @@ rule ccipReceive_RevertWhen_TxTypeEncodingIsOutOfRange() {
 
 /// @notice CCIP receive reverts when the transaction type is unsupported by ChildVault
 /// @dev Verifies that an unsupported transaction type leaves all vault state unchanged
-rule CCIP_004_ccipReceive_RevertWhen_TxTypeIsInvalid() {
+rule CCIP_003_ccipReceive_RevertWhen_TxTypeIsInvalid() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -1290,7 +1290,7 @@ rule CCIP_004_ccipReceive_RevertWhen_TxTypeIsInvalid() {
 
 /// @notice A received epoch deposit reverts when it did not originate from the parent chain.
 /// @dev Verifies the ChildVault-specific parent-source restriction after sender validation.
-rule ccipReceive_EPOCH_NET_DEPOSIT_RevertWhen_SourceChainIsNotParentChain() {
+rule CCIP_001_ccipReceive_EPOCH_NET_DEPOSIT_RevertWhen_SourceChainIsNotParentChain() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -1328,7 +1328,7 @@ rule ccipReceive_EPOCH_NET_DEPOSIT_RevertWhen_SourceChainIsNotParentChain() {
 }
 
 /// @notice A received epoch deposit reverts when its nonce was already handled.
-rule ccipReceive_EPOCH_NET_DEPOSIT_RevertWhen_EpochNonceIsNotNew() {
+rule CCIP_004_NONCE_003_NONCE_007_ccipReceive_EPOCH_NET_DEPOSIT_RevertWhen_EpochNonceIsNotNew() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -1364,7 +1364,7 @@ rule ccipReceive_EPOCH_NET_DEPOSIT_RevertWhen_EpochNonceIsNotNew() {
 
 /// @notice CCIP epoch deposit reverts when no active protocol adapter is configured
 /// @dev Verifies that a deposit without an active strategy leaves all vault state unchanged
-rule ccipReceive_EPOCH_NET_DEPOSIT_RevertWhen_NoActiveAdapter() {
+rule NONCE_005_ccipReceive_EPOCH_NET_DEPOSIT_RevertWhen_NoActiveAdapter() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -1403,7 +1403,7 @@ rule ccipReceive_EPOCH_NET_DEPOSIT_RevertWhen_NoActiveAdapter() {
 /// @notice CCIP epoch deposit reverts when its payload is too short to decode the epoch nonce
 /// @dev Verifies that malformed epoch data leaves all vault state unchanged. A competing nonce
 ///      condition cannot be imposed because the targeted payload intentionally has no decodable nonce.
-rule ccipReceive_EPOCH_NET_DEPOSIT_RevertWhen_PayloadEncodingIsMalformed() {
+rule CCIP_003_ccipReceive_EPOCH_NET_DEPOSIT_RevertWhen_PayloadEncodingIsMalformed() {
     env e;
     Client.Any2EVMMessage message;
     bytes data;
@@ -1436,7 +1436,7 @@ rule ccipReceive_EPOCH_NET_DEPOSIT_RevertWhen_PayloadEncodingIsMalformed() {
 
 /// @notice A successful CCIP epoch deposit transfers the delivered asset into the active adapter
 /// @dev Verifies exact balances, adapter TVL, unchanged recovery state, storage writes, and events
-rule ccipReceive_EPOCH_NET_DEPOSIT_Success() {
+rule CCIP_003_CCIP_004_NONCE_003_NONCE_004_ccipReceive_EPOCH_NET_DEPOSIT_Success() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -1519,7 +1519,7 @@ rule ccipReceive_EPOCH_NET_DEPOSIT_Success() {
 
 /// @notice A failed CCIP epoch deposit stores recovery for the delivered asset
 /// @dev Verifies unchanged balances and TVL, exact recovery state, storage writes, and failure events
-rule ccipReceive_EPOCH_NET_DEPOSIT_FailedDepositStoresRecovery() {
+rule NONCE_005_NONCE_006_REC_002_REC_009_ccipReceive_EPOCH_NET_DEPOSIT_FailedDepositStoresRecovery() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -1602,7 +1602,7 @@ rule ccipReceive_EPOCH_NET_DEPOSIT_FailedDepositStoresRecovery() {
 }
 
 /// @notice A received rebalance reverts when its nonce was already handled.
-rule ccipReceive_REBALANCE_RevertWhen_RebalanceNonceIsNotNew() {
+rule CCIP_004_NONCE_003_NONCE_007_ccipReceive_REBALANCE_RevertWhen_RebalanceNonceIsNotNew() {
     env e;
     Client.Any2EVMMessage message;
     uint256 rebalanceNonce;
@@ -1639,7 +1639,7 @@ rule ccipReceive_REBALANCE_RevertWhen_RebalanceNonceIsNotNew() {
 
 /// @notice CCIP rebalance reverts when the target protocol adapter is not registered
 /// @dev Verifies that an unknown target protocol leaves all vault state unchanged
-rule ccipReceive_REBALANCE_RevertWhen_AdapterNotRegistered() {
+rule ADAPTER_002_NONCE_005_ccipReceive_REBALANCE_RevertWhen_AdapterNotRegistered() {
     env e;
     Client.Any2EVMMessage message;
     uint256 rebalanceNonce;
@@ -1677,7 +1677,7 @@ rule ccipReceive_REBALANCE_RevertWhen_AdapterNotRegistered() {
 /// @notice CCIP rebalance reverts when its payload is too short to decode the nonce and protocol ID
 /// @dev Verifies that malformed rebalance data leaves all vault state unchanged. Competing nonce and
 ///      protocol conditions cannot be imposed because the targeted payload intentionally cannot decode them.
-rule ccipReceive_REBALANCE_RevertWhen_PayloadEncodingIsMalformed() {
+rule CCIP_003_ccipReceive_REBALANCE_RevertWhen_PayloadEncodingIsMalformed() {
     env e;
     Client.Any2EVMMessage message;
     bytes data;
@@ -1710,7 +1710,7 @@ rule ccipReceive_REBALANCE_RevertWhen_PayloadEncodingIsMalformed() {
 
 /// @notice CCIP rebalance reverts when the registered adapter is bound to another vault
 /// @dev Verifies that an invalid target adapter leaves all vault state unchanged
-rule ccipReceive_REBALANCE_RevertWhen_AdapterVaultIsInvalid() {
+rule ADAPTER_002_NONCE_005_ccipReceive_REBALANCE_RevertWhen_AdapterVaultIsInvalid() {
     env e;
     Client.Any2EVMMessage message;
     uint256 rebalanceNonce;
@@ -1748,7 +1748,7 @@ rule ccipReceive_REBALANCE_RevertWhen_AdapterVaultIsInvalid() {
 
 /// @notice A successful CCIP rebalance selects the target adapter and deposits the delivered asset
 /// @dev Verifies exact balances, adapter TVL, unchanged recovery state, storage writes, and events
-rule ccipReceive_REBALANCE_Success() {
+rule CCIP_003_CCIP_004_NONCE_003_NONCE_004_ccipReceive_REBALANCE_Success() {
     env e;
     Client.Any2EVMMessage message;
     uint256 rebalanceNonce;
@@ -1835,7 +1835,7 @@ rule ccipReceive_REBALANCE_Success() {
 
 /// @notice A failed CCIP rebalance deposit selects the target adapter and stores recovery
 /// @dev Verifies unchanged balances and TVL, exact recovery state, storage writes, and failure events
-rule ccipReceive_REBALANCE_FailedDepositStoresRecovery() {
+rule NONCE_005_NONCE_006_REC_002_REC_009_ccipReceive_REBALANCE_FailedDepositStoresRecovery() {
     env e;
     Client.Any2EVMMessage message;
     uint256 rebalanceNonce;
@@ -2225,7 +2225,7 @@ rule tryCcipSend_Success() {
 /// ──────────────────────── EXECUTE RECOVERY ──────────────────────
 
 /// @notice executeRecovery reverts while the vault is paused.
-rule executeRecovery_RevertWhen_Paused() {
+rule PAUSE_004_REC_008_executeRecovery_RevertWhen_Paused() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -2268,7 +2268,7 @@ rule executeRecovery_RevertWhen_ReentrantCall() {
 
 /// @notice executeRecovery reverts when no recovery is pending
 /// @dev Verifies that storage remains unchanged
-rule executeRecovery_NONE_RevertWhen_NoRecoveryPending() {
+rule REC_008_executeRecovery_NONE_RevertWhen_NoRecoveryPending() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -2289,7 +2289,7 @@ rule executeRecovery_NONE_RevertWhen_NoRecoveryPending() {
 
 /// @notice Epoch deposit recovery via executeRecovery reverts when no active adapter is set
 /// @dev Verifies that recovery state, balances, TVL, and events remain unchanged
-rule executeRecovery_EPOCH_DEPOSIT_RevertWhen_NoActiveAdapter() {
+rule REC_005_REC_009_executeRecovery_EPOCH_DEPOSIT_RevertWhen_NoActiveAdapter() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -2313,7 +2313,7 @@ rule executeRecovery_EPOCH_DEPOSIT_RevertWhen_NoActiveAdapter() {
 
 /// @notice Epoch deposit recovery via executeRecovery reverts when the adapter deposit fails
 /// @dev Verifies atomic rollback of recovery state, balances, TVL, and events
-rule executeRecovery_EPOCH_DEPOSIT_RevertWhen_DepositFails() {
+rule REC_005_executeRecovery_EPOCH_DEPOSIT_RevertWhen_DepositFails() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -2337,7 +2337,7 @@ rule executeRecovery_EPOCH_DEPOSIT_RevertWhen_DepositFails() {
 
 /// @notice Epoch deposit recovery via executeRecovery deposits the stored amount and clears recovery
 /// @dev Verifies balances, TVL, recovery deletion, storage writes, and events
-rule executeRecovery_EPOCH_DEPOSIT_Success() {
+rule REC_001_REC_004_REC_007_REC_008_executeRecovery_EPOCH_DEPOSIT_Success() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -2393,7 +2393,7 @@ rule executeRecovery_EPOCH_DEPOSIT_Success() {
 
 /// @notice Rebalance deposit recovery via executeRecovery reverts when no active adapter is set
 /// @dev Verifies that recovery state, balances, TVL, and events remain unchanged
-rule executeRecovery_REBALANCE_DEPOSIT_RevertWhen_NoActiveAdapter() {
+rule REC_005_REC_009_executeRecovery_REBALANCE_DEPOSIT_RevertWhen_NoActiveAdapter() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -2427,7 +2427,7 @@ rule executeRecovery_REBALANCE_DEPOSIT_RevertWhen_NoActiveAdapter() {
 
 /// @notice Rebalance deposit recovery via executeRecovery reverts when the adapter deposit fails
 /// @dev Verifies atomic rollback of recovery state, balances, TVL, and events
-rule executeRecovery_REBALANCE_DEPOSIT_RevertWhen_DepositFails() {
+rule REC_005_executeRecovery_REBALANCE_DEPOSIT_RevertWhen_DepositFails() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -2461,7 +2461,7 @@ rule executeRecovery_REBALANCE_DEPOSIT_RevertWhen_DepositFails() {
 
 /// @notice Rebalance deposit recovery via executeRecovery deposits the stored amount and clears recovery
 /// @dev Verifies balances, TVL, recovery deletion, storage writes, and events
-rule executeRecovery_REBALANCE_DEPOSIT_Success() {
+rule REC_001_REC_004_REC_007_REC_008_executeRecovery_REBALANCE_DEPOSIT_Success() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -2521,7 +2521,7 @@ rule executeRecovery_REBALANCE_DEPOSIT_Success() {
 
 /// @notice ChildVault CCIP send reverts when any recovery operation is already pending
 /// @dev Verifies that a pending recovery cannot be overwritten by a new send
-rule REC_006_ccipSend_RevertWhen_RecoveryAlreadyPending() {
+rule REC_003_ccipSend_RevertWhen_RecoveryAlreadyPending() {
     env e;
     uint256 bridgeAmount;
     uint64 destinationChainSelector;
@@ -2672,7 +2672,7 @@ rule ccipSend_RevertWhen_DestinationVaultNotRegistered() {
 
 /// @notice A successful ChildVault CCIP send bridges the asset without storing recovery
 /// @dev Verifies exact LINK and asset balances, unchanged recovery state, events
-rule ccipSend_Success() {
+rule CCIP_008_ccipSend_Success() {
     env e;
     uint256 bridgeAmount;
     uint64 destinationChainSelector;
@@ -2726,7 +2726,7 @@ rule ccipSend_Success() {
 
 /// @notice ChildVault stores CCIP send recovery when the router fee lookup fails
 /// @dev Verifies unchanged token balances, exact recovery state, events
-rule ccipSend_When_RouterGetFeeReverts_StoresRecovery() {
+rule CCIP_005_REC_002_REC_009_ccipSend_When_RouterGetFeeReverts_StoresRecovery() {
     env e;
     uint256 bridgeAmount;
     uint64 destinationChainSelector;
@@ -2795,7 +2795,7 @@ rule ccipSend_When_RouterGetFeeReverts_StoresRecovery() {
 
 /// @notice ChildVault stores CCIP send recovery when the router send fails
 /// @dev Verifies atomic token rollback, exact recovery state, events
-rule ccipSend_When_RouterCcipSendReverts_StoresRecovery() {
+rule CCIP_005_REC_002_REC_009_ccipSend_When_RouterCcipSendReverts_StoresRecovery() {
     env e;
     uint256 bridgeAmount;
     uint64 destinationChainSelector;
@@ -2865,7 +2865,7 @@ rule ccipSend_When_RouterCcipSendReverts_StoresRecovery() {
 /// ─────────────────── EXECUTE EPOCH WITHDRAW ──────────────────
 
 /// @notice Epoch withdraw reverts while the vault is paused.
-rule executeEpochWithdraw_RevertWhen_Paused() {
+rule PAUSE_004_executeEpochWithdraw_RevertWhen_Paused() {
     env e;
     uint256 epochNonce;
     require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
@@ -2896,7 +2896,7 @@ rule executeEpochWithdraw_RevertWhen_Paused() {
 }
 
 /// @notice Epoch withdraw reverts when its nonce was already handled.
-rule executeEpochWithdraw_RevertWhen_EpochNonceIsNotNew() {
+rule NONCE_003_NONCE_007_executeEpochWithdraw_RevertWhen_EpochNonceIsNotNew() {
     env e;
     uint256 epochNonce;
     uint256 amount;
@@ -3001,7 +3001,7 @@ rule executeEpochWithdraw_RevertWhen_ReentrantCall() {
 
 /// @notice Epoch withdraw reverts when any recovery operation is already pending
 /// @dev Verifies that a pending recovery cannot be overwritten
-rule executeEpochWithdraw_RevertWhen_RecoveryAlreadyPending() {
+rule NONCE_007_REC_003_executeEpochWithdraw_RevertWhen_RecoveryAlreadyPending() {
     env e;
     uint256 epochNonce;
     require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
@@ -3072,7 +3072,7 @@ rule executeEpochWithdraw_RevertWhen_AmountIsZero() {
 
 /// @notice Epoch withdraw reverts when no active protocol adapter is configured
 /// @dev Verifies that a missing strategy leaves all vault state unchanged
-rule executeEpochWithdraw_RevertWhen_NoActiveAdapter() {
+rule NONCE_005_executeEpochWithdraw_RevertWhen_NoActiveAdapter() {
     env e;
     uint256 epochNonce;
     require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
@@ -3185,7 +3185,7 @@ rule executeEpochWithdraw_RevertWhen_ParentVaultNotRegistered() {
 
 /// @notice A failed epoch withdraw stores recovery for the requested amount
 /// @dev Verifies unchanged balances and TVL, exact recovery state, failure events
-rule executeEpochWithdraw_When_WithdrawFails_StoresRecovery() {
+rule NONCE_005_NONCE_006_REC_002_REC_009_executeEpochWithdraw_When_WithdrawFails_StoresRecovery() {
     env e;
     uint256 epochNonce;
     require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
@@ -3253,7 +3253,7 @@ rule executeEpochWithdraw_When_WithdrawFails_StoresRecovery() {
 
 /// @notice A successful epoch withdraw bridges the actual withdrawn asset to the parent chain
 /// @dev Verifies exact balances, adapter TVL, events, and absence of recovery state
-rule executeEpochWithdraw_Success() {
+rule CCIP_008_NONCE_003_NONCE_004_executeEpochWithdraw_Success() {
     env e;
     uint256 epochNonce;
     require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
@@ -3327,7 +3327,7 @@ rule executeEpochWithdraw_Success() {
 
 /// @notice Epoch withdraw stores CCIP recovery when the router fee lookup fails after withdrawal
 /// @dev Verifies that the withdrawal remains committed and the withdrawn asset stays in the vault
-rule executeEpochWithdraw_When_RouterGetFeeReverts_StoresCcipSendRecovery() {
+rule CCIP_005_NONCE_005_NONCE_006_REC_002_REC_009_executeEpochWithdraw_When_RouterGetFeeReverts_StoresCcipSendRecovery() {
     env e;
     uint256 epochNonce;
     require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
@@ -3417,7 +3417,7 @@ rule executeEpochWithdraw_When_RouterGetFeeReverts_StoresCcipSendRecovery() {
 
 /// @notice Epoch withdraw stores CCIP recovery when the router send fails after withdrawal
 /// @dev Verifies atomic send rollback while preserving the completed strategy withdrawal
-rule executeEpochWithdraw_When_RouterCcipSendReverts_StoresCcipSendRecovery() {
+rule CCIP_005_NONCE_005_NONCE_006_REC_002_REC_009_executeEpochWithdraw_When_RouterCcipSendReverts_StoresCcipSendRecovery() {
     env e;
     uint256 epochNonce;
     require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
@@ -3550,7 +3550,7 @@ rule executeRecovery_REBALANCE_WITHDRAW_RevertWhen_ReentrantCall() {
 
 /// @notice Rebalance withdraw recovery via executeRecovery reverts when no active adapter is set
 /// @dev Verifies that recovery state, balances, TVL, and events remain unchanged
-rule executeRecovery_REBALANCE_WITHDRAW_RevertWhen_NoActiveAdapter() {
+rule REC_005_REC_009_executeRecovery_REBALANCE_WITHDRAW_RevertWhen_NoActiveAdapter() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -3595,7 +3595,7 @@ rule executeRecovery_REBALANCE_WITHDRAW_RevertWhen_NoActiveAdapter() {
 
 /// @notice Rebalance withdraw recovery via executeRecovery reverts when the adapter withdraw fails
 /// @dev Verifies atomic rollback of recovery state, balances, TVL, and events
-rule executeRecovery_REBALANCE_WITHDRAW_RevertWhen_WithdrawFails() {
+rule REC_005_executeRecovery_REBALANCE_WITHDRAW_RevertWhen_WithdrawFails() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -3677,7 +3677,7 @@ rule executeRecovery_REBALANCE_WITHDRAW_RevertWhen_AmountRebalancedIsZero() {
 
 /// @notice Local rebalance withdraw recovery via executeRecovery reverts when the target protocol adapter is not registered
 /// @dev Verifies atomic rollback of the completed source withdrawal and recovery clear
-rule executeRecovery_REBALANCE_WITHDRAW_Local_RevertWhen_TargetAdapterNotRegistered() {
+rule ADAPTER_002_executeRecovery_REBALANCE_WITHDRAW_Local_RevertWhen_TargetAdapterNotRegistered() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -3711,7 +3711,7 @@ rule executeRecovery_REBALANCE_WITHDRAW_Local_RevertWhen_TargetAdapterNotRegiste
 
 /// @notice Local rebalance withdraw recovery via executeRecovery reverts when the target adapter is bound to another vault
 /// @dev Verifies atomic rollback of the completed source withdrawal and recovery clear
-rule executeRecovery_REBALANCE_WITHDRAW_Local_RevertWhen_TargetAdapterVaultIsInvalid() {
+rule ADAPTER_002_executeRecovery_REBALANCE_WITHDRAW_Local_RevertWhen_TargetAdapterVaultIsInvalid() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -3747,7 +3747,7 @@ rule executeRecovery_REBALANCE_WITHDRAW_Local_RevertWhen_TargetAdapterVaultIsInv
 
 /// @notice Local rebalance withdraw recovery via executeRecovery withdraws and redeposits into the recovered target adapter
 /// @dev Verifies exact balances, recovery deletion, active adapter update, and events
-rule executeRecovery_REBALANCE_WITHDRAW_Local_Success() {
+rule REC_001_REC_004_REC_007_REC_008_executeRecovery_REBALANCE_WITHDRAW_Local_Success() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -3824,7 +3824,7 @@ rule executeRecovery_REBALANCE_WITHDRAW_Local_Success() {
 
 /// @notice Local rebalance withdraw recovery via executeRecovery stores rebalance deposit recovery when target deposit fails
 /// @dev Verifies the old withdraw recovery is cleared before the new deposit recovery is stored
-rule executeRecovery_REBALANCE_WITHDRAW_Local_When_DepositFails_StoresRecovery() {
+rule REC_001_REC_002_REC_004_REC_009_executeRecovery_REBALANCE_WITHDRAW_Local_When_DepositFails_StoresRecovery() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -3995,7 +3995,7 @@ rule executeRecovery_REBALANCE_WITHDRAW_Remote_RevertWhen_TargetVaultNotRegister
 
 /// @notice Remote rebalance withdraw recovery via executeRecovery bridges the recovered TVL to the target chain
 /// @dev Verifies exact balances, recovery deletion, active adapter clearing, and events
-rule executeRecovery_REBALANCE_WITHDRAW_Remote_Success() {
+rule CCIP_008_REC_001_REC_004_REC_007_REC_008_executeRecovery_REBALANCE_WITHDRAW_Remote_Success() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -4080,7 +4080,7 @@ rule executeRecovery_REBALANCE_WITHDRAW_Remote_Success() {
 
 /// @notice Remote rebalance withdraw recovery via executeRecovery stores CCIP recovery when the router fee lookup fails
 /// @dev Verifies that withdrawal and active adapter clearing remain committed
-rule executeRecovery_REBALANCE_WITHDRAW_Remote_When_RouterGetFeeReverts_StoresCcipSendRecovery() {
+rule CCIP_005_REC_001_REC_002_REC_004_REC_009_executeRecovery_REBALANCE_WITHDRAW_Remote_When_RouterGetFeeReverts_StoresCcipSendRecovery() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -4179,7 +4179,7 @@ rule executeRecovery_REBALANCE_WITHDRAW_Remote_When_RouterGetFeeReverts_StoresCc
 
 /// @notice Remote rebalance withdraw recovery via executeRecovery stores CCIP recovery when the router send fails
 /// @dev Verifies atomic send rollback while preserving withdrawal and active adapter clearing
-rule executeRecovery_REBALANCE_WITHDRAW_Remote_When_RouterCcipSendReverts_StoresCcipSendRecovery() {
+rule CCIP_005_REC_001_REC_002_REC_004_REC_009_executeRecovery_REBALANCE_WITHDRAW_Remote_When_RouterCcipSendReverts_StoresCcipSendRecovery() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -4279,7 +4279,7 @@ rule executeRecovery_REBALANCE_WITHDRAW_Remote_When_RouterCcipSendReverts_Stores
 /// ─────────────────── EXECUTE REBALANCE ───────────────────────
 
 /// @notice Rebalance execution reverts while the vault is paused.
-rule executeRebalance_RevertWhen_Paused() {
+rule PAUSE_004_executeRebalance_RevertWhen_Paused() {
     env e;
     uint256 rebalanceNonce;
     require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
@@ -4310,7 +4310,7 @@ rule executeRebalance_RevertWhen_Paused() {
 }
 
 /// @notice Rebalance execution reverts when its nonce was already handled.
-rule executeRebalance_RevertWhen_RebalanceNonceIsNotNew() {
+rule NONCE_003_NONCE_007_executeRebalance_RevertWhen_RebalanceNonceIsNotNew() {
     env e;
     uint256 rebalanceNonce;
     Types.Strategy newStrategy;
@@ -4403,7 +4403,7 @@ rule executeRebalance_RevertWhen_ReentrantCall() {
 
 /// @notice Rebalance execution reverts when any recovery operation is already pending
 /// @dev Verifies that an existing recovery cannot be overwritten
-rule executeRebalance_RevertWhen_RecoveryAlreadyPending() {
+rule NONCE_007_REC_003_executeRebalance_RevertWhen_RecoveryAlreadyPending() {
     env e;
     uint256 rebalanceNonce;
     require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
@@ -4435,7 +4435,7 @@ rule executeRebalance_RevertWhen_RecoveryAlreadyPending() {
 
 /// @notice Rebalance execution reverts when no active protocol adapter is configured
 /// @dev Verifies that a missing source strategy leaves all vault state unchanged
-rule executeRebalance_RevertWhen_NoActiveAdapter() {
+rule NONCE_005_executeRebalance_RevertWhen_NoActiveAdapter() {
     env e;
     uint256 rebalanceNonce;
     require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
@@ -4525,7 +4525,7 @@ rule executeRebalance_When_WithdrawFails_RevertWhen_TargetChainSelectorIsZero() 
 
 /// @notice A failed source withdrawal stores recovery for the target strategy
 /// @dev Verifies exact recovery state, failure events
-rule executeRebalance_When_WithdrawFails_StoresRecovery() {
+rule NONCE_005_NONCE_006_REC_002_REC_009_executeRebalance_When_WithdrawFails_StoresRecovery() {
     env e;
     uint256 rebalanceNonce;
     require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
@@ -4590,7 +4590,7 @@ rule executeRebalance_When_WithdrawFails_StoresRecovery() {
 
 /// @notice A local rebalance reverts when the target protocol adapter is not registered
 /// @dev Verifies atomic rollback of the completed source withdrawal
-rule executeRebalance_Local_RevertWhen_TargetAdapterNotRegistered() {
+rule ADAPTER_002_executeRebalance_Local_RevertWhen_TargetAdapterNotRegistered() {
     env e;
     uint256 rebalanceNonce;
     require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
@@ -4627,7 +4627,7 @@ rule executeRebalance_Local_RevertWhen_TargetAdapterNotRegistered() {
 
 /// @notice A local rebalance reverts when the target adapter is bound to another vault
 /// @dev Verifies atomic rollback of the completed source withdrawal
-rule executeRebalance_Local_RevertWhen_TargetAdapterVaultIsInvalid() {
+rule ADAPTER_002_executeRebalance_Local_RevertWhen_TargetAdapterVaultIsInvalid() {
     env e;
     uint256 rebalanceNonce;
     require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
@@ -4666,7 +4666,7 @@ rule executeRebalance_Local_RevertWhen_TargetAdapterVaultIsInvalid() {
 
 /// @notice A successful local rebalance withdraws and redeposits the full source TVL
 /// @dev Verifies exact balances, adapter state, recovery state, events
-rule executeRebalance_Local_Success() {
+rule NONCE_003_NONCE_004_executeRebalance_Local_Success() {
     env e;
     uint256 rebalanceNonce;
     require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
@@ -4730,7 +4730,7 @@ rule executeRebalance_Local_Success() {
 
 /// @notice A failed local target deposit stores rebalance deposit recovery
 /// @dev Verifies that the withdrawn asset remains in the vault with exact recovery state and events
-rule executeRebalance_Local_When_DepositFails_StoresRecovery() {
+rule NONCE_005_NONCE_006_REC_002_REC_009_executeRebalance_Local_When_DepositFails_StoresRecovery() {
     env e;
     uint256 rebalanceNonce;
     require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
@@ -4876,7 +4876,7 @@ rule executeRebalance_Remote_RevertWhen_TargetVaultNotRegistered() {
 
 /// @notice A successful remote rebalance bridges the full source TVL to the target child
 /// @dev Verifies exact balances, active adapter clearing, recovery state, and events
-rule executeRebalance_Remote_Success() {
+rule CCIP_008_NONCE_003_NONCE_004_executeRebalance_Remote_Success() {
     env e;
     uint256 rebalanceNonce;
     require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
@@ -4948,7 +4948,7 @@ rule executeRebalance_Remote_Success() {
 
 /// @notice A remote rebalance stores CCIP recovery when the router fee lookup fails
 /// @dev Verifies that withdrawal and active adapter clearing remain committed
-rule executeRebalance_Remote_When_RouterGetFeeReverts_StoresCcipSendRecovery() {
+rule CCIP_005_NONCE_005_NONCE_006_REC_002_REC_009_executeRebalance_Remote_When_RouterGetFeeReverts_StoresCcipSendRecovery() {
     env e;
     uint256 rebalanceNonce;
     require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
@@ -5036,7 +5036,7 @@ rule executeRebalance_Remote_When_RouterGetFeeReverts_StoresCcipSendRecovery() {
 
 /// @notice A remote rebalance stores CCIP recovery when the router send fails
 /// @dev Verifies atomic send rollback while preserving withdrawal and active adapter clearing
-rule executeRebalance_Remote_When_RouterCcipSendReverts_StoresCcipSendRecovery() {
+rule CCIP_005_NONCE_005_NONCE_006_REC_002_REC_009_executeRebalance_Remote_When_RouterCcipSendReverts_StoresCcipSendRecovery() {
     env e;
     uint256 rebalanceNonce;
     require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
@@ -5164,7 +5164,7 @@ rule executeRecovery_EPOCH_WITHDRAW_RevertWhen_ReentrantCall() {
 
 /// @notice Epoch withdraw recovery via executeRecovery reverts when no active adapter is set
 /// @dev Verifies that recovery state, balances, TVL, and events remain unchanged
-rule executeRecovery_EPOCH_WITHDRAW_RevertWhen_NoActiveAdapter() {
+rule REC_005_REC_009_executeRecovery_EPOCH_WITHDRAW_RevertWhen_NoActiveAdapter() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -5201,7 +5201,7 @@ rule executeRecovery_EPOCH_WITHDRAW_RevertWhen_NoActiveAdapter() {
 
 /// @notice Epoch withdraw recovery via executeRecovery reverts when the adapter withdraw fails
 /// @dev Verifies atomic rollback of recovery state, balances, TVL, and events
-rule executeRecovery_EPOCH_WITHDRAW_RevertWhen_WithdrawFails() {
+rule REC_005_executeRecovery_EPOCH_WITHDRAW_RevertWhen_WithdrawFails() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -5349,7 +5349,7 @@ rule executeRecovery_EPOCH_WITHDRAW_RevertWhen_ParentVaultNotRegistered() {
 
 /// @notice Epoch withdraw recovery via executeRecovery withdraws the stored amount, clears recovery, and bridges to the parent
 /// @dev Verifies balances, TVL, recovery deletion, storage writes, and events
-rule executeRecovery_EPOCH_WITHDRAW_Success() {
+rule CCIP_008_REC_001_REC_004_REC_007_REC_008_executeRecovery_EPOCH_WITHDRAW_Success() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -5423,7 +5423,7 @@ rule executeRecovery_EPOCH_WITHDRAW_Success() {
 
 /// @notice Epoch withdraw recovery via executeRecovery stores CCIP recovery when the router fee lookup fails after withdrawal
 /// @dev Verifies that epoch withdraw recovery is cleared and the withdrawn asset stays in the vault
-rule executeRecovery_EPOCH_WITHDRAW_When_RouterGetFeeReverts_StoresCcipSendRecovery() {
+rule CCIP_005_REC_001_REC_002_REC_004_REC_009_executeRecovery_EPOCH_WITHDRAW_When_RouterGetFeeReverts_StoresCcipSendRecovery() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -5518,7 +5518,7 @@ rule executeRecovery_EPOCH_WITHDRAW_When_RouterGetFeeReverts_StoresCcipSendRecov
 
 /// @notice Epoch withdraw recovery via executeRecovery stores CCIP recovery when the router send fails after withdrawal
 /// @dev Verifies atomic send rollback while preserving the completed recovery withdrawal
-rule executeRecovery_EPOCH_WITHDRAW_When_RouterCcipSendReverts_StoresCcipSendRecovery() {
+rule CCIP_005_REC_001_REC_002_REC_004_REC_009_executeRecovery_EPOCH_WITHDRAW_When_RouterCcipSendReverts_StoresCcipSendRecovery() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -5615,7 +5615,7 @@ rule executeRecovery_EPOCH_WITHDRAW_When_RouterCcipSendReverts_StoresCcipSendRec
 
 /// @notice Epoch-withdraw CCIP send recovery via executeRecovery clears recovery and bridges to the parent
 /// @dev Verifies balances, recovery deletion, events, and the encoded retry payload
-rule executeRecovery_CCIP_SEND_EPOCH_NET_WITHDRAW_Success() {
+rule CCIP_007_CCIP_008_REC_001_REC_004_REC_007_REC_008_executeRecovery_CCIP_SEND_EPOCH_NET_WITHDRAW_Success() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -5700,7 +5700,7 @@ rule executeRecovery_CCIP_SEND_EPOCH_NET_WITHDRAW_Success() {
 
 /// @notice Rebalance CCIP send recovery via executeRecovery clears recovery and bridges to the target chain
 /// @dev Verifies balances, recovery deletion, events, and the encoded rebalance retry payload
-rule executeRecovery_CCIP_SEND_REBALANCE_Success() {
+rule CCIP_007_CCIP_008_REC_001_REC_004_REC_007_REC_008_executeRecovery_CCIP_SEND_REBALANCE_Success() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -5784,7 +5784,7 @@ rule executeRecovery_CCIP_SEND_REBALANCE_Success() {
 
 /// @notice CCIP send recovery via executeRecovery reverts and preserves recovery when router fee lookup fails
 /// @dev Verifies atomic rollback after the recovery clear attempt
-rule executeRecovery_CCIP_SEND_RevertWhen_RouterGetFeeReverts() {
+rule CCIP_007_REC_005_executeRecovery_CCIP_SEND_RevertWhen_RouterGetFeeReverts() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -5816,7 +5816,7 @@ rule executeRecovery_CCIP_SEND_RevertWhen_RouterGetFeeReverts() {
 
 /// @notice CCIP send recovery via executeRecovery reverts and preserves recovery when router send fails
 /// @dev Verifies atomic rollback after the recovery clear attempt and fee approval
-rule executeRecovery_CCIP_SEND_RevertWhen_RouterCcipSendReverts() {
+rule CCIP_007_REC_005_executeRecovery_CCIP_SEND_RevertWhen_RouterCcipSendReverts() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -6008,7 +6008,7 @@ rule executeRecovery_CCIP_SEND_RevertWhen_DestinationVaultNotRegistered() {
 /// @notice CCIP send recovery clear deletes recovery state and emits CcipSendRecoveryCleared
 /// @dev Verifies the internal clear boundary used by executeRecovery (CCIP_SEND mode) before BaseVaultCcipLib._send.
 ///      CCIP send validation, router calls, token movement, and CCIPBridged are verified in BaseVaultCcipLib.spec.
-rule clearCcipSendRecovery_Success() {
+rule CCIP_007_clearCcipSendRecovery_Success() {
     env e;
 
     /// @dev revert conditions NOT being verified

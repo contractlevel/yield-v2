@@ -72,4 +72,8 @@ contract YieldcoinShareHarness is YieldcoinShare, HelperHarness {
     function callInheritedInitialize(address policyEngine) external {
         this.initialize("Invalid", "INVALID", 1, policyEngine);
     }
+
+    function authorizeUpgrade(address newImplementation) external {
+        _authorizeUpgrade(newImplementation);
+    }
 }

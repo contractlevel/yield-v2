@@ -187,7 +187,7 @@ rule REBAL_002_initiateRebalance_RevertWhen_RebalanceInProgress() {
 
 /// @notice Initiating a rebalance reverts when the cooldown timestamp addition overflows.
 /// @dev Verifies the checked addition used by the cooldown guard.
-rule initiateRebalance_RevertWhen_CooldownTimestampOverflows() {
+rule REBAL_002_initiateRebalance_RevertWhen_CooldownTimestampOverflows() {
     env e;
     bytes32 protocolId;
     uint64 chainSelector;
@@ -219,7 +219,7 @@ rule initiateRebalance_RevertWhen_CooldownTimestampOverflows() {
 
 /// @notice Initiating a rebalance reverts before the one-hour cooldown has elapsed.
 /// @dev Verifies the rebalance cooldown guard independently of its checked addition.
-rule initiateRebalance_RevertWhen_CooldownHasNotElapsed() {
+rule REBAL_002_initiateRebalance_RevertWhen_CooldownHasNotElapsed() {
     env e;
     bytes32 protocolId;
     uint64 chainSelector;
@@ -253,7 +253,7 @@ rule initiateRebalance_RevertWhen_CooldownHasNotElapsed() {
 
 /// @notice Initiating a rebalance reverts when the new strategy equals the active strategy.
 /// @dev Verifies same strategy guard.
-rule REBAL_003_initiateRebalance_RevertWhen_SameStrategy() {
+rule REBAL_002_initiateRebalance_RevertWhen_SameStrategy() {
     env e;
     uint64 thisChainSelector;
     bool isSupportedChain;
@@ -288,7 +288,7 @@ rule REBAL_003_initiateRebalance_RevertWhen_SameStrategy() {
 
 /// @notice Initiating a rebalance reverts when the target chain is unsupported.
 /// @dev Verifies invalid chain selector guard.
-rule initiateRebalance_RevertWhen_InvalidChainSelector() {
+rule REBAL_003_initiateRebalance_RevertWhen_InvalidChainSelector() {
     env e;
     bytes32 protocolId;
     uint64 chainSelector;
@@ -321,7 +321,7 @@ rule initiateRebalance_RevertWhen_InvalidChainSelector() {
 
 /// @notice Initiating a rebalance reverts when the target protocol is unsupported.
 /// @dev Verifies invalid protocol ID guard.
-rule initiateRebalance_RevertWhen_InvalidProtocolId() {
+rule REBAL_003_initiateRebalance_RevertWhen_InvalidProtocolId() {
     env e;
     bytes32 protocolId;
     uint64 chainSelector;
@@ -354,7 +354,7 @@ rule initiateRebalance_RevertWhen_InvalidProtocolId() {
 
 /// @notice Initiating a rebalance reverts before any epoch has completed.
 /// @dev Verifies no completed epoch guard.
-rule initiateRebalance_RevertWhen_NoCompletedEpoch() {
+rule REBAL_010_initiateRebalance_RevertWhen_NoCompletedEpoch() {
     env e;
     bytes32 protocolId;
     uint64 chainSelector;
@@ -452,7 +452,7 @@ rule initiateRebalance_RevertWhen_PreviousEpochExecuting() {
 
 /// @notice Initiating a local-to-local rebalance returns the local withdraw action.
 /// @dev Verifies state/pending preservation, RebalanceInitiated event, and WITHDRAW_LOCAL_TO_LOCAL action.
-rule initiateRebalance_Success_WhenLocalToLocal() {
+rule NONCE_011_initiateRebalance_Success_WhenLocalToLocal() {
     env e;
     bytes32 protocolId;
     uint64 thisChainSelector;
@@ -508,7 +508,7 @@ rule initiateRebalance_Success_WhenLocalToLocal() {
 
 /// @notice Initiating a local-to-remote rebalance returns the local-to-remote withdraw action.
 /// @dev Verifies state writes, RebalanceInitiated event, and WITHDRAW_LOCAL_TO_REMOTE action.
-rule initiateRebalance_Success_WhenLocalToRemote() {
+rule NONCE_011_initiateRebalance_Success_WhenLocalToRemote() {
     env e;
     bytes32 protocolId;
     uint64 chainSelector;
@@ -563,7 +563,7 @@ rule initiateRebalance_Success_WhenLocalToRemote() {
 
 /// @notice Initiating a rebalance from a remote active strategy returns no immediate local action.
 /// @dev Verifies state writes, RebalanceInitiated event, and NONE action.
-rule initiateRebalance_Success_WhenActiveStrategyIsRemote() {
+rule NONCE_011_initiateRebalance_Success_WhenActiveStrategyIsRemote() {
     env e;
     bytes32 protocolId;
     uint64 chainSelector;
@@ -707,7 +707,7 @@ rule finalizeRebalance_RevertWhen_LastCompletedTimestampIsFuture() {
 
 /// @notice Finalizing a persisted rebalance uses the caller-supplied nonce and strategy.
 /// @dev Verifies active strategy, state, pending strategy, timestamp, nonce, events, and the zero-fee path.
-rule finalizeRebalance_Success_WhenPersistedRebalanceHasNoManagementFeeShares() {
+rule FEE_004_NONCE_011_finalizeRebalance_Success_WhenPersistedRebalanceHasNoManagementFeeShares() {
     env e;
     uint256 rebalanceNonce;
     bytes32 protocolId;
@@ -753,7 +753,7 @@ rule finalizeRebalance_Success_WhenPersistedRebalanceHasNoManagementFeeShares() 
 
 /// @notice Finalizing a persisted rebalance collects no management fee when no time has elapsed.
 /// @dev Verifies the zero-fee path with outstanding shares and no share-token mutation.
-rule finalizeRebalance_Success_WhenManagementFeeElapsedTimeIsZero() {
+rule FEE_004_NONCE_011_finalizeRebalance_Success_WhenManagementFeeElapsedTimeIsZero() {
     env e;
     uint256 rebalanceNonce;
     bytes32 protocolId;
@@ -801,7 +801,7 @@ rule finalizeRebalance_Success_WhenManagementFeeElapsedTimeIsZero() {
 
 /// @notice Finalizing a synchronous local-to-local rebalance does not require or clear persisted rebalance state.
 /// @dev Verifies the local-to-local state/pending bypass and all common finalization writes and events.
-rule finalizeRebalance_Success_WhenLocalToLocal() {
+rule FEE_004_NONCE_011_finalizeRebalance_Success_WhenLocalToLocal() {
     env e;
     uint256 rebalanceNonce;
     bytes32 protocolId;
@@ -850,7 +850,7 @@ rule finalizeRebalance_Success_WhenLocalToLocal() {
 
 /// @notice Finalizing a persisted rebalance collects a nonzero uncapped management fee.
 /// @dev Verifies management-fee state, token, and event integration using a concrete one-share fee.
-rule finalizeRebalance_Success_WhenManagementFeeSharesAreCollected() {
+rule FEE_002_FEE_004_NONCE_011_finalizeRebalance_Success_WhenManagementFeeSharesAreCollected() {
     env e;
     uint256 rebalanceNonce;
     bytes32 protocolId;
@@ -905,7 +905,7 @@ rule finalizeRebalance_Success_WhenManagementFeeSharesAreCollected() {
 
 /// @notice Finalizing a persisted rebalance caps management-fee accrual at one year.
 /// @dev Verifies the elapsed-time cap through finalization using a concrete one-share fee.
-rule finalizeRebalance_Success_WhenManagementFeeElapsedTimeIsCapped() {
+rule FEE_002_FEE_004_NONCE_011_finalizeRebalance_Success_WhenManagementFeeElapsedTimeIsCapped() {
     env e;
     uint256 rebalanceNonce;
     bytes32 protocolId;

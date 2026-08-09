@@ -15,7 +15,7 @@ contract YieldcoinShare_KycPolicyIntegrationTest is BaseIntegrationTest {
         _mintShares(i_depositor, SHARE_AMOUNT);
     }
 
-    function test_YieldcoinShare_transfer_RevertWhen_RecipientIsNotKycApproved() external {
+    function test_YieldcoinShare_TOKEN_002_transfer_RevertWhen_RecipientIsNotKycApproved() external {
         _assertShareKycPolicy(ComplianceTokenERC3643.transfer.selector);
 
         _changePrank(i_depositor);
@@ -23,7 +23,7 @@ contract YieldcoinShare_KycPolicyIntegrationTest is BaseIntegrationTest {
         parent.share.transfer(i_recipient1, 1e18);
     }
 
-    function test_YieldcoinShare_transfer_RevertWhen_CallerIsNotKycApproved() external {
+    function test_YieldcoinShare_TOKEN_002_transfer_RevertWhen_CallerIsNotKycApproved() external {
         _registerKyc(i_recipient1);
         _mintShares(i_nonKycUser, 1e18);
 
@@ -32,7 +32,7 @@ contract YieldcoinShare_KycPolicyIntegrationTest is BaseIntegrationTest {
         parent.share.transfer(i_recipient1, 1e18);
     }
 
-    function test_YieldcoinShare_transfer_SucceedsWhen_AccountsAreKycApproved() external {
+    function test_YieldcoinShare_TOKEN_002_transfer_SucceedsWhen_AccountsAreKycApproved() external {
         _registerKyc(i_recipient1);
 
         _changePrank(i_depositor);
@@ -41,7 +41,7 @@ contract YieldcoinShare_KycPolicyIntegrationTest is BaseIntegrationTest {
         assertEq(parent.share.balanceOf(i_recipient1), 1e18);
     }
 
-    function test_YieldcoinShare_batchTransfer_RevertWhen_RecipientIsNotKycApproved() external {
+    function test_YieldcoinShare_TOKEN_002_batchTransfer_RevertWhen_RecipientIsNotKycApproved() external {
         _assertShareKycPolicy(ComplianceTokenERC3643.batchTransfer.selector);
         _registerKyc(i_recipient1);
 
@@ -58,7 +58,7 @@ contract YieldcoinShare_KycPolicyIntegrationTest is BaseIntegrationTest {
         parent.share.batchTransfer(recipients, amounts);
     }
 
-    function test_YieldcoinShare_batchTransfer_RevertWhen_CallerIsNotKycApproved() external {
+    function test_YieldcoinShare_TOKEN_002_batchTransfer_RevertWhen_CallerIsNotKycApproved() external {
         _registerKyc(i_recipient1);
         _registerKyc(i_recipient2);
         _mintShares(i_nonKycUser, 2e18);
@@ -76,7 +76,7 @@ contract YieldcoinShare_KycPolicyIntegrationTest is BaseIntegrationTest {
         parent.share.batchTransfer(recipients, amounts);
     }
 
-    function test_YieldcoinShare_batchTransfer_SucceedsWhen_AccountsAreKycApproved() external {
+    function test_YieldcoinShare_TOKEN_002_batchTransfer_SucceedsWhen_AccountsAreKycApproved() external {
         _registerKyc(i_recipient1);
         _registerKyc(i_recipient2);
 
@@ -95,7 +95,7 @@ contract YieldcoinShare_KycPolicyIntegrationTest is BaseIntegrationTest {
         assertEq(parent.share.balanceOf(i_recipient2), 2e18);
     }
 
-    function test_YieldcoinShare_transferFrom_RevertWhen_RecipientIsNotKycApproved() external {
+    function test_YieldcoinShare_TOKEN_002_transferFrom_RevertWhen_RecipientIsNotKycApproved() external {
         _assertShareKycPolicy(ComplianceTokenERC3643.transferFrom.selector);
         _registerKyc(i_withdrawer);
         _approveShares(i_depositor, i_withdrawer, 1e18);
@@ -105,7 +105,7 @@ contract YieldcoinShare_KycPolicyIntegrationTest is BaseIntegrationTest {
         parent.share.transferFrom(i_depositor, i_recipient1, 1e18);
     }
 
-    function test_YieldcoinShare_transferFrom_RevertWhen_FromIsNotKycApproved() external {
+    function test_YieldcoinShare_TOKEN_002_transferFrom_RevertWhen_FromIsNotKycApproved() external {
         _assertShareKycPolicy(ComplianceTokenERC3643.transferFrom.selector);
         _registerKyc(i_withdrawer);
         _registerKyc(i_recipient1);
@@ -117,7 +117,7 @@ contract YieldcoinShare_KycPolicyIntegrationTest is BaseIntegrationTest {
         parent.share.transferFrom(i_depositor, i_recipient1, 1e18);
     }
 
-    function test_YieldcoinShare_transferFrom_SucceedsWhen_AccountsAreKycApproved() external {
+    function test_YieldcoinShare_TOKEN_002_transferFrom_SucceedsWhen_AccountsAreKycApproved() external {
         _registerKyc(i_withdrawer);
         _registerKyc(i_recipient1);
         _approveShares(i_depositor, i_withdrawer, 1e18);
@@ -128,7 +128,7 @@ contract YieldcoinShare_KycPolicyIntegrationTest is BaseIntegrationTest {
         assertEq(parent.share.balanceOf(i_recipient1), 1e18);
     }
 
-    function test_YieldcoinShare_approve_RevertWhen_SpenderIsNotKycApproved() external {
+    function test_YieldcoinShare_TOKEN_002_approve_RevertWhen_SpenderIsNotKycApproved() external {
         _assertShareKycPolicy(ComplianceTokenERC3643.approve.selector);
 
         _changePrank(i_depositor);
@@ -136,7 +136,7 @@ contract YieldcoinShare_KycPolicyIntegrationTest is BaseIntegrationTest {
         parent.share.approve(i_withdrawer, 1e18);
     }
 
-    function test_YieldcoinShare_approve_RevertWhen_CallerIsNotKycApproved() external {
+    function test_YieldcoinShare_TOKEN_002_approve_RevertWhen_CallerIsNotKycApproved() external {
         _registerKyc(i_withdrawer);
 
         _changePrank(i_nonKycUser);
@@ -144,7 +144,7 @@ contract YieldcoinShare_KycPolicyIntegrationTest is BaseIntegrationTest {
         parent.share.approve(i_withdrawer, 1e18);
     }
 
-    function test_YieldcoinShare_approve_SucceedsWhen_AccountsAreKycApproved() external {
+    function test_YieldcoinShare_TOKEN_002_approve_SucceedsWhen_AccountsAreKycApproved() external {
         _registerKyc(i_withdrawer);
 
         _changePrank(i_depositor);
@@ -153,7 +153,7 @@ contract YieldcoinShare_KycPolicyIntegrationTest is BaseIntegrationTest {
         assertEq(parent.share.allowance(i_depositor, i_withdrawer), 1e18);
     }
 
-    function test_YieldcoinShare_increaseAllowance_RevertWhen_SpenderIsNotKycApproved() external {
+    function test_YieldcoinShare_TOKEN_002_increaseAllowance_RevertWhen_SpenderIsNotKycApproved() external {
         _assertShareKycPolicy(ComplianceTokenERC3643.increaseAllowance.selector);
 
         _changePrank(i_depositor);
@@ -161,7 +161,7 @@ contract YieldcoinShare_KycPolicyIntegrationTest is BaseIntegrationTest {
         parent.share.increaseAllowance(i_withdrawer, 1e18);
     }
 
-    function test_YieldcoinShare_increaseAllowance_RevertWhen_CallerIsNotKycApproved() external {
+    function test_YieldcoinShare_TOKEN_002_increaseAllowance_RevertWhen_CallerIsNotKycApproved() external {
         _registerKyc(i_withdrawer);
 
         _changePrank(i_nonKycUser);
@@ -169,7 +169,7 @@ contract YieldcoinShare_KycPolicyIntegrationTest is BaseIntegrationTest {
         parent.share.increaseAllowance(i_withdrawer, 1e18);
     }
 
-    function test_YieldcoinShare_increaseAllowance_SucceedsWhen_AccountsAreKycApproved() external {
+    function test_YieldcoinShare_TOKEN_002_increaseAllowance_SucceedsWhen_AccountsAreKycApproved() external {
         _registerKyc(i_withdrawer);
 
         _changePrank(i_depositor);
@@ -178,20 +178,20 @@ contract YieldcoinShare_KycPolicyIntegrationTest is BaseIntegrationTest {
         assertEq(parent.share.allowance(i_depositor, i_withdrawer), 1e18);
     }
 
-    function test_YieldcoinShare_decreaseAllowance_SucceedsWhen_SpenderIsNotKycApproved() external {
+    function test_YieldcoinShare_TOKEN_003_decreaseAllowance_SucceedsWhen_SpenderIsNotKycApproved() external {
         _assertShareKycPolicy(ComplianceTokenERC3643.decreaseAllowance.selector);
 
         _changePrank(i_depositor);
         parent.share.decreaseAllowance(i_withdrawer, 0);
     }
 
-    function test_YieldcoinShare_decreaseAllowance_RevertWhen_CallerIsNotKycApproved() external {
+    function test_YieldcoinShare_TOKEN_003_decreaseAllowance_RevertWhen_CallerIsNotKycApproved() external {
         _changePrank(i_nonKycUser);
         _expectPolicyRevert();
         parent.share.decreaseAllowance(i_withdrawer, 0);
     }
 
-    function test_YieldcoinShare_decreaseAllowance_SucceedsWhen_CallerIsKycApproved() external {
+    function test_YieldcoinShare_TOKEN_003_decreaseAllowance_SucceedsWhen_CallerIsKycApproved() external {
         _registerKyc(i_withdrawer); // approve requires spender KYC; only setting up the prior allowance
 
         _changePrank(i_depositor);

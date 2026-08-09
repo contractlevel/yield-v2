@@ -1,6 +1,8 @@
 using MockUSDC as asset;
 using MockLINK as link;
 using MockYieldcoinShare as share;
+using MockProtocolAdapter as adapter;
+using MockPolicyEngine as policyEngine;
 
 /// Verification of ParentVault-specific behavior
 /// @author @contractlevel
@@ -27,10 +29,14 @@ methods {
     function getSupportedProtocol(bytes32) external returns (bool) envfree;
     function getThisChainSelector() external returns (uint64) envfree;
     function getCrosschainVault(uint64) external returns (address) envfree;
+    function getActiveProtocolAdapter() external returns (address) envfree;
+    function getPolicyEngine() external returns (address) envfree;
 
     function asset.balanceOf(address) external returns (uint256) envfree;
     function share.balanceOf(address) external returns (uint256) envfree;
     function share.totalSupply() external returns (uint256) envfree;
+    function adapter.getVault() external returns (address) envfree;
+    function policyEngine.runCount() external returns (uint256) envfree;
 
     /*//////////////////////////////////////////////////////////////
                          DISPATCHER SUMMARIES
@@ -74,6 +80,15 @@ definition isProductionMethod(method f) returns bool =
 /// @notice State-changing production methods that can preserve or violate protocol invariants.
 definition isInvariantPreservationMethod(method f) returns bool =
     isProductionMethod(f) && !f.isView && !f.isPure;
+
+/// @notice ParentVault user entry points protected by the configured ACE policy stack.
+definition isPolicyProtectedUserMethod(method f) returns bool =
+    f.selector == sig:deposit(uint256).selector
+        || f.selector == sig:withdraw(uint256).selector
+        || f.selector == sig:claimShares(uint256).selector
+        || f.selector == sig:claimAsset(uint256).selector
+        || f.selector == sig:cancelDeposit().selector
+        || f.selector == sig:cancelWithdraw().selector;
 
 /// @notice Deposits in the current OPEN epoch are still held by ParentVault and remain refundable.
 definition currentOpenEpochDepositBacking() returns mathint =
@@ -193,15 +208,12 @@ hook Sstore currentContract.ext_yieldcoin_storage_ParentVault.s_withdraws[KEY ad
 /*//////////////////////////////////////////////////////////////
                            INVARIANTS
 //////////////////////////////////////////////////////////////*/
-/// @dev BaseVault-level invariants (validParentChainSelector-equivalent, noZeroChainSelector,
-///      noZeroAssetPrecision) are already covered by BaseVault.spec running against ParentVaultHarness
-///      and are not duplicated here.
 
 /// @notice ParentVault only ever stores the REBALANCE_DEPOSIT recovery mode
 /// @dev Verifies s_recoveryMode is always NONE or REBALANCE_DEPOSIT on ParentVault. The other four
 ///      Types.RecoveryMode values (REBALANCE_WITHDRAW, EPOCH_DEPOSIT, EPOCH_WITHDRAW, CCIP_SEND) are
 ///      exclusively written by ChildVault-side code paths.
-invariant recoveryModeIsRestrictedToRebalanceDeposit()
+invariant REC_008_recoveryModeIsRestrictedToRebalanceDeposit()
     getRecoveryMode() == Types.RecoveryMode.NONE || getRecoveryMode() == Types.RecoveryMode.REBALANCE_DEPOSIT
     filtered {
         f -> isInvariantPreservationMethod(f)
@@ -315,6 +327,34 @@ invariant REBAL_004_noneStateHasNoPendingStrategy()
         }
     }
 
+/// @notice Every stored active adapter is the adapter bound to ParentVault at activation
+/// @dev Verifies the persistent-state portion of docs/security/INVARIANTS.md REBAL-006. The
+///      deterministic registry model returns `adapter` for every protocol, while getVault verifies
+///      that the adapter is bound to this vault. The implication intentionally permits a zero active
+///      adapter during the documented cross-chain rebalance window. Registry changes after
+///      activation cannot affect this property because it checks the stored adapter directly.
+invariant ADAPTER_002_REBAL_006_activeAdapterIsBoundToParentVault()
+    getTreasury() != 0 && getActiveProtocolAdapter() != 0
+        => getActiveProtocolAdapter() == adapter && adapter.getVault() == currentContract
+    filtered {
+        f -> isInvariantPreservationMethod(f)
+    }
+    {
+        preserved initialize(
+            BaseVault.InitParams params,
+            address treasury,
+            address policyEngineManager,
+            address newPolicyEngine,
+            address cancelDepositOperator
+        ) with (env e) {
+            require getActiveProtocolAdapter() == 0;
+        }
+
+        preserved setTreasury(address newTreasury) with (env e) {
+            require getTreasury() != 0;
+        }
+    }
+
 /// @notice A persisted rebalance cannot coexist with an executing previous epoch
 /// @dev Verifies docs/security/INVARIANTS.md REBAL-009. The nonce guard avoids evaluating
 ///      epochNonce - 1 before initialization; the treasury guard scopes the property to the
@@ -344,8 +384,18 @@ invariant REBAL_009_rebalanceExcludesExecutingPreviousEpoch()
         }
     }
 
-/// @notice The epoch nonce is strictly positive after initialization
-/// @dev Verifies s_epochNonce is never zero, supporting the `epochNonce - 1` arithmetic used
+/// @notice ParentVault treasury is nonzero after initialization and every successful replacement
+/// @dev Verifies docs/security/INVARIANTS.md CFG-002. The epoch nonce is zero before initialization
+///      and initialize atomically sets it to one while requiring a nonzero treasury. Subsequent
+///      treasury replacements reject zero, while no other production method clears the field.
+invariant CFG_002_initializedTreasuryIsNonzero()
+    getEpochNonce() != 0 => getTreasury() != 0
+    filtered {
+        f -> isInvariantPreservationMethod(f)
+    }
+
+/// @notice The Parent lifecycle nonces are strictly positive after initialization
+/// @dev Verifies s_epochNonce and s_rebalance.nonce are never zero, supporting the `epochNonce - 1` arithmetic used
 ///      elsewhere in ParentVaultEpochLib and ParentVaultCcipLib. Guarded by getTreasury() != 0,
 ///      which initialize establishes before any role-gated treasury update, rather than isInitialized(): the harness's
 ///      isInitialized() reads OZ's shared _initialized version slot, which BaseVault's constructor
@@ -362,8 +412,8 @@ invariant REBAL_009_rebalanceExcludesExecutingPreviousEpoch()
 ///      The preserved block below excludes that by requiring the guard already held in the prestate
 ///      for every method except initialize() itself, which is the one real 0-to-nonzero transition
 ///      (and sets s_epochNonce atomically in the same call).
-invariant epochNonceIsNeverZero()
-    getTreasury() != 0 => getEpochNonce() >= 1
+invariant NONCE_009_parentLifecycleNoncesArePositive()
+    getTreasury() != 0 => (getEpochNonce() >= 1 && getRebalance().nonce >= 1)
     filtered {
         f -> isInvariantPreservationMethod(f)
     }
@@ -399,7 +449,7 @@ invariant EPOCH_001_exactlyCurrentEpochIsOpen(uint256 epochNonce)
             require getTreasury() != 0;
         }
         preserved closeEpoch(uint256 tvl) with (env e) {
-            requireInvariant epochsBeyondCurrentHaveNoneStatus(epochNonce);
+            requireInvariant EPOCH_001_epochsBeyondCurrentHaveNoneStatus(epochNonce);
         }
         preserved initialize(
             BaseVault.InitParams params,
@@ -413,13 +463,13 @@ invariant EPOCH_001_exactlyCurrentEpochIsOpen(uint256 epochNonce)
     }
 
 /// @notice Any epoch nonce beyond the current one retains the NONE status
-/// @dev Supporting invariant for epochRemainingCountersAreZeroBeforeClose below. s_epochNonce only
+/// @dev Supporting invariant for EPOCH_008_EPOCH_011_EPOCH_013_epochRemainingCountersAreZeroBeforeClose below. s_epochNonce only
 ///      ever increments (openNextEpoch), so in every reachable state an epoch nonce greater than the
 ///      current one has status NONE - but nothing states that fact on its own, so Certora's
 ///      unconstrained induction prestate could otherwise let a "future" epoch nonce already carry
 ///      leftover non-NONE status/fields from an impossible history, which openNextEpoch's plain
 ///      status-only write (status := OPEN, nothing else touched) would then silently inherit.
-invariant epochsBeyondCurrentHaveNoneStatus(uint256 otherEpochNonce)
+invariant EPOCH_001_epochsBeyondCurrentHaveNoneStatus(uint256 otherEpochNonce)
     otherEpochNonce > getEpochNonce() => getEpoch(otherEpochNonce).status == Types.EpochStatus.NONE
     filtered {
         f -> isInvariantPreservationMethod(f)
@@ -456,14 +506,14 @@ invariant epochsBeyondCurrentHaveNoneStatus(uint256 otherEpochNonce)
 ///      counterexample to this invariant itself. Used via requireInvariant below so the "stay
 ///      bounded"/"reach zero together" invariants aren't forced to consider unrealistic
 ///      not-yet-closed prestates where a remaining-side field is nonzero.
-/// @dev closeEpoch's own preserved block additionally requires epochsBeyondCurrentHaveNoneStatus:
+/// @dev closeEpoch's own preserved block additionally requires EPOCH_001_epochsBeyondCurrentHaveNoneStatus:
 ///      without it, Certora could otherwise assume the *next* epoch nonce (s_epochNonce + 1, about
 ///      to be opened by openNextEpoch) already had a non-NONE status with leftover nonzero remaining
 ///      fields from an unreachable prestate - satisfying this invariant's own hypothesis vacuously
 ///      pre-call (antecedent false) - and then openNextEpoch's status-only write would flip the
 ///      antecedent true post-call while the stale remaining fields are still sitting there untouched.
 // passing
-invariant epochRemainingCountersAreZeroBeforeClose(uint256 epochNonce)
+invariant EPOCH_008_EPOCH_011_EPOCH_013_epochRemainingCountersAreZeroBeforeClose(uint256 epochNonce)
     (getEpoch(epochNonce).status == Types.EpochStatus.NONE || getEpoch(epochNonce).status == Types.EpochStatus.OPEN)
         => (
             getEpoch(epochNonce).remainingDepositClaimAmount == 0
@@ -476,7 +526,7 @@ invariant epochRemainingCountersAreZeroBeforeClose(uint256 epochNonce)
     }
     {
         preserved closeEpoch(uint256 tvl) with (env e) {
-            requireInvariant epochsBeyondCurrentHaveNoneStatus(epochNonce);
+            requireInvariant EPOCH_001_epochsBeyondCurrentHaveNoneStatus(epochNonce);
         }
         preserved initialize(
             BaseVault.InitParams params,
@@ -486,7 +536,7 @@ invariant epochRemainingCountersAreZeroBeforeClose(uint256 epochNonce)
             address cancelDepositOperator
         ) with (env e) {
             /// @dev genesis fact, not provable as an invariant - see
-            ///      epochsBeyondCurrentHaveNoneStatus's initialize() preserved block above
+            ///      EPOCH_001_epochsBeyondCurrentHaveNoneStatus's initialize() preserved block above
             require getEpoch(epochNonce).status == Types.EpochStatus.NONE;
         }
     }
@@ -497,7 +547,7 @@ invariant epochRemainingCountersAreZeroBeforeClose(uint256 epochNonce)
 ///      a nonzero share-burn remainder until CCIP settlement atomically makes the epoch CLAIMABLE.
 ///      The strict branches also exclude an unreachable zero-net-flow EXECUTING induction state.
 ///      This supports the withdraw-counter exhaustion property below.
-invariant executingEpochHasValidNetFlow(uint256 epochNonce)
+invariant EPOCH_014_executingEpochHasValidNetFlow(uint256 epochNonce)
     getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING => (
         getEpoch(epochNonce).totalDepositAmount > getEpoch(epochNonce).totalWithdrawClaimAmount
             || (
@@ -513,7 +563,7 @@ invariant executingEpochHasValidNetFlow(uint256 epochNonce)
 /// @dev closeEpoch initializes both fields to the same provisional withdrawal amount. Neither field
 ///      changes before completeEpochDeposit or authenticated CCIP settlement makes the epoch
 ///      CLAIMABLE. This is the retained-backing relationship used by SOLV-001.
-invariant executingEpochRemainingWithdrawMatchesTotal(uint256 epochNonce)
+invariant EPOCH_014_executingEpochRemainingWithdrawMatchesTotal(uint256 epochNonce)
     getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING
         => getEpoch(epochNonce).remainingWithdrawClaimAmount
             == getEpoch(epochNonce).totalWithdrawClaimAmount
@@ -525,7 +575,7 @@ invariant executingEpochRemainingWithdrawMatchesTotal(uint256 epochNonce)
 /// @dev openNextEpoch writes only status and openedAtTimestamp. Proving the untouched future epoch's
 ///      deposit total is zero prevents that status-only transition from exposing arbitrary induction
 ///      state as newly refundable OPEN-epoch backing.
-invariant futureEpochDepositTotalsAreZero(uint256 epochNonce)
+invariant EPOCH_005_futureEpochDepositTotalsAreZero(uint256 epochNonce)
     epochNonce > getEpochNonce() => getEpoch(epochNonce).totalDepositAmount == 0
     filtered {
         f -> isInvariantPreservationMethod(f)
@@ -545,8 +595,8 @@ invariant futureEpochDepositTotalsAreZero(uint256 epochNonce)
 
 /// @notice Future epochs have no recorded withdrawal intents before they are opened
 /// @dev Supports SOLV-003 across openNextEpoch's status-only transition, parallel to
-///      futureEpochDepositTotalsAreZero on the deposit side.
-invariant futureEpochShareBurnTotalsAreZero(uint256 epochNonce)
+///      EPOCH_005_futureEpochDepositTotalsAreZero on the deposit side.
+invariant EPOCH_005_futureEpochShareBurnTotalsAreZero(uint256 epochNonce)
     epochNonce > getEpochNonce() => getEpoch(epochNonce).totalShareBurnAmount == 0
     filtered {
         f -> isInvariantPreservationMethod(f)
@@ -576,7 +626,7 @@ invariant EPOCH_008_epochDepositCountersStayBounded(uint256 epochNonce)
     }
     {
         preserved {
-            requireInvariant epochRemainingCountersAreZeroBeforeClose(epochNonce);
+            requireInvariant EPOCH_008_EPOCH_011_EPOCH_013_epochRemainingCountersAreZeroBeforeClose(epochNonce);
         }
     }
 
@@ -592,7 +642,7 @@ invariant EPOCH_008_exhaustedDepositClaimsHaveNoRemainingShareMint(uint256 epoch
     }
     {
         preserved {
-            requireInvariant epochRemainingCountersAreZeroBeforeClose(epochNonce);
+            requireInvariant EPOCH_008_EPOCH_011_EPOCH_013_epochRemainingCountersAreZeroBeforeClose(epochNonce);
         }
     }
 
@@ -606,7 +656,7 @@ invariant EPOCH_011_epochWithdrawCountersStayBounded(uint256 epochNonce)
     }
     {
         preserved {
-            requireInvariant epochRemainingCountersAreZeroBeforeClose(epochNonce);
+            requireInvariant EPOCH_008_EPOCH_011_EPOCH_013_epochRemainingCountersAreZeroBeforeClose(epochNonce);
         }
     }
 
@@ -626,10 +676,10 @@ invariant EPOCH_013_exhaustedShareBurnHasNoRemainingAssetClaim(uint256 epochNonc
     }
     {
         preserved {
-            requireInvariant epochRemainingCountersAreZeroBeforeClose(epochNonce);
+            requireInvariant EPOCH_008_EPOCH_011_EPOCH_013_epochRemainingCountersAreZeroBeforeClose(epochNonce);
         }
         preserved ccipReceive(Client.Any2EVMMessage message) with (env e) {
-            requireInvariant executingEpochHasValidNetFlow(epochNonce);
+            requireInvariant EPOCH_014_executingEpochHasValidNetFlow(epochNonce);
         }
     }
 
@@ -680,7 +730,7 @@ invariant SOLV_001_parentCoversReservedLiquidObligations()
             require getEpochNonce() > 1;
             requireInvariant ghostEpochStatusMatchesStorage(assert_uint256(getEpochNonce() - 1));
             requireInvariant ghostEpochRemainingWithdrawMatchesStorage(assert_uint256(getEpochNonce() - 1));
-            requireInvariant executingEpochRemainingWithdrawMatchesTotal(
+            requireInvariant EPOCH_014_executingEpochRemainingWithdrawMatchesTotal(
                 assert_uint256(getEpochNonce() - 1)
             );
         }
@@ -745,8 +795,8 @@ invariant SOLV_003_withdrawEscrowReconcilesWithEpochAccounting()
     {
         preserved closeEpoch(uint256 tvl) with (env e) {
             require getEpochNonce() != max_uint256;
-            requireInvariant epochRemainingCountersAreZeroBeforeClose(getEpochNonce());
-            requireInvariant futureEpochShareBurnTotalsAreZero(assert_uint256(getEpochNonce() + 1));
+            requireInvariant EPOCH_008_EPOCH_011_EPOCH_013_epochRemainingCountersAreZeroBeforeClose(getEpochNonce());
+            requireInvariant EPOCH_005_futureEpochShareBurnTotalsAreZero(assert_uint256(getEpochNonce() + 1));
         }
         preserved initialize(
             BaseVault.InitParams params,
@@ -776,7 +826,7 @@ invariant SOLV_003_withdrawEscrowReconcilesWithEpochAccounting()
 ///      counters to be zero before settlement so the aggregate ghost deltas use the correct baseline.
 /// @dev Also requires getTreasury() != 0 already held in the prestate for every method except
 ///      initialize() - see epochNonceIsNeverZero's NatSpec for why the guard needs this.
-invariant SHARE_003_totalSupplyReconcilesWithTotalShares()
+invariant SHARE_001_SHARE_003_totalSupplyReconcilesWithTotalShares()
     getTreasury() != 0 =>
         to_mathint(share.totalSupply()) == to_mathint(getTotalShares()) - ghost_sumPendingShareMint + ghost_sumPendingShareBurn
     filtered {
@@ -788,7 +838,7 @@ invariant SHARE_003_totalSupplyReconcilesWithTotalShares()
         }
         preserved closeEpoch(uint256 tvl) with (env e) {
             require getTreasury() != 0;
-            requireInvariant epochRemainingCountersAreZeroBeforeClose(getEpochNonce());
+            requireInvariant EPOCH_008_EPOCH_011_EPOCH_013_epochRemainingCountersAreZeroBeforeClose(getEpochNonce());
         }
         preserved initialize(
             BaseVault.InitParams params,
@@ -798,7 +848,7 @@ invariant SHARE_003_totalSupplyReconcilesWithTotalShares()
             address cancelDepositOperator
         ) with (env e) {
             /// @dev genesis fact, not provable as an invariant - see
-            ///      epochsBeyondCurrentHaveNoneStatus's initialize() preserved block above. If
+            ///      EPOCH_001_epochsBeyondCurrentHaveNoneStatus's initialize() preserved block above. If
             ///      initialize() is about to succeed, no shares have ever been minted or accounted.
             require share.totalSupply() == 0;
             require getTotalShares() == 0;
@@ -819,7 +869,7 @@ rule SOLV_001_closeEpochPreservesBacking_ZeroNetFlow(env e, uint256 tvl) {
     require epochNonce != max_uint256;
     requireInvariant ghostEpochStatusMatchesStorage(epochNonce);
     requireInvariant ghostEpochRemainingWithdrawMatchesStorage(epochNonce);
-    requireInvariant futureEpochDepositTotalsAreZero(assert_uint256(epochNonce + 1));
+    requireInvariant EPOCH_005_futureEpochDepositTotalsAreZero(assert_uint256(epochNonce + 1));
 
     closeEpoch(e, tvl);
 
@@ -834,7 +884,7 @@ rule SOLV_001_closeEpochPreservesBacking_LocalNetDeposit(env e, uint256 tvl) {
     require epochNonce != max_uint256;
     requireInvariant ghostEpochStatusMatchesStorage(epochNonce);
     requireInvariant ghostEpochRemainingWithdrawMatchesStorage(epochNonce);
-    requireInvariant futureEpochDepositTotalsAreZero(assert_uint256(epochNonce + 1));
+    requireInvariant EPOCH_005_futureEpochDepositTotalsAreZero(assert_uint256(epochNonce + 1));
 
     closeEpoch(e, tvl);
 
@@ -849,7 +899,7 @@ rule SOLV_001_closeEpochPreservesBacking_RemoteNetDeposit(env e, uint256 tvl) {
     require epochNonce != max_uint256;
     requireInvariant ghostEpochStatusMatchesStorage(epochNonce);
     requireInvariant ghostEpochRemainingWithdrawMatchesStorage(epochNonce);
-    requireInvariant futureEpochDepositTotalsAreZero(assert_uint256(epochNonce + 1));
+    requireInvariant EPOCH_005_futureEpochDepositTotalsAreZero(assert_uint256(epochNonce + 1));
 
     closeEpoch(e, tvl);
 
@@ -913,6 +963,55 @@ rule FEE_003_performanceFeeHighWaterMark_NeverDecreases(method f) filtered {
     assert getPerformanceFeeHighWaterMark() >= hwmBefore;
 }
 
+/// @notice Parent lifecycle nonces never decrease across a successful production call
+/// @dev Verifies docs/security/INVARIANTS.md NONCE-009 for both the epoch and rebalance domains.
+///      initialize() is the only transition from untouched nonce storage, so its arbitrary rule
+///      prestate is constrained to the genesis values that a reachable successful initialization has.
+rule NONCE_009_parentLifecycleNoncesNeverDecrease(method f) filtered {
+        f -> isInvariantPreservationMethod(f)
+} {
+    require f.selector == sig:initialize(BaseVault.InitParams,address,address,address,address).selector
+        => (getEpochNonce() == 0 && getRebalance().nonce == 0);
+
+    uint256 epochNonceBefore = getEpochNonce();
+    uint256 rebalanceNonceBefore = getRebalance().nonce;
+
+    env e;
+    calldataarg args;
+    f(e, args);
+
+    assert getEpochNonce() >= epochNonceBefore;
+    assert getRebalance().nonce >= rebalanceNonceBefore;
+}
+
+/// @notice Only initialization and the documented lifecycle transitions can change Parent nonces
+/// @dev Verifies the transition-exclusivity portions of NONCE-010 and NONCE-011. The listed
+///      rebalance entry points are the complete set of production paths that can reach successful
+///      rebalance finalization; their branch-specific postconditions prove the exact increment.
+rule NONCE_010_NONCE_011_onlyLifecycleTransitionsChangeNonces(method f) filtered {
+        f -> isInvariantPreservationMethod(f)
+} {
+    uint256 epochNonceBefore = getEpochNonce();
+    uint256 rebalanceNonceBefore = getRebalance().nonce;
+
+    env e;
+    calldataarg args;
+    f(e, args);
+
+    assert (
+        f.selector != sig:initialize(BaseVault.InitParams,address,address,address,address).selector
+            && f.selector != sig:closeEpoch(uint256).selector
+    ) => getEpochNonce() == epochNonceBefore;
+
+    assert (
+        f.selector != sig:initialize(BaseVault.InitParams,address,address,address,address).selector
+            && f.selector != sig:ccipReceive(Client.Any2EVMMessage).selector
+            && f.selector != sig:initiateRebalance(Types.Strategy).selector
+            && f.selector != sig:completeRebalance().selector
+            && f.selector != sig:executeRecovery().selector
+    ) => getRebalance().nonce == rebalanceNonceBefore;
+}
+
 /// @notice Outside an epoch's OPEN phase, its remaining deposit-claim and share-mint amounts never
 ///         increase
 /// @dev Verifies docs/INVARIANTS.md EPOCH-007 and proves the stronger all-method transition form.
@@ -964,9 +1063,9 @@ rule EPOCH_010_epochWithdrawCounters_NonIncreasing(method f, uint256 epochNonce)
 ///         OPEN -> CLAIMABLE (or NONE -> OPEN, for a brand new epoch); never backwards or sideways
 /// @dev Verifies docs/INVARIANTS.md EPOCH-002. Two guards, both lessons from earlier fixes in this
 ///      file:
-///      1. requireInvariant epochsBeyondCurrentHaveNoneStatus(epochNonce) rules out an
+///      1. requireInvariant EPOCH_001_epochsBeyondCurrentHaveNoneStatus(epochNonce) rules out an
 ///         unconstrained "future" epoch nonce carrying a leftover non-NONE status from an
-///         unreachable prestate - the same issue epochRemainingCountersAreZeroBeforeClose's
+///         unreachable prestate - the same issue EPOCH_008_EPOCH_011_EPOCH_013_epochRemainingCountersAreZeroBeforeClose's
 ///         closeEpoch preserved block already guards against, relevant here because openNextEpoch
 ///         writes status := OPEN for exactly such a nonce.
 ///      2. The require on initialize() rules out the analogous issue for epoch 1 specifically:
@@ -976,7 +1075,7 @@ rule EPOCH_010_epochWithdrawCounters_NonIncreasing(method f, uint256 epochNonce)
 rule EPOCH_002_epochTransitionsAreValid(method f, uint256 epochNonce) filtered {
         f -> isInvariantPreservationMethod(f)
 } {
-    requireInvariant epochsBeyondCurrentHaveNoneStatus(epochNonce);
+    requireInvariant EPOCH_001_epochsBeyondCurrentHaveNoneStatus(epochNonce);
     require f.selector == sig:initialize(BaseVault.InitParams,address,address,address,address).selector
         => getEpoch(1).status == Types.EpochStatus.NONE;
 
@@ -993,6 +1092,26 @@ rule EPOCH_002_epochTransitionsAreValid(method f, uint256 epochNonce) filtered {
         || (statusBefore == Types.EpochStatus.OPEN && statusAfter == Types.EpochStatus.EXECUTING)
         || (statusBefore == Types.EpochStatus.OPEN && statusAfter == Types.EpochStatus.CLAIMABLE)
         || (statusBefore == Types.EpochStatus.EXECUTING && statusAfter == Types.EpochStatus.CLAIMABLE);
+}
+
+/// @notice EPOCH-005: aggregate intent totals are immutable after an epoch leaves OPEN
+/// @dev User operations may update only the current OPEN epoch. Settlement and claim processing use
+///      separate remaining counters and must not rewrite the closed epoch's original aggregate
+///      deposit or share-burn totals.
+rule EPOCH_005_closedEpochTotalsAreFrozen(method f, uint256 epochNonce) filtered {
+    f -> isInvariantPreservationMethod(f)
+} {
+    require getEpoch(epochNonce).status != Types.EpochStatus.OPEN;
+
+    uint256 totalDepositBefore = getEpoch(epochNonce).totalDepositAmount;
+    uint256 totalShareBurnBefore = getEpoch(epochNonce).totalShareBurnAmount;
+
+    env e;
+    calldataarg args;
+    f(e, args);
+
+    assert getEpoch(epochNonce).totalDepositAmount == totalDepositBefore;
+    assert getEpoch(epochNonce).totalShareBurnAmount == totalShareBurnBefore;
 }
 
 
@@ -1015,4 +1134,21 @@ rule userEpochEscrowOnlyChangedByOwnerOutsideForceCancel(method f, address user,
 
     assert getDepositAmount(user, epochNonce) == depositBefore;
     assert getWithdrawShareBurnAmount(user, epochNonce) == withdrawBefore;
+}
+
+/// @notice AC-004: every successful protected user entry point invokes the configured policy engine
+/// @dev Verified against ParentVault's production ABI because ParentVault.rules.spec intentionally
+///      stubs policy hooks while testing the underlying user-operation behavior.
+rule AC_004_userEntryPointsInvokePolicyEngine(method f) filtered {
+    f -> isPolicyProtectedUserMethod(f)
+} {
+    require getPolicyEngine() == policyEngine;
+
+    uint256 runCountBefore = policyEngine.runCount();
+
+    env e;
+    calldataarg args;
+    f(e, args);
+
+    assert policyEngine.runCount() == runCountBefore + 1;
 }

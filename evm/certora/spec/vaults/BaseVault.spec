@@ -449,19 +449,19 @@ invariant noZeroAssetPrecision(env e)
 
 /// ─────────────────── CONSTRUCTOR IMMUTABLES ──────────────────
 
-rule constructor_getLink() {
+rule CFG_001_UPGRADE_005_constructor_getLink() {
     assert getLink() != 0;
 }
 
-rule constructor_getAsset() {
+rule CFG_001_UPGRADE_005_constructor_getAsset() {
     assert getAsset() != 0;
 }
 
-rule constructor_getAdapterRegistry() {
+rule CFG_001_UPGRADE_005_constructor_getAdapterRegistry() {
     assert getAdapterRegistry() != 0;
 }
 
-rule constructor_getRouter() {
+rule CFG_001_UPGRADE_005_constructor_getRouter() {
     assert getRouter() != 0;
 }
 
@@ -469,7 +469,7 @@ rule constructor_getRouter() {
 
 /// @notice BaseVault initialization reverts when the default admin is the zero address
 /// @dev Verifies that initialization is rolled back and mutable BaseVault configuration remains unchanged
-rule initializeBaseVault_RevertWhen_DefaultAdminIsZeroAddress() {
+rule CFG_001_initializeBaseVault_RevertWhen_DefaultAdminIsZeroAddress() {
     env e;
     BaseVault.InitParams params;
 
@@ -497,7 +497,7 @@ rule initializeBaseVault_RevertWhen_DefaultAdminIsZeroAddress() {
 
 /// @notice BaseVault initialization reverts when the pauser is the zero address
 /// @dev Verifies that initialization is rolled back and mutable BaseVault configuration remains unchanged
-rule initializeBaseVault_RevertWhen_PauserIsZeroAddress() {
+rule CFG_001_initializeBaseVault_RevertWhen_PauserIsZeroAddress() {
     env e;
     BaseVault.InitParams params;
 
@@ -525,7 +525,7 @@ rule initializeBaseVault_RevertWhen_PauserIsZeroAddress() {
 
 /// @notice BaseVault initialization reverts when the unpauser is the zero address
 /// @dev Verifies that initialization is rolled back and mutable BaseVault configuration remains unchanged
-rule initializeBaseVault_RevertWhen_UnpauserIsZeroAddress() {
+rule CFG_001_initializeBaseVault_RevertWhen_UnpauserIsZeroAddress() {
     env e;
     BaseVault.InitParams params;
 
@@ -553,7 +553,7 @@ rule initializeBaseVault_RevertWhen_UnpauserIsZeroAddress() {
 
 /// @notice BaseVault initialization reverts when the config operator is the zero address
 /// @dev Verifies that initialization is rolled back and mutable BaseVault configuration remains unchanged
-rule initializeBaseVault_RevertWhen_ConfigOperatorIsZeroAddress() {
+rule CFG_001_initializeBaseVault_RevertWhen_ConfigOperatorIsZeroAddress() {
     env e;
     BaseVault.InitParams params;
 
@@ -581,7 +581,7 @@ rule initializeBaseVault_RevertWhen_ConfigOperatorIsZeroAddress() {
 
 /// @notice BaseVault initialization reverts when the upgrader is the zero address
 /// @dev Verifies that initialization is rolled back and mutable BaseVault configuration remains unchanged
-rule initializeBaseVault_RevertWhen_UpgraderIsZeroAddress() {
+rule CFG_001_initializeBaseVault_RevertWhen_UpgraderIsZeroAddress() {
     env e;
     BaseVault.InitParams params;
 
@@ -637,7 +637,7 @@ rule initializeBaseVault_RevertWhen_InitialDefaultCcipGasLimitIsZero() {
 
 /// @notice BaseVault initialization reverts when the contract has already been initialized
 /// @dev Verifies that repeated initialization leaves all vault state unchanged
-rule initializeBaseVault_RevertWhen_AlreadyInitialized() {
+rule UPGRADE_002_initializeBaseVault_RevertWhen_AlreadyInitialized() {
     env e;
     BaseVault.InitParams params;
 
@@ -730,7 +730,7 @@ rule PAUSE_001_pause_RevertWhen_CallerDoesNotHavePAUSER_ROLE() {
 }
 
 /// @notice Pausing reverts when the vault is already paused (OZ Pausable's EnforcedPause)
-rule pause_RevertWhen_AlreadyPaused() {
+rule PAUSE_001_pause_RevertWhen_AlreadyPaused() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -749,7 +749,7 @@ rule pause_RevertWhen_AlreadyPaused() {
     assert ghost_Paused_EventCount == 0;
 }
 
-rule pause_Success() {
+rule PAUSE_001_pause_Success() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -769,7 +769,7 @@ rule pause_Success() {
 
 /// ─────────────────── UNPAUSE ─────────────────────────────────
 
-rule PAUSE_002_unpause_RevertWhen_CallerDoesNotHaveUNPAUSER_ROLE() {
+rule PAUSE_001_unpause_RevertWhen_CallerDoesNotHaveUNPAUSER_ROLE() {
     env e;
     
     /// @dev revert conditions NOT being verified
@@ -789,7 +789,7 @@ rule PAUSE_002_unpause_RevertWhen_CallerDoesNotHaveUNPAUSER_ROLE() {
 }
 
 /// @notice Unpausing reverts when the vault is not paused (OZ Pausable's ExpectedPause)
-rule unpause_RevertWhen_NotPaused() {
+rule PAUSE_001_unpause_RevertWhen_NotPaused() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -808,7 +808,7 @@ rule unpause_RevertWhen_NotPaused() {
     assert ghost_Unpaused_EventCount == 0;
 }
 
-rule unpause_Success() {
+rule PAUSE_001_unpause_Success() {
     env e;
 
      /// @dev revert conditions NOT being verified
@@ -850,7 +850,7 @@ rule setDefaultCcipGasLimit_RevertWhen_CallerDoesNotHaveCONFIG_OPERATOR_ROLE() {
     assert ghost_defaultCcipGasLimit_StoreCount == 0;
 }
 
-rule setDefaultCcipGasLimit_RevertWhen_GasLimitIsZero() {
+rule CFG_004_setDefaultCcipGasLimit_RevertWhen_GasLimitIsZero() {
     env e;
     uint256 gasLimit;
 
@@ -872,7 +872,7 @@ rule setDefaultCcipGasLimit_RevertWhen_GasLimitIsZero() {
     assert ghost_defaultCcipGasLimit_StoreCount == 0;
 }
 
-rule setDefaultCcipGasLimit_Success() {
+rule CFG_004_setDefaultCcipGasLimit_Success() {
     env e;
     uint256 gasLimit;
 
@@ -920,7 +920,7 @@ rule setCcipGasLimit_RevertWhen_CallerDoesNotHaveCONFIG_OPERATOR_ROLE() {
     assert ghost_ccipGasLimits_StoreCount == 0;
 }
 
-rule setCcipGasLimit_RevertWhen_ChainSelectorIsZero() {
+rule CFG_004_setCcipGasLimit_RevertWhen_ChainSelectorIsZero() {
     env e;
     uint64 chainSelector;
     uint256 gasLimit;
@@ -943,7 +943,7 @@ rule setCcipGasLimit_RevertWhen_ChainSelectorIsZero() {
     assert ghost_ccipGasLimits_StoreCount == 0;
 }
 
-rule setCcipGasLimit_Success() {
+rule CFG_004_setCcipGasLimit_Success() {
     env e;
     uint64 chainSelector;
     /// gasLimit=0 is valid — clears the per-chain gas limit override
@@ -998,7 +998,7 @@ rule setCrosschainVaults_RevertWhen_CallerDoesNotHaveCONFIG_OPERATOR_ROLE() {
     assert ghost_crosschainVaults_StoreCount == 0;
 }
 
-rule setCrosschainVaults_RevertWhen_ArrayLengthsDoNotMatch() {
+rule CFG_004_setCrosschainVaults_RevertWhen_ArrayLengthsDoNotMatch() {
     env e;
     uint64[] chainSelectors;
     address[] vaults;
@@ -1024,7 +1024,7 @@ rule setCrosschainVaults_RevertWhen_ArrayLengthsDoNotMatch() {
 
 /// @notice Setting crosschain vaults reverts when the input arrays are empty
 /// @dev Verifies that no crosschain vault is stored and no event is emitted
-rule setCrosschainVaults_RevertWhen_InputIsEmpty() {
+rule CFG_004_setCrosschainVaults_RevertWhen_InputIsEmpty() {
     env e;
     uint64[] chainSelectors;
     address[] vaults;
@@ -1048,7 +1048,7 @@ rule setCrosschainVaults_RevertWhen_InputIsEmpty() {
     assert ghost_crosschainVaults_StoreCount == 0;
 }
 
-rule setCrosschainVaults_RevertWhen_ChainSelectorIsZero() {
+rule CFG_004_setCrosschainVaults_RevertWhen_ChainSelectorIsZero() {
     env e;
     uint64[] chainSelectors;
     address[] vaults;
@@ -1253,7 +1253,7 @@ rule tryDepositToAdapter_Success() {
 /// @notice Storing a rebalance deposit recovery unconditionally overwrites any existing recovery
 /// state - callers are responsible for checking no recovery is already pending and amount != 0
 /// @dev Verifies the recovery fields, recovery mode, storage writes, and emitted event
-rule storeRebalanceDepositRecovery_Success() {
+rule REC_002_REC_009_storeRebalanceDepositRecovery_Success() {
     env e;
     uint256 rebalanceNonce;
     uint256 amount;
@@ -1291,7 +1291,7 @@ rule storeRebalanceDepositRecovery_Success() {
 
 /// @notice Clearing an active rebalance deposit recovery deletes its state
 /// @dev Verifies the recovery fields, recovery mode, storage writes, and emitted event
-rule clearRebalanceDepositRecovery_Success() {
+rule REC_002_REC_004_clearRebalanceDepositRecovery_Success() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -1460,7 +1460,7 @@ rule recoverFailedRebalanceDepositInternal_Success() {
 
 /// @notice Upgrade authorization reverts when the caller does not have UPGRADER_ROLE
 /// @dev Verifies the BaseVault authorization hook independently of UUPS proxy context
-rule authorizeUpgrade_RevertWhen_CallerDoesNotHaveUPGRADER_ROLE() {
+rule UPGRADE_001_authorizeUpgrade_RevertWhen_CallerDoesNotHaveUPGRADER_ROLE() {
     env e;
     address newImplementation;
 
@@ -1476,7 +1476,7 @@ rule authorizeUpgrade_RevertWhen_CallerDoesNotHaveUPGRADER_ROLE() {
 
 /// @notice Upgrade authorization succeeds when the caller has UPGRADER_ROLE
 /// @dev The authorization hook validates only the caller and does not modify vault storage
-rule authorizeUpgrade_Success() {
+rule UPGRADE_001_authorizeUpgrade_Success() {
     env e;
     address newImplementation;
 
@@ -1877,7 +1877,7 @@ rule handleCCIPRebalance_Success() {
 
 /// @notice A failed CCIP rebalance deposit stores recovery and returns false
 /// @dev Verifies unchanged balances and TVL, recovery state, storage writes, and failure events
-rule handleCCIPRebalance_FailedDepositStoresRecovery() {
+rule REC_002_REC_009_handleCCIPRebalance_FailedDepositStoresRecovery() {
     env e;
     uint256 rebalanceNonce;
     bytes32 protocolId;
@@ -2008,7 +2008,7 @@ rule revertIfZeroChainSelector_RevertWhen_ChainSelectorIsZero() {
 /// ─────────────────── REQUIRE NO RECOVERY ──────────────────
 
 /// @notice No-recovery validation reverts when any recovery mode is active
-rule requireNoRecovery_RevertWhen_RecoveryIsPending() {
+rule REC_003_requireNoRecovery_RevertWhen_RecoveryIsPending() {
     env e;
 
     /// @dev revert conditions NOT being verified

@@ -24,12 +24,12 @@ methods {
 /*//////////////////////////////////////////////////////////////
                              RULES
 //////////////////////////////////////////////////////////////*/
-rule getShare_ReturnsConfiguredShare() {
+rule CFG_001_getShare_ReturnsConfiguredShare() {
     assert getShare() == share;
     assert getShare() != 0;
 }
 
-rule run_RevertWhen_ParametersAreEmpty() {
+rule TOKEN_005_run_RevertWhen_ParametersAreEmpty() {
     env e;
     address caller;
     address subject;
@@ -47,7 +47,7 @@ rule run_RevertWhen_ParametersAreEmpty() {
     assert lastReverted;
 }
 
-rule run_RevertWhen_AccountEncodingIsTruncated() {
+rule TOKEN_005_run_RevertWhen_AccountEncodingIsTruncated() {
     env e;
     address caller;
     address subject;
@@ -65,7 +65,7 @@ rule run_RevertWhen_AccountEncodingIsTruncated() {
     assert lastReverted;
 }
 
-rule run_RevertWhen_AccountEncodingHasDirtyPadding() {
+rule TOKEN_005_run_RevertWhen_AccountEncodingHasDirtyPadding() {
     env e;
     address caller;
     address subject;
@@ -83,7 +83,7 @@ rule run_RevertWhen_AccountEncodingHasDirtyPadding() {
     assert lastReverted;
 }
 
-rule run_RevertWhen_AccountIsFrozen() {
+rule TOKEN_005_run_RevertWhen_AccountIsFrozen() {
     env e;
     address caller;
     address subject;
@@ -103,7 +103,7 @@ rule run_RevertWhen_AccountIsFrozen() {
     assert lastReverted;
 }
 
-rule run_Success_WhenAccountIsNotFrozen() {
+rule TOKEN_005_run_Success_WhenAccountIsNotFrozen() {
     env e;
     address caller;
     address subject;

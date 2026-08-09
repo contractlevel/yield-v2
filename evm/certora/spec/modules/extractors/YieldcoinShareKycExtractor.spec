@@ -26,7 +26,7 @@ methods {
 /*//////////////////////////////////////////////////////////////
                              RULES
 //////////////////////////////////////////////////////////////*/
-rule extract_SuccessfulReturn_IsWellFormed() {
+rule TOKEN_002_extract_SuccessfulReturn_IsWellFormed() {
     env e;
     IPolicyEngine.Payload payload;
 
@@ -42,7 +42,7 @@ rule extract_SuccessfulReturn_IsWellFormed() {
 
 /// @notice The other supported selector success paths decode dynamic payload.data and are vacuous under
 /// Certora's current model; decreaseAllowance is verified separately because it does not decode payload.data.
-rule extract_Success_WhenSelectorIsDecreaseAllowance() {
+rule TOKEN_003_extract_Success_WhenSelectorIsDecreaseAllowance() {
     env e;
     address sender;
     address spender;
@@ -62,7 +62,7 @@ rule extract_Success_WhenSelectorIsDecreaseAllowance() {
     assert accounts[0] == sender;
 }
 
-rule extract_RevertWhen_SelectorIsUnsupported() {
+rule TOKEN_003_extract_RevertWhen_SelectorIsUnsupported() {
     env e;
     bytes4 selector;
     address sender;

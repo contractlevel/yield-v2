@@ -12,18 +12,18 @@ contract YieldcoinShare_AttachPolicyEngineUnitTest is BaseUnitTest {
         s_newMockPolicyEngine = new MockPolicyEngine();
     }
 
-    function test_YieldcoinShare_attachPolicyEngine_RevertWhen_PolicyEngineIsZeroAddress() external {
+    function test_YieldcoinShare_TOKEN_001_attachPolicyEngine_RevertWhen_PolicyEngineIsZeroAddress() external {
         vm.expectRevert("Policy engine is zero address");
         s_yieldcoin.attachPolicyEngine(address(0));
     }
 
-    function test_YieldcoinShare_attachPolicyEngine_Success_SetsPolicyEngine() external {
+    function test_YieldcoinShare_TOKEN_001_attachPolicyEngine_Success_SetsPolicyEngine() external {
         s_yieldcoin.attachPolicyEngine(address(s_newMockPolicyEngine));
 
         assertEq(s_yieldcoin.getPolicyEngine(), address(s_newMockPolicyEngine));
     }
 
-    function test_YieldcoinShare_attachPolicyEngine_Success_EmitsPolicyEngineAttached() external {
+    function test_YieldcoinShare_TOKEN_001_attachPolicyEngine_Success_EmitsPolicyEngineAttached() external {
         vm.recordLogs();
         s_yieldcoin.attachPolicyEngine(address(s_newMockPolicyEngine));
 

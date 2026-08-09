@@ -276,7 +276,7 @@ rule collectPerformanceFeePublic_UsesStoredTotalShares_WhenSettlementEqualsHighW
 
 /// @notice Price per share returns asset precision when no shares exist.
 /// @dev Verifies the bootstrap price branch.
-rule calculatePricePerShare_Success_WhenNoShares() {
+rule EPOCH_017_calculatePricePerShare_Success_WhenNoShares() {
     env e;
     uint256 tvl;
     uint256 sharePrecision = SHARE_PRECISION();
@@ -303,7 +303,7 @@ rule calculatePricePerShare_Success_WhenNoShares() {
 
 /// @notice Price per share reverts when TVL is zero while shares are outstanding.
 /// @dev Verifies the explicit zero-TVL-with-shares branch.
-rule calculatePricePerShare_RevertWhen_ZeroTvlWithOutstandingShares() {
+rule EPOCH_017_calculatePricePerShare_RevertWhen_ZeroTvlWithOutstandingShares() {
     env e;
     uint256 sharePrecision = SHARE_PRECISION();
     uint256 assetPrecision = ASSET_PRECISION();
@@ -322,7 +322,7 @@ rule calculatePricePerShare_RevertWhen_ZeroTvlWithOutstandingShares() {
 
 /// @notice Price per share reverts when the calculated nonzero-TVL price rounds down to zero.
 /// @dev Verifies ParentVault__ZeroPricePerShare independently of the zero-TVL guard.
-rule calculatePricePerShare_RevertWhen_CalculatedPriceIsZero() {
+rule EPOCH_017_calculatePricePerShare_RevertWhen_CalculatedPriceIsZero() {
     env e;
     uint256 tvl;
     uint256 sharePrecision = SHARE_PRECISION();
@@ -369,7 +369,7 @@ rule calculatePricePerShare_RevertWhen_ResultOverflows() {
 
 /// @notice Price per share divides TVL value by total shares when both are nonzero.
 /// @dev Verifies the calculated price branch.
-rule calculatePricePerShare_Success_WhenSharesAndTvlExist() {
+rule EPOCH_017_calculatePricePerShare_Success_WhenSharesAndTvlExist() {
     env e;
     uint256 tvl;
     uint256 sharePrecision = SHARE_PRECISION();
@@ -459,7 +459,7 @@ rule calculateNewShares_Success_WhenNoShares() {
 }
 
 /// @notice New-share calculation reverts when TVL is zero with outstanding shares.
-rule calculateNewShares_RevertWhen_ZeroTvlWithOutstandingShares() {
+rule EPOCH_017_calculateNewShares_RevertWhen_ZeroTvlWithOutstandingShares() {
     env e;
     uint256 tvl = 0;
     uint256 depositAmount;
@@ -540,7 +540,7 @@ rule collectManagementFee_RevertWhen_TotalSharesAdditionOverflows() {
 
 /// @notice Management fee collection succeeds without minting when calculated fee shares are zero.
 /// @dev Verifies no storage write and no event when elapsed time is zero.
-rule collectManagementFee_Success_WhenFeeSharesAreZero() {
+rule FEE_004_collectManagementFee_Success_WhenFeeSharesAreZero() {
     env e;
     uint256 rebalanceNonce;
 
@@ -571,7 +571,7 @@ rule collectManagementFee_Success_WhenFeeSharesAreZero() {
 
 /// @notice Management fee collection succeeds without minting when no shares exist.
 /// @dev Verifies a nonzero elapsed period still produces zero fee shares from a zero share ledger.
-rule collectManagementFee_Success_WhenNoShares() {
+rule FEE_004_collectManagementFee_Success_WhenNoShares() {
     env e;
     uint256 rebalanceNonce;
     uint256 lastRebalanceCompletedTimestamp;
@@ -608,7 +608,7 @@ rule collectManagementFee_Success_WhenNoShares() {
 
 /// @notice Management fee collection caps elapsed time at one year.
 /// @dev Verifies fee shares use the one-year cap and emit ManagementFeeCollected when nonzero.
-rule collectManagementFee_Success_WhenElapsedTimeExceedsOneYear() {
+rule FEE_002_FEE_004_collectManagementFee_Success_WhenElapsedTimeExceedsOneYear() {
     env e;
     uint256 rebalanceNonce;
     uint256 lastRebalanceCompletedTimestamp;
@@ -656,7 +656,7 @@ rule collectManagementFee_Success_WhenElapsedTimeExceedsOneYear() {
 
 /// @notice Management fee collection succeeds for uncapped elapsed time when fee shares are nonzero.
 /// @dev Verifies storage write and ManagementFeeCollected event parameters.
-rule collectManagementFee_Success_WhenFeeSharesAreNonzero() {
+rule FEE_002_FEE_004_collectManagementFee_Success_WhenFeeSharesAreNonzero() {
     env e;
     uint256 rebalanceNonce;
     uint256 lastRebalanceCompletedTimestamp;
@@ -709,7 +709,7 @@ rule collectManagementFee_Success_WhenFeeSharesAreNonzero() {
 
 /// @notice Performance fee collection returns the gross price when it does not exceed the high-water mark.
 /// @dev Verifies no fee storage or event side effects.
-rule SHARE_003_collectPerformanceFee_Success_WhenGrossPriceDoesNotExceedHighWaterMark() {
+rule FEE_001_FEE_003_SHARE_002_collectPerformanceFee_Success_WhenGrossPriceDoesNotExceedHighWaterMark() {
     env e;
     uint256 epochNonce;
     uint256 tvl;
@@ -822,7 +822,7 @@ rule collectPerformanceFee_RevertWhen_SharePrecisionIsZero() {
 
 /// @notice Performance fee collection returns gross price when the fee would consume TVL.
 /// @dev Verifies fee >= tvl branch skips minting and high-water mark update.
-rule SHARE_003_collectPerformanceFee_Success_WhenFeeConsumesTvl() {
+rule FEE_001_FEE_003_SHARE_002_collectPerformanceFee_Success_WhenFeeConsumesTvl() {
     env e;
     uint256 epochNonce;
     uint256 tvl = 1;
@@ -878,7 +878,7 @@ rule SHARE_003_collectPerformanceFee_Success_WhenFeeConsumesTvl() {
 
 /// @notice Performance fee collection returns gross price when zero fee equals zero TVL.
 /// @dev Verifies the fee >= tvl early return before bootstrap settlement pricing.
-rule SHARE_003_collectPerformanceFee_Success_WhenZeroFeeConsumesZeroTvl() {
+rule FEE_001_FEE_003_SHARE_002_collectPerformanceFee_Success_WhenZeroFeeConsumesZeroTvl() {
     env e;
     uint256 epochNonce;
     uint256 tvl = 0;
@@ -970,7 +970,7 @@ rule collectPerformanceFee_RevertWhen_FeeSharesResultOverflows() {
 
 /// @notice Performance fee collection succeeds without minting when fee shares are zero.
 /// @dev Verifies bootstrap asset pricing leaves the initialized-or-raised high-water mark unchanged.
-rule collectPerformanceFee_Success_WhenFeeSharesAreZero() {
+rule FEE_001_FEE_003_collectPerformanceFee_Success_WhenFeeSharesAreZero() {
     env e;
     uint256 epochNonce;
     uint256 tvl;
@@ -1161,7 +1161,7 @@ rule collectPerformanceFee_RevertWhen_SettlementPriceIsZero() {
 
 /// @notice Performance fee collection succeeds when fee shares raise the high-water mark.
 /// @dev Verifies both returns, exact minting, the high-water-mark write, and event parameters.
-rule collectPerformanceFee_Success_WhenFeeSharesAreNonzeroAndRaiseHighWaterMark() {
+rule FEE_001_FEE_002_FEE_003_SHARE_002_collectPerformanceFee_Success_WhenFeeSharesAreNonzeroAndRaiseHighWaterMark() {
     env e;
     uint256 epochNonce;
     uint256 tvl = 2000000;
@@ -1232,7 +1232,7 @@ rule collectPerformanceFee_Success_WhenFeeSharesAreNonzeroAndRaiseHighWaterMark(
 
 /// @notice Performance fee collection succeeds without lowering the high-water mark after rounding dust.
 /// @dev Verifies the non-raising branch still returns and emits the settlement price and mints exact fee shares.
-rule collectPerformanceFee_Success_WhenRoundingLeavesSettlementBelowHighWaterMark() {
+rule FEE_001_FEE_002_FEE_003_SHARE_002_collectPerformanceFee_Success_WhenRoundingLeavesSettlementBelowHighWaterMark() {
     env e;
     uint256 epochNonce;
     uint256 tvl = ASSET_PRECISION();

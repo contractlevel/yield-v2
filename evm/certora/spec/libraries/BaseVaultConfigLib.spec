@@ -102,7 +102,7 @@ hook LOG3(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2) {
 /*//////////////////////////////////////////////////////////////
                              RULES
 //////////////////////////////////////////////////////////////*/
-rule setCrosschainVaults_RevertWhen_InputIsEmpty() {
+rule CFG_004_setCrosschainVaults_RevertWhen_InputIsEmpty() {
     env e;
     uint64[] chainSelectors;
     address[] vaults;
@@ -126,7 +126,7 @@ rule setCrosschainVaults_RevertWhen_InputIsEmpty() {
     assert ghost_crosschainVaults_StoreCount == 0;
 }
 
-rule setCrosschainVaults_RevertWhen_ArrayLengthsDoNotMatch() {
+rule CFG_004_setCrosschainVaults_RevertWhen_ArrayLengthsDoNotMatch() {
     env e;
     uint64[] chainSelectors;
     address[] vaults;
@@ -151,7 +151,7 @@ rule setCrosschainVaults_RevertWhen_ArrayLengthsDoNotMatch() {
     assert ghost_crosschainVaults_StoreCount == 0;
 }
 
-rule setCrosschainVaults_RevertWhen_FirstChainSelectorIsZero() {
+rule CFG_004_setCrosschainVaults_RevertWhen_FirstChainSelectorIsZero() {
     env e;
     uint64[] chainSelectors;
     address[] vaults;
@@ -204,7 +204,7 @@ rule setCrosschainVaults_Success() {
     assert ghost_crosschainVaults_StoredValue == vaults[0];
 }
 
-rule setCcipGasLimit_RevertWhen_ChainSelectorIsZero() {
+rule CFG_004_setCcipGasLimit_RevertWhen_ChainSelectorIsZero() {
     env e;
     uint256 gasLimit;
 
@@ -223,7 +223,7 @@ rule setCcipGasLimit_RevertWhen_ChainSelectorIsZero() {
     assert ghost_ccipGasLimits_StoreCount == 0;
 }
 
-rule setCcipGasLimit_Success() {
+rule CFG_004_setCcipGasLimit_Success() {
     env e;
     uint64 chainSelector;
     uint256 gasLimit;
@@ -248,7 +248,7 @@ rule setCcipGasLimit_Success() {
     assert ghost_ccipGasLimits_StoredValue == gasLimit;
 }
 
-rule setDefaultCcipGasLimit_RevertWhen_GasLimitIsZero() {
+rule CFG_004_setDefaultCcipGasLimit_RevertWhen_GasLimitIsZero() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -266,7 +266,7 @@ rule setDefaultCcipGasLimit_RevertWhen_GasLimitIsZero() {
     assert ghost_defaultCcipGasLimit_StoreCount == 0;
 }
 
-rule setDefaultCcipGasLimit_Success() {
+rule CFG_004_setDefaultCcipGasLimit_Success() {
     env e;
     uint256 gasLimit;
 

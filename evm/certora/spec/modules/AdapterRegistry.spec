@@ -79,7 +79,7 @@ rule ADAPTER_001_setAdapter_RevertWhen_CallerDoesNotHaveCONFIG_OPERATOR_ROLE() {
     assert ghost_AdapterSet_EventCount == 0;
 }
 
-rule setAdapter_RevertWhen_ProtocolIdIsZero() {
+rule ADAPTER_001_setAdapter_RevertWhen_ProtocolIdIsZero() {
     env e;
     bytes32 protocolId;
     address adapter;
@@ -99,7 +99,7 @@ rule setAdapter_RevertWhen_ProtocolIdIsZero() {
     assert ghost_AdapterSet_EventCount == 0;
 }
 
-rule setAdapter_Success() {
+rule ADAPTER_001_setAdapter_Success() {
     env e;
     bytes32 protocolId;
     address adapter;
@@ -123,7 +123,7 @@ rule setAdapter_Success() {
     assert getAdapter(protocolId) == adapter;
 }
 
-rule setAdapter_Success_WhenAdapterIsZeroAddress_RemovesAdapter() {
+rule ADAPTER_001_ADAPTER_003_setAdapter_Success_WhenAdapterIsZeroAddress_RemovesAdapter() {
     env e;
     bytes32 protocolId;
 
@@ -148,7 +148,7 @@ rule setAdapter_Success_WhenAdapterIsZeroAddress_RemovesAdapter() {
     assert getAdapter(protocolId) == 0;
 }
 
-rule setAdapter_Success_OverwritesPreviousAdapter() {
+rule ADAPTER_001_ADAPTER_003_setAdapter_Success_OverwritesPreviousAdapter() {
     env e;
     bytes32 protocolId;
     address adapter;
@@ -166,7 +166,7 @@ rule setAdapter_Success_OverwritesPreviousAdapter() {
     assert getAdapter(protocolId) == adapter;
 }
 
-rule setAdapter_Success_DoesNotAffectOtherProtocolId() {
+rule ADAPTER_001_setAdapter_Success_DoesNotAffectOtherProtocolId() {
     env e;
     bytes32 protocolId;
     bytes32 otherProtocolId;

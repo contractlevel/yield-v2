@@ -93,7 +93,7 @@ rule noZero() {
     assert currentContract.i_asset != 0 && currentContract.i_vault != 0;
 }
 
-rule assetConsistency(env e) {
+rule ADAPTER_006_assetConsistency(env e) {
     assert currentContract.i_asset == currentContract.i_vault.getAsset(e);
 }
 
@@ -151,7 +151,7 @@ rule deposit_RevertWhen_ReentrancyGuardIsEntered() {
     assert ghost_Deposit_EventCount == 0;
 }
 
-rule deposit_RevertWhen_TVLDecreases() {
+rule ADAPTER_007_deposit_RevertWhen_TVLDecreases() {
     env e;
     uint256 amount;
     uint256 tvlBefore = getTVL();
@@ -178,7 +178,7 @@ rule deposit_RevertWhen_TVLDecreases() {
     assert ghost_Deposit_EventCount == 0;
 }
 
-rule deposit_RevertWhen_CreditedShortfallExceedsRoundingTolerance() {
+rule ADAPTER_007_deposit_RevertWhen_CreditedShortfallExceedsRoundingTolerance() {
     env e;
     uint256 amount;
     uint256 tvlBefore = getTVL();
@@ -206,7 +206,7 @@ rule deposit_RevertWhen_CreditedShortfallExceedsRoundingTolerance() {
     assert ghost_Deposit_EventCount == 0;
 }
 
-rule deposit_Success() {
+rule ADAPTER_007_deposit_Success() {
     env e;
     uint256 amount;
     uint256 tvlBefore = getTVL();
@@ -296,7 +296,7 @@ rule withdraw_RevertWhen_ReentrancyGuardIsEntered() {
 
 /// @notice Epoch withdrawals revert when the protocol returns zero assets.
 /// @dev Zero is never accepted by the shared withdrawal tolerance check.
-rule withdraw_Epoch_RevertWhen_ActualWithdrawnAmountIsZero() {
+rule ADAPTER_008_withdraw_Epoch_RevertWhen_ActualWithdrawnAmountIsZero() {
     env e;
     uint256 amount;
     uint256 tvlBefore = getTVL();
@@ -327,7 +327,7 @@ rule withdraw_Epoch_RevertWhen_ActualWithdrawnAmountIsZero() {
     assert ghost_Withdraw_EventCount == 0;
 }
 
-rule withdraw_Epoch_RevertWhen_AmountExceedsTVL() {
+rule ADAPTER_008_withdraw_Epoch_RevertWhen_AmountExceedsTVL() {
     env e;
     uint256 amount;
 
@@ -355,7 +355,7 @@ rule withdraw_Epoch_RevertWhen_AmountExceedsTVL() {
     assert ghost_Withdraw_EventCount == 0;
 }
 
-rule withdraw_Epoch_RevertWhen_ActualWithdrawnAmountIsInsufficient() {
+rule ADAPTER_008_withdraw_Epoch_RevertWhen_ActualWithdrawnAmountIsInsufficient() {
     env e;
     uint256 amount;
     uint256 tvlBefore = getTVL();
@@ -385,7 +385,7 @@ rule withdraw_Epoch_RevertWhen_ActualWithdrawnAmountIsInsufficient() {
     assert ghost_Withdraw_EventCount == 0;
 }
 
-rule withdraw_Epoch_Success() {
+rule ADAPTER_008_ADAPTER_009_withdraw_Epoch_Success() {
     env e;
     uint256 amount;
     uint256 tvlBefore = getTVL();
@@ -421,7 +421,7 @@ rule withdraw_Epoch_Success() {
     assert ghost_Withdraw_EventParam_amount == amountOut;
 }
 
-rule withdraw_Rebalance_RevertWhen_ActualWithdrawnAmountIsInsufficient() {
+rule ADAPTER_008_withdraw_Rebalance_RevertWhen_ActualWithdrawnAmountIsInsufficient() {
     env e;
     uint256 tvlBefore = getTVL();
     uint256 amountOut = mockWithdrawAmount();
@@ -450,7 +450,7 @@ rule withdraw_Rebalance_RevertWhen_ActualWithdrawnAmountIsInsufficient() {
 
 /// @notice Full-position withdrawals revert when the protocol returns zero assets.
 /// @dev Zero is never accepted by the shared withdrawal tolerance check.
-rule withdraw_Rebalance_RevertWhen_ActualWithdrawnAmountIsZero() {
+rule ADAPTER_008_withdraw_Rebalance_RevertWhen_ActualWithdrawnAmountIsZero() {
     env e;
     uint256 tvlBefore = getTVL();
     uint256 amountOut = mockWithdrawAmount();
@@ -478,7 +478,7 @@ rule withdraw_Rebalance_RevertWhen_ActualWithdrawnAmountIsZero() {
     assert ghost_Withdraw_EventCount == 0;
 }
 
-rule withdraw_Rebalance_Success() {
+rule ADAPTER_008_ADAPTER_009_withdraw_Rebalance_Success() {
     env e;
     uint256 tvlBefore = getTVL();
     uint256 expectedAmountOut = mockWithdrawAmount();
