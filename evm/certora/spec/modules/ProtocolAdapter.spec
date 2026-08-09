@@ -124,7 +124,7 @@ rule ADAPTER_004_deposit_RevertWhen_CallerIsNotVault() {
     assert ghost_Deposit_EventCount == 0;
 }
 
-rule deposit_RevertWhen_ReentrancyGuardIsEntered() {
+rule REENT_001_deposit_RevertWhen_ReentrancyGuardIsEntered() {
     env e;
     uint256 amount;
     uint256 tvlBefore = getTVL();
@@ -264,7 +264,7 @@ rule ADAPTER_004_withdraw_RevertWhen_CallerIsNotVault() {
     assert ghost_Withdraw_EventCount == 0;
 }
 
-rule withdraw_RevertWhen_ReentrancyGuardIsEntered() {
+rule REENT_001_withdraw_RevertWhen_ReentrancyGuardIsEntered() {
     env e;
     uint256 amount;
     uint256 tvlBefore = getTVL();

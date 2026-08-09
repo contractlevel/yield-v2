@@ -38,13 +38,6 @@ contract YieldcoinShareKycExtractor is IYieldcoinShareKycExtractor {
             accounts[0] = payload.sender;
             accounts[1] = from;
             accounts[2] = to;
-        } else if (payload.selector == ComplianceTokenERC3643.batchTransfer.selector) {
-            (address[] memory toList,) = abi.decode(payload.data, (address[], uint256[]));
-            accounts = new address[](toList.length + 1);
-            accounts[0] = payload.sender;
-            for (uint256 i; i < toList.length; ++i) {
-                accounts[i + 1] = toList[i];
-            }
         } else if (
             payload.selector == ComplianceTokenERC3643.approve.selector
                 || payload.selector == ComplianceTokenERC3643.increaseAllowance.selector

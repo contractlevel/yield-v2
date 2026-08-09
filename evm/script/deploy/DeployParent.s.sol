@@ -512,13 +512,12 @@ contract DeployParent is Script {
 
         YieldcoinShareKycExtractor extractor = new YieldcoinShareKycExtractor();
 
-        bytes4[] memory selectors = new bytes4[](6);
+        bytes4[] memory selectors = new bytes4[](5);
         selectors[0] = ComplianceTokenERC3643.transfer.selector;
         selectors[1] = ComplianceTokenERC3643.transferFrom.selector;
-        selectors[2] = ComplianceTokenERC3643.batchTransfer.selector;
-        selectors[3] = ComplianceTokenERC3643.approve.selector;
-        selectors[4] = ComplianceTokenERC3643.increaseAllowance.selector;
-        selectors[5] = ComplianceTokenERC3643.decreaseAllowance.selector;
+        selectors[2] = ComplianceTokenERC3643.approve.selector;
+        selectors[3] = ComplianceTokenERC3643.increaseAllowance.selector;
+        selectors[4] = ComplianceTokenERC3643.decreaseAllowance.selector;
 
         policyEngine.setExtractors(selectors, address(extractor));
 
@@ -604,18 +603,11 @@ contract DeployParent is Script {
         _configureShareRole(
             policyEngine, shareSupplyPolicy, ComplianceTokenERC3643.unpause.selector, Roles.UNPAUSER_ROLE, unpauser
         );
-        // Compliance operations (batch selectors wired separately: runPolicy uses msg.sig of the outer call)
+        // Compliance operations. ACE batch functions run the corresponding single-item policy for each item.
         _configureShareRole(
             policyEngine,
             shareSupplyPolicy,
             ComplianceTokenERC3643.forcedTransfer.selector,
-            Roles.COMPLIANCE_OPERATOR_ROLE,
-            complianceOperator
-        );
-        _configureShareRole(
-            policyEngine,
-            shareSupplyPolicy,
-            ComplianceTokenERC3643.batchForcedTransfer.selector,
             Roles.COMPLIANCE_OPERATOR_ROLE,
             complianceOperator
         );
@@ -629,21 +621,7 @@ contract DeployParent is Script {
         _configureShareRole(
             policyEngine,
             shareSupplyPolicy,
-            ComplianceTokenERC3643.batchSetAddressFrozen.selector,
-            Roles.COMPLIANCE_OPERATOR_ROLE,
-            complianceOperator
-        );
-        _configureShareRole(
-            policyEngine,
-            shareSupplyPolicy,
             ComplianceTokenERC3643.freezePartialTokens.selector,
-            Roles.COMPLIANCE_OPERATOR_ROLE,
-            complianceOperator
-        );
-        _configureShareRole(
-            policyEngine,
-            shareSupplyPolicy,
-            ComplianceTokenERC3643.batchFreezePartialTokens.selector,
             Roles.COMPLIANCE_OPERATOR_ROLE,
             complianceOperator
         );
@@ -654,16 +632,9 @@ contract DeployParent is Script {
             Roles.COMPLIANCE_OPERATOR_ROLE,
             complianceOperator
         );
-        _configureShareRole(
-            policyEngine,
-            shareSupplyPolicy,
-            ComplianceTokenERC3643.batchUnfreezePartialTokens.selector,
-            Roles.COMPLIANCE_OPERATOR_ROLE,
-            complianceOperator
-        );
 
         bytes32[] memory noParameters = new bytes32[](0);
-        bytes4[] memory protectedSelectors = new bytes4[](16);
+        bytes4[] memory protectedSelectors = new bytes4[](12);
         protectedSelectors[0] = ComplianceTokenERC3643.mint.selector;
         protectedSelectors[1] = ComplianceTokenERC3643.burn.selector;
         protectedSelectors[2] = YieldcoinShare.setCCIPAdmin.selector;
@@ -673,13 +644,9 @@ contract DeployParent is Script {
         protectedSelectors[6] = ComplianceTokenERC3643.pause.selector;
         protectedSelectors[7] = ComplianceTokenERC3643.unpause.selector;
         protectedSelectors[8] = ComplianceTokenERC3643.forcedTransfer.selector;
-        protectedSelectors[9] = ComplianceTokenERC3643.batchForcedTransfer.selector;
-        protectedSelectors[10] = ComplianceTokenERC3643.setAddressFrozen.selector;
-        protectedSelectors[11] = ComplianceTokenERC3643.batchSetAddressFrozen.selector;
-        protectedSelectors[12] = ComplianceTokenERC3643.freezePartialTokens.selector;
-        protectedSelectors[13] = ComplianceTokenERC3643.batchFreezePartialTokens.selector;
-        protectedSelectors[14] = ComplianceTokenERC3643.unfreezePartialTokens.selector;
-        protectedSelectors[15] = ComplianceTokenERC3643.batchUnfreezePartialTokens.selector;
+        protectedSelectors[9] = ComplianceTokenERC3643.setAddressFrozen.selector;
+        protectedSelectors[10] = ComplianceTokenERC3643.freezePartialTokens.selector;
+        protectedSelectors[11] = ComplianceTokenERC3643.unfreezePartialTokens.selector;
         for (uint256 i; i < protectedSelectors.length; ++i) {
             _addSharePolicyPair(
                 policyEngine, yieldcoin, terminalAllow, protectedSelectors[i], address(shareSupplyPolicy), noParameters

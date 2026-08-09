@@ -31,7 +31,6 @@ contract YieldcoinShareKycExtractorHarness is YieldcoinShareKycExtractor, Helper
     function isSupportedSelector(bytes4 selector) external pure returns (bool) {
         return selector == ComplianceTokenERC3643.transfer.selector
             || selector == ComplianceTokenERC3643.transferFrom.selector
-            || selector == ComplianceTokenERC3643.batchTransfer.selector
             || selector == ComplianceTokenERC3643.approve.selector
             || selector == ComplianceTokenERC3643.increaseAllowance.selector
             || selector == ComplianceTokenERC3643.decreaseAllowance.selector;

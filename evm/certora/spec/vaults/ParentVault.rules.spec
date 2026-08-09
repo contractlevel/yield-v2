@@ -1246,7 +1246,7 @@ rule constructor_getSharePrecision() {
 /// ─────────────────── INITIALIZE PARENT VAULT ─────────────────
 
 /// @notice ParentVault initialization reverts during an active non-reentrant execution
-rule initialize_RevertWhen_ReentrantCall() {
+rule REENT_001_initialize_RevertWhen_ReentrantCall() {
     env e;
     BaseVault.InitParams params;
     address treasury;
@@ -1799,7 +1799,7 @@ rule setInitialActiveProtocolAdapter_RevertWhen_CallerDoesNotHaveDEFAULT_ADMIN_R
 
 /// @notice Setting the initial active protocol adapter reverts when called during an active non-reentrant execution
 /// @dev Verifies that a reentrant call leaves all vault state unchanged
-rule setInitialActiveProtocolAdapter_RevertWhen_ReentrantCall() {
+rule REENT_001_setInitialActiveProtocolAdapter_RevertWhen_ReentrantCall() {
     env e;
     bytes32 protocolId;
 
@@ -2317,7 +2317,7 @@ rule REBAL_008_getTVL_RevertWhen_TvlAdditionOverflows() {
 
 /// @notice Deposit reverts when called during an active non-reentrant execution
 /// @dev Verifies that a reentrant call leaves all vault state unchanged
-rule deposit_RevertWhen_ReentrantCall() {
+rule REENT_001_deposit_RevertWhen_ReentrantCall() {
     env e;
     uint256 amount;
 
@@ -2450,7 +2450,7 @@ rule EPOCH_005_deposit_Success() {
 
 /// @notice Withdraw reverts when called during an active non-reentrant execution
 /// @dev Verifies that a reentrant call leaves all vault state unchanged
-rule withdraw_RevertWhen_ReentrantCall() {
+rule REENT_001_withdraw_RevertWhen_ReentrantCall() {
     env e;
     uint256 shareBurnAmount;
 
@@ -2577,7 +2577,7 @@ rule EPOCH_005_withdraw_Success() {
 
 /// @notice Claiming shares reverts when called during an active non-reentrant execution
 /// @dev Verifies that a reentrant call leaves all vault state unchanged
-rule claimShares_RevertWhen_ReentrantCall() {
+rule REENT_001_claimShares_RevertWhen_ReentrantCall() {
     env e;
     uint256 epochNonce;
 
@@ -2715,7 +2715,7 @@ rule EPOCH_009_claimShares_Success() {
 
 /// @notice Claiming asset reverts when called during an active non-reentrant execution
 /// @dev Verifies that a reentrant call leaves all vault state unchanged
-rule claimAsset_RevertWhen_ReentrantCall() {
+rule REENT_001_claimAsset_RevertWhen_ReentrantCall() {
     env e;
     uint256 epochNonce;
 
@@ -2863,7 +2863,7 @@ rule EPOCH_012_claimAsset_Success() {
 
 /// @notice Cancelling a deposit reverts when called during an active non-reentrant execution
 /// @dev Verifies that a reentrant call leaves all vault state unchanged
-rule cancelDeposit_RevertWhen_ReentrantCall() {
+rule REENT_001_cancelDeposit_RevertWhen_ReentrantCall() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -2984,7 +2984,7 @@ rule EPOCH_006a_cancelDeposit_Success() {
 
 /// ───────────────────── FORCE CANCEL DEPOSIT ────────────────────
 
-rule forceCancelDeposit_RevertWhen_ReentrantCall() {
+rule REENT_001_forceCancelDeposit_RevertWhen_ReentrantCall() {
     env e;
     address user;
 
@@ -3096,7 +3096,7 @@ rule EPOCH_006a_PAUSE_006_forceCancelDeposit_Success() {
 
 /// @notice Cancelling a withdraw reverts when called during an active non-reentrant execution
 /// @dev Verifies that a reentrant call leaves all vault state unchanged
-rule cancelWithdraw_RevertWhen_ReentrantCall() {
+rule REENT_001_cancelWithdraw_RevertWhen_ReentrantCall() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -3251,7 +3251,7 @@ rule CCIP_001_ccipReceive_RevertWhen_CallerIsNotCCIPRouter() {
 
 /// @notice CCIP receive reverts when called during an active non-reentrant execution
 /// @dev Verifies that a reentrant delivery attempt leaves all vault state unchanged
-rule ccipReceive_RevertWhen_ReentrantCall() {
+rule REENT_001_ccipReceive_RevertWhen_ReentrantCall() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -4306,7 +4306,7 @@ rule initiateRebalance_RevertWhen_CallerDoesNotHaveREBALANCE_OPERATOR_ROLE() {
 
 /// @notice Initiating a rebalance reverts when called during an active non-reentrant execution
 /// @dev Verifies that a reentrant call leaves all vault state unchanged
-rule initiateRebalance_RevertWhen_ReentrantCall() {
+rule REENT_001_initiateRebalance_RevertWhen_ReentrantCall() {
     env e;
     Types.Strategy newStrategy;
 
@@ -5031,7 +5031,7 @@ rule closeEpoch_RevertWhen_CallerDoesNotHaveEPOCH_OPERATOR_ROLE() {
 
 /// @notice Closing an epoch reverts when called during an active non-reentrant execution
 /// @dev Verifies that a reentrant call leaves all vault state unchanged
-rule closeEpoch_RevertWhen_ReentrantCall() {
+rule REENT_001_closeEpoch_RevertWhen_ReentrantCall() {
     env e;
     uint256 tvl;
 
@@ -5477,7 +5477,7 @@ rule EPOCH_004_EPOCH_014_NONCE_010_closeEpoch_WAIT_FOR_REMOTE_WITHDRAW_Success()
 
 /// ───────────────────── COMPLETE EPOCH DEPOSIT ───────────────────
 
-rule completeEpochDeposit_RevertWhen_ReentrantCall() {
+rule REENT_001_completeEpochDeposit_RevertWhen_ReentrantCall() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -5627,7 +5627,7 @@ rule completeRebalance_RevertWhen_CallerDoesNotHaveREBALANCE_OPERATOR_ROLE() {
 
 /// @notice Completing a rebalance reverts when called during an active non-reentrant execution
 /// @dev Verifies that a reentrant call leaves all vault state unchanged
-rule completeRebalance_RevertWhen_ReentrantCall() {
+rule REENT_001_completeRebalance_RevertWhen_ReentrantCall() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -5756,7 +5756,7 @@ rule FEE_002_FEE_004_NONCE_011_PAUSE_006_completeRebalance_Success_WhenManagemen
 
 /// @notice Executing recovery reverts when called during an active non-reentrant execution
 /// @dev Verifies that a reentrant call leaves all vault state unchanged
-rule executeRecovery_RevertWhen_ReentrantCall() {
+rule REENT_001_executeRecovery_RevertWhen_ReentrantCall() {
     env e;
 
     /// @dev revert conditions NOT being verified

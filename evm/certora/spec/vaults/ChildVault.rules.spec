@@ -742,7 +742,7 @@ rule UPGRADE_002_initialize_RevertWhen_AlreadyInitialized() {
 
 /// @notice ChildVault initialization reverts during an active non-reentrant execution.
 /// @dev Verifies the nonReentrant modifier independently of initializer and BaseVault initializer reverts.
-rule initialize_RevertWhen_ReentrantCall() {
+rule REENT_001_initialize_RevertWhen_ReentrantCall() {
     env e;
     BaseVault.InitParams params;
 
@@ -837,7 +837,7 @@ rule CCIP_001_ccipReceive_RevertWhen_CallerIsNotCCIPRouter() {
 
 /// @notice CCIP receive reverts when called during an active non-reentrant execution
 /// @dev Verifies that a reentrant delivery attempt leaves all vault state unchanged
-rule ccipReceive_RevertWhen_ReentrantCall() {
+rule REENT_001_ccipReceive_RevertWhen_ReentrantCall() {
     env e;
     Client.Any2EVMMessage message;
     uint256 epochNonce;
@@ -2246,7 +2246,7 @@ rule PAUSE_004_REC_008_executeRecovery_RevertWhen_Paused() {
 
 /// @notice executeRecovery reverts when the call is reentrant
 /// @dev Verifies that storage remains unchanged
-rule executeRecovery_RevertWhen_ReentrantCall() {
+rule REENT_001_executeRecovery_RevertWhen_ReentrantCall() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -2551,7 +2551,7 @@ rule REC_003_ccipSend_RevertWhen_RecoveryAlreadyPending() {
 
 /// @notice ChildVault CCIP send reverts when the bridge amount is zero
 /// @dev Verifies that an invalid bridge amount leaves all vault state unchanged
-rule ccipSend_RevertWhen_BridgeAmountIsZero() {
+rule REC_009_ccipSend_RevertWhen_BridgeAmountIsZero() {
     env e;
     uint64 destinationChainSelector;
     Types.CcipTx ccipTxType;
@@ -2582,7 +2582,7 @@ rule ccipSend_RevertWhen_BridgeAmountIsZero() {
 
 /// @notice ChildVault CCIP send reverts when the destination chain selector is zero
 /// @dev Verifies that an invalid destination leaves all vault state unchanged
-rule ccipSend_RevertWhen_DestinationChainIsZero() {
+rule CFG_004_REC_009_ccipSend_RevertWhen_DestinationChainIsZero() {
     env e;
     uint256 bridgeAmount;
     Types.CcipTx ccipTxType;
@@ -2611,7 +2611,7 @@ rule ccipSend_RevertWhen_DestinationChainIsZero() {
 
 /// @notice ChildVault CCIP send reverts when the destination is the current chain
 /// @dev Verifies that an invalid self-chain destination leaves all vault state unchanged
-rule ccipSend_RevertWhen_DestinationIsSelfChain() {
+rule CFG_004_REC_009_ccipSend_RevertWhen_DestinationIsSelfChain() {
     env e;
     uint256 bridgeAmount;
     Types.CcipTx ccipTxType;
@@ -2640,7 +2640,7 @@ rule ccipSend_RevertWhen_DestinationIsSelfChain() {
 
 /// @notice ChildVault CCIP send reverts when no destination vault is registered
 /// @dev Verifies that an unset destination vault leaves all vault state unchanged
-rule ccipSend_RevertWhen_DestinationVaultNotRegistered() {
+rule CFG_003_REC_009_ccipSend_RevertWhen_DestinationVaultNotRegistered() {
     env e;
     uint256 bridgeAmount;
     uint64 destinationChainSelector;
@@ -2963,7 +2963,7 @@ rule executeEpochWithdraw_RevertWhen_CallerDoesNotHaveEPOCH_OPERATOR_ROLE() {
 
 /// @notice Epoch withdraw reverts when called during an active non-reentrant execution
 /// @dev Verifies that a reentrant call leaves all vault state unchanged
-rule executeEpochWithdraw_RevertWhen_ReentrantCall() {
+rule REENT_001_executeEpochWithdraw_RevertWhen_ReentrantCall() {
     env e;
     uint256 epochNonce;
     require epochNonce > getLastHandledEpochNonce(), "epoch nonce should be new";
@@ -3505,7 +3505,7 @@ rule CCIP_005_NONCE_005_NONCE_006_REC_002_REC_009_executeEpochWithdraw_When_Rout
         "recovery mode stored value is only meaningful when the recovery mode hook fires, which may not happen due to state packing";
 }
 
-rule executeRecovery_REBALANCE_WITHDRAW_RevertWhen_ReentrantCall() {
+rule REENT_001_executeRecovery_REBALANCE_WITHDRAW_RevertWhen_ReentrantCall() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -4371,7 +4371,7 @@ rule executeRebalance_RevertWhen_CallerDoesNotHaveREBALANCE_OPERATOR_ROLE() {
 
 /// @notice Rebalance execution reverts when called during an active non-reentrant execution
 /// @dev Verifies that a reentrant call leaves all vault state unchanged
-rule executeRebalance_RevertWhen_ReentrantCall() {
+rule REENT_001_executeRebalance_RevertWhen_ReentrantCall() {
     env e;
     uint256 rebalanceNonce;
     require rebalanceNonce > getLastHandledRebalanceNonce(), "rebalance nonce should be new";
@@ -5127,7 +5127,7 @@ rule CCIP_005_NONCE_005_NONCE_006_REC_002_REC_009_executeRebalance_Remote_When_R
 
 /// @notice Epoch withdraw recovery via executeRecovery reverts when the call is reentrant
 /// @dev Verifies that recovery state, balances, TVL, and events remain unchanged
-rule executeRecovery_EPOCH_WITHDRAW_RevertWhen_ReentrantCall() {
+rule REENT_001_executeRecovery_EPOCH_WITHDRAW_RevertWhen_ReentrantCall() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -5860,7 +5860,7 @@ rule CCIP_007_REC_005_executeRecovery_CCIP_SEND_RevertWhen_RouterCcipSendReverts
 
 /// @notice CCIP send recovery via executeRecovery reverts when the call is reentrant
 /// @dev Verifies that recovery state, balances, and events remain unchanged
-rule executeRecovery_CCIP_SEND_RevertWhen_ReentrantCall() {
+rule REENT_001_executeRecovery_CCIP_SEND_RevertWhen_ReentrantCall() {
     env e;
 
     /// @dev revert conditions NOT being verified

@@ -1,7 +1,7 @@
 /// Verification of YieldcoinShareKycExtractor
 /// @author @contractlevel
 /// @notice YieldcoinShareKycExtractor extracts accounts requiring KYC from YieldcoinShare payloads
-/// @dev transfer, transferFrom, batchTransfer, approve, and increaseAllowance all decode payload.data inside
+/// @dev transfer, transferFrom, approve, and increaseAllowance all decode payload.data inside
 /// extract(). Harness-built payloads that round-trip a value through that decode (constructed via abi.encode in
 /// the harness, then abi.decode'd across the extract() external-call boundary) were confirmed vacuous for every
 /// one of these selectors, matching a dynamic-bytes/array modeling limitation seen elsewhere in this suite.

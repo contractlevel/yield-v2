@@ -14,8 +14,6 @@ contract YieldcoinShareKycExtractor_ExtractUnitTest is BaseUnitTest {
     address internal i_from = makeAddr("from");
     address internal i_to = makeAddr("to");
     address internal i_spender = makeAddr("spender");
-    address internal i_recipientOne = makeAddr("recipientOne");
-    address internal i_recipientTwo = makeAddr("recipientTwo");
 
     function setUp() public {
         s_extractor = new YieldcoinShareKycExtractor();
@@ -37,25 +35,6 @@ contract YieldcoinShareKycExtractor_ExtractUnitTest is BaseUnitTest {
         expectedAccounts[0] = i_sender;
         expectedAccounts[1] = i_from;
         expectedAccounts[2] = i_to;
-        _assertKycAccounts(parameters, expectedAccounts);
-    }
-
-    function test_YieldcoinShareKycExtractor_TOKEN_002_extract_Success_WhenSelectorIsBatchTransfer() external view {
-        address[] memory recipients = new address[](2);
-        recipients[0] = i_recipientOne;
-        recipients[1] = i_recipientTwo;
-        uint256[] memory amounts = new uint256[](2);
-        amounts[0] = 1;
-        amounts[1] = 2;
-
-        IPolicyEngine.Parameter[] memory parameters = s_extractor.extract(
-            _payload(ComplianceTokenERC3643.batchTransfer.selector, abi.encode(recipients, amounts))
-        );
-
-        address[] memory expectedAccounts = new address[](3);
-        expectedAccounts[0] = i_sender;
-        expectedAccounts[1] = i_recipientOne;
-        expectedAccounts[2] = i_recipientTwo;
         _assertKycAccounts(parameters, expectedAccounts);
     }
 

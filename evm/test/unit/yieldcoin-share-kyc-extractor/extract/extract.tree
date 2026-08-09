@@ -3,8 +3,6 @@ YieldcoinShareKycExtractor_extract
 │   └── it should return sender and recipient as KYC accounts
 ├── when selector is transferFrom
 │   └── it should return operator, owner, and recipient as KYC accounts
-├── when selector is batchTransfer
-│   └── it should return sender and every recipient as KYC accounts
 ├── when selector is approve
 │   └── it should return owner and spender as KYC accounts
 ├── when selector is increaseAllowance

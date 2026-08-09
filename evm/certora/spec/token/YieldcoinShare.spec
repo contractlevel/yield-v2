@@ -226,7 +226,7 @@ rule CFG_001_TOKEN_001_initialize_RevertWhen_InitialCcipAdminIsZero() {
     assert lastReverted;
 }
 
-rule initialize_RevertWhen_ReentrancyGuardIsEntered() {
+rule REENT_001_initialize_RevertWhen_ReentrancyGuardIsEntered() {
     env e;
     address policyEngine;
     address initialCcipAdmin;

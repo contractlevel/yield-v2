@@ -1,0 +1,3 @@
+ChildVault_tryCcipSend
+└── when the caller is not the vault itself
+    └── it should revert with ChildVault__OnlySelf

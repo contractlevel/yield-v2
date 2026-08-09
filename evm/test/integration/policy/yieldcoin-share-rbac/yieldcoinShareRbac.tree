@@ -1,30 +1,36 @@
 YieldcoinShare_rbacPolicy
-├── mint
+├── mint and batchMint
 │   ├── when the caller is not ParentVault
-│   │   └── it should revert through ACE
+│   │   └── they should revert through the mint policy
 │   └── when the caller is ParentVault
-│       └── it should mint shares
-├── burn
+│       └── they should mint shares
+├── burn and batchBurn
 │   ├── when the caller is not ParentVault
-│   │   └── it should revert through ACE
+│   │   └── they should revert through the burn policy
 │   └── when the caller is ParentVault
-│       └── it should burn shares
+│       └── they should burn shares
 ├── setCCIPAdmin
 │   ├── when the caller is not config operator
 │   │   └── it should revert through ACE
 │   └── when the caller is config operator
 │       └── it should set CCIP admin
 ├── metadata setters
-│   └── when the caller is not config operator
-│       └── they should revert through ACE
+│   ├── when the caller is not config operator
+│   │   └── they should revert through ACE
+│   └── when the caller is config operator
+│       └── they should update token metadata
 ├── pause and unpause
-│   └── when the caller does not hold the configured role
-│       └── they should revert through ACE
+│   ├── when the caller does not hold the configured role
+│   │   └── they should revert through ACE
+│   └── when the caller holds the configured role
+│       └── they should update pause state
 ├── attachPolicyEngine
-│   └── when the caller is not policy engine manager
-│       └── it should revert through ACE
+│   ├── when the caller is not policy engine manager
+│   │   └── it should revert through ACE
+│   └── when the caller is policy engine manager
+│       └── it should attach the replacement engine
 └── compliance operations
     ├── when the caller is not compliance operator
-    │   └── they should revert through ACE
+    │   └── single and batch calls should revert through the corresponding single-item policy
     └── when the caller is compliance operator
-        └── forcedTransfer should transfer shares
+        └── single and batch calls should perform their configured operation

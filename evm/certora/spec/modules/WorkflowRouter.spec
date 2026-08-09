@@ -291,7 +291,7 @@ rule ROUTER_008_setWorkflowSelectors_RevertWhen_ZeroWorkflowId() {
     assert lastReverted;
 }
 
-rule setWorkflowSelectors_RevertWhen_SelectorsAreEmpty() {
+rule ROUTER_008_setWorkflowSelectors_RevertWhen_SelectorsAreEmpty() {
     env e;
     bytes32 workflowId;
     bytes4[] selectors;

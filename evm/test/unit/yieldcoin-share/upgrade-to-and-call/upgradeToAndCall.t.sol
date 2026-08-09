@@ -9,6 +9,12 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
+contract YieldcoinShareV2 is YieldcoinShare {
+    function upgradeTestVersion() external pure returns (uint256) {
+        return 2;
+    }
+}
+
 contract YieldcoinShare_UpgradeToAndCallUnitTest is BaseUnitTest {
     function test_YieldcoinShare_upgradeToAndCall_Success() external {
         YieldcoinShare newImpl = new YieldcoinShare();
@@ -17,24 +23,42 @@ contract YieldcoinShare_UpgradeToAndCallUnitTest is BaseUnitTest {
         s_yieldcoin.upgradeToAndCall(address(newImpl), "");
     }
 
-    function test_YieldcoinShare_upgradeToAndCall_Success_PreservesState() external {
+    function test_YieldcoinShare_UPGRADE_007_upgradeToAndCall_Success_PreservesState() external {
+        uint256 balance = 100e18;
+        uint256 allowance = 40e18;
+        uint256 frozenTokens = 10e18;
+
+        s_yieldcoin.mint(i_owner, balance);
+        _changePrank(i_owner);
+        s_yieldcoin.approve(i_nonOwner, allowance);
+        s_yieldcoin.freezePartialTokens(i_owner, frozenTokens);
+
         string memory nameBefore = s_yieldcoin.name();
         string memory symbolBefore = s_yieldcoin.symbol();
         uint8 decimalsBefore = s_yieldcoin.decimals();
         address ccipAdminBefore = s_yieldcoin.getCCIPAdmin();
         address policyEngineBefore = s_yieldcoin.getPolicyEngine();
         address ownerBefore = s_yieldcoin.owner();
+        uint256 supplyBefore = s_yieldcoin.totalSupply();
+        uint256 balanceBefore = s_yieldcoin.balanceOf(i_owner);
+        uint256 allowanceBefore = s_yieldcoin.allowance(i_owner, i_nonOwner);
+        uint256 frozenTokensBefore = s_yieldcoin.getFrozenTokens(i_owner);
 
-        YieldcoinShare newImpl = new YieldcoinShare();
+        YieldcoinShare newImpl = new YieldcoinShareV2();
         _changePrank(i_upgrader);
         s_yieldcoin.upgradeToAndCall(address(newImpl), "");
 
+        assertEq(YieldcoinShareV2(address(s_yieldcoin)).upgradeTestVersion(), 2);
         assertEq(s_yieldcoin.name(), nameBefore);
         assertEq(s_yieldcoin.symbol(), symbolBefore);
         assertEq(s_yieldcoin.decimals(), decimalsBefore);
         assertEq(s_yieldcoin.getCCIPAdmin(), ccipAdminBefore);
         assertEq(s_yieldcoin.getPolicyEngine(), policyEngineBefore);
         assertEq(s_yieldcoin.owner(), ownerBefore);
+        assertEq(s_yieldcoin.totalSupply(), supplyBefore);
+        assertEq(s_yieldcoin.balanceOf(i_owner), balanceBefore);
+        assertEq(s_yieldcoin.allowance(i_owner, i_nonOwner), allowanceBefore);
+        assertEq(s_yieldcoin.getFrozenTokens(i_owner), frozenTokensBefore);
     }
 
     function test_YieldcoinShare_upgradeToAndCall_RevertWhen_CallerIsNotOwner() external {
