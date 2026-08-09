@@ -73,6 +73,7 @@ abstract contract ProtocolAdapter is IProtocolAdapter, ReentrancyGuard {
     /// @param expectedAmount The expected withdrawn amount (requested amount, or TVL for full withdrawals)
     /// @param actualAmount The actual amount withdrawn from the protocol
     function _revertIfIncompleteWithdraw(uint256 expectedAmount, uint256 actualAmount) internal pure {
+        //slither-disable-next-line incorrect-equality
         if (actualAmount == 0) revert ProtocolAdapter__NoZeroAmount();
         if (actualAmount < expectedAmount && expectedAmount - actualAmount > WEI_TOLERANCE) {
             revert ProtocolAdapter__IncorrectWithdrawAmount();
