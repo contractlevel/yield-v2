@@ -13,12 +13,12 @@ abstract contract Properties is BeforeAfter, Asserts {
     /*//////////////////////////////////////////////////////////////
                                   MISC
     //////////////////////////////////////////////////////////////*/
-    function invariant_depositGhostMatchesOpenEpochTotal() public {
+    function invariant_SOLV_006_depositGhostMatchesOpenEpochTotal() public {
         uint256 currentEpochNonce = parent.vault.getEpochNonce();
         eq(
             parent.vault.getEpoch(currentEpochNonce).totalDepositAmount,
             ghost_totalDepositedByEpoch[currentEpochNonce],
-            "deposit ghost does not match open epoch total"
+            "SOLV-006: deposit ghost does not match open epoch total"
         );
     }
 

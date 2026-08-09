@@ -126,9 +126,9 @@ definition pendingRebalanceRecoveryBacking() returns mathint =
 /*//////////////////////////////////////////////////////////////
                              GHOSTS
 //////////////////////////////////////////////////////////////*/
-/// ─── Ghost-sum accumulators (SOLV-001 / SOLV-003 / SHARE-003) ─────
+/// ─── Ghost-sum accumulators (SOLV-001 / SOLV-003 / SOLV-006 / SHARE-003) ─────
 /// @dev These mirror per-key storage fields and maintain running sums across the unbounded
-///      s_epochs/s_withdraws key space, updated via the Sstore hooks below. Needed because the
+///      s_epochs/s_deposits/s_withdraws key space, updated via the Sstore hooks below. Needed because the
 ///      solvency/accounting invariants in the INVARIANTS section must hold across every epoch nonce
 ///      and user simultaneously, not just a fixed key the way the per-function Success rules do.
 ghost mapping(uint256 => uint256) ghost_epochRemainingWithdrawClaimAmount {
@@ -142,6 +142,12 @@ ghost mathint ghost_sumClaimableWithdrawObligation {
 }
 ghost mathint ghost_sumWithdrawEscrow {
     init_state axiom ghost_sumWithdrawEscrow == 0;
+}
+ghost mathint ghost_sumDepositEscrow {
+    init_state axiom ghost_sumDepositEscrow == 0;
+}
+ghost mathint ghost_sumPendingDepositClaims {
+    init_state axiom ghost_sumPendingDepositClaims == 0;
 }
 ghost mathint ghost_sumPendingShareMint {
     init_state axiom ghost_sumPendingShareMint == 0;
@@ -165,6 +171,12 @@ hook Sstore currentContract.ext_yieldcoin_storage_ParentVault.s_epochs[KEY uint2
     uint256 newValue (uint256 oldValue) {
     /// @dev SHARE-003: running sum of shares already counted in s_totalShares but not yet minted
     ghost_sumPendingShareMint = ghost_sumPendingShareMint + newValue - oldValue;
+}
+
+hook Sstore currentContract.ext_yieldcoin_storage_ParentVault.s_epochs[KEY uint256 epochNonce].remainingDepositClaimAmount
+    uint256 newValue (uint256 oldValue) {
+    /// @dev SOLV-006: running sum of closed-epoch deposit inputs not yet consumed by share claims
+    ghost_sumPendingDepositClaims = ghost_sumPendingDepositClaims + newValue - oldValue;
 }
 
 hook Sstore currentContract.ext_yieldcoin_storage_ParentVault.s_epochs[KEY uint256 epochNonce].remainingShareBurnAmount
@@ -203,6 +215,12 @@ hook Sstore currentContract.ext_yieldcoin_storage_ParentVault.s_withdraws[KEY ad
     uint256 newValue (uint256 oldValue) {
     /// @dev SOLV-003: running sum of shares escrowed against outstanding withdraw intents
     ghost_sumWithdrawEscrow = ghost_sumWithdrawEscrow + newValue - oldValue;
+}
+
+hook Sstore currentContract.ext_yieldcoin_storage_ParentVault.s_deposits[KEY address depositor][KEY uint256 epochNonce]
+    uint256 newValue (uint256 oldValue) {
+    /// @dev SOLV-006: running sum of asset deposits represented by outstanding per-user entries
+    ghost_sumDepositEscrow = ghost_sumDepositEscrow + newValue - oldValue;
 }
 
 /*//////////////////////////////////////////////////////////////
@@ -813,6 +831,37 @@ invariant SOLV_003_withdrawEscrowReconcilesWithEpochAccounting()
         }
     }
 
+/// @notice Accounted deposit escrow reconciles with open and closed epoch settlement state
+/// @dev The user-entry sum equals the current OPEN epoch's aggregate deposits plus
+///      remainingDepositClaimAmount across closed epochs. closeEpoch moves the current aggregate
+///      into the remaining-claim pool without changing user entries; cancellation and claims reduce
+///      the corresponding user and aggregate values in lockstep.
+invariant SOLV_006_depositEscrowReconcilesWithEpochAccounting()
+    ghost_sumDepositEscrow == currentOpenEpochDepositBacking() + ghost_sumPendingDepositClaims
+    filtered {
+        f -> isInvariantPreservationMethod(f)
+    }
+    {
+        preserved closeEpoch(uint256 tvl) with (env e) {
+            require getEpochNonce() != max_uint256;
+            requireInvariant EPOCH_008_EPOCH_011_EPOCH_013_epochRemainingCountersAreZeroBeforeClose(getEpochNonce());
+            requireInvariant EPOCH_005_futureEpochDepositTotalsAreZero(assert_uint256(getEpochNonce() + 1));
+        }
+        preserved initialize(
+            BaseVault.InitParams params,
+            address treasury,
+            address policyEngineManager,
+            address newPolicyEngine,
+            address cancelDepositOperator
+        ) with (env e) {
+            require getEpochNonce() == 0;
+            require getEpoch(1).totalDepositAmount == 0;
+            require getEpoch(1).remainingDepositClaimAmount == 0;
+            require ghost_sumDepositEscrow == 0;
+            require ghost_sumPendingDepositClaims == 0;
+        }
+    }
+
 /// @notice The share token's totalSupply() reconciles exactly with s_totalShares once pending
 ///         lazy mint/burn amounts are accounted for
 /// @dev Verifies docs/INVARIANTS.md SHARE-003. s_totalShares is adjusted for a whole epoch's net
@@ -1120,7 +1169,7 @@ rule EPOCH_005_closedEpochTotalsAreFrozen(method f, uint256 epochNonce) filtered
 /// @dev Every included function writing s_deposits or s_withdraws derives the affected user from
 ///      msg.sender. forceCancelDeposit is the intentional exception and is excluded here; its
 ///      authorization, target-user handling, and exact refund effects are verified separately.
-rule userEpochEscrowOnlyChangedByOwnerOutsideForceCancel(method f, address user, uint256 epochNonce) filtered {
+rule AC_009_userEpochEscrowOnlyChangedByOwnerOutsideForceCancel(method f, address user, uint256 epochNonce) filtered {
     f -> isInvariantPreservationMethod(f)
         && f.selector != sig:forceCancelDeposit(address).selector
 } {
