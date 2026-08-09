@@ -2657,7 +2657,7 @@ rule claimShares_RevertWhen_NoDeposit() {
 
 /// @notice Claiming shares mints the depositor's proportional (or fully remaining) share of the
 ///         epoch's minted shares, deletes their deposit entry, and emits DepositClaimed
-rule EPOCH_009_claimShares_Success() {
+rule EPOCH_019_EPOCH_009_claimShares_Success() {
     env e;
     uint256 epochNonce;
 
@@ -2799,7 +2799,7 @@ rule claimAsset_RevertWhen_NoWithdraw() {
 ///         proportional (or fully remaining) asset amount, deletes their withdraw entry, and emits
 ///         WithdrawClaimed. The formula holds even in the withdrawAmount == 0 case, where the asset
 ///         transfer is skipped entirely (adding/subtracting zero is a no-op).
-rule EPOCH_012_claimAsset_Success() {
+rule EPOCH_019_EPOCH_012_claimAsset_Success() {
     env e;
     uint256 epochNonce;
 
@@ -2941,7 +2941,7 @@ rule cancelDeposit_RevertWhen_NoDeposit() {
 
 /// @notice Cancelling a deposit deletes the depositor's entry, decrements the epoch total, refunds
 ///         the full deposit amount, and emits DepositCancelled
-rule EPOCH_006a_cancelDeposit_Success() {
+rule EPOCH_019_EPOCH_006a_cancelDeposit_Success() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -3056,7 +3056,7 @@ rule forceCancelDeposit_RevertWhen_NoDeposit() {
 }
 
 /// @notice Force cancellation refunds the named user even while paused and does not run policy
-rule EPOCH_006a_PAUSE_006_forceCancelDeposit_Success() {
+rule EPOCH_019_EPOCH_006a_PAUSE_006_forceCancelDeposit_Success() {
     env e;
     address user;
 
@@ -3090,6 +3090,40 @@ rule EPOCH_006a_PAUSE_006_forceCancelDeposit_Success() {
     assert ghost_DepositForceCancelled_Param_epochNonce == epochNonce;
     assert ghost_DepositForceCancelled_Param_depositor == user;
     assert ghost_DepositForceCancelled_Param_amount == depositAmount;
+}
+
+/// @notice A distinct force-cancel operator cannot receive any portion of the depositor's refund
+rule EPOCH_019_forceCancelDeposit_DoesNotPayDistinctOperator() {
+    env e;
+    address user;
+
+    require e.msg.value == 0, "non-payable";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require hasRole(CANCEL_DEPOSIT_OPERATOR_ROLE(), e.msg.sender);
+    require e.msg.sender != user, "operator should be distinct from the depositor";
+    require e.msg.sender != currentContract, "operator should not be the vault";
+    require user != currentContract, "depositor should not be the vault";
+
+    uint256 epochNonce = getEpochNonce();
+    require getEpoch(epochNonce).status == Types.EpochStatus.OPEN, "current epoch should be open";
+    uint256 depositAmount = getDepositAmount(user, epochNonce);
+    require depositAmount != 0, "user should have a deposit";
+    require getEpoch(epochNonce).totalDepositAmount >= depositAmount,
+        "epoch total deposit should cover the refund";
+
+    uint256 userBalanceBefore = asset.balanceOf(user);
+    uint256 operatorBalanceBefore = asset.balanceOf(e.msg.sender);
+    uint256 vaultBalanceBefore = asset.balanceOf(currentContract);
+    require vaultBalanceBefore >= depositAmount, "vault should cover the refund";
+    require userBalanceBefore <= max_uint256 - depositAmount, "user balance should not overflow";
+
+    forceCancelDeposit@withrevert(e, user);
+
+    assert !lastReverted;
+    assert asset.balanceOf(user) == userBalanceBefore + depositAmount;
+    assert asset.balanceOf(e.msg.sender) == operatorBalanceBefore;
+    assert asset.balanceOf(currentContract) == vaultBalanceBefore - depositAmount;
+    assert getDepositAmount(user, epochNonce) == 0;
 }
 
 /// ────────────────────────── CANCEL WITHDRAW ─────────────────────
@@ -3174,7 +3208,7 @@ rule cancelWithdraw_RevertWhen_NoWithdraw() {
 
 /// @notice Cancelling a withdraw deletes the withdrawer's entry, decrements the epoch total, refunds
 ///         the full share burn amount, and emits WithdrawCancelled
-rule EPOCH_006b_cancelWithdraw_Success() {
+rule EPOCH_019_EPOCH_006b_cancelWithdraw_Success() {
     env e;
 
     /// @dev revert conditions NOT being verified

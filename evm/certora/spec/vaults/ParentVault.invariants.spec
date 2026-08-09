@@ -455,7 +455,7 @@ invariant NONCE_009_parentLifecycleNoncesArePositive()
 ///      (BaseVault's constructor already makes it true via _disableInitializers(), independent of
 ///      whether ParentVault.initialize() has actually run). Same preserved-block reasoning as
 ///      epochNonceIsNeverZero above applies here too.
-invariant EPOCH_001_exactlyCurrentEpochIsOpen(uint256 epochNonce)
+invariant EPOCH_001_EPOCH_020_exactlyCurrentEpochIsOpen(uint256 epochNonce)
     getTreasury() != 0 => (
         (epochNonce == getEpochNonce()) <=> (getEpoch(epochNonce).status == Types.EpochStatus.OPEN)
     )
@@ -467,7 +467,7 @@ invariant EPOCH_001_exactlyCurrentEpochIsOpen(uint256 epochNonce)
             require getTreasury() != 0;
         }
         preserved closeEpoch(uint256 tvl) with (env e) {
-            requireInvariant EPOCH_001_epochsBeyondCurrentHaveNoneStatus(epochNonce);
+            requireInvariant EPOCH_001_EPOCH_020_epochsBeyondCurrentHaveNoneStatus(epochNonce);
         }
         preserved initialize(
             BaseVault.InitParams params,
@@ -487,7 +487,7 @@ invariant EPOCH_001_exactlyCurrentEpochIsOpen(uint256 epochNonce)
 ///      unconstrained induction prestate could otherwise let a "future" epoch nonce already carry
 ///      leftover non-NONE status/fields from an impossible history, which openNextEpoch's plain
 ///      status-only write (status := OPEN, nothing else touched) would then silently inherit.
-invariant EPOCH_001_epochsBeyondCurrentHaveNoneStatus(uint256 otherEpochNonce)
+invariant EPOCH_001_EPOCH_020_epochsBeyondCurrentHaveNoneStatus(uint256 otherEpochNonce)
     otherEpochNonce > getEpochNonce() => getEpoch(otherEpochNonce).status == Types.EpochStatus.NONE
     filtered {
         f -> isInvariantPreservationMethod(f)
@@ -510,6 +510,48 @@ invariant EPOCH_001_epochsBeyondCurrentHaveNoneStatus(uint256 otherEpochNonce)
         }
     }
 
+/// @notice Epoch zero is a permanent sentinel and is never opened or settled
+/// @dev Verifies the genesis component of docs/security/INVARIANTS.md EPOCH-020. Initialization
+///      opens epoch one, and every later close opens the next positive nonce, so no production
+///      lifecycle method writes a non-NONE status to epoch zero.
+invariant EPOCH_020_epochZeroAlwaysHasNoneStatus()
+    getEpoch(0).status == Types.EpochStatus.NONE
+    filtered {
+        f -> isInvariantPreservationMethod(f)
+    }
+
+/// @notice Historical positive epochs have the only statuses permitted by the lifecycle topology
+/// @dev Verifies the historical component of docs/security/INVARIANTS.md EPOCH-020. The immediately
+///      previous epoch may still be EXECUTING while remote settlement completes; every older
+///      positive epoch must be CLAIMABLE because closeEpoch refuses to advance while its previous
+///      epoch is not claimable. Current and future statuses are covered by the two EPOCH-001 /
+///      EPOCH-020 invariants above.
+invariant EPOCH_020_historicalEpochsHaveCanonicalStatus(uint256 epochNonce)
+    getTreasury() != 0 && epochNonce > 0 && epochNonce < getEpochNonce() => (
+        (epochNonce == assert_uint256(getEpochNonce() - 1) => (
+            getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING
+                || getEpoch(epochNonce).status == Types.EpochStatus.CLAIMABLE
+        ))
+        && (epochNonce < assert_uint256(getEpochNonce() - 1)
+            => getEpoch(epochNonce).status == Types.EpochStatus.CLAIMABLE)
+    )
+    filtered {
+        f -> isInvariantPreservationMethod(f)
+    }
+    {
+        preserved {
+            require getTreasury() != 0;
+        }
+        preserved initialize(
+            BaseVault.InitParams params,
+            address treasury,
+            address policyEngineManager,
+            address newPolicyEngine,
+            address cancelDepositOperator
+        ) with (env e) {
+        }
+    }
+    
 /// @notice Before an epoch has ever closed (status NONE, never touched, or OPEN, currently
 ///         accepting deposits/withdraws), none of its remaining-side settlement counters have been
 ///         set yet
@@ -524,7 +566,7 @@ invariant EPOCH_001_epochsBeyondCurrentHaveNoneStatus(uint256 otherEpochNonce)
 ///      counterexample to this invariant itself. Used via requireInvariant below so the "stay
 ///      bounded"/"reach zero together" invariants aren't forced to consider unrealistic
 ///      not-yet-closed prestates where a remaining-side field is nonzero.
-/// @dev closeEpoch's own preserved block additionally requires EPOCH_001_epochsBeyondCurrentHaveNoneStatus:
+/// @dev closeEpoch's own preserved block additionally requires EPOCH_001_EPOCH_020_epochsBeyondCurrentHaveNoneStatus:
 ///      without it, Certora could otherwise assume the *next* epoch nonce (s_epochNonce + 1, about
 ///      to be opened by openNextEpoch) already had a non-NONE status with leftover nonzero remaining
 ///      fields from an unreachable prestate - satisfying this invariant's own hypothesis vacuously
@@ -544,7 +586,7 @@ invariant EPOCH_008_EPOCH_011_EPOCH_013_epochRemainingCountersAreZeroBeforeClose
     }
     {
         preserved closeEpoch(uint256 tvl) with (env e) {
-            requireInvariant EPOCH_001_epochsBeyondCurrentHaveNoneStatus(epochNonce);
+            requireInvariant EPOCH_001_EPOCH_020_epochsBeyondCurrentHaveNoneStatus(epochNonce);
         }
         preserved initialize(
             BaseVault.InitParams params,
@@ -554,7 +596,7 @@ invariant EPOCH_008_EPOCH_011_EPOCH_013_epochRemainingCountersAreZeroBeforeClose
             address cancelDepositOperator
         ) with (env e) {
             /// @dev genesis fact, not provable as an invariant - see
-            ///      EPOCH_001_epochsBeyondCurrentHaveNoneStatus's initialize() preserved block above
+            ///      EPOCH_001_EPOCH_020_epochsBeyondCurrentHaveNoneStatus's initialize() preserved block above
             require getEpoch(epochNonce).status == Types.EpochStatus.NONE;
         }
     }
@@ -897,7 +939,7 @@ invariant SHARE_001_SHARE_003_totalSupplyReconcilesWithTotalShares()
             address cancelDepositOperator
         ) with (env e) {
             /// @dev genesis fact, not provable as an invariant - see
-            ///      EPOCH_001_epochsBeyondCurrentHaveNoneStatus's initialize() preserved block above. If
+            ///      EPOCH_001_EPOCH_020_epochsBeyondCurrentHaveNoneStatus's initialize() preserved block above. If
             ///      initialize() is about to succeed, no shares have ever been minted or accounted.
             require share.totalSupply() == 0;
             require getTotalShares() == 0;
@@ -1112,7 +1154,7 @@ rule EPOCH_010_epochWithdrawCounters_NonIncreasing(method f, uint256 epochNonce)
 ///         OPEN -> CLAIMABLE (or NONE -> OPEN, for a brand new epoch); never backwards or sideways
 /// @dev Verifies docs/INVARIANTS.md EPOCH-002. Two guards, both lessons from earlier fixes in this
 ///      file:
-///      1. requireInvariant EPOCH_001_epochsBeyondCurrentHaveNoneStatus(epochNonce) rules out an
+///      1. requireInvariant EPOCH_001_EPOCH_020_epochsBeyondCurrentHaveNoneStatus(epochNonce) rules out an
 ///         unconstrained "future" epoch nonce carrying a leftover non-NONE status from an
 ///         unreachable prestate - the same issue EPOCH_008_EPOCH_011_EPOCH_013_epochRemainingCountersAreZeroBeforeClose's
 ///         closeEpoch preserved block already guards against, relevant here because openNextEpoch
@@ -1124,7 +1166,7 @@ rule EPOCH_010_epochWithdrawCounters_NonIncreasing(method f, uint256 epochNonce)
 rule EPOCH_002_epochTransitionsAreValid(method f, uint256 epochNonce) filtered {
         f -> isInvariantPreservationMethod(f)
 } {
-    requireInvariant EPOCH_001_epochsBeyondCurrentHaveNoneStatus(epochNonce);
+    requireInvariant EPOCH_001_EPOCH_020_epochsBeyondCurrentHaveNoneStatus(epochNonce);
     require f.selector == sig:initialize(BaseVault.InitParams,address,address,address,address).selector
         => getEpoch(1).status == Types.EpochStatus.NONE;
 

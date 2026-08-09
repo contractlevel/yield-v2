@@ -44,9 +44,11 @@ contract ParentVault_ForceCancelDepositUnitTest is BaseUnitTest {
     function test_ParentVault_forceCancelDeposit_Success_TransfersUsdc() external {
         uint256 vaultBefore = s_mockUsdc.balanceOf(address(s_parentVault));
         uint256 depositorBefore = s_mockUsdc.balanceOf(i_depositor);
+        uint256 operatorBefore = s_mockUsdc.balanceOf(i_cancelDepositOperator);
         s_parentVault.forceCancelDeposit(i_depositor);
         assertEq(s_mockUsdc.balanceOf(address(s_parentVault)), vaultBefore - DEPOSIT_AMOUNT);
         assertEq(s_mockUsdc.balanceOf(i_depositor), depositorBefore + DEPOSIT_AMOUNT);
+        assertEq(s_mockUsdc.balanceOf(i_cancelDepositOperator), operatorBefore);
     }
 
     function test_ParentVault_forceCancelDeposit_Success_DeletesDepositMapping() external {

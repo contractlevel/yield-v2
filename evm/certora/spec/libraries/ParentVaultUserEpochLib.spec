@@ -885,7 +885,7 @@ rule EPOCH_008_claimShares_RevertWhen_RemainingDepositClaimAmountUnderflows() {
 
 /// @notice Claiming shares succeeds for the final deposit claimant.
 /// @dev Verifies final-claim branch using all remaining share mint amount.
-rule EPOCH_009_claimShares_Success_WhenFinalDepositClaimant() {
+rule EPOCH_019_EPOCH_009_claimShares_Success_WhenFinalDepositClaimant() {
     env e;
     address user;
     uint256 epochNonce;
@@ -925,7 +925,7 @@ rule EPOCH_009_claimShares_Success_WhenFinalDepositClaimant() {
 
 /// @notice Claiming shares succeeds for a proportional deposit claimant.
 /// @dev Verifies proportional deposit claim branch.
-rule EPOCH_009_claimShares_Success_WhenProportionalDepositClaimant() {
+rule EPOCH_019_EPOCH_009_claimShares_Success_WhenProportionalDepositClaimant() {
     env e;
     address user;
     uint256 epochNonce;
@@ -1145,7 +1145,7 @@ rule EPOCH_011_claimAsset_RevertWhen_RemainingShareBurnAmountUnderflows() {
 
 /// @notice Claiming asset succeeds for the final withdraw claimant with nonzero asset amount.
 /// @dev Verifies final-claim branch and asset transfer branch.
-rule EPOCH_012_claimAsset_Success_WhenFinalWithdrawClaimantAndAmountNonzero() {
+rule EPOCH_019_EPOCH_012_claimAsset_Success_WhenFinalWithdrawClaimantAndAmountNonzero() {
     env e;
     address user;
     uint256 epochNonce;
@@ -1193,7 +1193,7 @@ rule EPOCH_012_claimAsset_Success_WhenFinalWithdrawClaimantAndAmountNonzero() {
 
 /// @notice Claiming asset succeeds for the final withdraw claimant with zero asset amount.
 /// @dev Verifies final-claim branch and skipped asset transfer branch.
-rule EPOCH_012_claimAsset_Success_WhenFinalWithdrawClaimantAndAmountZero() {
+rule EPOCH_019_EPOCH_012_claimAsset_Success_WhenFinalWithdrawClaimantAndAmountZero() {
     env e;
     address user;
     uint256 epochNonce;
@@ -1237,7 +1237,7 @@ rule EPOCH_012_claimAsset_Success_WhenFinalWithdrawClaimantAndAmountZero() {
 
 /// @notice Claiming asset succeeds for a proportional withdraw claimant with zero asset amount.
 /// @dev Verifies proportional withdraw claim branch and skipped asset transfer branch.
-rule EPOCH_012_claimAsset_Success_WhenProportionalWithdrawClaimantAndAmountZero() {
+rule EPOCH_019_EPOCH_012_claimAsset_Success_WhenProportionalWithdrawClaimantAndAmountZero() {
     env e;
     address user;
     uint256 epochNonce;
@@ -1288,7 +1288,7 @@ rule EPOCH_012_claimAsset_Success_WhenProportionalWithdrawClaimantAndAmountZero(
 
 /// @notice Claiming asset succeeds for a proportional withdraw claimant with nonzero asset amount.
 /// @dev Verifies proportional withdraw claim branch and asset transfer branch.
-rule EPOCH_012_claimAsset_Success_WhenProportionalWithdrawClaimantAndAmountNonzero() {
+rule EPOCH_019_EPOCH_012_claimAsset_Success_WhenProportionalWithdrawClaimantAndAmountNonzero() {
     env e;
     address user;
     uint256 epochNonce;
@@ -1448,7 +1448,7 @@ rule EPOCH_006a_cancelDeposit_RevertWhen_EpochTotalDepositUnderflows() {
 
 /// @notice Canceling a deposit succeeds and returns the deposited asset.
 /// @dev Verifies deposit deletion, epoch total decrease, asset transfer, and DepositCancelled event.
-rule EPOCH_006a_cancelDeposit_Success() {
+rule EPOCH_019_EPOCH_006a_cancelDeposit_Success() {
     env e;
     address user;
 
@@ -1582,7 +1582,7 @@ rule EPOCH_006a_forceCancelDeposit_RevertWhen_EpochTotalDepositUnderflows() {
 
 /// @notice Force-canceling a deposit succeeds and returns the deposited asset to its owner.
 /// @dev Verifies exact state, balances, and DepositForceCancelled parameters without emitting DepositCancelled.
-rule EPOCH_006a_forceCancelDeposit_Success() {
+rule EPOCH_019_EPOCH_006a_forceCancelDeposit_Success() {
     env e;
     address user;
 
@@ -1717,7 +1717,7 @@ rule EPOCH_006b_cancelWithdraw_RevertWhen_EpochTotalShareBurnUnderflows() {
 
 /// @notice Canceling a withdraw succeeds and returns the escrowed shares.
 /// @dev Verifies withdraw deletion, epoch total decrease, share transfer, and WithdrawCancelled event.
-rule EPOCH_006b_cancelWithdraw_Success() {
+rule EPOCH_019_EPOCH_006b_cancelWithdraw_Success() {
     env e;
     address user;
 
