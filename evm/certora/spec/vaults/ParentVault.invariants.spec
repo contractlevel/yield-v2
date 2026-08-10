@@ -572,7 +572,6 @@ invariant EPOCH_020_historicalEpochsHaveCanonicalStatus(uint256 epochNonce)
 ///      fields from an unreachable prestate - satisfying this invariant's own hypothesis vacuously
 ///      pre-call (antecedent false) - and then openNextEpoch's status-only write would flip the
 ///      antecedent true post-call while the stale remaining fields are still sitting there untouched.
-// passing
 invariant EPOCH_008_EPOCH_011_EPOCH_013_epochRemainingCountersAreZeroBeforeClose(uint256 epochNonce)
     (getEpoch(epochNonce).status == Types.EpochStatus.NONE || getEpoch(epochNonce).status == Types.EpochStatus.OPEN)
         => (

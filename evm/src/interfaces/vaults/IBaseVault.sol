@@ -121,9 +121,9 @@ interface IBaseVault is IPauseable {
         bytes32 indexed ccipMessageId, uint64 indexed sourceChainSelector, Types.CcipTx indexed ccipTxType
     );
 
-    /// @notice Emitted when the crosschain vaults are set by a CONFIG_OPERATOR
-    /// @param chainSelector The CCIP selectors of the chain
-    /// @param vault The addresses of the crosschain vault
+    /// @notice Emitted when the crosschain vault for a chain selector is set or removed
+    /// @param chainSelector The CCIP selector of the remote chain
+    /// @param vault The registered vault address, or address(0) if the registration was removed
     event CrosschainVaultSet(uint64 indexed chainSelector, address indexed vault);
     /// @notice Emitted when the CCIP gas limit is set by a CONFIG_OPERATOR
     /// @param chainSelector The CCIP selector of the chain
@@ -148,88 +148,87 @@ interface IBaseVault is IPauseable {
                                RECOVERY
     //////////////////////////////////////////////////////////////*/
     /// @notice Executes the active recovery mode, reverting if no recovery is pending
-    /// @dev Precondition: a recovery mode must be active (not NONE)
+    /// @dev Permissionless because the operation and all inputs are fixed by stored recovery state
+    /// @dev Reverts if no recovery mode is active
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if the call is reentered
     function executeRecovery() external;
 
     /*//////////////////////////////////////////////////////////////
                            CONFIG SETTERS
     //////////////////////////////////////////////////////////////*/
-    /// @notice Sets the crosschain vaults
-    /// @param chainSelectors The CCIP selectors of the chains
-    /// @param vaults The addresses of the crosschain vaults
-    /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
-    /// @dev Precondition: chainSelectors must not be empty
-    /// @dev Precondition: chainSelectors and vaults must have the same length
-    /// @dev Sets the crosschain vaults
-    /// @dev Emits the CrosschainVaultSet event
+    /// @notice Sets or removes the crosschain vault registered for each supplied chain selector
+    /// @param chainSelectors The CCIP selectors of the remote chains
+    /// @param vaults The vault addresses, using address(0) to remove a registration
+    /// @dev Reverts if the caller does not have CONFIG_OPERATOR_ROLE
+    /// @dev Reverts if chainSelectors is empty
+    /// @dev Reverts if chainSelectors and vaults have different lengths
+    /// @dev Reverts if any chain selector is zero
+    /// @dev Changing or removing a registration can orphan an in-flight CCIP message from the prior vault
     function setCrosschainVaults(uint64[] calldata chainSelectors, address[] calldata vaults) external;
     /// @notice Sets the CCIP gas limit for a given chain selector
     /// @param chainSelector The CCIP selector of the chain
-    /// @param gasLimit The CCIP gas limit
-    /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
-    /// @dev Sets the CCIP gas limit
-    /// @dev Emits the CcipGasLimitSet event
+    /// @param gasLimit The CCIP gas limit, or zero to clear the override and use the default
+    /// @dev Reverts if the caller does not have CONFIG_OPERATOR_ROLE
+    /// @dev Reverts if chainSelector is zero
     function setCcipGasLimit(uint64 chainSelector, uint256 gasLimit) external;
     /// @notice Sets the default CCIP gas limit
-    /// @dev If a chain doesn't have a specific CCIP gas limit set, the default CCIP gas limit will be used.
-    /// @param gasLimit The CCIP gas limit
-    /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
-    /// @dev Sets the default CCIP gas limit
-    /// @dev Emits the DefaultCcipGasLimitSet event
+    /// @param gasLimit The default CCIP gas limit
+    /// @dev Used when a destination chain has no nonzero per-chain gas-limit override
+    /// @dev Reverts if the caller does not have CONFIG_OPERATOR_ROLE
+    /// @dev Reverts if gasLimit is zero
     function setDefaultCcipGasLimit(uint256 gasLimit) external;
     /*//////////////////////////////////////////////////////////////
                             LINK OPERATOR
     //////////////////////////////////////////////////////////////*/
-    /// @notice Withdraws LINK from the vault
+    /// @notice Withdraws LINK from the vault to the caller
     /// @param amount The amount of LINK to withdraw
-    /// @dev Precondition: Caller must have the LINK_OPERATOR_ROLE
-    /// @dev Precondition: Amount must be greater than 0
-    /// @dev Withdraws LINK from the vault to the caller
+    /// @dev Reverts if the caller does not have LINK_OPERATOR_ROLE
+    /// @dev Reverts if amount is zero
     function withdrawLink(uint256 amount) external;
 
     /*//////////////////////////////////////////////////////////////
                                GETTERS
     //////////////////////////////////////////////////////////////*/
-    /// @notice Gets the LINK token
+    /// @notice Returns the LINK token
     /// @return link The address of the LINK token
     function getLink() external view returns (address link);
-    /// @notice Gets the underlying asset token
+    /// @notice Returns the underlying asset token
     /// @return asset The address of the underlying asset token
     function getAsset() external view returns (address asset);
-    /// @notice Gets the underlying asset precision factor
+    /// @notice Returns the underlying asset precision factor
     /// @return assetPrecision 10 ** asset.decimals()
     function getAssetPrecision() external view returns (uint256 assetPrecision);
-    /// @notice Gets the CCIP selector for this chain
+    /// @notice Returns the CCIP selector for this chain
     /// @return thisChainSelector The CCIP selector for this chain
     function getThisChainSelector() external view returns (uint64 thisChainSelector);
-    /// @notice Gets the adapter registry
+    /// @notice Returns the adapter registry
     /// @return adapterRegistry The address of the adapter registry
     function getAdapterRegistry() external view returns (address adapterRegistry);
-    /// @notice Gets the crosschain vault address for a given chain selector
+    /// @notice Returns the crosschain vault address registered for a chain selector
     /// @param chainSelector The CCIP selector of the chain
-    /// @return vault The address of the crosschain vault
+    /// @return vault The registered crosschain vault address, or address(0) if none is registered
     function getCrosschainVault(uint64 chainSelector) external view returns (address vault);
-    /// @notice Gets the CCIP gas limit for a given chain selector
+    /// @notice Returns the effective CCIP gas limit for a chain selector
     /// @param chainSelector The CCIP selector of the chain
-    /// @return gasLimit The CCIP gas limit for the chain selector
+    /// @return gasLimit The per-chain override when nonzero, otherwise the default CCIP gas limit
     function getCcipGasLimit(uint64 chainSelector) external view returns (uint256 gasLimit);
-    /// @notice Gets the default CCIP gas limit
+    /// @notice Returns the default CCIP gas limit
     /// @return defaultCcipGasLimit The default CCIP gas limit
     function getDefaultCcipGasLimit() external view returns (uint256 defaultCcipGasLimit);
     /// @notice Returns the active strategy protocol adapter
     /// @return activeProtocolAdapter The address of the active strategy protocol adapter
     /// @dev Do not use the adapter directly as the vault's canonical TVL source; use getTVL()
     function getActiveProtocolAdapter() external view returns (address activeProtocolAdapter);
-    /// @notice Gets the TVL of the vault
-    /// @return tvl The TVL of the vault
-    /// @dev Strategy chain will return tvl, non-strategy chain will return 0
+    /// @notice Returns the underlying-asset value of this vault's active strategy position
+    /// @return tvl The active position value, or zero when this vault is not on the active strategy chain
     function getTVL() external view returns (uint256 tvl);
-    /// @notice Gets the pending rebalance deposit recovery
+    /// @notice Returns the pending rebalance deposit recovery state
     /// @return recovery Types.RebalanceDepositRecovery struct includes:
-    ///         uint256 rebalanceNonce - the nonce of the rebalance
-    ///         uint256 amount - the amount that needs to be rebalanced/deposited into the new strategy
+    ///         uint256 rebalanceNonce - the nonce of the failed rebalance deposit
+    ///         uint256 amount - the amount of underlying asset to retry depositing
     function getRebalanceDepositRecovery() external view returns (Types.RebalanceDepositRecovery memory recovery);
-    /// @notice Gets the active recovery mode
+    /// @notice Returns the active recovery mode
     /// @return recoveryMode The active recovery mode, or NONE when no recovery is active
     function getRecoveryMode() external view returns (Types.RecoveryMode recoveryMode);
 }

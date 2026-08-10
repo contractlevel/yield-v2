@@ -15,23 +15,22 @@ interface IAdapterRegistry {
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
     /// @notice Emitted when an adapter is set
-    /// @param protocolId The ID of the protocol - keccak256("aave-v3") for Aave v3, keccak256("compound-v3") for Compound v3, etc.
+    /// @param protocolId The protocol ID, such as keccak256("aave-v3")
     /// @param adapter The address of the adapter
     event AdapterSet(bytes32 indexed protocolId, address indexed adapter);
 
     /*//////////////////////////////////////////////////////////////
                                FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-    /// @notice Sets an adapter for a given protocol ID
-    /// @param protocolId The ID of the protocol - keccak256("aave-v3") for Aave v3, keccak256("compound-v3") for Compound v3, etc.
-    /// @param adapter The address of the adapter
-    /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
-    /// @dev Precondition: protocolId must not be zero
-    /// @dev Explicitly no zero address check on adapter
-    /// @dev Set `adapter` to address(0) to remove the adapter for `protocolId`
+    /// @notice Sets or removes the adapter registered for a protocol ID
+    /// @param protocolId The protocol ID, such as keccak256("aave-v3")
+    /// @param adapter The adapter address, or address(0) to remove the registration
+    /// @dev Reverts if the caller does not have CONFIG_OPERATOR_ROLE
+    /// @dev Reverts if protocolId is zero
+    /// @dev The adapter address may be zero to remove the registration
     function setAdapter(bytes32 protocolId, address adapter) external;
-    /// @notice Gets the adapter for a given protocol ID
-    /// @param protocolId The ID of the protocol - keccak256("aave-v3") for Aave v3, keccak256("compound-v3") for Compound v3, etc.
-    /// @return adapter The address of the adapter
+    /// @notice Returns the adapter registered for a protocol ID
+    /// @param protocolId The protocol ID, such as keccak256("aave-v3")
+    /// @return adapter The registered adapter address, or address(0) if none is registered
     function getAdapter(bytes32 protocolId) external view returns (address adapter);
 }

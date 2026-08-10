@@ -22,28 +22,28 @@ interface IAaveV4Spoke {
         uint32 dynamicConfigKey;
     }
 
-    /// @notice Supplies an amount of underlying asset to the specified reserve, on behalf of `onBehalfOf`
-    /// @dev Reverts if the reserve associated with `reserveId` is not listed
-    /// @dev The Spoke pulls the underlying asset from the caller, so prior token approval is required
-    /// @param reserveId The identifier of the reserve
-    /// @param amount The amount of asset to supply
-    /// @param onBehalfOf The owner of the position to add supply shares to
-    /// @return suppliedShares The amount of shares supplied
-    /// @return suppliedAmount The amount of assets supplied
-    function supply(uint256 reserveId, uint256 amount, address onBehalfOf)
-        external
-        returns (uint256 suppliedShares, uint256 suppliedAmount);
+    /// @notice Supplies an amount of underlying asset of the specified reserve.
+    /// @dev It reverts if the reserve associated with the given reserve identifier is not listed.
+    /// @dev The Spoke pulls the underlying asset from the caller, so prior token approval is required.
+    /// @dev Caller must be `onBehalfOf` or an authorized position manager for `onBehalfOf`.
+    /// @param reserveId The reserve identifier.
+    /// @param amount The amount of asset to supply.
+    /// @param onBehalfOf The owner of the position to add supply shares to.
+    /// @return The amount of shares supplied.
+    /// @return The amount of assets supplied.
+    function supply(uint256 reserveId, uint256 amount, address onBehalfOf) external returns (uint256, uint256);
 
-    /// @notice Withdraws a specified amount of underlying asset from the given reserve, on behalf of `to`
-    /// @dev Reverts if the reserve associated with `reserveId` is not listed
-    /// @dev Providing an amount greater than the maximum withdrawable value signals a full withdrawal
-    /// @dev The caller receives the underlying asset withdrawn
-    /// @param reserveId The identifier of the reserve
-    /// @param amount The amount of asset to withdraw (use a value greater than the maximum withdrawable to withdraw all)
-    /// @param to The owner of the position to remove supply shares from
-    /// @return The amount of shares withdrawn
-    /// @return The amount of assets withdrawn
-    function withdraw(uint256 reserveId, uint256 amount, address to) external returns (uint256, uint256);
+    /// @notice Withdraws a specified amount of underlying asset from the given reserve.
+    /// @dev It reverts if the reserve associated with the given reserve identifier is not listed.
+    /// @dev Providing an amount greater than the maximum withdrawable value signals a full withdrawal.
+    /// @dev Caller must be `onBehalfOf` or an authorized position manager for `onBehalfOf`.
+    /// @dev Caller receives the underlying asset withdrawn.
+    /// @param reserveId The identifier of the reserve.
+    /// @param amount The amount of asset to withdraw.
+    /// @param onBehalfOf The owner of position to remove supply shares from.
+    /// @return The amount of shares withdrawn.
+    /// @return The amount of assets withdrawn.
+    function withdraw(uint256 reserveId, uint256 amount, address onBehalfOf) external returns (uint256, uint256);
 
     /// @notice Returns the amount of assets supplied by a specific user for a given reserve
     /// @dev Reverts if the reserve associated with `reserveId` is not listed

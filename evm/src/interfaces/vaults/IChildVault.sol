@@ -45,7 +45,7 @@ interface IChildVault is IBaseVault {
 
     /// @notice Emitted when failed epoch deposit recovery state is stored
     /// @param epochNonce The epoch nonce of the failed deposit
-    /// @param amount The amount of USDC to retry depositing
+    /// @param amount The amount of underlying asset to retry depositing
     event EpochDepositRecoveryStored(uint256 indexed epochNonce, uint256 indexed amount);
 
     /// @notice Emitted when failed epoch deposit recovery state is cleared
@@ -54,7 +54,7 @@ interface IChildVault is IBaseVault {
 
     /// @notice Emitted when failed epoch withdraw recovery state is stored
     /// @param epochNonce The epoch nonce of the failed withdraw
-    /// @param amount The amount of USDC to retry withdrawing
+    /// @param amount The amount of underlying asset to retry withdrawing
     event EpochWithdrawRecoveryStored(uint256 indexed epochNonce, uint256 indexed amount);
 
     /// @notice Emitted when failed epoch withdraw recovery state is cleared
@@ -76,7 +76,7 @@ interface IChildVault is IBaseVault {
     /// @notice Emitted when failed CCIP send recovery state is stored
     /// @param ccipTxType The CCIP transaction type to replay
     /// @param destinationChainSelector The CCIP selector of the destination chain
-    /// @param amount The amount of USDC to bridge
+    /// @param amount The amount of underlying asset to bridge
     event CcipSendRecoveryStored(
         Types.CcipTx indexed ccipTxType, uint64 indexed destinationChainSelector, uint256 indexed amount
     );
@@ -84,7 +84,7 @@ interface IChildVault is IBaseVault {
     /// @notice Emitted when failed CCIP send recovery state is cleared
     /// @param ccipTxType The CCIP transaction type being retried
     /// @param destinationChainSelector The CCIP selector of the destination chain
-    /// @param amount The amount of USDC to bridge
+    /// @param amount The amount of underlying asset to bridge
     event CcipSendRecoveryCleared(
         Types.CcipTx indexed ccipTxType, uint64 indexed destinationChainSelector, uint256 indexed amount
     );
@@ -92,54 +92,78 @@ interface IChildVault is IBaseVault {
     /*//////////////////////////////////////////////////////////////
                                   CRE
     //////////////////////////////////////////////////////////////*/
-    /// @notice Executes the epoch withdraw from a strategy
+    /// @notice Attempts an epoch withdrawal from the active strategy and sends the assets to the parent vault
     /// @dev Called by the WorkflowRouter when net flow is negative
     /// @param epochNonce The nonce of the epoch
     /// @param amount The amount of asset to withdraw from the active strategy
-    /// @dev Precondition: caller must have the EPOCH_OPERATOR_ROLE
-    /// @dev Precondition: epochNonce must be greater than the last epoch nonce handled by this child vault
+    /// @dev Reverts if the caller does not have EPOCH_OPERATOR_ROLE
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if a recovery mode is active
+    /// @dev Reverts if amount is zero
+    /// @dev Reverts if epochNonce is not greater than the last epoch nonce handled by this child vault
+    /// @dev Reverts if a successful strategy withdrawal returns zero assets
+    /// @dev Reverts if the resulting CCIP transfer has invalid send parameters or no registered parent vault
+    /// @dev Stores epoch-withdraw recovery if the strategy withdrawal fails
+    /// @dev Stores CCIP-send recovery if a valid CCIP send attempt fails
     function executeEpochWithdraw(uint256 epochNonce, uint256 amount) external;
 
-    /// @notice Withdraws the entire TVL from the active strategy adapter and sends it to the new strategy
+    /// @notice Attempts to withdraw the active strategy's entire position and continue the rebalance
     /// @param rebalanceNonce The nonce of the rebalance
     /// @param newStrategy The new strategy to rebalance to
-    /// @dev Precondition: caller must have the REBALANCE_OPERATOR_ROLE
-    /// @dev Precondition: rebalanceNonce must be greater than the last rebalance nonce handled by this child vault
-    /// @dev Precondition: there must be no existent recovery mode
-    /// @dev Precondition: if the withdraw from the active strategy fails, newStrategy's chain selector must not be zero
-    ///      (enforced when storing rebalance withdraw recovery state, so it can be retried later)
+    /// @dev Reverts if the caller does not have REBALANCE_OPERATOR_ROLE
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if a recovery mode is active
+    /// @dev Reverts if rebalanceNonce is not greater than the last rebalance nonce handled by this child vault
+    /// @dev Reverts if a successful strategy withdrawal returns zero assets
+    /// @dev Reverts if newStrategy.chainSelector is zero
+    /// @dev Reverts if a required local adapter is not registered or is registered for another vault
+    /// @dev Reverts if a required crosschain transfer has invalid send parameters or no registered destination vault
+    /// @dev Stores rebalance-withdraw recovery if the old-strategy withdrawal fails
+    /// @dev Stores rebalance-deposit recovery if a local new-strategy deposit fails
+    /// @dev Stores CCIP-send recovery if a valid CCIP send attempt fails
     function executeRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy) external;
 
     /*//////////////////////////////////////////////////////////////
                                 GETTERS
     //////////////////////////////////////////////////////////////*/
-    /// @notice Gets the CCIP selector for the parent chain
+    /// @notice Returns the CCIP selector for the parent chain
     /// @return parentChainSelector The CCIP selector for the parent chain
     function getParentChainSelector() external view returns (uint64 parentChainSelector);
 
-    /// @notice Gets the highest epoch nonce handled by this child vault
+    /// @notice Returns the highest epoch nonce handled by this child vault
     /// @return lastHandledEpochNonce The highest handled epoch nonce
     function getLastHandledEpochNonce() external view returns (uint256 lastHandledEpochNonce);
 
-    /// @notice Gets the highest rebalance nonce handled by this child vault
+    /// @notice Returns the highest rebalance nonce handled by this child vault
     /// @return lastHandledRebalanceNonce The highest handled rebalance nonce
     function getLastHandledRebalanceNonce() external view returns (uint256 lastHandledRebalanceNonce);
 
-    /// @notice Gets failed epoch deposit recovery state
-    /// @return recovery The stored epoch deposit recovery state
+    /// @notice Returns the failed epoch deposit recovery state
+    /// @return recovery Types.EpochRecovery struct includes:
+    ///         uint256 epochNonce - the nonce of the failed epoch deposit
+    ///         uint256 amount - the amount of underlying asset to retry depositing
     function getEpochDepositRecovery() external view returns (Types.EpochRecovery memory recovery);
 
-    /// @notice Gets failed epoch withdraw recovery state
-    /// @return recovery The stored epoch withdraw recovery state
+    /// @notice Returns the failed epoch withdraw recovery state
+    /// @return recovery Types.EpochRecovery struct includes:
+    ///         uint256 epochNonce - the nonce of the failed epoch withdrawal
+    ///         uint256 amount - the amount of underlying asset to retry withdrawing
     function getEpochWithdrawRecovery() external view returns (Types.EpochRecovery memory recovery);
 
-    /// @notice Gets failed rebalance withdraw recovery state
+    /// @notice Returns the failed rebalance withdraw recovery state
     /// @return recovery Types.RebalanceWithdrawRecovery struct includes:
     ///         uint256 rebalanceNonce - the nonce of the rebalance
     ///         Types.Strategy strategy - the target strategy to continue the rebalance into after withdraw succeeds
     function getRebalanceWithdrawRecovery() external view returns (Types.RebalanceWithdrawRecovery memory recovery);
 
-    /// @notice Gets failed CCIP send recovery state
-    /// @return recovery The stored CCIP send recovery state
+    /// @notice Returns the failed CCIP send recovery state
+    /// @return recovery Types.CcipSendRecovery struct includes:
+    ///         uint256 amount - the amount of underlying asset to bridge
+    ///         uint256 nonce - the epoch or rebalance nonce of the failed operation
+    ///         bytes32 protocolId - the target protocol ID for a rebalance, otherwise zero
+    ///         uint64 destinationChainSelector - the CCIP selector of the destination chain
+    ///         Types.CcipTx ccipTxType - the CCIP transaction type to retry
     function getCcipSendRecovery() external view returns (Types.CcipSendRecovery memory recovery);
 }

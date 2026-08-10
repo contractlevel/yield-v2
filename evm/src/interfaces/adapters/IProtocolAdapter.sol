@@ -38,25 +38,32 @@ interface IProtocolAdapter {
     /*//////////////////////////////////////////////////////////////
                                FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-    /// @notice Deposits the underlying asset into the protocol
+    /// @notice Deposits the underlying asset into the configured protocol position
     /// @param amount The amount of asset to deposit
-    /// @dev Precondition: caller must be the Yieldcoin v2 Vault
+    /// @dev Reverts if the caller is not the Yieldcoin v2 vault
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the protocol reports a lower position value after the deposit
+    /// @dev Reverts if the protocol credits less than amount beyond the permitted rounding tolerance
     function deposit(uint256 amount) external;
-    /// @notice Withdraws the underlying asset from the protocol
-    /// @param amount The amount of asset to withdraw
+    /// @notice Withdraws the underlying asset from the configured protocol position and transfers it to the vault
+    /// @param amount The amount of asset to withdraw, or type(uint256).max to withdraw the entire position
     /// @return amountOut The actual amount of asset withdrawn
-    /// @dev Precondition: caller must be the Yieldcoin v2 Vault
+    /// @dev Reverts if the caller is not the Yieldcoin v2 vault
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if a specific withdrawal amount exceeds the adapter's position value
+    /// @dev Reverts if the protocol returns zero assets
+    /// @dev Reverts if the protocol returns less than the expected amount beyond the permitted rounding tolerance
     function withdraw(uint256 amount) external returns (uint256 amountOut);
-    /// @notice Gets the total value locked in the protocol
-    /// @return tvl The total value locked in the protocol
+    /// @notice Returns the underlying-asset value of the adapter's protocol position
+    /// @return tvl The value of the adapter's position denominated in the underlying asset
     function getTVL() external view returns (uint256 tvl);
-    /// @notice Gets the address of the protocol pool
+    /// @notice Returns the address of the protocol pool
     /// @return pool The address of the protocol pool
     function getProtocolPool() external view returns (address pool);
-    /// @notice Gets the Yieldcoin v2 Vault authorized to call this adapter
+    /// @notice Returns the Yieldcoin v2 Vault authorized to call this adapter
     /// @return vault The vault address
     function getVault() external view returns (address vault);
-    /// @notice Gets the underlying asset token used by this adapter
+    /// @notice Returns the underlying asset token used by this adapter
     /// @return asset The underlying asset token address
     function getAsset() external view returns (address asset);
 }

@@ -85,13 +85,11 @@ interface IWorkflowRouter is IReceiver, IPauseable {
     /// @param workflowId The ID of the workflow
     /// @param name The hash-encoded workflow name
     /// @param owner The address that deployed the workflow
-    /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
-    /// @dev Precondition: workflowId must not be zero
-    /// @dev Precondition: name and owner must both be nonzero when setting metadata, or both zero when removing metadata
-    /// @dev Precondition: the `(name, owner)` pair must differ from the currently registered metadata
-    ///      for `workflowId` - changing either field is sufficient (reverts with
-    ///      `WorkflowRouter__MetadataUnchanged` otherwise, including when removing an already-removed,
-    ///      i.e. unregistered, workflow ID)
+    /// @dev Reverts if the caller does not have CONFIG_OPERATOR_ROLE
+    /// @dev Reverts if workflowId is zero
+    /// @dev Reverts unless name and owner are both nonzero when setting metadata or both zero when removing metadata
+    /// @dev Reverts if the (name, owner) pair matches the currently registered metadata, including when removing an
+    ///      already-unregistered workflow ID
     /// @dev Set `name` and `owner` to zero to remove metadata for `workflowId`
     /// @dev Every successful call advances the workflow's selector-allowlist generation by one,
     ///      starting a fresh, empty selector set: selectors from every prior generation become
@@ -106,10 +104,10 @@ interface IWorkflowRouter is IReceiver, IPauseable {
     /// @param workflowId The ID of the workflow
     /// @param selectors The selectors to set
     /// @param isAllowlisted Whether the selectors are allowlisted
-    /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
-    /// @dev Precondition: workflowId must not be zero
-    /// @dev Precondition: selectors must not be empty
-    /// @dev Precondition: workflowId must have registered metadata (see `getWorkflowMetadata`)
+    /// @dev Reverts if the caller does not have CONFIG_OPERATOR_ROLE
+    /// @dev Reverts if workflowId is zero
+    /// @dev Reverts if selectors is empty
+    /// @dev Reverts if workflowId does not have registered metadata (see getWorkflowMetadata)
     /// @dev Set `isAllowlisted` to false to remove selectors from the workflow allowlist
     /// @dev Writes into the workflow's current selector-allowlist generation (see `getWorkflowGeneration`)
     function setWorkflowSelectors(bytes32 workflowId, bytes4[] calldata selectors, bool isAllowlisted) external;
@@ -132,7 +130,7 @@ interface IWorkflowRouter is IReceiver, IPauseable {
     /// @return generation The current generation of the workflow's selector allowlist
     function getWorkflowGeneration(bytes32 workflowId) external view returns (uint256 generation);
 
-    /// @notice Gets whether a selector is allowlisted for a workflow
+    /// @notice Returns whether a selector is allowlisted for a workflow
     /// @param workflowId The ID of the workflow
     /// @param selector The selector to check
     /// @return isAllowlisted Whether the selector is allowlisted for the workflow
@@ -142,7 +140,7 @@ interface IWorkflowRouter is IReceiver, IPauseable {
         view
         returns (bool isAllowlisted);
 
-    /// @notice Gets the Yieldcoin v2 Vault address for this chain
+    /// @notice Returns the Yieldcoin v2 Vault address for this chain
     /// @return vault The address of the vault
     function getVault() external view returns (address vault);
 }

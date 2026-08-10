@@ -12,6 +12,7 @@ interface IComet {
 
     /// @notice Withdraws an amount of asset from the caller's balance in the protocol, or borrows it if `asset`
     /// is the base token and `amount` exceeds the caller's supplied base balance
+    /// @dev Passing type(uint256).max withdraws the caller's full supplied balance without borrowing
     /// @param asset The address of the asset to withdraw
     /// @param amount The amount of asset to withdraw
     function withdraw(address asset, uint256 amount) external;

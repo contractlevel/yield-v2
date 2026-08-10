@@ -100,7 +100,7 @@ interface IParentVault is IBaseVault {
     /// @notice Emitted when a withdraw is made
     /// @param epochNonce The epoch nonce of the withdraw
     /// @param withdrawer The address of the withdrawer
-    /// @param shareBurnAmount The amount of shares burned
+    /// @param shareBurnAmount The amount of shares escrowed for burning when the withdrawal is claimed
     event WithdrawSubmitted(uint256 indexed epochNonce, address indexed withdrawer, uint256 indexed shareBurnAmount);
     /// @notice Emitted when a deposit is claimed
     /// @param epochNonce The epoch nonce of the claim
@@ -191,30 +191,34 @@ interface IParentVault is IBaseVault {
     //////////////////////////////////////////////////////////////*/
     /// @notice Sets the initial active protocol adapter after deployment
     /// @param protocolId The protocol ID of the initial active strategy
-    /// @dev This must be called once after the adapter is deployed and registered, before operational use.
-    /// @dev Precondition: caller must have the DEFAULT_ADMIN_ROLE
-    /// @dev Precondition: the initial active protocol adapter must not already be set
-    /// @dev Precondition: the protocol ID must have a registered adapter
+    /// @dev Must be called once after the adapter is deployed and registered, before operational use
+    /// @dev Reverts if the caller does not have DEFAULT_ADMIN_ROLE
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the initial active protocol adapter has already been set
+    /// @dev Reverts if protocolId does not have a registered adapter
+    /// @dev Reverts if the registered adapter is bound to another vault
     function setInitialActiveProtocolAdapter(bytes32 protocolId) external;
 
     /// @notice Sets the treasury address
     /// @param treasury The address of the treasury
-    /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
+    /// @dev Reverts if the caller does not have CONFIG_OPERATOR_ROLE
+    /// @dev Reverts if treasury is the zero address
     function setTreasury(address treasury) external;
 
     /// @notice Sets whether a protocol is supported on any chain across the Yieldcoin v2 system
     /// @param protocolId The protocol ID to configure
     /// @param isSupported Whether the protocol is supported
-    /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
-    /// @dev Precondition: protocolId must not be zero
-    /// @dev Precondition: if isSupported is false, protocolId must not be the active or pending strategy's protocol ID
+    /// @dev Reverts if the caller does not have CONFIG_OPERATOR_ROLE
+    /// @dev Reverts if protocolId is zero
+    /// @dev When removing support, reverts if protocolId belongs to the active or pending strategy
     function setSupportedProtocol(bytes32 protocolId, bool isSupported) external;
 
     /// @notice Force-cancels a user's deposit in the current open epoch, refunding their exact deposited amount
     /// @param user The depositor whose deposit is being force-cancelled
-    /// @dev Precondition: Caller must have the CANCEL_DEPOSIT_OPERATOR_ROLE
-    /// @dev Precondition: the current epoch must be open
-    /// @dev Precondition: user must have a deposit for the current epoch
+    /// @dev Reverts if the caller does not have CANCEL_DEPOSIT_OPERATOR_ROLE
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the current epoch is not open
+    /// @dev Reverts if user has no deposit in the current epoch
     function forceCancelDeposit(address user) external;
 
     /*//////////////////////////////////////////////////////////////
@@ -223,96 +227,115 @@ interface IParentVault is IBaseVault {
     /// @notice Deposits the underlying asset into the vault
     /// @param amount The amount of asset to deposit
     /// @return epochNonce The epoch nonce of the deposit
-    /// @dev Precondition: amount must meet the minimum deposit amount requirement
-    /// @dev Precondition: the contract must not be paused
-    /// @dev Precondition: tx must be compliant with the policy
-    /// @dev Precondition: the current epoch must be open
+    /// @dev Reverts if amount is less than the minimum deposit amount
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if the call is rejected by the attached ACE policies
+    /// @dev Reverts if the current epoch is not open
+    /// @dev Requires the caller to have sufficient asset balance and allowance for amount
     function deposit(uint256 amount) external returns (uint256 epochNonce);
 
-    /// @notice Submit USDC withdraw intent
-    /// @param shareBurnAmount The amount of shares to burn for the withdraw
-    /// @return epochNonce The epoch nonce of the withdraw
-    /// @dev Precondition: the contract must not be paused
-    /// @dev Precondition: tx must be compliant with the policy
-    /// @dev Precondition: the current epoch must be open
-    /// @dev Precondition: user must approve address(this) to transfer their shareBurnAmount
+    /// @notice Submits a withdrawal intent by escrowing shares in the current epoch
+    /// @param shareBurnAmount The amount of shares to escrow for burning when the withdrawal is claimed
+    /// @return epochNonce The nonce of the epoch containing the withdrawal intent
+    /// @dev Reverts if shareBurnAmount is zero
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if the call is rejected by the attached ACE policies
+    /// @dev Reverts if the current epoch is not open
+    /// @dev Requires the caller to have sufficient share balance and allowance for shareBurnAmount
     function withdraw(uint256 shareBurnAmount) external returns (uint256 epochNonce);
 
-    /// @notice Claim Yieldcoin shares after a deposit
-    /// @dev Finalizes an individual deposit
+    /// @notice Claims the shares allocated to the caller's deposit in a settled epoch
     /// @param epochNonce The epoch nonce of the deposit
     /// @return shareMintAmount The amount of Yieldcoin shares minted for the deposit
-    /// @dev Precondition: the contract must not be paused
-    /// @dev Precondition: tx must be compliant with the policy
-    /// @dev Precondition: the epoch nonce must be claimable
-    /// @dev Precondition: the user must have a deposit for the epoch nonce
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if the call is rejected by the attached ACE policies
+    /// @dev Reverts if the epoch is not claimable
+    /// @dev Reverts if the caller has no deposit in the epoch
+    /// @dev Reverts if the resulting share mint is rejected by the share token's attached ACE policies
     function claimShares(uint256 epochNonce) external returns (uint256 shareMintAmount);
 
     /// @notice Claims the underlying asset for a completed epoch withdrawal
-    /// @dev Finalizes an individual withdraw
     /// @param epochNonce The nonce of the epoch to claim from
     /// @return withdrawAmount The amount of asset transferred to the withdrawer
-    /// @dev Precondition: the contract must not be paused
-    /// @dev Precondition: tx must be compliant with the policy
-    /// @dev Precondition: the epoch nonce must be claimable
-    /// @dev Precondition: the user must have a withdraw intent for the epoch nonce
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if the call is rejected by the attached ACE policies
+    /// @dev Reverts if the epoch is not claimable
+    /// @dev Reverts if the caller has no withdrawal intent in the epoch
+    /// @dev Reverts if burning the escrowed shares is rejected by the share token's attached ACE policies
     function claimAsset(uint256 epochNonce) external returns (uint256 withdrawAmount);
 
-    /// @notice Cancels a deposit
-    /// @dev Precondition: the contract must not be paused
-    /// @dev Precondition: tx must be compliant with the policy
-    /// @dev Precondition: the current epoch must be open
-    /// @dev Precondition: the user must have a deposit for the epoch nonce
+    /// @notice Cancels and refunds the caller's deposit in the current open epoch
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if the call is rejected by the attached ACE policies
+    /// @dev Reverts if the current epoch is not open
+    /// @dev Reverts if the caller has no deposit in the current epoch
     function cancelDeposit() external;
 
-    /// @notice Cancels a withdraw
-    /// @dev Precondition: the contract must not be paused
-    /// @dev Precondition: tx must be compliant with the policy
-    /// @dev Precondition: the current epoch must be open
-    /// @dev Precondition: the user must have a withdraw intent for the epoch nonce
+    /// @notice Cancels the caller's withdrawal intent and returns the escrowed shares
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if the call is rejected by the attached ACE policies
+    /// @dev Reverts if the current epoch is not open
+    /// @dev Reverts if the caller has no withdrawal intent in the current epoch
     function cancelWithdraw() external;
 
     /*//////////////////////////////////////////////////////////////
                               OPERATIONS
     //////////////////////////////////////////////////////////////*/
-    /// @notice Closes an epoch and handles the net flow
-    /// @dev Opens the next epoch
-    /// @param tvl The Total Value Locked in the active strategy of the Yieldcoin v2 system
-    /// @dev Precondition: caller must have the EPOCH_OPERATOR_ROLE
-    /// @dev Precondition: there must not be an active rebalance
-    /// @dev Precondition: there must not be a stored recovery mode
-    /// @dev Precondition: the epoch must be open
-    /// @dev Precondition: the contract must not be paused
-    /// @dev Precondition: the epoch must have been open for at least MIN_EPOCH_PERIOD
-    /// @dev Precondition: the epoch must not have zero deposits and zero withdrawals
-    /// @dev Precondition: tvl must not be zero while shares are outstanding
-    /// @dev Precondition: the resulting price per share must not round down to zero
-    /// @dev Precondition: settlement must not mint zero shares for a minimum-size depositor
+    /// @notice Settles the current epoch, executes its net asset flow, and opens the next epoch
+    /// @param tvl The underlying-asset value of the active strategy before settling the current epoch
+    /// @dev The caller-supplied TVL is trusted and is not validated against onchain strategy state
+    /// @dev Reverts if the caller does not have EPOCH_OPERATOR_ROLE
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if a rebalance is in progress
+    /// @dev Reverts if a recovery mode is active
+    /// @dev Reverts if the current epoch is not open
+    /// @dev Reverts if the preceding epoch is still executing
+    /// @dev Reverts if the current epoch has been open for less than MIN_EPOCH_PERIOD
+    /// @dev Reverts if the epoch contains neither deposits nor withdrawal intents
+    /// @dev Reverts if tvl is zero while shares are outstanding
+    /// @dev Reverts if the resulting price per share rounds down to zero
+    /// @dev Reverts if deposit settlement would allocate zero shares to a minimum-size deposit
+    /// @dev Reverts if a required local strategy operation or CCIP transfer fails
     function closeEpoch(uint256 tvl) external;
 
     /// @notice Completes the most recently closed remote net-deposit epoch
-    /// @dev Precondition: caller must have the EPOCH_OPERATOR_ROLE
-    /// @dev Precondition: the previous epoch must be an executing net-deposit epoch
+    /// @dev Callable while the vault is paused so confirmed remote settlement can be finalized
+    /// @dev Reverts if the caller does not have EPOCH_OPERATOR_ROLE
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the previous epoch is not an executing net-deposit epoch
     function completeEpochDeposit() external;
 
     /// @notice Initiates a rebalance from the current strategy to a new strategy
     /// @param newStrategy The new strategy to rebalance to
-    /// @dev Precondition: caller must have the REBALANCE_OPERATOR_ROLE
-    /// @dev Precondition: the contract must not be paused
-    /// @dev Precondition: a rebalance must not already be in progress
-    /// @dev Precondition: there must not be a stored recovery mode
-    /// @dev Precondition: at least one epoch must have completed
-    /// @dev Precondition: newStrategy must differ from the current active strategy
-    /// @dev Precondition: no prior epoch may still be executing
-    /// @dev Precondition: newStrategy's chain selector must be supported
-    /// @dev Precondition: newStrategy's protocol ID must be supported
-    /// @dev Precondition: a local active strategy withdrawal must return a nonzero amount
+    /// @dev Reverts if the caller does not have REBALANCE_OPERATOR_ROLE
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if a rebalance is already in progress
+    /// @dev Reverts if a recovery mode is active
+    /// @dev Reverts if no epoch has completed
+    /// @dev Reverts if MIN_REBALANCE_PERIOD has not elapsed since the last completed rebalance
+    /// @dev Reverts if newStrategy matches the active strategy
+    /// @dev Reverts if the preceding epoch is still executing
+    /// @dev Reverts if newStrategy.chainSelector is not the local chain or a registered crosschain vault's chain
+    /// @dev Reverts if newStrategy.protocolId is not supported
+    /// @dev Reverts if a required local adapter is not registered or is registered for another vault
+    /// @dev Reverts if a local active-strategy withdrawal fails or returns zero assets
+    /// @dev Reverts if a required local strategy deposit or CCIP transfer fails
     function initiateRebalance(Types.Strategy memory newStrategy) external;
 
     /// @notice Completes a rebalance
-    /// @dev Precondition: caller must have the REBALANCE_OPERATOR_ROLE
-    /// @dev Precondition: there must not be a stored recovery mode
-    /// @dev Precondition: a rebalance must be in progress
+    /// @dev Callable while the vault is paused so confirmed remote settlement can be finalized
+    /// @dev Reverts if the caller does not have REBALANCE_OPERATOR_ROLE
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if a recovery mode is active
+    /// @dev Reverts if no rebalance is in progress
     function completeRebalance() external;
 
     /*//////////////////////////////////////////////////////////////
@@ -362,20 +385,20 @@ interface IParentVault is IBaseVault {
     /// @return amount The asset amount the user deposited into the given epoch
     function getDepositAmount(address user, uint256 epochNonce) external view returns (uint256 amount);
 
-    /// @notice Returns the share burn amount submitted by a user for a given epoch withdraw intent
+    /// @notice Returns the share amount escrowed by a user for an epoch withdrawal intent
     /// @param user The address of the withdrawer
     /// @param epochNonce The epoch nonce of the withdraw intent
-    /// @return shareBurnAmount The number of Yieldcoin shares the user submitted for burning in the given epoch
+    /// @return shareBurnAmount The shares escrowed for burning when the withdrawal is claimed
     function getWithdrawShareBurnAmount(address user, uint256 epochNonce)
         external
         view
         returns (uint256 shareBurnAmount);
 
-    /// @notice Gets the operator multisig for protocol fees
+    /// @notice Returns the operator multisig that receives protocol fees
     /// @return treasury The address of the operator multisig for protocol fees
     function getTreasury() external view returns (address treasury);
 
-    /// @notice Gets the Yieldcoin share token
+    /// @notice Returns the Yieldcoin share token
     /// @return share The address of the Yieldcoin share token
     function getShare() external view returns (address share);
 }

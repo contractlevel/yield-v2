@@ -14,13 +14,13 @@ interface ICompoundV3Adapter is IProtocolAdapter {
     /// @param to The address that received the claimed rewards
     event RewardsClaimed(address indexed to);
 
-    /// @notice Claims any rewards from the Comet Rewards contract
+    /// @notice Claims rewards accrued by the adapter's Comet position and sends them to a recipient
     /// @param to The address to receive the claimed rewards
-    /// @dev Precondition: caller must have REWARDS_OPERATOR_ROLE on the vault
-    /// @dev Precondition: to must not be zero address
+    /// @dev Reverts if the caller does not have REWARDS_OPERATOR_ROLE on the vault
+    /// @dev Reverts if to is the zero address
     function claimRewards(address to) external;
 
-    /// @notice Gets the Compound v3 rewards contract address
+    /// @notice Returns the Compound v3 rewards contract address
     /// @return cometRewards The Compound v3 rewards contract address
     function getCometRewards() external view returns (address cometRewards);
 }
