@@ -39,21 +39,24 @@ interface IProtocolAdapter {
                                FUNCTIONS
     //////////////////////////////////////////////////////////////*/
     /// @notice Deposits the underlying asset into the configured protocol position
-    /// @param amount The amount of asset to deposit
-    /// @dev Reverts if the caller is not the Yieldcoin v2 vault
+    /// @param amount The amount of underlying asset to deposit
+    /// @dev Reverts if the caller is not the Yieldcoin v2 Vault
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the protocol reports a lower position value after the deposit
     /// @dev Reverts if the protocol credits less than amount beyond the permitted rounding tolerance
     function deposit(uint256 amount) external;
     /// @notice Withdraws the underlying asset from the configured protocol position and transfers it to the vault
-    /// @param amount The amount of asset to withdraw, or type(uint256).max to withdraw the entire position
-    /// @return amountOut The actual amount of asset withdrawn
-    /// @dev Reverts if the caller is not the Yieldcoin v2 vault
+    /// @param amount The amount of underlying asset to withdraw, or type(uint256).max to withdraw the entire position
+    /// @return actualWithdrawnAmount The actual amount of underlying asset withdrawn
+    /// @dev Handles two withdrawal scenarios:
+    ///      1. Epoch withdrawal - when amount is a specific amount
+    ///      2. Rebalance withdrawal - when amount is type(uint256).max
+    /// @dev Reverts if the caller is not the Yieldcoin v2 Vault
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if a specific withdrawal amount exceeds the adapter's position value
     /// @dev Reverts if the protocol returns zero assets
     /// @dev Reverts if the protocol returns less than the expected amount beyond the permitted rounding tolerance
-    function withdraw(uint256 amount) external returns (uint256 amountOut);
+    function withdraw(uint256 amount) external returns (uint256 actualWithdrawnAmount);
     /// @notice Returns the underlying-asset value of the adapter's protocol position
     /// @return tvl The value of the adapter's position denominated in the underlying asset
     function getTVL() external view returns (uint256 tvl);

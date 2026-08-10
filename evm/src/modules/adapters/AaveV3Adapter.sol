@@ -21,16 +21,17 @@ contract AaveV3Adapter is ProtocolAdapter, IAaveV3Adapter {
     /*//////////////////////////////////////////////////////////////
                                IMMUTABLE
     //////////////////////////////////////////////////////////////*/
-    /// @notice The address of the Aave V3 pool addresses provider
+    /// @dev The address of the Aave v3 pool addresses provider
     address internal immutable i_poolAddressesProvider;
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
     /// @param vault The address of the Yieldcoin v2 Vault
-    /// @param poolAddressesProvider The address of the Aave V3 pool addresses provider
-    /// @dev Precondition: poolAddressesProvider must not be the zero address
-    /// @dev Precondition: the vault's asset must be a listed reserve on the Aave V3 pool
+    /// @param poolAddressesProvider The address of the Aave v3 pool addresses provider
+    /// @dev Reverts if vault is the zero address
+    /// @dev Reverts if poolAddressesProvider is the zero address
+    /// @dev Reverts if the vault's underlying asset is not listed on the current Aave v3 pool
     constructor(address vault, address poolAddressesProvider) ProtocolAdapter(vault) {
         _revertIfZeroAddress(poolAddressesProvider);
 
@@ -45,10 +46,12 @@ contract AaveV3Adapter is ProtocolAdapter, IAaveV3Adapter {
     /*//////////////////////////////////////////////////////////////
                                 EXTERNAL
     //////////////////////////////////////////////////////////////*/
-    /// @notice Deposits the underlying asset to the Aave V3 pool
-    /// @param amount The amount of asset to deposit
-    /// @dev Deposits the asset to the Aave V3 pool
-    /// @dev Precondition: caller must be the Yieldcoin v2 Vault
+    /// @notice Deposits the underlying asset into the configured protocol position
+    /// @param amount The amount of underlying asset to deposit
+    /// @dev Reverts if the caller is not the Yieldcoin v2 Vault
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the protocol reports a lower position value after the deposit
+    /// @dev Reverts if the protocol credits less than amount beyond the permitted rounding tolerance
     function deposit(uint256 amount) external nonReentrant onlyVault {
         emit Deposit(amount);
 
@@ -61,14 +64,17 @@ contract AaveV3Adapter is ProtocolAdapter, IAaveV3Adapter {
         _revertIfIncompleteDeposit(tvlBefore, tvlAfter, amount);
     }
 
-    /// @notice Withdraws the underlying asset from the Aave V3 pool
-    /// @param amount The amount of asset to withdraw (use type(uint256).max to withdraw all)
-    /// @return actualWithdrawnAmount The actual withdrawn amount
-    /// @dev Transfers the actual withdrawn amount to the Yieldcoin v2 Vault
-    /// @dev Precondition: caller must be the Yieldcoin v2 Vault
-    /// @dev Handles 2 withdraw scenarios:
-    /// 1. Epoch Withdraw - when the amount is a specific amount
-    /// 2. Rebalance Withdraw - when the amount is type(uint256).max
+    /// @notice Withdraws the underlying asset from the configured protocol position and transfers it to the vault
+    /// @param amount The amount of underlying asset to withdraw, or type(uint256).max to withdraw the entire position
+    /// @return actualWithdrawnAmount The actual amount of underlying asset withdrawn
+    /// @dev Handles two withdrawal scenarios:
+    ///      1. Epoch withdrawal - when amount is a specific amount
+    ///      2. Rebalance withdrawal - when amount is type(uint256).max
+    /// @dev Reverts if the caller is not the Yieldcoin v2 Vault
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if a specific withdrawal amount exceeds the adapter's position value
+    /// @dev Reverts if the protocol returns zero assets
+    /// @dev Reverts if the protocol returns less than the expected amount beyond the permitted rounding tolerance
     function withdraw(uint256 amount) external nonReentrant onlyVault returns (uint256 actualWithdrawnAmount) {
         address pool = _getAavePool();
 
@@ -77,7 +83,6 @@ contract AaveV3Adapter is ProtocolAdapter, IAaveV3Adapter {
             _revertIfEpochWithdrawAmountExceedsTVL(amount, _getTVL(pool));
 
             actualWithdrawnAmount = IPool(pool).withdraw(i_asset, amount, address(this));
-            /// @dev Precondition: the actual withdrawn amount must not be less than the requested amount, beyond tolerance
             _revertIfIncompleteWithdraw(amount, actualWithdrawnAmount);
         }
         /// @dev Scenario 2: Rebalance Withdraw - when the amount is type(uint256).max
@@ -86,7 +91,6 @@ contract AaveV3Adapter is ProtocolAdapter, IAaveV3Adapter {
 
             actualWithdrawnAmount = IPool(pool).withdraw(i_asset, amount, address(this));
 
-            /// @dev Precondition: the actual withdrawn amount must not be less than the TVL, beyond tolerance
             _revertIfIncompleteWithdraw(tvl, actualWithdrawnAmount);
         }
         emit Withdraw(actualWithdrawnAmount);
@@ -96,16 +100,16 @@ contract AaveV3Adapter is ProtocolAdapter, IAaveV3Adapter {
     /*//////////////////////////////////////////////////////////////
                                 INTERNAL
     //////////////////////////////////////////////////////////////*/
-    /// @notice Gets the Aave V3 pool address
-    /// @return pool The Aave V3 pool address
+    /// @notice Returns the current Aave v3 pool address
+    /// @return pool The current Aave v3 pool address
     function _getAavePool() internal view returns (address pool) {
         pool = IPoolAddressesProvider(i_poolAddressesProvider).getPool();
     }
 
-    /// @notice Gets the TVL in the Aave V3 pool
-    /// @param pool The Aave V3 pool address. Fetched from _getAavePool()
-    /// @return tvl The TVL of the Aave V3 pool
-    /// @dev Reading aToken balance can slightly overstate available value. Bounded by Aave treasury fee rate.
+    /// @notice Returns the underlying-asset value of the adapter's Aave v3 position
+    /// @param pool The current Aave v3 pool address
+    /// @return tvl The value of the adapter's position denominated in the underlying asset
+    /// @dev The aToken balance can slightly overstate the withdrawable value, bounded by Aave's treasury fee rate
     function _getTVL(address pool) internal view returns (uint256 tvl) {
         DataTypes.ReserveDataLegacy memory reserveData = IPool(pool).getReserveData(i_asset);
         address aTokenAddress = reserveData.aTokenAddress;
@@ -115,22 +119,21 @@ contract AaveV3Adapter is ProtocolAdapter, IAaveV3Adapter {
     /*//////////////////////////////////////////////////////////////
                                  GETTER
     //////////////////////////////////////////////////////////////*/
-    /// @notice Gets the TVL in the Aave V3 pool
-    /// @return tvl The TVL of the Aave V3 pool
-    /// @dev This is used for getting the TVL of the Yieldcoin v2 system, if this is the active protocol adapter
+    /// @notice Returns the underlying-asset value of the adapter's protocol position
+    /// @return tvl The value of the adapter's position denominated in the underlying asset
     function getTVL() external view returns (uint256 tvl) {
         address pool = _getAavePool();
         tvl = _getTVL(pool);
     }
 
-    /// @notice Gets the address of the Aave V3 pool
-    /// @return pool The address of the Aave V3 pool
+    /// @notice Returns the address of the protocol pool
+    /// @return pool The address of the current Aave v3 pool
     function getProtocolPool() external view returns (address pool) {
         pool = _getAavePool();
     }
 
-    /// @notice Gets the address of the Aave V3 pool addresses provider
-    /// @return poolAddressesProvider The address of the Aave V3 pool addresses provider
+    /// @notice Returns the address of the Aave v3 pool addresses provider
+    /// @return poolAddressesProvider The address of the Aave v3 pool addresses provider
     function getPoolAddressesProvider() external view returns (address poolAddressesProvider) {
         poolAddressesProvider = i_poolAddressesProvider;
     }

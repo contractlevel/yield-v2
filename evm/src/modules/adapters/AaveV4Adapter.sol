@@ -17,14 +17,11 @@ contract AaveV4Adapter is ProtocolAdapter, IAaveV4Adapter {
     using SafeERC20 for IERC20;
 
     /*//////////////////////////////////////////////////////////////
-                                 ERRORS
-    //////////////////////////////////////////////////////////////*/
-    /*//////////////////////////////////////////////////////////////
                                IMMUTABLE
     //////////////////////////////////////////////////////////////*/
-    /// @notice The address of the Aave v4 Spoke
+    /// @dev The address of the Aave v4 Spoke
     address internal immutable i_spoke;
-    /// @notice The Aave v4 reserve id for the underlying asset on the Spoke
+    /// @dev The Aave v4 reserve ID for the underlying asset on the Spoke
     uint256 internal immutable i_reserveId;
 
     /*//////////////////////////////////////////////////////////////
@@ -32,8 +29,10 @@ contract AaveV4Adapter is ProtocolAdapter, IAaveV4Adapter {
     //////////////////////////////////////////////////////////////*/
     /// @param vault The address of the Yieldcoin v2 Vault
     /// @param spoke The address of the Aave v4 Spoke
-    /// @dev Precondition: spoke must not be the zero address
-    /// @dev Precondition: the vault's asset must be a listed reserve on the Aave v4 Spoke
+    /// @dev Reverts if vault is the zero address
+    /// @dev Reverts if spoke is the zero address
+    /// @dev Reverts if the vault's underlying asset is not listed on the Aave v4 Spoke
+    /// @dev Reverts if the vault's underlying asset is listed more than once on the Aave v4 Spoke
     constructor(address vault, address spoke) ProtocolAdapter(vault) {
         _revertIfZeroAddress(spoke);
         i_spoke = spoke;
@@ -43,10 +42,12 @@ contract AaveV4Adapter is ProtocolAdapter, IAaveV4Adapter {
     /*//////////////////////////////////////////////////////////////
                                 EXTERNAL
     //////////////////////////////////////////////////////////////*/
-    /// @notice Deposits the underlying asset to the Aave v4 Spoke
-    /// @param amount The amount of asset to deposit
-    /// @dev Deposits the asset into the adapter's own Aave v4 position
-    /// @dev Precondition: caller must be the Yieldcoin v2 Vault
+    /// @notice Deposits the underlying asset into the configured protocol position
+    /// @param amount The amount of underlying asset to deposit
+    /// @dev Reverts if the caller is not the Yieldcoin v2 Vault
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the protocol reports a lower position value after the deposit
+    /// @dev Reverts if the protocol credits less than amount beyond the permitted rounding tolerance
     function deposit(uint256 amount) external nonReentrant onlyVault {
         emit Deposit(amount);
 
@@ -59,14 +60,17 @@ contract AaveV4Adapter is ProtocolAdapter, IAaveV4Adapter {
         _revertIfIncompleteDeposit(tvlBefore, tvlAfter, amount);
     }
 
-    /// @notice Withdraws the underlying asset from the Aave v4 Spoke
-    /// @param amount The amount of asset to withdraw (use type(uint256).max to withdraw all)
-    /// @return actualWithdrawnAmount The actual withdrawn amount
-    /// @dev Transfers the actual withdrawn amount to the Yieldcoin v2 Vault
-    /// @dev Precondition: caller must be the Yieldcoin v2 Vault
-    /// @dev Handles 2 withdraw scenarios:
-    /// 1. Epoch Withdraw - when the amount is a specific amount
-    /// 2. Rebalance Withdraw - when the amount is type(uint256).max
+    /// @notice Withdraws the underlying asset from the configured protocol position and transfers it to the vault
+    /// @param amount The amount of underlying asset to withdraw, or type(uint256).max to withdraw the entire position
+    /// @return actualWithdrawnAmount The actual amount of underlying asset withdrawn
+    /// @dev Handles two withdrawal scenarios:
+    ///      1. Epoch withdrawal - when amount is a specific amount
+    ///      2. Rebalance withdrawal - when amount is type(uint256).max
+    /// @dev Reverts if the caller is not the Yieldcoin v2 Vault
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if a specific withdrawal amount exceeds the adapter's position value
+    /// @dev Reverts if the protocol returns zero assets
+    /// @dev Reverts if the protocol returns less than the expected amount beyond the permitted rounding tolerance
     function withdraw(uint256 amount) external nonReentrant onlyVault returns (uint256 actualWithdrawnAmount) {
         /// @dev Scenario 1: Epoch Withdraw - when the amount is a specific amount
         if (amount != type(uint256).max) {
@@ -74,7 +78,6 @@ contract AaveV4Adapter is ProtocolAdapter, IAaveV4Adapter {
 
             //slither-disable-next-line unused-return
             (, actualWithdrawnAmount) = IAaveV4Spoke(i_spoke).withdraw(i_reserveId, amount, address(this));
-            /// @dev Precondition: the actual withdrawn amount must not be less than the requested amount, beyond tolerance
             _revertIfIncompleteWithdraw(amount, actualWithdrawnAmount);
         }
         /// @dev Scenario 2: Rebalance Withdraw - when the amount is type(uint256).max
@@ -84,7 +87,6 @@ contract AaveV4Adapter is ProtocolAdapter, IAaveV4Adapter {
             //slither-disable-next-line unused-return
             (, actualWithdrawnAmount) = IAaveV4Spoke(i_spoke).withdraw(i_reserveId, amount, address(this));
 
-            /// @dev Precondition: the actual withdrawn amount must not be less than the TVL, beyond tolerance
             _revertIfIncompleteWithdraw(tvl, actualWithdrawnAmount);
         }
         emit Withdraw(actualWithdrawnAmount);
@@ -94,18 +96,18 @@ contract AaveV4Adapter is ProtocolAdapter, IAaveV4Adapter {
     /*//////////////////////////////////////////////////////////////
                                 INTERNAL
     //////////////////////////////////////////////////////////////*/
-    /// @notice Gets the TVL in the Aave v4 Spoke
-    /// @return tvl The TVL of the Aave v4 position
+    /// @notice Returns the underlying-asset value of the adapter's Aave v4 position
+    /// @return tvl The value of the adapter's position denominated in the underlying asset
     function _getTVL() internal view returns (uint256 tvl) {
         tvl = IAaveV4Spoke(i_spoke).getUserSuppliedAssets(i_reserveId, address(this));
     }
 
-    /// @notice Gets the reserve id for an underlying token on an Aave v4 Spoke
+    /// @notice Returns the reserve ID for an underlying token on an Aave v4 Spoke
     /// @param spoke The address of the Aave v4 Spoke
     /// @param underlying The address of the underlying token
-    /// @return reserveId The Aave v4 reserve id
-    /// @dev Reverts with AaveV4Adapter__DuplicateReserveFound if underlying is listed as more than one reserve
-    /// @dev Reverts with ProtocolAdapter__AssetMismatch if underlying is not found as a reserve
+    /// @return reserveId The Aave v4 reserve ID
+    /// @dev Reverts if underlying is listed as more than one reserve
+    /// @dev Reverts if underlying is not listed as a reserve
     function _getReserveId(address spoke, address underlying) internal view returns (uint256 reserveId) {
         IAaveV4Spoke aaveV4Spoke = IAaveV4Spoke(spoke);
         uint256 reserveCount = aaveV4Spoke.getReserveCount();
@@ -126,21 +128,20 @@ contract AaveV4Adapter is ProtocolAdapter, IAaveV4Adapter {
     /*//////////////////////////////////////////////////////////////
                                  GETTER
     //////////////////////////////////////////////////////////////*/
-    /// @notice Gets the TVL in the Aave v4 Spoke
-    /// @return tvl The TVL of the Aave v4 position
-    /// @dev This is used for getting the TVL of the Yieldcoin v2 system, if this is the active protocol adapter
+    /// @notice Returns the underlying-asset value of the adapter's protocol position
+    /// @return tvl The value of the adapter's position denominated in the underlying asset
     function getTVL() external view returns (uint256 tvl) {
         tvl = _getTVL();
     }
 
-    /// @notice Gets the address of the Aave v4 Spoke
+    /// @notice Returns the address of the protocol pool
     /// @return pool The address of the Aave v4 Spoke
     function getProtocolPool() external view returns (address pool) {
         pool = i_spoke;
     }
 
-    /// @notice Gets the Aave v4 reserve id for the underlying asset on the Spoke
-    /// @return reserveId The Aave v4 reserve id
+    /// @notice Returns the Aave v4 reserve ID for the underlying asset on the Spoke
+    /// @return reserveId The Aave v4 reserve ID
     function getReserveId() external view returns (uint256 reserveId) {
         reserveId = i_reserveId;
     }

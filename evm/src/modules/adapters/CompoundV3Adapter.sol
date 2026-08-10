@@ -20,25 +20,23 @@ contract CompoundV3Adapter is ProtocolAdapter, ICompoundV3Adapter {
     using SafeERC20 for IERC20;
 
     /*//////////////////////////////////////////////////////////////
-                                 ERRORS
-    //////////////////////////////////////////////////////////////*/
-    /*//////////////////////////////////////////////////////////////
                                VARIABLES
     //////////////////////////////////////////////////////////////*/
-    /// @notice The address of the Compound V3 pool
+    /// @dev The address of the Compound v3 pool
     address internal immutable i_comet;
-    /// @notice The address of the Compound V3 rewards contract
+    /// @dev The address of the Compound v3 rewards contract
     address internal immutable i_cometRewards;
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
     /// @param vault The address of the Yieldcoin v2 Vault
-    /// @param comet The address of the Compound V3 pool
-    /// @param cometRewards The address of the Compound V3 rewards contract
-    /// @dev Precondition: comet must not be the zero address
-    /// @dev Precondition: cometRewards must not be the zero address
-    /// @dev Precondition: comet's base token must equal the vault's asset
+    /// @param comet The address of the Compound v3 pool
+    /// @param cometRewards The address of the Compound v3 rewards contract
+    /// @dev Reverts if vault is the zero address
+    /// @dev Reverts if comet is the zero address
+    /// @dev Reverts if cometRewards is the zero address
+    /// @dev Reverts if Comet's base token does not equal the vault's underlying asset
     constructor(address vault, address comet, address cometRewards) ProtocolAdapter(vault) {
         _revertIfZeroAddress(comet);
         _revertIfZeroAddress(cometRewards);
@@ -51,10 +49,12 @@ contract CompoundV3Adapter is ProtocolAdapter, ICompoundV3Adapter {
     /*//////////////////////////////////////////////////////////////
                                 EXTERNAL
     //////////////////////////////////////////////////////////////*/
-    /// @notice Deposits the underlying asset to the Compound V3 pool
-    /// @param amount The amount of asset to deposit
-    /// @dev Deposits the asset to the Compound V3 pool
-    /// @dev Precondition: caller must be the Yieldcoin v2 Vault
+    /// @notice Deposits the underlying asset into the configured protocol position
+    /// @param amount The amount of underlying asset to deposit
+    /// @dev Reverts if the caller is not the Yieldcoin v2 Vault
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the protocol reports a lower position value after the deposit
+    /// @dev Reverts if the protocol credits less than amount beyond the permitted rounding tolerance
     function deposit(uint256 amount) external nonReentrant onlyVault {
         emit Deposit(amount);
 
@@ -66,15 +66,19 @@ contract CompoundV3Adapter is ProtocolAdapter, ICompoundV3Adapter {
         _revertIfIncompleteDeposit(tvlBefore, tvlAfter, amount);
     }
 
-    /// @notice Withdraws the underlying asset from the Compound V3 pool
-    /// @param amount The amount of asset to withdraw (use type(uint256).max to withdraw all)
-    /// @return actualWithdrawnAmount The actual withdrawn amount
-    /// @dev Transfers the actual withdrawn amount to the Yieldcoin v2 Vault
-    /// @dev Prevents borrowing by ensuring amount <= TVL when not using MAX sentinel
-    /// @dev Precondition: caller must be the Yieldcoin v2 Vault
-    /// @dev Handles 2 withdraw scenarios:
-    /// 1. Epoch Withdraw - when the amount is a specific amount
-    /// 2. Rebalance Withdraw - when the amount is type(uint256).max
+    /// @notice Withdraws the underlying asset from the configured protocol position and transfers it to the vault
+    /// @param amount The amount of underlying asset to withdraw, or type(uint256).max to withdraw the entire position
+    /// @return actualWithdrawnAmount The actual amount of underlying asset withdrawn
+    /// @dev Handles two withdrawal scenarios:
+    ///      1. Epoch withdrawal - when amount is a specific amount
+    ///      2. Rebalance withdrawal - when amount is type(uint256).max
+    /// @dev A specific withdrawal cannot borrow because amount must not exceed the adapter's position value;
+    ///      Compound treats type(uint256).max as a full withdrawal of the supplied base-asset balance
+    /// @dev Reverts if the caller is not the Yieldcoin v2 Vault
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if a specific withdrawal amount exceeds the adapter's position value
+    /// @dev Reverts if the protocol returns zero assets
+    /// @dev Reverts if the protocol returns less than the expected amount beyond the permitted rounding tolerance
     function withdraw(uint256 amount) external nonReentrant onlyVault returns (uint256 actualWithdrawnAmount) {
         /// @dev get balance before withdraw to calculate actual withdrawn amount
         uint256 balanceBefore = IERC20(i_asset).balanceOf(address(this));
@@ -91,7 +95,6 @@ contract CompoundV3Adapter is ProtocolAdapter, ICompoundV3Adapter {
             /// @dev calculate actual amount received from withdrawing
             uint256 balanceAfter = IERC20(i_asset).balanceOf(address(this));
             actualWithdrawnAmount = balanceAfter - balanceBefore;
-            /// @dev Precondition: the actual withdrawn amount must not be less than the requested amount, beyond tolerance
             _revertIfIncompleteWithdraw(amount, actualWithdrawnAmount);
         }
         /// @dev Scenario 2: Rebalance Withdraw - when the amount is type(uint256).max
@@ -102,7 +105,6 @@ contract CompoundV3Adapter is ProtocolAdapter, ICompoundV3Adapter {
             uint256 balanceAfter = IERC20(i_asset).balanceOf(address(this));
             actualWithdrawnAmount = balanceAfter - balanceBefore;
 
-            /// @dev Precondition: the actual withdrawn amount must not be less than the TVL, beyond tolerance
             _revertIfIncompleteWithdraw(tvl, actualWithdrawnAmount);
         }
 
@@ -110,10 +112,10 @@ contract CompoundV3Adapter is ProtocolAdapter, ICompoundV3Adapter {
         IERC20(i_asset).safeTransfer(i_vault, actualWithdrawnAmount);
     }
 
-    /// @notice Claims any rewards from the Comet Rewards contract
+    /// @notice Claims rewards accrued by the adapter's Comet position and sends them to a recipient
     /// @param to The address to receive the claimed rewards
-    /// @dev Precondition: caller must have REWARDS_OPERATOR_ROLE on the vault
-    /// @dev Precondition: to must not be zero address
+    /// @dev Reverts if the caller does not have REWARDS_OPERATOR_ROLE on the vault
+    /// @dev Reverts if to is the zero address
     function claimRewards(address to) external {
         if (!IAccessControl(i_vault).hasRole(Roles.REWARDS_OPERATOR_ROLE, msg.sender)) {
             revert CompoundV3Adapter__CallerNotRewardsOperator();
@@ -126,8 +128,8 @@ contract CompoundV3Adapter is ProtocolAdapter, ICompoundV3Adapter {
     /*//////////////////////////////////////////////////////////////
                                 INTERNAL
     //////////////////////////////////////////////////////////////*/
-    /// @notice Internal function to get total value
-    /// @return tvl The total value of the asset in the Compound V3 pool
+    /// @notice Returns the underlying-asset value of the adapter's Compound v3 position
+    /// @return tvl The value of the adapter's position denominated in the underlying asset
     function _getTVL() internal view returns (uint256 tvl) {
         tvl = IComet(i_comet).balanceOf(address(this));
     }
@@ -135,21 +137,20 @@ contract CompoundV3Adapter is ProtocolAdapter, ICompoundV3Adapter {
     /*//////////////////////////////////////////////////////////////
                                  GETTER
     //////////////////////////////////////////////////////////////*/
-    /// @notice Gets the total value of the asset in the Compound V3 pool
-    /// @return tvl The total value of the asset in the Compound V3 pool
-    /// @dev This is used for getting the TVL of the Yieldcoin v2 system, if this is the active protocol adapter
+    /// @notice Returns the underlying-asset value of the adapter's protocol position
+    /// @return tvl The value of the adapter's position denominated in the underlying asset
     function getTVL() external view returns (uint256 tvl) {
         tvl = _getTVL();
     }
 
-    /// @notice Gets the Compound V3 pool address
-    /// @return comet The Compound V3 pool address
-    function getProtocolPool() external view returns (address comet) {
-        return i_comet;
+    /// @notice Returns the address of the protocol pool
+    /// @return pool The Compound v3 pool address
+    function getProtocolPool() external view returns (address pool) {
+        pool = i_comet;
     }
 
-    /// @notice Gets the Compound V3 rewards contract address
-    /// @return cometRewards The Compound V3 rewards contract address
+    /// @notice Returns the Compound v3 rewards contract address
+    /// @return cometRewards The Compound v3 rewards contract address
     function getCometRewards() external view returns (address cometRewards) {
         return i_cometRewards;
     }
