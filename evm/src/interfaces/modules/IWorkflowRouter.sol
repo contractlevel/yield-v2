@@ -11,7 +11,7 @@ interface IWorkflowRouter is IReceiver, IPauseable {
     /*//////////////////////////////////////////////////////////////
                            TYPE DECLARATIONS
     //////////////////////////////////////////////////////////////*/
-    /// @dev Struct for workflow metadata
+    /// @notice Metadata registered for a workflow
     /// @param owner The address that deployed the workflow
     /// @param name The hash-encoded workflow name
     struct WorkflowMetadata {
@@ -116,18 +116,18 @@ interface IWorkflowRouter is IReceiver, IPauseable {
                                 GETTERS
     //////////////////////////////////////////////////////////////*/
     /// @notice Returns the registered metadata for a workflow ID
-    /// @dev A workflow is registered iff owner != address(0) and name != bytes10(0).
     /// @param workflowId The workflow ID to look up
-    /// @return metadata The registered owner and name
+    /// @return metadata The registered owner and name, or zero values if the workflow is unregistered
+    /// @dev A workflow is registered if and only if owner and name are both nonzero
     function getWorkflowMetadata(bytes32 workflowId) external view returns (WorkflowMetadata memory metadata);
 
     /// @notice Returns the current selector-allowlist generation for a workflow ID
+    /// @param workflowId The workflow ID to query
+    /// @return generation The current generation of the workflow's selector allowlist
     /// @dev Bumped by every successful `setWorkflowMetadata` call for this workflow ID. A generation of
     ///      0 means the workflow ID has never been configured. A nonzero generation does not by itself
     ///      mean the workflow ID is currently registered, since removal also advances it - check
-    ///      `getWorkflowMetadata` for current registration status.
-    /// @param workflowId The workflow ID to query
-    /// @return generation The current generation of the workflow's selector allowlist
+    ///      `getWorkflowMetadata` for current registration status
     function getWorkflowGeneration(bytes32 workflowId) external view returns (uint256 generation);
 
     /// @notice Returns whether a selector is allowlisted for a workflow

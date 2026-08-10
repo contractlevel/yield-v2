@@ -28,6 +28,7 @@ interface IAdapterRegistry {
     /// @dev Reverts if the caller does not have CONFIG_OPERATOR_ROLE
     /// @dev Reverts if protocolId is zero
     /// @dev The adapter address may be zero to remove the registration
+    /// @dev Does not validate whether a replaced or removed adapter is active in a vault
     function setAdapter(bytes32 protocolId, address adapter) external;
     /// @notice Returns the adapter registered for a protocol ID
     /// @param protocolId The protocol ID, such as keccak256("aave-v3")

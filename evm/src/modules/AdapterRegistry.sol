@@ -10,7 +10,7 @@ import {Roles} from "../libraries/Roles.sol";
 
 /// @title Yieldcoin v2 Adapter Registry
 /// @author @contractlevel
-/// @notice Registry for protocol adapters. This should be deployed on every chain.
+/// @notice Stores the protocol adapters available to the Yieldcoin v2 vault on this chain
 contract AdapterRegistry is IAdapterRegistry, AccessControlDefaultAdminRules {
     /*//////////////////////////////////////////////////////////////
                                  STATE
@@ -28,19 +28,20 @@ contract AdapterRegistry is IAdapterRegistry, AccessControlDefaultAdminRules {
     // point ProtocolAdapters to AdapterRegistry
     /// @param initialDelay The initial delay for the default admin role
     /// @param initialOwner The address of the initial default admin
+    /// @dev Reverts if initialOwner is the zero address
     //slither-disable-next-line missing-zero-check
     constructor(uint48 initialDelay, address initialOwner) AccessControlDefaultAdminRules(initialDelay, initialOwner) {}
 
     /*//////////////////////////////////////////////////////////////
                                  SETTER
     //////////////////////////////////////////////////////////////*/
-    /// @notice Sets an adapter for a given protocol ID. Set `adapter` to address(0) to remove the adapter for `protocolId`
-    /// @param protocolId The ID of the protocol - keccak256("aave-v3") for Aave v3, keccak256("compound-v3") for Compound v3, etc.
-    /// @param adapter The address of the adapter
-    /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
-    /// @dev Precondition: protocolId must not be zero
-    /// @dev Explicitly no zero address check on adapter
-    /// @dev Design decision: does not check whether the adapter being replaced is the active adapter for the vault // @review this
+    /// @notice Sets or removes the adapter registered for a protocol ID
+    /// @param protocolId The protocol ID, such as keccak256("aave-v3")
+    /// @param adapter The adapter address, or address(0) to remove the registration
+    /// @dev Reverts if the caller does not have CONFIG_OPERATOR_ROLE
+    /// @dev Reverts if protocolId is zero
+    /// @dev The adapter address may be zero to remove the registration
+    /// @dev Does not validate whether a replaced or removed adapter is active in a vault
     //slither-disable-next-line missing-zero-check
     function setAdapter(bytes32 protocolId, address adapter) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
         if (protocolId == bytes32(0)) revert AdapterRegistry__NoZeroProtocolId();
@@ -51,9 +52,9 @@ contract AdapterRegistry is IAdapterRegistry, AccessControlDefaultAdminRules {
     /*//////////////////////////////////////////////////////////////
                                  GETTER
     //////////////////////////////////////////////////////////////*/
-    /// @notice Gets the adapter for a given protocol ID
-    /// @param protocolId The ID of the protocol - keccak256("aave-v3") for Aave v3, keccak256("compound-v3") for Compound v3, etc.
-    /// @return adapter The address of the adapter
+    /// @notice Returns the adapter registered for a protocol ID
+    /// @param protocolId The protocol ID, such as keccak256("aave-v3")
+    /// @return adapter The registered adapter address, or address(0) if none is registered
     function getAdapter(bytes32 protocolId) external view returns (address adapter) {
         adapter = s_adapters[protocolId];
     }

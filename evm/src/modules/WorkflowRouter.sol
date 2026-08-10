@@ -51,7 +51,7 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
-    /// @notice Parameters to initialize the contract in the constructor.
+    /// @notice Parameters used to initialize the WorkflowRouter
     /// @param initialDelay The initial delay for the default admin role
     /// @param defaultAdmin The address of the default admin
     /// @param pauser The address that can pause the router
@@ -69,10 +69,14 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
         address vault;
     }
 
-    /// @notice Initializes the WorkflowRouter and grants initial roles.
+    /// @notice Initializes the WorkflowRouter and grants its initial roles
     /// @param params Constructor parameters
-    /// @dev Precondition: pauser, unpauser, configOperator, keystoneForwarder, and vault must not be the zero address
-    ///      (defaultAdmin validity is enforced by AccessControlDefaultAdminRules)
+    /// @dev Reverts if params.defaultAdmin is the zero address
+    /// @dev Reverts if params.pauser is the zero address
+    /// @dev Reverts if params.unpauser is the zero address
+    /// @dev Reverts if params.configOperator is the zero address
+    /// @dev Reverts if params.keystoneForwarder is the zero address
+    /// @dev Reverts if params.vault is the zero address
     constructor(ConstructorParams memory params)
         AccessControlDefaultAdminRules(params.initialDelay, params.defaultAdmin)
     {
@@ -89,8 +93,9 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
         _grantRole(Roles.KEYSTONE_FORWARDER_ROLE, params.keystoneForwarder);
     }
 
-    /// @notice Reverts when a required address input is zero
+    /// @notice Validates that a required address is nonzero
     /// @param value The address to validate
+    /// @dev Reverts if value is the zero address
     function _revertIfZeroAddress(address value) internal pure {
         if (value == address(0)) revert WorkflowRouter__NoZeroAddress();
     }
@@ -98,18 +103,19 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
     /*//////////////////////////////////////////////////////////////
                                ON REPORT
     //////////////////////////////////////////////////////////////*/
-    /// @notice Handles incoming keystone reports.
-    /// @dev A report that fails because its execution gas limit is insufficient may be retried with a higher gas limit.
-    /// @param metadata Report's metadata.
-    /// @param report Workflow report.
-    /// @dev Precondition: Caller must have the KEYSTONE_FORWARDER_ROLE
-    /// @dev Precondition: WorkflowRouter must not be paused
-    /// @dev Precondition: metadata.length must equal the Keystone metadata length
-    /// @dev Precondition: Workflow ID must not be zero
-    /// @dev Precondition: Workflow Metadata must be valid
-    /// @dev Precondition: report.length must be valid for a selector
-    /// @dev Precondition: selector must be allowlisted
-    /// @dev Precondition: Call to the vault must succeed
+    /// @notice Validates and forwards an incoming CRE workflow report to the vault
+    /// @param metadata The packed Keystone metadata containing workflow ID, name, owner, and report ID
+    /// @param report The raw vault calldata, beginning with an allowlisted function selector
+    /// @dev A report that fails because its execution gas limit is insufficient may be retried with a higher gas limit
+    /// @dev Reverts if the caller does not have KEYSTONE_FORWARDER_ROLE
+    /// @dev Reverts if the router is paused
+    /// @dev Reverts if metadata is not exactly 64 bytes
+    /// @dev Reverts if the decoded workflow ID, name, or owner is zero
+    /// @dev Reverts if the decoded workflow name and owner do not match the metadata registered for the workflow ID
+    /// @dev Reverts if report is shorter than a function selector
+    /// @dev Reverts if the report selector is not allowlisted for the workflow
+    /// @dev Reverts if the forwarded vault call fails
+    /// @dev The metadata report ID is unused; this router does not independently reject stale or replayed reports
     function onReport(bytes calldata metadata, bytes calldata report)
         external
         whenNotPaused
@@ -139,15 +145,16 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
     }
 
     /// @notice Decodes metadata fields from the Keystone Forwarder's onReport call
+    /// @param metadata The raw metadata bytes from onReport
+    /// @return workflowId The unique workflow identifier
+    /// @return workflowName The hash-encoded workflow name (bytes10)
+    /// @return workflowOwner The address that deployed the workflow
     /// @dev Metadata is abi.encodePacked by the Forwarder (no length prefix):
     ///      - Offset  0, size 32: workflowId    (bytes32)
     ///      - Offset 32, size 10: workflowName  (bytes10)
     ///      - Offset 42, size 20: workflowOwner (address)
     ///      - Offset 62, size  2: reportId      (unused)
-    /// @param metadata The raw metadata bytes from onReport
-    /// @return workflowId The unique workflow identifier
-    /// @return workflowName The hash-encoded workflow name (bytes10)
-    /// @return workflowOwner The address that deployed the workflow
+    /// @dev Reverts if metadata is not exactly 64 bytes
     function _decodeMetadata(bytes calldata metadata)
         internal
         pure
@@ -170,16 +177,14 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
     //////////////////////////////////////////////////////////////*/
     /// @notice Sets the workflow metadata
     /// @param workflowId The ID of the workflow
-    /// @param name The hash-encoded workflow name (bytes10)
+    /// @param name The hash-encoded workflow name
     /// @param owner The address that deployed the workflow
-    /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
-    /// @dev Precondition: workflowId must not be zero
-    /// @dev Precondition: name and owner must both be nonzero when setting metadata, or both zero when removing metadata
-    /// @dev Precondition: the `(name, owner)` pair must differ from the currently registered metadata
-    ///      for `workflowId` - changing either field is sufficient (reverts with
-    ///      WorkflowRouter__MetadataUnchanged otherwise, including when removing an already-removed,
-    ///      i.e. unregistered, workflow ID)
-    /// @dev Set `name` and `owner` to zero to remove metadata for `workflowId`.
+    /// @dev Reverts if the caller does not have CONFIG_OPERATOR_ROLE
+    /// @dev Reverts if workflowId is zero
+    /// @dev Reverts unless name and owner are both nonzero when setting metadata or both zero when removing metadata
+    /// @dev Reverts if the (name, owner) pair matches the currently registered metadata, including when removing an
+    ///      already-unregistered workflow ID
+    /// @dev Set `name` and `owner` to zero to remove metadata for `workflowId`
     /// @dev Every successful call advances the workflow's selector-allowlist generation by one,
     ///      starting a fresh, empty selector set: selectors from every prior generation become
     ///      unreachable. Registering a workflow ID, or updating the metadata of an already-registered
@@ -213,12 +218,12 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
     /// @param workflowId The ID of the workflow
     /// @param selectors The selectors to set
     /// @param isAllowlisted Whether the selectors are allowlisted
-    /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
-    /// @dev Precondition: workflowId must not be zero
-    /// @dev Precondition: selectors must not be empty
-    /// @dev Precondition: workflowId must have registered metadata (see `getWorkflowMetadata`)
-    /// @dev Set `isAllowlisted` to false to remove selectors from the workflow allowlist.
-    /// @dev Writes into the workflow's current selector-allowlist generation (see `getWorkflowGeneration`).
+    /// @dev Reverts if the caller does not have CONFIG_OPERATOR_ROLE
+    /// @dev Reverts if workflowId is zero
+    /// @dev Reverts if selectors is empty
+    /// @dev Reverts if workflowId does not have registered metadata (see getWorkflowMetadata)
+    /// @dev Set `isAllowlisted` to false to remove selectors from the workflow allowlist
+    /// @dev Writes into the workflow's current selector-allowlist generation (see `getWorkflowGeneration`)
     function setWorkflowSelectors(bytes32 workflowId, bytes4[] calldata selectors, bool isAllowlisted)
         external
         onlyRole(Roles.CONFIG_OPERATOR_ROLE)
@@ -240,15 +245,15 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
                                  PAUSE
     //////////////////////////////////////////////////////////////*/
     /// @notice Pauses the WorkflowRouter
-    /// @dev Precondition: Caller must have the PAUSER_ROLE
-    /// @dev Precondition: WorkflowRouter must not be paused
+    /// @dev Reverts if the caller does not have PAUSER_ROLE
+    /// @dev Reverts if the contract is already paused
     function pause() external onlyRole(Roles.PAUSER_ROLE) {
         _pause();
     }
 
     /// @notice Unpauses the WorkflowRouter
-    /// @dev Precondition: Caller must have the UNPAUSER_ROLE
-    /// @dev Precondition: WorkflowRouter must be paused
+    /// @dev Reverts if the caller does not have UNPAUSER_ROLE
+    /// @dev Reverts if the contract is not paused
     function unpause() external onlyRole(Roles.UNPAUSER_ROLE) {
         _unpause();
     }
@@ -256,26 +261,26 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
     /*//////////////////////////////////////////////////////////////
                                  GETTER
     //////////////////////////////////////////////////////////////*/
-    /// @notice Returns the registered metadata for a workflow ID.
-    /// @dev A workflow is registered iff owner != address(0) and name != bytes10(0).
+    /// @notice Returns the registered metadata for a workflow ID
     /// @param workflowId The workflow ID to look up
-    /// @return metadata The registered owner and name (zero values if unregistered)
+    /// @return metadata The registered owner and name, or zero values if the workflow is unregistered
+    /// @dev A workflow is registered if and only if owner and name are both nonzero
     function getWorkflowMetadata(bytes32 workflowId) external view returns (WorkflowMetadata memory metadata) {
         metadata = s_workflowMetadata[workflowId];
     }
 
     /// @notice Returns the current selector-allowlist generation for a workflow ID
+    /// @param workflowId The workflow ID to query
+    /// @return generation The current generation of the workflow's selector allowlist
     /// @dev Bumped by every successful `setWorkflowMetadata` call for this workflow ID. A generation of
     ///      0 means the workflow ID has never been configured. A nonzero generation does not by itself
     ///      mean the workflow ID is currently registered, since removal also advances it - check
-    ///      `getWorkflowMetadata` for current registration status.
-    /// @param workflowId The workflow ID to query
-    /// @return generation The current generation of the workflow's selector allowlist
+    ///      `getWorkflowMetadata` for current registration status
     function getWorkflowGeneration(bytes32 workflowId) external view returns (uint256 generation) {
         generation = s_workflowGenerations[workflowId];
     }
 
-    /// @notice Gets whether a selector is allowlisted for a workflow
+    /// @notice Returns whether a selector is allowlisted for a workflow
     /// @param workflowId The ID of the workflow
     /// @param selector The selector to check
     /// @return isAllowlisted Whether the selector is allowlisted for the workflow
@@ -288,7 +293,7 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
         isAllowlisted = s_workflowSelectors[workflowId][s_workflowGenerations[workflowId]][selector];
     }
 
-    /// @notice Gets the Yieldcoin v2 Vault address for this chain
+    /// @notice Returns the Yieldcoin v2 Vault address for this chain
     /// @return vault The address of the vault
     function getVault() external view returns (address vault) {
         vault = i_vault;
