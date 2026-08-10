@@ -6,7 +6,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 /// @title Yieldcoin v2 Share Interface
 /// @author @contractlevel
 /// @notice Interface for the Yieldcoin v2 Share contract
-/// @dev The YieldcoinShare token does not inherit this because Chainlink ACE's ComplianceTokenERC3643 functions are not virtual.
+/// @dev YieldcoinShare does not inherit this interface because not all required ComplianceTokenERC3643 functions
+///      can be overridden to resolve the interface inheritance
 interface IShare is IERC20 {
     /// @notice Mints shares to an address
     /// @param to The address to mint shares to
