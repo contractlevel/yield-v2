@@ -7,17 +7,20 @@ import {IYieldcoinShareKycExtractor} from "../../interfaces/extractors/IYieldcoi
 
 /// @title YieldcoinShareKycExtractor
 /// @author @contractlevel
-/// @notice Extracts every account that must pass KYC for YieldcoinShare user actions.
+/// @notice Extracts every account that must pass KYC for YieldcoinShare user actions
 contract YieldcoinShareKycExtractor is IYieldcoinShareKycExtractor {
     /// @notice The type and version of the extractor
     string public constant override typeAndVersion = "YieldcoinShareKycExtractor 1.0.0";
 
-    /// @notice Parameter key for the encoded address array of accounts requiring KYC.
+    /// @notice Parameter key for the encoded address array of accounts requiring KYC
     bytes32 public constant PARAM_KYC_ACCOUNTS = keccak256("kycAccounts");
 
-    /// @notice Extracts KYC account addresses from supported YieldcoinShare selectors.
+    /// @notice Extracts the accounts that must satisfy KYC for a supported YieldcoinShare function
     /// @param payload The policy engine payload
-    /// @return parameters The extracted account list encoded under PARAM_KYC_ACCOUNTS
+    /// @return parameters A single parameter named PARAM_KYC_ACCOUNTS containing `abi.encode(address[])`
+    /// @dev Extracts sender and recipient for transfer; sender, owner, and recipient for transferFrom; sender and
+    ///      spender for approve and increaseAllowance; and only sender for decreaseAllowance
+    /// @dev Reverts if payload.selector is unsupported or payload.data is malformed for the selected function
     function extract(IPolicyEngine.Payload calldata payload)
         external
         pure

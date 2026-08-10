@@ -6,7 +6,7 @@ import {Policy} from "@chainlink/policy-management/core/Policy.sol";
 
 /// @title TerminalAllowPolicy
 /// @author @contractlevel
-/// @notice Final policy in a fail-closed ACE policy chain.
+/// @notice Final policy in a fail-closed ACE policy chain
 /// @dev ACE policies such as KYC checks may return `Continue` after successful validation,
 ///      which means "keep evaluating" rather than "allow execution". This policy is attached
 ///      last to return `Allowed` only after all earlier policies have passed. It allows the
@@ -17,15 +17,16 @@ contract TerminalAllowPolicy is Policy {
     /// @notice The type and version of the policy
     string public constant override typeAndVersion = "TerminalAllowPolicy 1.0.0";
 
-    /// @notice Explicitly allows execution after all earlier policies in the chain have passed.
+    /// @notice Explicitly allows execution after all earlier policies in the chain have passed
+    /// @param parameters Policy parameters; expects an empty array because this policy performs no validation
+    /// @return allowed `Allowed`, which terminates policy evaluation and permits the protected call
     /// @dev This policy MUST be attached last. It expects no parameters because it performs no
     ///      validation itself; validation belongs in earlier policies. Returning `Allowed` here
     ///      prevents successful `Continue`-only policy chains from falling through to the
     ///      PolicyEngine default rule.
     /// @dev The unnamed `IPolicy.run` parameters (caller, subject, selector, context) are unused; only
     ///      `parameters` is checked.
-    /// @param parameters The extracted policy parameters; must be empty, since this policy performs no validation
-    /// @return allowed The `Allowed` policy result.
+    /// @dev Reverts if parameters is not empty
     function run(address, address, bytes4, bytes[] calldata parameters, bytes calldata)
         public
         pure

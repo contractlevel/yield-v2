@@ -14,9 +14,9 @@ contract SenderExtractor is ISenderExtractor {
     /// @notice The parameter key for the sender
     bytes32 public constant PARAM_SENDER = keccak256("sender");
 
-    /// @notice Extracts the sender from a policy engine payload
+    /// @notice Extracts the transaction sender from a policy engine payload
     /// @param payload The policy engine payload
-    /// @return parameters The extracted parameters
+    /// @return parameters A single parameter named PARAM_SENDER containing `abi.encode(payload.sender)`
     function extract(IPolicyEngine.Payload calldata payload)
         external
         pure

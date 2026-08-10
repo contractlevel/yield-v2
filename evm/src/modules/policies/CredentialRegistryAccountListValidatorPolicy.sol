@@ -6,7 +6,6 @@ import {
 } from "@chainlink/cross-chain-identity/CredentialRegistryIdentityValidator.sol";
 import {ICredentialRequirements} from "@chainlink/cross-chain-identity/interfaces/ICredentialRequirements.sol";
 import {IPolicyEngine} from "@chainlink/policy-management/interfaces/IPolicyEngine.sol";
-import {IPolicy} from "@chainlink/policy-management/interfaces/IPolicy.sol";
 import {Policy} from "@chainlink/policy-management/core/Policy.sol";
 import {
     ICredentialRegistryAccountListValidatorPolicy
@@ -14,7 +13,7 @@ import {
 
 /// @title CredentialRegistryAccountListValidatorPolicy
 /// @author @contractlevel
-/// @notice Validates that every account in an extracted account list has the required credentials.
+/// @notice Validates that every account in an extracted account list has the required credentials
 contract CredentialRegistryAccountListValidatorPolicy is
     Policy,
     CredentialRegistryIdentityValidator,
@@ -23,8 +22,11 @@ contract CredentialRegistryAccountListValidatorPolicy is
     /// @notice The type and version of the policy
     string public constant override typeAndVersion = "CredentialRegistryAccountListValidatorPolicy 1.0.0";
 
-    /// @notice Configures credential sources and requirements.
-    /// @param parameters ABI-encoded credential source and requirement inputs
+    /// @notice Configures the policy's initial credential sources and requirements
+    /// @param parameters Empty bytes or an ABI-encoded tuple of CredentialSourceInput[] and CredentialRequirementInput[]
+    /// @dev Empty parameters initialize the policy without credential requirements, causing run to fail closed until
+    ///      a requirement is added or the policy is detached
+    /// @dev Reverts if parameters is nonempty and malformed or any source or requirement configuration is invalid
     function configure(bytes calldata parameters) internal override onlyInitializing {
         if (parameters.length == 0) {
             __CredentialRegistryIdentitityValidator_init_unchained(
@@ -45,9 +47,16 @@ contract CredentialRegistryAccountListValidatorPolicy is
         __CredentialRegistryIdentitityValidator_init_unchained(sources, requirements);
     }
 
-    /// @notice Validates all accounts passed as the single encoded address array parameter.
-    /// @dev Reverts if no credential requirements are configured, whether the policy was
-    ///      deployed/initialized without any (see `configure`) or all requirements were later
+    /// @notice Validates that every account in an extracted account list satisfies all credential requirements
+    /// @param parameters Policy parameters; expects exactly one `abi.encode(address[])` item
+    /// @param context Additional context passed to credential registries and data validators
+    /// @return policyResult `Continue` when every account satisfies all configured credential requirements
+    /// @dev The caller, subject, and selector inputs are unused
+    /// @dev Reverts if parameters does not contain exactly one item or the encoded account list is malformed or empty
+    /// @dev Reverts if no credential requirements are configured
+    /// @dev Reverts if any account fails credential validation
+    /// @dev This fail-closed check applies whether the policy was deployed/initialized without
+    ///      any requirements (see `configure`) or all requirements were later
     ///      removed via the inherited `removeCredentialRequirement`. Without this check, the
     ///      inherited `validate()` would iterate zero requirements and vacuously return true,
     ///      silently approving every account instead of failing closed.
@@ -56,13 +65,10 @@ contract CredentialRegistryAccountListValidatorPolicy is
     ///      all of its credential requirements while it remains attached. Draining requirements
     ///      while still attached now causes every gated call to revert until a requirement is
     ///      restored or the policy is removed — the intended fail-closed behavior, not a bug.
-    /// @param parameters Policy parameters; expects exactly one `abi.encode(address[])` item
-    /// @param context Additional policy context passed to the credential validator
-    /// @return policyResult The policy result, `Continue` when every account validates
     function run(address, address, bytes4, bytes[] calldata parameters, bytes calldata context)
         public
         view
-        override(Policy, IPolicy)
+        override(Policy, ICredentialRegistryAccountListValidatorPolicy)
         returns (IPolicyEngine.PolicyResult policyResult)
     {
         if (parameters.length != 1) revert InvalidParameters("expected kyc account list");
