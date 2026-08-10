@@ -11,15 +11,15 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 
 /// @title Yieldcoin v2 BaseVault CCIP logic library
 /// @author @contractlevel
-/// @notice Handles shared CCIP validation and message sending for BaseVault implementations.
-/// @dev Public library functions are linked by Solidity and execute by DELEGATECALL in the vault context.
+/// @notice Handles shared CCIP validation and message sending for BaseVault implementations
+/// @dev Public library functions are linked by Solidity and execute by DELEGATECALL in the vault context
 library BaseVaultCcipLib {
     using SafeERC20 for IERC20;
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
-    /// @dev Solidity requires locally declared events for emits; these must match IBaseVault and emit from the vault via DELEGATECALL.
+    /// @dev Solidity requires locally declared events for emits; these must match IBaseVault and emit from the vault via DELEGATECALL
     /// @notice Emitted when a CCIP transfer is sent to a destination chain
     /// @param ccipMessageId The ID of the CCIP message
     /// @param destinationChainSelector The CCIP selector of the destination chain
@@ -31,10 +31,12 @@ library BaseVaultCcipLib {
     /*//////////////////////////////////////////////////////////////
                                   CCIP
     //////////////////////////////////////////////////////////////*/
-    /// @notice Reverts unless the CCIP sender matches the configured crosschain vault for the source chain.
+    /// @notice Validates that a CCIP sender is the registered crosschain vault for the source chain
     /// @param $ BaseVault namespaced storage
     /// @param sender The decoded CCIP sender
     /// @param srcChainSelector The CCIP selector of the source chain
+    /// @dev Reverts if no crosschain vault is registered for srcChainSelector
+    /// @dev Reverts if sender is not the registered crosschain vault
     function onlyAllowedSender(BaseVaultStore.BaseVaultStorage storage $, address sender, uint64 srcChainSelector)
         public
         view
@@ -42,12 +44,15 @@ library BaseVaultCcipLib {
         _onlyAllowedSender($, sender, srcChainSelector);
     }
 
-    /// @notice Validates CCIP send parameters and returns the registered destination vault.
+    /// @notice Validates CCIP send parameters and returns the registered destination vault
     /// @param $ BaseVault namespaced storage
-    /// @param bridgeAmount The amount of asset to bridge
+    /// @param bridgeAmount The amount of underlying asset to bridge
     /// @param destinationChainSelector The CCIP selector of the destination chain
     /// @param thisChainSelector The CCIP selector of this chain
     /// @return vault The registered vault for the destination chain
+    /// @dev Reverts if bridgeAmount is zero
+    /// @dev Reverts if destinationChainSelector is zero or identifies this chain
+    /// @dev Reverts if no crosschain vault is registered for destinationChainSelector
     function validateCcipSend(
         BaseVaultStore.BaseVaultStorage storage $,
         uint256 bridgeAmount,
@@ -57,17 +62,20 @@ library BaseVaultCcipLib {
         vault = _validateCcipSend($, bridgeAmount, destinationChainSelector, thisChainSelector);
     }
 
-    /// @notice Builds and sends a CCIP message.
+    /// @notice Builds and sends a CCIP message that transfers the underlying asset
     /// @param $ BaseVault namespaced storage
-    /// @param bridgeAmount The amount of asset to bridge
+    /// @param bridgeAmount The amount of underlying asset to bridge
     /// @param destinationChainSelector The CCIP selector of the destination chain
     /// @param ccipTxType The type of CCIP transaction
     /// @param nonce The epoch nonce (EPOCH_NET_DEPOSIT/EPOCH_NET_WITHDRAW) or rebalance nonce (REBALANCE)
-    /// @param protocolId The target strategy protocol id; only meaningful when ccipTxType is REBALANCE
+    /// @param protocolId The target strategy protocol ID; only meaningful when ccipTxType is REBALANCE
     /// @param asset The underlying asset managed by the vault
     /// @param link The LINK token used to pay CCIP fees
     /// @param ccipRouter The CCIP router
     /// @param thisChainSelector The CCIP selector of this chain
+    /// @dev Reverts if the CCIP send parameters are invalid
+    /// @dev Reverts if fee calculation, token approval, or the CCIP router call fails
+    /// @dev Requires the vault to hold enough underlying asset and LINK for the transfer and CCIP fee
     function send(
         BaseVaultStore.BaseVaultStorage storage $,
         uint256 bridgeAmount,
@@ -94,10 +102,13 @@ library BaseVaultCcipLib {
         );
     }
 
-    /// @notice Validates that a CCIP message delivered the vault's configured asset token and returns the delivered amount.
+    /// @notice Validates the tokens delivered by a CCIP message and returns the underlying-asset amount
     /// @param message The CCIP message received from the router
     /// @param asset The vault's configured asset token
-    /// @return amount The amount of asset delivered by CCIP
+    /// @return amount The amount of underlying asset delivered by CCIP
+    /// @dev Reverts unless the message contains exactly one delivered token amount
+    /// @dev Reverts if the delivered token is not asset
+    /// @dev Reverts if the delivered amount is zero
     function validateReceivedTokenAndGetAmount(Client.Any2EVMMessage memory message, address asset)
         public
         pure
@@ -106,10 +117,12 @@ library BaseVaultCcipLib {
         amount = _validateReceivedTokenAndGetAmount(message, asset);
     }
 
-    /// @notice Reverts unless the CCIP sender matches the configured crosschain vault for the source chain.
+    /// @notice Validates that a CCIP sender is the registered crosschain vault for the source chain
     /// @param $ BaseVault namespaced storage
     /// @param sender The decoded CCIP sender
     /// @param srcChainSelector The CCIP selector of the source chain
+    /// @dev Reverts if no crosschain vault is registered for srcChainSelector
+    /// @dev Reverts if sender is not the registered crosschain vault
     function _onlyAllowedSender(BaseVaultStore.BaseVaultStorage storage $, address sender, uint64 srcChainSelector)
         internal
         view
@@ -120,17 +133,20 @@ library BaseVaultCcipLib {
         }
     }
 
-    /// @notice Builds and sends a CCIP message.
+    /// @notice Builds and sends a CCIP message that transfers the underlying asset
     /// @param $ BaseVault namespaced storage
-    /// @param bridgeAmount The amount of asset to bridge
+    /// @param bridgeAmount The amount of underlying asset to bridge
     /// @param destinationChainSelector The CCIP selector of the destination chain
     /// @param ccipTxType The type of CCIP transaction
     /// @param nonce The epoch nonce (EPOCH_NET_DEPOSIT/EPOCH_NET_WITHDRAW) or rebalance nonce (REBALANCE)
-    /// @param protocolId The target strategy protocol id; only meaningful when ccipTxType is REBALANCE
+    /// @param protocolId The target strategy protocol ID; only meaningful when ccipTxType is REBALANCE
     /// @param asset The underlying asset managed by the vault
     /// @param link The LINK token used to pay CCIP fees
     /// @param ccipRouter The CCIP router
     /// @param thisChainSelector The CCIP selector of this chain
+    /// @dev Reverts if the CCIP send parameters are invalid
+    /// @dev Reverts if fee calculation, token approval, or the CCIP router call fails
+    /// @dev Requires the vault to hold enough underlying asset and LINK for the transfer and CCIP fee
     function _send(
         BaseVaultStore.BaseVaultStorage storage $,
         uint256 bridgeAmount,
@@ -168,10 +184,13 @@ library BaseVaultCcipLib {
         emit CCIPBridged(ccipMessageId, destinationChainSelector, ccipTxType);
     }
 
-    /// @notice Validates that a CCIP message delivered the vault's configured asset token and returns the delivered amount.
+    /// @notice Validates the tokens delivered by a CCIP message and returns the underlying-asset amount
     /// @param message The CCIP message received from the router
     /// @param asset The vault's configured asset token
-    /// @return amount The amount of asset delivered by CCIP
+    /// @return amount The amount of underlying asset delivered by CCIP
+    /// @dev Reverts unless the message contains exactly one delivered token amount
+    /// @dev Reverts if the delivered token is not asset
+    /// @dev Reverts if the delivered amount is zero
     function _validateReceivedTokenAndGetAmount(Client.Any2EVMMessage memory message, address asset)
         internal
         pure
@@ -188,12 +207,15 @@ library BaseVaultCcipLib {
         if (amount == 0) revert IBaseVault.BaseVault__NoZeroAmount();
     }
 
-    /// @notice Validates CCIP send parameters and returns the registered destination vault.
+    /// @notice Validates CCIP send parameters and returns the registered destination vault
     /// @param $ BaseVault namespaced storage
-    /// @param bridgeAmount The amount of asset to bridge
+    /// @param bridgeAmount The amount of underlying asset to bridge
     /// @param destinationChainSelector The CCIP selector of the destination chain
     /// @param thisChainSelector The CCIP selector of this chain
     /// @return vault The registered vault for the destination chain
+    /// @dev Reverts if bridgeAmount is zero
+    /// @dev Reverts if destinationChainSelector is zero or identifies this chain
+    /// @dev Reverts if no crosschain vault is registered for destinationChainSelector
     function _validateCcipSend(
         BaseVaultStore.BaseVaultStorage storage $,
         uint256 bridgeAmount,
@@ -209,10 +231,10 @@ library BaseVaultCcipLib {
         if (vault == address(0)) revert IBaseVault.BaseVault__DestinationVaultNotSet(destinationChainSelector);
     }
 
-    /// @notice Returns the CCIP gas limit for a destination chain, falling back to the default gas limit if none is set.
+    /// @notice Returns the effective CCIP gas limit for a destination chain
     /// @param $ BaseVault namespaced storage
     /// @param chainSelector The CCIP selector of the destination chain
-    /// @return gasLimit The CCIP gas limit to use for the destination chain
+    /// @return gasLimit The per-chain override when nonzero, otherwise the default CCIP gas limit
     function _getCcipGasLimit(BaseVaultStore.BaseVaultStorage storage $, uint64 chainSelector)
         internal
         view

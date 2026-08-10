@@ -9,8 +9,8 @@ import {Types} from "../Types.sol";
 
 /// @title Yieldcoin v2 ParentVault epoch lifecycle logic library
 /// @author @contractlevel
-/// @notice Handles ParentVault epoch settlement while ParentVault keeps external strategy and CCIP actions.
-/// @dev Public library functions are linked by Solidity and execute by DELEGATECALL in the ParentVault context.
+/// @notice Handles ParentVault epoch settlement while ParentVault keeps external strategy and CCIP actions
+/// @dev Public library functions are linked by Solidity and execute by DELEGATECALL in the ParentVault context
 library ParentVaultEpochLib {
     /*//////////////////////////////////////////////////////////////
                                CONSTANTS
@@ -22,6 +22,11 @@ library ParentVaultEpochLib {
                            TYPE DECLARATIONS
     //////////////////////////////////////////////////////////////*/
     /// @notice The action ParentVault must take after closeEpoch settles net flow
+    /// @param NONE No external action because deposits and withdrawals netted to zero
+    /// @param DEPOSIT_TO_LOCAL_STRATEGY Deposit the positive net flow into the local active strategy
+    /// @param SEND_DEPOSIT_TO_REMOTE_STRATEGY Send the positive net flow to the remote active strategy
+    /// @param WITHDRAW_FROM_LOCAL_STRATEGY Withdraw the negative net flow from the local active strategy
+    /// @param WAIT_FOR_REMOTE_WITHDRAW Wait for the remote active strategy to return the negative net flow
     enum ExternalAction {
         NONE, // 0: no net flow to execute (deposits and withdraws netted to zero)
         DEPOSIT_TO_LOCAL_STRATEGY, // 1: net deposit, active strategy is on this chain
@@ -33,8 +38,8 @@ library ParentVaultEpochLib {
     /// @notice The external action ParentVault should execute after closeEpoch settlement
     /// @param epochNonce The nonce of the epoch that was just closed
     /// @param action The action ParentVault must take
-    /// @param amount The net deposit or withdraw amount to act on
-    /// @param totalDepositAmount The epoch's total deposit amount, needed by ParentVault to finalize a local net withdraw
+    /// @param amount The net deposit or withdrawal amount to act on
+    /// @param totalDepositAmount The epoch's total deposit amount, used to finalize a local net withdrawal
     struct CloseEpochExternalAction {
         uint256 epochNonce;
         ExternalAction action;
@@ -45,17 +50,17 @@ library ParentVaultEpochLib {
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
-    /// @dev Solidity requires locally declared events for emits; these must match IParentVault and emit from the vault via DELEGATECALL.
+    /// @dev Solidity requires locally declared events for emits; these must match IParentVault and emit from the vault via DELEGATECALL
     /// @notice Emitted when an epoch is open
     /// @param epochNonce The nonce of the open epoch
     event EpochOpen(uint256 indexed epochNonce);
     /// @notice Emitted when a remote net-deposit epoch is executing
     /// @param epochNonce The nonce of the executing epoch
-    /// @param amount The amount of asset being deposited on the remote strategy chain
+    /// @param amount The amount of underlying asset being deposited on the remote strategy chain
     event EpochDepositExecuting(uint256 indexed epochNonce, uint256 indexed amount);
     /// @notice Emitted when a remote net-withdraw epoch is executing
     /// @param epochNonce The nonce of the executing epoch
-    /// @param amount The amount of asset that needs to be withdrawn
+    /// @param amount The amount of underlying asset to withdraw
     event EpochWithdrawExecuting(uint256 indexed epochNonce, uint256 indexed amount);
     /// @notice Emitted when an epoch is claimable
     /// @param epochNonce The nonce of the claimable epoch
@@ -64,9 +69,9 @@ library ParentVaultEpochLib {
     /*//////////////////////////////////////////////////////////////
                                 EPOCH
     //////////////////////////////////////////////////////////////*/
-    /// @notice Settles the current epoch and returns the external action ParentVault must execute.
+    /// @notice Settles the current epoch and returns the external action ParentVault must execute
     /// @param $ ParentVault namespaced storage
-    /// @param tvl The Total Value Locked in the active strategy of the Yieldcoin v2 system
+    /// @param tvl The underlying-asset value of the active strategy before settling the current epoch
     /// @param share The Yieldcoin share token
     /// @param sharePrecision The share precision factor
     /// @param assetPrecision The underlying asset precision factor, used as the bootstrap price per share
@@ -74,6 +79,15 @@ library ParentVaultEpochLib {
     /// @param isLocalStrategy Whether this chain currently has the active strategy adapter
     /// @return externalAction The external action, epoch nonce, net amount, and total deposit amount ParentVault
     ///         needs to execute the action and finalize the epoch after settlement
+    /// @dev The caller-supplied TVL is trusted and is not validated against onchain strategy state
+    /// @dev Reverts if a rebalance is in progress
+    /// @dev Reverts if the preceding epoch is not claimable
+    /// @dev Reverts if the current epoch is not open or has been open for less than MIN_EPOCH_PERIOD
+    /// @dev Reverts if the epoch contains neither deposits nor withdrawal intents
+    /// @dev Reverts if TVL is zero while shares are outstanding or the resulting price per share is zero
+    /// @dev Reverts if deposit settlement would allocate zero shares to a minimum-size deposit
+    /// @dev Reverts if performance-fee share minting is rejected by the share token's attached ACE policies
+    /// @dev Collects the performance fee and computes the settlement price per share before computing net flow
     function closeEpoch(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 tvl,
@@ -86,9 +100,9 @@ library ParentVaultEpochLib {
         externalAction = _closeEpoch($, tvl, share, sharePrecision, assetPrecision, minDepositAmount, isLocalStrategy);
     }
 
-    /// @notice Settles the current epoch and returns the external action ParentVault must execute.
+    /// @notice Settles the current epoch and returns the external action ParentVault must execute
     /// @param $ ParentVault namespaced storage
-    /// @param tvl The Total Value Locked in the active strategy of the Yieldcoin v2 system
+    /// @param tvl The underlying-asset value of the active strategy before settling the current epoch
     /// @param share The Yieldcoin share token
     /// @param sharePrecision The share precision factor
     /// @param assetPrecision The underlying asset precision factor, used as the bootstrap price per share
@@ -96,12 +110,15 @@ library ParentVaultEpochLib {
     /// @param isLocalStrategy Whether this chain currently has the active strategy adapter
     /// @return externalAction The external action, epoch nonce, net amount, and total deposit amount ParentVault
     ///         needs to execute the action and finalize the epoch after settlement
-    /// @dev Precondition: no rebalance may be in progress
-    /// @dev Precondition: the previous epoch (if one exists) must be CLAIMABLE
-    /// @dev Precondition: the current epoch must be OPEN and have been open for at least MIN_EPOCH_PERIOD
-    /// @dev Precondition: the epoch must have nonzero deposits or withdrawals
+    /// @dev The caller-supplied TVL is trusted and is not validated against onchain strategy state
+    /// @dev Reverts if a rebalance is in progress
+    /// @dev Reverts if the preceding epoch is not claimable
+    /// @dev Reverts if the current epoch is not open or has been open for less than MIN_EPOCH_PERIOD
+    /// @dev Reverts if the epoch contains neither deposits nor withdrawal intents
+    /// @dev Reverts if TVL is zero while shares are outstanding or the resulting price per share is zero
+    /// @dev Reverts if deposit settlement would allocate zero shares to a minimum-size deposit
+    /// @dev Reverts if performance-fee share minting is rejected by the share token's attached ACE policies
     /// @dev Collects the performance fee and computes the settlement price per share before computing net flow
-    /// @dev Precondition: settlement must not mint zero shares for a minimum-size depositor
     function _closeEpoch(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 tvl,
@@ -205,16 +222,18 @@ library ParentVaultEpochLib {
         }
     }
 
-    /// @notice Completes the most recently closed remote net-deposit epoch.
+    /// @notice Completes the most recently closed remote net-deposit epoch
     /// @param $ ParentVault namespaced storage
-    /// @dev Precondition: at least one epoch must have completed
-    /// @dev Precondition: the previous epoch must have positive net flow and be EXECUTING
+    /// @dev Reverts if no epoch has completed
+    /// @dev Reverts if the preceding epoch is not an executing net-deposit epoch
     function completeEpochDeposit(ParentVaultStore.ParentVaultStorage storage $) public {
         _completeEpochDeposit($);
     }
 
-    /// @notice Completes the most recently closed remote net-deposit epoch.
+    /// @notice Completes the most recently closed remote net-deposit epoch
     /// @param $ ParentVault namespaced storage
+    /// @dev Reverts if no epoch has completed
+    /// @dev Reverts if the preceding epoch is not an executing net-deposit epoch
     function _completeEpochDeposit(ParentVaultStore.ParentVaultStorage storage $) internal {
         uint256 currentEpochNonce = $.s_epochNonce;
         if (currentEpochNonce == 1) revert IParentVault.ParentVault__NoCompletedEpoch();
@@ -228,11 +247,12 @@ library ParentVaultEpochLib {
         _finalizeEpoch(s_epoch, epochNonce);
     }
 
-    /// @notice Finalizes a local net-withdraw epoch after ParentVault receives actual adapter output.
+    /// @notice Finalizes a local net-withdraw epoch after ParentVault receives actual adapter output
     /// @param $ ParentVault namespaced storage
     /// @param epochNonce The epoch nonce being finalized
     /// @param totalDepositAmount The epoch's total deposit amount, as already settled by `closeEpoch`
     /// @param amountOut The actual amount withdrawn from the local strategy
+    /// @dev Assumes epochNonce identifies the epoch just settled as a local net withdrawal; this function does not validate it
     function finalizeLocalNetWithdraw(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 epochNonce,
@@ -242,11 +262,12 @@ library ParentVaultEpochLib {
         _finalizeLocalNetWithdraw($, epochNonce, totalDepositAmount, amountOut);
     }
 
-    /// @notice Finalizes a local net-withdraw epoch after ParentVault receives actual adapter output.
+    /// @notice Finalizes a local net-withdraw epoch after ParentVault receives actual adapter output
     /// @param $ ParentVault namespaced storage
     /// @param epochNonce The epoch nonce being finalized
     /// @param totalDepositAmount The epoch's total deposit amount, as already settled by `closeEpoch`
     /// @param amountOut The actual amount withdrawn from the local strategy
+    /// @dev Assumes epochNonce identifies the epoch just settled as a local net withdrawal; this function does not validate it
     function _finalizeLocalNetWithdraw(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 epochNonce,
@@ -261,10 +282,10 @@ library ParentVaultEpochLib {
         emit EpochClaimable(epochNonce);
     }
 
-    /// @notice Marks a settled epoch as claimable.
+    /// @notice Marks an executing epoch as claimable
     /// @param s_epoch The epoch's storage struct
     /// @param epochNonce The nonce of the epoch being finalized
-    /// @dev Precondition: the epoch's status must be EXECUTING
+    /// @dev Reverts if the epoch is not executing
     function _finalizeEpoch(Types.Epoch storage s_epoch, uint256 epochNonce) internal {
         if (s_epoch.status != Types.EpochStatus.EXECUTING) {
             revert IParentVault.ParentVault__EpochNotExecuting(epochNonce);
@@ -274,16 +295,18 @@ library ParentVaultEpochLib {
         emit EpochClaimable(epochNonce);
     }
 
-    /// @notice Opens the next epoch.
+    /// @notice Opens the epoch immediately following epochNonce
     /// @param $ ParentVault namespaced storage
     /// @param epochNonce The epoch nonce just closed by `closeEpoch`, as the next nonce is `epochNonce + 1`
+    /// @dev Assumes epochNonce identifies the current epoch that was just settled; this function does not validate it
     function openNextEpoch(ParentVaultStore.ParentVaultStorage storage $, uint256 epochNonce) public {
         _openNextEpoch($, epochNonce);
     }
 
-    /// @notice Opens the next epoch.
+    /// @notice Opens the epoch immediately following epochNonce
     /// @param $ ParentVault namespaced storage
     /// @param epochNonce The epoch nonce just closed by `closeEpoch`, as the next nonce is `epochNonce + 1`
+    /// @dev Assumes epochNonce identifies the current epoch that was just settled; this function does not validate it
     function _openNextEpoch(ParentVaultStore.ParentVaultStorage storage $, uint256 epochNonce) internal {
         uint256 nextNonce = epochNonce + 1;
         $.s_epochNonce = nextNonce;

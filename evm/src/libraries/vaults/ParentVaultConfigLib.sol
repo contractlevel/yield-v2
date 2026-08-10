@@ -7,13 +7,13 @@ import {IParentVault} from "../../interfaces/vaults/IParentVault.sol";
 
 /// @title Yieldcoin v2 ParentVault config logic library
 /// @author @contractlevel
-/// @notice Handles ParentVault-specific config setter logic.
-/// @dev Public library functions are linked by Solidity and execute by DELEGATECALL in the ParentVault context.
+/// @notice Handles ParentVault-specific configuration updates
+/// @dev Public library functions are linked by Solidity and execute by DELEGATECALL in the ParentVault context
 library ParentVaultConfigLib {
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
-    /// @dev Solidity requires locally declared events for emits; these must match IParentVault and emit from the vault via DELEGATECALL.
+    /// @dev Solidity requires locally declared events for emits; these must match IParentVault and emit from the vault via DELEGATECALL
     /// @notice Emitted when the treasury address is set
     /// @param treasury The address of the treasury
     event TreasurySet(address indexed treasury);
@@ -25,42 +25,42 @@ library ParentVaultConfigLib {
     /*//////////////////////////////////////////////////////////////
                                   CONFIG
     //////////////////////////////////////////////////////////////*/
-    /// @notice Sets the treasury address.
+    /// @notice Sets the treasury address
     /// @param $ ParentVault namespaced storage
     /// @param treasury The address of the treasury
-    /// @dev Precondition: treasury must not be the zero address
+    /// @dev Reverts if treasury is the zero address
     function setTreasury(ParentVaultStore.ParentVaultStorage storage $, address treasury) public {
         _setTreasury($, treasury);
     }
 
-    /// @notice Sets whether a protocol is supported on any chain across the Yieldcoin v2 system.
+    /// @notice Sets whether a protocol is supported on any chain across the Yieldcoin v2 system
     /// @param $ ParentVault namespaced storage
-    /// @param protocolId The protocol identifier of the protocol
+    /// @param protocolId The protocol ID
     /// @param isSupported Whether the protocol is supported
-    /// @dev Precondition: protocolId must not be zero
-    /// @dev Precondition: if isSupported is false, protocolId must not be the active or pending strategy's protocol ID
+    /// @dev Reverts if protocolId is zero
+    /// @dev When removing support, reverts if protocolId belongs to the active or pending strategy
     function setSupportedProtocol(ParentVaultStore.ParentVaultStorage storage $, bytes32 protocolId, bool isSupported)
         public
     {
         _setSupportedProtocol($, protocolId, isSupported);
     }
 
-    /// @notice Sets the treasury address.
+    /// @notice Sets the treasury address
     /// @param $ ParentVault namespaced storage
     /// @param treasury The address of the treasury
-    /// @dev Precondition: treasury must not be the zero address
+    /// @dev Reverts if treasury is the zero address
     function _setTreasury(ParentVaultStore.ParentVaultStorage storage $, address treasury) internal {
         if (treasury == address(0)) revert IBaseVault.BaseVault__NoZeroAddress();
         $.s_treasury = treasury;
         emit TreasurySet(treasury);
     }
 
-    /// @notice Sets whether a protocol is supported on any chain across the Yieldcoin v2 system.
+    /// @notice Sets whether a protocol is supported on any chain across the Yieldcoin v2 system
     /// @param $ ParentVault namespaced storage
-    /// @param protocolId The protocol identifier of the protocol
+    /// @param protocolId The protocol ID
     /// @param isSupported Whether the protocol is supported
-    /// @dev Precondition: protocolId must not be zero
-    /// @dev Precondition: if isSupported is false, protocolId must not be the active or pending strategy's protocol ID
+    /// @dev Reverts if protocolId is zero
+    /// @dev When removing support, reverts if protocolId belongs to the active or pending strategy
     function _setSupportedProtocol(ParentVaultStore.ParentVaultStorage storage $, bytes32 protocolId, bool isSupported)
         internal
     {

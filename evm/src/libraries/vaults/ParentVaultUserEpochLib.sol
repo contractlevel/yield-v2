@@ -11,8 +11,8 @@ import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 
 /// @title Yieldcoin v2 ParentVault user epoch logic library
 /// @author @contractlevel
-/// @notice Handles user-level ParentVault epoch operations while ParentVault keeps policy and lifecycle orchestration.
-/// @dev Public library functions are linked by Solidity and execute by DELEGATECALL in the ParentVault context.
+/// @notice Handles user-level ParentVault epoch operations while ParentVault keeps policy and lifecycle orchestration
+/// @dev Public library functions are linked by Solidity and execute by DELEGATECALL in the ParentVault context
 library ParentVaultUserEpochLib {
     /*//////////////////////////////////////////////////////////////
                            TYPE DECLARATIONS
@@ -22,7 +22,7 @@ library ParentVaultUserEpochLib {
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
-    /// @dev Solidity requires locally declared events for emits; these must match IParentVault and emit from the vault via DELEGATECALL.
+    /// @dev Solidity requires locally declared events for emits; these must match IParentVault and emit from the vault via DELEGATECALL
     /// @notice Emitted when a deposit is made
     /// @param epochNonce The epoch nonce of the deposit
     /// @param depositor The address of the depositor
@@ -31,7 +31,7 @@ library ParentVaultUserEpochLib {
     /// @notice Emitted when a withdraw is made
     /// @param epochNonce The epoch nonce of the withdraw
     /// @param withdrawer The address of the withdrawer
-    /// @param shareBurnAmount The amount of shares burned
+    /// @param shareBurnAmount The amount of shares escrowed for burning when the withdrawal is claimed
     event WithdrawSubmitted(uint256 indexed epochNonce, address indexed withdrawer, uint256 indexed shareBurnAmount);
     /// @notice Emitted when a deposit is claimed
     /// @param epochNonce The epoch nonce of the claim
@@ -69,9 +69,9 @@ library ParentVaultUserEpochLib {
     /// @param amount The amount of asset to deposit
     /// @param minDepositAmount The minimum deposit amount
     /// @return epochNonce The epoch nonce of the deposit
-    /// @dev Precondition: amount must meet the minimum deposit amount requirement
-    /// @dev Precondition: the current epoch must be open
-    /// @dev Precondition: user must approve address(this) to transfer their amount
+    /// @dev Reverts if amount is less than minDepositAmount
+    /// @dev Reverts if the current epoch is not open
+    /// @dev Requires user to have sufficient asset balance and allowance for amount
     function deposit(
         ParentVaultStore.ParentVaultStorage storage $,
         address asset,
@@ -89,9 +89,9 @@ library ParentVaultUserEpochLib {
     /// @param amount The amount of asset to deposit
     /// @param minDepositAmount The minimum deposit amount
     /// @return epochNonce The epoch nonce of the deposit
-    /// @dev Precondition: amount must meet the minimum deposit amount requirement
-    /// @dev Precondition: the current epoch must be open
-    /// @dev Precondition: user must approve address(this) to transfer their amount
+    /// @dev Reverts if amount is less than minDepositAmount
+    /// @dev Reverts if the current epoch is not open
+    /// @dev Requires user to have sufficient asset balance and allowance for amount
     function _deposit(
         ParentVaultStore.ParentVaultStorage storage $,
         address asset,
@@ -112,15 +112,15 @@ library ParentVaultUserEpochLib {
         emit DepositSubmitted(epochNonce, user, amount);
     }
 
-    /// @notice Submit USDC withdraw intent
+    /// @notice Submits a withdrawal intent by escrowing shares in the current epoch
     /// @param $ ParentVault namespaced storage
     /// @param share The Yieldcoin share token
     /// @param user The user submitting the withdraw intent
-    /// @param shareBurnAmount The amount of shares to burn for the withdraw
+    /// @param shareBurnAmount The amount of shares to escrow for burning when the withdrawal is claimed
     /// @return epochNonce The epoch nonce of the withdraw
-    /// @dev Precondition: shareBurnAmount must not be zero
-    /// @dev Precondition: the current epoch must be open
-    /// @dev Precondition: user must approve address(this) to transfer their shareBurnAmount
+    /// @dev Reverts if shareBurnAmount is zero
+    /// @dev Reverts if the current epoch is not open
+    /// @dev Requires user to have sufficient share balance and allowance for shareBurnAmount
     function withdraw(
         ParentVaultStore.ParentVaultStorage storage $,
         address share,
@@ -130,15 +130,15 @@ library ParentVaultUserEpochLib {
         epochNonce = _withdraw($, share, user, shareBurnAmount);
     }
 
-    /// @notice Submit USDC withdraw intent
+    /// @notice Submits a withdrawal intent by escrowing shares in the current epoch
     /// @param $ ParentVault namespaced storage
     /// @param share The Yieldcoin share token
     /// @param user The user submitting the withdraw intent
-    /// @param shareBurnAmount The amount of shares to burn for the withdraw
+    /// @param shareBurnAmount The amount of shares to escrow for burning when the withdrawal is claimed
     /// @return epochNonce The epoch nonce of the withdraw
-    /// @dev Precondition: shareBurnAmount must not be zero
-    /// @dev Precondition: the current epoch must be open
-    /// @dev Precondition: user must approve address(this) to transfer their shareBurnAmount
+    /// @dev Reverts if shareBurnAmount is zero
+    /// @dev Reverts if the current epoch is not open
+    /// @dev Requires user to have sufficient share balance and allowance for shareBurnAmount
     function _withdraw(
         ParentVaultStore.ParentVaultStorage storage $,
         address share,
@@ -159,15 +159,16 @@ library ParentVaultUserEpochLib {
         emit WithdrawSubmitted(epochNonce, user, shareBurnAmount);
     }
 
-    /// @notice Claim Yieldcoin shares after a deposit
+    /// @notice Claims the shares allocated to a user's deposit in a settled epoch
     /// @param $ ParentVault namespaced storage
     /// @param share The Yieldcoin share token
     /// @param user The depositor claiming shares
     /// @param epochNonce The epoch nonce of the deposit
     /// @return shareMintAmount The amount of Yieldcoin shares minted for the deposit
-    /// @dev Finalizes an individual deposit
-    /// @dev Precondition: the epoch nonce must be claimable
-    /// @dev Precondition: the user must have a deposit for the epoch nonce
+    /// @dev Reverts if the epoch is not claimable
+    /// @dev Reverts if user has no deposit in the epoch
+    /// @dev Reverts if the share mint is rejected by the share token's attached ACE policies
+    /// @dev Consumes the user's entire epoch deposit entry and updates the remaining deposit claim pools
     function claimShares(ParentVaultStore.ParentVaultStorage storage $, address share, address user, uint256 epochNonce)
         public
         returns (uint256 shareMintAmount)
@@ -175,15 +176,16 @@ library ParentVaultUserEpochLib {
         shareMintAmount = _claimShares($, share, user, epochNonce);
     }
 
-    /// @notice Claim Yieldcoin shares after a deposit
+    /// @notice Claims the shares allocated to a user's deposit in a settled epoch
     /// @param $ ParentVault namespaced storage
     /// @param share The Yieldcoin share token
     /// @param user The depositor claiming shares
     /// @param epochNonce The epoch nonce of the deposit
     /// @return shareMintAmount The amount of Yieldcoin shares minted for the deposit
-    /// @dev Finalizes an individual deposit
-    /// @dev Precondition: the epoch nonce must be claimable
-    /// @dev Precondition: the user must have a deposit for the epoch nonce
+    /// @dev Reverts if the epoch is not claimable
+    /// @dev Reverts if user has no deposit in the epoch
+    /// @dev Reverts if the share mint is rejected by the share token's attached ACE policies
+    /// @dev Consumes the user's entire epoch deposit entry and updates the remaining deposit claim pools
     function _claimShares(
         ParentVaultStore.ParentVaultStorage storage $,
         address share,
@@ -216,16 +218,17 @@ library ParentVaultUserEpochLib {
         emit DepositClaimed(epochNonce, user, shareMintAmount);
     }
 
-    /// @notice Claim underlying asset after a withdraw
+    /// @notice Claims the underlying asset allocated to a user's withdrawal intent in a settled epoch
     /// @param $ ParentVault namespaced storage
     /// @param share The Yieldcoin share token
     /// @param asset The underlying asset token
     /// @param user The withdrawer claiming asset
     /// @param epochNonce The epoch nonce of the withdraw
     /// @return withdrawAmount The amount of asset withdrawn
-    /// @dev Finalizes an individual withdraw
-    /// @dev Precondition: the epoch nonce must be claimable
-    /// @dev Precondition: the user must have a withdraw intent for the epoch nonce
+    /// @dev Reverts if the epoch is not claimable
+    /// @dev Reverts if user has no withdrawal intent in the epoch
+    /// @dev Reverts if burning the escrowed shares is rejected by the share token's attached ACE policies
+    /// @dev Consumes the user's entire epoch withdrawal entry and updates the remaining withdrawal claim pools
     function claimAsset(
         ParentVaultStore.ParentVaultStorage storage $,
         address share,
@@ -236,16 +239,17 @@ library ParentVaultUserEpochLib {
         withdrawAmount = _claimAsset($, share, asset, user, epochNonce);
     }
 
-    /// @notice Claim underlying asset after a withdraw
+    /// @notice Claims the underlying asset allocated to a user's withdrawal intent in a settled epoch
     /// @param $ ParentVault namespaced storage
     /// @param share The Yieldcoin share token
     /// @param asset The underlying asset token
     /// @param user The withdrawer claiming asset
     /// @param epochNonce The epoch nonce of the withdraw
     /// @return withdrawAmount The amount of asset withdrawn
-    /// @dev Finalizes an individual withdraw
-    /// @dev Precondition: the epoch nonce must be claimable
-    /// @dev Precondition: the user must have a withdraw intent for the epoch nonce
+    /// @dev Reverts if the epoch is not claimable
+    /// @dev Reverts if user has no withdrawal intent in the epoch
+    /// @dev Reverts if burning the escrowed shares is rejected by the share token's attached ACE policies
+    /// @dev Consumes the user's entire epoch withdrawal entry and updates the remaining withdrawal claim pools
     function _claimAsset(
         ParentVaultStore.ParentVaultStorage storage $,
         address share,
@@ -281,60 +285,61 @@ library ParentVaultUserEpochLib {
         if (withdrawAmount != 0) IERC20(asset).safeTransfer(user, withdrawAmount);
     }
 
-    /// @notice Cancels a deposit
+    /// @notice Cancels and refunds a user's deposit in the current open epoch
     /// @param $ ParentVault namespaced storage
     /// @param asset The underlying asset token
     /// @param user The depositor cancelling their deposit
-    /// @dev This deletes the entire deposit entry for the user and epoch nonce
-    /// @dev Precondition: the current epoch must be open
-    /// @dev Precondition: the user must have a deposit for the epoch nonce
+    /// @dev Reverts if the current epoch is not open
+    /// @dev Reverts if user has no deposit in the current epoch
+    /// @dev Deletes the deposit entry, reduces the epoch deposit total, and refunds the underlying asset
     function cancelDeposit(ParentVaultStore.ParentVaultStorage storage $, address asset, address user) public {
         _cancelDeposit($, asset, user);
     }
 
-    /// @notice Cancels a deposit
+    /// @notice Cancels and refunds a user's deposit in the current open epoch
     /// @param $ ParentVault namespaced storage
     /// @param asset The underlying asset token
     /// @param user The depositor cancelling their deposit
-    /// @dev This deletes the entire deposit entry for the user and epoch nonce
-    /// @dev Precondition: the current epoch must be open
-    /// @dev Precondition: the user must have a deposit for the epoch nonce
+    /// @dev Reverts if the current epoch is not open
+    /// @dev Reverts if user has no deposit in the current epoch
+    /// @dev Deletes the deposit entry, reduces the epoch deposit total, and refunds the underlying asset
     function _cancelDeposit(ParentVaultStore.ParentVaultStorage storage $, address asset, address user) internal {
         (uint256 epochNonce, uint256 depositAmount) = _cancelDepositCore($, asset, user);
         emit DepositCancelled(epochNonce, user, depositAmount);
     }
 
-    /// @notice Force-cancels a user's deposit in the current open epoch
+    /// @notice Force-cancels and refunds a user's deposit in the current open epoch
     /// @param $ ParentVault namespaced storage
     /// @param asset The underlying asset token
     /// @param user The depositor whose deposit is being force-cancelled
-    /// @dev This deletes the entire deposit entry for the user and epoch nonce
-    /// @dev Precondition: the current epoch must be open
-    /// @dev Precondition: the user must have a deposit for the epoch nonce
+    /// @dev Reverts if the current epoch is not open
+    /// @dev Reverts if user has no deposit in the current epoch
+    /// @dev Deletes the deposit entry, reduces the epoch deposit total, and refunds the underlying asset
     function forceCancelDeposit(ParentVaultStore.ParentVaultStorage storage $, address asset, address user) public {
         _forceCancelDeposit($, asset, user);
     }
 
-    /// @notice Force-cancels a user's deposit in the current open epoch
+    /// @notice Force-cancels and refunds a user's deposit in the current open epoch
     /// @param $ ParentVault namespaced storage
     /// @param asset The underlying asset token
     /// @param user The depositor whose deposit is being force-cancelled
-    /// @dev This deletes the entire deposit entry for the user and epoch nonce
-    /// @dev Precondition: the current epoch must be open
-    /// @dev Precondition: the user must have a deposit for the epoch nonce
+    /// @dev Reverts if the current epoch is not open
+    /// @dev Reverts if user has no deposit in the current epoch
+    /// @dev Deletes the deposit entry, reduces the epoch deposit total, and refunds the underlying asset
     function _forceCancelDeposit(ParentVaultStore.ParentVaultStorage storage $, address asset, address user) internal {
         (uint256 epochNonce, uint256 depositAmount) = _cancelDepositCore($, asset, user);
         emit DepositForceCancelled(epochNonce, user, depositAmount);
     }
 
-    /// @notice Shared state-mutation core for cancelling a deposit in the current open epoch
+    /// @notice Cancels and refunds a user's deposit without selecting the event emitted by the caller
     /// @param $ ParentVault namespaced storage
     /// @param asset The underlying asset token
     /// @param user The depositor whose deposit is being cancelled
     /// @return epochNonce The epoch nonce the deposit was cancelled from
     /// @return depositAmount The amount of asset refunded to the user
-    /// @dev Precondition: the current epoch must be open
-    /// @dev Precondition: the user must have a deposit for the epoch nonce
+    /// @dev Reverts if the current epoch is not open
+    /// @dev Reverts if user has no deposit in the current epoch
+    /// @dev Deletes the deposit entry, reduces the epoch deposit total, and refunds the underlying asset
     function _cancelDepositCore(ParentVaultStore.ParentVaultStorage storage $, address asset, address user)
         private
         returns (uint256 epochNonce, uint256 depositAmount)
@@ -351,24 +356,24 @@ library ParentVaultUserEpochLib {
         IERC20(asset).safeTransfer(user, depositAmount);
     }
 
-    /// @notice Cancels a withdraw
+    /// @notice Cancels a user's withdrawal intent and returns the escrowed shares
     /// @param $ ParentVault namespaced storage
     /// @param share The Yieldcoin share token
     /// @param user The withdrawer cancelling their withdraw intent
-    /// @dev This deletes the entire withdraw entry for the user and epoch nonce
-    /// @dev Precondition: the current epoch must be open
-    /// @dev Precondition: the user must have a withdraw intent for the epoch nonce
+    /// @dev Reverts if the current epoch is not open
+    /// @dev Reverts if user has no withdrawal intent in the current epoch
+    /// @dev Deletes the withdrawal entry, reduces the epoch withdrawal total, and returns the escrowed shares
     function cancelWithdraw(ParentVaultStore.ParentVaultStorage storage $, address share, address user) public {
         _cancelWithdraw($, share, user);
     }
 
-    /// @notice Cancels a withdraw
+    /// @notice Cancels a user's withdrawal intent and returns the escrowed shares
     /// @param $ ParentVault namespaced storage
     /// @param share The Yieldcoin share token
     /// @param user The withdrawer cancelling their withdraw intent
-    /// @dev This deletes the entire withdraw entry for the user and epoch nonce
-    /// @dev Precondition: the current epoch must be open
-    /// @dev Precondition: the user must have a withdraw intent for the epoch nonce
+    /// @dev Reverts if the current epoch is not open
+    /// @dev Reverts if user has no withdrawal intent in the current epoch
+    /// @dev Deletes the withdrawal entry, reduces the epoch withdrawal total, and returns the escrowed shares
     function _cancelWithdraw(ParentVaultStore.ParentVaultStorage storage $, address share, address user) internal {
         uint256 epochNonce = $.s_epochNonce;
         Types.Epoch storage s_epoch = $.s_epochs[epochNonce];

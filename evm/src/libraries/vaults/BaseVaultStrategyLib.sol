@@ -8,13 +8,13 @@ import {IProtocolAdapter} from "../../interfaces/adapters/IProtocolAdapter.sol";
 
 /// @title Yieldcoin v2 BaseVault strategy adapter logic library
 /// @author @contractlevel
-/// @notice Handles shared active strategy adapter state transitions for BaseVault implementations.
-/// @dev Public library functions are linked by Solidity and execute by DELEGATECALL in the vault context.
+/// @notice Handles shared active strategy adapter state transitions for BaseVault implementations
+/// @dev Public library functions are linked by Solidity and execute by DELEGATECALL in the vault context
 library BaseVaultStrategyLib {
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
-    /// @dev Solidity requires locally declared events for emits; these must match IBaseVault and emit from the vault via DELEGATECALL.
+    /// @dev Solidity requires locally declared events for emits; these must match IBaseVault and emit from the vault via DELEGATECALL
     /// @notice Emitted when the active protocol adapter is set
     /// @param protocolId The protocol ID of the active strategy
     /// @param adapter The active protocol adapter
@@ -26,12 +26,14 @@ library BaseVaultStrategyLib {
     /*//////////////////////////////////////////////////////////////
                                 STRATEGY
     //////////////////////////////////////////////////////////////*/
-    /// @notice Sets the active strategy protocol adapter.
+    /// @notice Sets the registered protocol adapter as this vault's active strategy adapter
     /// @param $ BaseVault namespaced storage
     /// @param protocolId The protocol ID of the strategy
     /// @param adapterRegistry The adapter registry
     /// @param vault The vault address expected by the registered adapter
     /// @return adapter The active strategy protocol adapter
+    /// @dev Reverts if protocolId has no registered adapter
+    /// @dev Reverts if the registered adapter is bound to a different vault
     function setActiveAdapter(
         BaseVaultStore.BaseVaultStorage storage $,
         bytes32 protocolId,
@@ -41,19 +43,21 @@ library BaseVaultStrategyLib {
         adapter = _setActiveAdapter($, protocolId, adapterRegistry, vault);
     }
 
-    /// @notice Clears the active strategy protocol adapter for this chain, given a known adapter.
+    /// @notice Clears this vault's active strategy adapter
     /// @param $ BaseVault namespaced storage
     /// @param adapter The active strategy adapter being cleared, already known by the caller
     function clearActiveAdapter(BaseVaultStore.BaseVaultStorage storage $, address adapter) public {
         _clearActiveAdapter($, adapter);
     }
 
-    /// @notice Sets the active strategy protocol adapter.
+    /// @notice Sets the registered protocol adapter as this vault's active strategy adapter
     /// @param $ BaseVault namespaced storage
     /// @param protocolId The protocol ID of the strategy
     /// @param adapterRegistry The adapter registry
     /// @param vault The vault address expected by the registered adapter
     /// @return adapter The active strategy protocol adapter
+    /// @dev Reverts if protocolId has no registered adapter
+    /// @dev Reverts if the registered adapter is bound to a different vault
     function _setActiveAdapter(
         BaseVaultStore.BaseVaultStorage storage $,
         bytes32 protocolId,
@@ -70,7 +74,7 @@ library BaseVaultStrategyLib {
         emit ActiveProtocolAdapterSet(protocolId, adapter);
     }
 
-    /// @notice Clears the active strategy protocol adapter for this chain, given a known adapter.
+    /// @notice Clears this vault's active strategy adapter
     /// @param $ BaseVault namespaced storage
     /// @param adapter The active strategy adapter being cleared, already known by the caller
     function _clearActiveAdapter(BaseVaultStore.BaseVaultStorage storage $, address adapter) internal {

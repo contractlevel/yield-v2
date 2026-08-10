@@ -15,8 +15,8 @@ library Types {
                                 STRATEGY
     //////////////////////////////////////////////////////////////*/
     /// @notice Struct for defining an onchain strategy
-    /// @param protocolId The protocol ID - keccak256("aave-v3"), keccak256("aave-v4")
-    /// @param chainSelector CCIP chain selector
+    /// @param protocolId The protocol ID, such as keccak256("aave-v3")
+    /// @param chainSelector The CCIP selector of the strategy chain
     struct Strategy {
         bytes32 protocolId;
         uint64 chainSelector;
@@ -26,9 +26,9 @@ library Types {
                                   CCIP
     //////////////////////////////////////////////////////////////*/
     /// @notice CCIP transaction type discriminators for epoch net-flow settlement and rebalances
-    /// @param EPOCH_NET_DEPOSIT Epoch netflow has more deposits than withdraws and bridges the underlying asset to the active strategy chain
-    /// @param EPOCH_NET_WITHDRAW Epoch netflow has more withdraws than deposits and bridges the underlying asset from the strategy to the Parent
-    /// @param REBALANCE The system rebalances by bridging the TVL from the old strategy to the new strategy chain
+    /// @param EPOCH_NET_DEPOSIT Bridges a positive epoch net flow to the active strategy chain
+    /// @param EPOCH_NET_WITHDRAW Bridges assets from the active strategy chain to settle a negative epoch net flow
+    /// @param REBALANCE Bridges the active strategy position from the old strategy chain to the new strategy chain
     enum CcipTx {
         EPOCH_NET_DEPOSIT, // 0
         EPOCH_NET_WITHDRAW, // 1
@@ -54,23 +54,23 @@ library Types {
         CCIP_SEND
     }
 
-    /// @notice Recovery state for failed epoch operations
+    /// @notice Recovery state for a failed ChildVault epoch deposit or withdrawal
     /// @param epochNonce The nonce of the epoch
-    /// @param amount The amount needed to retry the failed operation
+    /// @param amount The amount of underlying asset needed to retry the failed operation
     struct EpochRecovery {
         uint256 epochNonce;
         uint256 amount;
     }
 
-    /// @notice Recovery state for failed rebalance deposit operations
+    /// @notice Recovery state for a failed rebalance deposit
     /// @param rebalanceNonce The nonce of the rebalance
-    /// @param amount The amount needed to retry the failed deposit
+    /// @param amount The amount of underlying asset to retry depositing
     struct RebalanceDepositRecovery {
         uint256 rebalanceNonce;
         uint256 amount;
     }
 
-    /// @notice Recovery state for failed rebalance withdraw operations
+    /// @notice Recovery state for a failed ChildVault rebalance withdrawal
     /// @param rebalanceNonce The nonce of the rebalance
     /// @param strategy The target strategy to continue the rebalance into after withdraw succeeds
     struct RebalanceWithdrawRecovery {
@@ -79,9 +79,9 @@ library Types {
     }
 
     /// @notice Recovery state for failed ChildVault CCIP send operations
-    /// @param amount The amount of asset to bridge
+    /// @param amount The amount of underlying asset to bridge
     /// @param nonce The epoch nonce (EPOCH_NET_DEPOSIT/EPOCH_NET_WITHDRAW) or rebalance nonce (REBALANCE) to replay
-    /// @param protocolId The target strategy protocol id to rebalance into; only meaningful when ccipTxType is REBALANCE
+    /// @param protocolId The target strategy protocol ID; only meaningful when ccipTxType is REBALANCE
     /// @param destinationChainSelector The CCIP selector of the destination chain
     /// @param ccipTxType The CCIP transaction type to replay
     struct CcipSendRecovery {
@@ -96,21 +96,21 @@ library Types {
                                REBALANCE
     //////////////////////////////////////////////////////////////*/
     /// @notice State of the rebalance operation
-    /// @dev This is only used on the Parent chain
     /// @param NONE There is no active rebalance operation
     /// @param REBALANCING The rebalance is in progress
+    /// @dev Used only by ParentVault
     enum RebalanceState {
         NONE, // 0
         REBALANCING // 1
     }
 
     /// @notice Data for the rebalance operation
-    /// @dev This is only used on the Parent chain
-    /// @param nonce How many rebalances have been initiated. This is used for individual rebalance IDs
+    /// @param nonce The active rebalance ID while state is REBALANCING; otherwise the ID assigned to the next rebalance
     /// @param state The state of the rebalance operation
-    /// @param activeStrategy The active strategy, where the Yieldcoin TVL is currently allocated
-    /// @param pendingStrategy The pending strategy, where the Yieldcoin TVL is going to be allocated
-    /// @param lastRebalanceCompletedTimestamp The timestamp of the last rebalance operation completed. This is for fee collection.
+    /// @param activeStrategy The last finalized strategy; assets may be in transit while a rebalance is active
+    /// @param pendingStrategy The target strategy while a rebalance is active, otherwise the zero-value strategy
+    /// @param lastRebalanceCompletedTimestamp The completion timestamp used for rebalance cooldowns and fee collection
+    /// @dev Used only by ParentVault
     struct Rebalance {
         uint256 nonce;
         RebalanceState state;
@@ -124,9 +124,9 @@ library Types {
     //////////////////////////////////////////////////////////////*/
     /// @notice Status of an epoch
     /// @param NONE The epoch has not been opened
-    /// @param OPEN The epoch is open for deposits and withdraws
-    /// @param EXECUTING The epoch is executing
-    /// @param CLAIMABLE The epoch is claimable
+    /// @param OPEN The epoch is open for deposits and withdrawal intents
+    /// @param EXECUTING The epoch is waiting for remote strategy execution or crosschain settlement
+    /// @param CLAIMABLE The epoch has settled and its user entries can be claimed
     enum EpochStatus {
         NONE, // 0
         OPEN, // 1
@@ -135,10 +135,10 @@ library Types {
     }
 
     /// @notice Data for an epoch
-    /// @param totalDepositAmount The total amount of asset deposited during the epoch
-    /// @param totalShareBurnAmount The total amount of shares submitted to be burned during the epoch
-    /// @param totalWithdrawClaimAmount The total amount of asset available for withdraw claims during the epoch
-    /// @param pricePerShare The price per share of the epoch
+    /// @param totalDepositAmount The total underlying asset recorded for deposit intents, reduced by cancellations while OPEN and fixed at settlement
+    /// @param totalShareBurnAmount The total shares recorded for withdrawal intents, reduced by cancellations while OPEN and fixed at settlement
+    /// @param totalWithdrawClaimAmount The asset allocated to withdrawal claims at settlement; provisional during a remote withdrawal
+    /// @param pricePerShare The price per share set when the epoch settles
     /// @param remainingDepositClaimAmount The unclaimed asset deposit amount used for shrinking-pool share claims
     /// @param remainingShareMintAmount The unclaimed shares to mint for deposit claims
     /// @param remainingShareBurnAmount The unclaimed shares submitted for withdraw claims

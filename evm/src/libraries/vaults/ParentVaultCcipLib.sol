@@ -9,13 +9,13 @@ import {ParentVaultEpochLib} from "./ParentVaultEpochLib.sol";
 
 /// @title Yieldcoin v2 ParentVault CCIP receive logic library
 /// @author @contractlevel
-/// @notice Handles ParentVault-specific CCIP message decoding, validation, and epoch settlement.
-/// @dev Public library functions are linked by Solidity and execute by DELEGATECALL in the ParentVault context.
+/// @notice Handles ParentVault-specific CCIP message decoding, validation, and epoch settlement
+/// @dev Public library functions are linked by Solidity and execute by DELEGATECALL in the ParentVault context
 library ParentVaultCcipLib {
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
-    /// @dev Solidity requires locally declared events for emits; these must match IParentVault and emit from the vault via DELEGATECALL.
+    /// @dev Solidity requires locally declared events for emits; these must match IParentVault and emit from the vault via DELEGATECALL
     /// @notice Emitted when a CCIP withdraw message delivers less asset than expected
     /// @param epochNonce The nonce of the epoch with the short withdrawal
     /// @param expectedAmount The amount of asset expected from the remote strategy
@@ -27,13 +27,15 @@ library ParentVaultCcipLib {
     /*//////////////////////////////////////////////////////////////
                                   CCIP
     //////////////////////////////////////////////////////////////*/
-    /// @notice Handles ParentVault-specific CCIP message data after BaseVault validates sender and delivered token.
+    /// @notice Handles ParentVault-specific CCIP message data after BaseVault validates the sender and delivered token
     /// @param $ ParentVault namespaced storage
     /// @param ccipTxType The decoded CCIP transaction type
     /// @param data The decoded CCIP payload data
-    /// @param receivedAmount The amount of asset delivered by CCIP
+    /// @param receivedAmount The amount of underlying asset delivered by CCIP
     /// @return rebalanceNonce Nonzero rebalance nonce when ParentVault must handle a rebalance callback
     /// @return protocolId Pending strategy protocol ID for the rebalance callback
+    /// @dev Reverts if ccipTxType is not EPOCH_NET_WITHDRAW or REBALANCE
+    /// @dev Reverts if data is malformed or fails the selected transaction type's validation
     function receiveCcip(
         ParentVaultStore.ParentVaultStorage storage $,
         Types.CcipTx ccipTxType,
@@ -43,13 +45,15 @@ library ParentVaultCcipLib {
         (rebalanceNonce, protocolId) = _receiveCcip($, ccipTxType, data, receivedAmount);
     }
 
-    /// @notice Handles ParentVault-specific CCIP message data after BaseVault validates sender and delivered token.
+    /// @notice Handles ParentVault-specific CCIP message data after BaseVault validates the sender and delivered token
     /// @param $ ParentVault namespaced storage
     /// @param ccipTxType The decoded CCIP transaction type
     /// @param data The decoded CCIP payload data
-    /// @param receivedAmount The amount of asset delivered by CCIP
+    /// @param receivedAmount The amount of underlying asset delivered by CCIP
     /// @return rebalanceNonce Nonzero rebalance nonce when ParentVault must handle a rebalance callback
     /// @return protocolId Pending strategy protocol ID for the rebalance callback
+    /// @dev Reverts if ccipTxType is not EPOCH_NET_WITHDRAW or REBALANCE
+    /// @dev Reverts if data is malformed or fails the selected transaction type's validation
     function _receiveCcip(
         ParentVaultStore.ParentVaultStorage storage $,
         Types.CcipTx ccipTxType,
@@ -65,11 +69,14 @@ library ParentVaultCcipLib {
         }
     }
 
-    /// @notice Settles the withdraw side of an epoch after CCIP delivers the remote strategy's withdraw output.
+    /// @notice Settles the withdrawal side of an epoch after CCIP delivers the remote strategy's withdrawal output
     /// @param $ ParentVault namespaced storage
     /// @param data The decoded CCIP payload data, ABI-encoded as the settled epoch's nonce
-    /// @param receivedAmount The amount of asset delivered by CCIP for the remote withdraw
-    /// @dev Precondition: the decoded epoch nonce must equal `s_epochNonce - 1` (the most recently closed epoch)
+    /// @param receivedAmount The amount of underlying asset delivered for the remote withdrawal
+    /// @dev Reverts if data is not an ABI-encoded uint256 epoch nonce
+    /// @dev Reverts if the decoded epoch nonce does not identify the most recently closed epoch
+    /// @dev Assumes the identified epoch is a remote net withdrawal; this helper validates the nonce and EXECUTING
+    ///      status but does not independently validate the net-flow direction
     function _handleEpochNetWithdraw(
         ParentVaultStore.ParentVaultStorage storage $,
         bytes memory data,
@@ -93,14 +100,15 @@ library ParentVaultCcipLib {
         ParentVaultEpochLib._finalizeEpoch(s_epoch, epochNonce);
     }
 
-    /// @notice Validates a rebalance callback CCIP payload against the vault's stored pending rebalance.
+    /// @notice Validates a rebalance callback payload against the vault's stored pending rebalance
     /// @param $ ParentVault namespaced storage
     /// @param data The decoded CCIP payload data, ABI-encoded as (rebalanceNonce, protocolId)
     /// @return rebalanceNonce The decoded rebalance nonce, validated against `s_rebalance.nonce`
     /// @return protocolId The decoded pending strategy protocol ID, validated against `s_rebalance.pendingStrategy.protocolId`
-    /// @dev Precondition: a rebalance must be in progress (`s_rebalance.state == REBALANCING`)
-    /// @dev Precondition: the decoded rebalanceNonce must match `s_rebalance.nonce`
-    /// @dev Precondition: the decoded protocolId must match `s_rebalance.pendingStrategy.protocolId`
+    /// @dev Reverts if no rebalance is in progress
+    /// @dev Reverts if data is not an ABI-encoded (uint256, bytes32) tuple
+    /// @dev Reverts if the decoded rebalanceNonce does not match s_rebalance.nonce
+    /// @dev Reverts if the decoded protocolId does not match s_rebalance.pendingStrategy.protocolId
     function _validateRebalance(ParentVaultStore.ParentVaultStorage storage $, bytes memory data)
         internal
         view

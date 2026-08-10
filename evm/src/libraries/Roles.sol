@@ -5,34 +5,34 @@ pragma solidity 0.8.34;
 /// @author @contractlevel
 /// @notice Roles for the Yieldcoin v2 protocol
 library Roles {
-    /// @notice Default admin role grants and revokes other roles
+    /// @notice Role that administers local roles; on ParentVault, also authorizes the one-time initial adapter setup
     bytes32 internal constant DEFAULT_ADMIN_ROLE = 0x00;
-    /// @notice Upgrader role can upgrade proxy contracts
+    /// @notice Role authorized to upgrade vault proxy contracts
     bytes32 internal constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
-    /// @notice Pauser role for pausing the Yieldcoin v2 infrastructure
+    /// @notice Role authorized to pause Yieldcoin v2 contracts
     bytes32 internal constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
-    /// @notice Unpauser role for unpausing the Yieldcoin v2 infrastructure
+    /// @notice Role authorized to unpause Yieldcoin v2 contracts
     bytes32 internal constant UNPAUSER_ROLE = keccak256("UNPAUSER_ROLE");
-    /// @notice Config operator role for setting configuration state such as the allowed crosschain vaults for sending and receiving CCIP messages
+    /// @notice Role authorized to update vault, router, registry, and ACE-gated token configuration
     bytes32 internal constant CONFIG_OPERATOR_ROLE = keccak256("CONFIG_OPERATOR_ROLE");
-    /// @notice Rebalance operator role for rebalancing the Yieldcoin v2 protocol. Granted to WorkflowRouter.
+    /// @notice Role authorizing WorkflowRouter to execute vault rebalance operations
     bytes32 internal constant REBALANCE_OPERATOR_ROLE = keccak256("REBALANCE_OPERATOR_ROLE");
-    /// @notice Epoch operator role for managing epochs in the Yieldcoin v2 protocol. Granted to WorkflowRouter.
+    /// @notice Role authorizing WorkflowRouter to execute vault epoch operations
     bytes32 internal constant EPOCH_OPERATOR_ROLE = keccak256("EPOCH_OPERATOR_ROLE");
-    /// @notice Link operator role for withdrawing LINK from the Yieldcoin v2 vaults
+    /// @notice Role authorized to withdraw LINK from Yieldcoin v2 vaults
     bytes32 internal constant LINK_OPERATOR_ROLE = keccak256("LINK_OPERATOR_ROLE");
-    /// @notice Compliance operator role for compliance actions: forced transfers, freeze/unfreeze, pause/unpause through ACE RBAC
+    /// @notice Role authorized through ACE for forced transfers and account or balance freezing
     bytes32 internal constant COMPLIANCE_OPERATOR_ROLE = keccak256("COMPLIANCE_OPERATOR_ROLE");
-    /// @notice ChainlinkCRE Keystone Forwarder calls WorkflowRouter::onReport
+    /// @notice Role authorizing the Chainlink Keystone Forwarder to call WorkflowRouter.onReport
     bytes32 internal constant KEYSTONE_FORWARDER_ROLE = keccak256("KEYSTONE_FORWARDER_ROLE");
-    /// @notice Policy engine manager role for replacing attached policy engines
+    /// @notice Role authorized to replace attached ACE policy engines
     bytes32 internal constant POLICY_ENGINE_MANAGER_ROLE = keccak256("POLICY_ENGINE_MANAGER_ROLE");
-    /// @notice Minter role for minting Yieldcoin shares. Granted to ParentVault through ACE RoleBasedAccessControlPolicy.
+    /// @notice Role used by ACE policy configuration to authorize ParentVault to mint Yieldcoin shares
     bytes32 internal constant MINTER_ROLE = keccak256("MINTER_ROLE");
-    /// @notice Burner role for burning Yieldcoin shares. Granted to ParentVault through ACE RoleBasedAccessControlPolicy.
+    /// @notice Role used by ACE policy configuration to authorize ParentVault to burn Yieldcoin shares
     bytes32 internal constant BURNER_ROLE = keccak256("BURNER_ROLE");
-    /// @notice Rewards operator role for claiming Compound V3 protocol rewards from the CompoundV3Adapter
+    /// @notice Role authorized to claim Compound v3 rewards through CompoundV3Adapter
     bytes32 internal constant REWARDS_OPERATOR_ROLE = keccak256("REWARDS_OPERATOR_ROLE");
-    /// @notice Cancel deposit operator role for force-cancelling stuck deposits to unblock epoch settlement
+    /// @notice Role authorized to force-cancel stuck deposits to unblock epoch settlement
     bytes32 internal constant CANCEL_DEPOSIT_OPERATOR_ROLE = keccak256("CANCEL_DEPOSIT_OPERATOR_ROLE");
 }

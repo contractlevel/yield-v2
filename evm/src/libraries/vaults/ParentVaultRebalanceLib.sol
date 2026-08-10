@@ -8,8 +8,8 @@ import {Types} from "../Types.sol";
 
 /// @title Yieldcoin v2 ParentVault rebalance logic library
 /// @author @contractlevel
-/// @notice Handles ParentVault rebalance validation and state transitions.
-/// @dev Public library functions are linked by Solidity and execute by DELEGATECALL in the ParentVault context.
+/// @notice Handles ParentVault rebalance validation and state transitions
+/// @dev Public library functions are linked by Solidity and execute by DELEGATECALL in the ParentVault context
 library ParentVaultRebalanceLib {
     /*//////////////////////////////////////////////////////////////
                                CONSTANTS
@@ -21,6 +21,9 @@ library ParentVaultRebalanceLib {
                            TYPE DECLARATIONS
     //////////////////////////////////////////////////////////////*/
     /// @notice The action ParentVault must take after initiateRebalance updates state
+    /// @param NONE No local action because the active strategy is remote
+    /// @param WITHDRAW_LOCAL_TO_LOCAL Withdraw from the local active strategy and deposit into the local target strategy
+    /// @param WITHDRAW_LOCAL_TO_REMOTE Withdraw from the local active strategy and send the assets to the remote target strategy
     enum ExternalAction {
         NONE, // 0: the previously active strategy is not on this chain, nothing to withdraw here
         WITHDRAW_LOCAL_TO_LOCAL, // 1: withdraw from the local active strategy and deposit into the local new strategy
@@ -38,7 +41,7 @@ library ParentVaultRebalanceLib {
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
-    /// @dev Solidity requires locally declared events for emits; these must match IParentVault and emit from the vault via DELEGATECALL.
+    /// @dev Solidity requires locally declared events for emits; these must match IParentVault and emit from the vault via DELEGATECALL
     /// @notice Emitted when a rebalance is initiated
     /// @param rebalanceNonce The nonce of the rebalance
     /// @param protocolId The target strategy protocol ID
@@ -55,12 +58,16 @@ library ParentVaultRebalanceLib {
     /*//////////////////////////////////////////////////////////////
                                REBALANCE
     //////////////////////////////////////////////////////////////*/
-    /// @notice Starts a rebalance and returns the external strategy/CCIP action ParentVault must execute.
+    /// @notice Starts a rebalance and returns the external strategy or CCIP action ParentVault must execute
     /// @param $ ParentVault namespaced storage
     /// @param newStrategy The new strategy to rebalance to
     /// @param thisChainSelector The chain selector for the ParentVault chain
     /// @param isSupportedChain Whether the target strategy chain is local or registered in BaseVault storage
     /// @return result The external action ParentVault should execute after state is updated
+    /// @dev Reverts if a rebalance is already in progress or the rebalance cooldown has not elapsed
+    /// @dev Reverts if newStrategy matches the active strategy
+    /// @dev Reverts if the target chain or protocol is unsupported
+    /// @dev Reverts if no epoch has completed or the preceding epoch is still executing
     function initiateRebalance(
         ParentVaultStore.ParentVaultStorage storage $,
         Types.Strategy memory newStrategy,
@@ -70,12 +77,16 @@ library ParentVaultRebalanceLib {
         result = _initiateRebalance($, newStrategy, thisChainSelector, isSupportedChain);
     }
 
-    /// @notice Starts a rebalance and returns the external strategy/CCIP action ParentVault must execute.
+    /// @notice Starts a rebalance and returns the external strategy or CCIP action ParentVault must execute
     /// @param $ ParentVault namespaced storage
     /// @param newStrategy The new strategy to rebalance to
     /// @param thisChainSelector The chain selector for the ParentVault chain
     /// @param isSupportedChain Whether the target strategy chain is local or registered in BaseVault storage
     /// @return result The external action ParentVault should execute after state is updated
+    /// @dev Reverts if a rebalance is already in progress or the rebalance cooldown has not elapsed
+    /// @dev Reverts if newStrategy matches the active strategy
+    /// @dev Reverts if the target chain or protocol is unsupported
+    /// @dev Reverts if no epoch has completed or the preceding epoch is still executing
     function _initiateRebalance(
         ParentVaultStore.ParentVaultStorage storage $,
         Types.Strategy memory newStrategy,
@@ -129,12 +140,15 @@ library ParentVaultRebalanceLib {
         }
     }
 
-    /// @notice Finalizes an in-progress rebalance and collects management fees.
+    /// @notice Finalizes a rebalance and collects management fees
     /// @param $ ParentVault namespaced storage
     /// @param share The Yieldcoin share token
     /// @param rebalanceNonce The current `s_rebalance.nonce`
     /// @param newStrategy The current `s_rebalance.pendingStrategy`
-    /// @param isLocalToLocalRebalance See `_finalizeRebalance` below
+    /// @param isLocalToLocalRebalance Whether the rebalance resolved synchronously without persisted pending state
+    /// @dev For an asynchronous rebalance, reverts if no rebalance is in progress
+    /// @dev Assumes rebalanceNonce and newStrategy were validated by ParentVault; this function does not validate them
+    /// @dev Reverts if management-fee share minting is rejected by the share token's attached ACE policies
     function finalizeRebalance(
         ParentVaultStore.ParentVaultStorage storage $,
         address share,
@@ -145,15 +159,17 @@ library ParentVaultRebalanceLib {
         _finalizeRebalance($, share, rebalanceNonce, newStrategy, isLocalToLocalRebalance);
     }
 
-    /// @notice Finalizes an in-progress rebalance and collects management fees.
+    /// @notice Finalizes a rebalance and collects management fees
     /// @param $ ParentVault namespaced storage
     /// @param share The Yieldcoin share token
     /// @param rebalanceNonce The current `s_rebalance.nonce`
     /// @param newStrategy The current `s_rebalance.pendingStrategy`
     /// @param isLocalToLocalRebalance True when finalizing a rebalance that stayed on this chain and
-    ///        resolved synchronously within the same initiateRebalance() call - state/pendingStrategy
-    ///        were never written to storage (see _initiateRebalance), so there is nothing to validate
-    ///        or clear here.
+    ///        resolved synchronously within the same initiateRebalance() call; state and pendingStrategy
+    ///        were never written to storage, so there is nothing to clear
+    /// @dev For an asynchronous rebalance, reverts if no rebalance is in progress
+    /// @dev Assumes rebalanceNonce and newStrategy were validated by ParentVault; this function does not validate them
+    /// @dev Reverts if management-fee share minting is rejected by the share token's attached ACE policies
     function _finalizeRebalance(
         ParentVaultStore.ParentVaultStorage storage $,
         address share,

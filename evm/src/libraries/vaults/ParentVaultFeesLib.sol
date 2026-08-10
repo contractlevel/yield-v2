@@ -8,8 +8,8 @@ import {ParentVaultMathLib} from "./ParentVaultMathLib.sol";
 
 /// @title Yieldcoin v2 ParentVault fee logic library
 /// @author @contractlevel
-/// @notice Handles ParentVault fee accounting while ParentVault keeps lifecycle orchestration.
-/// @dev Public library functions are linked by Solidity and execute by DELEGATECALL in the ParentVault context.
+/// @notice Handles ParentVault fee accounting while ParentVault keeps lifecycle orchestration
+/// @dev Public library functions are linked by Solidity and execute by DELEGATECALL in the ParentVault context
 library ParentVaultFeesLib {
     /*//////////////////////////////////////////////////////////////
                                CONSTANTS
@@ -24,7 +24,7 @@ library ParentVaultFeesLib {
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
-    /// @dev Solidity requires locally declared events for emits; these must match IParentVault and emit from the vault via DELEGATECALL.
+    /// @dev Solidity requires locally declared events for emits; these must match IParentVault and emit from the vault via DELEGATECALL
     /// @notice Emitted when management fees are collected
     /// @param rebalanceNonce The nonce of the rebalance that collected the fee
     /// @param feeShares The number of shares minted to the treasury
@@ -42,16 +42,17 @@ library ParentVaultFeesLib {
     /*//////////////////////////////////////////////////////////////
                                   FEES
     //////////////////////////////////////////////////////////////*/
-    /// @notice Calculates the asset value of a Yieldcoin share token.
+    /// @notice Calculates the underlying-asset value of one Yieldcoin share
+    /// @param $ ParentVault namespaced storage
+    /// @param tvl The Total Value Locked in the active strategy, denominated in the underlying asset
+    /// @param sharePrecision The share precision factor
+    /// @param assetPrecision The underlying asset precision factor, used as the bootstrap price per share
+    /// @return pricePerShare The underlying-asset value of one share
     /// @dev Bootstrap pricing: when totalShares == 0, pricePerShare is always assetPrecision (par),
     ///      regardless of tvl. Any residual tvl at that point (e.g. dust left behind after a full
     ///      exit) is captured by the next depositor's shares rather than the prior shareholders.
     ///      See KI-010 in docs/KNOWN_ISSUES.md.
-    /// @param $ ParentVault namespaced storage
-    /// @param tvl The Total Value Locked in the active strategy of the Yieldcoin v2 system
-    /// @param sharePrecision The share precision factor
-    /// @param assetPrecision The underlying asset precision factor, used as the bootstrap price per share
-    /// @return pricePerShare Asset value of a Yieldcoin share token
+    /// @dev Reverts if TVL is zero while shares are outstanding or the calculated price rounds down to zero
     function calculatePricePerShare(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 tvl,
@@ -61,15 +62,16 @@ library ParentVaultFeesLib {
         pricePerShare = _calculatePricePerShare(tvl, $.s_totalShares, sharePrecision, assetPrecision);
     }
 
-    /// @notice Calculates the asset value of a Yieldcoin share token.
-    /// @param tvl The Total Value Locked in the active strategy of the Yieldcoin v2 system
+    /// @notice Calculates the underlying-asset value of one Yieldcoin share
+    /// @param tvl The Total Value Locked in the active strategy, denominated in the underlying asset
     /// @param totalShares The total outstanding Yieldcoin shares (caller-supplied to avoid a redundant SLOAD)
     /// @param sharePrecision The share precision factor
     /// @param assetPrecision The underlying asset precision factor, used as the bootstrap price per share
-    /// @return pricePerShare Asset value of a Yieldcoin share token
+    /// @return pricePerShare The underlying-asset value of one share
     /// @dev Bootstrap pricing: when totalShares == 0, pricePerShare is always assetPrecision (par), regardless
     ///      of tvl. Any residual tvl at that point (e.g. dust left behind after a full exit) is captured by the
     ///      next depositor's shares rather than the prior shareholders. See KI-010 in docs/KNOWN_ISSUES.md.
+    /// @dev Reverts if TVL is zero while shares are outstanding or the calculated price rounds down to zero
     function _calculatePricePerShare(uint256 tvl, uint256 totalShares, uint256 sharePrecision, uint256 assetPrecision)
         internal
         pure
@@ -85,15 +87,16 @@ library ParentVaultFeesLib {
         }
     }
 
-    /// @notice Calculates deposit shares directly from TVL and post-fee share supply.
-    /// @dev Avoids using a floored price-per-share as a divisor, which can compound rounding
-    ///      error and over-mint shares when the share price is small.
-    /// @param tvl The Total Value Locked in the active strategy
+    /// @notice Calculates deposit shares directly from TVL and the post-fee share supply
+    /// @param tvl The Total Value Locked in the active strategy, denominated in the underlying asset
     /// @param depositAmount The deposit amount being converted to shares
     /// @param totalShares The total shares after performance-fee dilution
     /// @param sharePrecision The share precision factor
     /// @param assetPrecision The asset precision factor used for bootstrap pricing
     /// @return newShares The number of shares to mint
+    /// @dev Avoids using a floored price-per-share as a divisor, which can compound rounding
+    ///      error and over-mint shares when the share price is small.
+    /// @dev Reverts if TVL is zero while shares are outstanding
     function _calculateNewShares(
         uint256 tvl,
         uint256 depositAmount,
@@ -110,12 +113,14 @@ library ParentVaultFeesLib {
         }
     }
 
-    /// @notice Calculates and collects the management fee based on time elapsed since the last rebalance completed.
-    /// @dev Elapsed time is capped at 365 days
+    /// @notice Calculates and collects management fees for time elapsed since the preceding rebalance completed
     /// @param $ ParentVault namespaced storage
     /// @param rebalanceNonce The nonce of the rebalance collecting the fee
     /// @param lastRebalanceCompletedTimestamp The timestamp when the rebalance last completed
     /// @param share The Yieldcoin share token
+    /// @dev Caps elapsed time at 365 days
+    /// @dev Reverts if lastRebalanceCompletedTimestamp is in the future
+    /// @dev Reverts if fee-share minting is rejected by the share token's attached ACE policies
     function collectManagementFee(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 rebalanceNonce,
@@ -125,12 +130,14 @@ library ParentVaultFeesLib {
         _collectManagementFee($, rebalanceNonce, lastRebalanceCompletedTimestamp, share);
     }
 
-    /// @notice Calculates and collects the management fee based on time elapsed since the last rebalance completed.
+    /// @notice Calculates and collects management fees for time elapsed since the preceding rebalance completed
     /// @param $ ParentVault namespaced storage
     /// @param rebalanceNonce The nonce of the rebalance collecting the fee
     /// @param lastRebalanceCompletedTimestamp The timestamp when the rebalance last completed
     /// @param share The Yieldcoin share token
-    /// @dev Elapsed time is capped at 365 days
+    /// @dev Caps elapsed time at 365 days
+    /// @dev Reverts if lastRebalanceCompletedTimestamp is in the future
+    /// @dev Reverts if fee-share minting is rejected by the share token's attached ACE policies
     function _collectManagementFee(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 rebalanceNonce,
@@ -150,15 +157,18 @@ library ParentVaultFeesLib {
         }
     }
 
-    /// @notice Collects performance fee when the gross price exceeds the high water mark.
+    /// @notice Collects performance fees when the gross price exceeds the high water mark
     /// @param $ ParentVault namespaced storage
     /// @param epochNonce The epoch nonce collecting the fee
-    /// @param tvl The strategy TVL before current epoch deposits and withdrawals settle
+    /// @param tvl The strategy TVL before current epoch deposits and withdrawals settle, denominated in the underlying asset
     /// @param grossPricePerShare The epoch price per share before performance fee dilution
     /// @param share The Yieldcoin share token
     /// @param sharePrecision The share precision factor
     /// @param assetPrecision The underlying asset precision factor, used as the bootstrap price per share
     /// @return settlementPricePerShare The epoch price per share after performance fee dilution
+    /// @dev Returns grossPricePerShare without minting when it does not exceed the high water mark or the fee is not collectible
+    /// @dev Reverts if fee-share minting is rejected by the share token's attached ACE policies
+    /// @dev Mints fee shares but does not update s_totalShares; the epoch-settlement caller performs the ledger update
     function collectPerformanceFee(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 epochNonce,
@@ -173,17 +183,19 @@ library ParentVaultFeesLib {
         );
     }
 
-    /// @notice Collects performance fee when the gross price exceeds the high water mark.
+    /// @notice Collects performance fees when the gross price exceeds the high water mark
     /// @param $ ParentVault namespaced storage
     /// @param epochNonce The epoch nonce collecting the fee
-    /// @param tvl The strategy TVL before current epoch deposits and withdrawals settle
+    /// @param tvl The strategy TVL before current epoch deposits and withdrawals settle, denominated in the underlying asset
     /// @param grossPricePerShare The epoch price per share before performance fee dilution
     /// @param totalShares The total outstanding Yieldcoin shares (caller-supplied to avoid a redundant SLOAD)
     /// @param share The Yieldcoin share token
     /// @param sharePrecision The share precision factor
     /// @param assetPrecision The underlying asset precision factor, used as the bootstrap price per share
     /// @return settlementPricePerShare The epoch price per share after performance fee dilution
-    /// @return feeShares The number of shares minted as a performance fee (0 if none were minted).
+    /// @return feeShares The number of shares minted as a performance fee, or zero if none were minted
+    /// @dev Returns grossPricePerShare without minting when it does not exceed the high water mark or the fee is not collectible
+    /// @dev Reverts if fee-share minting is rejected by the share token's attached ACE policies
     /// @dev This function mints feeShares but deliberately does NOT write `s_totalShares` - the caller
     ///      is the sole writer of that ledger, computing `totalShares + feeShares` (plus its own epoch
     ///      deposit/withdraw deltas) in a single write, instead of this function writing an intermediate

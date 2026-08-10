@@ -6,35 +6,35 @@ import {IBaseVault} from "../../interfaces/vaults/IBaseVault.sol";
 
 /// @title Yieldcoin v2 BaseVault config logic library
 /// @author @contractlevel
-/// @notice Handles shared config setter logic for BaseVault implementations.
-/// @dev Public library functions are linked by Solidity and execute by DELEGATECALL in the vault context.
+/// @notice Handles shared configuration updates for BaseVault implementations
+/// @dev Public library functions are linked by Solidity and execute by DELEGATECALL in the vault context
 library BaseVaultConfigLib {
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
-    /// @dev Solidity requires locally declared events for emits; these must match IBaseVault and emit from the vault via DELEGATECALL.
-    /// @notice Emitted when the crosschain vaults are set by a CONFIG_OPERATOR
-    /// @param chainSelector The CCIP selectors of the chain
-    /// @param vault The addresses of the crosschain vault
+    /// @dev Solidity requires locally declared events for emits; these must match IBaseVault and emit from the vault via DELEGATECALL
+    /// @notice Emitted when the crosschain vault for a chain selector is set or removed
+    /// @param chainSelector The CCIP selector of the remote chain
+    /// @param vault The registered vault address, or address(0) if the registration was removed
     event CrosschainVaultSet(uint64 indexed chainSelector, address indexed vault);
-    /// @notice Emitted when the CCIP gas limit is set by a CONFIG_OPERATOR
+    /// @notice Emitted when a per-chain CCIP gas-limit override is set or cleared
     /// @param chainSelector The CCIP selector of the chain
-    /// @param gasLimit The gas limit for the CCIP send
+    /// @param gasLimit The override, or zero if the override was cleared
     event CcipGasLimitSet(uint64 indexed chainSelector, uint256 indexed gasLimit);
-    /// @notice Emitted when the default CCIP gas limit is set by a CONFIG_OPERATOR
+    /// @notice Emitted when the default CCIP gas limit is set
     /// @param gasLimit The gas limit for the default CCIP send
     event DefaultCcipGasLimitSet(uint256 indexed gasLimit);
 
     /*//////////////////////////////////////////////////////////////
                                   CONFIG
     //////////////////////////////////////////////////////////////*/
-    /// @notice Sets the crosschain vaults.
+    /// @notice Sets or removes the crosschain vault registered for each supplied chain selector
     /// @param $ BaseVault namespaced storage
-    /// @param chainSelectors The CCIP selectors of the chains
-    /// @param vaults The addresses of the crosschain vaults
-    /// @dev Precondition: chainSelectors must not be empty
-    /// @dev Precondition: chainSelectors and vaults must be the same length
-    /// @dev Precondition: each chainSelector must not be zero
+    /// @param chainSelectors The CCIP selectors of the remote chains
+    /// @param vaults The vault addresses, using address(0) to remove a registration
+    /// @dev Reverts if chainSelectors is empty
+    /// @dev Reverts if chainSelectors and vaults have different lengths
+    /// @dev Reverts if any chain selector is zero
     function setCrosschainVaults(
         BaseVaultStore.BaseVaultStorage storage $,
         uint64[] calldata chainSelectors,
@@ -43,30 +43,30 @@ library BaseVaultConfigLib {
         _setCrosschainVaults($, chainSelectors, vaults);
     }
 
-    /// @notice Sets the CCIP gas limit for a given chain selector.
+    /// @notice Sets or clears the CCIP gas-limit override for a chain selector
     /// @param $ BaseVault namespaced storage
     /// @param chainSelector The CCIP selector of the chain
-    /// @param gasLimit The CCIP gas limit
-    /// @dev Precondition: chainSelector must not be zero
+    /// @param gasLimit The override, or zero to clear it and use the default
+    /// @dev Reverts if chainSelector is zero
     function setCcipGasLimit(BaseVaultStore.BaseVaultStorage storage $, uint64 chainSelector, uint256 gasLimit) public {
         _setCcipGasLimit($, chainSelector, gasLimit);
     }
 
-    /// @notice Sets the default CCIP gas limit.
+    /// @notice Sets the default CCIP gas limit
     /// @param $ BaseVault namespaced storage
     /// @param gasLimit The default CCIP gas limit
-    /// @dev Precondition: gasLimit must not be zero
+    /// @dev Reverts if gasLimit is zero
     function setDefaultCcipGasLimit(BaseVaultStore.BaseVaultStorage storage $, uint256 gasLimit) public {
         _setDefaultCcipGasLimit($, gasLimit);
     }
 
-    /// @notice Sets the crosschain vaults.
+    /// @notice Sets or removes the crosschain vault registered for each supplied chain selector
     /// @param $ BaseVault namespaced storage
-    /// @param chainSelectors The CCIP selectors of the chains
-    /// @param vaults The addresses of the crosschain vaults
-    /// @dev Precondition: chainSelectors must not be empty
-    /// @dev Precondition: chainSelectors and vaults must be the same length
-    /// @dev Precondition: each chainSelector must not be zero
+    /// @param chainSelectors The CCIP selectors of the remote chains
+    /// @param vaults The vault addresses, using address(0) to remove a registration
+    /// @dev Reverts if chainSelectors is empty
+    /// @dev Reverts if chainSelectors and vaults have different lengths
+    /// @dev Reverts if any chain selector is zero
     function _setCrosschainVaults(
         BaseVaultStore.BaseVaultStorage storage $,
         uint64[] calldata chainSelectors,
@@ -82,11 +82,11 @@ library BaseVaultConfigLib {
         }
     }
 
-    /// @notice Sets the CCIP gas limit for a given chain selector.
+    /// @notice Sets or clears the CCIP gas-limit override for a chain selector
     /// @param $ BaseVault namespaced storage
     /// @param chainSelector The CCIP selector of the chain
-    /// @param gasLimit The CCIP gas limit
-    /// @dev Precondition: chainSelector must not be zero
+    /// @param gasLimit The override, or zero to clear it and use the default
+    /// @dev Reverts if chainSelector is zero
     function _setCcipGasLimit(BaseVaultStore.BaseVaultStorage storage $, uint64 chainSelector, uint256 gasLimit)
         internal
     {
@@ -95,10 +95,10 @@ library BaseVaultConfigLib {
         emit CcipGasLimitSet(chainSelector, gasLimit);
     }
 
-    /// @notice Sets the default CCIP gas limit.
+    /// @notice Sets the default CCIP gas limit
     /// @param $ BaseVault namespaced storage
     /// @param gasLimit The default CCIP gas limit
-    /// @dev Precondition: gasLimit must not be zero
+    /// @dev Reverts if gasLimit is zero
     function _setDefaultCcipGasLimit(BaseVaultStore.BaseVaultStorage storage $, uint256 gasLimit) internal {
         if (gasLimit == 0) revert IBaseVault.BaseVault__NoZeroAmount();
         $.s_defaultCcipGasLimit = gasLimit;
