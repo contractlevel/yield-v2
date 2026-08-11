@@ -35,7 +35,7 @@ interface IParentVault is IBaseVault {
     /// @dev Thrown when the epoch is too short
     /// @param epochNonce The nonce for the epoch that is too short
     error ParentVault__EpochTooShort(uint256 epochNonce);
-    /// @dev Thrown when closeEpoch is called with no deposits and no withdrawals
+    /// @dev Thrown when closeEpoch is called with no deposits and no withdraw intents
     /// @param epochNonce The nonce for the empty epoch
     error ParentVault__EmptyEpoch(uint256 epochNonce);
     /// @dev Thrown when closeEpoch is called with zero TVL while shares are outstanding
@@ -92,15 +92,15 @@ interface IParentVault is IBaseVault {
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
     /// @dev IParentVault remains the canonical vault ABI; linked libraries redeclare matching events only to emit them.
-    /// @notice Emitted when a deposit is made
+    /// @notice Emitted when a deposit is submitted
     /// @param epochNonce The epoch nonce of the deposit
     /// @param depositor The address of the depositor
-    /// @param amount The amount of asset deposited
+    /// @param amount The amount of underlying asset deposited
     event DepositSubmitted(uint256 indexed epochNonce, address indexed depositor, uint256 indexed amount);
-    /// @notice Emitted when a withdraw is made
-    /// @param epochNonce The epoch nonce of the withdraw
+    /// @notice Emitted when a withdraw intent is submitted
+    /// @param epochNonce The epoch nonce of the withdraw intent
     /// @param withdrawer The address of the withdrawer
-    /// @param shareBurnAmount The amount of shares escrowed for burning when the withdrawal is claimed
+    /// @param shareBurnAmount The amount of shares escrowed for burning when the withdraw is claimed
     event WithdrawSubmitted(uint256 indexed epochNonce, address indexed withdrawer, uint256 indexed shareBurnAmount);
     /// @notice Emitted when a deposit is claimed
     /// @param epochNonce The epoch nonce of the claim
@@ -110,26 +110,26 @@ interface IParentVault is IBaseVault {
     /// @notice Emitted when a withdraw is claimed
     /// @param epochNonce The epoch nonce of the claim
     /// @param withdrawer The address of the withdrawer
-    /// @param amount The amount of asset withdrawn
+    /// @param amount The amount of underlying asset withdrawn
     event WithdrawClaimed(uint256 indexed epochNonce, address indexed withdrawer, uint256 indexed amount);
     /// @notice Emitted when an epoch is open
     /// @param epochNonce The nonce of the open epoch
     event EpochOpen(uint256 indexed epochNonce);
     /// @notice Emitted when a remote net-deposit epoch is executing
     /// @param epochNonce The nonce of the executing epoch
-    /// @param amount The amount of asset being deposited on the remote strategy chain
+    /// @param amount The amount of underlying asset being deposited on the remote strategy chain
     event EpochDepositExecuting(uint256 indexed epochNonce, uint256 indexed amount);
     /// @notice Emitted when a remote net-withdraw epoch is executing
     /// @param epochNonce The nonce of the executing epoch
-    /// @param amount The amount of asset that needs to be withdrawn
+    /// @param amount The amount of underlying asset that needs to be withdrawn
     event EpochWithdrawExecuting(uint256 indexed epochNonce, uint256 indexed amount);
     /// @notice Emitted when an epoch is claimable
     /// @param epochNonce The nonce of the claimable epoch
     event EpochClaimable(uint256 indexed epochNonce);
-    /// @notice Emitted when a CCIP withdraw message delivers less asset than expected
+    /// @notice Emitted when a CCIP withdrawal message delivers less underlying asset than expected
     /// @param epochNonce The nonce of the epoch with the short withdrawal
-    /// @param expectedAmount The amount of asset expected from the remote strategy
-    /// @param actualAmount The amount of asset delivered by the CCIP message
+    /// @param expectedAmount The amount of underlying asset expected from the remote strategy
+    /// @param actualAmount The amount of underlying asset delivered by the CCIP message
     event EpochWithdrawAmountShort(
         uint256 indexed epochNonce, uint256 indexed expectedAmount, uint256 indexed actualAmount
     );
@@ -161,17 +161,17 @@ interface IParentVault is IBaseVault {
     /// @notice Emitted when a deposit is cancelled
     /// @param epochNonce The epoch nonce of the deposit
     /// @param depositor The address of the depositor
-    /// @param amount The amount of asset that was cancelled
+    /// @param amount The amount of underlying asset refunded
     event DepositCancelled(uint256 indexed epochNonce, address indexed depositor, uint256 indexed amount);
-    /// @notice Emitted when a withdraw is cancelled
-    /// @param epochNonce The epoch nonce of the withdraw
+    /// @notice Emitted when a withdraw intent is cancelled
+    /// @param epochNonce The epoch nonce of the withdraw intent
     /// @param withdrawer The address of the withdrawer
     /// @param shareBurnAmount The amount of shares that were intended to burn to redeem the underlying asset
     event WithdrawCancelled(uint256 indexed epochNonce, address indexed withdrawer, uint256 indexed shareBurnAmount);
     /// @notice Emitted when a deposit is force-cancelled by the cancel deposit operator
     /// @param epochNonce The epoch nonce of the deposit
     /// @param depositor The address of the depositor
-    /// @param amount The amount of asset that was cancelled
+    /// @param amount The amount of underlying asset refunded
     event DepositForceCancelled(uint256 indexed epochNonce, address indexed depositor, uint256 indexed amount);
     /// @notice Emitted when the initial active protocol adapter is set
     /// @param protocolId The protocol ID of the initial active strategy
@@ -197,6 +197,7 @@ interface IParentVault is IBaseVault {
     /// @dev Reverts if the initial active protocol adapter has already been set
     /// @dev Reverts if protocolId does not have a registered adapter
     /// @dev Reverts if the registered adapter is bound to another vault
+    /// @dev Sets the active strategy to protocolId on this chain
     function setInitialActiveProtocolAdapter(bytes32 protocolId) external;
 
     /// @notice Sets the treasury address
@@ -210,7 +211,8 @@ interface IParentVault is IBaseVault {
     /// @param isSupported Whether the protocol is supported
     /// @dev Reverts if the caller does not have CONFIG_OPERATOR_ROLE
     /// @dev Reverts if protocolId is zero
-    /// @dev When removing support, reverts if protocolId belongs to the active or pending strategy
+    /// @dev When removing support, reverts if protocolId belongs to the active strategy
+    /// @dev When removing support, reverts if protocolId belongs to the pending strategy
     function setSupportedProtocol(bytes32 protocolId, bool isSupported) external;
 
     /// @notice Force-cancels a user's deposit in the current open epoch, refunding their exact deposited amount
@@ -219,25 +221,26 @@ interface IParentVault is IBaseVault {
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the current epoch is not open
     /// @dev Reverts if user has no deposit in the current epoch
+    /// @dev Deliberately callable while paused and not subject to the caller's attached ACE policies
     function forceCancelDeposit(address user) external;
 
     /*//////////////////////////////////////////////////////////////
                             USER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
     /// @notice Deposits the underlying asset into the vault
-    /// @param amount The amount of asset to deposit
+    /// @param amount The amount of underlying asset to deposit
     /// @return epochNonce The epoch nonce of the deposit
     /// @dev Reverts if amount is less than the minimum deposit amount
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the vault is paused
     /// @dev Reverts if the call is rejected by the attached ACE policies
     /// @dev Reverts if the current epoch is not open
-    /// @dev Requires the caller to have sufficient asset balance and allowance for amount
+    /// @dev Requires the caller to have sufficient underlying-asset balance and allowance for amount
     function deposit(uint256 amount) external returns (uint256 epochNonce);
 
-    /// @notice Submits a withdrawal intent by escrowing shares in the current epoch
-    /// @param shareBurnAmount The amount of shares to escrow for burning when the withdrawal is claimed
-    /// @return epochNonce The nonce of the epoch containing the withdrawal intent
+    /// @notice Submits a withdraw intent by escrowing shares in the current epoch
+    /// @param shareBurnAmount The amount of shares to escrow for burning when the withdraw is claimed
+    /// @return epochNonce The nonce of the epoch containing the withdraw intent
     /// @dev Reverts if shareBurnAmount is zero
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the vault is paused
@@ -254,17 +257,16 @@ interface IParentVault is IBaseVault {
     /// @dev Reverts if the call is rejected by the attached ACE policies
     /// @dev Reverts if the epoch is not claimable
     /// @dev Reverts if the caller has no deposit in the epoch
-    /// @dev Reverts if the resulting share mint is rejected by the share token's attached ACE policies
     function claimShares(uint256 epochNonce) external returns (uint256 shareMintAmount);
 
-    /// @notice Claims the underlying asset for a completed epoch withdrawal
+    /// @notice Claims the underlying asset for a completed epoch withdraw
     /// @param epochNonce The nonce of the epoch to claim from
-    /// @return withdrawAmount The amount of asset transferred to the withdrawer
+    /// @return withdrawAmount The amount of underlying asset transferred to the withdrawer
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the vault is paused
     /// @dev Reverts if the call is rejected by the attached ACE policies
     /// @dev Reverts if the epoch is not claimable
-    /// @dev Reverts if the caller has no withdrawal intent in the epoch
+    /// @dev Reverts if the caller has no withdraw intent in the epoch
     /// @dev Reverts if burning the escrowed shares is rejected by the share token's attached ACE policies
     function claimAsset(uint256 epochNonce) external returns (uint256 withdrawAmount);
 
@@ -276,12 +278,12 @@ interface IParentVault is IBaseVault {
     /// @dev Reverts if the caller has no deposit in the current epoch
     function cancelDeposit() external;
 
-    /// @notice Cancels the caller's withdrawal intent and returns the escrowed shares
+    /// @notice Cancels the caller's withdraw intent in the current open epoch and returns the escrowed shares
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the vault is paused
     /// @dev Reverts if the call is rejected by the attached ACE policies
     /// @dev Reverts if the current epoch is not open
-    /// @dev Reverts if the caller has no withdrawal intent in the current epoch
+    /// @dev Reverts if the caller has no withdraw intent in the current epoch
     function cancelWithdraw() external;
 
     /*//////////////////////////////////////////////////////////////
@@ -289,7 +291,15 @@ interface IParentVault is IBaseVault {
     //////////////////////////////////////////////////////////////*/
     /// @notice Settles the current epoch, executes its net asset flow, and opens the next epoch
     /// @param tvl The underlying-asset value of the active strategy before settling the current epoch
+    /// @dev Called by the WorkflowRouter
+    /// @dev Net flow is the total deposited underlying asset minus the total underlying asset owed for withdraw claims
+    /// @dev A zero net flow makes the epoch claimable without moving assets
+    /// @dev A positive net flow is deposited locally or sent by CCIP to the remote active strategy; a remote epoch
+    ///      remains executing until completeEpochDeposit is called after the ChildVault confirms the deposit
+    /// @dev A negative net flow is withdrawn locally and made claimable, or remains executing while CRE triggers
+    ///      the remote strategy withdrawal and return transfer
     /// @dev The caller-supplied TVL is trusted and is not validated against onchain strategy state
+    /// @dev An incorrect tvl irreversibly corrupts epoch share accounting once a user claims from the affected epoch
     /// @dev Reverts if the caller does not have EPOCH_OPERATOR_ROLE
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the vault is paused
@@ -298,11 +308,17 @@ interface IParentVault is IBaseVault {
     /// @dev Reverts if the current epoch is not open
     /// @dev Reverts if the preceding epoch is still executing
     /// @dev Reverts if the current epoch has been open for less than MIN_EPOCH_PERIOD
-    /// @dev Reverts if the epoch contains neither deposits nor withdrawal intents
+    /// @dev Reverts if the epoch contains neither deposits nor withdraw intents
     /// @dev Reverts if tvl is zero while shares are outstanding
     /// @dev Reverts if the resulting price per share rounds down to zero
     /// @dev Reverts if deposit settlement would allocate zero shares to a minimum-size deposit
-    /// @dev Reverts if a required local strategy operation or CCIP transfer fails
+    /// @dev Requires any local strategy or CCIP interaction selected by the net-flow branch to succeed
+    /// @dev The preceding-epoch guard prevents claims and strategy changes while a remote epoch remains executing
+    /// @dev If a remote strategy withdrawal fails, users cannot claim until recovery succeeds on the ChildVault
+    /// @dev An epoch nonce of one has no preceding epoch because initialization opens epoch one
+    /// @dev Zero TVL with outstanding shares requires restoring TVL through an on-behalf-of strategy supply before
+    ///      settlement can continue; the permanent admin seed deposit means this requires a full strategy loss
+    /// @dev See KI-008 and KI-010 in docs/KNOWN_ISSUES.md
     function closeEpoch(uint256 tvl) external;
 
     /// @notice Completes the most recently closed remote net-deposit epoch
@@ -325,9 +341,10 @@ interface IParentVault is IBaseVault {
     /// @dev Reverts if the preceding epoch is still executing
     /// @dev Reverts if newStrategy.chainSelector is not the local chain or a registered crosschain vault's chain
     /// @dev Reverts if newStrategy.protocolId is not supported
-    /// @dev Reverts if a required local adapter is not registered or is registered for another vault
-    /// @dev Reverts if a local active-strategy withdrawal fails or returns zero assets
-    /// @dev Reverts if a required local strategy deposit or CCIP transfer fails
+    /// @dev If the active strategy is local, reverts if its withdrawal returns zero assets
+    /// @dev If the new strategy is local, reverts if its protocol has no registered adapter
+    /// @dev If the new strategy is local, reverts if the registered adapter is bound to another vault
+    /// @dev Requires any local strategy or CCIP interaction selected by the rebalance branch to succeed
     function initiateRebalance(Types.Strategy memory newStrategy) external;
 
     /// @notice Completes a rebalance
@@ -351,7 +368,7 @@ interface IParentVault is IBaseVault {
 
     /// @notice Returns the share precision factor (fixed at SHARE_PRECISION)
     /// @return sharePrecision The share precision factor
-    function getSharePrecision() external view returns (uint256 sharePrecision);
+    function getSharePrecision() external pure returns (uint256 sharePrecision);
 
     /// @notice Returns the minimum deposit amount (1 * i_assetPrecision)
     /// @return minDepositAmount The minimum deposit amount
@@ -368,7 +385,17 @@ interface IParentVault is IBaseVault {
 
     /// @notice Returns the epoch data for a given epoch nonce
     /// @param epochNonce The epoch nonce to query
-    /// @return epoch The epoch data including status, deposit/withdraw totals, price per share, and opened timestamp
+    /// @return epoch Types.Epoch struct includes:
+    ///         uint256 totalDepositAmount - the total underlying asset deposited in the epoch
+    ///         uint256 totalShareBurnAmount - the total shares submitted for withdraw in the epoch
+    ///         uint256 totalWithdrawClaimAmount - the total underlying asset allocated to epoch withdraw claims
+    ///         uint256 pricePerShare - the settlement price per share
+    ///         uint256 remainingDepositClaimAmount - the unclaimed underlying asset attributed to deposits
+    ///         uint256 remainingShareMintAmount - the shares remaining to mint for deposits
+    ///         uint256 remainingShareBurnAmount - the escrowed shares remaining to burn for withdraw claims
+    ///         uint256 remainingWithdrawClaimAmount - the underlying asset remaining to claim for withdraw claims
+    ///         uint256 openedAtTimestamp - the timestamp when the epoch opened
+    ///         Types.EpochStatus status - the epoch status
     function getEpoch(uint256 epochNonce) external view returns (Types.Epoch memory epoch);
 
     /// @notice Returns the current epoch nonce
@@ -377,18 +404,20 @@ interface IParentVault is IBaseVault {
 
     /// @notice Returns the total number of Yieldcoin shares tracked by the vault
     /// @return totalShares The total share count tracked by the vault
+    /// @dev Updated at epoch settlement before the corresponding shares are minted or burned at claim time, so it
+    ///      may be higher or lower than the share token's totalSupply() while claims remain pending
     function getTotalShares() external view returns (uint256 totalShares);
 
-    /// @notice Returns the asset deposit amount submitted by a user for a given epoch
+    /// @notice Returns the underlying-asset deposit amount submitted by a user for a given epoch
     /// @param user The address of the depositor
     /// @param epochNonce The epoch nonce of the deposit
-    /// @return amount The asset amount the user deposited into the given epoch
+    /// @return amount The underlying-asset amount the user deposited into the given epoch
     function getDepositAmount(address user, uint256 epochNonce) external view returns (uint256 amount);
 
-    /// @notice Returns the share amount escrowed by a user for an epoch withdrawal intent
+    /// @notice Returns the share amount escrowed by a user for an epoch withdraw intent
     /// @param user The address of the withdrawer
     /// @param epochNonce The epoch nonce of the withdraw intent
-    /// @return shareBurnAmount The shares escrowed for burning when the withdrawal is claimed
+    /// @return shareBurnAmount The shares escrowed for burning when the withdraw is claimed
     function getWithdrawShareBurnAmount(address user, uint256 epochNonce)
         external
         view

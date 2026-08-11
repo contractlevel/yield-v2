@@ -72,7 +72,7 @@ contract AaveV4Adapter is ProtocolAdapter, IAaveV4Adapter {
     /// @dev Reverts if the protocol returns zero assets
     /// @dev Reverts if the protocol returns less than the expected amount beyond the permitted rounding tolerance
     function withdraw(uint256 amount) external nonReentrant onlyVault returns (uint256 actualWithdrawnAmount) {
-        /// @dev Scenario 1: Epoch Withdraw - when the amount is a specific amount
+        // Scenario 1: Epoch withdrawal - when the amount is a specific amount
         if (amount != type(uint256).max) {
             _revertIfEpochWithdrawAmountExceedsTVL(amount, _getTVL());
 
@@ -80,7 +80,7 @@ contract AaveV4Adapter is ProtocolAdapter, IAaveV4Adapter {
             (, actualWithdrawnAmount) = IAaveV4Spoke(i_spoke).withdraw(i_reserveId, amount, address(this));
             _revertIfIncompleteWithdraw(amount, actualWithdrawnAmount);
         }
-        /// @dev Scenario 2: Rebalance Withdraw - when the amount is type(uint256).max
+        // Scenario 2: Rebalance withdrawal - when the amount is type(uint256).max
         else {
             uint256 tvl = _getTVL();
 

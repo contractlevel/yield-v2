@@ -29,8 +29,9 @@ import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 /// @title Yieldcoin v2 ParentVault
 /// @author @contractlevel
-/// @notice The entry/exit point for users to deposit and withdraw in the Yieldcoin v2 system.
-/// @dev Only one ParentVault is deployed on a single chain in the entire Yieldcoin v2 system.
+/// @notice The user entry and exit point for deposits and withdraw intents in Yieldcoin v2
+/// @dev Coordinates user accounting, epoch settlement, fees, and crosschain strategy allocation
+/// @dev The Yieldcoin v2 system has one ParentVault
 contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtectedUpgradeable {
     /*//////////////////////////////////////////////////////////////
                                CONSTANTS
@@ -49,10 +50,11 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
-    /// @notice Initializes implementation-level immutable configuration for the ParentVault.
+    /// @notice Initializes immutable ParentVault configuration and disables implementation initializers
     /// @param params BaseVault constructor parameters for values baked into the implementation bytecode
     /// @param share The address of the Yieldcoin (YIELD) share token
-    /// @dev Precondition: share must not be the zero address
+    /// @dev Reverts if BaseVault immutable configuration is invalid
+    /// @dev Reverts if share is the zero address
     constructor(BaseVault.ConstructorParams memory params, address share) BaseVault(params) {
         _revertIfZeroAddress(share);
 
@@ -62,21 +64,23 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         _disableInitializers();
     }
 
-    /// @notice Initializes ParentVault mutable proxy state.
+    /// @notice Initializes ParentVault mutable proxy state
     /// @param params BaseVault initializer parameters for roles and mutable vault configuration
     /// @param treasury The address of the operator multisig for protocol fees
     /// @param policyEngineManager The address authorized to replace this vault's attached policy engine
     /// @param policyEngine The address of the Yieldcoin v2 PolicyEngine
     /// @param cancelDepositOperator The address authorized to force-cancel stuck deposits
-    /// @dev Precondition: treasury must not be the zero address
-    /// @dev Precondition: policyEngineManager must not be the zero address
-    /// @dev Precondition: policyEngine must not be the zero address
-    /// @dev Precondition: cancelDepositOperator must not be the zero address
-    /// @dev PolicyProtected ownership is initialized to the vault default admin only to satisfy inherited Ownable state.
-    ///      Runtime policy engine replacement is controlled by POLICY_ENGINE_MANAGER_ROLE.
-    /// @dev The initial active protocol adapter is set after deployment with setInitialActiveProtocolAdapter.
-    ///      Deployment order: deploy vault implementation, deploy vault proxy, deploy adapter with proxy address,
-    ///      register adapter, then call setter on the proxy.
+    /// @dev Reverts if any BaseVault initializer parameter is invalid
+    /// @dev Reverts if treasury is the zero address
+    /// @dev Reverts if policyEngineManager is the zero address
+    /// @dev Reverts if policyEngine is the zero address or does not support IPolicyEngine
+    /// @dev Reverts if cancelDepositOperator is the zero address
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the proxy has already been initialized
+    /// @dev Grants POLICY_ENGINE_MANAGER_ROLE to policyEngineManager
+    /// @dev Grants CANCEL_DEPOSIT_OPERATOR_ROLE to cancelDepositOperator
+    /// @dev Opens epoch one, initializes rebalance nonce one, and sets the initial high water mark to one asset unit
+    /// @dev The initial active protocol adapter must be configured separately after its deployment and registration
     function initialize(
         BaseVault.InitParams memory params,
         address treasury,
@@ -109,11 +113,13 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     //////////////////////////////////////////////////////////////*/
     /// @notice Sets the initial active protocol adapter after deployment
     /// @param protocolId The protocol ID of the initial active strategy
-    /// @dev This is called once after the adapter is deployed and registered inside the *same deploy script*, before operational use.
-    /// @dev Precondition: Caller must have the DEFAULT_ADMIN_ROLE
-    /// @dev Precondition: the initial active protocol adapter must not already be set
-    /// @dev Precondition: the protocol ID must have a registered adapter
-    /// @dev Precondition: the registered adapter must be bound to this vault
+    /// @dev Must be called once after the adapter is deployed and registered, before operational use
+    /// @dev Reverts if the caller does not have DEFAULT_ADMIN_ROLE
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the initial active protocol adapter has already been set
+    /// @dev Reverts if protocolId does not have a registered adapter
+    /// @dev Reverts if the registered adapter is bound to another vault
+    /// @dev Sets the active strategy to protocolId on this chain
     function setInitialActiveProtocolAdapter(bytes32 protocolId)
         external
         nonReentrant
@@ -135,8 +141,8 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
 
     /// @notice Sets the treasury address
     /// @param treasury The address of the treasury
-    /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
-    /// @dev Precondition: treasury must not be the zero address
+    /// @dev Reverts if the caller does not have CONFIG_OPERATOR_ROLE
+    /// @dev Reverts if treasury is the zero address
     function setTreasury(address treasury) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
         ParentVaultConfigLib.setTreasury(_parentVaultStorage(), treasury);
     }
@@ -145,29 +151,28 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
                              USER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
     /// @notice Deposits the underlying asset into the vault
-    /// @param amount The amount of asset to deposit
+    /// @param amount The amount of underlying asset to deposit
     /// @return epochNonce The epoch nonce of the deposit
-    /// @dev Precondition: amount must meet the minimum deposit amount requirement
-    /// @dev Precondition: the function must not be reentered
-    /// @dev Precondition: the contract must not be paused
-    /// @dev Precondition: tx must be compliant with the policy
-    /// @dev Precondition: the current epoch must be open
-    /// @dev ParentVaultUserEpochLib is linked by Solidity and executes by DELEGATECALL in the vault context.
+    /// @dev Reverts if amount is less than the minimum deposit amount
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if the call is rejected by the attached ACE policies
+    /// @dev Reverts if the current epoch is not open
+    /// @dev Requires the caller to have sufficient underlying-asset balance and allowance for amount
     function deposit(uint256 amount) external nonReentrant whenNotPaused runPolicy returns (uint256 epochNonce) {
         epochNonce =
             ParentVaultUserEpochLib.deposit(_parentVaultStorage(), i_asset, msg.sender, amount, i_minDepositAmount);
     }
 
-    /// @notice Submit USDC withdraw intent
-    /// @param shareBurnAmount The amount of shares to burn for the withdraw
-    /// @return epochNonce The epoch nonce of the withdraw
-    /// @dev Precondition: the function must not be reentered
-    /// @dev Precondition: the contract must not be paused
-    /// @dev Precondition: tx must be compliant with the policy
-    /// @dev ParentVault policy intentionally overlaps with YieldcoinShare transfer checks for defense-in-depth.
-    /// @dev Precondition: the current epoch must be open
-    /// @dev Precondition: user must approve address(this) to transfer their shareBurnAmount
-    /// @dev ParentVaultUserEpochLib is linked by Solidity and executes by DELEGATECALL in the vault context.
+    /// @notice Submits a withdraw intent by escrowing shares in the current epoch
+    /// @param shareBurnAmount The amount of shares to escrow for burning when the withdraw is claimed
+    /// @return epochNonce The nonce of the epoch containing the withdraw intent
+    /// @dev Reverts if shareBurnAmount is zero
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if the call is rejected by the attached ACE policies
+    /// @dev Reverts if the current epoch is not open
+    /// @dev Requires the caller to have sufficient share balance and allowance for shareBurnAmount
     function withdraw(uint256 shareBurnAmount)
         external
         nonReentrant
@@ -178,16 +183,14 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         epochNonce = ParentVaultUserEpochLib.withdraw(_parentVaultStorage(), i_share, msg.sender, shareBurnAmount);
     }
 
-    /// @notice Claim Yieldcoin shares after a deposit
+    /// @notice Claims the shares allocated to the caller's deposit in a settled epoch
     /// @param epochNonce The epoch nonce of the deposit
     /// @return shareMintAmount The amount of Yieldcoin shares minted for the deposit
-    /// @dev Finalizes an individual deposit.
-    /// @dev Precondition: the function must not be reentered
-    /// @dev Precondition: the contract must not be paused
-    /// @dev Precondition: tx must be compliant with the policy
-    /// @dev Precondition: the epoch nonce must be claimable
-    /// @dev Precondition: the user must have a deposit for the epoch nonce
-    /// @dev ParentVaultUserEpochLib is linked by Solidity and executes by DELEGATECALL in the vault context.
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if the call is rejected by the attached ACE policies
+    /// @dev Reverts if the epoch is not claimable
+    /// @dev Reverts if the caller has no deposit in the epoch
     function claimShares(uint256 epochNonce)
         external
         nonReentrant
@@ -198,16 +201,15 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         shareMintAmount = ParentVaultUserEpochLib.claimShares(_parentVaultStorage(), i_share, msg.sender, epochNonce);
     }
 
-    /// @notice Claim underlying asset after a withdraw
-    /// @param epochNonce The epoch nonce of the withdraw
-    /// @return withdrawAmount The amount of asset withdrawn
-    /// @dev Finalizes an individual withdraw.
-    /// @dev Precondition: the function must not be reentered
-    /// @dev Precondition: the contract must not be paused
-    /// @dev Precondition: tx must be compliant with the policy
-    /// @dev Precondition: the epoch nonce must be claimable
-    /// @dev Precondition: the user must have a withdraw intent for the epoch nonce
-    /// @dev ParentVaultUserEpochLib is linked by Solidity and executes by DELEGATECALL in the vault context.
+    /// @notice Claims the underlying asset for a completed epoch withdraw
+    /// @param epochNonce The nonce of the epoch to claim from
+    /// @return withdrawAmount The amount of underlying asset transferred to the withdrawer
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if the call is rejected by the attached ACE policies
+    /// @dev Reverts if the epoch is not claimable
+    /// @dev Reverts if the caller has no withdraw intent in the epoch
+    /// @dev Reverts if burning the escrowed shares is rejected by the share token's attached ACE policies
     function claimAsset(uint256 epochNonce)
         external
         nonReentrant
@@ -220,40 +222,33 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         );
     }
 
-    /// @notice Cancels a deposit
-    /// @dev This deletes the entire deposit entry for the user and epoch nonce
-    /// @dev Precondition: the function must not be reentered
-    /// @dev Precondition: the contract must not be paused
-    /// @dev Precondition: tx must be compliant with the policy
-    /// @dev Precondition: the current epoch must be open
-    /// @dev Precondition: the user must have a deposit for the epoch nonce
-    /// @dev ParentVaultUserEpochLib is linked by Solidity and executes by DELEGATECALL in the vault context.
+    /// @notice Cancels and refunds the caller's deposit in the current open epoch
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if the call is rejected by the attached ACE policies
+    /// @dev Reverts if the current epoch is not open
+    /// @dev Reverts if the caller has no deposit in the current epoch
     function cancelDeposit() external nonReentrant whenNotPaused runPolicy {
         ParentVaultUserEpochLib.cancelDeposit(_parentVaultStorage(), i_asset, msg.sender);
     }
 
-    /// @notice Cancels a withdraw
-    /// @dev This deletes the entire withdraw entry for the user and epoch nonce
-    /// @dev Precondition: the function must not be reentered
-    /// @dev Precondition: the contract must not be paused
-    /// @dev Precondition: tx must be compliant with the policy
-    /// @dev ParentVault policy intentionally overlaps with YieldcoinShare transfer checks for defense-in-depth.
-    /// @dev Precondition: the current epoch must be open
-    /// @dev Precondition: the user must have a withdraw intent for the epoch nonce
-    /// @dev ParentVaultUserEpochLib is linked by Solidity and executes by DELEGATECALL in the vault context.
+    /// @notice Cancels the caller's withdraw intent in the current open epoch and returns the escrowed shares
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if the call is rejected by the attached ACE policies
+    /// @dev Reverts if the current epoch is not open
+    /// @dev Reverts if the caller has no withdraw intent in the current epoch
     function cancelWithdraw() external nonReentrant whenNotPaused runPolicy {
         ParentVaultUserEpochLib.cancelWithdraw(_parentVaultStorage(), i_share, msg.sender);
     }
 
     /// @notice Force-cancels a user's deposit in the current open epoch, refunding their exact deposited amount
     /// @param user The depositor whose deposit is being force-cancelled
-    /// @dev This deletes the entire deposit entry for the user and epoch nonce
-    /// @dev Precondition: the function must not be reentered
-    /// @dev Precondition: caller must have the CANCEL_DEPOSIT_OPERATOR_ROLE
-    /// @dev Precondition: the current epoch must be open
-    /// @dev Precondition: the user must have a deposit for the epoch nonce
-    /// @dev ParentVaultUserEpochLib is linked by Solidity and executes by DELEGATECALL in the vault context.
-    /// @dev Intentionally does not include whenNotPaused and runPolicy
+    /// @dev Reverts if the caller does not have CANCEL_DEPOSIT_OPERATOR_ROLE
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the current epoch is not open
+    /// @dev Reverts if user has no deposit in the current epoch
+    /// @dev Deliberately callable while paused and not subject to the caller's attached ACE policies
     function forceCancelDeposit(address user) external nonReentrant onlyRole(Roles.CANCEL_DEPOSIT_OPERATOR_ROLE) {
         ParentVaultUserEpochLib.forceCancelDeposit(_parentVaultStorage(), i_asset, user);
     }
@@ -261,18 +256,28 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /*//////////////////////////////////////////////////////////////
                                   CCIP
     //////////////////////////////////////////////////////////////*/
-    /// @notice Receives CCIP messages
-    /// @param message Any2EVMMessage.
-    /// @dev Precondition: the call must not be reentered
-    /// @dev Precondition: the message must be sent by an allowed sender (a crosschain vault mapped to an allowed source chain selector)
-    /// @dev Precondition: the message must originate from the active strategy chain
-    /// @dev Precondition: the received token must be i_asset
-    /// @dev Precondition: there must not be an existent recovery mode
-    /// @dev Precondition: if epoch tx: the decoded nonce must match the previous
-    /// @dev Precondition: if rebalance tx: the state must be REBALANCING
-    /// @dev Precondition: if rebalance tx: the decoded nonce must match the current
-    /// @dev Precondition: if rebalance tx: the decoded protocolId must match the pending protocolId
-    /// @dev Precondition: the contract must not be paused
+    /// @notice Handles an inbound CCIP epoch withdrawal or rebalance message
+    /// @param message The CCIP message received from the router
+    /// @dev Reverts if the caller is not the configured CCIP router
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if no crosschain vault is registered for the source chain
+    /// @dev Reverts if the decoded sender is not the registered crosschain vault
+    /// @dev Reverts if the message does not originate from the active strategy chain
+    /// @dev Reverts if a recovery mode is active
+    /// @dev Reverts if the message does not deliver exactly one token amount
+    /// @dev Reverts if the delivered token is not the configured underlying asset
+    /// @dev Reverts if the delivered amount is zero
+    /// @dev Reverts if the transaction type is not EPOCH_NET_WITHDRAW or REBALANCE
+    /// @dev Reverts if message data cannot be decoded for its transaction type
+    /// @dev For EPOCH_NET_WITHDRAW, reverts if the decoded nonce is not the most recently closed epoch
+    /// @dev For EPOCH_NET_WITHDRAW, reverts if the identified epoch is not executing
+    /// @dev For REBALANCE, reverts if no rebalance is in progress
+    /// @dev For REBALANCE, reverts if the decoded nonce does not match the active rebalance
+    /// @dev For REBALANCE, reverts if the decoded protocol ID does not match the pending strategy
+    /// @dev Reverts if a rebalance protocol has no registered adapter
+    /// @dev Reverts if the registered rebalance adapter is bound to another vault
+    /// @dev Stores rebalance-deposit recovery if the target strategy deposit fails
     function _ccipReceive(Client.Any2EVMMessage memory message)
         internal
         override
@@ -287,18 +292,16 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         }
 
         _requireNoRecovery(_baseVaultStorage());
-        /// @dev We can afford to inline these lib calls. It makes Certora verification easier, but should be revisited if size becomes an issue.
         uint256 receivedAmount = BaseVaultCcipLib._validateReceivedTokenAndGetAmount(message, i_asset);
 
-        /// @dev data decodes to a uint256 epochNonce for epoch net withdraws and a (uint256 rebalanceNonce, bytes32 protocolId) for rebalances
+        // data decodes to a uint256 epochNonce for epoch net withdrawals and a
+        // (uint256 rebalanceNonce, bytes32 protocolId) for rebalances
         (Types.CcipTx ccipTxType, bytes memory data) = abi.decode(message.data, (Types.CcipTx, bytes));
         (uint256 rebalanceNonce, bytes32 protocolId) =
             ParentVaultCcipLib._receiveCcip($, ccipTxType, data, receivedAmount);
         if (rebalanceNonce != 0) {
             bool success = _handleCCIPRebalance(rebalanceNonce, protocolId, receivedAmount);
-            /// @dev _ccipReceive only runs on the chain a rebalance CCIP message was sent to, so the
-            ///      pending strategy's chain selector is always this chain - no need to read it from
-            ///      storage (BaseVaultCcipLib.sol -> BaseVault._ccipSend sends to newStrategy.chainSelector).
+            // A rebalance message is received on its pending strategy chain, which is this chain
             if (success) {
                 _finalizeRebalance(
                     rebalanceNonce, Types.Strategy({protocolId: protocolId, chainSelector: i_thisChainSelector})
@@ -312,39 +315,36 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /*//////////////////////////////////////////////////////////////
                                  EPOCH
     //////////////////////////////////////////////////////////////*/
-    /// @notice Closes an epoch and handles the net flow, then opens the next epoch
-    /// @param tvl The Total Value Locked in the active strategy of the Yieldcoin v2 system
-    /// @dev Called by WorkflowRouter.
-    /// @dev The `netFlow` is `total asset deposit amount` minus `calculated total asset withdraw amount` for the given epoch.
-    ///      When `netFlow == 0`: the epoch is CLAIMABLE
-    ///      When `netFlow > 0` and the active strategy is local to this chain: the netFlow is deposited straight into the strategy
-    ///      When `netFlow > 0` and the active strategy is remote to this chain: the netFlow is sent via CCIP and the epoch is EXECUTING
-    ///      When `netFlow < 0` and the active strategy is local to this chain: the netFlow is withdrawn from the strategy and the epoch is CLAIMABLE
-    ///      When `netFlow < 0` and the active strategy is remote to this chain: EpochWithdrawExecuting() triggers CRE to write to the strategy chain and the epoch is EXECUTING
-    /// @dev Precondition: the caller must have the EPOCH_OPERATOR_ROLE
-    /// @dev Precondition: there must not be an active rebalance
-    /// @dev Precondition: there must not be a stored recovery mode
-    /// @dev Precondition: the previous epoch must be claimable, if a previous epoch exists
-    /// @dev Precondition: the epoch must be open
-    /// @dev Precondition: the epoch period must have exceeded the MIN_EPOCH_PERIOD
-    /// @dev Precondition: there must have been a deposit or withdraw intent submitted during the epoch
-    /// @dev Precondition: local strategy interactions must be successful
-    /// @dev Precondition: the contract must not be paused
-    /// @dev The previous-epoch guard prevents closing a later epoch while a prior
-    ///      remote epoch is still EXECUTING. This prevents claims and strategy changes until cross-chain settlement completes.
-    ///      if a child strategy withdraw fails, the owed USDC is not back on the Parent,
-    ///      so affected users cannot claim until executeRecovery() succeeds on the child vault.
-    /// @dev previousEpochNonce == 0 means no prior epoch exists (initialize() sets s_epochNonce = 1).
-    /// @dev The tvl parameter is provided by the CRE workflow via WorkflowRouter and is trusted
-    ///      to accurately reflect the active strategy chain's TVL. The CRE workflow is audited to
-    ///      the same standard as this contract. No onchain validation of this value is performed;
-    ///      an incorrect value will corrupt epoch share accounting irrecoverably once any user
-    ///      claims against the affected epoch.
-    /// @dev Precondition: `tvl == 0 && s_totalShares > 0` will cause a revert
-    /// @dev Precondition: If deposits exist, aggregate minted shares must cover at least one share per minimum deposit amount.
-    /// @dev If TVL goes to zero with shares outstanding, closeEpoch reverts until TVL is restored via
-    ///      an on-behalf-of supply to the active protocol; the permanent admin seed deposit means this
-    ///      requires a full loss of the active strategy, not a partial one. See KI-008, KI-010 in docs/KNOWN_ISSUES.md.
+    /// @notice Settles the current epoch, executes its net asset flow, and opens the next epoch
+    /// @param tvl The underlying-asset value of the active strategy before settling the current epoch
+    /// @dev Called by the WorkflowRouter
+    /// @dev Net flow is the total deposited underlying asset minus the total underlying asset owed for withdraw claims
+    /// @dev A zero net flow makes the epoch claimable without moving assets
+    /// @dev A positive net flow is deposited locally or sent by CCIP to the remote active strategy; a remote epoch
+    ///      remains executing until completeEpochDeposit is called after the ChildVault confirms the deposit
+    /// @dev A negative net flow is withdrawn locally and made claimable, or remains executing while CRE triggers
+    ///      the remote strategy withdrawal and return transfer
+    /// @dev The caller-supplied TVL is trusted and is not validated against onchain strategy state
+    /// @dev An incorrect tvl irreversibly corrupts epoch share accounting once a user claims from the affected epoch
+    /// @dev Reverts if the caller does not have EPOCH_OPERATOR_ROLE
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if a rebalance is in progress
+    /// @dev Reverts if a recovery mode is active
+    /// @dev Reverts if the current epoch is not open
+    /// @dev Reverts if the preceding epoch is still executing
+    /// @dev Reverts if the current epoch has been open for less than MIN_EPOCH_PERIOD
+    /// @dev Reverts if the epoch contains neither deposits nor withdraw intents
+    /// @dev Reverts if tvl is zero while shares are outstanding
+    /// @dev Reverts if the resulting price per share rounds down to zero
+    /// @dev Reverts if deposit settlement would allocate zero shares to a minimum-size deposit
+    /// @dev Requires any local strategy or CCIP interaction selected by the net-flow branch to succeed
+    /// @dev The preceding-epoch guard prevents claims and strategy changes while a remote epoch remains executing
+    /// @dev If a remote strategy withdrawal fails, users cannot claim until recovery succeeds on the ChildVault
+    /// @dev An epoch nonce of one has no preceding epoch because initialization opens epoch one
+    /// @dev Zero TVL with outstanding shares requires restoring TVL through an on-behalf-of strategy supply before
+    ///      settlement can continue; the permanent admin seed deposit means this requires a full strategy loss
+    /// @dev See KI-008 and KI-010 in docs/KNOWN_ISSUES.md
     function closeEpoch(uint256 tvl) external nonReentrant whenNotPaused onlyRole(Roles.EPOCH_OPERATOR_ROLE) {
         ParentVaultStorage storage $ = _parentVaultStorage();
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
@@ -380,10 +380,10 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     }
 
     /// @notice Completes the most recently closed remote net-deposit epoch
-    /// @dev Called by WorkflowRouter after the destination ChildVault emits EpochDepositToStrategySuccess.
-    /// @dev Deliberately callable while paused: claims remain paused, but confirmed settlement can finalize.
-    /// @dev Precondition: caller must have EPOCH_OPERATOR_ROLE
-    /// @dev Precondition: the previous epoch must be an executing net-deposit epoch
+    /// @dev Callable while the vault is paused so confirmed remote settlement can be finalized
+    /// @dev Reverts if the caller does not have EPOCH_OPERATOR_ROLE
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the previous epoch is not an executing net-deposit epoch
     function completeEpochDeposit() external nonReentrant onlyRole(Roles.EPOCH_OPERATOR_ROLE) {
         ParentVaultEpochLib.completeEpochDeposit(_parentVaultStorage());
     }
@@ -393,17 +393,21 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     //////////////////////////////////////////////////////////////*/
     /// @notice Initiates a rebalance from the current strategy to a new strategy
     /// @param newStrategy The new strategy to rebalance to
-    /// @dev This is called by the WorkflowRouter.
-    /// @dev Precondition: the caller must have the REBALANCE_OPERATOR_ROLE
-    /// @dev Precondition: the contract must not be paused
-    /// @dev Precondition: A rebalance must not already be in progress
-    /// @dev Precondition: MIN_REBALANCE_PERIOD must have elapsed since the last rebalance completed
-    /// @dev Precondition: newStrategy must not be the same as the current active strategy
-    /// @dev Precondition: An epoch must not be EXECUTING
-    /// @dev Precondition: If current/active/previous strategy is on this chain, withdrawing tvl from the old strategy must succeed
-    /// @dev Precondition: If current/active/previous strategy is on this chain, the withdrawn amount must not be zero
-    /// @dev Precondition: If current/active/previous strategy and newStrategy is on this chain, depositing tvl into the new strategy must succeed
-    /// @dev Precondition: there must not be a stored recovery mode
+    /// @dev Reverts if the caller does not have REBALANCE_OPERATOR_ROLE
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if a rebalance is already in progress
+    /// @dev Reverts if a recovery mode is active
+    /// @dev Reverts if no epoch has completed
+    /// @dev Reverts if MIN_REBALANCE_PERIOD has not elapsed since the last completed rebalance
+    /// @dev Reverts if newStrategy matches the active strategy
+    /// @dev Reverts if the preceding epoch is still executing
+    /// @dev Reverts if newStrategy.chainSelector is not the local chain or a registered crosschain vault's chain
+    /// @dev Reverts if newStrategy.protocolId is not supported
+    /// @dev If the active strategy is local, reverts if its withdrawal returns zero assets
+    /// @dev If the new strategy is local, reverts if its protocol has no registered adapter
+    /// @dev If the new strategy is local, reverts if the registered adapter is bound to another vault
+    /// @dev Requires any local strategy or CCIP interaction selected by the rebalance branch to succeed
     function initiateRebalance(Types.Strategy memory newStrategy)
         external
         nonReentrant
@@ -420,7 +424,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         ParentVaultRebalanceLib.InitiateRebalanceResult memory result =
             ParentVaultRebalanceLib.initiateRebalance($, newStrategy, i_thisChainSelector, isSupportedChain);
 
-        /// @dev check if old/previously-active strategy chain selector is this one
+        // Continue synchronously when the previously active strategy is local
         //slither-disable-next-line incorrect-equality
         if (result.action != ParentVaultRebalanceLib.ExternalAction.NONE) {
             // withdraw from local strategy
@@ -449,39 +453,29 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     }
 
     /// @notice Completes a rebalance
-    /// @dev The WorkflowRouter calls this.
-    /// @dev Precondition: caller must have REBALANCE_OPERATOR_ROLE
-    /// @dev Precondition: there must not be a stored recovery mode
-    /// @dev Precondition: function must not be reentered
+    /// @dev Callable while the vault is paused so confirmed remote settlement can be finalized
+    /// @dev Reverts if the caller does not have REBALANCE_OPERATOR_ROLE
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if a recovery mode is active
+    /// @dev Reverts if no rebalance is in progress
     function completeRebalance() external nonReentrant onlyRole(Roles.REBALANCE_OPERATOR_ROLE) {
         _requireNoRecovery(_baseVaultStorage());
         Types.Rebalance storage s_rebalance = _parentVaultStorage().s_rebalance;
         _finalizeRebalance(s_rebalance.nonce, s_rebalance.pendingStrategy);
     }
 
-    /// @notice Finalizes an in-progress rebalance via ParentVaultRebalanceLib.
-    /// @dev Every ParentVault call site with a persisted pending rebalance funnels through here rather
-    ///      than calling ParentVaultRebalanceLib.finalizeRebalance directly, so there is exactly one
-    ///      place that knows how to reach the library. `_ccipReceive`'s rebalance-complete branch
-    ///      already has `rebalanceNonce`/`newStrategy` in memory and passes them straight through,
-    ///      avoiding a redundant SLOAD of `s_rebalance.nonce`/`pendingStrategy`. Callers that don't
-    ///      (`completeRebalance`, `executeRecovery`) read them from storage once, immediately before
-    ///      calling. The local-to-local path never persists a pending rebalance in the first place -
-    ///      see `_finalizeLocalToLocalRebalance` below.
-    /// @param rebalanceNonce The current `s_rebalance.nonce`
-    /// @param newStrategy The current `s_rebalance.pendingStrategy`
-    /// @dev Virtual so verification harnesses can call the equivalent internal library implementation.
+    /// @notice Finalizes an in-progress rebalance with persisted pending state
+    /// @param rebalanceNonce The nonce of the rebalance to finalize
+    /// @param newStrategy The pending strategy to activate
+    /// @dev Reverts if no rebalance is in progress
     // @review remove virtual before deployment
     function _finalizeRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy) internal virtual {
         ParentVaultRebalanceLib.finalizeRebalance(_parentVaultStorage(), i_share, rebalanceNonce, newStrategy, false);
     }
 
-    /// @notice Finalizes a rebalance that resolved synchronously within the same initiateRebalance()
-    ///         call (both old and new strategy on this chain) - state/pendingStrategy were never
-    ///         persisted, so there is nothing to validate or clear.
+    /// @notice Finalizes a local-to-local rebalance that completed synchronously without persisted pending state
     /// @param rebalanceNonce The rebalance nonce, already known by the caller
     /// @param newStrategy The new strategy, already known by the caller
-    /// @dev Virtual so verification harnesses can call the equivalent internal library implementation.
     // @review remove virtual before deployment
     function _finalizeLocalToLocalRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy)
         internal
@@ -517,12 +511,12 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
                                  SETTER
     //////////////////////////////////////////////////////////////*/
     /// @notice Sets whether a protocol is supported on any chain across the Yieldcoin v2 system
-    /// @param protocolId The protocol identifier of the protocol to support, ie keccak256("aave-v3")
-    /// @param isSupported Whether a protocol is supported on any chain. True for supported, false for not
-    /// @dev Precondition: caller must have CONFIG_OPERATOR_ROLE
-    /// @dev Precondition: protocolId must not be zero
-    /// @dev Precondition: an unsupported protocol must not be the active or pending strategy protocol
-    /// @dev Emits SupportedProtocolSet event
+    /// @param protocolId The protocol ID to configure
+    /// @param isSupported Whether the protocol is supported
+    /// @dev Reverts if the caller does not have CONFIG_OPERATOR_ROLE
+    /// @dev Reverts if protocolId is zero
+    /// @dev When removing support, reverts if protocolId belongs to the active strategy
+    /// @dev When removing support, reverts if protocolId belongs to the pending strategy
     function setSupportedProtocol(bytes32 protocolId, bool isSupported) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
         ParentVaultConfigLib.setSupportedProtocol(_parentVaultStorage(), protocolId, isSupported);
     }
@@ -538,7 +532,17 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
 
     /// @notice Returns the epoch data for a given epoch nonce
     /// @param epochNonce The epoch nonce to query
-    /// @return epoch The epoch data including status, deposit/withdraw totals, price per share, and timestamps
+    /// @return epoch Types.Epoch struct includes:
+    ///         uint256 totalDepositAmount - the total underlying asset deposited in the epoch
+    ///         uint256 totalShareBurnAmount - the total shares submitted for withdraw in the epoch
+    ///         uint256 totalWithdrawClaimAmount - the total underlying asset allocated to epoch withdraw claims
+    ///         uint256 pricePerShare - the settlement price per share
+    ///         uint256 remainingDepositClaimAmount - the unclaimed underlying asset attributed to deposits
+    ///         uint256 remainingShareMintAmount - the shares remaining to mint for deposits
+    ///         uint256 remainingShareBurnAmount - the escrowed shares remaining to burn for withdraw claims
+    ///         uint256 remainingWithdrawClaimAmount - the underlying asset remaining to claim for withdraw claims
+    ///         uint256 openedAtTimestamp - the timestamp when the epoch opened
+    ///         Types.EpochStatus status - the epoch status
     function getEpoch(uint256 epochNonce) external view returns (Types.Epoch memory epoch) {
         epoch = _parentVaultStorage().s_epochs[epochNonce];
     }
@@ -550,24 +554,25 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     }
 
     /// @notice Returns the total number of Yieldcoin shares tracked by the vault
-    /// @dev This leads the on-chain share supply: updated at epoch close, minted/burned lazily at claim time
     /// @return totalShares The total share count tracked by the vault
+    /// @dev Updated at epoch settlement before the corresponding shares are minted or burned at claim time, so it
+    ///      may be higher or lower than the share token's totalSupply() while claims remain pending
     function getTotalShares() external view returns (uint256 totalShares) {
         totalShares = _parentVaultStorage().s_totalShares;
     }
 
-    /// @notice Returns the asset deposit amount submitted by a user for a given epoch
+    /// @notice Returns the underlying-asset deposit amount submitted by a user for a given epoch
     /// @param user The address of the depositor
     /// @param epochNonce The epoch nonce of the deposit
-    /// @return amount The asset amount the user deposited into the given epoch
+    /// @return amount The underlying-asset amount the user deposited into the given epoch
     function getDepositAmount(address user, uint256 epochNonce) external view returns (uint256 amount) {
         amount = _parentVaultStorage().s_deposits[user][epochNonce];
     }
 
-    /// @notice Returns the share burn amount submitted by a user for a given epoch withdraw intent
+    /// @notice Returns the share amount escrowed by a user for an epoch withdraw intent
     /// @param user The address of the withdrawer
     /// @param epochNonce The epoch nonce of the withdraw intent
-    /// @return shareBurnAmount The number of Yieldcoin shares the user submitted for burning in the given epoch
+    /// @return shareBurnAmount The shares escrowed for burning when the withdraw is claimed
     function getWithdrawShareBurnAmount(address user, uint256 epochNonce)
         external
         view
@@ -586,33 +591,33 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         highWaterMark = _parentVaultStorage().s_performanceFeeHighWaterMark;
     }
 
-    /// @notice Gets the operator multisig for protocol fees
+    /// @notice Returns the operator multisig that receives protocol fees
     /// @return treasury The address of the operator multisig for protocol fees
     function getTreasury() external view returns (address treasury) {
         treasury = _parentVaultStorage().s_treasury;
     }
 
-    /// @notice Gets the Yieldcoin share token
+    /// @notice Returns the Yieldcoin share token
     /// @return share The address of the Yieldcoin share token
     function getShare() external view returns (address share) {
         share = i_share;
     }
 
-    /// @notice Gets the share precision
-    /// @return sharePrecision The share precision
+    /// @notice Returns the share precision factor (fixed at SHARE_PRECISION)
+    /// @return sharePrecision The share precision factor
     function getSharePrecision() external pure returns (uint256 sharePrecision) {
         sharePrecision = SHARE_PRECISION;
     }
 
-    /// @notice Gets the minimum deposit amount (1 * i_assetPrecision)
+    /// @notice Returns the minimum deposit amount (1 * i_assetPrecision)
     /// @return minDepositAmount The minimum deposit amount
     function getMinDepositAmount() external view returns (uint256 minDepositAmount) {
         minDepositAmount = i_minDepositAmount;
     }
 
-    /// @notice Gets whether a protocolId is supported on any chain across the Yieldcoin v2 system.
-    /// @param protocolId The protocol identifier to check, ie keccak256("aave-v3")
-    /// @return isSupported true if supported on any chain, false if not supported on any chain
+    /// @notice Returns whether a protocol ID is supported on any chain across the Yieldcoin v2 system
+    /// @param protocolId The protocol ID to query
+    /// @return isSupported Whether the protocol ID is supported
     function getSupportedProtocol(bytes32 protocolId) external view returns (bool isSupported) {
         isSupported = _parentVaultStorage().s_supportedProtocol[protocolId];
     }
@@ -620,20 +625,23 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /*//////////////////////////////////////////////////////////////
                                 OVERRIDE
     //////////////////////////////////////////////////////////////*/
-    /// @notice Resolves the owner() conflict between OwnableUpgradeable (via PolicyProtectedUpgradeable) and
-    ///         AccessControlDefaultAdminRules. Returns the default admin address.
+    /// @notice Returns the current default admin
+    /// @return owner_ The address of the current default admin
+    /// @dev Resolves the owner() override shared by PolicyProtectedUpgradeable and
+    ///      AccessControlDefaultAdminRulesUpgradeable
     function owner()
         public
         view
         override(OwnableUpgradeable, AccessControlDefaultAdminRulesUpgradeable)
-        returns (address)
+        returns (address owner_)
     {
-        return AccessControlDefaultAdminRulesUpgradeable.owner();
+        owner_ = AccessControlDefaultAdminRulesUpgradeable.owner();
     }
 
-    /// @notice Attaches a policy engine.
-    /// @dev Precondition: Caller must have the POLICY_ENGINE_MANAGER_ROLE
+    /// @notice Replaces the policy engine attached to this vault
     /// @param policyEngine The policy engine to attach
+    /// @dev Reverts if the caller does not have POLICY_ENGINE_MANAGER_ROLE
+    /// @dev Reverts if policyEngine is the zero address or does not support IPolicyEngine
     function attachPolicyEngine(address policyEngine) external override onlyRole(Roles.POLICY_ENGINE_MANAGER_ROLE) {
         _validatePolicyEngine(policyEngine);
         _attachPolicyEngine(policyEngine);
@@ -642,9 +650,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @notice Returns whether this contract implements the given interface ID
     /// @param interfaceId The interface identifier, as specified in ERC-165
     /// @return Whether this contract implements `interfaceId`
-    /// @dev Overrides BaseVault and PolicyProtectedUpgradeable. Re-implements the full interface ID check directly
-    ///      (rather than calling both supers) so it can additionally support IPolicyProtected: IERC165,
-    ///      IAccessControlDefaultAdminRules, and IAny2EVMMessageReceiver (from BaseVault), plus IPolicyProtected.
+    /// @dev Supports IERC165, IAccessControlDefaultAdminRules, IAny2EVMMessageReceiver, and IPolicyProtected
     function supportsInterface(bytes4 interfaceId)
         public
         pure
@@ -657,11 +663,11 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
             || interfaceId == type(IPolicyProtected).interfaceId;
     }
 
-    /// @notice Gets the Yieldcoin TVL if this chain is the active strategy chain, or 0 if not
-    /// @return tvl The Yieldcoin TVL
-    /// @dev Unlike the Child Vault implementation, which also includes s_epochDepositRecovery.amount and
-    ///      s_ccipSendRecovery.amount, the Parent Vault implementation only includes s_rebalanceDepositRecovery.amount.
-    /// @dev Returns 0 if the TVL is in transit over CCIP. This should not be read onchain when Parent state is REBALANCING.
+    /// @notice Returns this vault's accounted underlying-asset value
+    /// @return tvl The active local strategy position plus applicable vault-held recovery assets
+    /// @dev Returns zero when this vault has neither an active strategy position nor applicable recovery assets
+    /// @dev Includes pending rebalance-deposit recovery held by this vault when an active adapter is set
+    /// @dev Returns zero when no active adapter is set
     function _getTVL() internal view override returns (uint256 tvl) {
         BaseVaultStorage storage $ = _baseVaultStorage();
         address activeAdapter = $.s_activeProtocolAdapter;

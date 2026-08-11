@@ -216,9 +216,9 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /*//////////////////////////////////////////////////////////////
                                   CRE
     //////////////////////////////////////////////////////////////*/
-    /// @notice Attempts an epoch withdrawal from the active strategy and sends the assets to the parent vault
+    /// @notice Attempts an epoch withdrawal from the active strategy and sends the underlying asset to the parent vault
     /// @param epochNonce The nonce of the epoch
-    /// @param amount The amount of asset to withdraw from the active strategy
+    /// @param amount The amount of underlying asset to withdraw from the active strategy
     /// @dev Called by the WorkflowRouter when net flow is negative
     /// @dev Reverts if the caller does not have EPOCH_OPERATOR_ROLE
     /// @dev Reverts if the vault is paused
@@ -447,7 +447,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         emit EpochWithdrawRecoveryStored(epochNonce, amount);
     }
 
-    /// @notice Retries a failed epoch withdrawal and sends the withdrawn assets to the parent vault
+    /// @notice Retries a failed epoch withdrawal and sends the withdrawn underlying asset to the parent vault
     /// @param $ ChildVault namespaced storage
     /// @param $_baseVault BaseVault namespaced storage
     /// @dev Reverts if the active strategy adapter is not set
@@ -685,7 +685,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @notice Returns the failed rebalance withdraw recovery state
     /// @return recovery Types.RebalanceWithdrawRecovery struct includes:
     ///         uint256 rebalanceNonce - the nonce of the rebalance
-    ///         Types.Strategy strategy - the target strategy to continue the rebalance into after withdraw succeeds
+    ///         Types.Strategy strategy - the target strategy to continue the rebalance into after withdrawal succeeds
     function getRebalanceWithdrawRecovery() external view returns (Types.RebalanceWithdrawRecovery memory recovery) {
         recovery = _childVaultStorage().s_rebalanceWithdrawRecovery;
     }
@@ -734,8 +734,9 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /*//////////////////////////////////////////////////////////////
                                 OVERRIDE
     //////////////////////////////////////////////////////////////*/
-    /// @notice Returns the underlying-asset value of this vault's active strategy position
-    /// @return tvl The active position value, or zero when this vault is not on the active strategy chain
+    /// @notice Returns this vault's accounted underlying-asset value
+    /// @return tvl The active strategy position plus applicable vault-held recovery assets
+    /// @dev Returns zero when this vault has neither an active strategy position nor applicable recovery assets
     /// @dev Includes pending epoch-deposit, rebalance-deposit, and CCIP-send recovery amounts held by this vault
     /// @dev Returns only the pending CCIP-send recovery amount when no active adapter is set
     function _getTVL() internal view override returns (uint256 tvl) {

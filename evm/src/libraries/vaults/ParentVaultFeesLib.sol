@@ -92,7 +92,7 @@ library ParentVaultFeesLib {
     /// @param depositAmount The deposit amount being converted to shares
     /// @param totalShares The total shares after performance-fee dilution
     /// @param sharePrecision The share precision factor
-    /// @param assetPrecision The asset precision factor used for bootstrap pricing
+    /// @param assetPrecision The underlying asset precision factor used for bootstrap pricing
     /// @return newShares The number of shares to mint
     /// @dev Avoids using a floored price-per-share as a divisor, which can compound rounding
     ///      error and over-mint shares when the share price is small.
@@ -120,7 +120,6 @@ library ParentVaultFeesLib {
     /// @param share The Yieldcoin share token
     /// @dev Caps elapsed time at 365 days
     /// @dev Reverts if lastRebalanceCompletedTimestamp is in the future
-    /// @dev Reverts if fee-share minting is rejected by the share token's attached ACE policies
     function collectManagementFee(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 rebalanceNonce,
@@ -137,7 +136,6 @@ library ParentVaultFeesLib {
     /// @param share The Yieldcoin share token
     /// @dev Caps elapsed time at 365 days
     /// @dev Reverts if lastRebalanceCompletedTimestamp is in the future
-    /// @dev Reverts if fee-share minting is rejected by the share token's attached ACE policies
     function _collectManagementFee(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 rebalanceNonce,
@@ -167,7 +165,6 @@ library ParentVaultFeesLib {
     /// @param assetPrecision The underlying asset precision factor, used as the bootstrap price per share
     /// @return settlementPricePerShare The epoch price per share after performance fee dilution
     /// @dev Returns grossPricePerShare without minting when it does not exceed the high water mark or the fee is not collectible
-    /// @dev Reverts if fee-share minting is rejected by the share token's attached ACE policies
     /// @dev Mints fee shares but does not update s_totalShares; the epoch-settlement caller performs the ledger update
     function collectPerformanceFee(
         ParentVaultStore.ParentVaultStorage storage $,
@@ -195,7 +192,6 @@ library ParentVaultFeesLib {
     /// @return settlementPricePerShare The epoch price per share after performance fee dilution
     /// @return feeShares The number of shares minted as a performance fee, or zero if none were minted
     /// @dev Returns grossPricePerShare without minting when it does not exceed the high water mark or the fee is not collectible
-    /// @dev Reverts if fee-share minting is rejected by the share token's attached ACE policies
     /// @dev This function mints feeShares but deliberately does NOT write `s_totalShares` - the caller
     ///      is the sole writer of that ledger, computing `totalShares + feeShares` (plus its own epoch
     ///      deposit/withdraw deltas) in a single write, instead of this function writing an intermediate
@@ -226,8 +222,8 @@ library ParentVaultFeesLib {
         uint256 newTotalShares = totalShares + feeShares;
 
         settlementPricePerShare = _calculatePricePerShare(tvl, newTotalShares, sharePrecision, assetPrecision);
-        /// @dev feeShares rounds up and the settlement price rounds down, so dilution can land the
-        ///      settlement price a dust amount below the high water mark; only ever raise it (FEE-003)
+        // feeShares rounds up and the settlement price rounds down, so dilution can land the
+        // settlement price a dust amount below the high water mark; only ever raise it (FEE-003)
         if (settlementPricePerShare > highWaterMark) {
             $.s_performanceFeeHighWaterMark = settlementPricePerShare;
         }

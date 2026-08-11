@@ -80,28 +80,28 @@ contract CompoundV3Adapter is ProtocolAdapter, ICompoundV3Adapter {
     /// @dev Reverts if the protocol returns zero assets
     /// @dev Reverts if the protocol returns less than the expected amount beyond the permitted rounding tolerance
     function withdraw(uint256 amount) external nonReentrant onlyVault returns (uint256 actualWithdrawnAmount) {
-        /// @dev get balance before withdraw to calculate actual withdrawn amount
+        // Get balance before withdrawal to calculate the actual withdrawn amount
         uint256 balanceBefore = IERC20(i_asset).balanceOf(address(this));
 
         uint256 tvl = _getTVL();
 
-        /// @dev Scenario 1: Epoch Withdraw - when the amount is a specific amount
+        // Scenario 1: Epoch withdrawal - when the amount is a specific amount
         if (amount != type(uint256).max) {
-            /// @dev accidental borrow prevention
+            // Prevent an accidental borrow
             _revertIfEpochWithdrawAmountExceedsTVL(amount, tvl);
 
             IComet(i_comet).withdraw(i_asset, amount);
 
-            /// @dev calculate actual amount received from withdrawing
+            // Calculate the actual amount received from the withdrawal
             uint256 balanceAfter = IERC20(i_asset).balanceOf(address(this));
             actualWithdrawnAmount = balanceAfter - balanceBefore;
             _revertIfIncompleteWithdraw(amount, actualWithdrawnAmount);
         }
-        /// @dev Scenario 2: Rebalance Withdraw - when the amount is type(uint256).max
+        // Scenario 2: Rebalance withdrawal - when the amount is type(uint256).max
         else {
             IComet(i_comet).withdraw(i_asset, amount);
 
-            /// @dev calculate actual amount received from withdrawing
+            // Calculate the actual amount received from the withdrawal
             uint256 balanceAfter = IERC20(i_asset).balanceOf(address(this));
             actualWithdrawnAmount = balanceAfter - balanceBefore;
 

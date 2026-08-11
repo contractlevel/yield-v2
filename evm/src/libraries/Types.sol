@@ -27,7 +27,7 @@ library Types {
     //////////////////////////////////////////////////////////////*/
     /// @notice CCIP transaction type discriminators for epoch net-flow settlement and rebalances
     /// @param EPOCH_NET_DEPOSIT Bridges a positive epoch net flow to the active strategy chain
-    /// @param EPOCH_NET_WITHDRAW Bridges assets from the active strategy chain to settle a negative epoch net flow
+    /// @param EPOCH_NET_WITHDRAW Bridges underlying asset from the active strategy chain to settle a negative epoch net flow
     /// @param REBALANCE Bridges the active strategy position from the old strategy chain to the new strategy chain
     enum CcipTx {
         EPOCH_NET_DEPOSIT, // 0
@@ -54,7 +54,7 @@ library Types {
         CCIP_SEND
     }
 
-    /// @notice Recovery state for a failed ChildVault epoch deposit or withdrawal
+    /// @notice Recovery state for a failed ChildVault epoch deposit or withdraw
     /// @param epochNonce The nonce of the epoch
     /// @param amount The amount of underlying asset needed to retry the failed operation
     struct EpochRecovery {
@@ -70,9 +70,9 @@ library Types {
         uint256 amount;
     }
 
-    /// @notice Recovery state for a failed ChildVault rebalance withdrawal
+    /// @notice Recovery state for a failed ChildVault rebalance withdraw
     /// @param rebalanceNonce The nonce of the rebalance
-    /// @param strategy The target strategy to continue the rebalance into after withdraw succeeds
+    /// @param strategy The target strategy to continue the rebalance into after withdrawal succeeds
     struct RebalanceWithdrawRecovery {
         uint256 rebalanceNonce;
         Strategy strategy;
@@ -124,7 +124,7 @@ library Types {
     //////////////////////////////////////////////////////////////*/
     /// @notice Status of an epoch
     /// @param NONE The epoch has not been opened
-    /// @param OPEN The epoch is open for deposits and withdrawal intents
+    /// @param OPEN The epoch is open for deposits and withdraw intents
     /// @param EXECUTING The epoch is waiting for remote strategy execution or crosschain settlement
     /// @param CLAIMABLE The epoch has settled and its user entries can be claimed
     enum EpochStatus {
@@ -136,13 +136,13 @@ library Types {
 
     /// @notice Data for an epoch
     /// @param totalDepositAmount The total underlying asset recorded for deposit intents, reduced by cancellations while OPEN and fixed at settlement
-    /// @param totalShareBurnAmount The total shares recorded for withdrawal intents, reduced by cancellations while OPEN and fixed at settlement
-    /// @param totalWithdrawClaimAmount The asset allocated to withdrawal claims at settlement; provisional during a remote withdrawal
+    /// @param totalShareBurnAmount The total shares recorded for withdraw intents, reduced by cancellations while OPEN and fixed at settlement
+    /// @param totalWithdrawClaimAmount The underlying asset allocated to withdraw claims at settlement; provisional during a remote withdraw
     /// @param pricePerShare The price per share set when the epoch settles
-    /// @param remainingDepositClaimAmount The unclaimed asset deposit amount used for shrinking-pool share claims
+    /// @param remainingDepositClaimAmount The unclaimed underlying-asset deposit amount used for shrinking-pool share claims
     /// @param remainingShareMintAmount The unclaimed shares to mint for deposit claims
     /// @param remainingShareBurnAmount The unclaimed shares submitted for withdraw claims
-    /// @param remainingWithdrawClaimAmount The unclaimed asset available for withdraw claims
+    /// @param remainingWithdrawClaimAmount The unclaimed underlying asset available for withdraw claims
     /// @param openedAtTimestamp The timestamp when the epoch was opened
     /// @param status The status of the epoch
     /// @dev Remaining counter pairs are mutable claim-settlement state. Existing totals remain historical settlement state.

@@ -87,7 +87,7 @@ interface IWorkflowRouter is IReceiver, IPauseable {
     /// @param owner The address that deployed the workflow
     /// @dev Reverts if the caller does not have CONFIG_OPERATOR_ROLE
     /// @dev Reverts if workflowId is zero
-    /// @dev Reverts unless name and owner are both nonzero when setting metadata or both zero when removing metadata
+    /// @dev Reverts if exactly one of name and owner is zero
     /// @dev Reverts if the (name, owner) pair matches the currently registered metadata, including when removing an
     ///      already-unregistered workflow ID
     /// @dev Set `name` and `owner` to zero to remove metadata for `workflowId`

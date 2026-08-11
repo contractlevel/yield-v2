@@ -22,7 +22,7 @@ library ParentVaultEpochLib {
                            TYPE DECLARATIONS
     //////////////////////////////////////////////////////////////*/
     /// @notice The action ParentVault must take after closeEpoch settles net flow
-    /// @param NONE No external action because deposits and withdrawals netted to zero
+    /// @param NONE No external action because deposits and withdraws netted to zero
     /// @param DEPOSIT_TO_LOCAL_STRATEGY Deposit the positive net flow into the local active strategy
     /// @param SEND_DEPOSIT_TO_REMOTE_STRATEGY Send the positive net flow to the remote active strategy
     /// @param WITHDRAW_FROM_LOCAL_STRATEGY Withdraw the negative net flow from the local active strategy
@@ -38,8 +38,8 @@ library ParentVaultEpochLib {
     /// @notice The external action ParentVault should execute after closeEpoch settlement
     /// @param epochNonce The nonce of the epoch that was just closed
     /// @param action The action ParentVault must take
-    /// @param amount The net deposit or withdrawal amount to act on
-    /// @param totalDepositAmount The epoch's total deposit amount, used to finalize a local net withdrawal
+    /// @param amount The net deposit or withdraw amount to act on
+    /// @param totalDepositAmount The epoch's total deposit amount, used to finalize a local net withdraw
     struct CloseEpochExternalAction {
         uint256 epochNonce;
         ExternalAction action;
@@ -83,10 +83,9 @@ library ParentVaultEpochLib {
     /// @dev Reverts if a rebalance is in progress
     /// @dev Reverts if the preceding epoch is not claimable
     /// @dev Reverts if the current epoch is not open or has been open for less than MIN_EPOCH_PERIOD
-    /// @dev Reverts if the epoch contains neither deposits nor withdrawal intents
+    /// @dev Reverts if the epoch contains neither deposits nor withdraw intents
     /// @dev Reverts if TVL is zero while shares are outstanding or the resulting price per share is zero
     /// @dev Reverts if deposit settlement would allocate zero shares to a minimum-size deposit
-    /// @dev Reverts if performance-fee share minting is rejected by the share token's attached ACE policies
     /// @dev Collects the performance fee and computes the settlement price per share before computing net flow
     function closeEpoch(
         ParentVaultStore.ParentVaultStorage storage $,
@@ -114,10 +113,9 @@ library ParentVaultEpochLib {
     /// @dev Reverts if a rebalance is in progress
     /// @dev Reverts if the preceding epoch is not claimable
     /// @dev Reverts if the current epoch is not open or has been open for less than MIN_EPOCH_PERIOD
-    /// @dev Reverts if the epoch contains neither deposits nor withdrawal intents
+    /// @dev Reverts if the epoch contains neither deposits nor withdraw intents
     /// @dev Reverts if TVL is zero while shares are outstanding or the resulting price per share is zero
     /// @dev Reverts if deposit settlement would allocate zero shares to a minimum-size deposit
-    /// @dev Reverts if performance-fee share minting is rejected by the share token's attached ACE policies
     /// @dev Collects the performance fee and computes the settlement price per share before computing net flow
     function _closeEpoch(
         ParentVaultStore.ParentVaultStorage storage $,
@@ -166,10 +164,10 @@ library ParentVaultEpochLib {
         if (totalDepositAmount != 0 && newShares * minDepositAmount < totalDepositAmount) {
             revert IParentVault.ParentVault__DepositWouldMintZeroShares();
         }
-        /// @dev This is the sole write to s_totalShares for the epoch: totalShares is the pre-fee value
-        ///      read above, feeShares folds in any performance-fee dilution _collectPerformanceFee minted
-        ///      (without itself writing storage - see its NatSpec), and newShares/totalShareBurnAmount
-        ///      fold in this epoch's deposits/withdraws.
+        // This is the sole write to s_totalShares for the epoch: totalShares is the pre-fee value
+        // read above, feeShares folds in any performance-fee dilution _collectPerformanceFee minted
+        // (without itself writing storage - see its NatSpec), and newShares/totalShareBurnAmount
+        // fold in this epoch's deposits and withdrawals
         $.s_totalShares = totalShares + feeShares + newShares - totalShareBurnAmount;
 
         s_epoch.pricePerShare = settlementPricePerShare;
@@ -252,7 +250,7 @@ library ParentVaultEpochLib {
     /// @param epochNonce The epoch nonce being finalized
     /// @param totalDepositAmount The epoch's total deposit amount, as already settled by `closeEpoch`
     /// @param amountOut The actual amount withdrawn from the local strategy
-    /// @dev Assumes epochNonce identifies the epoch just settled as a local net withdrawal; this function does not validate it
+    /// @dev Assumes epochNonce identifies the epoch just settled as a local net withdraw; this function does not validate it
     function finalizeLocalNetWithdraw(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 epochNonce,
@@ -267,7 +265,7 @@ library ParentVaultEpochLib {
     /// @param epochNonce The epoch nonce being finalized
     /// @param totalDepositAmount The epoch's total deposit amount, as already settled by `closeEpoch`
     /// @param amountOut The actual amount withdrawn from the local strategy
-    /// @dev Assumes epochNonce identifies the epoch just settled as a local net withdrawal; this function does not validate it
+    /// @dev Assumes epochNonce identifies the epoch just settled as a local net withdraw; this function does not validate it
     function _finalizeLocalNetWithdraw(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 epochNonce,

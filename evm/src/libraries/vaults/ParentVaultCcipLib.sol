@@ -16,10 +16,10 @@ library ParentVaultCcipLib {
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
     /// @dev Solidity requires locally declared events for emits; these must match IParentVault and emit from the vault via DELEGATECALL
-    /// @notice Emitted when a CCIP withdraw message delivers less asset than expected
+    /// @notice Emitted when a CCIP withdrawal message delivers less underlying asset than expected
     /// @param epochNonce The nonce of the epoch with the short withdrawal
-    /// @param expectedAmount The amount of asset expected from the remote strategy
-    /// @param actualAmount The amount of asset delivered by the CCIP message
+    /// @param expectedAmount The amount of underlying asset expected from the remote strategy
+    /// @param actualAmount The amount of underlying asset delivered by the CCIP message
     event EpochWithdrawAmountShort(
         uint256 indexed epochNonce, uint256 indexed expectedAmount, uint256 indexed actualAmount
     );
@@ -89,11 +89,11 @@ library ParentVaultCcipLib {
         uint256 totalDepositAmount = s_epoch.totalDepositAmount;
         uint256 expectedWithdraw = s_epoch.totalWithdrawClaimAmount - totalDepositAmount;
         uint256 totalWithdrawClaimAmount = totalDepositAmount + receivedAmount;
-        /// @dev Intentional overwrite. The amount could be higher than expected.
+        // Intentional overwrite. The amount could be higher than expected.
         s_epoch.totalWithdrawClaimAmount = totalWithdrawClaimAmount;
         s_epoch.remainingWithdrawClaimAmount = totalWithdrawClaimAmount;
         if (receivedAmount < expectedWithdraw) {
-            /// @dev Shouldn't happen because we revert at the adapter level if shortfall withdraw amount
+            // Should not happen because the adapter reverts if the withdraw amount is short
             emit EpochWithdrawAmountShort(epochNonce, expectedWithdraw, receivedAmount);
         }
 

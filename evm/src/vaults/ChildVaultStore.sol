@@ -17,10 +17,10 @@ abstract contract ChildVaultStore {
     /// active protocol adapter - the rebalance nonce and the target strategy to continue the
     /// rebalance into once the withdraw is retried and succeeds.
     /// @param s_epochDepositRecovery Recovery data for a failed deposit into the active strategy adapter,
-    /// after Parent CCIP-sends epoch net-deposit funds to this chain - the epoch nonce and asset amount
+    /// after Parent CCIP-sends epoch net-deposit funds to this chain - the epoch nonce and underlying-asset amount
     /// to retry depositing.
     /// @param s_epochWithdrawRecovery Recovery data for a failed withdrawal from the active strategy
-    /// adapter when executeEpochWithdraw is called for a net-withdraw epoch - the epoch nonce and asset
+    /// adapter when executeEpochWithdraw is called for a net-withdraw epoch - the epoch nonce and underlying-asset
     /// amount to retry withdrawing. A successful retry proceeds to CCIP-send the withdrawn amount back
     /// to Parent; a failure of that send is tracked separately by s_ccipSendRecovery.
     /// @param s_ccipSendRecovery Recovery data for a failed outbound CCIP send (epoch net-withdraw

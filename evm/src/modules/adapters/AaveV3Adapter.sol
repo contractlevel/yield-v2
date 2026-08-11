@@ -78,14 +78,14 @@ contract AaveV3Adapter is ProtocolAdapter, IAaveV3Adapter {
     function withdraw(uint256 amount) external nonReentrant onlyVault returns (uint256 actualWithdrawnAmount) {
         address pool = _getAavePool();
 
-        /// @dev Scenario 1: Epoch Withdraw - when the amount is a specific amount
+        // Scenario 1: Epoch withdrawal - when the amount is a specific amount
         if (amount != type(uint256).max) {
             _revertIfEpochWithdrawAmountExceedsTVL(amount, _getTVL(pool));
 
             actualWithdrawnAmount = IPool(pool).withdraw(i_asset, amount, address(this));
             _revertIfIncompleteWithdraw(amount, actualWithdrawnAmount);
         }
-        /// @dev Scenario 2: Rebalance Withdraw - when the amount is type(uint256).max
+        // Scenario 2: Rebalance withdrawal - when the amount is type(uint256).max
         else {
             uint256 tvl = _getTVL(pool);
 

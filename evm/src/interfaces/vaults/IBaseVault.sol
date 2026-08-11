@@ -35,10 +35,10 @@ interface IBaseVault is IPauseable {
     /// @dev Thrown when an external self-call helper is called by any address other than this contract
     error BaseVault__OnlySelf();
     /// @dev Thrown when a strategy adapter deposit fails in a synchronous path
-    /// @param amount The amount of asset that failed to deposit
+    /// @param amount The amount of underlying asset that failed to deposit
     error BaseVault__DepositFailed(uint256 amount);
-    /// @dev Thrown when a strategy adapter withdraw fails in a synchronous path
-    /// @param amount The amount of asset that failed to withdraw
+    /// @dev Thrown when a strategy adapter withdrawal fails in a synchronous path
+    /// @param amount The amount of underlying asset that failed to withdraw
     error BaseVault__WithdrawFailed(uint256 amount);
     /// @dev Thrown when the adapter is not registered
     /// @param protocolId The ID of the protocol
@@ -63,9 +63,9 @@ interface IBaseVault is IPauseable {
     /// @dev Thrown when no crosschain vault is registered for the destination chain selector
     /// @param destinationChainSelector The destination chain selector with no registered vault
     error BaseVault__DestinationVaultNotSet(uint64 destinationChainSelector);
-    /// @dev Thrown when a CCIP message does not deliver the vault's configured asset token
+    /// @dev Thrown when a CCIP message does not deliver the vault's configured underlying asset token
     /// @param receivedToken The token address delivered by CCIP
-    /// @param expectedToken The vault's configured asset token
+    /// @param expectedToken The vault's configured underlying asset token
     error BaseVault__InvalidReceivedToken(address receivedToken, address expectedToken);
     /// @dev Thrown when there is no pending recovery for the requested operation
     error BaseVault__NoPendingRecovery();
@@ -79,24 +79,24 @@ interface IBaseVault is IPauseable {
     //////////////////////////////////////////////////////////////*/
     /// @notice Emitted when a deposit to the strategy is successful
     /// @param epochNonce The nonce of the epoch
-    /// @param amount The amount of asset deposited
+    /// @param amount The amount of underlying asset deposited
     event EpochDepositToStrategySuccess(uint256 indexed epochNonce, uint256 indexed amount);
-    /// @notice Emitted when a withdraw from the strategy is successful
+    /// @notice Emitted when a strategy withdrawal is successful
     /// @param epochNonce The nonce of the epoch
-    /// @param amount The amount of asset withdrawn
+    /// @param amount The amount of underlying asset withdrawn
     event EpochWithdrawFromStrategySuccess(uint256 indexed epochNonce, uint256 indexed amount);
 
     /// @notice Emitted when a rebalance deposit to the new strategy is successful
     /// @param rebalanceNonce The nonce of the rebalance
-    /// @param amount The amount of asset rebalanced into the new strategy
+    /// @param amount The amount of underlying asset rebalanced into the new strategy
     event RebalanceDepositSuccess(uint256 indexed rebalanceNonce, uint256 indexed amount);
     /// @notice Emitted when a rebalance deposit to the new strategy fails
     /// @param rebalanceNonce The nonce of the rebalance
-    /// @param amount The amount of asset that failed to rebalance into the new strategy
+    /// @param amount The amount of underlying asset that failed to rebalance into the new strategy
     event RebalanceDepositFailure(uint256 indexed rebalanceNonce, uint256 indexed amount);
-    /// @notice Emitted when a rebalance withdraw from the old strategy is successful
+    /// @notice Emitted when a rebalance withdrawal from the old strategy is successful
     /// @param rebalanceNonce The nonce of the rebalance
-    /// @param amount The amount of asset withdrawn from the old strategy
+    /// @param amount The amount of underlying asset withdrawn from the old strategy
     event RebalanceWithdrawSuccess(uint256 indexed rebalanceNonce, uint256 indexed amount);
     /// @notice Emitted when the active protocol adapter is set
     /// @param protocolId The protocol ID of the active strategy
@@ -139,7 +139,7 @@ interface IBaseVault is IPauseable {
     event LinkWithdrawn(address indexed operator, uint256 indexed amount);
     /// @notice Emitted when failed rebalance deposit recovery state is stored
     /// @param rebalanceNonce The nonce of the failed rebalance deposit
-    /// @param amount The amount of asset to retry depositing
+    /// @param amount The amount of underlying asset to retry depositing
     event RebalanceDepositRecoveryStored(uint256 indexed rebalanceNonce, uint256 indexed amount);
     /// @notice Emitted when failed rebalance deposit recovery state is cleared
     /// @param rebalanceNonce The nonce of the recovered rebalance deposit
@@ -226,8 +226,9 @@ interface IBaseVault is IPauseable {
     /// @return activeProtocolAdapter The address of the active strategy protocol adapter
     /// @dev Do not use the adapter directly as the vault's canonical TVL source; use getTVL()
     function getActiveProtocolAdapter() external view returns (address activeProtocolAdapter);
-    /// @notice Returns the underlying-asset value of this vault's active strategy position
-    /// @return tvl The active position value, or zero when this vault is not on the active strategy chain
+    /// @notice Returns this vault's accounted underlying-asset value
+    /// @return tvl The active strategy position plus applicable vault-held recovery assets
+    /// @dev Returns zero when this vault has neither an active strategy position nor applicable recovery assets
     function getTVL() external view returns (uint256 tvl);
     /// @notice Returns the pending rebalance deposit recovery state
     /// @return recovery Types.RebalanceDepositRecovery struct includes:

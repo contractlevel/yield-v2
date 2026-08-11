@@ -108,10 +108,10 @@ library BaseVaultCcipLib {
 
     /// @notice Validates the tokens delivered by a CCIP message and returns the underlying-asset amount
     /// @param message The CCIP message received from the router
-    /// @param asset The vault's configured asset token
+    /// @param asset The vault's configured underlying asset token
     /// @return amount The amount of underlying asset delivered by CCIP
     /// @dev Reverts if the message does not contain exactly one delivered token amount
-    /// @dev Reverts if the delivered token is not asset
+    /// @dev Reverts if the delivered token is not the configured underlying asset
     /// @dev Reverts if the delivered amount is zero
     function validateReceivedTokenAndGetAmount(Client.Any2EVMMessage memory message, address asset)
         public
@@ -193,10 +193,10 @@ library BaseVaultCcipLib {
 
     /// @notice Validates the tokens delivered by a CCIP message and returns the underlying-asset amount
     /// @param message The CCIP message received from the router
-    /// @param asset The vault's configured asset token
+    /// @param asset The vault's configured underlying asset token
     /// @return amount The amount of underlying asset delivered by CCIP
     /// @dev Reverts if the message does not contain exactly one delivered token amount
-    /// @dev Reverts if the delivered token is not asset
+    /// @dev Reverts if the delivered token is not the configured underlying asset
     /// @dev Reverts if the delivered amount is zero
     function _validateReceivedTokenAndGetAmount(Client.Any2EVMMessage memory message, address asset)
         internal

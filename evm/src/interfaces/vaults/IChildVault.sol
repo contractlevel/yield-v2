@@ -31,15 +31,15 @@ interface IChildVault is IBaseVault {
     //////////////////////////////////////////////////////////////*/
     /// @notice Emitted when a deposit to the strategy fails
     /// @param epochNonce The nonce of the epoch
-    /// @param amount The amount of asset that failed to deposit
+    /// @param amount The amount of underlying asset that failed to deposit
     event EpochDepositToStrategyFailure(uint256 indexed epochNonce, uint256 indexed amount);
 
-    /// @notice Emitted when a withdraw from the strategy fails
+    /// @notice Emitted when a strategy withdrawal fails
     /// @param epochNonce The nonce of the epoch
-    /// @param amount The amount of asset that failed to withdraw
+    /// @param amount The amount of underlying asset that failed to withdraw
     event EpochWithdrawFromStrategyFailure(uint256 indexed epochNonce, uint256 indexed amount);
 
-    /// @notice Emitted when a rebalance withdraw from the old strategy fails
+    /// @notice Emitted when a rebalance withdrawal from the old strategy fails
     /// @param rebalanceNonce The nonce of the rebalance
     event RebalanceWithdrawFailure(uint256 indexed rebalanceNonce);
 
@@ -92,9 +92,9 @@ interface IChildVault is IBaseVault {
     /*//////////////////////////////////////////////////////////////
                                   CRE
     //////////////////////////////////////////////////////////////*/
-    /// @notice Attempts an epoch withdrawal from the active strategy and sends the assets to the parent vault
+    /// @notice Attempts an epoch withdrawal from the active strategy and sends the underlying asset to the parent vault
     /// @param epochNonce The nonce of the epoch
-    /// @param amount The amount of asset to withdraw from the active strategy
+    /// @param amount The amount of underlying asset to withdraw from the active strategy
     /// @dev Called by the WorkflowRouter when net flow is negative
     /// @dev Reverts if the caller does not have EPOCH_OPERATOR_ROLE
     /// @dev Reverts if the vault is paused
@@ -156,7 +156,7 @@ interface IChildVault is IBaseVault {
     /// @notice Returns the failed rebalance withdraw recovery state
     /// @return recovery Types.RebalanceWithdrawRecovery struct includes:
     ///         uint256 rebalanceNonce - the nonce of the rebalance
-    ///         Types.Strategy strategy - the target strategy to continue the rebalance into after withdraw succeeds
+    ///         Types.Strategy strategy - the target strategy to continue the rebalance into after withdrawal succeeds
     function getRebalanceWithdrawRecovery() external view returns (Types.RebalanceWithdrawRecovery memory recovery);
 
     /// @notice Returns the failed CCIP send recovery state

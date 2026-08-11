@@ -289,7 +289,7 @@ abstract contract BaseVault is
     /// @param adapter The active strategy adapter
     /// @param amount The amount to deposit into the adapter
     /// @dev Reverts if the caller is not this vault
-    /// @dev Reverts if the asset transfer or adapter deposit fails
+    /// @dev Reverts if the underlying-asset transfer or adapter deposit fails
     function tryDepositToAdapter(address adapter, uint256 amount) external {
         if (msg.sender != address(this)) revert BaseVault__OnlySelf();
 
@@ -408,8 +408,9 @@ abstract contract BaseVault is
     /*//////////////////////////////////////////////////////////////
                             INTERNAL GETTER
     //////////////////////////////////////////////////////////////*/
-    /// @notice Returns the underlying-asset value of this vault's active strategy position
-    /// @return tvl The active position value, or zero when this vault is not on the active strategy chain
+    /// @notice Returns this vault's accounted underlying-asset value
+    /// @return tvl The active strategy position plus applicable vault-held recovery assets
+    /// @dev Returns zero when this vault has neither an active strategy position nor applicable recovery assets
     /// @dev Overridden by ParentVault and ChildVault to account for their respective state
     /// @dev Returns zero while the active position is in transit through CCIP
     function _getTVL() internal view virtual returns (uint256 tvl);
@@ -542,8 +543,9 @@ abstract contract BaseVault is
         activeProtocolAdapter = _baseVaultStorage().s_activeProtocolAdapter;
     }
 
-    /// @notice Returns the underlying-asset value of this vault's active strategy position
-    /// @return tvl The active position value, or zero when this vault is not on the active strategy chain
+    /// @notice Returns this vault's accounted underlying-asset value
+    /// @return tvl The active strategy position plus applicable vault-held recovery assets
+    /// @dev Returns zero when this vault has neither an active strategy position nor applicable recovery assets
     function getTVL() external view returns (uint256 tvl) {
         tvl = _getTVL();
     }

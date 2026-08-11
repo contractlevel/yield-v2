@@ -22,17 +22,17 @@ interface IProtocolAdapter {
     error ProtocolAdapter__TVLDecreasedOnDeposit();
     /// @dev Thrown when the protocol credits less than the requested deposit amount, beyond rounding tolerance
     error ProtocolAdapter__IncompleteDeposit();
-    /// @dev Thrown when the protocol returns less asset than the requested withdraw amount
+    /// @dev Thrown when the protocol returns less underlying asset than the requested withdrawal amount
     error ProtocolAdapter__IncorrectWithdrawAmount();
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
     /// @notice Emitted when a deposit to the protocol is executed
-    /// @param amount The amount of asset deposited
+    /// @param amount The amount of underlying asset deposited
     event Deposit(uint256 indexed amount);
     /// @notice Emitted when a withdrawal from the protocol is executed
-    /// @param amount The amount of asset withdrawn
+    /// @param amount The amount of underlying asset withdrawn
     event Withdraw(uint256 indexed amount);
 
     /*//////////////////////////////////////////////////////////////

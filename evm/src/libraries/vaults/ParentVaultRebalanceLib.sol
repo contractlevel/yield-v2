@@ -23,7 +23,7 @@ library ParentVaultRebalanceLib {
     /// @notice The action ParentVault must take after initiateRebalance updates state
     /// @param NONE No local action because the active strategy is remote
     /// @param WITHDRAW_LOCAL_TO_LOCAL Withdraw from the local active strategy and deposit into the local target strategy
-    /// @param WITHDRAW_LOCAL_TO_REMOTE Withdraw from the local active strategy and send the assets to the remote target strategy
+    /// @param WITHDRAW_LOCAL_TO_REMOTE Withdraw from the local active strategy and send the underlying asset to the remote target strategy
     enum ExternalAction {
         NONE, // 0: the previously active strategy is not on this chain, nothing to withdraw here
         WITHDRAW_LOCAL_TO_LOCAL, // 1: withdraw from the local active strategy and deposit into the local new strategy
@@ -148,7 +148,6 @@ library ParentVaultRebalanceLib {
     /// @param isLocalToLocalRebalance Whether the rebalance resolved synchronously without persisted pending state
     /// @dev For an asynchronous rebalance, reverts if no rebalance is in progress
     /// @dev Assumes rebalanceNonce and newStrategy were validated by ParentVault; this function does not validate them
-    /// @dev Reverts if management-fee share minting is rejected by the share token's attached ACE policies
     function finalizeRebalance(
         ParentVaultStore.ParentVaultStorage storage $,
         address share,
@@ -169,7 +168,6 @@ library ParentVaultRebalanceLib {
     ///        were never written to storage, so there is nothing to clear
     /// @dev For an asynchronous rebalance, reverts if no rebalance is in progress
     /// @dev Assumes rebalanceNonce and newStrategy were validated by ParentVault; this function does not validate them
-    /// @dev Reverts if management-fee share minting is rejected by the share token's attached ACE policies
     function _finalizeRebalance(
         ParentVaultStore.ParentVaultStorage storage $,
         address share,
