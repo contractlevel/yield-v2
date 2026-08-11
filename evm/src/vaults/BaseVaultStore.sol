@@ -5,7 +5,7 @@ import {Types} from "../libraries/Types.sol";
 
 /// @title Yieldcoin v2 BaseVault namespaced storage
 /// @author @contractlevel
-/// @notice ERC-7201 storage for BaseVault mutable state.
+/// @notice ERC-7201 storage for BaseVault mutable state
 abstract contract BaseVaultStore {
     /// @custom:storage-location erc7201:yieldcoin.storage.BaseVault
     /// @notice Namespaced storage shared by ParentVault and ChildVault for the state common to both:
@@ -41,6 +41,8 @@ abstract contract BaseVaultStore {
     bytes32 private constant BASE_VAULT_STORAGE_LOCATION =
         0x99afdd01627a14a05f9b616b4e511b7ffe10b226156d7b6f476c4380e58f9d00;
 
+    /// @notice Returns the BaseVault namespaced storage pointer
+    /// @return $ The BaseVault namespaced storage pointer
     function _baseVaultStorage() internal pure returns (BaseVaultStorage storage $) {
         //slither-disable-next-line assembly
         assembly {

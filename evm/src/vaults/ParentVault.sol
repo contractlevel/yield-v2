@@ -494,11 +494,17 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
                                 RECOVERY
     //////////////////////////////////////////////////////////////*/
     /// @notice Executes the active recovery mode, reverting if no recovery is pending
-    /// @dev The only recovery mode that can be active on Parent is REBALANCE_DEPOSIT.
-    /// @dev Precondition: a recovery mode must be active (not NONE)
-    /// @dev Precondition: function must not be reentered
-    /// @dev Finalizes the rebalance in the same atomic tx
-    /// @dev Precondition: the contract must not be paused
+    /// @dev Permissionless because the operation and all inputs are fixed by stored recovery state
+    /// @dev REBALANCE_DEPOSIT is the only recovery mode supported by ParentVault
+    /// @dev Reverts if no recovery mode is active
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the active recovery requires a strategy adapter that is not set
+    /// @dev Reverts if the active recovery requires a local target adapter that is not registered
+    /// @dev Reverts if the registered local target adapter is bound to another vault
+    /// @dev Reverts if the active recovery requires an unregistered crosschain vault
+    /// @dev Reverts if a strategy withdrawal used by the active recovery returns zero assets
+    /// @dev Requires any strategy, token, and CCIP interactions used by the active recovery to succeed
     function executeRecovery() external override(BaseVault, IBaseVault) nonReentrant whenNotPaused {
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
         if ($_baseVault.s_recoveryMode != Types.RecoveryMode.REBALANCE_DEPOSIT) revert BaseVault__NoPendingRecovery();

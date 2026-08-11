@@ -5,7 +5,7 @@ import {Types} from "../libraries/Types.sol";
 
 /// @title Yieldcoin v2 ChildVault namespaced storage
 /// @author @contractlevel
-/// @notice ERC-7201 storage for ChildVault mutable state.
+/// @notice ERC-7201 storage for ChildVault mutable state
 abstract contract ChildVaultStore {
     /// @custom:storage-location erc7201:yieldcoin.storage.ChildVault
     /// @notice Namespaced storage for ChildVault mutable state: action replay protection and recovery
@@ -23,8 +23,8 @@ abstract contract ChildVaultStore {
     /// adapter when executeEpochWithdraw is called for a net-withdraw epoch - the epoch nonce and asset
     /// amount to retry withdrawing. A successful retry proceeds to CCIP-send the withdrawn amount back
     /// to Parent; a failure of that send is tracked separately by s_ccipSendRecovery.
-    /// @param s_ccipSendRecovery Recovery data for a failed outbound CCIP send (of any type - epoch
-    /// net-deposit/withdraw or rebalance) - the CCIP tx type to replay, amount, destination chain
+    /// @param s_ccipSendRecovery Recovery data for a failed outbound CCIP send (epoch net-withdraw
+    /// or rebalance) - the CCIP tx type to replay, amount, destination chain
     /// selector, epoch/rebalance nonce, and (for rebalance sends) the target protocol ID.
     struct ChildVaultStorage {
         uint256 s_lastHandledEpochNonce;
@@ -40,6 +40,8 @@ abstract contract ChildVaultStore {
     bytes32 private constant CHILD_VAULT_STORAGE_LOCATION =
         0x78e4dbdeeaf798c2dd37013d97b7b9a2111b1f613652054109dec720ccf6f400;
 
+    /// @notice Returns the ChildVault namespaced storage pointer
+    /// @return $ The ChildVault namespaced storage pointer
     function _childVaultStorage() internal pure returns (ChildVaultStorage storage $) {
         //slither-disable-next-line assembly
         assembly {

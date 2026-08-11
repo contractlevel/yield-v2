@@ -152,6 +152,12 @@ interface IBaseVault is IPauseable {
     /// @dev Reverts if no recovery mode is active
     /// @dev Reverts if the vault is paused
     /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the active recovery requires a strategy adapter that is not set
+    /// @dev Reverts if the active recovery requires a local target adapter that is not registered
+    /// @dev Reverts if the registered local target adapter is bound to another vault
+    /// @dev Reverts if the active recovery requires an unregistered crosschain vault
+    /// @dev Reverts if a strategy withdrawal used by the active recovery returns zero assets
+    /// @dev Requires any strategy, token, and CCIP interactions used by the active recovery to succeed
     function executeRecovery() external;
 
     /*//////////////////////////////////////////////////////////////
@@ -209,9 +215,9 @@ interface IBaseVault is IPauseable {
     /// @param chainSelector The CCIP selector of the chain
     /// @return vault The registered crosschain vault address, or address(0) if none is registered
     function getCrosschainVault(uint64 chainSelector) external view returns (address vault);
-    /// @notice Returns the effective CCIP gas limit for a chain selector
+    /// @notice Returns the configured CCIP gas-limit override for a chain selector
     /// @param chainSelector The CCIP selector of the chain
-    /// @return gasLimit The per-chain override when nonzero, otherwise the default CCIP gas limit
+    /// @return gasLimit The per-chain override, or zero when no override is configured
     function getCcipGasLimit(uint64 chainSelector) external view returns (uint256 gasLimit);
     /// @notice Returns the default CCIP gas limit
     /// @return defaultCcipGasLimit The default CCIP gas limit

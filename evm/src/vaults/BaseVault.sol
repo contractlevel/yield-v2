@@ -67,18 +67,21 @@ abstract contract BaseVault is
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
     //////////////////////////////////////////////////////////////*/
-    /// @notice Modifier to only allow messages from allowed crosschain vaults
-    /// @param sender The address of the sender
-    /// @param srcChainSelector The CCIP selector of the chain
+    /// @notice Validates that the CCIP message sender is the registered crosschain vault for the source chain
+    /// @param sender The decoded address of the CCIP sender
+    /// @param srcChainSelector The CCIP selector of the source chain
+    /// @dev Reverts if no crosschain vault is registered for srcChainSelector
+    /// @dev Reverts if sender is not the registered crosschain vault
     modifier onlyAllowedSender(address sender, uint64 srcChainSelector) {
         _onlyAllowedSender(sender, srcChainSelector);
         _;
     }
 
-    /// @notice Internal function to only allow messages from allowed crosschain vaults
-    /// @param sender The address of the sender
-    /// @param srcChainSelector The CCIP selector of the chain
-    /// @dev Precondition: Sender must be the crosschain vault for the source chain selector
+    /// @notice Validates that the CCIP message sender is the registered crosschain vault for the source chain
+    /// @param sender The decoded address of the CCIP sender
+    /// @param srcChainSelector The CCIP selector of the source chain
+    /// @dev Reverts if no crosschain vault is registered for srcChainSelector
+    /// @dev Reverts if sender is not the registered crosschain vault
     function _onlyAllowedSender(address sender, uint64 srcChainSelector) internal view virtual {
         BaseVaultCcipLib.onlyAllowedSender(_baseVaultStorage(), sender, srcChainSelector);
     }
@@ -104,7 +107,7 @@ abstract contract BaseVault is
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
-    /// @notice Parameters to initialize immutable contract values in the constructor.
+    /// @notice Parameters used to initialize immutable contract values
     /// @param link The address of the Chainlink LINK token
     /// @param asset The address of the underlying asset token
     /// @param ccipRouter The address of the CCIP router
@@ -118,12 +121,12 @@ abstract contract BaseVault is
         uint64 thisChainSelector;
     }
 
-    /// @notice Parameters to initialize mutable proxy state.
+    /// @notice Parameters used to initialize mutable proxy state
     /// @param defaultAdmin The address of the default admin for setting roles - trusted actor in the system
     /// @param pauser The address of the pauser for pausing the vault - trusted actor in the system
     /// @param unpauser The address of the unpauser for unpausing the vault - trusted actor in the system
     /// @param configOperator The address of the config operator for setters - trusted actor in the system
-    /// @param initialDefaultCcipGasLimit The initial s_defaultCcipGasLimit
+    /// @param initialDefaultCcipGasLimit The initial default CCIP gas limit
     /// @param upgrader The address authorized to upgrade the vault implementation through UUPS
     struct InitParams {
         address defaultAdmin;
@@ -134,10 +137,13 @@ abstract contract BaseVault is
         address upgrader;
     }
 
-    /// @notice Initializes implementation-level immutable configuration and disables implementation initializers.
+    /// @notice Initializes immutable configuration and disables implementation initializers
     /// @param params Constructor parameters for values that are baked into the implementation bytecode
-    /// @dev Precondition: required immutable address params must not be the zero address
-    /// @dev Precondition: params.thisChainSelector must not be zero
+    /// @dev Reverts if params.link is the zero address
+    /// @dev Reverts if params.asset is the zero address
+    /// @dev Reverts if params.ccipRouter is the zero address
+    /// @dev Reverts if params.adapterRegistry is the zero address
+    /// @dev Reverts if params.thisChainSelector is zero
     constructor(ConstructorParams memory params) CCIPReceiver(params.ccipRouter) {
         _revertIfZeroAddress(params.link);
         _revertIfZeroAddress(params.asset);
@@ -153,12 +159,16 @@ abstract contract BaseVault is
         _disableInitializers();
     }
 
-    /// @notice Initializes BaseVault mutable proxy state.
+    /// @notice Initializes BaseVault mutable proxy state
     /// @param params Initializer parameters for roles and mutable vault configuration
-    /// @dev Grants PAUSER_ROLE to params.pauser, UNPAUSER_ROLE to params.unpauser, CONFIG_OPERATOR_ROLE to
-    ///      params.configOperator, and UPGRADER_ROLE to params.upgrader.
-    /// @dev Precondition: required address params must not be the zero address
-    /// @dev Precondition: params.initialDefaultCcipGasLimit must not be zero
+    /// @dev Sets params.defaultAdmin as the initial DEFAULT_ADMIN_ROLE holder
+    /// @dev Grants PAUSER_ROLE to params.pauser
+    /// @dev Grants UNPAUSER_ROLE to params.unpauser
+    /// @dev Grants CONFIG_OPERATOR_ROLE to params.configOperator
+    /// @dev Grants UPGRADER_ROLE to params.upgrader
+    /// @dev Reverts if any role-holder address is the zero address
+    /// @dev Reverts if params.initialDefaultCcipGasLimit is zero
+    /// @dev Reverts if called outside an initializing context
     //slither-disable-next-line naming-convention
     function __BaseVault_init(InitParams memory params) internal onlyInitializing {
         _revertIfZeroAddress(params.defaultAdmin);
@@ -183,16 +193,17 @@ abstract contract BaseVault is
     /*//////////////////////////////////////////////////////////////
                                   CCIP
     //////////////////////////////////////////////////////////////*/
-    /// @notice Bridges asset to a destination chain
-    /// @param bridgeAmount The amount of asset to bridge
+    /// @notice Sends underlying asset and operation data to a registered crosschain vault through CCIP
+    /// @param bridgeAmount The amount of underlying asset to bridge
     /// @param destinationChainSelector The CCIP selector of the destination chain
     /// @param ccipTxType The type of CCIP transaction
     /// @param nonce The epoch nonce (EPOCH_NET_DEPOSIT/EPOCH_NET_WITHDRAW) or rebalance nonce (REBALANCE)
-    /// @param protocolId The target strategy protocol id; only meaningful when ccipTxType is REBALANCE
-    /// @dev Precondition: bridgeAmount must be more than 0
-    /// @dev Precondition: destinationChainSelector must be non-zero
-    /// @dev Precondition: destinationChainSelector must not equal the current chain selector
-    /// @dev Precondition: destinationChainSelector must be a valid, registered crosschain vault
+    /// @param protocolId The target strategy protocol ID; only meaningful when ccipTxType is REBALANCE
+    /// @dev Reverts if bridgeAmount is zero
+    /// @dev Reverts if destinationChainSelector is zero
+    /// @dev Reverts if destinationChainSelector identifies this chain
+    /// @dev Reverts if no crosschain vault is registered for destinationChainSelector
+    /// @dev Requires the vault to hold enough underlying asset and LINK for the transfer and CCIP fee
     function _ccipSend(
         uint256 bridgeAmount,
         uint64 destinationChainSelector,
@@ -217,8 +228,8 @@ abstract contract BaseVault is
     /// @notice Handles the CCIP rebalance message
     /// @param rebalanceNonce The nonce of the rebalance
     /// @param protocolId The protocol ID of the new strategy on this chain
-    /// @param amount The amount of USDC to rebalance(deposit) into the new strategy on this chain
-    /// @return success Whether the deposit into the new strategy succeeded or not
+    /// @param amount The amount of underlying asset to deposit into the new strategy on this chain
+    /// @return success Whether the deposit into the new strategy succeeded
     /// @dev Called from both ParentVault and ChildVault's `_ccipReceive` when the previous strategy chain
     ///      sends a CCIP rebalance to this new strategy chain.
     /// @dev The active adapter is set before deposit. If deposit fails, it points to the new
@@ -233,9 +244,10 @@ abstract contract BaseVault is
 
     /// @notice Deposits a received CCIP rebalance amount into the active strategy or stores recovery on failure.
     /// @param rebalanceNonce The nonce of the rebalance
-    /// @param amount The amount of USDC to rebalance(deposit) into the active strategy
+    /// @param amount The amount of underlying asset to deposit into the active strategy
     /// @param adapter The active strategy adapter, already known from _setActiveAdapter
-    /// @return success Whether the deposit into the active strategy succeeded or not
+    /// @return success Whether the deposit into the active strategy succeeded
+    /// @dev Stores rebalance deposit recovery state and returns false if the adapter deposit fails
     function _handleCCIPRebalanceDeposit(uint256 rebalanceNonce, uint256 amount, address adapter)
         internal
         returns (bool success)
@@ -254,10 +266,12 @@ abstract contract BaseVault is
     //////////////////////////////////////////////////////////////*/
     /// @notice Executes a deposit to the active strategy
     /// @param amount The amount to deposit
-    /// @param revertOnFailure Indicates whether the call should revert if the deposit to strategy fails or not
+    /// @param revertOnFailure Whether to revert if the strategy deposit fails
     /// @param activeAdapter The active strategy adapter
-    /// @return success Whether the deposit succeeded or not
-    /// @dev This function uses a trycatch to handle cases where the deposit to strategy fails.
+    /// @return success Whether the deposit succeeded
+    /// @dev Reverts if activeAdapter is the zero address
+    /// @dev Reverts if the adapter call fails and revertOnFailure is true
+    /// @dev Returns false if the adapter call fails and revertOnFailure is false
     function _executeDeposit(uint256 amount, bool revertOnFailure, address activeAdapter)
         internal
         returns (bool success)
@@ -271,10 +285,11 @@ abstract contract BaseVault is
         }
     }
 
-    /// @notice Called by _executeDeposit for explicit recovery
+    /// @notice Transfers underlying asset to an adapter and invokes its deposit function
     /// @param adapter The active strategy adapter
     /// @param amount The amount to deposit into the adapter
-    /// @dev Precondition: caller must be this vault
+    /// @dev Reverts if the caller is not this vault
+    /// @dev Reverts if the asset transfer or adapter deposit fails
     function tryDepositToAdapter(address adapter, uint256 amount) external {
         if (msg.sender != address(this)) revert BaseVault__OnlySelf();
 
@@ -284,11 +299,13 @@ abstract contract BaseVault is
 
     /// @notice Executes a withdraw from the active strategy
     /// @param amount The amount to withdraw
-    /// @param revertOnFailure Indicates whether the call should revert if the withdraw from strategy fails or not
+    /// @param revertOnFailure Whether to revert if the strategy withdrawal fails
     /// @param activeAdapter The active strategy adapter
-    /// @return success Whether the withdraw succeeded or not
-    /// @return amountOut The amount withdrawn. This will be 0 if revertOnFailure is false and the withdraw failed
-    /// @dev This function uses a trycatch to handle cases where the withdraw from strategy fails.
+    /// @return success Whether the withdrawal succeeded
+    /// @return amountOut The amount withdrawn, or zero if the withdrawal fails without reverting
+    /// @dev Reverts if activeAdapter is the zero address
+    /// @dev Reverts if the adapter call fails and revertOnFailure is true
+    /// @dev Returns false and zero if the adapter call fails and revertOnFailure is false
     function _executeWithdraw(uint256 amount, bool revertOnFailure, address activeAdapter)
         internal
         returns (bool success, uint256 amountOut)
@@ -307,8 +324,8 @@ abstract contract BaseVault is
     /// @notice Sets the active strategy protocol adapter
     /// @param protocolId The protocol ID of the strategy
     /// @return adapter The address of the active strategy protocol adapter
-    /// @dev Precondition: the protocol ID must have a registered adapter
-    /// @dev Precondition: the registered adapter must be bound to this vault
+    /// @dev Reverts if protocolId has no registered adapter
+    /// @dev Reverts if the registered adapter is bound to a different vault
     function _setActiveAdapter(bytes32 protocolId) internal virtual returns (address adapter) {
         adapter =
             BaseVaultStrategyLib.setActiveAdapter(_baseVaultStorage(), protocolId, i_adapterRegistry, address(this));
@@ -324,14 +341,21 @@ abstract contract BaseVault is
                                RECOVERY
     //////////////////////////////////////////////////////////////*/
     /// @notice Executes the active recovery mode, reverting if no recovery is pending
-    /// @dev Inherited and implemented by ParentVault and ChildVault
-    /// @dev Precondition: a recovery mode must be active (not NONE)
-    /// @dev Deliberately permissionless to allow anyone to advance recovery state when conditions allow.
-    /// @dev Precondition: the contract must not be paused
+    /// @dev Permissionless because the operation and all inputs are fixed by stored recovery state
+    /// @dev Reverts if no recovery mode is active
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the active recovery requires a strategy adapter that is not set
+    /// @dev Reverts if the active recovery requires a local target adapter that is not registered
+    /// @dev Reverts if the registered local target adapter is bound to another vault
+    /// @dev Reverts if the active recovery requires an unregistered crosschain vault
+    /// @dev Reverts if a strategy withdrawal used by the active recovery returns zero assets
+    /// @dev Requires any strategy, token, and CCIP interactions used by the active recovery to succeed
     function executeRecovery() external virtual;
 
     /// @notice Reverts if any recovery state is pending
-    /// @param $ BaseVaultStorage to read the recovery mode
+    /// @param $ BaseVault namespaced storage
+    /// @dev Reverts if a recovery mode is active
     function _requireNoRecovery(BaseVaultStorage storage $) internal view {
         if ($.s_recoveryMode != Types.RecoveryMode.NONE) revert BaseVault__RecoveryAlreadyPending();
     }
@@ -339,14 +363,10 @@ abstract contract BaseVault is
     // --- REBALANCE DEPOSIT RECOVERY --- //
 
     /// @notice Stores recovery state for a failed rebalance deposit
-    /// @param $ BaseVaultStorage
+    /// @param $ BaseVault namespaced storage
     /// @param rebalanceNonce The nonce of the rebalance
     /// @param amount The amount that should have been rebalanced into the new strategy
-    /// @dev This is called when a rebalance attempts to deposit into a new strategy and fails.
-    /// @dev amount is already checked non-zero upstream - by `_validateReceivedTokenAndGetAmount` (CCIP callers)
-    ///      or by `BaseVault__ZeroRecoveryAmount` (`_rebalanceToNewStrategy` callers)
-    /// @dev No recovery state must currently exist - already enforced upstream by every caller (`_ccipReceive`
-    ///      on Child and Parent, `executeRebalance`); see GAS_OPTS.md for the full call-path proof
+    /// @dev The caller must ensure amount is nonzero and no other recovery mode is active
     function _storeRebalanceDepositRecovery(BaseVaultStorage storage $, uint256 rebalanceNonce, uint256 amount)
         internal
     {
@@ -357,11 +377,11 @@ abstract contract BaseVault is
 
     /// @notice Retries a previously failed rebalance deposit into the active strategy
     /// @param $ BaseVault namespaced storage
-    /// @dev Precondition: rebalance deposit recovery state must exist
-    /// @dev Precondition: active strategy adapter must be set
-    /// @dev Precondition: the deposit into the strategy must be successful
-    /// @return rebalanceNonce the nonce of the recovered rebalance deposit
-    /// @return amount the amount of the underlying asset rebalanced/deposited into the new strategy
+    /// @return rebalanceNonce The nonce of the recovered rebalance deposit
+    /// @return amount The amount of underlying asset deposited into the new strategy
+    /// @dev Reverts if the active strategy adapter is not set
+    /// @dev Reverts if the strategy deposit fails
+    /// @dev The caller must ensure rebalance deposit recovery is active
     function _recoverFailedRebalanceDeposit(BaseVaultStorage storage $)
         internal
         returns (uint256 rebalanceNonce, uint256 amount)
@@ -388,41 +408,37 @@ abstract contract BaseVault is
     /*//////////////////////////////////////////////////////////////
                             INTERNAL GETTER
     //////////////////////////////////////////////////////////////*/
-    /// @notice Gets the Yieldcoin TVL if this chain is the active strategy chain, or 0 if not
-    /// @return tvl The Yieldcoin TVL
-    /// @dev Overridden and implemented differently in Parent and Child Vaults to account for epoch net-deposit
-    ///      recovery amounts on Child.
-    /// @dev Returns 0 if the TVL is in transit over CCIP. This should not be read onchain when Parent state is REBALANCING.
+    /// @notice Returns the underlying-asset value of this vault's active strategy position
+    /// @return tvl The active position value, or zero when this vault is not on the active strategy chain
+    /// @dev Overridden by ParentVault and ChildVault to account for their respective state
+    /// @dev Returns zero while the active position is in transit through CCIP
     function _getTVL() internal view virtual returns (uint256 tvl);
 
     /*//////////////////////////////////////////////////////////////
                              CONFIG SETTERS
     //////////////////////////////////////////////////////////////*/
-    /// @notice Pauses the vault
-    /// @dev Precondition: Caller must have the PAUSER_ROLE
-    /// @dev Precondition: Vault must not be paused
+    /// @notice Pauses the contract
+    /// @dev Reverts if the caller does not have PAUSER_ROLE
+    /// @dev Reverts if the contract is already paused
     function pause() external onlyRole(Roles.PAUSER_ROLE) {
         _pause();
     }
 
-    /// @notice Unpauses the vault
-    /// @dev Precondition: Caller must have the UNPAUSER_ROLE
-    /// @dev Precondition: Vault must be paused
+    /// @notice Unpauses the contract
+    /// @dev Reverts if the caller does not have UNPAUSER_ROLE
+    /// @dev Reverts if the contract is not paused
     function unpause() external onlyRole(Roles.UNPAUSER_ROLE) {
         _unpause();
     }
 
-    /// @notice Sets the crosschain vaults
-    /// @param chainSelectors The CCIP selectors of the chains
-    /// @param vaults The addresses of the crosschain vaults
-    /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
-    /// @dev Precondition: chainSelectors must not be empty
-    /// @dev Precondition: chainSelectors and vaults must have the same length
-    /// @dev Precondition: each chain selector must not be zero
-    /// @dev Emits the CrosschainVaultSet event
-    /// @dev Set a vault to address(0) to remove the crosschain vault for that chain selector.
-    /// @dev This can orphan in-flight CCIP messages. Operator should ensure there are no active crosschain
-    ///      rebalance or epoch operations in progress before removing or changing a vault mapping.
+    /// @notice Sets or removes the crosschain vault registered for each supplied chain selector
+    /// @param chainSelectors The CCIP selectors of the remote chains
+    /// @param vaults The vault addresses, using address(0) to remove a registration
+    /// @dev Reverts if the caller does not have CONFIG_OPERATOR_ROLE
+    /// @dev Reverts if chainSelectors is empty
+    /// @dev Reverts if chainSelectors and vaults have different lengths
+    /// @dev Reverts if any chain selector is zero
+    /// @dev Changing or removing a registration can orphan an in-flight CCIP message from the prior vault
     function setCrosschainVaults(uint64[] calldata chainSelectors, address[] calldata vaults)
         external
         virtual
@@ -433,10 +449,9 @@ abstract contract BaseVault is
 
     /// @notice Sets the CCIP gas limit for a given chain selector
     /// @param chainSelector The CCIP selector of the chain
-    /// @param gasLimit The CCIP gas limit. Set to 0 to clear the per-chain override and use the default gas limit.
-    /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
-    /// @dev Precondition: chainSelector must not be zero
-    /// @dev Emits the CcipGasLimitSet event
+    /// @param gasLimit The CCIP gas limit, or zero to clear the override and use the default
+    /// @dev Reverts if the caller does not have CONFIG_OPERATOR_ROLE
+    /// @dev Reverts if chainSelector is zero
     function setCcipGasLimit(uint64 chainSelector, uint256 gasLimit)
         external
         virtual
@@ -446,11 +461,10 @@ abstract contract BaseVault is
     }
 
     /// @notice Sets the default CCIP gas limit
-    /// @param gasLimit The CCIP gas limit
-    /// @dev If a chain doesn't have a specific CCIP gas limit set, the default CCIP gas limit will be used.
-    /// @dev Precondition: Caller must have the CONFIG_OPERATOR_ROLE
-    /// @dev Precondition: gasLimit must not be zero
-    /// @dev Emits the DefaultCcipGasLimitSet event
+    /// @param gasLimit The default CCIP gas limit
+    /// @dev Used when a destination chain has no nonzero per-chain gas-limit override
+    /// @dev Reverts if the caller does not have CONFIG_OPERATOR_ROLE
+    /// @dev Reverts if gasLimit is zero
     function setDefaultCcipGasLimit(uint256 gasLimit) external virtual onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
         BaseVaultConfigLib.setDefaultCcipGasLimit(_baseVaultStorage(), gasLimit);
     }
@@ -460,8 +474,8 @@ abstract contract BaseVault is
     //////////////////////////////////////////////////////////////*/
     /// @notice Withdraws LINK from the vault to the caller
     /// @param amount The amount of LINK to withdraw
-    /// @dev Precondition: Caller must have the LINK_OPERATOR_ROLE
-    /// @dev Precondition: Amount must be greater than 0
+    /// @dev Reverts if the caller does not have LINK_OPERATOR_ROLE
+    /// @dev Reverts if amount is zero
     function withdrawLink(uint256 amount) external onlyRole(Roles.LINK_OPERATOR_ROLE) {
         _revertIfZeroAmount(amount);
         IERC20(i_link).safeTransfer(msg.sender, amount);
@@ -471,51 +485,51 @@ abstract contract BaseVault is
     /*//////////////////////////////////////////////////////////////
                                  GETTER
     //////////////////////////////////////////////////////////////*/
-    /// @notice Gets the LINK token
+    /// @notice Returns the LINK token
     /// @return link The address of the LINK token
     function getLink() external view returns (address link) {
         link = i_link;
     }
 
-    /// @notice Gets the underlying asset token
+    /// @notice Returns the underlying asset token
     /// @return asset The address of the underlying asset token
     function getAsset() external view returns (address asset) {
         asset = i_asset;
     }
 
-    /// @notice Gets the underlying asset precision factor
+    /// @notice Returns the underlying asset precision factor
     /// @return assetPrecision 10 ** asset.decimals()
     function getAssetPrecision() external view returns (uint256 assetPrecision) {
         assetPrecision = i_assetPrecision;
     }
 
-    /// @notice Gets the CCIP selector for this chain
+    /// @notice Returns the CCIP selector for this chain
     /// @return thisChainSelector The CCIP selector for this chain
     function getThisChainSelector() external view returns (uint64 thisChainSelector) {
         thisChainSelector = i_thisChainSelector;
     }
 
-    /// @notice Gets the adapter registry
+    /// @notice Returns the adapter registry
     /// @return adapterRegistry The address of the adapter registry
     function getAdapterRegistry() external view returns (address adapterRegistry) {
         adapterRegistry = i_adapterRegistry;
     }
 
-    /// @notice Gets the crosschain vault address for a given chain selector
+    /// @notice Returns the crosschain vault address registered for a chain selector
     /// @param chainSelector The CCIP selector of the chain
-    /// @return vault The address of the crosschain vault
+    /// @return vault The registered crosschain vault address, or address(0) if none is registered
     function getCrosschainVault(uint64 chainSelector) external view returns (address vault) {
         vault = _baseVaultStorage().s_crosschainVaults[chainSelector];
     }
 
-    /// @notice Gets the CCIP gas limit for a given chain selector
+    /// @notice Returns the configured CCIP gas-limit override for a chain selector
     /// @param chainSelector The CCIP selector of the chain
-    /// @return gasLimit The CCIP gas limit for the chain selector
+    /// @return gasLimit The per-chain override, or zero when no override is configured
     function getCcipGasLimit(uint64 chainSelector) external view returns (uint256 gasLimit) {
         gasLimit = _baseVaultStorage().s_ccipGasLimits[chainSelector];
     }
 
-    /// @notice Gets the default CCIP gas limit
+    /// @notice Returns the default CCIP gas limit
     /// @return defaultCcipGasLimit The default CCIP gas limit
     function getDefaultCcipGasLimit() external view returns (uint256 defaultCcipGasLimit) {
         defaultCcipGasLimit = _baseVaultStorage().s_defaultCcipGasLimit;
@@ -528,23 +542,21 @@ abstract contract BaseVault is
         activeProtocolAdapter = _baseVaultStorage().s_activeProtocolAdapter;
     }
 
-    /// @notice Gets the TVL of the vault
-    /// @return tvl The TVL of the vault
-    /// @dev Strategy chain will return tvl, non-strategy chain will return 0.
-    /// @dev Returns 0 if the TVL is in transit over CCIP. This should not be read onchain when Parent state is REBALANCING.
+    /// @notice Returns the underlying-asset value of this vault's active strategy position
+    /// @return tvl The active position value, or zero when this vault is not on the active strategy chain
     function getTVL() external view returns (uint256 tvl) {
         tvl = _getTVL();
     }
 
-    /// @notice Gets the pending rebalance deposit recovery
+    /// @notice Returns the pending rebalance deposit recovery state
     /// @return recovery Types.RebalanceDepositRecovery struct includes:
-    ///         uint256 rebalanceNonce - the nonce of the rebalance
-    ///         uint256 amount - the amount that needs to be rebalanced/deposited into the new strategy
+    ///         uint256 rebalanceNonce - the nonce of the failed rebalance deposit
+    ///         uint256 amount - the amount of underlying asset to retry depositing
     function getRebalanceDepositRecovery() external view returns (Types.RebalanceDepositRecovery memory recovery) {
         recovery = _baseVaultStorage().s_rebalanceDepositRecovery;
     }
 
-    /// @notice Gets the active recovery mode
+    /// @notice Returns the active recovery mode
     /// @return recoveryMode The active recovery mode, or NONE when no recovery is active
     function getRecoveryMode() external view returns (Types.RecoveryMode recoveryMode) {
         recoveryMode = _baseVaultStorage().s_recoveryMode;
@@ -553,7 +565,8 @@ abstract contract BaseVault is
     /*//////////////////////////////////////////////////////////////
                                 OVERRIDE
     //////////////////////////////////////////////////////////////*/
-    /// @dev Authorizes UUPS implementation upgrades.
+    /// @notice Authorizes a UUPS implementation upgrade
+    /// @dev Reverts if the caller does not have UPGRADER_ROLE
     function _authorizeUpgrade(address) internal override onlyRole(Roles.UPGRADER_ROLE) {}
 
     /// @notice Returns whether this contract implements the given interface ID

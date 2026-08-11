@@ -93,9 +93,9 @@ interface IChildVault is IBaseVault {
                                   CRE
     //////////////////////////////////////////////////////////////*/
     /// @notice Attempts an epoch withdrawal from the active strategy and sends the assets to the parent vault
-    /// @dev Called by the WorkflowRouter when net flow is negative
     /// @param epochNonce The nonce of the epoch
     /// @param amount The amount of asset to withdraw from the active strategy
+    /// @dev Called by the WorkflowRouter when net flow is negative
     /// @dev Reverts if the caller does not have EPOCH_OPERATOR_ROLE
     /// @dev Reverts if the vault is paused
     /// @dev Reverts if the call is reentered
@@ -103,7 +103,7 @@ interface IChildVault is IBaseVault {
     /// @dev Reverts if amount is zero
     /// @dev Reverts if epochNonce is not greater than the last epoch nonce handled by this child vault
     /// @dev Reverts if a successful strategy withdrawal returns zero assets
-    /// @dev Reverts if the resulting CCIP transfer has invalid send parameters or no registered parent vault
+    /// @dev Reverts if no parent vault is registered for the parent chain
     /// @dev Stores epoch-withdraw recovery if the strategy withdrawal fails
     /// @dev Stores CCIP-send recovery if a valid CCIP send attempt fails
     function executeEpochWithdraw(uint256 epochNonce, uint256 amount) external;
@@ -118,8 +118,9 @@ interface IChildVault is IBaseVault {
     /// @dev Reverts if rebalanceNonce is not greater than the last rebalance nonce handled by this child vault
     /// @dev Reverts if a successful strategy withdrawal returns zero assets
     /// @dev Reverts if newStrategy.chainSelector is zero
-    /// @dev Reverts if a required local adapter is not registered or is registered for another vault
-    /// @dev Reverts if a required crosschain transfer has invalid send parameters or no registered destination vault
+    /// @dev If the initial strategy withdrawal succeeds, reverts if a local target protocol has no registered adapter
+    /// @dev If the initial strategy withdrawal succeeds, reverts if the registered local adapter is bound to another vault
+    /// @dev If the initial strategy withdrawal succeeds, reverts if no crosschain vault is registered for a remote target chain
     /// @dev Stores rebalance-withdraw recovery if the old-strategy withdrawal fails
     /// @dev Stores rebalance-deposit recovery if a local new-strategy deposit fails
     /// @dev Stores CCIP-send recovery if a valid CCIP send attempt fails

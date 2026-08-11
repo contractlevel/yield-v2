@@ -51,7 +51,8 @@ library BaseVaultCcipLib {
     /// @param thisChainSelector The CCIP selector of this chain
     /// @return vault The registered vault for the destination chain
     /// @dev Reverts if bridgeAmount is zero
-    /// @dev Reverts if destinationChainSelector is zero or identifies this chain
+    /// @dev Reverts if destinationChainSelector is zero
+    /// @dev Reverts if destinationChainSelector identifies this chain
     /// @dev Reverts if no crosschain vault is registered for destinationChainSelector
     function validateCcipSend(
         BaseVaultStore.BaseVaultStorage storage $,
@@ -73,8 +74,11 @@ library BaseVaultCcipLib {
     /// @param link The LINK token used to pay CCIP fees
     /// @param ccipRouter The CCIP router
     /// @param thisChainSelector The CCIP selector of this chain
-    /// @dev Reverts if the CCIP send parameters are invalid
-    /// @dev Reverts if fee calculation, token approval, or the CCIP router call fails
+    /// @dev Reverts if bridgeAmount is zero
+    /// @dev Reverts if destinationChainSelector is zero
+    /// @dev Reverts if destinationChainSelector identifies this chain
+    /// @dev Reverts if no crosschain vault is registered for destinationChainSelector
+    /// @dev Requires successful fee calculation, token approvals, and CCIP router execution
     /// @dev Requires the vault to hold enough underlying asset and LINK for the transfer and CCIP fee
     function send(
         BaseVaultStore.BaseVaultStorage storage $,
@@ -106,7 +110,7 @@ library BaseVaultCcipLib {
     /// @param message The CCIP message received from the router
     /// @param asset The vault's configured asset token
     /// @return amount The amount of underlying asset delivered by CCIP
-    /// @dev Reverts unless the message contains exactly one delivered token amount
+    /// @dev Reverts if the message does not contain exactly one delivered token amount
     /// @dev Reverts if the delivered token is not asset
     /// @dev Reverts if the delivered amount is zero
     function validateReceivedTokenAndGetAmount(Client.Any2EVMMessage memory message, address asset)
@@ -144,8 +148,11 @@ library BaseVaultCcipLib {
     /// @param link The LINK token used to pay CCIP fees
     /// @param ccipRouter The CCIP router
     /// @param thisChainSelector The CCIP selector of this chain
-    /// @dev Reverts if the CCIP send parameters are invalid
-    /// @dev Reverts if fee calculation, token approval, or the CCIP router call fails
+    /// @dev Reverts if bridgeAmount is zero
+    /// @dev Reverts if destinationChainSelector is zero
+    /// @dev Reverts if destinationChainSelector identifies this chain
+    /// @dev Reverts if no crosschain vault is registered for destinationChainSelector
+    /// @dev Requires successful fee calculation, token approvals, and CCIP router execution
     /// @dev Requires the vault to hold enough underlying asset and LINK for the transfer and CCIP fee
     function _send(
         BaseVaultStore.BaseVaultStorage storage $,
@@ -188,7 +195,7 @@ library BaseVaultCcipLib {
     /// @param message The CCIP message received from the router
     /// @param asset The vault's configured asset token
     /// @return amount The amount of underlying asset delivered by CCIP
-    /// @dev Reverts unless the message contains exactly one delivered token amount
+    /// @dev Reverts if the message does not contain exactly one delivered token amount
     /// @dev Reverts if the delivered token is not asset
     /// @dev Reverts if the delivered amount is zero
     function _validateReceivedTokenAndGetAmount(Client.Any2EVMMessage memory message, address asset)
@@ -214,7 +221,8 @@ library BaseVaultCcipLib {
     /// @param thisChainSelector The CCIP selector of this chain
     /// @return vault The registered vault for the destination chain
     /// @dev Reverts if bridgeAmount is zero
-    /// @dev Reverts if destinationChainSelector is zero or identifies this chain
+    /// @dev Reverts if destinationChainSelector is zero
+    /// @dev Reverts if destinationChainSelector identifies this chain
     /// @dev Reverts if no crosschain vault is registered for destinationChainSelector
     function _validateCcipSend(
         BaseVaultStore.BaseVaultStorage storage $,

@@ -20,7 +20,7 @@ import {Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClie
 
 /// @title Yieldcoin v2 ChildVault
 /// @author @contractlevel
-/// @notice ChildVault is a contract that inherits from BaseVault. It's used to interact with Strategy protocols and communicate with the Parent and other ChildVaults across chains.
+/// @notice Manages strategy positions and crosschain operations on a chain remote from the ParentVault
 contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /*//////////////////////////////////////////////////////////////
                            TYPE DECLARATIONS
@@ -36,11 +36,12 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
-    /// @notice Initializes implementation-level immutable configuration for the ChildVault.
+    /// @notice Initializes immutable ChildVault configuration and disables implementation initializers
     /// @param params BaseVault constructor parameters for values baked into the implementation bytecode
-    /// @param parentChainSelector CCIP selector for the parent chain
-    /// @dev Precondition: parentChainSelector must not be zero
-    /// @dev Precondition: parentChainSelector must not equal params.thisChainSelector
+    /// @param parentChainSelector The CCIP selector for the parent chain
+    /// @dev Reverts if BaseVault immutable configuration is invalid
+    /// @dev Reverts if parentChainSelector is zero
+    /// @dev Reverts if parentChainSelector identifies this chain
     constructor(BaseVault.ConstructorParams memory params, uint64 parentChainSelector) BaseVault(params) {
         _revertIfZeroChainSelector(parentChainSelector);
         if (parentChainSelector == params.thisChainSelector) revert ChildVault__InvalidParentChainSelector();
@@ -48,8 +49,11 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         _disableInitializers();
     }
 
-    /// @notice Initializes ChildVault mutable proxy state.
+    /// @notice Initializes ChildVault mutable proxy state
     /// @param params BaseVault initializer parameters for roles and mutable vault configuration
+    /// @dev Reverts if any BaseVault initializer parameter is invalid
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the proxy has already been initialized
     function initialize(BaseVault.InitParams memory params) external nonReentrant initializer {
         __BaseVault_init(params);
     }
@@ -57,18 +61,24 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /*//////////////////////////////////////////////////////////////
                                   CCIP
     //////////////////////////////////////////////////////////////*/
-    /// @notice Receives CCIP messages
-    /// @param message Any2EVMMessage.
-    /// @dev Precondition: the call must not be reentered
-    /// @dev Precondition: the message must be sent by an allowed sender (a crosschain vault mapped to an allowed source chain selector)
-    /// @dev Precondition: there must not be an existent recovery mode
-    /// @dev Precondition: the received token must be i_asset
-    /// @dev Precondition: there should only be 1 token sent
-    /// @dev Precondition: the amount of token receive must be more than 0
-    /// @dev Precondition: the received tx type must be supported: EPOCH_NET_DEPOSIT or REBALANCE
-    /// @dev Precondition: EPOCH_NET_DEPOSIT messages must originate from the parent chain
-    /// @dev Precondition: the decoded nonce must be greater than the last nonce of its type handled by this child vault
-    /// @dev Precondition: the contract must not be paused
+    /// @notice Handles an inbound CCIP epoch deposit or rebalance message
+    /// @param message The CCIP message received from the router
+    /// @dev Reverts if the caller is not the configured CCIP router
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if no crosschain vault is registered for the source chain
+    /// @dev Reverts if the decoded sender is not the registered crosschain vault
+    /// @dev Reverts if a recovery mode is active
+    /// @dev Reverts if the message does not deliver exactly one token amount
+    /// @dev Reverts if the delivered token is not the configured underlying asset
+    /// @dev Reverts if the delivered amount is zero
+    /// @dev Reverts if the transaction type is not EPOCH_NET_DEPOSIT or REBALANCE
+    /// @dev Reverts if an EPOCH_NET_DEPOSIT message does not originate from the parent chain
+    /// @dev Reverts if the decoded nonce is not greater than the last handled nonce of its type
+    /// @dev Reverts if message data cannot be decoded for its transaction type
+    /// @dev Reverts if a rebalance protocol has no registered adapter
+    /// @dev Reverts if the registered rebalance adapter is bound to another vault
+    /// @dev Stores epoch-deposit or rebalance-deposit recovery if the strategy deposit fails
     function _ccipReceive(Client.Any2EVMMessage memory message)
         internal
         override
@@ -81,7 +91,8 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         _requireNoRecovery($_baseVault);
         uint256 receivedAmount = BaseVaultCcipLib._validateReceivedTokenAndGetAmount(message, i_asset);
 
-        /// @dev data decodes to a uint256 epochNonce for epoch net deposits and a (uint256 rebalanceNonce, bytes32 protocolId) for rebalances
+        // data decodes to a uint256 epochNonce for epoch net deposits and a
+        // (uint256 rebalanceNonce, bytes32 protocolId) for rebalances
         (Types.CcipTx ccipTxType, bytes memory data) = abi.decode(message.data, (Types.CcipTx, bytes));
 
         if (ccipTxType == Types.CcipTx.EPOCH_NET_DEPOSIT) {
@@ -92,7 +103,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
             _handleEpochNonce($, epochNonce);
             _handleCCIPDeposit($, $_baseVault, epochNonce, receivedAmount);
         }
-        /// @dev see BaseVault::_handleCCIPRebalance
+        // See BaseVault._handleCCIPRebalance
         else if (ccipTxType == Types.CcipTx.REBALANCE) {
             (uint256 rebalanceNonce, bytes32 protocolId) = abi.decode(data, (uint256, bytes32));
             _handleRebalanceNonce($, rebalanceNonce);
@@ -104,21 +115,21 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         emit CCIPReceived(message.messageId, message.sourceChainSelector, ccipTxType);
     }
 
-    /// @notice Internal function to only allow messages from allowed crosschain vaults
-    /// @param sender The address of the sender
-    /// @param srcChainSelector The CCIP selector of the chain
-    /// @dev Precondition: Sender must be the crosschain vault for the source chain selector
+    /// @notice Validates that the CCIP message sender is the registered crosschain vault for the source chain
+    /// @param sender The decoded address of the CCIP sender
+    /// @param srcChainSelector The CCIP selector of the source chain
+    /// @dev Reverts if no crosschain vault is registered for srcChainSelector
+    /// @dev Reverts if sender is not the registered crosschain vault
     function _onlyAllowedSender(address sender, uint64 srcChainSelector) internal view override {
         BaseVaultCcipLib._onlyAllowedSender(_baseVaultStorage(), sender, srcChainSelector);
     }
 
-    /// @notice Handles the CCIP EPOCH_NET_DEPOSIT deposit message
-    /// @param $ ChildVaultStorage for nonce and recovery state
-    /// @param $_baseVault BaseVaultStorage for the active strategy adapter and recovery state
+    /// @notice Deposits an inbound CCIP epoch amount into the active strategy or stores recovery on failure
+    /// @param $ ChildVault namespaced storage
+    /// @param $_baseVault BaseVault namespaced storage
     /// @param epochNonce The nonce of the epoch
-    /// @param amount The amount of asset that was bridged to deposit into the active strategy on this child chain
-    /// @dev Only reachable on a ChildVault: the ParentVault sends a CCIP deposit to the active strategy chain
-    ///      when an epoch's net flow is positive (more deposits than withdraws).
+    /// @param amount The amount of underlying asset received for deposit
+    /// @dev Stores epoch deposit recovery and returns normally if the adapter deposit fails
     function _handleCCIPDeposit(
         ChildVaultStorage storage $,
         BaseVaultStorage storage $_baseVault,
@@ -134,14 +145,20 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         }
     }
 
-    /// @notice Sends a ChildVault CCIP message and stores recovery state on failure
-    /// @param bridgeAmount The amount of asset to bridge
+    /// @notice Sends a ChildVault CCIP message or stores recovery if a valid send attempt fails
+    /// @param bridgeAmount The amount of underlying asset to bridge
     /// @param destinationChainSelector The CCIP selector of the destination chain
     /// @param ccipTxType The type of CCIP transaction
     /// @param nonce The epoch nonce (EPOCH_NET_DEPOSIT/EPOCH_NET_WITHDRAW) or rebalance nonce (REBALANCE)
-    /// @param protocolId The target strategy protocol id; only meaningful when ccipTxType is REBALANCE
-    /// @dev Overrides BaseVault::_ccipSend to use a try/catch. (Parent failures use atomic revert)
-    /// @dev Precondition: no recovery state must currently exist
+    /// @param protocolId The target strategy protocol ID; only meaningful when ccipTxType is REBALANCE
+    /// @dev Overrides BaseVault._ccipSend to catch valid send-attempt failures and store them for recovery;
+    ///      ParentVault CCIP send failures revert atomically
+    /// @dev Reverts if a recovery mode is active
+    /// @dev Reverts if bridgeAmount is zero
+    /// @dev Reverts if destinationChainSelector is zero
+    /// @dev Reverts if destinationChainSelector identifies this chain
+    /// @dev Reverts if no crosschain vault is registered for destinationChainSelector
+    /// @dev Stores CCIP-send recovery if fee calculation, token approval, or the router call fails
     function _ccipSend(
         uint256 bridgeAmount,
         uint64 destinationChainSelector,
@@ -151,10 +168,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     ) internal override {
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
         _requireNoRecovery($_baseVault);
-        /// @notice This same check runs again inside BaseVaultCcipLib._send (reached below via
-        ///         tryCcipSend), but it's deliberately duplicated here too, outside the try/catch,
-        ///         so a config error (e.g. an unregistered destination chain) reverts atomically
-        ///         instead of being caught below and misfiled as retryable CCIP send recovery state.
+        // Validate outside try/catch so configuration errors revert instead of being stored as recovery
         //slither-disable-next-line unused-return
         BaseVaultCcipLib._validateCcipSend($_baseVault, bridgeAmount, destinationChainSelector, i_thisChainSelector);
 
@@ -165,12 +179,18 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     }
 
     /// @notice Executes a CCIP send through an external self-call boundary for ChildVault try/catch recovery
-    /// @dev Precondition: caller must be this vault
-    /// @param bridgeAmount The amount of asset to bridge
+    /// @param bridgeAmount The amount of underlying asset to bridge
     /// @param destinationChainSelector The CCIP selector of the destination chain
     /// @param ccipTxType The type of CCIP transaction
     /// @param nonce The epoch nonce (EPOCH_NET_DEPOSIT/EPOCH_NET_WITHDRAW) or rebalance nonce (REBALANCE)
-    /// @param protocolId The target strategy protocol id; only meaningful when ccipTxType is REBALANCE
+    /// @param protocolId The target strategy protocol ID; only meaningful when ccipTxType is REBALANCE
+    /// @dev Reverts if the caller is not this vault
+    /// @dev Reverts if bridgeAmount is zero
+    /// @dev Reverts if destinationChainSelector is zero
+    /// @dev Reverts if destinationChainSelector identifies this chain
+    /// @dev Reverts if no crosschain vault is registered for destinationChainSelector
+    /// @dev Requires successful fee calculation, token approvals, and CCIP router execution
+    /// @dev Requires the vault to hold enough underlying asset and LINK for the transfer and CCIP fee
     function tryCcipSend(
         uint256 bridgeAmount,
         uint64 destinationChainSelector,
@@ -196,13 +216,20 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /*//////////////////////////////////////////////////////////////
                                   CRE
     //////////////////////////////////////////////////////////////*/
-    /// @notice Executes the epoch withdraw from a strategy
+    /// @notice Attempts an epoch withdrawal from the active strategy and sends the assets to the parent vault
     /// @param epochNonce The nonce of the epoch
     /// @param amount The amount of asset to withdraw from the active strategy
-    /// @dev This is called by the WorkflowRouter when net flow is negative (more withdraws than deposits).
-    /// @dev Precondition: Caller must have the EPOCH_OPERATOR_ROLE
-    /// @dev Precondition: the contract must not be paused
-    /// @dev Precondition: epochNonce must be greater than the last epoch nonce handled by this child vault
+    /// @dev Called by the WorkflowRouter when net flow is negative
+    /// @dev Reverts if the caller does not have EPOCH_OPERATOR_ROLE
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if a recovery mode is active
+    /// @dev Reverts if amount is zero
+    /// @dev Reverts if epochNonce is not greater than the last epoch nonce handled by this child vault
+    /// @dev Reverts if a successful strategy withdrawal returns zero assets
+    /// @dev Reverts if no parent vault is registered for the parent chain
+    /// @dev Stores epoch-withdraw recovery if the strategy withdrawal fails
+    /// @dev Stores CCIP-send recovery if a valid CCIP send attempt fails
     function executeEpochWithdraw(uint256 epochNonce, uint256 amount)
         external
         nonReentrant
@@ -226,19 +253,22 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         }
     }
 
-    /// @notice Withdraws the entire tvl from the active strategy protocol adapter and sends it to the new strategy
+    /// @notice Attempts to withdraw the active strategy's entire position and continue the rebalance
     /// @param rebalanceNonce The nonce of the rebalance
     /// @param newStrategy The new strategy to rebalance to
-    /// @dev This is called by the WorkflowRouter.
-    /// @dev This function shouldn't be in BaseVault because if a rebalance needs to be executed on the parent, this
-    ///      is what happens: CRE workflow writes to parent; if parent == strategy, ParentVault.initiateRebalance
-    ///      performs the equivalent withdraw-then-rebalance steps synchronously in the same call instead of via
-    ///      this CRE-triggered function.
-    /// @dev Precondition: caller must have the REBALANCE_OPERATOR_ROLE
-    /// @dev Precondition: rebalanceNonce must be greater than the last rebalance nonce handled by this child vault
-    /// @dev Precondition: call must not be reentered
-    /// @dev Precondition: there must be no existent recovery mode
-    /// @dev Precondition: the contract must not be paused
+    /// @dev Reverts if the caller does not have REBALANCE_OPERATOR_ROLE
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if a recovery mode is active
+    /// @dev Reverts if rebalanceNonce is not greater than the last rebalance nonce handled by this child vault
+    /// @dev Reverts if a successful strategy withdrawal returns zero assets
+    /// @dev Reverts if newStrategy.chainSelector is zero
+    /// @dev If the initial strategy withdrawal succeeds, reverts if a local target protocol has no registered adapter
+    /// @dev If the initial strategy withdrawal succeeds, reverts if the registered local adapter is bound to another vault
+    /// @dev If the initial strategy withdrawal succeeds, reverts if no crosschain vault is registered for a remote target chain
+    /// @dev Stores rebalance-withdraw recovery if the old-strategy withdrawal fails
+    /// @dev Stores rebalance-deposit recovery if a local new-strategy deposit fails
+    /// @dev Stores CCIP-send recovery if a valid CCIP send attempt fails
     function executeRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy)
         external
         nonReentrant
@@ -256,13 +286,13 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         }
     }
 
-    /// @notice Executes a rebalance by attempting to withdraw from the old strategy with _executeWithdraw. If that was successful, then attempts to rebalance with _rebalanceToNewStrategy
+    /// @notice Withdraws the active strategy position and continues the rebalance on success
     /// @param rebalanceNonce The nonce of the rebalance
     /// @param newStrategy The new strategy to rebalance to
-    /// @return success Whether the withdraw from the old strategy succeeded or not
-    /// @return amountRebalanced The amount rebalanced
-    /// @dev The try/catch that handles a failed withdraw from the old strategy lives inside _executeWithdraw;
-    ///      this function branches on its returned `success` flag rather than catching directly.
+    /// @return success Whether the withdrawal from the old strategy succeeded
+    /// @return amountRebalanced The amount of underlying asset withdrawn for the rebalance
+    /// @dev Reverts if a successful strategy withdrawal returns zero assets
+    /// @dev Returns false and emits RebalanceWithdrawFailure if the adapter withdrawal fails
     function _executeRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy)
         internal
         returns (bool success, uint256 amountRebalanced)
@@ -278,12 +308,16 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         }
     }
 
-    /// @notice Rebalances the TVL to the new strategy
+    /// @notice Deposits locally or sends the withdrawn position to a remote strategy chain
     /// @param rebalanceNonce The nonce of the rebalance
-    /// @param tvlToRebalance The TVL amount to rebalance
+    /// @param tvlToRebalance The amount of underlying asset to rebalance
     /// @param newStrategy The new strategy to rebalance to
     /// @param oldAdapter The previously-active strategy adapter, already known by the caller
-    /// @dev Handles a local rebalance on this chain or a crosschain rebalance to the new strategy chain.
+    /// @dev Reverts if a local target protocol has no registered adapter
+    /// @dev Reverts if the registered local adapter is bound to another vault
+    /// @dev Stores rebalance-deposit recovery if a local adapter deposit fails
+    /// @dev Reverts if a remote target chain has no registered crosschain vault
+    /// @dev Stores CCIP-send recovery if a valid remote send attempt fails
     function _rebalanceToNewStrategy(
         uint256 rebalanceNonce,
         uint256 tvlToRebalance,
@@ -317,9 +351,16 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
                                 RECOVERY
     //////////////////////////////////////////////////////////////*/
     /// @notice Executes the active recovery mode, reverting if no recovery is pending
-    /// @dev Precondition: a recovery mode must be active (not NONE)
-    /// @dev Precondition: function must not be reentered
-    /// @dev Precondition: the contract must not be paused
+    /// @dev Permissionless because the operation and all inputs are fixed by stored recovery state
+    /// @dev Reverts if no recovery mode is active
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the active recovery requires a strategy adapter that is not set
+    /// @dev Reverts if the active recovery requires a local target adapter that is not registered
+    /// @dev Reverts if the registered local target adapter is bound to another vault
+    /// @dev Reverts if the active recovery requires an unregistered crosschain vault
+    /// @dev Reverts if a strategy withdrawal used by the active recovery returns zero assets
+    /// @dev Requires any strategy, token, and CCIP interactions used by the active recovery to succeed
     function executeRecovery() external override(BaseVault, IBaseVault) nonReentrant whenNotPaused {
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
         Types.RecoveryMode mode = $_baseVault.s_recoveryMode;
@@ -341,13 +382,11 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     // --- EPOCH DEPOSIT RECOVERY --- //
 
     /// @notice Stores recovery state for a failed epoch deposit
-    /// @param $ ChildVaultStorage
-    /// @param $_baseVault BaseVaultStorage
+    /// @param $ ChildVault namespaced storage
+    /// @param $_baseVault BaseVault namespaced storage
     /// @param epochNonce The epoch nonce of the failed deposit
-    /// @param amount The amount of asset to retry depositing
-    /// @dev amount is already checked non-zero upstream, by `_ccipReceive`'s call to `_validateReceivedTokenAndGetAmount`
-    /// @dev No recovery state must currently exist - already enforced by the sole caller, `_ccipReceive`,
-    ///      which checks `_requireNoRecovery` before this is reached, with no recovery-mutating call in between.
+    /// @param amount The amount of underlying asset to retry depositing
+    /// @dev The caller must ensure amount is nonzero and no other recovery mode is active
     function _storeEpochDepositRecovery(
         ChildVaultStorage storage $,
         BaseVaultStorage storage $_baseVault,
@@ -359,9 +398,12 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         emit EpochDepositRecoveryStored(epochNonce, amount);
     }
 
-    /// @notice Recovers a failed epoch deposit tx
-    /// @param $ ChildVaultStorage
-    /// @param $_baseVault BaseVaultStorage
+    /// @notice Retries a failed epoch deposit into the active strategy
+    /// @param $ ChildVault namespaced storage
+    /// @param $_baseVault BaseVault namespaced storage
+    /// @dev Reverts if the active strategy adapter is not set
+    /// @dev Reverts if the strategy deposit fails
+    /// @dev The caller must ensure epoch deposit recovery is active
     function _recoverFailedEpochDeposit(ChildVaultStorage storage $, BaseVaultStorage storage $_baseVault) internal {
         Types.EpochRecovery memory recovery = $.s_epochDepositRecovery;
         uint256 epochNonce = recovery.epochNonce;
@@ -373,8 +415,8 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     }
 
     /// @notice Clears recovery state for a failed epoch deposit
-    /// @param $ ChildVaultStorage for the epoch deposit recovery state
-    /// @param $_baseVault BaseVaultStorage for recovery mode
+    /// @param $ ChildVault namespaced storage
+    /// @param $_baseVault BaseVault namespaced storage
     /// @param epochNonce The epoch nonce of the recovery being cleared, already known by the caller
     function _clearEpochDepositRecovery(
         ChildVaultStorage storage $,
@@ -389,13 +431,11 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     // --- EPOCH WITHDRAW RECOVERY --- //
 
     /// @notice Stores recovery state for a failed epoch withdraw
-    /// @param $ ChildVaultStorage
-    /// @param $_baseVault BaseVaultStorage
+    /// @param $ ChildVault namespaced storage
+    /// @param $_baseVault BaseVault namespaced storage
     /// @param epochNonce The epoch nonce of the failed withdraw
-    /// @param amount The amount of asset to retry withdrawing
-    /// @dev amount is already checked non-zero upstream, by `executeEpochWithdraw`'s call to `_revertIfZeroAmount`
-    /// @dev No recovery state must currently exist - already enforced by the sole caller, `executeEpochWithdraw`,
-    ///      which checks `_requireNoRecovery` before this is reached, with no recovery-mutating call in between.
+    /// @param amount The amount of underlying asset to retry withdrawing
+    /// @dev The caller must ensure amount is nonzero and no other recovery mode is active
     function _storeEpochWithdrawRecovery(
         ChildVaultStorage storage $,
         BaseVaultStorage storage $_baseVault,
@@ -407,10 +447,15 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         emit EpochWithdrawRecoveryStored(epochNonce, amount);
     }
 
-    /// @notice Recovers a failed epoch withdraw tx
-    /// @param $ ChildVaultStorage
-    /// @param $_baseVault BaseVaultStorage
-    /// @dev Precondition: amountOut from strategy withdraw must not be 0
+    /// @notice Retries a failed epoch withdrawal and sends the withdrawn assets to the parent vault
+    /// @param $ ChildVault namespaced storage
+    /// @param $_baseVault BaseVault namespaced storage
+    /// @dev Reverts if the active strategy adapter is not set
+    /// @dev Reverts if the strategy withdrawal fails
+    /// @dev Reverts if the strategy withdrawal returns zero assets
+    /// @dev Reverts if no parent vault is registered for the parent chain
+    /// @dev Stores CCIP-send recovery if a valid send attempt fails
+    /// @dev The caller must ensure epoch withdraw recovery is active
     function _recoverFailedEpochWithdraw(ChildVaultStorage storage $, BaseVaultStorage storage $_baseVault) internal {
         Types.EpochRecovery memory recovery = $.s_epochWithdrawRecovery;
         uint256 epochNonce = recovery.epochNonce;
@@ -425,8 +470,8 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     }
 
     /// @notice Clears recovery state for a failed epoch withdraw
-    /// @param $ ChildVaultStorage for the epoch withdraw recovery state
-    /// @param $_baseVault BaseVaultStorage for recovery mode
+    /// @param $ ChildVault namespaced storage
+    /// @param $_baseVault BaseVault namespaced storage
     /// @param epochNonce The epoch nonce of the recovery being cleared, already known by the caller
     function _clearEpochWithdrawRecovery(
         ChildVaultStorage storage $,
@@ -441,13 +486,12 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     // --- REBALANCE WITHDRAW RECOVERY --- //
 
     /// @notice Stores recovery state for a failed rebalance withdraw
-    /// @param $ ChildVaultStorage
-    /// @param $_baseVault BaseVaultStorage
+    /// @param $ ChildVault namespaced storage
+    /// @param $_baseVault BaseVault namespaced storage
     /// @param rebalanceNonce The rebalance nonce of the failed withdraw
     /// @param strategy The target strategy to continue the rebalance into after withdraw succeeds
-    /// @dev Precondition: strategy chain selector must not be zero
-    /// @dev No recovery state must currently exist - already enforced by the sole caller, `executeRebalance`,
-    ///      which checks `_requireNoRecovery` before this is reached, with no recovery-mutating call in between.
+    /// @dev Reverts if strategy.chainSelector is zero
+    /// @dev The caller must ensure no other recovery mode is active
     function _storeRebalanceWithdrawRecovery(
         ChildVaultStorage storage $,
         BaseVaultStorage storage $_baseVault,
@@ -462,9 +506,18 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         emit RebalanceWithdrawRecoveryStored(rebalanceNonce, strategy.protocolId, strategy.chainSelector);
     }
 
-    /// @notice Recovers a failed rebalance withdraw tx
-    /// @param $ ChildVaultStorage
-    /// @param $_baseVault BaseVaultStorage
+    /// @notice Retries a failed rebalance withdrawal and continues the rebalance
+    /// @param $ ChildVault namespaced storage
+    /// @param $_baseVault BaseVault namespaced storage
+    /// @dev Reverts if the active strategy adapter is not set
+    /// @dev Reverts if the strategy withdrawal fails
+    /// @dev Reverts if the strategy withdrawal returns zero assets
+    /// @dev Reverts if a recovered local target protocol has no registered adapter
+    /// @dev Reverts if the registered recovered local adapter is bound to another vault
+    /// @dev Reverts if no crosschain vault is registered for a recovered remote target chain
+    /// @dev Stores rebalance-deposit recovery if the recovered local strategy deposit fails
+    /// @dev Stores CCIP-send recovery if a valid recovered remote send attempt fails
+    /// @dev The caller must ensure rebalance withdraw recovery is active
     function _recoverFailedRebalanceWithdraw(ChildVaultStorage storage $, BaseVaultStorage storage $_baseVault)
         internal
     {
@@ -482,8 +535,8 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     }
 
     /// @notice Clears recovery state for a failed rebalance withdraw
-    /// @param $ ChildVaultStorage for the rebalance withdraw recovery state
-    /// @param $_baseVault BaseVaultStorage for recovery mode
+    /// @param $ ChildVault namespaced storage
+    /// @param $_baseVault BaseVault namespaced storage
     /// @param rebalanceNonce The rebalance nonce of the recovery being cleared, already known by the caller
     function _clearRebalanceWithdrawRecovery(
         ChildVaultStorage storage $,
@@ -498,16 +551,13 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     // --- CCIP SEND RECOVERY --- //
 
     /// @notice Stores recovery state for a failed CCIP send
-    /// @param $_baseVault BaseVaultStorage
-    /// @param bridgeAmount The amount of asset that was being bridged
+    /// @param $_baseVault BaseVault namespaced storage
+    /// @param bridgeAmount The amount of underlying asset that was being bridged
     /// @param destinationChainSelector The CCIP selector of the destination chain
     /// @param ccipTxType The type of CCIP transaction
     /// @param nonce The epoch nonce (EPOCH_NET_DEPOSIT/EPOCH_NET_WITHDRAW) or rebalance nonce (REBALANCE)
-    /// @param protocolId The target strategy protocol id; only meaningful when ccipTxType is REBALANCE
-    /// @dev No recovery state must currently exist - already enforced by the sole caller, `_ccipSend`'s own
-    ///      catch block, which checks `_requireNoRecovery` at the top of the same function, immediately
-    ///      before the try/catch; the only intervening action is the CCIP send attempt itself, and
-    ///      `nonReentrant` blocks any reentrant call from mutating recovery state in between.
+    /// @param protocolId The target strategy protocol ID; only meaningful when ccipTxType is REBALANCE
+    /// @dev The caller must ensure no other recovery mode is active
     function _storeCcipSendRecovery(
         BaseVaultStorage storage $_baseVault,
         uint256 bridgeAmount,
@@ -528,7 +578,14 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     }
 
     /// @notice Recovers a failed CCIP send by retrying it
-    /// @param $_baseVault BaseVaultStorage
+    /// @param $_baseVault BaseVault namespaced storage
+    /// @dev Reverts if the stored bridge amount is zero
+    /// @dev Reverts if the stored destination chain selector is zero
+    /// @dev Reverts if the stored destination chain selector identifies this chain
+    /// @dev Reverts if no crosschain vault is registered for the stored destination chain selector
+    /// @dev Requires successful fee calculation, token approvals, and CCIP router execution
+    /// @dev A failed retry restores the cleared recovery state through transaction rollback
+    /// @dev The caller must ensure CCIP send recovery is active
     function _recoverFailedCcipSend(BaseVaultStorage storage $_baseVault) internal {
         // Clear before retry; if CCIP send reverts, EVM atomicity restores this recovery state.
         Types.CcipSendRecovery memory recovery = _clearCcipSendRecovery(_childVaultStorage(), $_baseVault);
@@ -548,8 +605,8 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     }
 
     /// @notice Clears recovery state for a failed CCIP send
-    /// @param $ ChildVaultStorage for Child Recovery state
-    /// @param $_baseVault BaseVaultStorage for recovery mode
+    /// @param $ ChildVault namespaced storage
+    /// @param $_baseVault BaseVault namespaced storage
     /// @return recovery The cleared CCIP send recovery state
     function _clearCcipSendRecovery(ChildVaultStorage storage $, BaseVaultStorage storage $_baseVault)
         internal
@@ -565,9 +622,9 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
                             NONCE HANDLING
     //////////////////////////////////////////////////////////////*/
     /// @notice Validates and stores an epoch nonce as handled by this child vault
-    /// @param $ ChildVaultStorage for handled nonces
+    /// @param $ ChildVault namespaced storage
     /// @param epochNonce The epoch nonce to handle
-    /// @dev Reverts unless epochNonce is greater than the last handled epoch nonce
+    /// @dev Reverts if epochNonce is not greater than the last handled epoch nonce
     function _handleEpochNonce(ChildVaultStorage storage $, uint256 epochNonce) internal {
         uint256 lastHandledNonce = $.s_lastHandledEpochNonce;
         if (epochNonce <= lastHandledNonce) {
@@ -577,9 +634,9 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     }
 
     /// @notice Validates and stores a rebalance nonce as handled by this child vault
-    /// @param $ ChildVaultStorage for handled nonces
+    /// @param $ ChildVault namespaced storage
     /// @param rebalanceNonce The rebalance nonce to handle
-    /// @dev Reverts unless rebalanceNonce is greater than the last handled rebalance nonce
+    /// @dev Reverts if rebalanceNonce is not greater than the last handled rebalance nonce
     function _handleRebalanceNonce(ChildVaultStorage storage $, uint256 rebalanceNonce) internal {
         uint256 lastHandledNonce = $.s_lastHandledRebalanceNonce;
         if (rebalanceNonce <= lastHandledNonce) {
@@ -591,44 +648,55 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /*//////////////////////////////////////////////////////////////
                                  GETTER
     //////////////////////////////////////////////////////////////*/
-    /// @notice Gets the CCIP selector for the parent chain
+    /// @notice Returns the CCIP selector for the parent chain
     /// @return parentChainSelector The CCIP selector for the parent chain
     function getParentChainSelector() external view returns (uint64 parentChainSelector) {
         parentChainSelector = i_parentChainSelector;
     }
 
-    /// @notice Gets the highest epoch nonce handled by this child vault
+    /// @notice Returns the highest epoch nonce handled by this child vault
     /// @return lastHandledEpochNonce The highest handled epoch nonce
     function getLastHandledEpochNonce() external view returns (uint256 lastHandledEpochNonce) {
         lastHandledEpochNonce = _childVaultStorage().s_lastHandledEpochNonce;
     }
 
-    /// @notice Gets the highest rebalance nonce handled by this child vault
+    /// @notice Returns the highest rebalance nonce handled by this child vault
     /// @return lastHandledRebalanceNonce The highest handled rebalance nonce
     function getLastHandledRebalanceNonce() external view returns (uint256 lastHandledRebalanceNonce) {
         lastHandledRebalanceNonce = _childVaultStorage().s_lastHandledRebalanceNonce;
     }
 
-    /// @notice Gets failed epoch deposit recovery state
-    /// @return recovery The stored epoch deposit recovery state
+    /// @notice Returns the failed epoch deposit recovery state
+    /// @return recovery Types.EpochRecovery struct includes:
+    ///         uint256 epochNonce - the nonce of the failed epoch deposit
+    ///         uint256 amount - the amount of underlying asset to retry depositing
     function getEpochDepositRecovery() external view returns (Types.EpochRecovery memory recovery) {
         recovery = _childVaultStorage().s_epochDepositRecovery;
     }
 
-    /// @notice Gets failed epoch withdraw recovery state
-    /// @return recovery The stored epoch withdraw recovery state
+    /// @notice Returns the failed epoch withdraw recovery state
+    /// @return recovery Types.EpochRecovery struct includes:
+    ///         uint256 epochNonce - the nonce of the failed epoch withdrawal
+    ///         uint256 amount - the amount of underlying asset to retry withdrawing
     function getEpochWithdrawRecovery() external view returns (Types.EpochRecovery memory recovery) {
         recovery = _childVaultStorage().s_epochWithdrawRecovery;
     }
 
-    /// @notice Gets failed rebalance withdraw recovery state
-    /// @return recovery The stored rebalance withdraw recovery state
+    /// @notice Returns the failed rebalance withdraw recovery state
+    /// @return recovery Types.RebalanceWithdrawRecovery struct includes:
+    ///         uint256 rebalanceNonce - the nonce of the rebalance
+    ///         Types.Strategy strategy - the target strategy to continue the rebalance into after withdraw succeeds
     function getRebalanceWithdrawRecovery() external view returns (Types.RebalanceWithdrawRecovery memory recovery) {
         recovery = _childVaultStorage().s_rebalanceWithdrawRecovery;
     }
 
-    /// @notice Gets failed CCIP send recovery state
-    /// @return recovery The stored CCIP send recovery state
+    /// @notice Returns the failed CCIP send recovery state
+    /// @return recovery Types.CcipSendRecovery struct includes:
+    ///         uint256 amount - the amount of underlying asset to bridge
+    ///         uint256 nonce - the epoch or rebalance nonce of the failed operation
+    ///         bytes32 protocolId - the target protocol ID for a rebalance, otherwise zero
+    ///         uint64 destinationChainSelector - the CCIP selector of the destination chain
+    ///         Types.CcipTx ccipTxType - the CCIP transaction type to retry
     function getCcipSendRecovery() external view returns (Types.CcipSendRecovery memory recovery) {
         recovery = _childVaultStorage().s_ccipSendRecovery;
     }
@@ -666,13 +734,10 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /*//////////////////////////////////////////////////////////////
                                 OVERRIDE
     //////////////////////////////////////////////////////////////*/
-    /// @notice Gets the Yieldcoin TVL if this chain is the active strategy chain, or 0 if not
-    /// @return tvl The Yieldcoin TVL
-    /// @dev Unlike the Parent Vault implementation, which only includes s_rebalanceDepositRecovery.amount, the
-    ///      Child Vault implementation also includes s_epochDepositRecovery.amount and s_ccipSendRecovery.amount.
-    /// @dev Returns 0 if the TVL has been bridged away with no adapter set; if a rebalance-away CCIP send
-    ///      failed, the stranded funds are still counted via s_ccipSendRecovery.amount. This should not be
-    ///      read onchain when Parent state is REBALANCING.
+    /// @notice Returns the underlying-asset value of this vault's active strategy position
+    /// @return tvl The active position value, or zero when this vault is not on the active strategy chain
+    /// @dev Includes pending epoch-deposit, rebalance-deposit, and CCIP-send recovery amounts held by this vault
+    /// @dev Returns only the pending CCIP-send recovery amount when no active adapter is set
     function _getTVL() internal view override returns (uint256 tvl) {
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
         ChildVaultStorage storage $ = _childVaultStorage();
@@ -682,8 +747,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
             tvl = IProtocolAdapter(activeAdapter).getTVL() + $.s_epochDepositRecovery.amount
                 + $_baseVault.s_rebalanceDepositRecovery.amount + $.s_ccipSendRecovery.amount;
         } else {
-            /// @dev The adapter is cleared before a rebalance-away CCIP send; if that send fails, the funds
-            ///      are still held locally and tracked by s_ccipSendRecovery.amount (0 if no recovery is pending).
+            // The adapter is cleared before a remote rebalance send; a failed send remains locally recoverable
             tvl = $.s_ccipSendRecovery.amount;
         }
     }
@@ -691,8 +755,8 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @notice Sets the active strategy protocol adapter
     /// @param protocolId The protocol ID of the strategy
     /// @return adapter The address of the active strategy protocol adapter
-    /// @dev Precondition: the protocol ID must have a registered adapter
-    /// @dev Precondition: the registered adapter must be bound to this vault
+    /// @dev Reverts if protocolId has no registered adapter
+    /// @dev Reverts if the registered adapter is bound to a different vault
     /// @dev ChildVault has enough bytecode headroom to inline the library implementation,
     ///      which also avoids unresolved external library calls in ChildVault verification.
     function _setActiveAdapter(bytes32 protocolId) internal override returns (address adapter) {
