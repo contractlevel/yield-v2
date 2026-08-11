@@ -130,27 +130,17 @@ contract ParentVault_BaseVaultInitializeUnitTest is BaseVault_InitializeUnitTest
         returns (BaseVault vault)
     {
         ERC1967Proxy parentVaultProxy = new ERC1967Proxy(
-            implementation,
-            abi.encodeWithSelector(
-                ParentVault.initialize.selector,
-                params,
-                i_treasury,
-                i_policyEngineManager,
-                address(s_mockPolicyEngine),
-                i_cancelDepositOperator
-            )
+            implementation, abi.encodeCall(ParentVault.initialize, (params, i_treasury, i_cancelDepositOperator))
         );
         vault = BaseVault(address(parentVaultProxy));
     }
 
     function _initializeVault(BaseVault vault, BaseVault.InitParams memory params) internal override {
-        ParentVault(address(vault))
-            .initialize(params, i_treasury, i_policyEngineManager, address(s_mockPolicyEngine), i_cancelDepositOperator);
+        ParentVault(address(vault)).initialize(params, i_treasury, i_cancelDepositOperator);
     }
 
     function _initializeImplementation(address implementation, BaseVault.InitParams memory params) internal override {
-        ParentVault(implementation)
-            .initialize(params, i_treasury, i_policyEngineManager, address(s_mockPolicyEngine), i_cancelDepositOperator);
+        ParentVault(implementation).initialize(params, i_treasury, i_cancelDepositOperator);
     }
 }
 

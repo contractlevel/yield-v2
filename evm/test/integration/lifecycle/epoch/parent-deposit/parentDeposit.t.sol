@@ -21,7 +21,6 @@ contract ParentDeposit_EpochIntegrationTest is BaseIntegrationTest {
         address aaveV3Pool = parent.aaveV3Adapter.getProtocolPool();
         uint256 poolBalanceBefore = IERC20(parent.asset).balanceOf(aaveV3Pool);
 
-        _registerKyc(i_depositor);
         _fundAndApproveUsdc(i_depositor, DEPOSIT_AMOUNT);
 
         _changePrank(i_depositor);

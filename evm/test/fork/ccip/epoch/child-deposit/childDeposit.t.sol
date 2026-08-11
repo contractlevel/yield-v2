@@ -18,7 +18,6 @@ contract ChildDeposit_CcipForkTest is BaseCcipForkTest {
     function test_CcipFork_epochChildDeposit_RoutesUsdcToChildStrategy() external {
         _selectArbitrumFork();
 
-        _registerKyc(i_depositor);
         _fundAndApproveParentUsdc(i_depositor, DEPOSIT_AMOUNT);
 
         _changePrank(i_depositor);

@@ -16,9 +16,6 @@ contract MultiUser_EpochIntegrationTest is BaseIntegrationTest {
     function setUp() public override {
         super.setUp();
         _deployParent();
-        _registerKyc(i_depositor);
-        _registerKyc(i_recipient1);
-        _registerKyc(i_withdrawer);
         _configureCloseEpochWorkflow(parent.workflowRouter, WORKFLOW_ID, WORKFLOW_NAME, i_owner);
     }
 

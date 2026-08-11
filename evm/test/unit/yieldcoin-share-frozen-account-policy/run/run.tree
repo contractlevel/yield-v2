@@ -1,9 +1,0 @@
-YieldcoinShareFrozenAccountPolicy_run
-├── when parameters are empty
-│   └── it should revert
-├── when parameters include more than one account
-│   └── it should revert
-├── when the account is frozen
-│   └── it should reject the policy run
-└── when the account is not frozen
-    └── it should return Continue

@@ -1,5 +1,0 @@
-TerminalAllowPolicy_run
-├── when parameters are not empty
-│   └── it should revert
-└── when parameters are empty
-    └── it should return Allowed

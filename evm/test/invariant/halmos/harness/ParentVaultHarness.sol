@@ -12,13 +12,7 @@ import {ParentVaultMathLib} from "../../../../src/libraries/vaults/ParentVaultMa
 ///      mappings avoids stdstore, which relies on vm.record() — a cheatcode
 ///      unsupported by Halmos.
 contract ParentVaultHarness is ParentVault {
-    constructor(
-        BaseVault.ConstructorParams memory params,
-        address treasury,
-        address share,
-        address policyEngineManager,
-        address policyEngine
-    ) ParentVault(params, share) {}
+    constructor(BaseVault.ConstructorParams memory params, address share) ParentVault(params, share) {}
 
     function setEpochStatus(uint256 nonce, Types.EpochStatus status) external {
         _parentVaultStorage().s_epochs[nonce].status = status;

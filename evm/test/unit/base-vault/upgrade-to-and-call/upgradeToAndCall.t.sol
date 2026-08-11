@@ -32,6 +32,12 @@ contract ChildVaultV2 is ChildVault {
     }
 }
 
+contract BaseVaultInvalidProxiableUUID {
+    function proxiableUUID() external pure returns (bytes32) {
+        return bytes32(uint256(1));
+    }
+}
+
 abstract contract BaseVault_UpgradeToAndCallUnitTest is BaseUnitTest {
     function _deployImplementation() internal virtual returns (address);
 
@@ -50,8 +56,11 @@ abstract contract BaseVault_UpgradeToAndCallUnitTest is BaseUnitTest {
         BaseVault proxy = _getProxy();
         uint256 defaultCcipGasLimitBefore = proxy.getDefaultCcipGasLimit();
         bool hasPauserRole = proxy.hasRole(Roles.PAUSER_ROLE, i_pauser);
+        bool hasUnpauserRole = proxy.hasRole(Roles.UNPAUSER_ROLE, i_unpauser);
+        bool hasConfigOperatorRole = proxy.hasRole(Roles.CONFIG_OPERATOR_ROLE, i_configOperator);
         bool hasUpgraderRole = proxy.hasRole(Roles.UPGRADER_ROLE, i_upgrader);
         bool hasDefaultAdminRole = proxy.hasRole(Roles.DEFAULT_ADMIN_ROLE, i_owner);
+        bool pausedBefore = proxy.paused();
 
         address newImpl = _deployImplementation();
         _changePrank(i_upgrader);
@@ -59,8 +68,11 @@ abstract contract BaseVault_UpgradeToAndCallUnitTest is BaseUnitTest {
 
         assertEq(proxy.getDefaultCcipGasLimit(), defaultCcipGasLimitBefore);
         assertEq(proxy.hasRole(Roles.PAUSER_ROLE, i_pauser), hasPauserRole);
+        assertEq(proxy.hasRole(Roles.UNPAUSER_ROLE, i_unpauser), hasUnpauserRole);
+        assertEq(proxy.hasRole(Roles.CONFIG_OPERATOR_ROLE, i_configOperator), hasConfigOperatorRole);
         assertEq(proxy.hasRole(Roles.UPGRADER_ROLE, i_upgrader), hasUpgraderRole);
         assertEq(proxy.hasRole(Roles.DEFAULT_ADMIN_ROLE, i_owner), hasDefaultAdminRole);
+        assertEq(proxy.paused(), pausedBefore);
     }
 
     function test_BaseVault_upgradeToAndCall_RevertWhen_CallerDoesNotHaveUPGRADER_ROLE() external {
@@ -81,6 +93,24 @@ abstract contract BaseVault_UpgradeToAndCallUnitTest is BaseUnitTest {
 
         vm.expectRevert(UUPSUpgradeable.UUPSUnauthorizedCallContext.selector);
         BaseVault(payable(implementation)).upgradeToAndCall(newImpl, "");
+    }
+
+    function test_BaseVault_upgradeToAndCall_RevertWhen_NewImplementationHasNoCode() external {
+        address newImpl = makeAddr("new implementation");
+
+        _changePrank(i_upgrader);
+        vm.expectRevert();
+        _getProxy().upgradeToAndCall(newImpl, "");
+    }
+
+    function test_BaseVault_upgradeToAndCall_RevertWhen_ProxiableUUIDIsInvalid() external {
+        address newImpl = address(new BaseVaultInvalidProxiableUUID());
+
+        _changePrank(i_upgrader);
+        vm.expectRevert(
+            abi.encodeWithSelector(UUPSUpgradeable.UUPSUnsupportedProxiableUUID.selector, bytes32(uint256(1)))
+        );
+        _getProxy().upgradeToAndCall(newImpl, "");
     }
 
     function test_BaseVault_upgradeToAndCall_RevertWhen_ReinitializeAfterUpgrade() external {
@@ -105,14 +135,7 @@ contract ParentVault_BaseVaultUpgradeToAndCallUnitTest is BaseVault_UpgradeToAnd
     }
 
     function _callInitializeOnProxy(BaseVault proxy) internal override {
-        ParentVault(address(proxy))
-            .initialize(
-                _baseVaultInitParams(),
-                i_treasury,
-                i_policyEngineManager,
-                address(s_mockPolicyEngine),
-                i_cancelDepositOperator
-            );
+        ParentVault(address(proxy)).initialize(_baseVaultInitParams(), i_treasury, i_cancelDepositOperator);
     }
 
     function test_ParentVault_UPGRADE_007_upgradeToAndCall_Success_PreservesLifecycleState() external {

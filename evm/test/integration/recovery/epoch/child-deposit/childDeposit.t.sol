@@ -18,7 +18,6 @@ contract ChildDeposit_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         uint256 childPoolBalanceBefore = IERC20(parent.asset).balanceOf(childPool);
 
         MockAaveV3Pool(childPool).setSupplyReverts(true);
-        _registerKyc(i_depositor);
         _fundAndApproveUsdc(i_depositor, DEPOSIT_AMOUNT);
 
         _changePrank(i_depositor);

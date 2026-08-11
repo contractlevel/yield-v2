@@ -4,14 +4,14 @@ This document summarizes the main threat surfaces for Yieldcoin v2 and the contr
 
 ## 1. System scope
 
-Yieldcoin v2 is a multichain yield vault. Users interact with `ParentVault` on the parent chain. Capital is deployed through protocol adapters either on the parent chain or on child chains through CCIP. Chainlink CRE drives epoch settlement and rebalancing through `WorkflowRouter`. ACE gates user access and share-token transfers.
+Yieldcoin v2 is a multichain yield vault. Users interact with `ParentVault` on the parent chain. Capital is deployed through protocol adapters either on the parent chain or on child chains through CCIP. Chainlink CRE drives epoch settlement and rebalancing through `WorkflowRouter`.
 
 Primary assets at risk:
 
 - Underlying asset held transiently in vaults or deployed through adapters.
 - Yieldcoin share accounting in `ParentVault`.
 - User ability to deposit, withdraw, claim, cancel, and transfer shares.
-- Privileged control over workflow routing, adapters, pauses, upgrades, temporary break-glass role grants, and compliance configuration.
+- Privileged control over workflow routing, adapters, pauses, upgrades, and temporary break-glass role grants.
 
 ## 2. Trust boundaries
 
@@ -20,7 +20,6 @@ Primary assets at risk:
 - **Underlying asset issuer.** The initial underlying asset is USDC, whose issuer can blacklist addresses or pause transfers. See [KI-002](./KNOWN_ISSUES.md#ki-002--underlying-asset-issuer-can-blacklist-or-pause-the-protocol).
 - **CRE and WorkflowRouter.** CRE supplies trusted TVL inputs and workflow-triggered actions. `WorkflowRouter` is the on-chain ingress for Keystone Forwarder reports and validates workflow metadata and selector allowlists before dispatching to the vault.
 - **CCIP.** CCIP transports messages and tokens between parent and child vaults. Vaults validate the decoded sender against the configured crosschain vault for the source chain selector.
-- **ACE policy system.** ACE gates user-facing vault functions and share-token transfers. Policy configuration is a privileged operational surface covered by [KI-001](./KNOWN_ISSUES.md#ki-001--centralized-trust-in-privileged-operatoradmin-roles).
 - **Off-chain yield data.** The DefiLlama relay informs rebalance decisions, but does not directly write on-chain state. CRE and on-chain allowlists constrain what can be executed.
 
 ## 3. Main threat surfaces
@@ -40,7 +39,7 @@ Residual risk remains inherent to the product: Yieldcoin v2 cannot guarantee sol
 
 ### 3.2 Privileged operator/admin compromise
 
-A compromised privileged signer can misconfigure roles, workflow metadata/selectors, adapter mappings, supported protocols, pause controls, temporary break-glass authority, policy wiring, or upgrade authority within that role's scope. See [KI-001](./KNOWN_ISSUES.md#ki-001--centralized-trust-in-privileged-operatoradmin-roles).
+A compromised privileged signer can misconfigure roles, workflow metadata/selectors, adapter mappings, supported protocols, pause controls, temporary break-glass authority, or upgrade authority within that role's scope. See [KI-001](./KNOWN_ISSUES.md#ki-001--centralized-trust-in-privileged-operatoradmin-roles).
 
 Code-level mitigations include role separation, explicit role checks, `AccessControlDefaultAdminRules` on native components, narrow workflow ingress through `WorkflowRouter`, and adapter/vault binding checks.
 
@@ -66,6 +65,14 @@ Adapters are the boundary between vault accounting and external protocol mechani
 
 Mitigations include `onlyVault` adapter entry points, vault-bound adapter registration checks, supported-protocol checks for rebalances, protocol-specific withdraw amount validation, and invariant/test coverage for adapter registration and active-strategy consistency. Registered adapters remain a trusted component of the system.
 
+### 3.7 Permissionless third-party supplies can influence strategy TVL
+
+Supported lending markets allow a third party to supply underlying assets on behalf of an adapter. This increases the adapter's raw protocol balance and reported TVL without passing through the vault's deposit accounting. If CRE includes that balance when closing an epoch, the unsolicited supply can affect epoch pricing, shares minted to depositors, assets allocated to withdrawers, and fee accounting.
+
+Epoch batching prevents the standard single-transaction flash-loan donation attack because the third party cannot withdraw funds credited to the adapter. A third party can nevertheless use real capital to influence accounting. Operators should monitor lending-market supply events that credit adapter addresses and alert on unexpected adapter TVL increases, then investigate unexplained changes before epoch close where operationally feasible.
+
+See [KI-008](./KNOWN_ISSUES.md#ki-008--strategy-tvl-can-include-permissionless-third-party-supplies) for the full analysis, residual risk, and revisit conditions.
+
 ## 4. Verifiable controls
 
 Auditors should verify these controls against code and tests:
@@ -75,7 +82,7 @@ Auditors should verify these controls against code and tests:
 - CCIP receivers validate the source chain selector and decoded sender against registered crosschain vaults.
 - Parent/local strategy failures revert atomically; child asynchronous failures store typed recovery state for retry.
 - `executeRecovery()` is permissionless, requires an active recovery mode, and consumes only stored recovery state.
-- User-facing vault functions and share transfers are ACE-gated where intended.
+- Share minting and burning require roles held by `ParentVault`; pausing `YieldcoinShare` blocks transfers, minting, and burning while leaving approvals available.
 - Adapters are registered, vault-bound, and callable only by their vault.
 - UUPS upgrades are restricted by the configured upgrade authority.
 

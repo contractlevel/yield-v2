@@ -1,0 +1,8 @@
+YieldcoinShare_unpause
+├── when the caller does not have UNPAUSER_ROLE
+│   └── it should revert with AccessControlUnauthorizedAccount
+├── when the token is unpaused
+│   └── it should revert with ExpectedPause
+└── when the caller has UNPAUSER_ROLE and the token is paused
+    ├── it should unpause the token
+    └── it should emit Unpaused

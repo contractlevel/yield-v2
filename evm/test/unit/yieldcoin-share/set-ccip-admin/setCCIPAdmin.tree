@@ -1,6 +1,8 @@
 YieldcoinShare_setCCIPAdmin
+  ├── when the caller does not have CONFIG_OPERATOR_ROLE
+  │   └── it should revert with AccessControlUnauthorizedAccount
   ├── when the new admin is the zero address
   │   └── it should revert with YieldcoinShare__NoZeroAddress
-  └── when the policy allows the call
+  └── when the call is valid
       ├── it should update the CCIP admin
       └── it should emit a CCIPAdminTransferred event

@@ -20,7 +20,6 @@ contract ParentWithdraw_EpochIntegrationTest is BaseIntegrationTest {
         _deployParent();
 
         s_aaveV3Pool = parent.aaveV3Adapter.getProtocolPool();
-        _registerKyc(i_depositor);
         _configureCloseEpochWorkflow(parent.workflowRouter, WORKFLOW_ID, WORKFLOW_NAME, i_owner);
         s_shareAmount = _depositAndClaimShares();
     }

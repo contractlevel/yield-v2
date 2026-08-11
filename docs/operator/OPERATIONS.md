@@ -2,8 +2,6 @@
 
 This runbook covers normal public operator responsibilities for Yieldcoin v2. Use placeholder addresses in public docs unless a deployment intentionally publishes real addresses.
 
-Before operating a production deployment, complete every gate in [`LAUNCH_REQUIREMENTS`](./LAUNCH_REQUIREMENTS.md), including obtaining the required Chainlink ACE production licence grant.
-
 Potential post-MVP work is tracked separately in the [`ROADMAP`](../protocol/ROADMAP.md).
 
 // @review seal 911/usmans msig series - https://x.com/0xusmanf/status/2078584503350776182
@@ -21,7 +19,6 @@ Operators should monitor:
 - CRE workflow execution status;
 - CCIP message status and LINK balances;
 - adapter registration and active strategy TVL;
-- ACE policy wiring and provider availability.
 
 ## CRE Service Quotas
 
@@ -58,7 +55,7 @@ Recovery callers must not choose arbitrary amounts, destinations, strategies, re
 
 ## Pauses And Escalation
 
-Use pause controls according to role assignments in [`ACCESS_CONTROL_MATRIX`](../security/ACCESS_CONTROL_MATRIX.md). Escalate unusual states, external protocol failures, compromised keys, incorrect TVL, CCIP disruption, or ACE policy issues through [`INCIDENT_RESPONSE`](./INCIDENT_RESPONSE.md).
+Use pause controls according to role assignments in [`ACCESS_CONTROL_MATRIX`](../security/ACCESS_CONTROL_MATRIX.md). Escalate unusual states, external protocol failures, compromised keys, incorrect TVL, or CCIP disruption through [`INCIDENT_RESPONSE`](./INCIDENT_RESPONSE.md).
 
 ## Paused Cross-Chain Execution
 
@@ -90,4 +87,4 @@ Before temporarily unpausing a vault, pause the normal `WorkflowRouter` or revok
 
 When destination execution reverts because the vault is paused, validate and manually execute the CCIP message after the destination is unpaused. Verify its source chain, sender, token, amount, transaction type, nonce, and protocol ID. Do not repeat the originating withdrawal or rebalance call. Confirm the destination vault and recovery state before restoring automation.
 
-For exact protocol flows, see [`PATHS`](../protocol/PATHS.md). For accepted risks and liveness dependencies, see [`KNOWN_ISSUES`](../security/KNOWN_ISSUES.md). For pre-launch gating requirements, see [`LAUNCH_REQUIREMENTS`](./LAUNCH_REQUIREMENTS.md).
+For exact protocol flows, see [`PATHS`](../protocol/PATHS.md). For accepted risks and liveness dependencies, see [`KNOWN_ISSUES`](../security/KNOWN_ISSUES.md).

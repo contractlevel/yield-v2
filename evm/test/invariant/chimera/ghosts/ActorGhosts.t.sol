@@ -18,7 +18,6 @@ abstract contract ActorGhosts is Setup {
         _addActor(i_recipient2);
 
         for (uint256 i; i < s_actors.length; ++i) {
-            _registerKyc(s_actors[i]);
             MockUSDC(parent.vault.getAsset()).mint(s_actors[i], INVARIANT_ACTOR_USDC_BALANCE);
             _changePrank(s_actors[i]);
             IERC20(parent.vault.getAsset()).approve(address(parent.vault), type(uint256).max);

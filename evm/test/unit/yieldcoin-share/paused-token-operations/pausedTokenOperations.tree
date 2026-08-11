@@ -1,0 +1,11 @@
+YieldcoinShare_pausedTokenOperations
+├── when transfer is called
+│   └── it should revert with EnforcedPause
+├── when transferFrom is called
+│   └── it should revert with EnforcedPause
+├── when mint is called
+│   └── it should revert with EnforcedPause
+├── when burn is called
+│   └── it should revert with EnforcedPause
+└── when approve is called
+    └── it should succeed because approvals do not change balances

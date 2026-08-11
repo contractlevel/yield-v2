@@ -221,7 +221,7 @@ interface IParentVault is IBaseVault {
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the current epoch is not open
     /// @dev Reverts if user has no deposit in the current epoch
-    /// @dev Deliberately callable while paused and not subject to the caller's attached ACE policies
+    /// @dev Deliberately callable while paused
     function forceCancelDeposit(address user) external;
 
     /*//////////////////////////////////////////////////////////////
@@ -233,7 +233,6 @@ interface IParentVault is IBaseVault {
     /// @dev Reverts if amount is less than the minimum deposit amount
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the vault is paused
-    /// @dev Reverts if the call is rejected by the attached ACE policies
     /// @dev Reverts if the current epoch is not open
     /// @dev Requires the caller to have sufficient underlying-asset balance and allowance for amount
     function deposit(uint256 amount) external returns (uint256 epochNonce);
@@ -244,7 +243,6 @@ interface IParentVault is IBaseVault {
     /// @dev Reverts if shareBurnAmount is zero
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the vault is paused
-    /// @dev Reverts if the call is rejected by the attached ACE policies
     /// @dev Reverts if the current epoch is not open
     /// @dev Requires the caller to have sufficient share balance and allowance for shareBurnAmount
     function withdraw(uint256 shareBurnAmount) external returns (uint256 epochNonce);
@@ -254,7 +252,6 @@ interface IParentVault is IBaseVault {
     /// @return shareMintAmount The amount of Yieldcoin shares minted for the deposit
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the vault is paused
-    /// @dev Reverts if the call is rejected by the attached ACE policies
     /// @dev Reverts if the epoch is not claimable
     /// @dev Reverts if the caller has no deposit in the epoch
     function claimShares(uint256 epochNonce) external returns (uint256 shareMintAmount);
@@ -264,16 +261,13 @@ interface IParentVault is IBaseVault {
     /// @return withdrawAmount The amount of underlying asset transferred to the withdrawer
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the vault is paused
-    /// @dev Reverts if the call is rejected by the attached ACE policies
     /// @dev Reverts if the epoch is not claimable
     /// @dev Reverts if the caller has no withdraw intent in the epoch
-    /// @dev Reverts if burning the escrowed shares is rejected by the share token's attached ACE policies
     function claimAsset(uint256 epochNonce) external returns (uint256 withdrawAmount);
 
     /// @notice Cancels and refunds the caller's deposit in the current open epoch
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the vault is paused
-    /// @dev Reverts if the call is rejected by the attached ACE policies
     /// @dev Reverts if the current epoch is not open
     /// @dev Reverts if the caller has no deposit in the current epoch
     function cancelDeposit() external;
@@ -281,7 +275,6 @@ interface IParentVault is IBaseVault {
     /// @notice Cancels the caller's withdraw intent in the current open epoch and returns the escrowed shares
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the vault is paused
-    /// @dev Reverts if the call is rejected by the attached ACE policies
     /// @dev Reverts if the current epoch is not open
     /// @dev Reverts if the caller has no withdraw intent in the current epoch
     function cancelWithdraw() external;

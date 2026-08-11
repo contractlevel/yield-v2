@@ -11,6 +11,16 @@ import {ParentVaultMathLib} from "./ParentVaultMathLib.sol";
 /// @notice Handles ParentVault fee accounting while ParentVault keeps lifecycle orchestration
 /// @dev Public library functions are linked by Solidity and execute by DELEGATECALL in the ParentVault context
 library ParentVaultFeesLib {
+    struct PerformanceFeeParams {
+        uint256 epochNonce;
+        uint256 tvl;
+        uint256 grossPricePerShare;
+        uint256 totalShares;
+        address share;
+        uint256 sharePrecision;
+        uint256 assetPrecision;
+    }
+
     /*//////////////////////////////////////////////////////////////
                                CONSTANTS
     //////////////////////////////////////////////////////////////*/
@@ -206,22 +216,39 @@ library ParentVaultFeesLib {
         uint256 sharePrecision,
         uint256 assetPrecision
     ) internal returns (uint256 settlementPricePerShare, uint256 feeShares) {
-        uint256 highWaterMark = $.s_performanceFeeHighWaterMark;
-        if (grossPricePerShare <= highWaterMark) return (grossPricePerShare, 0);
+        PerformanceFeeParams memory params = PerformanceFeeParams({
+            epochNonce: epochNonce,
+            tvl: tvl,
+            grossPricePerShare: grossPricePerShare,
+            totalShares: totalShares,
+            share: share,
+            sharePrecision: sharePrecision,
+            assetPrecision: assetPrecision
+        });
+        return _collectPerformanceFee($, params);
+    }
 
-        uint256 yieldPerShare = grossPricePerShare - highWaterMark;
-        uint256 totalYield = ParentVaultMathLib._mulDivUp(yieldPerShare, totalShares, sharePrecision);
+    function _collectPerformanceFee(ParentVaultStore.ParentVaultStorage storage $, PerformanceFeeParams memory params)
+        internal
+        returns (uint256 settlementPricePerShare, uint256 feeShares)
+    {
+        uint256 highWaterMark = $.s_performanceFeeHighWaterMark;
+        if (params.grossPricePerShare <= highWaterMark) return (params.grossPricePerShare, 0);
+
+        uint256 yieldPerShare = params.grossPricePerShare - highWaterMark;
+        uint256 totalYield = ParentVaultMathLib._mulDivUp(yieldPerShare, params.totalShares, params.sharePrecision);
         uint256 fee = ParentVaultMathLib._mulDivUp(totalYield, PERFORMANCE_FEE_BPS, BPS_DENOMINATOR);
 
-        if (fee >= tvl) {
-            return (grossPricePerShare, 0);
+        if (fee >= params.tvl) {
+            return (params.grossPricePerShare, 0);
         }
 
-        feeShares = ParentVaultMathLib._mulDivUp(fee, totalShares, tvl - fee);
+        feeShares = ParentVaultMathLib._mulDivUp(fee, params.totalShares, params.tvl - fee);
 
-        uint256 newTotalShares = totalShares + feeShares;
+        uint256 newTotalShares = params.totalShares + feeShares;
 
-        settlementPricePerShare = _calculatePricePerShare(tvl, newTotalShares, sharePrecision, assetPrecision);
+        settlementPricePerShare =
+            _calculatePricePerShare(params.tvl, newTotalShares, params.sharePrecision, params.assetPrecision);
         // feeShares rounds up and the settlement price rounds down, so dilution can land the
         // settlement price a dust amount below the high water mark; only ever raise it (FEE-003)
         if (settlementPricePerShare > highWaterMark) {
@@ -229,8 +256,8 @@ library ParentVaultFeesLib {
         }
 
         if (feeShares != 0) {
-            emit PerformanceFeeCollected(epochNonce, feeShares, settlementPricePerShare);
-            IShare(share).mint($.s_treasury, feeShares);
+            emit PerformanceFeeCollected(params.epochNonce, feeShares, settlementPricePerShare);
+            IShare(params.share).mint($.s_treasury, feeShares);
         }
     }
 }

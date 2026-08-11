@@ -3,12 +3,15 @@ ParentVault_deployment
 │   └── it should grant expected vault roles
 ├── proxy
 │   ├── it should deploy vault as separate implementation and proxy contracts
-│   └── it should initialize share owner to the upgrader address
+│   └── it should hand off vault default admin
 ├── core addresses
 │   └── it should configure vault addresses from deployment config
+├── share
+│   └── it should configure share initial state
 ├── adapters
 │   ├── it should register Aave V3, Aave V4, and Compound V3 adapters
-│   └── it should configure deployed adapters
+│   ├── it should configure deployed adapters
+│   └── it should configure AdapterRegistry roles
 ├── protocol support
 │   └── it should support Aave V3, Aave V4, and Compound V3 protocol IDs
 ├── CCIP config
@@ -16,10 +19,5 @@ ParentVault_deployment
 │   └── it should leave the parent chain selector unregistered
 ├── initial active adapter
 │   └── it should set Aave V3 as the initial active adapter
-├── workflow router
-│   └── it should configure constructor-granted router roles
-└── ACE components
-    ├── it should attach and configure the deployed policy engine
-    ├── it should register ParentVault KYC
-    ├── it should remove temporary deployer registry write permission
-    └── it should hand off ACE roles
+└── workflow router
+    └── it should configure constructor-granted router roles

@@ -20,27 +20,10 @@ import {IProtocolAdapter} from "../src/interfaces/adapters/IProtocolAdapter.sol"
 import {IAaveV4Spoke} from "../src/interfaces/external/IAaveV4Spoke.sol";
 import {Roles} from "../src/libraries/Roles.sol";
 
-import {CredentialRegistry} from "@chainlink/cross-chain-identity/CredentialRegistry.sol";
-import {IdentityRegistry} from "@chainlink/cross-chain-identity/IdentityRegistry.sol";
-import {
-    CredentialRegistryIdentityValidatorPolicy
-} from "@chainlink/cross-chain-identity/CredentialRegistryIdentityValidatorPolicy.sol";
-import {PolicyEngine} from "@chainlink/policy-management/core/PolicyEngine.sol";
-import {OnlyAuthorizedSenderPolicy} from "@chainlink/policy-management/policies/OnlyAuthorizedSenderPolicy.sol";
-import {RoleBasedAccessControlPolicy} from "@chainlink/policy-management/policies/RoleBasedAccessControlPolicy.sol";
-
-import {
-    CredentialRegistryAccountListValidatorPolicy
-} from "../src/modules/policies/CredentialRegistryAccountListValidatorPolicy.sol";
-import {TerminalAllowPolicy} from "../src/modules/policies/TerminalAllowPolicy.sol";
-import {YieldcoinShareFrozenAccountPolicy} from "../src/modules/policies/YieldcoinShareFrozenAccountPolicy.sol";
-
 abstract contract BaseDeploymentTest is BaseTest {
     struct Parent {
         address link;
         address asset;
-        bytes32 vaultCcid;
-        bytes32 treasuryCcid;
         address aaveV3PoolAddressesProvider;
         address aaveV4Spoke;
         address compoundV3Comet;
@@ -54,15 +37,6 @@ abstract contract BaseDeploymentTest is BaseTest {
         AaveV4Adapter aaveV4Adapter;
         CompoundV3Adapter compoundV3Adapter;
         WorkflowRouter workflowRouter;
-        PolicyEngine policyEngine;
-        IdentityRegistry identityRegistry;
-        CredentialRegistry credentialRegistry;
-        YieldcoinShareFrozenAccountPolicy vaultFrozenAccountPolicy;
-        CredentialRegistryIdentityValidatorPolicy vaultKycPolicy;
-        CredentialRegistryAccountListValidatorPolicy shareKycPolicy;
-        RoleBasedAccessControlPolicy shareSupplyPolicy;
-        OnlyAuthorizedSenderPolicy providerPolicy;
-        TerminalAllowPolicy terminalAllow;
     }
 
     struct Child {
@@ -118,8 +92,6 @@ abstract contract BaseDeploymentTest is BaseTest {
         parent_ = Parent({
             link: parentDeployment.link,
             asset: parentDeployment.asset,
-            vaultCcid: parentDeployment.vaultCcid,
-            treasuryCcid: parentDeployment.treasuryCcid,
             aaveV3PoolAddressesProvider: parentDeployment.aaveV3PoolAddressesProvider,
             aaveV4Spoke: parentDeployment.aaveV4Spoke,
             compoundV3Comet: parentDeployment.compoundV3Comet,
@@ -132,16 +104,7 @@ abstract contract BaseDeploymentTest is BaseTest {
             aaveV3Adapter: parentDeployment.aaveV3Adapter,
             aaveV4Adapter: parentDeployment.aaveV4Adapter,
             compoundV3Adapter: parentDeployment.compoundV3Adapter,
-            workflowRouter: parentDeployment.workflowRouter,
-            policyEngine: parentDeployment.policyEngine,
-            identityRegistry: parentDeployment.identityRegistry,
-            credentialRegistry: parentDeployment.credentialRegistry,
-            vaultFrozenAccountPolicy: parentDeployment.vaultFrozenAccountPolicy,
-            vaultKycPolicy: parentDeployment.vaultKycPolicy,
-            shareKycPolicy: parentDeployment.shareKycPolicy,
-            shareSupplyPolicy: parentDeployment.shareSupplyPolicy,
-            providerPolicy: parentDeployment.providerPolicy,
-            terminalAllow: parentDeployment.terminalAllow
+            workflowRouter: parentDeployment.workflowRouter
         });
     }
 
@@ -246,14 +209,6 @@ abstract contract BaseDeploymentTest is BaseTest {
     function _labelParentIntegrationContracts() internal virtual {
         vm.label(address(parent.vault), "Integration ParentVault");
         vm.label(address(parent.share), "Integration YieldcoinShare");
-        vm.label(address(parent.policyEngine), "Integration PolicyEngine");
-        vm.label(address(parent.identityRegistry), "Integration IdentityRegistry");
-        vm.label(address(parent.credentialRegistry), "Integration CredentialRegistry");
-        vm.label(address(parent.vaultFrozenAccountPolicy), "Integration ParentVault Freeze Policy");
-        vm.label(address(parent.vaultKycPolicy), "Integration ParentVault KYC Policy");
-        vm.label(address(parent.shareKycPolicy), "Integration Share KYC Policy");
-        vm.label(address(parent.shareSupplyPolicy), "Integration Share RBAC Policy");
-        vm.label(address(parent.terminalAllow), "Integration TerminalAllowPolicy");
     }
 
     function _labelChildIntegrationContracts() internal virtual {

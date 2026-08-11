@@ -6,21 +6,14 @@ import {ParentVault} from "../../../src/vaults/ParentVault.sol";
 import {BaseVault} from "../../../src/vaults/BaseVault.sol";
 import {BaseVaultStrategyLib} from "../../../src/libraries/vaults/BaseVaultStrategyLib.sol";
 import {BaseVaultCcipLib} from "../../../src/libraries/vaults/BaseVaultCcipLib.sol";
-import {ParentVaultRebalanceLib} from "../../../src/libraries/vaults/ParentVaultRebalanceLib.sol";
 import {Types} from "../../../src/libraries/Types.sol";
 import {Roles} from "../../../src/libraries/Roles.sol";
-import {IPolicyProtected} from "@chainlink/policy-management/interfaces/IPolicyProtected.sol";
 
 contract ParentVaultHarness is ParentVault, HelperHarness {
     bytes32 private constant INITIALIZABLE_STORAGE =
         0xf0c57e16840df040f15088dc2f81fe391c3923bec73e23a9662efc9c229c6a00;
 
     constructor(BaseVault.ConstructorParams memory params, address share) ParentVault(params, share) {}
-
-    /// @dev Override _runPolicyBefore/_runPolicyAfter to avoid external policy engine calls.
-    ///      PolicyProtected logic is verified separately in ParentVault-specific specs.
-    function _runPolicyBefore() internal override {}
-    function _runPolicyAfter() internal override {}
 
     function initializeBaseVault(BaseVault.InitParams memory params) external initializer {
         __BaseVault_init(params);
@@ -107,23 +100,6 @@ contract ParentVaultHarness is ParentVault, HelperHarness {
         adapter = BaseVaultStrategyLib._setActiveAdapter(_baseVaultStorage(), protocolId, i_adapterRegistry, address(this));
     }
 
-    /// @dev Avoid unresolved public library calls while exercising the identical implementation.
-    function _finalizeRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy) internal override {
-        ParentVaultRebalanceLib._finalizeRebalance(
-            _parentVaultStorage(), i_share, rebalanceNonce, newStrategy, false
-        );
-    }
-
-    /// @dev Avoid unresolved public library calls while exercising the identical implementation.
-    function _finalizeLocalToLocalRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy)
-        internal
-        override
-    {
-        ParentVaultRebalanceLib._finalizeRebalance(
-            _parentVaultStorage(), i_share, rebalanceNonce, newStrategy, true
-        );
-    }
-
     function requireNoRecovery() external view {
         _requireNoRecovery(_baseVaultStorage());
     }
@@ -138,10 +114,6 @@ contract ParentVaultHarness is ParentVault, HelperHarness {
 
     function getRecoveryAmount() external view returns (uint256) {
         return _baseVaultStorage().s_rebalanceDepositRecovery.amount;
-    }
-
-    function policyProtectedInterfaceId() external pure returns (bytes4) {
-        return type(IPolicyProtected).interfaceId;
     }
 
     function CANCEL_DEPOSIT_OPERATOR_ROLE() external pure returns (bytes32) {

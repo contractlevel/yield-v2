@@ -37,7 +37,6 @@ abstract contract BaseRecoveryIntegrationTest is BaseIntegrationTest {
     }
 
     function _depositAndClaimParentLocalShares() internal returns (uint256 shareAmount) {
-        _registerKyc(i_depositor);
         _fundAndApproveUsdc(i_depositor, DEPOSIT_AMOUNT);
 
         _changePrank(i_depositor);

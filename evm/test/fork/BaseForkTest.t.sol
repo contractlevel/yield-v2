@@ -115,14 +115,6 @@ abstract contract BaseForkTest is BaseDeploymentTest {
         vm.makePersistent(address(forkParent.vaultImpl));
         vm.makePersistent(address(forkParent.vault));
         vm.makePersistent(address(forkParent.workflowRouter));
-        vm.makePersistent(address(forkParent.policyEngine));
-        vm.makePersistent(address(forkParent.identityRegistry));
-        vm.makePersistent(address(forkParent.credentialRegistry));
-        vm.makePersistent(address(forkParent.vaultKycPolicy));
-        vm.makePersistent(address(forkParent.shareKycPolicy));
-        vm.makePersistent(address(forkParent.shareSupplyPolicy));
-        vm.makePersistent(address(forkParent.providerPolicy));
-        vm.makePersistent(address(forkParent.terminalAllow));
         if (address(forkParent.aaveV3Adapter) != address(0)) vm.makePersistent(address(forkParent.aaveV3Adapter));
         if (address(forkParent.aaveV4Adapter) != address(0)) vm.makePersistent(address(forkParent.aaveV4Adapter));
         if (address(forkParent.compoundV3Adapter) != address(0)) {

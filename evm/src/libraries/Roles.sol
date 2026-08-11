@@ -13,7 +13,7 @@ library Roles {
     bytes32 internal constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     /// @notice Role authorized to unpause Yieldcoin v2 contracts
     bytes32 internal constant UNPAUSER_ROLE = keccak256("UNPAUSER_ROLE");
-    /// @notice Role authorized to update vault, router, registry, and ACE-gated token configuration
+    /// @notice Role authorized to update vault, router, registry, and token configuration
     bytes32 internal constant CONFIG_OPERATOR_ROLE = keccak256("CONFIG_OPERATOR_ROLE");
     /// @notice Role authorizing WorkflowRouter to execute vault rebalance operations
     bytes32 internal constant REBALANCE_OPERATOR_ROLE = keccak256("REBALANCE_OPERATOR_ROLE");
@@ -21,15 +21,11 @@ library Roles {
     bytes32 internal constant EPOCH_OPERATOR_ROLE = keccak256("EPOCH_OPERATOR_ROLE");
     /// @notice Role authorized to withdraw LINK from Yieldcoin v2 vaults
     bytes32 internal constant LINK_OPERATOR_ROLE = keccak256("LINK_OPERATOR_ROLE");
-    /// @notice Role authorized through ACE for forced transfers and account or balance freezing
-    bytes32 internal constant COMPLIANCE_OPERATOR_ROLE = keccak256("COMPLIANCE_OPERATOR_ROLE");
     /// @notice Role authorizing the Chainlink Keystone Forwarder to call WorkflowRouter.onReport
     bytes32 internal constant KEYSTONE_FORWARDER_ROLE = keccak256("KEYSTONE_FORWARDER_ROLE");
-    /// @notice Role authorized to replace attached ACE policy engines
-    bytes32 internal constant POLICY_ENGINE_MANAGER_ROLE = keccak256("POLICY_ENGINE_MANAGER_ROLE");
-    /// @notice Role used by ACE policy configuration to authorize ParentVault to mint Yieldcoin shares
+    /// @notice Role authorizing ParentVault to mint Yieldcoin shares
     bytes32 internal constant MINTER_ROLE = keccak256("MINTER_ROLE");
-    /// @notice Role used by ACE policy configuration to authorize ParentVault to burn Yieldcoin shares
+    /// @notice Role authorizing ParentVault to burn Yieldcoin shares
     bytes32 internal constant BURNER_ROLE = keccak256("BURNER_ROLE");
     /// @notice Role authorized to claim Compound v3 rewards through CompoundV3Adapter
     bytes32 internal constant REWARDS_OPERATOR_ROLE = keccak256("REWARDS_OPERATOR_ROLE");

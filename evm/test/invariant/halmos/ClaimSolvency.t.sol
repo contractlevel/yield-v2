@@ -8,7 +8,6 @@ import {Types} from "../../../src/libraries/Types.sol";
 
 import {ParentVaultHarness} from "./harness/ParentVaultHarness.sol";
 import {MockYieldcoinShare} from "../../mocks/MockYieldcoinShare.sol";
-import {MockPolicyEngine} from "../../mocks/MockPolicyEngine.sol";
 import {MockUSDC} from "../../mocks/MockUSDC.sol";
 
 /// @notice Claim solvency proofs: the deposit-side and withdraw-side counter pairs
@@ -20,14 +19,12 @@ contract ClaimSolvency is Test {
     address internal constant STUB = address(1);
 
     MockYieldcoinShare internal s_mockShare;
-    MockPolicyEngine internal s_mockPolicyEngine;
     MockUSDC internal s_mockUsdc;
     ParentVaultHarness internal s_vault;
 
     function setUp() public {
         s_mockUsdc = new MockUSDC();
         s_mockShare = new MockYieldcoinShare();
-        s_mockPolicyEngine = new MockPolicyEngine();
 
         s_vault = new ParentVaultHarness(
             BaseVault.ConstructorParams({
@@ -37,10 +34,7 @@ contract ClaimSolvency is Test {
                 adapterRegistry: STUB,
                 thisChainSelector: uint64(1)
             }),
-            STUB, // treasury
-            address(s_mockShare),
-            STUB, // policyEngineManager
-            address(s_mockPolicyEngine)
+            address(s_mockShare)
         );
         // setInitialActiveProtocolAdapter intentionally skipped:
         // claimShares and claimAsset do not touch the protocol adapter.

@@ -6,7 +6,7 @@ solc = "0.8.34"
 optimizer = true
 # @review-deploy before production deployment
 optimizer_runs = 777
-via_ir = true
+via_ir = false
 no_match_contract = "CryticTester"
 
 [invariant]

@@ -1,72 +1,131 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.34;
 
-import {ComplianceTokenERC3643} from "@chainlink/tokens/erc-3643/src/ComplianceTokenERC3643.sol";
+import {IShare} from "../interfaces/token/IShare.sol";
+import {Roles} from "../libraries/Roles.sol";
 import {YieldcoinShareStore} from "./YieldcoinShareStore.sol";
 
 import {
+    AccessControlDefaultAdminRulesUpgradeable
+} from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
+import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {
     ReentrancyGuardTransientUpgradeable
 } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardTransientUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-/// @title YieldcoinShare
+/// @title Yieldcoin v2 Share Token
 /// @author @contractlevel
-/// @notice Compliance-ready share token for the Yieldcoin v2 system
-/// @dev Does not inherit IShare because not all required ComplianceTokenERC3643 functions can be overridden to
-///      resolve the interface inheritance
-//slither-disable-next-line missing-inheritance
-contract YieldcoinShare is ComplianceTokenERC3643, YieldcoinShareStore, ReentrancyGuardTransientUpgradeable {
+/// @notice Upgradeable ERC20 token representing shares in Yieldcoin v2
+/// @dev Minting and burning are restricted to their respective roles
+/// @dev Pausing disables transfers, minting, and burning while leaving approvals available
+contract YieldcoinShare is
+    IShare,
+    YieldcoinShareStore,
+    ERC20Upgradeable,
+    PausableUpgradeable,
+    AccessControlDefaultAdminRulesUpgradeable,
+    ReentrancyGuardTransientUpgradeable,
+    UUPSUpgradeable
+{
     /*//////////////////////////////////////////////////////////////
-                                 ERRORS
+                               CONSTANTS
     //////////////////////////////////////////////////////////////*/
-    /// @dev Thrown when the zero address is provided for required configuration
-    error YieldcoinShare__NoZeroAddress();
-    /// @dev Thrown to permanently prevent renouncing ownership, which would irrecoverably disable UUPS upgrades
-    error YieldcoinShare__CannotRenounceOwnership();
-    /// @dev Thrown when the inherited ComplianceTokenERC3643 initializer is called; YieldcoinShare
-    ///      must only be initialized through its own initialize(address,address,address)
-    error YieldcoinShare__InvalidInitialize();
-
-    /*//////////////////////////////////////////////////////////////
-                                 EVENTS
-    //////////////////////////////////////////////////////////////*/
-    /// @notice Emitted when the CCIP token admin identity changes
-    /// @param previousAdmin The previous CCIP admin
-    /// @param newAdmin The new CCIP admin
-    event CCIPAdminTransferred(address indexed previousAdmin, address indexed newAdmin);
+    /// @dev Initial delay for transferring the default admin role
+    uint48 internal constant INITIAL_DEFAULT_ADMIN_ROLE_TRANSFER_DELAY = 0;
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
     /// @notice Disables initialization of the implementation contract
-    /// @dev The token must be initialized through a proxy
+    /// @dev The proxy must be initialized through `initialize`
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
 
-    /*//////////////////////////////////////////////////////////////
-                               INITIALIZE
-    //////////////////////////////////////////////////////////////*/
-    /// @notice Initializes the YieldcoinShare token and sets the initial CCIP admin and UUPS upgrader
-    /// @param policyEngine The Chainlink ACE PolicyEngine
-    /// @param initialCcipAdmin The initial Chainlink CCIP token admin identity
-    /// @param upgrader The address authorized to upgrade this contract through UUPS
-    /// @dev Reverts if policyEngine is the zero address
-    /// @dev Reverts if initialCcipAdmin is the zero address
-    /// @dev Reverts if upgrader is the zero address
-    /// @dev Reverts if the proxy is already initialized
-    /// @dev Reverts if the function is called on the implementation contract
+    /// @notice Initializes the token, CCIP admin, and role-based access control
+    /// @param defaultAdmin The initial default admin
+    /// @param pauser The address authorized to pause the token
+    /// @param unpauser The address authorized to unpause the token
+    /// @param configOperator The address authorized to update token configuration
+    /// @param initialCcipAdmin The initial Chainlink CCIP token administrator
+    /// @param upgrader The address authorized to upgrade the token implementation
+    /// @dev Reverts if any address parameter is the zero address
     /// @dev Reverts if the call is reentered
-    /// @dev Reverts if attaching policyEngine fails
-    function initialize(address policyEngine, address initialCcipAdmin, address upgrader)
-        external
-        nonReentrant
-        initializer
-    {
-        if (upgrader == address(0)) revert YieldcoinShare__NoZeroAddress();
-        _validatePolicyEngine(policyEngine);
-        __ComplianceTokenERC3643_init("Yieldcoin", "YIELD", 18, policyEngine);
+    /// @dev Sets the token name to Yieldcoin, symbol to YIELD, and decimals to 18
+    function initialize(
+        address defaultAdmin,
+        address pauser,
+        address unpauser,
+        address configOperator,
+        address initialCcipAdmin,
+        address upgrader
+    ) external nonReentrant initializer {
+        _revertIfZeroAddress(defaultAdmin);
+        _revertIfZeroAddress(pauser);
+        _revertIfZeroAddress(unpauser);
+        _revertIfZeroAddress(configOperator);
+        _revertIfZeroAddress(initialCcipAdmin);
+        _revertIfZeroAddress(upgrader);
+
+        __ERC20_init("Yieldcoin", "YIELD");
+        __Pausable_init();
+        __AccessControlDefaultAdminRules_init(INITIAL_DEFAULT_ADMIN_ROLE_TRANSFER_DELAY, defaultAdmin);
+        __ReentrancyGuardTransient_init();
+        __UUPSUpgradeable_init();
+
+        _grantRole(Roles.PAUSER_ROLE, pauser);
+        _grantRole(Roles.UNPAUSER_ROLE, unpauser);
+        _grantRole(Roles.CONFIG_OPERATOR_ROLE, configOperator);
+        _grantRole(Roles.UPGRADER_ROLE, upgrader);
         _setCCIPAdmin(initialCcipAdmin);
-        _transferOwnership(upgrader);
+    }
+
+    /// @notice Validates that a required address is nonzero
+    /// @param value The address to validate
+    /// @dev Reverts if value is the zero address
+    function _revertIfZeroAddress(address value) internal pure {
+        if (value == address(0)) revert YieldcoinShare__NoZeroAddress();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                                EXTERNAL
+    //////////////////////////////////////////////////////////////*/
+    /// @notice Mints shares to an address
+    /// @param to The address to mint shares to
+    /// @param amount The amount of shares to mint
+    /// @dev Reverts if the caller does not have MINTER_ROLE
+    /// @dev Reverts if to is the zero address
+    /// @dev Reverts if the token is paused
+    function mint(address to, uint256 amount) external onlyRole(Roles.MINTER_ROLE) {
+        _mint(to, amount);
+    }
+
+    /// @notice Burns shares from an address
+    /// @param user The address to burn shares from
+    /// @param amount The amount of shares to burn
+    /// @dev Reverts if the caller does not have BURNER_ROLE
+    /// @dev Reverts if user is the zero address
+    /// @dev Reverts if amount exceeds the user's share balance
+    /// @dev Reverts if the token is paused
+    function burn(address user, uint256 amount) external onlyRole(Roles.BURNER_ROLE) {
+        _burn(user, amount);
+    }
+
+    /// @notice Pauses transfers, minting, and burning
+    /// @dev Reverts if the caller does not have PAUSER_ROLE
+    /// @dev Reverts if the token is already paused
+    function pause() external onlyRole(Roles.PAUSER_ROLE) {
+        _pause();
+    }
+
+    /// @notice Unpauses transfers, minting, and burning
+    /// @dev Reverts if the caller does not have UNPAUSER_ROLE
+    /// @dev Reverts if the token is not paused
+    function unpause() external onlyRole(Roles.UNPAUSER_ROLE) {
+        _unpause();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -74,36 +133,22 @@ contract YieldcoinShare is ComplianceTokenERC3643, YieldcoinShareStore, Reentran
     //////////////////////////////////////////////////////////////*/
     /// @notice Sets the Chainlink CCIP token admin identity
     /// @param newAdmin The new CCIP admin
-    /// @dev Reverts if the call is rejected by the attached ACE policies
+    /// @dev Reverts if the caller does not have CONFIG_OPERATOR_ROLE
     /// @dev Reverts if newAdmin is the zero address
-    /// @dev The deployment configures RoleBasedAccessControlPolicy to require CONFIG_OPERATOR_ROLE
-    function setCCIPAdmin(address newAdmin) external runPolicy {
+    function setCCIPAdmin(address newAdmin) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
         _setCCIPAdmin(newAdmin);
     }
 
-    /// @notice Sets the stored CCIP admin and emits CCIPAdminTransferred
-    /// @param newAdmin The new CCIP admin
+    /// @notice Updates the Chainlink CCIP token administrator
+    /// @param newAdmin The new CCIP token administrator
     /// @dev Reverts if newAdmin is the zero address
     function _setCCIPAdmin(address newAdmin) internal {
-        if (newAdmin == address(0)) revert YieldcoinShare__NoZeroAddress();
+        _revertIfZeroAddress(newAdmin);
 
-        YieldcoinShareStorage storage $ = getYieldcoinShareStorage();
+        YieldcoinShareStorage storage $ = _yieldcoinShareStorage();
         address previousAdmin = $.ccipAdmin;
         $.ccipAdmin = newAdmin;
         emit CCIPAdminTransferred(previousAdmin, newAdmin);
-    }
-
-    /// @notice Attaches a policy engine through ACE policy authorization
-    /// @param policyEngine The new policy engine
-    /// @dev Reverts if the call is rejected by the currently attached ACE policies
-    /// @dev Reverts if policyEngine is the zero address
-    /// @dev Reverts if attaching the new policy engine fails
-    /// @dev Failure to detach the previous policy engine does not revert; the inherited implementation emits
-    ///      PolicyEngineDetachFailed instead
-    /// @dev The deployment configures RoleBasedAccessControlPolicy to require POLICY_ENGINE_MANAGER_ROLE
-    function attachPolicyEngine(address policyEngine) external override runPolicy {
-        _validatePolicyEngine(policyEngine);
-        _attachPolicyEngine(policyEngine);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -111,30 +156,20 @@ contract YieldcoinShare is ComplianceTokenERC3643, YieldcoinShareStore, Reentran
     //////////////////////////////////////////////////////////////*/
     /// @notice Returns the Chainlink CCIP token admin identity
     /// @return ccipAdmin The stored CCIP admin
-    function getCCIPAdmin() public view override returns (address ccipAdmin) {
-        ccipAdmin = getYieldcoinShareStorage().ccipAdmin;
+    function getCCIPAdmin() external view returns (address ccipAdmin) {
+        ccipAdmin = _yieldcoinShareStorage().ccipAdmin;
     }
 
     /*//////////////////////////////////////////////////////////////
                                 OVERRIDE
     //////////////////////////////////////////////////////////////*/
-    /// @notice Prevents the UUPS upgrader from renouncing ownership
-    /// @dev Reverts on every call because renouncing ownership would irrecoverably remove upgrade authority
-    ///      Use transferOwnership to rotate the upgrader key instead.
-    ///
-    /// @dev WARNING: transferOwnership (inherited from OwnableUpgradeable) is a single-step transfer
-    ///      with no confirmation from the new owner. Sending to an incorrect or uncontrolled address
-    ///      permanently removes upgrade capability with no recovery path. Rotate keys with extreme care.
-    function renounceOwnership() public pure override {
-        revert YieldcoinShare__CannotRenounceOwnership();
-    }
+    /// @notice Authorizes a UUPS implementation upgrade
+    /// @dev Reverts if the caller does not have UPGRADER_ROLE
+    function _authorizeUpgrade(address) internal override onlyRole(Roles.UPGRADER_ROLE) {}
 
-    /// @notice Prevents initialization through the inherited ComplianceTokenERC3643 initializer
-    /// @dev Reverts on every call. ComplianceTokenERC3643 declares this initializer as public virtual, so it
-    ///      remains an independently-callable selector unless overridden. YieldcoinShare must only
-    ///      be initialized through initialize(address,address,address) above.
-    /// @dev All inputs are ignored
-    function initialize(string calldata, string calldata, uint8, address) public pure override {
-        revert YieldcoinShare__InvalidInitialize();
+    /// @notice Applies ERC20 balance and supply updates while the token is unpaused
+    /// @dev Covers transfers, minting, and burning
+    function _update(address from, address to, uint256 value) internal override whenNotPaused {
+        super._update(from, to, value);
     }
 }

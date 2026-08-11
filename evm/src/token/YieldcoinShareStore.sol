@@ -3,14 +3,13 @@ pragma solidity 0.8.34;
 
 /// @title YieldcoinShareStore
 /// @author @contractlevel
-/// @notice Stores YieldcoinShare-specific state outside the inherited ACE token storage
+/// @notice ERC-7201 storage for YieldcoinShare-specific state
 contract YieldcoinShareStore {
     /// @custom:storage-location erc7201:yieldcoin.storage.YieldcoinShare
     /// @notice Namespaced storage for the YieldcoinShare token's Chainlink CCIP admin identity
     /// @param ccipAdmin The CCIP admin identity returned by getCCIPAdmin(), which may be used as part of
     ///      future Cross-Chain Token registration. Set initially by initialize() and subsequently through the
-    ///      ACE-policy-protected setCCIPAdmin() function; the deployment configures setCCIPAdmin() to require
-    ///      CONFIG_OPERATOR_ROLE.
+    ///      role-protected setCCIPAdmin() function.
     struct YieldcoinShareStorage {
         address ccipAdmin;
     }
@@ -22,7 +21,7 @@ contract YieldcoinShareStore {
 
     /// @notice Returns the YieldcoinShare namespaced storage pointer
     /// @return $ The YieldcoinShare namespaced storage pointer
-    function getYieldcoinShareStorage() internal pure returns (YieldcoinShareStorage storage $) {
+    function _yieldcoinShareStorage() internal pure returns (YieldcoinShareStorage storage $) {
         //slither-disable-next-line assembly
         assembly {
             $.slot := YIELDCOIN_SHARE_STORAGE_LOCATION

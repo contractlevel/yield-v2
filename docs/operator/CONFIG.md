@@ -15,8 +15,7 @@ For the full authority model, use [`ACCESS_CONTROL_MATRIX`](../security/ACCESS_C
   - [Pause Controls](#pause-controls)
   - [Adapter Registry Configuration](#adapter-registry-configuration)
   - [Operational Functions](#operational-functions)
-  - [Token and Policy Configuration](#token-and-policy-configuration)
-  - [Policy Engine Replacement](#policy-engine-replacement)
+  - [Token Configuration](#token-configuration)
   - [Rewards](#rewards)
   - [Upgrades and Role Administration](#upgrades-and-role-administration)
 
@@ -33,12 +32,10 @@ For the full authority model, use [`ACCESS_CONTROL_MATRIX`](../security/ACCESS_C
 | `DEFAULT_ADMIN_ROLE`              | Grant and revoke local roles. It should not be used for routine protocol operation.                                                                    |
 | `CONFIG_OPERATOR_ROLE`            | Maintain vault, router, registry, token metadata, CCIP, treasury, and supported protocol configuration.                                                |
 | `PAUSER_ROLE` / `UNPAUSER_ROLE`   | Pause and unpause vaults, router, and token where configured.                                                                                          |
-| `POLICY_ENGINE_MANAGER_ROLE`      | Replace the policy engine attached to policy-protected contracts.                                                                                      |
 | `LINK_OPERATOR_ROLE`              | Withdraw unused LINK from vault contracts.                                                                                                             |
 | `REWARDS_OPERATOR_ROLE`           | Claim protocol rewards from supported adapters, currently Compound V3.                                                                                 |
 | `CANCEL_DEPOSIT_OPERATOR_ROLE`    | Force-cancel a stuck current-epoch deposit to preserve liveness.                                                                                       |
-| `COMPLIANCE_OPERATOR_ROLE`        | Perform token compliance actions through ACE RBAC. See [`COMPLIANCE`](./COMPLIANCE.md).                                                                |
-| `UPGRADER_ROLE` / token `owner()` | Upgrade UUPS implementations. See [`UPGRADES`](./UPGRADES.md).                                                                                         |
+| `UPGRADER_ROLE`                   | Upgrade UUPS implementations. See [`UPGRADES`](./UPGRADES.md).                                                                                         |
 | `EPOCH_OPERATOR_ROLE`             | Execute epoch settlement. This role is intended for [`WorkflowRouter`](../../evm/src/modules/WorkflowRouter.sol), not a routine human operator wallet. |
 | `REBALANCE_OPERATOR_ROLE`         | Execute strategy rebalances. This role is intended for `WorkflowRouter`, not a routine human operator wallet.                                          |
 
@@ -59,7 +56,7 @@ Vault configuration exists on both [`ParentVault`](../../evm/src/vaults/ParentVa
 
 Before changing cross-chain vaults or gas limits, confirm there is no active rebalance, no epoch waiting on cross-chain execution, and no stored recovery that depends on the old route. Removing a cross-chain vault can orphan in-flight CCIP messages.
 
-Before changing the treasury, verify the address is controlled by the intended custody process and authorized by the ACE compliance process.
+Before changing the treasury, verify the address is controlled by the intended custody process.
 
 ## Workflow Router Configuration
 
@@ -80,8 +77,8 @@ Registering a workflow ID, or updating the metadata of one that is still registe
 
 | Function    | Role            | Applies to                                                                 | Purpose                                                                          |
 | ----------- | --------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `pause()`   | `PAUSER_ROLE`   | Parent vault, child vault, WorkflowRouter, YieldcoinShare through ACE RBAC | Stops the protected contract path during incidents or controlled maintenance.    |
-| `unpause()` | `UNPAUSER_ROLE` | Parent vault, child vault, WorkflowRouter, YieldcoinShare through ACE RBAC | Resumes operation after the condition that required the pause has been resolved. |
+| `pause()`   | `PAUSER_ROLE`   | Parent vault, child vault, WorkflowRouter, and YieldcoinShare | Stops the protected contract path during incidents or controlled maintenance.    |
+| `unpause()` | `UNPAUSER_ROLE` | Parent vault, child vault, WorkflowRouter, and YieldcoinShare | Resumes operation after the condition that required the pause has been resolved. |
 
 Vault pause state blocks normal user, epoch, rebalance, recovery, and inbound CCIP flows. Two ParentVault functions remain callable while paused because they perform only local finalization of already-confirmed work: `completeEpochDeposit()` finalizes the most recently closed remote net-deposit epoch, and `completeRebalance()` finalizes an in-progress rebalance. Their role and state-machine checks still apply.
 
@@ -104,33 +101,20 @@ Before changing an adapter, verify it is deployed for the correct vault and unde
 
 `withdrawLink(amount)` only moves LINK, not the underlying asset. LINK is still operationally important because CCIP sends depend on LINK balances.
 
-`forceCancelDeposit(user)` is a narrow epoch-liveness tool and should not be used as a normal user-support or compliance-bypass path. Its operational rationale is documented in [DD-012](../protocol/DECISIONS.md#dd-012---forcecanceldeposit-is-a-narrow-epoch-liveness-tool).
+`forceCancelDeposit(user)` is a narrow epoch-liveness tool and should not be used as a normal user-support path. Its operational rationale is documented in [DD-012](../protocol/DECISIONS.md#dd-012---forcecanceldeposit-is-a-narrow-epoch-liveness-tool).
 
-## Token and Policy Configuration
+## Token Configuration
 
-[`YieldcoinShare`](../../evm/src/token/YieldcoinShare.sol) uses Chainlink ACE policy checks for most token-level operations. For the detailed compliance model, see [`COMPLIANCE`](./COMPLIANCE.md). For the role model, see [`ACCESS_CONTROL_MATRIX`](../security/ACCESS_CONTROL_MATRIX.md#yieldcoinshare).
+[`YieldcoinShare`](../../evm/src/token/YieldcoinShare.sol) is an upgradeable ERC-20 share token governed by local OpenZeppelin access-control roles. For the role model, see [`ACCESS_CONTROL_MATRIX`](../security/ACCESS_CONTROL_MATRIX.md#yieldcoinshare).
 
-| Function or authority                | Control                                                      | Purpose                                                          |
-| ------------------------------------ | ------------------------------------------------------------ | ---------------------------------------------------------------- |
-| `setCCIPAdmin(newAdmin)`             | ACE RBAC `CONFIG_OPERATOR_ROLE`                              | Sets the stored Chainlink CCIP token admin identity.             |
-| `setName(...)` / `setSymbol(...)`    | ACE RBAC `CONFIG_OPERATOR_ROLE`                              | Updates token metadata when allowed by policy.                   |
-| `attachPolicyEngine(policyEngine)`   | ACE RBAC `POLICY_ENGINE_MANAGER_ROLE`                        | Replaces the policy engine attached to the token.                |
-| `pause()` / `unpause()`              | ACE RBAC `PAUSER_ROLE` / `UNPAUSER_ROLE`                     | Pauses or unpauses token behavior through the token policy path. |
-| forced transfer and freeze functions | ACE RBAC `COMPLIANCE_OPERATOR_ROLE`                          | Executes compliance operations.                                  |
-| `mint(...)` / `burn(...)`            | ACE RBAC `MINTER_ROLE` / `BURNER_ROLE` held by `ParentVault` | Allows the vault flow to mint and burn shares.                   |
+| Function or authority              | Control                                                    | Purpose                                                               |
+| ---------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------- |
+| `setCCIPAdmin(newAdmin)`           | `CONFIG_OPERATOR_ROLE`                                     | Sets the stored Chainlink CCIP token admin identity.                  |
+| `pause()` / `unpause()`            | `PAUSER_ROLE` / `UNPAUSER_ROLE`                            | Pauses or unpauses transfers, minting, and burning.                   |
+| `mint(...)` / `burn(...)`          | `MINTER_ROLE` / `BURNER_ROLE` held by `ParentVault`        | Allows the parent-vault flow to mint and burn shares.                 |
+| UUPS implementation upgrade       | `UPGRADER_ROLE`                                            | Authorizes an upgrade to a compatible token implementation.          |
 
 `setCCIPAdmin(newAdmin)` is not currently used by live Yieldcoin share-token flows. It is included so the protocol can later enable CCIP functionality for `YieldcoinShare` without changing the token's admin model.
-
-Policy wiring is administered through `PolicyEngine.ADMIN_ROLE`. Policy internals, including RBAC operation allowances and role membership, are administered through `PolicyEngine.POLICY_CONFIG_ADMIN_ROLE`.
-
-## Policy Engine Replacement
-
-| Function                           | Control                               | Contract       | Purpose                                                  |
-| ---------------------------------- | ------------------------------------- | -------------- | -------------------------------------------------------- |
-| `attachPolicyEngine(policyEngine)` | Local `POLICY_ENGINE_MANAGER_ROLE`    | Parent vault   | Replaces the policy engine attached to the parent vault. |
-| `attachPolicyEngine(policyEngine)` | ACE RBAC `POLICY_ENGINE_MANAGER_ROLE` | YieldcoinShare | Replaces the policy engine attached to the share token.  |
-
-Policy engine replacement is a high-risk operation. The replacement engine should already have the intended policy wiring before it is attached, otherwise protected functions can unexpectedly revert or lose intended checks.
 
 ## Rewards
 
@@ -142,7 +126,7 @@ Beyond this ability to claim, COMP rewards handling is not explicitly part of th
 
 ## Upgrades and Role Administration
 
-UUPS vault upgrades are authorized by `UPGRADER_ROLE`. `YieldcoinShare` upgrade authority is its inherited `owner()`, which should be treated as the token upgrader authority and not as general token administration.
+UUPS vault and `YieldcoinShare` upgrades are authorized by `UPGRADER_ROLE`.
 
 Local `DEFAULT_ADMIN_ROLE` holders grant and revoke local roles with inherited `grantRole(...)` and `revokeRole(...)`. They should not be routine operators for vault, router, registry, or incident-response actions. Use the access matrix to verify the intended holder and scope before changing any role.
 

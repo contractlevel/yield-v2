@@ -33,7 +33,7 @@ See [ACCESS_CONTROL_MATRIX - Vault Recovery](../security/ACCESS_CONTROL_MATRIX.m
 
 Parent vault epoch, rebalance, fee, CCIP, and user-epoch logic is split into libraries to manage bytecode size and keep verification targets smaller.
 
-The libraries contain accounting and validation logic. The vault contracts retain external orchestration, role checks, policy checks, strategy calls, CCIP calls, and recovery entry points.
+The libraries contain accounting and validation logic. The vault contracts retain external orchestration, role checks, strategy calls, CCIP calls, and recovery entry points.
 
 This split is an implementation boundary, not a trust boundary: linked libraries execute in the vault context.
 
@@ -123,35 +123,19 @@ See [INVARIANTS - Rebalance Lifecycle And TVL](../security/INVARIANTS.md#rebalan
 
 ## DD-012 - `forceCancelDeposit` Is A Narrow Epoch-Liveness Tool
 
-`forceCancelDeposit(user)` allows `CANCEL_DEPOSIT_OPERATOR_ROLE` to remove and refund a user's deposit from the current open epoch without the user's participation or an ACE policy check.
+`forceCancelDeposit(user)` allows `CANCEL_DEPOSIT_OPERATOR_ROLE` to remove and refund a user's deposit from the current open epoch without the user's participation.
 
-This authority exists because an individual deposit can produce a zero-share allocation at settlement and cause the entire epoch close to revert. The operator can remove that deposit so settlement can proceed for the epoch. The function is not intended as a routine user-support path or a general compliance override.
+This authority exists because an individual deposit can produce a zero-share allocation at settlement and cause the entire epoch close to revert. The operator can remove that deposit so settlement can proceed for the epoch. The function is not intended as a routine user-support path.
 
 No equivalent forced withdrawal-cancellation or forced claim functions are provided. Those positions do not create the same zero-share epoch-settlement failure, so they do not justify expanding operator authority over user positions.
 
 See [ACCESS_CONTROL_MATRIX - Authority Matrix](../security/ACCESS_CONTROL_MATRIX.md#authority-matrix) and [CONFIG - Operational Functions](../operator/CONFIG.md#operational-functions).
 
-## DD-013 - Compliance Freezes Block Vault User Actions Until Unfrozen
-
-All direct `ParentVault` user functions enforce the configured ACE compliance policy. A frozen user cannot deposit, withdraw, claim shares or assets, or cancel an open deposit or withdrawal until an authorized compliance operator unfreezes the account.
-
-This is the intended effect of a compliance freeze. Open intents and settled claims remain recorded for the user; freezing does not delete, reassign, or settle them through an alternate privileged vault path. Once the account is unfrozen and satisfies the remaining configured policies, the user can resume the normal cancel or claim flow.
-
-`forceCancelDeposit(user)` does not change this policy. Its separate, narrow epoch-liveness purpose is documented in [DD-012](#dd-012---forcecanceldeposit-is-a-narrow-epoch-liveness-tool).
-
-See [COMPLIANCE - ParentVault User Functions](../operator/COMPLIANCE.md#parentvault-user-functions).
-
-## DD-014 - Trusted Configuration Setters Are Idempotent
+## DD-013 - Trusted Configuration Setters Are Idempotent
 
 Trusted configuration setters may accept and re-emit an unchanged value. This keeps configuration behavior consistent and operationally idempotent. Event consumers must not assume every setter event represents a value transition.
 
-## DD-015 - YieldcoinShare Policy Engine Replacement Uses ACE Authorization
-
-`YieldcoinShare.attachPolicyEngine` is intentionally authorized by the currently attached ACE policy engine. During normal operation, `POLICY_ENGINE_MANAGER_ROLE` can replace the engine without a contract upgrade.
-
-If the current engine cannot authorize its replacement, recovery requires an owner-authorized UUPS upgrade. The independent upgrader is the break-glass authority for this failure mode.
-
-## DD-016 - `executeRebalance` Trusts CRE-Supplied Target Strategy
+## DD-014 - `executeRebalance` Trusts CRE-Supplied Target Strategy
 
 `ChildVault.executeRebalance(rebalanceNonce, newStrategy)` does not independently verify `newStrategy` against `ParentVault.s_rebalance.pendingStrategy` before withdrawing from the old strategy and routing funds toward it.
 
@@ -162,3 +146,7 @@ This is the same trust class as [DD-006](#dd-006---closeepoch-trusts-cre-supplie
 Because there is no contract-side backstop here, correctness depends entirely on the CRE `RebalanceExecutor` sub-workflow deriving `newStrategy` from a value it can trust — in practice, reading it directly from the `RebalanceInitiated(rebalanceNonce, protocolId, chainSelector)` event that triggered the workflow, rather than re-deriving or caching it from other state. Get this wrong in the workflow and there is no on-chain check that will catch it.
 
 See [DD-005](#dd-005---cre-is-the-automation-and-tvl-reporting-layer), [DD-006](#dd-006---closeepoch-trusts-cre-supplied-tvl), and [KI-007](../security/KNOWN_ISSUES.md#ki-007--epoch-close-depends-on-cre-workflow-execution).
+
+<!-- ccipAdmin in token contract is unused, but implemented to make future crosschain compatability with possible -->
+
+<!-- any extra yield beyond the apyBase, such as comet rewards is not cared for. we account for some as an extra precaution, but it is not a system priority, if some of it gets stranded, we dont care -->

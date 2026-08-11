@@ -21,7 +21,6 @@ contract ParentVault_DeploymentIntegrationTest is BaseIntegrationTest {
         assertTrue(parent.vault.hasRole(Roles.REWARDS_OPERATOR_ROLE, networkConfig.roles.rewardsOperator));
         assertTrue(parent.vault.hasRole(Roles.PAUSER_ROLE, networkConfig.roles.pauser));
         assertTrue(parent.vault.hasRole(Roles.UNPAUSER_ROLE, networkConfig.roles.unpauser));
-        assertTrue(parent.vault.hasRole(Roles.POLICY_ENGINE_MANAGER_ROLE, networkConfig.roles.policy.engineManager));
         assertTrue(parent.vault.hasRole(Roles.UPGRADER_ROLE, networkConfig.roles.upgrader));
     }
 
@@ -55,9 +54,12 @@ contract ParentVault_DeploymentIntegrationTest is BaseIntegrationTest {
         assertGt(address(parent.shareImpl).code.length, 0);
         assertGt(address(parent.share).code.length, 0);
         assertNotEq(address(parent.shareImpl), address(parent.share));
-        assertEq(parent.share.getPolicyEngine(), address(parent.policyEngine));
         assertEq(parent.share.getCCIPAdmin(), networkConfig.roles.configOperator);
-        assertEq(parent.share.owner(), networkConfig.roles.upgrader);
+        assertEq(parent.share.defaultAdmin(), address(this));
+        assertTrue(parent.share.hasRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator));
+        assertTrue(parent.share.hasRole(Roles.UPGRADER_ROLE, networkConfig.roles.upgrader));
+        assertTrue(parent.share.hasRole(Roles.MINTER_ROLE, address(parent.vault)));
+        assertTrue(parent.share.hasRole(Roles.BURNER_ROLE, address(parent.vault)));
     }
 
     function test_ParentVault_deployment_RegistersAdapters() external view {
@@ -146,57 +148,5 @@ contract ParentVault_DeploymentIntegrationTest is BaseIntegrationTest {
         assertTrue(parent.workflowRouter.hasRole(Roles.PAUSER_ROLE, networkConfig.roles.pauser));
         assertTrue(parent.workflowRouter.hasRole(Roles.UNPAUSER_ROLE, networkConfig.roles.unpauser));
         assertTrue(parent.workflowRouter.hasRole(Roles.KEYSTONE_FORWARDER_ROLE, networkConfig.cre.keystoneForwarder));
-    }
-
-    function test_ParentVault_deployment_ConfiguresACEComponents() external view {
-        assertEq(parent.vault.getPolicyEngine(), address(parent.policyEngine));
-        assertEq(parent.share.getPolicyEngine(), address(parent.policyEngine));
-        assertTrue(
-            parent.policyEngine.hasRole(parent.policyEngine.DEFAULT_ADMIN_ROLE(), networkConfig.roles.defaultAdmin)
-        );
-        assertTrue(parent.policyEngine.hasRole(parent.policyEngine.ADMIN_ROLE(), networkConfig.roles.policy.admin));
-        assertTrue(
-            parent.policyEngine
-                .hasRole(parent.policyEngine.POLICY_CONFIG_ADMIN_ROLE(), networkConfig.roles.policy.configAdmin)
-        );
-    }
-
-    function test_ParentVault_deployment_RegistersParentVaultKyc() external view {
-        bytes32 ccid = parent.vaultCcid;
-
-        assertEq(parent.identityRegistry.getIdentity(address(parent.vault)), ccid);
-        assertTrue(parent.vaultKycPolicy.validate(address(parent.vault), ""));
-        assertTrue(parent.shareKycPolicy.validate(address(parent.vault), ""));
-    }
-
-    function test_ParentVault_deployment_RegistersTreasuryKyc() external view {
-        assertEq(parent.identityRegistry.getIdentity(networkConfig.treasury), parent.treasuryCcid);
-        assertTrue(parent.vaultKycPolicy.validate(networkConfig.treasury, ""));
-        assertTrue(parent.shareKycPolicy.validate(networkConfig.treasury, ""));
-    }
-
-    function test_ParentVault_deployment_RemovesTemporaryRegistryProvider() external view {
-        assertTrue(parent.providerPolicy.senderAuthorized(networkConfig.kycProvider));
-        assertFalse(parent.providerPolicy.senderAuthorized(address(this)));
-    }
-
-    function test_ParentVault_deployment_HandsOffACERoles() external view {
-        assertTrue(
-            parent.policyEngine.hasRole(parent.policyEngine.DEFAULT_ADMIN_ROLE(), networkConfig.roles.defaultAdmin)
-        );
-        assertTrue(parent.policyEngine.hasRole(parent.policyEngine.ADMIN_ROLE(), networkConfig.roles.policy.admin));
-        assertTrue(
-            parent.policyEngine
-                .hasRole(parent.policyEngine.POLICY_CONFIG_ADMIN_ROLE(), networkConfig.roles.policy.configAdmin)
-        );
-
-        assertFalse(parent.policyEngine.hasRole(parent.policyEngine.DEFAULT_ADMIN_ROLE(), address(this)));
-        assertFalse(parent.policyEngine.hasRole(parent.policyEngine.ADMIN_ROLE(), address(this)));
-        assertFalse(parent.policyEngine.hasRole(parent.policyEngine.POLICY_CONFIG_ADMIN_ROLE(), address(this)));
-
-        assertEq(parent.identityRegistry.owner(), address(parent.policyEngine));
-        assertEq(parent.identityRegistry.getPolicyEngine(), address(parent.policyEngine));
-        assertEq(parent.credentialRegistry.owner(), address(parent.policyEngine));
-        assertEq(parent.credentialRegistry.getPolicyEngine(), address(parent.policyEngine));
     }
 }
