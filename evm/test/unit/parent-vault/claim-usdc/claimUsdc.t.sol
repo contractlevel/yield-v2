@@ -125,7 +125,6 @@ contract ParentVault_ClaimAssetUnitTest is BaseUnitTest {
         uint256 expectedThirdAsset = adjustedWithdrawClaimAmount - expectedFirstAsset - expectedSecondAsset;
 
         _setParentTotalShares(totalShares);
-        _setParentPerformanceFeeHighWaterMark(2 * ASSET_PRECISION);
         _submitWithdraw(i_withdrawer, firstBurn);
         _submitWithdraw(i_recipient1, secondBurn);
         _submitWithdraw(i_recipient2, thirdBurn);

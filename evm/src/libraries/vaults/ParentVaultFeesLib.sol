@@ -11,23 +11,11 @@ import {ParentVaultMathLib} from "./ParentVaultMathLib.sol";
 /// @notice Handles ParentVault fee accounting while ParentVault keeps lifecycle orchestration
 /// @dev Public library functions are linked by Solidity and execute by DELEGATECALL in the ParentVault context
 library ParentVaultFeesLib {
-    struct PerformanceFeeParams {
-        uint256 epochNonce;
-        uint256 tvl;
-        uint256 grossPricePerShare;
-        uint256 totalShares;
-        address share;
-        uint256 sharePrecision;
-        uint256 assetPrecision;
-    }
-
     /*//////////////////////////////////////////////////////////////
                                CONSTANTS
     //////////////////////////////////////////////////////////////*/
     /// @dev Basis points denominator (100% = 10_000 bps)
     uint256 internal constant BPS_DENOMINATOR = 10_000;
-    /// @dev Performance fee rate (7.77%)
-    uint256 internal constant PERFORMANCE_FEE_BPS = 777;
     /// @dev Annual management fee rate (1%)
     uint256 internal constant MANAGEMENT_FEE_BPS = 100;
 
@@ -39,15 +27,6 @@ library ParentVaultFeesLib {
     /// @param rebalanceNonce The nonce of the rebalance that collected the fee
     /// @param feeShares The number of shares minted to the treasury
     event ManagementFeeCollected(uint256 indexed rebalanceNonce, uint256 indexed feeShares);
-    /// @notice Emitted when performance fees are collected
-    /// @param epochNonce The epoch nonce that collected the fee
-    /// @param feeShares The number of shares minted to the treasury
-    /// @param settlementPricePerShare The price per share after fee-share dilution. This raises the high water
-    ///        mark, except when rounding causes it to land a dust amount below the existing high water mark -
-    ///        the high water mark is only ever raised, never lowered, so it may not equal this value
-    event PerformanceFeeCollected(
-        uint256 indexed epochNonce, uint256 indexed feeShares, uint256 indexed settlementPricePerShare
-    );
 
     /*//////////////////////////////////////////////////////////////
                                   FEES
@@ -97,10 +76,10 @@ library ParentVaultFeesLib {
         }
     }
 
-    /// @notice Calculates deposit shares directly from TVL and the post-fee share supply
+    /// @notice Calculates deposit shares directly from TVL and the outstanding share supply
     /// @param tvl The Total Value Locked in the active strategy, denominated in the underlying asset
     /// @param depositAmount The deposit amount being converted to shares
-    /// @param totalShares The total shares after performance-fee dilution
+    /// @param totalShares The total outstanding shares
     /// @param sharePrecision The share precision factor
     /// @param assetPrecision The underlying asset precision factor used for bootstrap pricing
     /// @return newShares The number of shares to mint
@@ -162,102 +141,6 @@ library ParentVaultFeesLib {
             $.s_totalShares = totalShares + feeShares;
             IShare(share).mint($.s_treasury, feeShares);
             emit ManagementFeeCollected(rebalanceNonce, feeShares);
-        }
-    }
-
-    /// @notice Collects performance fees when the gross price exceeds the high water mark
-    /// @param $ ParentVault namespaced storage
-    /// @param epochNonce The epoch nonce collecting the fee
-    /// @param tvl The strategy TVL before current epoch deposits and withdrawals settle, denominated in the underlying asset
-    /// @param grossPricePerShare The epoch price per share before performance fee dilution
-    /// @param share The Yieldcoin share token
-    /// @param sharePrecision The share precision factor
-    /// @param assetPrecision The underlying asset precision factor, used as the bootstrap price per share
-    /// @return settlementPricePerShare The epoch price per share after performance fee dilution
-    /// @dev Returns grossPricePerShare without minting when it does not exceed the high water mark or the fee is not collectible
-    /// @dev Mints fee shares but does not update s_totalShares; the epoch-settlement caller performs the ledger update
-    function collectPerformanceFee(
-        ParentVaultStore.ParentVaultStorage storage $,
-        uint256 epochNonce,
-        uint256 tvl,
-        uint256 grossPricePerShare,
-        address share,
-        uint256 sharePrecision,
-        uint256 assetPrecision
-    ) public returns (uint256 settlementPricePerShare) {
-        (settlementPricePerShare,) = _collectPerformanceFee(
-            $, epochNonce, tvl, grossPricePerShare, $.s_totalShares, share, sharePrecision, assetPrecision
-        );
-    }
-
-    /// @notice Collects performance fees when the gross price exceeds the high water mark
-    /// @param $ ParentVault namespaced storage
-    /// @param epochNonce The epoch nonce collecting the fee
-    /// @param tvl The strategy TVL before current epoch deposits and withdrawals settle, denominated in the underlying asset
-    /// @param grossPricePerShare The epoch price per share before performance fee dilution
-    /// @param totalShares The total outstanding Yieldcoin shares (caller-supplied to avoid a redundant SLOAD)
-    /// @param share The Yieldcoin share token
-    /// @param sharePrecision The share precision factor
-    /// @param assetPrecision The underlying asset precision factor, used as the bootstrap price per share
-    /// @return settlementPricePerShare The epoch price per share after performance fee dilution
-    /// @return feeShares The number of shares minted as a performance fee, or zero if none were minted
-    /// @dev Returns grossPricePerShare without minting when it does not exceed the high water mark or the fee is not collectible
-    /// @dev This function mints feeShares but deliberately does NOT write `s_totalShares` - the caller
-    ///      is the sole writer of that ledger, computing `totalShares + feeShares` (plus its own epoch
-    ///      deposit/withdraw deltas) in a single write, instead of this function writing an intermediate
-    ///      value that the caller would immediately overwrite.
-    function _collectPerformanceFee(
-        ParentVaultStore.ParentVaultStorage storage $,
-        uint256 epochNonce,
-        uint256 tvl,
-        uint256 grossPricePerShare,
-        uint256 totalShares,
-        address share,
-        uint256 sharePrecision,
-        uint256 assetPrecision
-    ) internal returns (uint256 settlementPricePerShare, uint256 feeShares) {
-        PerformanceFeeParams memory params = PerformanceFeeParams({
-            epochNonce: epochNonce,
-            tvl: tvl,
-            grossPricePerShare: grossPricePerShare,
-            totalShares: totalShares,
-            share: share,
-            sharePrecision: sharePrecision,
-            assetPrecision: assetPrecision
-        });
-        return _collectPerformanceFee($, params);
-    }
-
-    function _collectPerformanceFee(ParentVaultStore.ParentVaultStorage storage $, PerformanceFeeParams memory params)
-        internal
-        returns (uint256 settlementPricePerShare, uint256 feeShares)
-    {
-        uint256 highWaterMark = $.s_performanceFeeHighWaterMark;
-        if (params.grossPricePerShare <= highWaterMark) return (params.grossPricePerShare, 0);
-
-        uint256 yieldPerShare = params.grossPricePerShare - highWaterMark;
-        uint256 totalYield = ParentVaultMathLib._mulDivUp(yieldPerShare, params.totalShares, params.sharePrecision);
-        uint256 fee = ParentVaultMathLib._mulDivUp(totalYield, PERFORMANCE_FEE_BPS, BPS_DENOMINATOR);
-
-        if (fee >= params.tvl) {
-            return (params.grossPricePerShare, 0);
-        }
-
-        feeShares = ParentVaultMathLib._mulDivUp(fee, params.totalShares, params.tvl - fee);
-
-        uint256 newTotalShares = params.totalShares + feeShares;
-
-        settlementPricePerShare =
-            _calculatePricePerShare(params.tvl, newTotalShares, params.sharePrecision, params.assetPrecision);
-        // feeShares rounds up and the settlement price rounds down, so dilution can land the
-        // settlement price a dust amount below the high water mark; only ever raise it (FEE-003)
-        if (settlementPricePerShare > highWaterMark) {
-            $.s_performanceFeeHighWaterMark = settlementPricePerShare;
-        }
-
-        if (feeShares != 0) {
-            emit PerformanceFeeCollected(params.epochNonce, feeShares, settlementPricePerShare);
-            IShare(params.share).mint($.s_treasury, feeShares);
         }
     }
 }

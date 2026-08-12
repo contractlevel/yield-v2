@@ -109,7 +109,7 @@ This is deliberate: management fee is charged for the elapsed duration of a comp
 
 If the vault remains on a single optimal strategy for longer than a year without rebalancing, elapsed time beyond the most recent 365 days is not collected on the eventual next rebalance. That time is forfeited, not deferred - the fee is intentionally capped at one year's worth per collection.
 
-See [INVARIANTS - FEE-004](../security/INVARIANTS.md#fee-accounting).
+See [INVARIANTS - FEE-002](../security/INVARIANTS.md#fee-accounting).
 
 ## DD-011 - Adapter Registry Changes Are Not Live Migrations
 

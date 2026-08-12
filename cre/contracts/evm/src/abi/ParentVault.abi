@@ -608,19 +608,6 @@
   },
   {
     "type": "function",
-    "name": "getPerformanceFeeHighWaterMark",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "highWaterMark",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "getRebalance",
     "inputs": [],
     "outputs": [
@@ -1226,7 +1213,7 @@
     ],
     "outputs": [
       {
-        "name": "",
+        "name": "isSupported",
         "type": "bool",
         "internalType": "bool"
       }
@@ -1854,31 +1841,6 @@
         "type": "address",
         "indexed": false,
         "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "PerformanceFeeCollected",
-    "inputs": [
-      {
-        "name": "epochNonce",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "feeShares",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "settlementPricePerShare",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
       }
     ],
     "anonymous": false

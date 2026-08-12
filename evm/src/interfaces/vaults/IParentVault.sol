@@ -149,15 +149,6 @@ interface IParentVault is IBaseVault {
     /// @param rebalanceNonce The nonce of the rebalance that collected the fee
     /// @param feeShares The number of shares minted to the treasury
     event ManagementFeeCollected(uint256 indexed rebalanceNonce, uint256 indexed feeShares);
-    /// @notice Emitted when performance fees are collected
-    /// @param epochNonce The epoch nonce that collected the fee
-    /// @param feeShares The number of shares minted to the treasury
-    /// @param settlementPricePerShare The price per share after fee-share dilution. This raises the high water
-    ///        mark, except when rounding causes it to land a dust amount below the existing high water mark -
-    ///        the high water mark is only ever raised, never lowered, so it may not equal this value
-    event PerformanceFeeCollected(
-        uint256 indexed epochNonce, uint256 indexed feeShares, uint256 indexed settlementPricePerShare
-    );
     /// @notice Emitted when a deposit is cancelled
     /// @param epochNonce The epoch nonce of the deposit
     /// @param depositor The address of the depositor
@@ -354,10 +345,6 @@ interface IParentVault is IBaseVault {
     /// @notice Returns whether the initial active protocol adapter has been set
     /// @return initialActiveProtocolAdapterSet Whether the initial active protocol adapter has been set
     function getInitialActiveProtocolAdapterSet() external view returns (bool initialActiveProtocolAdapterSet);
-
-    /// @notice Returns the performance fee high water mark
-    /// @return highWaterMark The highest price per share recorded for performance fee purposes
-    function getPerformanceFeeHighWaterMark() external view returns (uint256 highWaterMark);
 
     /// @notice Returns the share precision factor (fixed at SHARE_PRECISION)
     /// @return sharePrecision The share precision factor

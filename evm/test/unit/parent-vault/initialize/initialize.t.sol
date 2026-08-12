@@ -18,7 +18,6 @@ contract ParentVault_InitializeUnitTest is BaseUnitTest {
         Types.Epoch memory epoch = parentVault.getEpoch(1);
 
         assertEq(parentVault.getTreasury(), i_treasury);
-        assertEq(parentVault.getPerformanceFeeHighWaterMark(), parentVault.getAssetPrecision());
         assertEq(parentVault.getEpochNonce(), 1);
         assertEq(parentVault.getInitialActiveProtocolAdapterSet(), false);
         assertEq(parentVault.getActiveProtocolAdapter(), address(0));

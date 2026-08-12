@@ -407,7 +407,7 @@ A third party can still use real capital to inflate the active adapter's raw pro
 - the epoch price per share,
 - shares minted to pending depositors,
 - assets allocated to pending withdrawers,
-- performance-fee and high-water-mark accounting, and
+- management-fee accounting, and
 - rebalances that withdraw the adapter's full raw position.
 
 An attacker with a pending withdrawal may recover a pro-rata portion of their own unsolicited supply through that epoch's withdrawal settlement. Any unrecovered amount is absorbed by other participants, remaining shareholders, or protocol fees. The attacker cannot atomically recover the full supplied amount unless they also control privileged workflow or vault execution paths, which is outside the permissionless threat model.

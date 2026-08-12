@@ -141,13 +141,11 @@ contract ParentVault_BaseVaultUpgradeToAndCallUnitTest is BaseVault_UpgradeToAnd
     function test_ParentVault_UPGRADE_007_upgradeToAndCall_Success_PreservesLifecycleState() external {
         uint256 epochNonce = 1;
         uint256 totalShares = 11_000e18;
-        uint256 highWaterMark = 2e6;
         uint256 recoveryNonce = 13;
         uint256 recoveryAmount = 17e6;
 
         _setParentEpochStatus(epochNonce, Types.EpochStatus.EXECUTING);
         _setParentTotalShares(totalShares);
-        _setParentPerformanceFeeHighWaterMark(highWaterMark);
         _setParentPendingRebalance(COMPOUND_V3_PROTOCOL_ID, CHILD_CHAIN_SELECTOR);
         _setParentLastRebalanceCompletedTimestamp(19);
         stdstore.target(address(s_parentVault)).sig("getRebalanceDepositRecovery()").depth(0)
@@ -167,7 +165,6 @@ contract ParentVault_BaseVaultUpgradeToAndCallUnitTest is BaseVault_UpgradeToAnd
         assertEq(ParentVaultV2(address(s_parentVault)).upgradeTestVersion(), 2);
         assertEq(s_parentVault.getEpochNonce(), epochNonce);
         assertEq(s_parentVault.getTotalShares(), totalShares);
-        assertEq(s_parentVault.getPerformanceFeeHighWaterMark(), highWaterMark);
         assertEq(keccak256(abi.encode(s_parentVault.getEpoch(epochNonce))), keccak256(abi.encode(epochBefore)));
         assertEq(keccak256(abi.encode(s_parentVault.getRebalance())), keccak256(abi.encode(rebalanceBefore)));
         assertEq(uint256(s_parentVault.getRecoveryMode()), uint256(Types.RecoveryMode.REBALANCE_DEPOSIT));

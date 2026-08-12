@@ -71,7 +71,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the proxy has already been initialized
     /// @dev Grants CANCEL_DEPOSIT_OPERATOR_ROLE to cancelDepositOperator
-    /// @dev Opens epoch one, initializes rebalance nonce one, and sets the initial high water mark to one asset unit
+    /// @dev Opens epoch one and initializes rebalance nonce one
     /// @dev The initial active protocol adapter must be configured separately after its deployment and registration
     function initialize(BaseVault.InitParams memory params, address treasury, address cancelDepositOperator)
         external
@@ -84,7 +84,6 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
         __BaseVault_init(params);
 
         ParentVaultStorage storage $ = _parentVaultStorage();
-        $.s_performanceFeeHighWaterMark = i_assetPrecision;
         $.s_epochNonce = 1;
         $.s_epochs[1].status = Types.EpochStatus.OPEN;
         $.s_epochs[1].openedAtTimestamp = block.timestamp;
@@ -540,12 +539,6 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /// @return initialActiveProtocolAdapterSet Whether the initial active protocol adapter has been set
     function getInitialActiveProtocolAdapterSet() external view returns (bool initialActiveProtocolAdapterSet) {
         initialActiveProtocolAdapterSet = _parentVaultStorage().s_initialActiveProtocolAdapterSet;
-    }
-
-    /// @notice Returns the performance fee high water mark
-    /// @return highWaterMark The highest price per share recorded for performance fee purposes
-    function getPerformanceFeeHighWaterMark() external view returns (uint256 highWaterMark) {
-        highWaterMark = _parentVaultStorage().s_performanceFeeHighWaterMark;
     }
 
     /// @notice Returns the operator multisig that receives protocol fees

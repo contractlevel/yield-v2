@@ -19,7 +19,6 @@ methods {
     function getTotalShares() external returns (uint256) envfree;
     function getDepositAmount(address, uint256) external returns (uint256) envfree;
     function getWithdrawShareBurnAmount(address, uint256) external returns (uint256) envfree;
-    function getPerformanceFeeHighWaterMark() external returns (uint256) envfree;
     function getTreasury() external returns (address) envfree;
     function getAsset() external returns (address) envfree;
     function getRecoveryMode() external returns (Types.RecoveryMode) envfree;
@@ -685,7 +684,7 @@ invariant EPOCH_011_epochWithdrawCountersStayBounded(uint256 epochNonce)
 ///      whose share-burn pool is zero from inception, are intentionally outside this Certora property
 ///      because Solady fullMulDiv's zero-multiplicand path is not modeled reliably. The implication
 ///      remains one-directional because a non-final claimant's asset amount may reach zero first
-///      through rounding or the documented DEV-004 dust case while shares remain to be burned.
+///      through rounding or the documented DEV-003 dust case while shares remain to be burned.
 invariant EPOCH_013_exhaustedShareBurnHasNoRemainingAssetClaim(uint256 epochNonce)
     (
         getEpoch(epochNonce).totalShareBurnAmount != 0
@@ -975,35 +974,6 @@ rule storageBehaviorMatchesMutability(env e, method f, calldataarg args) filtere
         || isImplementationInitializer
         || before[currentContract] != after[currentContract]
         || changesExpectedExternalStorage;
-}
-
-/// @notice The performance fee high water mark never decreases
-/// @dev Verifies docs/INVARIANTS.md FEE-003. This is a parametric before/after rule rather than a
-///      persistent invariant because it compares two states across one arbitrary transaction. A
-///      bare rule considers a fully arbitrary "before" storage state (unlike an invariant, it is not
-///      anchored to anything already proven), so without a guard, hwmBefore could be picked as an
-///      unreachable garbage value exceeding i_assetPrecision, and initialize()'s unconditional
-///      `s_performanceFeeHighWaterMark = i_assetPrecision` write would then look like a decrease.
-///      Guarding on getTreasury() == 0 is insufficient here: that branch is vacuously satisfied
-///      whenever getTreasury() != 0, so hwmBefore is still unconstrained in exactly the scenario
-///      Certora would pick - a prestate where getTreasury() is already nonzero (so the guard says
-///      nothing) while the unrelated `initializer` modifier's own storage still permits calling
-///      initialize(). The fact that actually matters doesn't need treasury at all: if initialize()
-///      is about to succeed, this must be the vault's first-ever initialization, so HWM must already
-///      be at its untouched genesis value of 0 - regardless of what getTreasury() happens to read.
-rule FEE_003_performanceFeeHighWaterMark_NeverDecreases(method f) filtered {
-        f -> isInvariantPreservationMethod(f)
-} {
-    require f.selector == sig:initialize(BaseVault.InitParams,address,address).selector
-        => getPerformanceFeeHighWaterMark() == 0;
-
-    uint256 hwmBefore = getPerformanceFeeHighWaterMark();
-
-    env e;
-    calldataarg args;
-    f(e, args);
-
-    assert getPerformanceFeeHighWaterMark() >= hwmBefore;
 }
 
 /// @notice Parent lifecycle nonces never decrease across a successful production call

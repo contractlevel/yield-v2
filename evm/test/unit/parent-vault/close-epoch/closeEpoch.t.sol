@@ -8,15 +8,11 @@ import {IBaseVault} from "../../../../src/interfaces/vaults/IBaseVault.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
 import {MockCCIPRouter} from "../../../mocks/MockCCIPRouter.sol";
 
-import {FixedPointMathLib} from "@solady/utils/FixedPointMathLib.sol";
-
 contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
     uint256 internal constant WITHDRAW_SHARES = YIELD_PRECISION;
     uint256 internal constant TVL = 1_000 * 1e6;
     uint256 internal constant SEEDED_SHARES = 1_000_000 * YIELD_PRECISION;
     uint256 internal constant SEEDED_TVL = 1_000_000 * ASSET_PRECISION;
-    uint256 internal constant PERFORMANCE_FEE_BPS = 777;
-    uint256 internal constant BPS_DENOMINATOR = 10_000;
 
     function setUp() public {
         deal(address(s_mockUsdc), i_depositor, DEPOSIT_AMOUNT);
@@ -103,7 +99,6 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         uint256 totalShares = 1;
         uint256 tvl = DEPOSIT_AMOUNT + 1;
         _setParentTotalShares(totalShares);
-        _setParentPerformanceFeeHighWaterMark(tvl * SHARE_PRECISION / totalShares);
         _submitDeposit();
 
         _warpPastMinEpoch();
@@ -268,7 +263,6 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
 
     function test_ParentVault_closeEpoch_Success_StoresCalculatedPricePerShareWhenSharesExist() public {
         _setParentTotalShares(SEEDED_SHARES);
-        _setParentPerformanceFeeHighWaterMark(TVL * SHARE_PRECISION / SEEDED_SHARES);
         _submitDeposit();
         _closeEpoch(TVL);
 
@@ -319,7 +313,7 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
 
     function test_ParentVault_closeEpoch_Success_WhenNetFlowIsZero_ClosesWithoutExternalAction() public {
         // _prepareNetWithdraw() sizes the withdraw so that, with exact SHARE_PRECISION division and
-        // no performance fee active, closing at tvl == DEPOSIT_AMOUNT prices the withdraw at exactly
+        // Closing at tvl == DEPOSIT_AMOUNT prices the withdraw at exactly
         // DEPOSIT_AMOUNT too - matching _submitDeposit()'s fixed amount, so netFlow == 0 exactly.
         _submitDeposit();
         _prepareNetWithdraw();
@@ -348,128 +342,32 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         assertEq(s_parentVault.getTotalShares(), expectedShares);
     }
 
-    function test_ParentVault_closeEpoch_PerformanceFee_NoFeeWhenPricePerShareEqualsHighWaterMark() public {
-        _setParentTotalShares(SEEDED_SHARES);
-        _submitDeposit();
-        _closeEpoch(SEEDED_TVL);
-
-        uint256 newShares = DEPOSIT_AMOUNT * YIELD_PRECISION / ASSET_PRECISION;
-        assertEq(s_yieldcoin.balanceOf(i_treasury), 0);
-        assertEq(s_parentVault.getTotalShares(), SEEDED_SHARES + newShares);
-        assertEq(s_parentVault.getPerformanceFeeHighWaterMark(), ASSET_PRECISION);
-    }
-
-    function test_ParentVault_closeEpoch_PerformanceFee_MintsTreasurySharesWhenPricePerShareExceedsHighWaterMark()
-        public
-    {
+    function test_ParentVault_closeEpoch_HighYieldUsesUndilutedPriceAndMintsNoTreasuryShares() public {
         uint256 grossPricePerShare = 105 * ASSET_PRECISION / 100;
-        uint256 tvl = SEEDED_SHARES * grossPricePerShare / SHARE_PRECISION;
-        uint256 expectedFeeShares =
-            _expectedPerformanceFeeShares(SEEDED_SHARES, tvl, grossPricePerShare, ASSET_PRECISION);
-        uint256 settlementPricePerShare = _pricePerShare(tvl, SEEDED_SHARES + expectedFeeShares);
-        uint256 expectedDepositShares = DEPOSIT_AMOUNT * (SEEDED_SHARES + expectedFeeShares) / tvl;
-
-        _setParentTotalShares(SEEDED_SHARES);
-        _submitDeposit();
-        _closeEpoch(tvl);
-
-        assertEq(s_yieldcoin.balanceOf(i_treasury), expectedFeeShares);
-        assertEq(s_parentVault.getTotalShares(), SEEDED_SHARES + expectedFeeShares + expectedDepositShares);
-        assertEq(s_parentVault.getEpoch(1).pricePerShare, settlementPricePerShare);
-        assertEq(s_parentVault.getPerformanceFeeHighWaterMark(), settlementPricePerShare);
-    }
-
-    function test_ParentVault_closeEpoch_PerformanceFee_WhenFeeWouldConsumeTvl_SkipsFeeAndLeavesHighWaterMarkUnchanged()
-        public
-    {
-        uint256 totalShares = 1;
-        uint256 tvl = 1;
-        uint256 highWaterMark = 0;
-        uint256 expectedPricePerShare = SHARE_PRECISION;
-        uint256 expectedDepositShares = DEPOSIT_AMOUNT;
-
-        _setParentTotalShares(totalShares);
-        _setParentPerformanceFeeHighWaterMark(highWaterMark);
-        _submitDeposit();
-
-        _closeEpoch(tvl);
-
-        assertEq(s_yieldcoin.balanceOf(i_treasury), 0);
-        assertEq(s_parentVault.getTotalShares(), totalShares + expectedDepositShares);
-        assertEq(s_parentVault.getEpoch(1).pricePerShare, expectedPricePerShare);
-        assertEq(uint8(s_parentVault.getEpoch(1).status), uint8(Types.EpochStatus.CLAIMABLE));
-        assertEq(s_parentVault.getPerformanceFeeHighWaterMark(), highWaterMark);
-    }
-
-    function test_ParentVault_closeEpoch_PerformanceFee_EmitsPerformanceFeeCollected() public {
-        uint256 grossPricePerShare = 105 * ASSET_PRECISION / 100;
-        uint256 tvl = SEEDED_SHARES * grossPricePerShare / SHARE_PRECISION;
-        uint256 expectedFeeShares =
-            _expectedPerformanceFeeShares(SEEDED_SHARES, tvl, grossPricePerShare, ASSET_PRECISION);
-        uint256 settlementPricePerShare = _pricePerShare(tvl, SEEDED_SHARES + expectedFeeShares);
-
-        _setParentTotalShares(SEEDED_SHARES);
-        _submitDeposit();
-
-        vm.recordLogs();
-        _closeEpoch(tvl);
-
-        Vm.Log memory log =
-            _assertEmittedBy(keccak256("PerformanceFeeCollected(uint256,uint256,uint256)"), address(s_parentVault));
-        assertEq(uint256(log.topics[1]), 1);
-        assertEq(uint256(log.topics[2]), expectedFeeShares);
-        assertEq(uint256(log.topics[3]), settlementPricePerShare);
-    }
-
-    function test_ParentVault_closeEpoch_PerformanceFee_DoesNotUpdateHighWaterMarkBelowPriorHigh() public {
-        uint256 highWaterMark = 105 * ASSET_PRECISION / 100;
-        uint256 grossPricePerShare = 103 * ASSET_PRECISION / 100;
         uint256 tvl = SEEDED_SHARES * grossPricePerShare / SHARE_PRECISION;
         uint256 expectedDepositShares = DEPOSIT_AMOUNT * SEEDED_SHARES / tvl;
 
         _setParentTotalShares(SEEDED_SHARES);
-        _setParentPerformanceFeeHighWaterMark(highWaterMark);
         _submitDeposit();
         _closeEpoch(tvl);
 
         assertEq(s_yieldcoin.balanceOf(i_treasury), 0);
         assertEq(s_parentVault.getTotalShares(), SEEDED_SHARES + expectedDepositShares);
-        assertEq(s_parentVault.getPerformanceFeeHighWaterMark(), highWaterMark);
+        assertEq(s_parentVault.getEpoch(1).pricePerShare, grossPricePerShare);
     }
 
-    function test_ParentVault_closeEpoch_PerformanceFee_ChargesOnlyYieldAboveHighWaterMarkAfterDrawdown() public {
-        uint256 highWaterMark = 105 * ASSET_PRECISION / 100;
-        uint256 grossPricePerShare = 106 * ASSET_PRECISION / 100;
-        uint256 tvl = SEEDED_SHARES * grossPricePerShare / SHARE_PRECISION;
-        uint256 expectedFeeShares = _expectedPerformanceFeeShares(SEEDED_SHARES, tvl, grossPricePerShare, highWaterMark);
-        uint256 settlementPricePerShare = _pricePerShare(tvl, SEEDED_SHARES + expectedFeeShares);
-        uint256 expectedDepositShares = DEPOSIT_AMOUNT * (SEEDED_SHARES + expectedFeeShares) / tvl;
-
-        _setParentTotalShares(SEEDED_SHARES);
-        _setParentPerformanceFeeHighWaterMark(highWaterMark);
-        _submitDeposit();
-        _closeEpoch(tvl);
-
-        assertEq(s_yieldcoin.balanceOf(i_treasury), expectedFeeShares);
-        assertEq(s_parentVault.getTotalShares(), SEEDED_SHARES + expectedFeeShares + expectedDepositShares);
-        assertEq(s_parentVault.getEpoch(1).pricePerShare, settlementPricePerShare);
-        assertEq(s_parentVault.getPerformanceFeeHighWaterMark(), settlementPricePerShare);
-    }
-
-    function test_ParentVault_closeEpoch_PerformanceFee_WithdrawsSettleAtPostFeePrice() public {
+    function test_ParentVault_closeEpoch_HighYieldWithdrawsSettleAtUndilutedPrice() public {
         uint256 grossPricePerShare = 105 * ASSET_PRECISION / 100;
         uint256 tvl = SEEDED_SHARES * grossPricePerShare / SHARE_PRECISION;
-        uint256 expectedFeeShares =
-            _expectedPerformanceFeeShares(SEEDED_SHARES, tvl, grossPricePerShare, ASSET_PRECISION);
-        uint256 settlementPricePerShare = _pricePerShare(tvl, SEEDED_SHARES + expectedFeeShares);
-        uint256 expectedWithdrawUsdc = WITHDRAW_SHARES * settlementPricePerShare / SHARE_PRECISION;
+        uint256 expectedWithdrawUsdc = WITHDRAW_SHARES * grossPricePerShare / SHARE_PRECISION;
 
         _setParentTotalShares(SEEDED_SHARES);
         _submitParentWithdraw(WITHDRAW_SHARES);
         _closeEpoch(tvl);
 
+        assertEq(s_yieldcoin.balanceOf(i_treasury), 0);
         assertEq(s_parentVault.getEpoch(1).totalWithdrawClaimAmount, expectedWithdrawUsdc);
-        assertEq(s_parentVault.getEpoch(1).pricePerShare, settlementPricePerShare);
+        assertEq(s_parentVault.getEpoch(1).pricePerShare, grossPricePerShare);
     }
 
     function test_ParentVault_closeEpoch_LocalNetDeposit_EmitsEpochClaimable() public {
@@ -561,7 +459,6 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
 
     function _prepareNetWithdraw() internal {
         _setParentTotalShares(WITHDRAW_SHARES);
-        _setParentPerformanceFeeHighWaterMark(TVL * SHARE_PRECISION / WITHDRAW_SHARES);
         _submitParentWithdraw(WITHDRAW_SHARES);
     }
 
@@ -575,19 +472,6 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         assertEq(s_parentVault.getEpochNonce(), 2);
         assertEq(uint256(s_parentVault.getEpoch(2).status), uint256(Types.EpochStatus.OPEN));
         assertEq(s_parentVault.getEpoch(2).openedAtTimestamp, block.timestamp);
-    }
-
-    function _expectedPerformanceFeeShares(
-        uint256 totalShares,
-        uint256 tvl,
-        uint256 grossPricePerShare,
-        uint256 highWaterMark
-    ) internal pure returns (uint256 feeShares) {
-        uint256 totalYield = FixedPointMathLib.fullMulDivUp(
-            grossPricePerShare - highWaterMark, totalShares, SHARE_PRECISION
-        );
-        uint256 feeUsdc = FixedPointMathLib.fullMulDivUp(totalYield, PERFORMANCE_FEE_BPS, BPS_DENOMINATOR);
-        feeShares = FixedPointMathLib.fullMulDivUp(feeUsdc, totalShares, tvl - feeUsdc);
     }
 
     function _pricePerShare(uint256 tvl, uint256 totalShares) internal pure returns (uint256 pricePerShare) {

@@ -95,7 +95,6 @@ contract ParentVault_ClaimSharesUnitTest is BaseUnitTest {
         uint256 expectedThirdMint = expectedTotalMinted - expectedFirstMint - expectedSecondMint;
 
         _setParentTotalShares(totalShares);
-        _setParentPerformanceFeeHighWaterMark(pricePerShare);
         _submitDeposit(i_depositor, firstDeposit);
         _submitDeposit(i_recipient1, secondDeposit);
         _submitDeposit(i_recipient2, thirdDeposit);
@@ -122,7 +121,6 @@ contract ParentVault_ClaimSharesUnitTest is BaseUnitTest {
         uint256 shareBurnAmount = 100 * YIELD_PRECISION;
         uint256 tvl = 100 * ASSET_PRECISION;
         _setParentTotalShares(shareBurnAmount);
-        _setParentPerformanceFeeHighWaterMark(ASSET_PRECISION);
         _submitWithdraw(i_withdrawer, shareBurnAmount);
         _closeEpoch(tvl);
 
@@ -145,7 +143,6 @@ contract ParentVault_ClaimSharesUnitTest is BaseUnitTest {
         uint256 epochTwoTotalMinted = DEPOSIT_AMOUNT * (totalShares + epochOneTotalMinted) / tvl;
 
         _setParentTotalShares(totalShares);
-        _setParentPerformanceFeeHighWaterMark(pricePerShare);
         _submitDeposit(i_depositor, firstDeposit);
         _submitDeposit(i_recipient1, secondDeposit);
         _submitDeposit(i_recipient2, thirdDeposit);

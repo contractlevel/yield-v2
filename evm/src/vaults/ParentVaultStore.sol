@@ -19,8 +19,6 @@ abstract contract ParentVaultStore {
     /// actually happens at claim time. Between closeEpoch and the last claimAsset call for an epoch,
     /// s_totalShares can already be decremented for pending burns while the corresponding share tokens
     /// have not yet been burned, so totalSupply() would read higher than the true count during that window.
-    /// @param s_performanceFeeHighWaterMark Highest price-per-share ever recorded; performance fees
-    /// are only charged on price-per-share growth above this mark.
     /// @param s_epochNonce Nonce of the currently open epoch. Starts at 1 in initialize(), so a
     /// previous epoch nonce of 0 means no prior epoch exists.
     /// @param s_epochs Per-epoch-nonce accounting: total deposit and withdraw amounts, price per share,
@@ -37,7 +35,6 @@ abstract contract ParentVaultStore {
     struct ParentVaultStorage {
         Types.Rebalance s_rebalance;
         uint256 s_totalShares;
-        uint256 s_performanceFeeHighWaterMark;
         uint256 s_epochNonce;
         mapping(uint256 epochNonce => Types.Epoch) s_epochs;
         mapping(address depositor => mapping(uint256 epochId => uint256 assetAmount)) s_deposits;

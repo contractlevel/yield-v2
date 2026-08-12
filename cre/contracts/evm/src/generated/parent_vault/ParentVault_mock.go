@@ -41,7 +41,6 @@ type ParentVaultMock struct {
 	GetInitialActiveProtocolAdapterSet func() (bool, error)
 	GetLink                            func() (common.Address, error)
 	GetMinDepositAmount                func() (*big.Int, error)
-	GetPerformanceFeeHighWaterMark     func() (*big.Int, error)
 	GetRebalance                       func() (TypesRebalance, error)
 	GetRebalanceDepositRecovery        func() (TypesRebalanceDepositRecovery, error)
 	GetRecoveryMode                    func() (uint8, error)
@@ -341,16 +340,6 @@ func NewParentVaultMock(address common.Address, clientMock *evmmock.ClientCapabi
 				return nil, err
 			}
 			return abi.Methods["getMinDepositAmount"].Outputs.Pack(result)
-		},
-		string(abi.Methods["getPerformanceFeeHighWaterMark"].ID[:4]): func(payload []byte) ([]byte, error) {
-			if mock.GetPerformanceFeeHighWaterMark == nil {
-				return nil, errors.New("getPerformanceFeeHighWaterMark method not mocked")
-			}
-			result, err := mock.GetPerformanceFeeHighWaterMark()
-			if err != nil {
-				return nil, err
-			}
-			return abi.Methods["getPerformanceFeeHighWaterMark"].Outputs.Pack(result)
 		},
 		string(abi.Methods["getRebalance"].ID[:4]): func(payload []byte) ([]byte, error) {
 			if mock.GetRebalance == nil {

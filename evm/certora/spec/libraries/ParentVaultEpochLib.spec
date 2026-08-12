@@ -14,7 +14,6 @@ methods {
     function getPreviousEpochNonce() external returns (uint256) envfree;
     function getPreviousEpochStatus() external returns (Types.EpochStatus) envfree;
     function getTotalShares() external returns (uint256) envfree;
-    function getPerformanceFeeHighWaterMark() external returns (uint256) envfree;
     function getTreasury() external returns (address) envfree;
     function getRebalanceState() external returns (Types.RebalanceState) envfree;
     function getEpochTotalDepositAmount(uint256) external returns (uint256) envfree;
@@ -70,10 +69,6 @@ definition EpochWithdrawExecutingEvent() returns bytes32 =
 definition EpochClaimableEvent() returns bytes32 =
 // keccak256("EpochClaimable(uint256)")
     to_bytes32(0x45d9681f238e455170e797872754deaef148c9e7836f9949104764a4f4cfae8a);
-
-definition PerformanceFeeCollectedEvent() returns bytes32 =
-// keccak256("PerformanceFeeCollected(uint256,uint256,uint256)")
-    to_bytes32(0xdc4f167bfca42a54abc7c7dd90ec178ea116a54329d32a1a6cb1c6208d17177c);
 
 /*//////////////////////////////////////////////////////////////
                              GHOSTS
@@ -178,27 +173,10 @@ ghost uint256 ghost_EpochClaimable_Param_epochNonce {
     init_state axiom ghost_EpochClaimable_Param_epochNonce == 0;
 }
 
-ghost mathint ghost_PerformanceFeeCollected_EventCount {
-    init_state axiom ghost_PerformanceFeeCollected_EventCount == 0;
-}
-
-ghost uint256 ghost_PerformanceFeeCollected_Param_epochNonce {
-    init_state axiom ghost_PerformanceFeeCollected_Param_epochNonce == 0;
-}
-
-ghost uint256 ghost_PerformanceFeeCollected_Param_feeShares {
-    init_state axiom ghost_PerformanceFeeCollected_Param_feeShares == 0;
-}
-
-ghost uint256 ghost_PerformanceFeeCollected_Param_settlementPricePerShare {
-    init_state axiom ghost_PerformanceFeeCollected_Param_settlementPricePerShare == 0;
-}
-
 definition EpochLifecycleEventCountsAreZero() returns bool =
     ghost_EpochClaimable_EventCount == 0
         && ghost_EpochDepositExecuting_EventCount == 0
-        && ghost_EpochWithdrawExecuting_EventCount == 0
-        && ghost_PerformanceFeeCollected_EventCount == 0;
+        && ghost_EpochWithdrawExecuting_EventCount == 0;
 
 /*//////////////////////////////////////////////////////////////
                              HOOKS
@@ -253,15 +231,6 @@ hook LOG3(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2) {
     }
 }
 
-hook LOG4(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2, bytes32 t3) {
-    if (t0 == PerformanceFeeCollectedEvent()) {
-        ghost_PerformanceFeeCollected_EventCount = ghost_PerformanceFeeCollected_EventCount + 1;
-        ghost_PerformanceFeeCollected_Param_epochNonce = bytes32ToUint256(t1);
-        ghost_PerformanceFeeCollected_Param_feeShares = bytes32ToUint256(t2);
-        ghost_PerformanceFeeCollected_Param_settlementPricePerShare = bytes32ToUint256(t3);
-    }
-}
-
 /*//////////////////////////////////////////////////////////////
                              RULES
 //////////////////////////////////////////////////////////////*/
@@ -290,7 +259,6 @@ rule EPOCH_003_closeEpoch_RevertWhen_RebalanceInProgress() {
     require tvl == 0, "bootstrap tvl is zero";
     require sharePrecision == 1, "share precision is one";
     require minDepositAmount == 1, "minimum deposit amount is one";
-    require getPerformanceFeeHighWaterMark() >= sharePrecision, "performance fee is not collected";
 
     /// @dev revert condition being verified
     require getRebalanceState() != Types.RebalanceState.NONE, "rebalance is in progress";
@@ -327,7 +295,6 @@ rule closeEpoch_RevertWhen_CurrentEpochNonceIsZero() {
     require tvl == 0, "bootstrap tvl is zero";
     require sharePrecision == 1, "share precision is one";
     require minDepositAmount == 1, "minimum deposit amount is one";
-    require getPerformanceFeeHighWaterMark() >= sharePrecision, "performance fee is not collected";
 
     /// @dev revert condition being verified
     require getEpochNonce() == 0, "current epoch nonce is zero";
@@ -369,7 +336,6 @@ rule EPOCH_003_closeEpoch_RevertWhen_PreviousEpochNotClaimable() {
     require tvl == 0, "bootstrap tvl is zero";
     require sharePrecision == 1, "share precision is one";
     require minDepositAmount == 1, "minimum deposit amount is one";
-    require getPerformanceFeeHighWaterMark() >= sharePrecision, "performance fee is not collected";
 
     /// @dev revert condition being verified
     require getEpochStatus(previousEpochNonce) != Types.EpochStatus.CLAIMABLE, "previous epoch is not claimable";
@@ -411,7 +377,6 @@ rule closeEpoch_RevertWhen_EpochNotOpen() {
     require tvl == 0, "bootstrap tvl is zero";
     require sharePrecision == 1, "share precision is one";
     require minDepositAmount == 1, "minimum deposit amount is one";
-    require getPerformanceFeeHighWaterMark() >= sharePrecision, "performance fee is not collected";
 
     /// @dev revert condition being verified
     require getEpochStatus(epochNonce) != Types.EpochStatus.OPEN, "epoch is not open";
@@ -453,7 +418,6 @@ rule closeEpoch_RevertWhen_EpochOpenTimestampOverflows() {
     require tvl == 0, "bootstrap tvl is zero";
     require sharePrecision == 1, "share precision is one";
     require minDepositAmount == 1, "minimum deposit amount is one";
-    require getPerformanceFeeHighWaterMark() >= sharePrecision, "performance fee is not collected";
 
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
@@ -495,7 +459,6 @@ rule EPOCH_016_closeEpoch_RevertWhen_EpochTooShort() {
     require tvl == 0, "bootstrap tvl is zero";
     require sharePrecision == 1, "share precision is one";
     require minDepositAmount == 1, "minimum deposit amount is one";
-    require getPerformanceFeeHighWaterMark() >= sharePrecision, "performance fee is not collected";
 
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
@@ -537,7 +500,6 @@ rule EPOCH_016_closeEpoch_RevertWhen_EmptyEpoch() {
     require tvl == 0, "bootstrap tvl is zero";
     require sharePrecision == 1, "share precision is one";
     require minDepositAmount == 1, "minimum deposit amount is one";
-    require getPerformanceFeeHighWaterMark() >= sharePrecision, "performance fee is not collected";
 
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
@@ -622,7 +584,6 @@ rule EPOCH_018_closeEpoch_RevertWhen_DepositWouldMintZeroShares() {
     require tvl <= max_uint256 / sharePrecision, "gross price per share does not overflow";
     mathint grossPricePerShare = tvl * sharePrecision / totalShares;
     require grossPricePerShare != 0, "gross price per share is nonzero";
-    require getPerformanceFeeHighWaterMark() >= grossPricePerShare, "performance fee is not collected";
     require getEpochTotalDepositAmount(epochNonce) <= max_uint256 / totalShares,
         "new share calculation does not overflow";
     mathint newShares = getEpochTotalDepositAmount(epochNonce) * totalShares / tvl;
@@ -671,7 +632,6 @@ rule closeEpoch_RevertWhen_SharePrecisionIsZero() {
     uint256 tvl = 0;
     uint256 sharePrecision = 0;
     uint256 assetPrecision = 1;
-    require getPerformanceFeeHighWaterMark() >= assetPrecision, "performance fee is not collected";
 
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
@@ -790,7 +750,6 @@ rule closeEpoch_RevertWhen_TotalWithdrawOverflows() {
         "minimum epoch period has elapsed";
     require shareBurnAmount == 2, "two shares are burned";
     require totalShares == 1, "one share is outstanding";
-    require getPerformanceFeeHighWaterMark() == max_uint256, "performance fee is not collected";
 
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
@@ -830,7 +789,6 @@ rule closeEpoch_RevertWhen_NewSharesOverflows() {
     require depositAmount == max_uint256 / 2, "deposit amount is the maximum positive int256";
     require getEpochTotalShareBurnAmount(epochNonce) == 0, "no shares are burned";
     require getTotalShares() == 0, "bootstrap price per share path";
-    require getPerformanceFeeHighWaterMark() >= assetPrecision, "performance fee is not collected";
 
     uint256 tvl = 0;
     /// @dev ghost starting values
@@ -916,7 +874,6 @@ rule closeEpoch_RevertWhen_ZeroShareGuardMultiplicationOverflows() {
     require depositAmount > max_uint256 / minDepositAmount, "zero-share guard multiplication overflows";
     require getEpochTotalShareBurnAmount(epochNonce) == 0, "no shares are burned";
     require getTotalShares() == 0, "bootstrap price per share path";
-    require getPerformanceFeeHighWaterMark() >= sharePrecision, "performance fee is not collected";
 
     uint256 tvl = 0;
     /// @dev ghost starting values
@@ -961,7 +918,6 @@ rule closeEpoch_RevertWhen_TotalSharesAdditionOverflows() {
     require totalShares > max_uint256 - depositAmount, "total shares addition overflows";
     require getEpochTotalShareBurnAmount(epochNonce) == 0, "no shares are burned";
     uint256 tvl = totalShares;
-    require getPerformanceFeeHighWaterMark() >= sharePrecision, "performance fee is not collected";
 
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
@@ -1005,7 +961,6 @@ rule closeEpoch_RevertWhen_TotalSharesSubtractionUnderflows() {
     require shareBurnAmount <= max_uint256 / 2, "withdraw amount fits int256";
     require shareBurnAmount > totalShares, "total shares subtraction underflows";
     uint256 tvl = totalShares;
-    require getPerformanceFeeHighWaterMark() >= sharePrecision, "performance fee is not collected";
 
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
@@ -1017,9 +972,6 @@ rule closeEpoch_RevertWhen_TotalSharesSubtractionUnderflows() {
 }
 
 /// ─────────────────── CLOSE EPOCH SUCCESS ────────────────────
-
-/// @dev Performance-fee-specific reverts and high-water-mark behavior are verified in
-/// ParentVaultFeesLib.spec. The rules below verify closeEpoch's integration with that library.
 
 /// @notice Closing a balanced epoch makes it claimable and returns no external action.
 /// @dev Verifies the net-zero branch with a concrete non-fee arithmetic witness.
@@ -1040,7 +992,6 @@ rule EPOCH_004_NONCE_010_SHARE_002_closeEpoch_Success_WhenNetFlowIsZero() {
     uint256 totalShares = getTotalShares();
     uint256 depositAmount = getEpochTotalDepositAmount(epochNonce);
     uint256 shareBurnAmount = getEpochTotalShareBurnAmount(epochNonce);
-    uint256 highWaterMarkBefore = getPerformanceFeeHighWaterMark();
 
     /// @dev success conditions being verified
     require getEpochStatus(epochNonce) == Types.EpochStatus.OPEN, "epoch is open";
@@ -1051,7 +1002,6 @@ rule EPOCH_004_NONCE_010_SHARE_002_closeEpoch_Success_WhenNetFlowIsZero() {
     require totalShares == 2, "two shares are outstanding";
     require totalShares <= max_uint256 / sharePrecision, "gross price per share does not overflow";
     uint256 tvl = 2;
-    require getPerformanceFeeHighWaterMark() == 1, "performance fee is not collected";
     require depositAmount == 1, "one asset unit is deposited";
     require shareBurnAmount == 1, "one share is burned";
     require depositAmount <= max_uint256 / sharePrecision, "share calculation does not overflow";
@@ -1064,8 +1014,6 @@ rule EPOCH_004_NONCE_010_SHARE_002_closeEpoch_Success_WhenNetFlowIsZero() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
     require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
-    require ghost_PerformanceFeeCollected_EventCount == 0,
-        "PerformanceFeeCollected event count starts at zero";
     require ghost_totalShares_StoreCount == 0, "total shares store count starts at zero";
     require ghost_epoch_totalWithdrawClaimAmount_StoreCount == 0,
         "totalWithdrawClaimAmount store count starts at zero";
@@ -1082,7 +1030,6 @@ rule EPOCH_004_NONCE_010_SHARE_002_closeEpoch_Success_WhenNetFlowIsZero() {
     assert returnedTotalDepositAmount == depositAmount;
     assert getEpochNonce() == epochNonce;
     assert getTotalShares() == totalShares;
-    assert getPerformanceFeeHighWaterMark() == highWaterMarkBefore;
     assert getEpochTotalDepositAmount(epochNonce) == depositAmount;
     assert getEpochTotalShareBurnAmount(epochNonce) == shareBurnAmount;
     assert getEpochStatus(epochNonce) == Types.EpochStatus.CLAIMABLE;
@@ -1094,7 +1041,6 @@ rule EPOCH_004_NONCE_010_SHARE_002_closeEpoch_Success_WhenNetFlowIsZero() {
     assert getEpochRemainingWithdrawClaimAmount(epochNonce) == shareBurnAmount;
     assert ghost_EpochClaimable_EventCount == 1;
     assert ghost_EpochClaimable_Param_epochNonce == epochNonce;
-    assert ghost_PerformanceFeeCollected_EventCount == 0;
     assert ghost_EpochDepositExecuting_EventCount == 0;
     assert ghost_EpochWithdrawExecuting_EventCount == 0;
     assert ghost_totalShares_StoreCount == 1;
@@ -1107,14 +1053,14 @@ rule EPOCH_004_NONCE_010_SHARE_002_closeEpoch_Success_WhenNetFlowIsZero() {
     assert ghost_epoch_status_StoredValue == Types.EpochStatus.CLAIMABLE;
 }
 
-/// @notice Closing an epoch folds performance-fee shares into the epoch's sole total-share write.
-/// @dev Verifies fee minting, dilution, epoch accounting, action, and both emitted events.
-rule EPOCH_004_NONCE_010_SHARE_002_closeEpoch_Success_WhenPerformanceFeeIsCollected() {
+/// @notice A profitable epoch settles at the full undiluted price and does not mint treasury shares.
+/// @dev Uses a concrete 2x price witness to verify management fees are not collected during epoch close.
+rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenPriceExceedsParWithoutFeeDilution() {
     env e;
-    uint256 tvl = 2;
-    uint256 sharePrecision = 10000;
+    uint256 sharePrecision = 100;
     uint256 assetPrecision = 1;
-    uint256 minDepositAmount = 1;
+    uint256 minDepositAmount = 2;
+    uint256 tvl = 200;
     bool isLocalStrategy = true;
 
     /// @dev revert conditions NOT being verified
@@ -1126,8 +1072,6 @@ rule EPOCH_004_NONCE_010_SHARE_002_closeEpoch_Success_WhenPerformanceFeeIsCollec
 
     uint256 epochNonce = getEpochNonce();
     uint256 minEpochPeriod = getMinEpochPeriod();
-    uint256 feeShares = 10000;
-    uint256 newShares = 10000;
     address treasury = getTreasury();
     uint256 treasuryBalanceBefore = share.balanceOf(treasury);
     uint256 totalSupplyBefore = share.totalSupply();
@@ -1138,18 +1082,13 @@ rule EPOCH_004_NONCE_010_SHARE_002_closeEpoch_Success_WhenPerformanceFeeIsCollec
         "minimum epoch period addition does not overflow";
     require e.block.timestamp >= getEpochOpenedAtTimestamp(epochNonce) + minEpochPeriod,
         "minimum epoch period has elapsed";
-    require getEpochTotalDepositAmount(epochNonce) == 1, "one asset unit is deposited";
+    require getTotalShares() == 100, "one share-precision unit is outstanding";
+    require getEpochTotalDepositAmount(epochNonce) == 2, "two asset units are deposited";
     require getEpochTotalShareBurnAmount(epochNonce) == 0, "no shares are burned";
-    require getTotalShares() == 10000, "ten thousand shares are outstanding";
-    require getPerformanceFeeHighWaterMark() == 1, "gross price exceeds the high-water mark";
-    require treasuryBalanceBefore <= max_uint256 - feeShares, "treasury share balance does not overflow";
-    require totalSupplyBefore <= max_uint256 - feeShares, "share total supply does not overflow";
 
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
     require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
-    require ghost_PerformanceFeeCollected_EventCount == 0,
-        "PerformanceFeeCollected event count starts at zero";
     require ghost_totalShares_StoreCount == 0, "total shares store count starts at zero";
     require ghost_epoch_totalWithdrawClaimAmount_StoreCount == 0,
         "totalWithdrawClaimAmount store count starts at zero";
@@ -1162,32 +1101,25 @@ rule EPOCH_004_NONCE_010_SHARE_002_closeEpoch_Success_WhenPerformanceFeeIsCollec
     assert !lastReverted;
     assert returnedEpochNonce == epochNonce;
     assert returnedAction == ACTION_DEPOSIT_TO_LOCAL_STRATEGY();
-    assert returnedAmount == 1;
-    assert returnedTotalDepositAmount == 1;
+    assert returnedAmount == 2;
+    assert returnedTotalDepositAmount == 2;
     assert getEpochNonce() == epochNonce;
-    assert getTotalShares() == 10000 + feeShares + newShares;
-    assert getPerformanceFeeHighWaterMark() == 1;
-    assert getEpochTotalDepositAmount(epochNonce) == 1;
-    assert getEpochTotalShareBurnAmount(epochNonce) == 0;
+    assert getTotalShares() == 101;
     assert getEpochStatus(epochNonce) == Types.EpochStatus.CLAIMABLE;
-    assert getEpochPricePerShare(epochNonce) == 1;
-    assert getEpochRemainingDepositClaimAmount(epochNonce) == 1;
-    assert getEpochRemainingShareMintAmount(epochNonce) == newShares;
+    assert getEpochPricePerShare(epochNonce) == 200;
+    assert getEpochRemainingDepositClaimAmount(epochNonce) == 2;
+    assert getEpochRemainingShareMintAmount(epochNonce) == 1;
     assert getEpochRemainingShareBurnAmount(epochNonce) == 0;
     assert getEpochTotalWithdrawClaimAmount(epochNonce) == 0;
     assert getEpochRemainingWithdrawClaimAmount(epochNonce) == 0;
-    assert share.balanceOf(treasury) == treasuryBalanceBefore + feeShares;
-    assert share.totalSupply() == totalSupplyBefore + feeShares;
+    assert share.balanceOf(treasury) == treasuryBalanceBefore;
+    assert share.totalSupply() == totalSupplyBefore;
     assert ghost_EpochClaimable_EventCount == 1;
     assert ghost_EpochClaimable_Param_epochNonce == epochNonce;
-    assert ghost_PerformanceFeeCollected_EventCount == 1;
-    assert ghost_PerformanceFeeCollected_Param_epochNonce == epochNonce;
-    assert ghost_PerformanceFeeCollected_Param_feeShares == feeShares;
-    assert ghost_PerformanceFeeCollected_Param_settlementPricePerShare == 1;
     assert ghost_EpochDepositExecuting_EventCount == 0;
     assert ghost_EpochWithdrawExecuting_EventCount == 0;
     assert ghost_totalShares_StoreCount == 1;
-    assert ghost_totalShares_StoredValue == 10000 + feeShares + newShares;
+    assert ghost_totalShares_StoredValue == 101;
     assert ghost_epoch_totalWithdrawClaimAmount_StoreCount == 1;
     assert ghost_epoch_totalWithdrawClaimAmount_StoredKey == epochNonce;
     assert ghost_epoch_totalWithdrawClaimAmount_StoredValue == 0;
@@ -1214,7 +1146,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenLocalNetDepo
     uint256 epochNonce = getEpochNonce();
     uint256 minEpochPeriod = getMinEpochPeriod();
     uint256 depositAmount = getEpochTotalDepositAmount(epochNonce);
-    uint256 highWaterMarkBefore = getPerformanceFeeHighWaterMark();
 
     /// @dev success conditions being verified
     require getEpochStatus(epochNonce) == Types.EpochStatus.OPEN, "epoch is open";
@@ -1223,15 +1154,12 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenLocalNetDepo
     require e.block.timestamp >= getEpochOpenedAtTimestamp(epochNonce) + minEpochPeriod,
         "minimum epoch period has elapsed";
     require getTotalShares() == 0, "bootstrap price per share path";
-    require getPerformanceFeeHighWaterMark() >= assetPrecision, "performance fee is not collected";
     require depositAmount == assetPrecision, "deposit is one whole asset token";
     require getEpochTotalShareBurnAmount(epochNonce) == 0, "no shares are burned";
 
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
     require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
-    require ghost_PerformanceFeeCollected_EventCount == 0,
-        "PerformanceFeeCollected event count starts at zero";
     require ghost_totalShares_StoreCount == 0, "total shares store count starts at zero";
     require ghost_epoch_totalWithdrawClaimAmount_StoreCount == 0,
         "totalWithdrawClaimAmount store count starts at zero";
@@ -1249,7 +1177,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenLocalNetDepo
     assert returnedTotalDepositAmount == depositAmount;
     assert getEpochNonce() == epochNonce;
     assert getTotalShares() == sharePrecision;
-    assert getPerformanceFeeHighWaterMark() == highWaterMarkBefore;
     assert getEpochTotalDepositAmount(epochNonce) == depositAmount;
     assert getEpochTotalShareBurnAmount(epochNonce) == 0;
     assert getEpochStatus(epochNonce) == Types.EpochStatus.CLAIMABLE;
@@ -1261,7 +1188,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenLocalNetDepo
     assert getEpochRemainingWithdrawClaimAmount(epochNonce) == 0;
     assert ghost_EpochClaimable_EventCount == 1;
     assert ghost_EpochClaimable_Param_epochNonce == epochNonce;
-    assert ghost_PerformanceFeeCollected_EventCount == 0;
     assert ghost_EpochDepositExecuting_EventCount == 0;
     assert ghost_EpochWithdrawExecuting_EventCount == 0;
     assert ghost_totalShares_StoreCount == 1;
@@ -1291,7 +1217,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenRemoteNetDep
     uint256 epochNonce = getEpochNonce();
     uint256 minEpochPeriod = getMinEpochPeriod();
     uint256 depositAmount = getEpochTotalDepositAmount(epochNonce);
-    uint256 highWaterMarkBefore = getPerformanceFeeHighWaterMark();
 
     /// @dev success conditions being verified
     require getEpochStatus(epochNonce) == Types.EpochStatus.OPEN, "epoch is open";
@@ -1301,7 +1226,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenRemoteNetDep
         "minimum epoch period has elapsed";
     require sharePrecision != 0, "share precision is nonzero";
     require getTotalShares() == 0, "bootstrap price per share path";
-    require getPerformanceFeeHighWaterMark() >= sharePrecision, "performance fee is not collected";
     require depositAmount != 0, "net deposit amount is nonzero";
     require depositAmount <= max_uint256 / sharePrecision, "share calculation does not overflow";
     require depositAmount <= max_uint256 / 2, "deposit amount fits int256";
@@ -1314,8 +1238,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenRemoteNetDep
     require ghost_EpochDepositExecuting_EventCount == 0,
         "EpochDepositExecuting event count starts at zero";
     require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
-    require ghost_PerformanceFeeCollected_EventCount == 0,
-        "PerformanceFeeCollected event count starts at zero";
     require ghost_totalShares_StoreCount == 0, "total shares store count starts at zero";
     require ghost_epoch_totalWithdrawClaimAmount_StoreCount == 0,
         "totalWithdrawClaimAmount store count starts at zero";
@@ -1333,7 +1255,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenRemoteNetDep
     assert returnedTotalDepositAmount == depositAmount;
     assert getEpochNonce() == epochNonce;
     assert getTotalShares() == depositAmount;
-    assert getPerformanceFeeHighWaterMark() == highWaterMarkBefore;
     assert getEpochTotalDepositAmount(epochNonce) == depositAmount;
     assert getEpochTotalShareBurnAmount(epochNonce) == 0;
     assert getEpochStatus(epochNonce) == Types.EpochStatus.EXECUTING;
@@ -1347,7 +1268,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenRemoteNetDep
     assert ghost_EpochDepositExecuting_Param_epochNonce == epochNonce;
     assert ghost_EpochDepositExecuting_Param_amount == depositAmount;
     assert ghost_EpochClaimable_EventCount == 0;
-    assert ghost_PerformanceFeeCollected_EventCount == 0;
     assert ghost_EpochWithdrawExecuting_EventCount == 0;
     assert ghost_totalShares_StoreCount == 1;
     assert ghost_totalShares_StoredValue == depositAmount;
@@ -1377,7 +1297,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenLocalNetWith
     uint256 totalShares = getTotalShares();
     uint256 depositAmount = getEpochTotalDepositAmount(epochNonce);
     uint256 shareBurnAmount = getEpochTotalShareBurnAmount(epochNonce);
-    uint256 highWaterMarkBefore = getPerformanceFeeHighWaterMark();
     uint256 totalWithdrawClaimAmountBefore = getEpochTotalWithdrawClaimAmount(epochNonce);
     uint256 remainingWithdrawClaimAmountBefore = getEpochRemainingWithdrawClaimAmount(epochNonce);
 
@@ -1390,7 +1309,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenLocalNetWith
     require totalShares == 2, "two shares are outstanding";
     require totalShares <= max_uint256 / sharePrecision, "gross price per share does not overflow";
     uint256 tvl = 2;
-    require getPerformanceFeeHighWaterMark() == 1, "performance fee is not collected";
     require depositAmount == 1, "one asset unit is deposited";
     require shareBurnAmount == 2, "two shares are burned";
     require depositAmount <= max_uint256 / 2, "deposit amount fits int256";
@@ -1406,8 +1324,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenLocalNetWith
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
     require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
-    require ghost_PerformanceFeeCollected_EventCount == 0,
-        "PerformanceFeeCollected event count starts at zero";
     require ghost_EpochDepositExecuting_EventCount == 0,
         "EpochDepositExecuting event count starts at zero";
     require ghost_EpochWithdrawExecuting_EventCount == 0,
@@ -1429,7 +1345,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenLocalNetWith
     assert returnedTotalDepositAmount == depositAmount;
     assert getEpochNonce() == epochNonce;
     assert getTotalShares() == totalShares + depositAmount - shareBurnAmount;
-    assert getPerformanceFeeHighWaterMark() == highWaterMarkBefore;
     assert getEpochTotalDepositAmount(epochNonce) == depositAmount;
     assert getEpochTotalShareBurnAmount(epochNonce) == shareBurnAmount;
     assert getEpochStatus(epochNonce) == Types.EpochStatus.OPEN;
@@ -1440,7 +1355,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenLocalNetWith
     assert getEpochTotalWithdrawClaimAmount(epochNonce) == totalWithdrawClaimAmountBefore;
     assert getEpochRemainingWithdrawClaimAmount(epochNonce) == remainingWithdrawClaimAmountBefore;
     assert ghost_EpochClaimable_EventCount == 0;
-    assert ghost_PerformanceFeeCollected_EventCount == 0;
     assert ghost_EpochDepositExecuting_EventCount == 0;
     assert ghost_EpochWithdrawExecuting_EventCount == 0;
     assert ghost_totalShares_StoreCount == 1;
@@ -1466,7 +1380,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenRemoteNetWit
     uint256 minEpochPeriod = getMinEpochPeriod();
     uint256 totalShares = getTotalShares();
     uint256 shareBurnAmount = getEpochTotalShareBurnAmount(epochNonce);
-    uint256 highWaterMarkBefore = getPerformanceFeeHighWaterMark();
 
     /// @dev success conditions being verified
     require getEpochStatus(epochNonce) == Types.EpochStatus.OPEN, "epoch is open";
@@ -1477,7 +1390,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenRemoteNetWit
     require totalShares == 2, "two shares are outstanding";
     require totalShares <= max_uint256 / sharePrecision, "gross price per share does not overflow";
     uint256 tvl = 2;
-    require getPerformanceFeeHighWaterMark() == 1, "performance fee is not collected";
     require getEpochTotalDepositAmount(epochNonce) == 0, "no deposits were made";
     require shareBurnAmount == 1, "one share is burned";
     require shareBurnAmount <= max_uint256 / sharePrecision, "withdraw calculation does not overflow";
@@ -1488,8 +1400,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenRemoteNetWit
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
     require ghost_EpochWithdrawExecuting_EventCount == 0,
         "EpochWithdrawExecuting event count starts at zero";
-    require ghost_PerformanceFeeCollected_EventCount == 0,
-        "PerformanceFeeCollected event count starts at zero";
     require ghost_totalShares_StoreCount == 0, "total shares store count starts at zero";
     require ghost_epoch_totalWithdrawClaimAmount_StoreCount == 0,
         "totalWithdrawClaimAmount store count starts at zero";
@@ -1508,7 +1418,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenRemoteNetWit
     assert returnedTotalDepositAmount == 0;
     assert getEpochNonce() == epochNonce;
     assert getTotalShares() == totalShares - shareBurnAmount;
-    assert getPerformanceFeeHighWaterMark() == highWaterMarkBefore;
     assert getEpochTotalDepositAmount(epochNonce) == 0;
     assert getEpochTotalShareBurnAmount(epochNonce) == shareBurnAmount;
     assert getEpochStatus(epochNonce) == Types.EpochStatus.EXECUTING;
@@ -1521,7 +1430,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenRemoteNetWit
     assert ghost_EpochWithdrawExecuting_EventCount == 1;
     assert ghost_EpochWithdrawExecuting_Param_epochNonce == epochNonce;
     assert ghost_EpochWithdrawExecuting_Param_amount == shareBurnAmount;
-    assert ghost_PerformanceFeeCollected_EventCount == 0;
     assert ghost_EpochClaimable_EventCount == 0;
     assert ghost_EpochDepositExecuting_EventCount == 0;
     assert ghost_totalShares_StoreCount == 1;
@@ -1640,7 +1548,6 @@ rule EPOCH_014_completeEpochDeposit_Success() {
     uint256 depositAmountBefore = getEpochTotalDepositAmount(epochNonce);
     uint256 withdrawClaimAmountBefore = getEpochTotalWithdrawClaimAmount(epochNonce);
     uint256 totalSharesBefore = getTotalShares();
-    uint256 highWaterMarkBefore = getPerformanceFeeHighWaterMark();
 
     /// @dev success conditions being verified
     require getEpochTotalDepositAmount(epochNonce) > getEpochTotalWithdrawClaimAmount(epochNonce),
@@ -1658,7 +1565,6 @@ rule EPOCH_014_completeEpochDeposit_Success() {
     assert getEpochTotalDepositAmount(epochNonce) == depositAmountBefore;
     assert getEpochTotalWithdrawClaimAmount(epochNonce) == withdrawClaimAmountBefore;
     assert getTotalShares() == totalSharesBefore;
-    assert getPerformanceFeeHighWaterMark() == highWaterMarkBefore;
     assert getEpochStatus(epochNonce) == Types.EpochStatus.CLAIMABLE;
     assert ghost_EpochClaimable_EventCount == 1;
     assert ghost_EpochClaimable_Param_epochNonce == epochNonce;
@@ -1711,7 +1617,6 @@ rule EPOCH_014_finalizeLocalNetWithdraw_Success() {
     uint256 depositAmountBefore = getEpochTotalDepositAmount(epochNonce);
     uint256 shareBurnAmountBefore = getEpochTotalShareBurnAmount(epochNonce);
     uint256 totalSharesBefore = getTotalShares();
-    uint256 highWaterMarkBefore = getPerformanceFeeHighWaterMark();
 
     /// @dev ghost starting values
     require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
@@ -1726,7 +1631,6 @@ rule EPOCH_014_finalizeLocalNetWithdraw_Success() {
     assert getEpochTotalDepositAmount(epochNonce) == depositAmountBefore;
     assert getEpochTotalShareBurnAmount(epochNonce) == shareBurnAmountBefore;
     assert getTotalShares() == totalSharesBefore;
-    assert getPerformanceFeeHighWaterMark() == highWaterMarkBefore;
     assert getEpochTotalWithdrawClaimAmount(epochNonce) == settledAmount;
     assert getEpochRemainingWithdrawClaimAmount(epochNonce) == settledAmount;
     assert getEpochStatus(epochNonce) == Types.EpochStatus.CLAIMABLE;
@@ -1774,7 +1678,6 @@ rule EPOCH_004_NONCE_010_openNextEpoch_Success() {
 
     mathint nextEpochNonce = epochNonce + 1;
     uint256 totalSharesBefore = getTotalShares();
-    uint256 highWaterMarkBefore = getPerformanceFeeHighWaterMark();
 
     /// @dev ghost starting values
     require ghost_EpochOpen_EventCount == 0, "EpochOpen event count starts at zero";
@@ -1785,7 +1688,6 @@ rule EPOCH_004_NONCE_010_openNextEpoch_Success() {
 
     assert !lastReverted;
     assert getTotalShares() == totalSharesBefore;
-    assert getPerformanceFeeHighWaterMark() == highWaterMarkBefore;
     assert getEpochNonce() == nextEpochNonce;
     assert getEpochStatus(getEpochNonce()) == Types.EpochStatus.OPEN;
     assert getEpochOpenedAtTimestamp(getEpochNonce()) == e.block.timestamp;

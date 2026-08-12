@@ -50,7 +50,6 @@ methods {
     function getDepositAmount(address, uint256) external returns (uint256) envfree;
     function getWithdrawShareBurnAmount(address, uint256) external returns (uint256) envfree;
     function getInitialActiveProtocolAdapterSet() external returns (bool) envfree;
-    function getPerformanceFeeHighWaterMark() external returns (uint256) envfree;
     function getTreasury() external returns (address) envfree;
     function getShare() external returns (address) envfree;
     function getSharePrecision() external returns (uint256) envfree;
@@ -210,10 +209,6 @@ definition ManagementFeeCollectedEvent() returns bytes32 =
 // keccak256("ManagementFeeCollected(uint256,uint256)")
     to_bytes32(0x6f4a589972e181c1010960e6cb88e05776a4f3a28373e49c69ffdf8cc30f1a31);
 
-definition PerformanceFeeCollectedEvent() returns bytes32 =
-// keccak256("PerformanceFeeCollected(uint256,uint256,uint256)")
-    to_bytes32(0xdc4f167bfca42a54abc7c7dd90ec178ea116a54329d32a1a6cb1c6208d17177c);
-
 definition InitialActiveProtocolAdapterSetEvent() returns bytes32 =
 // keccak256("InitialActiveProtocolAdapterSet(bytes32,address)")
     to_bytes32(0x389c4eb5fd9b7beba97816c41d88380c67872bdd8d51e708ac90598a3725b112);
@@ -261,7 +256,6 @@ definition RebalanceDepositRecoveryClearedEvent() returns bytes32 =
 
 /// @dev Mirrors the constants in ParentVaultFeesLib for modeling the management fee formula inline.
 definition BPS_DENOMINATOR() returns uint256 = 10000;
-definition PERFORMANCE_FEE_BPS() returns uint256 = 777;
 definition MANAGEMENT_FEE_BPS() returns uint256 = 100;
 definition YEAR() returns uint256 = 31536000;
 
@@ -476,14 +470,6 @@ ghost mathint ghost_totalShares_StoreCount {
 }
 ghost uint256 ghost_totalShares_StoredValue {
     init_state axiom ghost_totalShares_StoredValue == 0;
-}
-
-/// ─── s_performanceFeeHighWaterMark ────────────────────────────
-ghost mathint ghost_performanceFeeHighWaterMark_StoreCount {
-    init_state axiom ghost_performanceFeeHighWaterMark_StoreCount == 0;
-}
-ghost uint256 ghost_performanceFeeHighWaterMark_StoredValue {
-    init_state axiom ghost_performanceFeeHighWaterMark_StoredValue == 0;
 }
 
 /// ─── s_epochNonce ──────────────────────────────────────────────
@@ -847,20 +833,6 @@ ghost uint256 ghost_ManagementFeeCollected_Param_feeShares {
     init_state axiom ghost_ManagementFeeCollected_Param_feeShares == 0;
 }
 
-/// ─── Event: PerformanceFeeCollected ───────────────────────────────
-ghost mathint ghost_PerformanceFeeCollected_EventCount {
-    init_state axiom ghost_PerformanceFeeCollected_EventCount == 0;
-}
-ghost uint256 ghost_PerformanceFeeCollected_Param_epochNonce {
-    init_state axiom ghost_PerformanceFeeCollected_Param_epochNonce == 0;
-}
-ghost uint256 ghost_PerformanceFeeCollected_Param_feeShares {
-    init_state axiom ghost_PerformanceFeeCollected_Param_feeShares == 0;
-}
-ghost uint256 ghost_PerformanceFeeCollected_Param_settlementPricePerShare {
-    init_state axiom ghost_PerformanceFeeCollected_Param_settlementPricePerShare == 0;
-}
-
 /// ─── Event: InitialActiveProtocolAdapterSet ───────────────────────
 ghost mathint ghost_InitialActiveProtocolAdapterSet_EventCount {
     init_state axiom ghost_InitialActiveProtocolAdapterSet_EventCount == 0;
@@ -934,11 +906,6 @@ hook Sstore currentContract.ext_yieldcoin_storage_ParentVault.s_rebalance.lastRe
 hook Sstore currentContract.ext_yieldcoin_storage_ParentVault.s_totalShares uint256 newValue {
     ghost_totalShares_StoreCount = ghost_totalShares_StoreCount + 1;
     ghost_totalShares_StoredValue = newValue;
-}
-
-hook Sstore currentContract.ext_yieldcoin_storage_ParentVault.s_performanceFeeHighWaterMark uint256 newValue {
-    ghost_performanceFeeHighWaterMark_StoreCount = ghost_performanceFeeHighWaterMark_StoreCount + 1;
-    ghost_performanceFeeHighWaterMark_StoredValue = newValue;
 }
 
 hook Sstore currentContract.ext_yieldcoin_storage_ParentVault.s_epochNonce uint256 newValue {
@@ -1167,11 +1134,6 @@ hook LOG4(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2, bytes32 
         ghost_RebalanceCompleted_Param_rebalanceNonce = bytes32ToUint256(t1);
         ghost_RebalanceCompleted_Param_newProtocolId = t2;
         ghost_RebalanceCompleted_Param_newChainSelector = bytes32ToUint64(t3);
-    } else if (t0 == PerformanceFeeCollectedEvent()) {
-        ghost_PerformanceFeeCollected_EventCount = ghost_PerformanceFeeCollected_EventCount + 1;
-        ghost_PerformanceFeeCollected_Param_epochNonce = bytes32ToUint256(t1);
-        ghost_PerformanceFeeCollected_Param_feeShares = bytes32ToUint256(t2);
-        ghost_PerformanceFeeCollected_Param_settlementPricePerShare = bytes32ToUint256(t3);
     } else if (t0 == CCIPBridgedEvent()) {
         ghost_CCIPBridged_EventCount = ghost_CCIPBridged_EventCount + 1;
         ghost_CCIPBridged_Param_ccipMessageId = t1;
@@ -1551,8 +1513,8 @@ rule CFG_001_initialize_RevertWhen_CancelDepositOperatorIsZeroAddress() {
     assert lastReverted;
 }
 
-/// @notice ParentVault initialization sets up epoch 1, rebalance nonce 1, performance fee high water
-///         mark, treasury, and the cancel-deposit operator role.
+/// @notice ParentVault initialization sets up epoch 1, rebalance nonce 1, treasury, and the
+///         cancel-deposit operator role.
 rule NONCE_008_UPGRADE_003_initialize_Success() {
     env e;
     BaseVault.InitParams params;
@@ -1581,7 +1543,6 @@ rule NONCE_008_UPGRADE_003_initialize_Success() {
     require ghost_epoch_openedAtTimestamp_StoreCount == 0;
     require ghost_rebalance_nonce_StoreCount == 0;
     require ghost_rebalance_lastRebalanceCompletedTimestamp_StoreCount == 0;
-    require ghost_performanceFeeHighWaterMark_StoreCount == 0;
 
     initialize@withrevert(e, params, treasury, cancelDepositOperator);
 
@@ -1590,7 +1551,6 @@ rule NONCE_008_UPGRADE_003_initialize_Success() {
     assert getEpochNonce() == 1;
     assert getEpoch(1).status == Types.EpochStatus.OPEN;
     assert getEpoch(1).openedAtTimestamp == e.block.timestamp;
-    assert getPerformanceFeeHighWaterMark() == getAssetPrecision();
     assert getRebalance().nonce == 1;
     assert getRebalance().lastRebalanceCompletedTimestamp == e.block.timestamp;
     assert getTreasury() == treasury;
@@ -3814,7 +3774,7 @@ rule REC_009_ccipReceive_REBALANCE_RevertWhen_TargetAdapterVaultIsInvalid() {
 ///         state, and takes the zero-share management-fee path)
 /// @dev Management-fee calculation and collection are verified in ParentVaultFeesLib.spec and
 ///      ParentVaultRebalanceLib.spec; this rule verifies ParentVault's CCIP integration wiring.
-rule CCIP_003_CCIP_004_FEE_004_NONCE_011_NONCE_013_ccipReceive_REBALANCE_Success() {
+rule CCIP_003_CCIP_004_FEE_002_NONCE_011_NONCE_013_ccipReceive_REBALANCE_Success() {
     env e;
     Client.Any2EVMMessage message;
     uint256 rebalanceNonce;
@@ -4637,7 +4597,7 @@ rule NONCE_011_initiateRebalance_LOCAL_TO_REMOTE_Success() {
 ///      ParentVaultRebalanceLib.spec; this rule verifies ParentVault's local integration wiring.
 /// @dev Run with ParentVault.localAdapter.conf, which links the initial active-adapter storage path
 ///      to MockProtocolAdapter so Certora can resolve the withdrawal before the adapter switch.
-rule FEE_004_NONCE_011_initiateRebalance_LOCAL_TO_LOCAL_Success() {
+rule FEE_002_NONCE_011_initiateRebalance_LOCAL_TO_LOCAL_Success() {
     env e;
     Types.Strategy newStrategy;
 
@@ -4729,9 +4689,6 @@ rule FEE_004_NONCE_011_initiateRebalance_LOCAL_TO_LOCAL_Success() {
 ///      access control/pause/reentrancy/recovery guards, and the external-action dispatch that
 ///      lives in ParentVault.sol itself (_executeDeposit/_ccipSend/_executeWithdraw/events),
 ///      which the library spec cannot see since the library only returns the action to take.
-///      Success rules below reuse the exact simplifying preconditions from the library spec's own
-///      closeEpoch_Success_* rules (bootstrap/tvl==totalShares tricks to avoid performance fee
-///      collection) rather than re-deriving the fee formula.
 
 /// @notice Closing an epoch reverts when the caller lacks EPOCH_OPERATOR_ROLE
 /// @dev Verifies that an unauthorized call leaves all vault state unchanged
@@ -4885,7 +4842,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_closeEpoch_DEPOSIT_TO_LOCAL_STRATEGY_Success(
     require getAssetPrecision() == 1000000, "asset precision should be 1e6";
     require getMinDepositAmount() == 1000000, "minimum deposit should be one asset unit";
     require getTotalShares() == 0, "use bootstrap settlement";
-    require getPerformanceFeeHighWaterMark() >= getSharePrecision(), "performance fee should not be collected";
     require depositAmount == 1000000, "use one minimum deposit";
     require getEpoch(epochNonce).totalShareBurnAmount == 0, "no withdrawal intent";
     require tvl == 0, "bootstrap tvl should be zero";
@@ -4946,7 +4902,6 @@ rule REC_009_closeEpoch_DEPOSIT_TO_LOCAL_STRATEGY_RevertWhen_DepositFails() {
     require getAssetPrecision() == 1000000, "asset precision should be 1e6";
     require getMinDepositAmount() == 1000000, "minimum deposit should be one asset unit";
     require getTotalShares() == 0, "use bootstrap settlement";
-    require getPerformanceFeeHighWaterMark() >= getSharePrecision(), "performance fee should not be collected";
     require depositAmount == 1000000, "use one minimum deposit";
     require getEpoch(epochNonce).totalShareBurnAmount == 0, "no withdrawal intent";
     require tvl == 0, "bootstrap tvl should be zero";
@@ -5000,7 +4955,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_closeEpoch_SEND_DEPOSIT_TO_REMOTE_STRATEGY_Su
     require getAssetPrecision() == 1000000, "asset precision should be 1e6";
     require getMinDepositAmount() == 1000000, "minimum deposit should be one asset unit";
     require getTotalShares() == 0, "use bootstrap settlement";
-    require getPerformanceFeeHighWaterMark() >= getSharePrecision(), "performance fee should not be collected";
     require depositAmount == 1000000, "use one minimum deposit";
     require getEpoch(epochNonce).totalShareBurnAmount == 0, "no withdrawal intent";
     require tvl == 0, "bootstrap tvl should be zero";
@@ -5082,7 +5036,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_closeEpoch_WITHDRAW_FROM_LOCAL_STRATEGY_Succe
     require getSharePrecision() == 1000000000000000000, "share precision should be 1e18";
     require totalShares == 1000000, "use one whole asset unit of shares";
     require tvl == 1000000, "use one whole asset unit of tvl";
-    require getPerformanceFeeHighWaterMark() >= getSharePrecision(), "performance fee should not be collected";
     require getEpoch(epochNonce).totalDepositAmount == 0, "no deposits should be made";
     require shareBurnAmount == 500000, "withdraw half of the outstanding shares";
 
@@ -5146,7 +5099,6 @@ rule REC_009_closeEpoch_WITHDRAW_FROM_LOCAL_STRATEGY_RevertWhen_WithdrawFails() 
     require getSharePrecision() == 1000000000000000000, "share precision should be 1e18";
     require totalShares == 1000000, "use one whole asset unit of shares";
     require tvl == 1000000, "use one whole asset unit of tvl";
-    require getPerformanceFeeHighWaterMark() >= getSharePrecision(), "performance fee should not be collected";
     require getEpoch(epochNonce).totalDepositAmount == 0, "no deposits should be made";
     require shareBurnAmount == 500000, "withdraw half of the outstanding shares";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
@@ -5191,7 +5143,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_closeEpoch_WAIT_FOR_REMOTE_WITHDRAW_Success()
     require getSharePrecision() == 1000000000000000000, "share precision should be 1e18";
     require totalShares == 1000000, "use one whole asset unit of shares";
     require tvl == 1000000, "use one whole asset unit of tvl";
-    require getPerformanceFeeHighWaterMark() >= getSharePrecision(), "performance fee should not be collected";
     require getEpoch(epochNonce).totalDepositAmount == 0, "no deposits should be made";
     require shareBurnAmount == 500000, "withdraw half of the outstanding shares";
     require getActiveProtocolAdapter() == 0, "no active adapter on this chain (remote strategy)";
@@ -5425,7 +5376,7 @@ rule completeRebalance_RevertWhen_NoRebalanceInProgress() {
 
 /// @notice Completing a rebalance activates the pending strategy, increments the rebalance nonce,
 ///         and mints the management fee to the treasury when fee shares are nonzero
-rule FEE_002_FEE_004_NONCE_011_PAUSE_006_completeRebalance_Success_WhenManagementFeeSharesAreCollected() {
+rule FEE_001_FEE_002_NONCE_011_PAUSE_006_completeRebalance_Success_WhenManagementFeeSharesAreCollected() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -5601,7 +5552,7 @@ rule REC_005_executeRecovery_RevertWhen_DepositFails() {
 
 /// @notice Executing recovery deposits the stored recovery amount into the active adapter, clears
 ///         the recovery, and finalizes the rebalance (activating the pending strategy)
-rule FEE_004_NONCE_011_REC_001_REC_004_REC_007_executeRecovery_Success() {
+rule FEE_002_NONCE_011_REC_001_REC_004_REC_007_executeRecovery_Success() {
     env e;
 
     /// @dev revert conditions NOT being verified

@@ -195,7 +195,7 @@ abstract contract Properties is BeforeAfter, Asserts {
         );
     }
 
-    function invariant_FEE_002_allFeeSharesMintToTreasury() public {
+    function invariant_FEE_001_allManagementFeeSharesMintToTreasury() public {
         uint256 totalUserSharesMinted;
         uint256 totalSharesBurned;
         for (uint256 i; i < ghost_claimableEpochs.length; ++i) {
@@ -219,7 +219,7 @@ abstract contract Properties is BeforeAfter, Asserts {
         eq(
             parent.share.balanceOf(parent.vault.getTreasury()),
             expectedTreasuryShares,
-            "FEE-002: treasury share balance doesn't match total fee shares minted"
+            "FEE-001: treasury share balance doesn't match total management fee shares minted"
         );
     }
 

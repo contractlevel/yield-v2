@@ -73,10 +73,6 @@ abstract contract Setup is BaseSetup, BaseIntegrationTest {
         require(epoch.openedAtTimestamp != 0, "UPGRADE-003: initial epoch timestamp missing");
         require(rebalance.state == Types.RebalanceState.NONE, "UPGRADE-003: initial rebalance state mismatch");
         require(rebalance.lastRebalanceCompletedTimestamp != 0, "UPGRADE-003: rebalance timestamp missing");
-        require(
-            parent.vault.getPerformanceFeeHighWaterMark() == ASSET_PRECISION,
-            "UPGRADE-003: initial high-water mark mismatch"
-        );
         require(parent.vault.getTotalShares() == 0, "UPGRADE-003: initial shares not zero");
         require(parent.vault.getRecoveryMode() == Types.RecoveryMode.NONE, "UPGRADE-003: initial recovery active");
 

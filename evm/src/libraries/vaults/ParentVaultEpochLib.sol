@@ -61,7 +61,6 @@ library ParentVaultEpochLib {
         uint256 totalShareBurnAmount;
         uint256 totalShares;
         uint256 settlementPricePerShare;
-        uint256 feeShares;
         uint256 totalWithdraw;
         uint256 newShares;
         int256 netFlow;
@@ -106,7 +105,7 @@ library ParentVaultEpochLib {
     /// @dev Reverts if the epoch contains neither deposits nor withdraw intents
     /// @dev Reverts if TVL is zero while shares are outstanding or the resulting price per share is zero
     /// @dev Reverts if deposit settlement would allocate zero shares to a minimum-size deposit
-    /// @dev Collects the performance fee and computes the settlement price per share before computing net flow
+    /// @dev Computes the settlement price per share before computing net flow
     function closeEpoch(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 tvl,
@@ -136,7 +135,7 @@ library ParentVaultEpochLib {
     /// @dev Reverts if the epoch contains neither deposits nor withdraw intents
     /// @dev Reverts if TVL is zero while shares are outstanding or the resulting price per share is zero
     /// @dev Reverts if deposit settlement would allocate zero shares to a minimum-size deposit
-    /// @dev Collects the performance fee and computes the settlement price per share before computing net flow
+    /// @dev Computes the settlement price per share before computing net flow
     function _closeEpoch(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 tvl,
@@ -184,39 +183,25 @@ library ParentVaultEpochLib {
         }
 
         accounting.totalShares = $.s_totalShares;
-        uint256 grossPricePerShare = ParentVaultFeesLib._calculatePricePerShare(
+        accounting.settlementPricePerShare = ParentVaultFeesLib._calculatePricePerShare(
             params.tvl, accounting.totalShares, params.sharePrecision, params.assetPrecision
         );
-        ParentVaultFeesLib.PerformanceFeeParams memory feeParams;
-        feeParams.epochNonce = epochNonce;
-        feeParams.tvl = params.tvl;
-        feeParams.grossPricePerShare = grossPricePerShare;
-        feeParams.totalShares = accounting.totalShares;
-        feeParams.share = params.share;
-        feeParams.sharePrecision = params.sharePrecision;
-        feeParams.assetPrecision = params.assetPrecision;
-        (accounting.settlementPricePerShare, accounting.feeShares) =
-            ParentVaultFeesLib._collectPerformanceFee($, feeParams);
 
         accounting.totalWithdraw = ParentVaultMathLib._mulDivDown(
             accounting.totalShareBurnAmount, accounting.settlementPricePerShare, params.sharePrecision
         );
         accounting.netFlow = int256(accounting.totalDepositAmount) - int256(accounting.totalWithdraw);
 
-        accounting.newShares =
-            _calculateNewShares(params, accounting.totalDepositAmount, accounting.totalShares + accounting.feeShares);
+        accounting.newShares = _calculateNewShares(params, accounting.totalDepositAmount, accounting.totalShares);
         if (
             accounting.totalDepositAmount != 0
                 && accounting.newShares * params.minDepositAmount < accounting.totalDepositAmount
         ) {
             revert IParentVault.ParentVault__DepositWouldMintZeroShares();
         }
-        // This is the sole write to s_totalShares for the epoch: totalShares is the pre-fee value
-        // read above, feeShares folds in any performance-fee dilution _collectPerformanceFee minted
-        // (without itself writing storage - see its NatSpec), and newShares/totalShareBurnAmount
-        // fold in this epoch's deposits and withdrawals
-        $.s_totalShares =
-            accounting.totalShares + accounting.feeShares + accounting.newShares - accounting.totalShareBurnAmount;
+        // This is the sole write to s_totalShares for the epoch and folds in the epoch's
+        // deposit allocation and submitted withdrawals.
+        $.s_totalShares = accounting.totalShares + accounting.newShares - accounting.totalShareBurnAmount;
 
         s_epoch.pricePerShare = accounting.settlementPricePerShare;
         s_epoch.remainingDepositClaimAmount = accounting.totalDepositAmount;
