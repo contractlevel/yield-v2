@@ -1,6 +1,7 @@
 using MockComet as comet;
 using MockCometRewardsVerifier as cometRewards;
 using MockAccessControlVault as vault;
+using MockUSDC as rewardToken;
 
 /// Verification of CompoundV3Adapter protocol-specific behavior
 /// @author @contractlevel
@@ -23,6 +24,7 @@ methods {
     function cometRewards.s_lastTo() external returns (address) envfree;
     function cometRewards.s_lastShouldAccrue() external returns (bool) envfree;
     function cometRewards.s_claimToCallCount() external returns (uint256) envfree;
+    function rewardToken.balanceOf(address) external returns (uint256) envfree;
     function vault.hasRole(bytes32, address) external returns (bool) envfree;
 
     function bytes32ToAddress(bytes32) external returns (address) envfree;
@@ -125,11 +127,17 @@ rule claimRewards_Success_EmitsEventAndClaimsToRecipient() {
     env e;
     address to;
     bytes32 role = REWARDS_OPERATOR_ROLE();
+    uint256 adapterRewardBalanceBefore = rewardToken.balanceOf(e, currentContract);
+    uint256 recipientRewardBalanceBefore = rewardToken.balanceOf(e, to);
 
     /// @dev revert conditions NOT being verified
     require vault.hasRole(role, e.msg.sender), "caller is rewards operator";
     require to != 0, "to is not zero";
+    require to != currentContract, "recipient is not the adapter";
     require e.msg.value == 0, "non-payable";
+    require adapterRewardBalanceBefore > 0, "adapter has a stranded reward balance";
+    require recipientRewardBalanceBefore <= max_uint256 - adapterRewardBalanceBefore,
+        "recipient reward balance does not overflow";
 
     /// @dev ghost starting values
     require ghost_RewardsClaimed_EventCount == 0, "RewardsClaimed event count starts at zero";
@@ -146,4 +154,6 @@ rule claimRewards_Success_EmitsEventAndClaimsToRecipient() {
     assert cometRewards.s_lastSrc() == currentContract;
     assert cometRewards.s_lastTo() == to;
     assert cometRewards.s_lastShouldAccrue();
+    assert rewardToken.balanceOf(currentContract) == 0;
+    assert rewardToken.balanceOf(to) == recipientRewardBalanceBefore + adapterRewardBalanceBefore;
 }

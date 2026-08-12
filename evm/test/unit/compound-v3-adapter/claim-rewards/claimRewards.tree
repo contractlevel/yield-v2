@@ -5,4 +5,5 @@ claimRewards
   │   └── it should revert
   └── when the caller has REWARDS_OPERATOR_ROLE on the vault
       ├── it should emit a RewardsClaimed event
-      └── it should call claimTo on the CometRewards contract
+      ├── it should call claimTo on the CometRewards contract
+      └── it should send reward tokens already held by the adapter to the recipient

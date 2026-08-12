@@ -14,7 +14,7 @@ interface ICompoundV3Adapter is IProtocolAdapter {
     /// @param to The address that received the claimed rewards
     event RewardsClaimed(address indexed to);
 
-    /// @notice Claims rewards accrued by the adapter's Comet position and sends them to a recipient
+    /// @notice Claims accrued rewards and sends any reward tokens already held by the adapter to the recipient
     /// @param to The address to receive the claimed rewards
     /// @dev Reverts if the caller does not have REWARDS_OPERATOR_ROLE on the vault
     /// @dev Reverts if to is the zero address

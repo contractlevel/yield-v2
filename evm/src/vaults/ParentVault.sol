@@ -125,14 +125,6 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
         emit InitialActiveProtocolAdapterSet(protocolId, adapter);
     }
 
-    /// @notice Sets the treasury address
-    /// @param treasury The address of the treasury
-    /// @dev Reverts if the caller does not have CONFIG_OPERATOR_ROLE
-    /// @dev Reverts if treasury is the zero address
-    function setTreasury(address treasury) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
-        ParentVaultConfigLib.setTreasury(_parentVaultStorage(), treasury);
-    }
-
     /*//////////////////////////////////////////////////////////////
                              USER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -476,6 +468,14 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
         ParentVaultConfigLib.setSupportedProtocol(_parentVaultStorage(), protocolId, isSupported);
     }
 
+    /// @notice Sets the treasury address
+    /// @param treasury The address of the treasury
+    /// @dev Reverts if the caller does not have CONFIG_OPERATOR_ROLE
+    /// @dev Reverts if treasury is the zero address
+    function setTreasury(address treasury) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
+        ParentVaultConfigLib.setTreasury(_parentVaultStorage(), treasury);
+    }
+
     /*//////////////////////////////////////////////////////////////
                                  GETTER
     //////////////////////////////////////////////////////////////*/
@@ -585,10 +585,10 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /// @notice Returns the current default admin
     /// @notice Returns whether this contract implements the given interface ID
     /// @param interfaceId The interface identifier, as specified in ERC-165
-    /// @return Whether this contract implements `interfaceId`
+    /// @return isSupported Whether this contract implements `interfaceId`
     /// @dev Supports IERC165, IAccessControlDefaultAdminRules, and IAny2EVMMessageReceiver
-    function supportsInterface(bytes4 interfaceId) public pure override(BaseVault) returns (bool) {
-        return interfaceId == type(IERC165).interfaceId
+    function supportsInterface(bytes4 interfaceId) public pure override(BaseVault) returns (bool isSupported) {
+        isSupported = interfaceId == type(IERC165).interfaceId
             || interfaceId == type(IAccessControlDefaultAdminRules).interfaceId
             || interfaceId == type(IAny2EVMMessageReceiver).interfaceId;
     }

@@ -354,7 +354,7 @@ rule CFG_001_initialize_RevertWhen_UpgraderIsZero() {
     assert lastReverted;
 }
 
-rule TOKEN_001_initialize_Success() {
+rule TOKEN_001_TOKEN_004_initialize_Success() {
     env e;
     address initialDefaultAdmin;
     address pauser;
@@ -433,7 +433,7 @@ rule UPGRADE_001_authorizeUpgrade_Success() {
 /*//////////////////////////////////////////////////////////////
                           CCIP ADMIN
 //////////////////////////////////////////////////////////////*/
-rule TOKEN_001_setCCIPAdmin_RevertWhen_CallerLacksCONFIG_OPERATOR_ROLE() {
+rule TOKEN_002_setCCIPAdmin_RevertWhen_CallerLacksCONFIG_OPERATOR_ROLE() {
     env e;
     address newAdmin;
 
@@ -494,7 +494,7 @@ rule TOKEN_001_setCCIPAdmin_Success() {
 /*//////////////////////////////////////////////////////////////
                               PAUSE
 //////////////////////////////////////////////////////////////*/
-rule PAUSE_002_pause_RevertWhen_CallerLacksPAUSER_ROLE() {
+rule PAUSE_007_pause_RevertWhen_CallerLacksPAUSER_ROLE() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -508,7 +508,7 @@ rule PAUSE_002_pause_RevertWhen_CallerLacksPAUSER_ROLE() {
     assert lastReverted;
 }
 
-rule PAUSE_002_pause_RevertWhen_AlreadyPaused() {
+rule pause_RevertWhen_AlreadyPaused() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -522,7 +522,7 @@ rule PAUSE_002_pause_RevertWhen_AlreadyPaused() {
     assert lastReverted;
 }
 
-rule PAUSE_002_pause_Success() {
+rule PAUSE_007_pause_Success() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -537,7 +537,7 @@ rule PAUSE_002_pause_Success() {
     assert ghost_Paused_EventCount == 1;
 }
 
-rule PAUSE_002_unpause_RevertWhen_CallerLacksUNPAUSER_ROLE() {
+rule PAUSE_007_unpause_RevertWhen_CallerLacksUNPAUSER_ROLE() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -551,7 +551,7 @@ rule PAUSE_002_unpause_RevertWhen_CallerLacksUNPAUSER_ROLE() {
     assert lastReverted;
 }
 
-rule PAUSE_002_unpause_RevertWhen_NotPaused() {
+rule unpause_RevertWhen_NotPaused() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -565,7 +565,7 @@ rule PAUSE_002_unpause_RevertWhen_NotPaused() {
     assert lastReverted;
 }
 
-rule PAUSE_002_unpause_Success() {
+rule PAUSE_007_unpause_Success() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -602,7 +602,7 @@ rule TOKEN_002_mint_RevertWhen_CallerLacksMINTER_ROLE() {
     assert lastReverted;
 }
 
-rule TOKEN_002_mint_RevertWhen_RecipientIsZero() {
+rule mint_RevertWhen_RecipientIsZero() {
     env e;
     uint256 amount;
 
@@ -617,7 +617,7 @@ rule TOKEN_002_mint_RevertWhen_RecipientIsZero() {
     assert lastReverted;
 }
 
-rule PAUSE_002_TOKEN_002_mint_RevertWhen_Paused() {
+rule PAUSE_008_mint_RevertWhen_Paused() {
     env e;
     address recipient;
     uint256 amount;
@@ -636,7 +636,7 @@ rule PAUSE_002_TOKEN_002_mint_RevertWhen_Paused() {
     assert lastReverted;
 }
 
-rule TOKEN_002_mint_Success() {
+rule TOKEN_003_mint_Success() {
     env e;
     address recipient;
     uint256 amount;
@@ -676,7 +676,7 @@ rule TOKEN_002_burn_RevertWhen_CallerLacksBURNER_ROLE() {
     assert lastReverted;
 }
 
-rule TOKEN_002_burn_RevertWhen_UserIsZero() {
+rule burn_RevertWhen_UserIsZero() {
     env e;
     uint256 amount;
 
@@ -690,7 +690,7 @@ rule TOKEN_002_burn_RevertWhen_UserIsZero() {
     assert lastReverted;
 }
 
-rule TOKEN_002_burn_RevertWhen_BalanceIsInsufficient() {
+rule burn_RevertWhen_BalanceIsInsufficient() {
     env e;
     address user;
     uint256 amount;
@@ -708,7 +708,7 @@ rule TOKEN_002_burn_RevertWhen_BalanceIsInsufficient() {
     assert lastReverted;
 }
 
-rule PAUSE_002_TOKEN_002_burn_RevertWhen_Paused() {
+rule PAUSE_008_burn_RevertWhen_Paused() {
     env e;
     address user;
     uint256 amount;
@@ -727,7 +727,7 @@ rule PAUSE_002_TOKEN_002_burn_RevertWhen_Paused() {
     assert lastReverted;
 }
 
-rule TOKEN_002_burn_Success() {
+rule TOKEN_003_burn_Success() {
     env e;
     address user;
     uint256 amount;
@@ -751,7 +751,7 @@ rule TOKEN_002_burn_Success() {
 /*//////////////////////////////////////////////////////////////
                      PAUSED ERC20 OPERATIONS
 //////////////////////////////////////////////////////////////*/
-rule PAUSE_002_transfer_RevertWhen_Paused() {
+rule PAUSE_008_transfer_RevertWhen_Paused() {
     env e;
     address recipient;
     uint256 amount;
@@ -769,7 +769,7 @@ rule PAUSE_002_transfer_RevertWhen_Paused() {
     assert lastReverted;
 }
 
-rule PAUSE_002_transferFrom_RevertWhen_Paused() {
+rule PAUSE_008_transferFrom_RevertWhen_Paused() {
     env e;
     address from;
     address recipient;
@@ -790,7 +790,7 @@ rule PAUSE_002_transferFrom_RevertWhen_Paused() {
     assert lastReverted;
 }
 
-rule PAUSE_002_approve_Success_WhenPaused() {
+rule PAUSE_008_approve_Success_WhenPaused() {
     env e;
     address spender;
     uint256 amount;
