@@ -11,7 +11,6 @@ import {ChildVault} from "../../src/vaults/ChildVault.sol";
 import {AdapterRegistry} from "../../src/modules/AdapterRegistry.sol";
 
 import {MockLink} from "../mocks/MockLink.sol";
-import {MockPolicyEngine} from "../mocks/MockPolicyEngine.sol";
 import {MockProtocolAdapter} from "../mocks/MockProtocolAdapter.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
 import {MockCCIPRouter} from "../mocks/MockCCIPRouter.sol";
@@ -25,13 +24,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 abstract contract BaseUnitTest is BaseTest {
     using stdStorage for StdStorage;
 
-    /// @dev YieldcoinShare.initialize is overloaded with ComplianceTokenERC3643's own initializer,
-    ///      so `YieldcoinShare.initialize.selector` is ambiguous and must be computed explicitly.
-    bytes4 internal constant YIELDCOIN_SHARE_INITIALIZE_SELECTOR =
-        bytes4(keccak256("initialize(address,address,address)"));
-
     MockLink internal s_mockLink;
-    MockPolicyEngine internal s_mockPolicyEngine;
     MockProtocolAdapter internal s_mockProtocolAdapter;
     MockUSDC internal s_mockUsdc;
     MockCCIPRouter internal s_mockCcipRouter;
@@ -44,7 +37,6 @@ abstract contract BaseUnitTest is BaseTest {
     constructor() {
         _changePrank(i_owner);
         s_mockLink = new MockLink();
-        s_mockPolicyEngine = new MockPolicyEngine();
         s_mockProtocolAdapter = new MockProtocolAdapter();
         s_mockUsdc = new MockUSDC();
         s_mockCcipRouter = new MockCCIPRouter(address(s_mockUsdc));
@@ -52,8 +44,9 @@ abstract contract BaseUnitTest is BaseTest {
         YieldcoinShare yieldcoinImpl = new YieldcoinShare();
         ERC1967Proxy yieldcoinProxy = new ERC1967Proxy(
             address(yieldcoinImpl),
-            abi.encodeWithSelector(
-                YIELDCOIN_SHARE_INITIALIZE_SELECTOR, address(s_mockPolicyEngine), i_configOperator, i_upgrader
+            abi.encodeCall(
+                YieldcoinShare.initialize,
+                (i_owner, i_pauser, i_unpauser, i_configOperator, i_configOperator, i_upgrader)
             )
         );
         s_yieldcoin = YieldcoinShare(address(yieldcoinProxy));
@@ -68,14 +61,7 @@ abstract contract BaseUnitTest is BaseTest {
         ParentVault parentVaultImpl = new ParentVault(params, address(s_yieldcoin));
         ERC1967Proxy parentVaultProxy = new ERC1967Proxy(
             address(parentVaultImpl),
-            abi.encodeWithSelector(
-                ParentVault.initialize.selector,
-                initParams,
-                i_treasury,
-                i_policyEngineManager,
-                address(s_mockPolicyEngine),
-                i_cancelDepositOperator
-            )
+            abi.encodeCall(ParentVault.initialize, (initParams, i_treasury, i_cancelDepositOperator))
         );
         s_parentVault = ParentVault(address(parentVaultProxy));
         s_mockProtocolAdapter.setVault(address(s_parentVault));
@@ -97,11 +83,12 @@ abstract contract BaseUnitTest is BaseTest {
         s_childVault.grantRole(Roles.EPOCH_OPERATOR_ROLE, i_epochOperator);
         s_parentVault.grantRole(Roles.REBALANCE_OPERATOR_ROLE, i_rebalanceOperator);
         s_childVault.grantRole(Roles.REBALANCE_OPERATOR_ROLE, i_rebalanceOperator);
+        s_yieldcoin.grantRole(Roles.MINTER_ROLE, address(s_parentVault));
+        s_yieldcoin.grantRole(Roles.BURNER_ROLE, address(s_parentVault));
 
         vm.label(address(s_parentVault), "ParentVault");
         vm.label(address(s_childVault), "ChildVault");
         vm.label(address(s_yieldcoin), "Yieldcoin");
-        vm.label(address(s_mockPolicyEngine), "PolicyEngine");
         vm.label(address(s_mockUsdc), "MockUSDC");
     }
 
@@ -154,16 +141,11 @@ abstract contract BaseUnitTest is BaseTest {
         ParentVault parentVaultImpl = new ParentVault(constructorParams, address(s_yieldcoin));
         ERC1967Proxy parentVaultProxy = new ERC1967Proxy(
             address(parentVaultImpl),
-            abi.encodeWithSelector(
-                ParentVault.initialize.selector,
-                _baseVaultInitParams(),
-                i_treasury,
-                i_policyEngineManager,
-                address(s_mockPolicyEngine),
-                i_cancelDepositOperator
-            )
+            abi.encodeCall(ParentVault.initialize, (_baseVaultInitParams(), i_treasury, i_cancelDepositOperator))
         );
         parentVault = ParentVault(address(parentVaultProxy));
+        s_yieldcoin.grantRole(Roles.MINTER_ROLE, address(parentVault));
+        s_yieldcoin.grantRole(Roles.BURNER_ROLE, address(parentVault));
     }
 
     function _setParentCrosschainVault(uint64 chainSelector, address vault) internal {
@@ -212,10 +194,6 @@ abstract contract BaseUnitTest is BaseTest {
         stdstore.target(address(s_parentVault)).sig("getTotalShares()").checked_write(totalShares);
     }
 
-    function _setParentPerformanceFeeHighWaterMark(uint256 highWaterMark) internal {
-        stdstore.target(address(s_parentVault)).sig("getPerformanceFeeHighWaterMark()").checked_write(highWaterMark);
-    }
-
     function _setParentEpochNonce(uint256 epochNonce) internal {
         stdstore.target(address(s_parentVault)).sig("getEpochNonce()").checked_write(epochNonce);
     }
@@ -253,6 +231,7 @@ abstract contract BaseUnitTest is BaseTest {
     }
 
     function _submitParentWithdraw(uint256 shareAmount) internal {
+        _changePrank(address(s_parentVault));
         s_yieldcoin.mint(i_withdrawer, shareAmount);
         _changePrank(i_withdrawer);
         s_yieldcoin.approve(address(s_parentVault), shareAmount);

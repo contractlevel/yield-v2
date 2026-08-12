@@ -89,7 +89,6 @@ contract ParentVault_CompleteEpochDepositUnitTest is BaseUnitTest {
     function _prepareExecutingNetWithdraw() internal {
         _prepareRemoteStrategy();
         _setParentTotalShares(YIELD_PRECISION);
-        _setParentPerformanceFeeHighWaterMark(TVL * SHARE_PRECISION / YIELD_PRECISION);
         _submitParentWithdraw(YIELD_PRECISION);
         _warpPastMinEpoch();
         _changePrank(i_epochOperator);

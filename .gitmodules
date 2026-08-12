@@ -10,9 +10,6 @@
 [submodule "evm/lib/chainlink-ccip"]
 	path = evm/lib/chainlink-ccip
 	url = https://github.com/smartcontractkit/chainlink-ccip
-[submodule "evm/lib/chainlink-ace"]
-	path = evm/lib/chainlink-ace
-	url = https://github.com/smartcontractkit/chainlink-ace
 [submodule "evm/lib/openzeppelin-contracts-4.8.3"]
 	path = evm/lib/openzeppelin-contracts-4.8.3
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts

@@ -1,0 +1,8 @@
+YieldcoinShare_pause
+├── when the caller does not have PAUSER_ROLE
+│   └── it should revert with AccessControlUnauthorizedAccount
+├── when the token is paused
+│   └── it should revert with EnforcedPause
+└── when the caller has PAUSER_ROLE
+    ├── it should pause the token
+    └── it should emit Paused

@@ -33,7 +33,6 @@ type ParentVaultMock struct {
 	GetAssetPrecision                  func() (*big.Int, error)
 	GetCCVsAndFinalityConfig           func(GetCCVsAndFinalityConfigInput) (GetCCVsAndFinalityConfigOutput, error)
 	GetCcipGasLimit                    func(GetCcipGasLimitInput) (*big.Int, error)
-	GetContext                         func() ([]byte, error)
 	GetCrosschainVault                 func(GetCrosschainVaultInput) (common.Address, error)
 	GetDefaultCcipGasLimit             func() (*big.Int, error)
 	GetDepositAmount                   func(GetDepositAmountInput) (*big.Int, error)
@@ -42,8 +41,6 @@ type ParentVaultMock struct {
 	GetInitialActiveProtocolAdapterSet func() (bool, error)
 	GetLink                            func() (common.Address, error)
 	GetMinDepositAmount                func() (*big.Int, error)
-	GetPerformanceFeeHighWaterMark     func() (*big.Int, error)
-	GetPolicyEngine                    func() (common.Address, error)
 	GetRebalance                       func() (TypesRebalance, error)
 	GetRebalanceDepositRecovery        func() (TypesRebalanceDepositRecovery, error)
 	GetRecoveryMode                    func() (uint8, error)
@@ -221,16 +218,6 @@ func NewParentVaultMock(address common.Address, clientMock *evmmock.ClientCapabi
 			}
 			return abi.Methods["getCcipGasLimit"].Outputs.Pack(result)
 		},
-		string(abi.Methods["getContext"].ID[:4]): func(payload []byte) ([]byte, error) {
-			if mock.GetContext == nil {
-				return nil, errors.New("getContext method not mocked")
-			}
-			result, err := mock.GetContext()
-			if err != nil {
-				return nil, err
-			}
-			return abi.Methods["getContext"].Outputs.Pack(result)
-		},
 		string(abi.Methods["getCrosschainVault"].ID[:4]): func(payload []byte) ([]byte, error) {
 			if mock.GetCrosschainVault == nil {
 				return nil, errors.New("getCrosschainVault method not mocked")
@@ -353,26 +340,6 @@ func NewParentVaultMock(address common.Address, clientMock *evmmock.ClientCapabi
 				return nil, err
 			}
 			return abi.Methods["getMinDepositAmount"].Outputs.Pack(result)
-		},
-		string(abi.Methods["getPerformanceFeeHighWaterMark"].ID[:4]): func(payload []byte) ([]byte, error) {
-			if mock.GetPerformanceFeeHighWaterMark == nil {
-				return nil, errors.New("getPerformanceFeeHighWaterMark method not mocked")
-			}
-			result, err := mock.GetPerformanceFeeHighWaterMark()
-			if err != nil {
-				return nil, err
-			}
-			return abi.Methods["getPerformanceFeeHighWaterMark"].Outputs.Pack(result)
-		},
-		string(abi.Methods["getPolicyEngine"].ID[:4]): func(payload []byte) ([]byte, error) {
-			if mock.GetPolicyEngine == nil {
-				return nil, errors.New("getPolicyEngine method not mocked")
-			}
-			result, err := mock.GetPolicyEngine()
-			if err != nil {
-				return nil, err
-			}
-			return abi.Methods["getPolicyEngine"].Outputs.Pack(result)
 		},
 		string(abi.Methods["getRebalance"].ID[:4]): func(payload []byte) ([]byte, error) {
 			if mock.GetRebalance == nil {

@@ -4,9 +4,10 @@ pragma solidity 0.8.34;
 import {BaseUnitTest} from "../../BaseUnitTest.t.sol";
 
 import {YieldcoinShare} from "../../../../src/token/YieldcoinShare.sol";
+import {Roles} from "../../../../src/libraries/Roles.sol";
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 contract YieldcoinShareV2 is YieldcoinShare {
@@ -15,7 +16,30 @@ contract YieldcoinShareV2 is YieldcoinShare {
     }
 }
 
+contract YieldcoinShareInvalidProxiableUUID {
+    function proxiableUUID() external pure returns (bytes32) {
+        return bytes32(uint256(1));
+    }
+}
+
 contract YieldcoinShare_UpgradeToAndCallUnitTest is BaseUnitTest {
+    struct YieldcoinShareState {
+        string name;
+        string symbol;
+        uint8 decimals;
+        address ccipAdmin;
+        uint256 supply;
+        uint256 balance;
+        uint256 allowance;
+        address defaultAdmin;
+        bool hasPauserRole;
+        bool hasUnpauserRole;
+        bool hasConfigOperatorRole;
+        bool hasUpgraderRole;
+        bool hasMinterRole;
+        bool hasBurnerRole;
+    }
+
     function test_YieldcoinShare_upgradeToAndCall_Success() external {
         YieldcoinShare newImpl = new YieldcoinShare();
 
@@ -26,46 +50,62 @@ contract YieldcoinShare_UpgradeToAndCallUnitTest is BaseUnitTest {
     function test_YieldcoinShare_UPGRADE_007_upgradeToAndCall_Success_PreservesState() external {
         uint256 balance = 100e18;
         uint256 allowance = 40e18;
-        uint256 frozenTokens = 10e18;
 
+        _changePrank(address(s_parentVault));
         s_yieldcoin.mint(i_owner, balance);
         _changePrank(i_owner);
         s_yieldcoin.approve(i_nonOwner, allowance);
-        s_yieldcoin.freezePartialTokens(i_owner, frozenTokens);
+        _changePrank(i_pauser);
+        s_yieldcoin.pause();
 
-        string memory nameBefore = s_yieldcoin.name();
-        string memory symbolBefore = s_yieldcoin.symbol();
-        uint8 decimalsBefore = s_yieldcoin.decimals();
-        address ccipAdminBefore = s_yieldcoin.getCCIPAdmin();
-        address policyEngineBefore = s_yieldcoin.getPolicyEngine();
-        address ownerBefore = s_yieldcoin.owner();
-        uint256 supplyBefore = s_yieldcoin.totalSupply();
-        uint256 balanceBefore = s_yieldcoin.balanceOf(i_owner);
-        uint256 allowanceBefore = s_yieldcoin.allowance(i_owner, i_nonOwner);
-        uint256 frozenTokensBefore = s_yieldcoin.getFrozenTokens(i_owner);
+        YieldcoinShareState memory stateBefore = YieldcoinShareState({
+            name: s_yieldcoin.name(),
+            symbol: s_yieldcoin.symbol(),
+            decimals: s_yieldcoin.decimals(),
+            ccipAdmin: s_yieldcoin.getCCIPAdmin(),
+            supply: s_yieldcoin.totalSupply(),
+            balance: s_yieldcoin.balanceOf(i_owner),
+            allowance: s_yieldcoin.allowance(i_owner, i_nonOwner),
+            defaultAdmin: s_yieldcoin.defaultAdmin(),
+            hasPauserRole: s_yieldcoin.hasRole(Roles.PAUSER_ROLE, i_pauser),
+            hasUnpauserRole: s_yieldcoin.hasRole(Roles.UNPAUSER_ROLE, i_unpauser),
+            hasConfigOperatorRole: s_yieldcoin.hasRole(Roles.CONFIG_OPERATOR_ROLE, i_configOperator),
+            hasUpgraderRole: s_yieldcoin.hasRole(Roles.UPGRADER_ROLE, i_upgrader),
+            hasMinterRole: s_yieldcoin.hasRole(Roles.MINTER_ROLE, address(s_parentVault)),
+            hasBurnerRole: s_yieldcoin.hasRole(Roles.BURNER_ROLE, address(s_parentVault))
+        });
 
         YieldcoinShare newImpl = new YieldcoinShareV2();
         _changePrank(i_upgrader);
         s_yieldcoin.upgradeToAndCall(address(newImpl), "");
 
         assertEq(YieldcoinShareV2(address(s_yieldcoin)).upgradeTestVersion(), 2);
-        assertEq(s_yieldcoin.name(), nameBefore);
-        assertEq(s_yieldcoin.symbol(), symbolBefore);
-        assertEq(s_yieldcoin.decimals(), decimalsBefore);
-        assertEq(s_yieldcoin.getCCIPAdmin(), ccipAdminBefore);
-        assertEq(s_yieldcoin.getPolicyEngine(), policyEngineBefore);
-        assertEq(s_yieldcoin.owner(), ownerBefore);
-        assertEq(s_yieldcoin.totalSupply(), supplyBefore);
-        assertEq(s_yieldcoin.balanceOf(i_owner), balanceBefore);
-        assertEq(s_yieldcoin.allowance(i_owner, i_nonOwner), allowanceBefore);
-        assertEq(s_yieldcoin.getFrozenTokens(i_owner), frozenTokensBefore);
+        assertEq(s_yieldcoin.name(), stateBefore.name);
+        assertEq(s_yieldcoin.symbol(), stateBefore.symbol);
+        assertEq(s_yieldcoin.decimals(), stateBefore.decimals);
+        assertEq(s_yieldcoin.getCCIPAdmin(), stateBefore.ccipAdmin);
+        assertEq(s_yieldcoin.totalSupply(), stateBefore.supply);
+        assertEq(s_yieldcoin.balanceOf(i_owner), stateBefore.balance);
+        assertEq(s_yieldcoin.allowance(i_owner, i_nonOwner), stateBefore.allowance);
+        assertTrue(s_yieldcoin.paused());
+        assertEq(s_yieldcoin.defaultAdmin(), stateBefore.defaultAdmin);
+        assertEq(s_yieldcoin.hasRole(Roles.PAUSER_ROLE, i_pauser), stateBefore.hasPauserRole);
+        assertEq(s_yieldcoin.hasRole(Roles.UNPAUSER_ROLE, i_unpauser), stateBefore.hasUnpauserRole);
+        assertEq(s_yieldcoin.hasRole(Roles.CONFIG_OPERATOR_ROLE, i_configOperator), stateBefore.hasConfigOperatorRole);
+        assertEq(s_yieldcoin.hasRole(Roles.UPGRADER_ROLE, i_upgrader), stateBefore.hasUpgraderRole);
+        assertEq(s_yieldcoin.hasRole(Roles.MINTER_ROLE, address(s_parentVault)), stateBefore.hasMinterRole);
+        assertEq(s_yieldcoin.hasRole(Roles.BURNER_ROLE, address(s_parentVault)), stateBefore.hasBurnerRole);
     }
 
-    function test_YieldcoinShare_upgradeToAndCall_RevertWhen_CallerIsNotOwner() external {
+    function test_YieldcoinShare_upgradeToAndCall_RevertWhen_CallerLacksUpgraderRole() external {
         YieldcoinShare newImpl = new YieldcoinShare();
 
         _changePrank(i_nonOwner);
-        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, i_nonOwner));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, i_nonOwner, Roles.UPGRADER_ROLE
+            )
+        );
         s_yieldcoin.upgradeToAndCall(address(newImpl), "");
     }
 
@@ -77,12 +117,30 @@ contract YieldcoinShare_UpgradeToAndCallUnitTest is BaseUnitTest {
         yieldcoinImpl.upgradeToAndCall(address(newImpl), "");
     }
 
+    function test_YieldcoinShare_upgradeToAndCall_RevertWhen_NewImplementationHasNoCode() external {
+        address newImpl = makeAddr("new implementation");
+
+        _changePrank(i_upgrader);
+        vm.expectRevert();
+        s_yieldcoin.upgradeToAndCall(newImpl, "");
+    }
+
+    function test_YieldcoinShare_upgradeToAndCall_RevertWhen_ProxiableUUIDIsInvalid() external {
+        address newImpl = address(new YieldcoinShareInvalidProxiableUUID());
+
+        _changePrank(i_upgrader);
+        vm.expectRevert(
+            abi.encodeWithSelector(UUPSUpgradeable.UUPSUnsupportedProxiableUUID.selector, bytes32(uint256(1)))
+        );
+        s_yieldcoin.upgradeToAndCall(newImpl, "");
+    }
+
     function test_YieldcoinShare_upgradeToAndCall_RevertWhen_ReinitializeAfterUpgrade() external {
         YieldcoinShare newImpl = new YieldcoinShare();
         _changePrank(i_upgrader);
         s_yieldcoin.upgradeToAndCall(address(newImpl), "");
 
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        s_yieldcoin.initialize(address(s_mockPolicyEngine), i_configOperator, i_upgrader);
+        s_yieldcoin.initialize(i_owner, i_pauser, i_unpauser, i_configOperator, i_configOperator, i_upgrader);
     }
 }

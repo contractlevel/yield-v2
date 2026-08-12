@@ -20,7 +20,6 @@ contract ChildDeposit_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
     function test_CcipFork_recoveryChildEpochDeposit_DepositsAfterFailedBaseDeposit() external {
         _selectArbitrumFork();
 
-        _registerKyc(i_depositor);
         _fundAndApproveParentUsdc(i_depositor, DEPOSIT_AMOUNT);
 
         _changePrank(i_depositor);

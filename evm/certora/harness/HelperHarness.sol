@@ -151,24 +151,12 @@ contract HelperHarness {
         return keccak256("LINK_OPERATOR_ROLE");
     }
 
-    function DONATE_OPERATOR_ROLE() public returns (bytes32) {
-        return keccak256("DONATE_OPERATOR_ROLE");
-    }
-
-    function COMPLIANCE_OPERATOR_ROLE() public returns (bytes32) {
-        return keccak256("COMPLIANCE_OPERATOR_ROLE");
-    }
-
     function EMERGENCY_DRAINER_ROLE() public returns (bytes32) {
         return keccak256("EMERGENCY_DRAINER_ROLE");
     }
 
     function KEYSTONE_FORWARDER_ROLE() public returns (bytes32) {
         return keccak256("KEYSTONE_FORWARDER_ROLE");
-    }
-
-    function POLICY_ENGINE_MANAGER_ROLE() public returns (bytes32) {
-        return keccak256("POLICY_ENGINE_MANAGER_ROLE");
     }
 
     function MINTER_ROLE() public returns (bytes32) {

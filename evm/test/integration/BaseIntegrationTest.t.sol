@@ -29,21 +29,6 @@ import {MockUSDC} from "../mocks/MockUSDC.sol";
 import {CCIPLocalSimulator, IRouterClient, LinkToken} from "@chainlink/local/src/ccip/CCIPLocalSimulator.sol";
 import {MockCCIPRouter} from "@chainlink/local/test/mocks/MockRouter.sol";
 
-import {CredentialRegistry} from "@chainlink/cross-chain-identity/CredentialRegistry.sol";
-import {IdentityRegistry} from "@chainlink/cross-chain-identity/IdentityRegistry.sol";
-import {
-    CredentialRegistryIdentityValidatorPolicy
-} from "@chainlink/cross-chain-identity/CredentialRegistryIdentityValidatorPolicy.sol";
-import {PolicyEngine} from "@chainlink/policy-management/core/PolicyEngine.sol";
-import {IPolicyEngine} from "@chainlink/policy-management/interfaces/IPolicyEngine.sol";
-import {OnlyAuthorizedSenderPolicy} from "@chainlink/policy-management/policies/OnlyAuthorizedSenderPolicy.sol";
-import {RoleBasedAccessControlPolicy} from "@chainlink/policy-management/policies/RoleBasedAccessControlPolicy.sol";
-
-import {
-    CredentialRegistryAccountListValidatorPolicy
-} from "../../src/modules/policies/CredentialRegistryAccountListValidatorPolicy.sol";
-import {TerminalAllowPolicy} from "../../src/modules/policies/TerminalAllowPolicy.sol";
-
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 abstract contract BaseIntegrationTest is BaseDeploymentTest {
@@ -228,25 +213,6 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
         assertEq(remoteChild.compoundV3Adapter.getProtocolPool(), remoteChild.compoundV3Comet);
         assertNotEq(parent.compoundV3Adapter.getProtocolPool(), remoteChild.compoundV3Adapter.getProtocolPool());
         assertNotEq(child.compoundV3Adapter.getProtocolPool(), remoteChild.compoundV3Adapter.getProtocolPool());
-    }
-
-    function _expectPolicyRevert() internal {
-        vm.expectPartialRevert(IPolicyEngine.PolicyRunRejected.selector);
-    }
-
-    function _registerKyc(address account) internal {
-        bytes32 ccid = keccak256(abi.encodePacked(account));
-
-        _changePrank(networkConfig.kycProvider);
-        parent.identityRegistry.registerIdentity(ccid, account, "");
-        parent.credentialRegistry.registerCredential(ccid, KYC_CREDENTIAL, 0, "", "");
-    }
-
-    function _revokeKyc(address account) internal {
-        bytes32 ccid = keccak256(abi.encodePacked(account));
-
-        _changePrank(networkConfig.kycProvider);
-        parent.credentialRegistry.removeCredential(ccid, KYC_CREDENTIAL, "");
     }
 
     function _fundAndApproveUsdc(address account, uint256 amount) internal {
@@ -471,7 +437,6 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
     }
 
     function _seedParentLocalTvl(uint256 depositAmount) internal {
-        _registerKyc(i_depositor);
         _fundAndApproveUsdc(i_depositor, depositAmount);
 
         _changePrank(i_depositor);
@@ -490,7 +455,6 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
     }
 
     function _seedChildLocalTvl(uint256 depositAmount) internal {
-        _registerKyc(i_depositor);
         _fundAndApproveUsdc(i_depositor, depositAmount);
 
         _changePrank(i_depositor);
@@ -521,31 +485,6 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
         address adapter = remoteChild.adapterRegistry.getAdapter(protocolId);
         stdstore.enable_packed_slots().target(address(remoteChild.vault)).sig("getActiveProtocolAdapter()")
             .checked_write(adapter);
-    }
-
-    function _assertPolicyPair(address target, bytes4 selector, address firstPolicy) internal view {
-        address[] memory policies = parent.policyEngine.getPolicies(target, selector);
-        assertEq(policies.length, 2);
-        assertEq(policies[0], firstPolicy);
-        assertEq(policies[1], address(parent.terminalAllow));
-    }
-
-    function _assertParentVaultKycPolicy(bytes4 selector) internal view {
-        address[] memory policies = parent.policyEngine.getPolicies(address(parent.vault), selector);
-        assertEq(policies.length, 3);
-        assertEq(policies[0], address(parent.vaultFrozenAccountPolicy));
-        assertEq(policies[1], address(parent.vaultKycPolicy));
-        assertEq(policies[2], address(parent.terminalAllow));
-    }
-
-    function _assertShareKycPolicy(bytes4 selector) internal view {
-        _assertPolicyPair(address(parent.share), selector, address(parent.shareKycPolicy));
-    }
-
-    function _assertShareRbacPolicy(bytes4 selector, bytes32 role, address account) internal view {
-        _assertPolicyPair(address(parent.share), selector, address(parent.shareSupplyPolicy));
-        assertTrue(parent.shareSupplyPolicy.hasAllowedRole(selector, account));
-        assertTrue(parent.shareSupplyPolicy.hasRole(role, account));
     }
 
     function _setDefaultCcipGasLimits() internal {

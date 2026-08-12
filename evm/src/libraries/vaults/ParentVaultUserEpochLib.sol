@@ -225,7 +225,6 @@ library ParentVaultUserEpochLib {
     /// @return withdrawAmount The amount of underlying asset withdrawn
     /// @dev Reverts if the epoch is not claimable
     /// @dev Reverts if user has no withdraw intent in the epoch
-    /// @dev Reverts if burning the escrowed shares is rejected by the share token's attached ACE policies
     /// @dev Consumes the user's entire epoch withdraw entry and updates the remaining withdraw claim pools
     function claimAsset(
         ParentVaultStore.ParentVaultStorage storage $,
@@ -246,7 +245,6 @@ library ParentVaultUserEpochLib {
     /// @return withdrawAmount The amount of underlying asset withdrawn
     /// @dev Reverts if the epoch is not claimable
     /// @dev Reverts if user has no withdraw intent in the epoch
-    /// @dev Reverts if burning the escrowed shares is rejected by the share token's attached ACE policies
     /// @dev Consumes the user's entire epoch withdraw entry and updates the remaining withdraw claim pools
     function _claimAsset(
         ParentVaultStore.ParentVaultStorage storage $,

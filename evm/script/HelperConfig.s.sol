@@ -29,7 +29,6 @@ contract HelperConfig is Script {
     struct NetworkConfig {
         address initialOwner;
         address treasury;
-        address kycProvider;
         RolesConfig roles;
         TokensConfig tokens;
         ProtocolsConfig protocols;
@@ -43,18 +42,10 @@ contract HelperConfig is Script {
         address pauser;
         address unpauser;
         address configOperator;
-        address complianceOperator;
-        PolicyRolesConfig policy;
         address linkOperator;
         address rewardsOperator;
         address upgrader;
         address cancelDepositOperator;
-    }
-
-    struct PolicyRolesConfig {
-        address admin;
-        address configAdmin;
-        address engineManager;
     }
 
     struct TokensConfig {
@@ -124,14 +115,11 @@ contract HelperConfig is Script {
         networkConfig = NetworkConfig({
             initialOwner: BURNER_EOA,
             treasury: BURNER_EOA,
-            kycProvider: BURNER_EOA,
             roles: RolesConfig({
                 defaultAdmin: BURNER_EOA,
                 pauser: BURNER_EOA,
                 unpauser: BURNER_EOA,
                 configOperator: BURNER_EOA,
-                complianceOperator: BURNER_EOA,
-                policy: PolicyRolesConfig({admin: BURNER_EOA, configAdmin: BURNER_EOA, engineManager: BURNER_EOA}),
                 linkOperator: BURNER_EOA,
                 rewardsOperator: BURNER_EOA,
                 upgrader: BURNER_EOA,
@@ -162,14 +150,11 @@ contract HelperConfig is Script {
         networkConfig = NetworkConfig({
             initialOwner: BURNER_EOA,
             treasury: BURNER_EOA,
-            kycProvider: BURNER_EOA,
             roles: RolesConfig({
                 defaultAdmin: BURNER_EOA,
                 pauser: BURNER_EOA,
                 unpauser: BURNER_EOA,
                 configOperator: BURNER_EOA,
-                complianceOperator: BURNER_EOA,
-                policy: PolicyRolesConfig({admin: BURNER_EOA, configAdmin: BURNER_EOA, engineManager: BURNER_EOA}),
                 linkOperator: BURNER_EOA,
                 rewardsOperator: BURNER_EOA,
                 upgrader: BURNER_EOA,
@@ -200,14 +185,11 @@ contract HelperConfig is Script {
         networkConfig = NetworkConfig({
             initialOwner: BURNER_EOA,
             treasury: BURNER_EOA,
-            kycProvider: BURNER_EOA,
             roles: RolesConfig({
                 defaultAdmin: BURNER_EOA,
                 pauser: BURNER_EOA,
                 unpauser: BURNER_EOA,
                 configOperator: BURNER_EOA,
-                complianceOperator: BURNER_EOA,
-                policy: PolicyRolesConfig({admin: BURNER_EOA, configAdmin: BURNER_EOA, engineManager: BURNER_EOA}),
                 linkOperator: BURNER_EOA,
                 rewardsOperator: BURNER_EOA,
                 upgrader: BURNER_EOA,
@@ -237,14 +219,11 @@ contract HelperConfig is Script {
         networkConfig = NetworkConfig({
             initialOwner: BURNER_EOA,
             treasury: BURNER_EOA,
-            kycProvider: BURNER_EOA,
             roles: RolesConfig({
                 defaultAdmin: BURNER_EOA,
                 pauser: BURNER_EOA,
                 unpauser: BURNER_EOA,
                 configOperator: BURNER_EOA,
-                complianceOperator: BURNER_EOA,
-                policy: PolicyRolesConfig({admin: BURNER_EOA, configAdmin: BURNER_EOA, engineManager: BURNER_EOA}),
                 linkOperator: BURNER_EOA,
                 rewardsOperator: BURNER_EOA,
                 upgrader: BURNER_EOA,
@@ -274,14 +253,11 @@ contract HelperConfig is Script {
         networkConfig = NetworkConfig({
             initialOwner: BURNER_EOA,
             treasury: BURNER_EOA,
-            kycProvider: BURNER_EOA,
             roles: RolesConfig({
                 defaultAdmin: BURNER_EOA,
                 pauser: BURNER_EOA,
                 unpauser: BURNER_EOA,
                 configOperator: BURNER_EOA,
-                complianceOperator: BURNER_EOA,
-                policy: PolicyRolesConfig({admin: BURNER_EOA, configAdmin: BURNER_EOA, engineManager: BURNER_EOA}),
                 linkOperator: BURNER_EOA,
                 rewardsOperator: BURNER_EOA,
                 upgrader: BURNER_EOA,
@@ -314,14 +290,11 @@ contract HelperConfig is Script {
         networkConfig = NetworkConfig({
             initialOwner: BURNER_EOA,
             treasury: BURNER_EOA,
-            kycProvider: BURNER_EOA,
             roles: RolesConfig({
                 defaultAdmin: BURNER_EOA,
                 pauser: BURNER_EOA,
                 unpauser: BURNER_EOA,
                 configOperator: BURNER_EOA,
-                complianceOperator: BURNER_EOA,
-                policy: PolicyRolesConfig({admin: BURNER_EOA, configAdmin: BURNER_EOA, engineManager: BURNER_EOA}),
                 linkOperator: BURNER_EOA,
                 rewardsOperator: BURNER_EOA,
                 upgrader: BURNER_EOA,
@@ -354,14 +327,11 @@ contract HelperConfig is Script {
         networkConfig = NetworkConfig({
             initialOwner: BURNER_EOA,
             treasury: BURNER_EOA,
-            kycProvider: BURNER_EOA,
             roles: RolesConfig({
                 defaultAdmin: BURNER_EOA,
                 pauser: BURNER_EOA,
                 unpauser: BURNER_EOA,
                 configOperator: BURNER_EOA,
-                complianceOperator: BURNER_EOA,
-                policy: PolicyRolesConfig({admin: BURNER_EOA, configAdmin: BURNER_EOA, engineManager: BURNER_EOA}),
                 linkOperator: BURNER_EOA,
                 rewardsOperator: BURNER_EOA,
                 upgrader: BURNER_EOA,
@@ -394,14 +364,11 @@ contract HelperConfig is Script {
         networkConfig = NetworkConfig({
             initialOwner: BURNER_EOA,
             treasury: BURNER_EOA,
-            kycProvider: BURNER_EOA,
             roles: RolesConfig({
                 defaultAdmin: BURNER_EOA,
                 pauser: BURNER_EOA,
                 unpauser: BURNER_EOA,
                 configOperator: BURNER_EOA,
-                complianceOperator: BURNER_EOA,
-                policy: PolicyRolesConfig({admin: BURNER_EOA, configAdmin: BURNER_EOA, engineManager: BURNER_EOA}),
                 linkOperator: BURNER_EOA,
                 rewardsOperator: BURNER_EOA,
                 upgrader: BURNER_EOA,
@@ -434,14 +401,11 @@ contract HelperConfig is Script {
         networkConfig = NetworkConfig({
             initialOwner: BURNER_EOA,
             treasury: BURNER_EOA,
-            kycProvider: BURNER_EOA,
             roles: RolesConfig({
                 defaultAdmin: BURNER_EOA,
                 pauser: BURNER_EOA,
                 unpauser: BURNER_EOA,
                 configOperator: BURNER_EOA,
-                complianceOperator: BURNER_EOA,
-                policy: PolicyRolesConfig({admin: BURNER_EOA, configAdmin: BURNER_EOA, engineManager: BURNER_EOA}),
                 linkOperator: BURNER_EOA,
                 rewardsOperator: BURNER_EOA,
                 upgrader: BURNER_EOA,
@@ -474,14 +438,11 @@ contract HelperConfig is Script {
         networkConfig = NetworkConfig({
             initialOwner: BURNER_EOA,
             treasury: BURNER_EOA,
-            kycProvider: BURNER_EOA,
             roles: RolesConfig({
                 defaultAdmin: BURNER_EOA,
                 pauser: BURNER_EOA,
                 unpauser: BURNER_EOA,
                 configOperator: BURNER_EOA,
-                complianceOperator: BURNER_EOA,
-                policy: PolicyRolesConfig({admin: BURNER_EOA, configAdmin: BURNER_EOA, engineManager: BURNER_EOA}),
                 linkOperator: BURNER_EOA,
                 rewardsOperator: BURNER_EOA,
                 upgrader: BURNER_EOA,
@@ -522,7 +483,6 @@ contract HelperConfig is Script {
         networkConfig = NetworkConfig({
             initialOwner: address(1),
             treasury: makeAddr("treasury"),
-            kycProvider: makeAddr("kycProvider"),
             roles: _getMockRolesConfig(),
             tokens: tokens,
             protocols: protocols,
@@ -538,12 +498,6 @@ contract HelperConfig is Script {
             pauser: makeAddr("pauser"),
             unpauser: makeAddr("unpauser"),
             configOperator: makeAddr("configOperator"),
-            complianceOperator: makeAddr("complianceOperator"),
-            policy: PolicyRolesConfig({
-                admin: makeAddr("policyAdmin"),
-                configAdmin: makeAddr("policyConfigAdmin"),
-                engineManager: makeAddr("policyEngineManager")
-            }),
             linkOperator: makeAddr("linkOperator"),
             rewardsOperator: makeAddr("rewardsOperator"),
             upgrader: makeAddr("upgrader"),
@@ -557,12 +511,14 @@ contract HelperConfig is Script {
 
     function _getMockProtocolsConfig(address usdc) private returns (ProtocolsConfig memory) {
         address aaveV3Pool = address(new MockAaveV3Pool(usdc));
+        MockCometRewards cometRewards = new MockCometRewards();
+        cometRewards.setRewardToken(usdc);
 
         return ProtocolsConfig({
             aaveV3PoolAddressesProvider: address(new MockAaveV3PoolAddressesProvider(aaveV3Pool)),
             aaveV4Spoke: address(new MockAaveV4Spoke(usdc)),
             compoundV3Comet: address(new MockComet(usdc)),
-            compoundV3CometRewards: address(new MockCometRewards())
+            compoundV3CometRewards: address(cometRewards)
         });
     }
 

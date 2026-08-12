@@ -1,17 +1,26 @@
 YieldcoinShare_initialize
-  ├── when initialization succeeds
-  │   ├── it should set the token metadata
-  │   ├── it should set the policy engine
-  │   ├── it should set the CCIP admin
-  │   ├── it should set the owner to the upgrader
-  │   └── it should emit a CCIPAdminTransferred event
-  ├── when upgrader is the zero address
-  │   └── it should revert with YieldcoinShare__NoZeroAddress
-  ├── when initial CCIP admin is the zero address
-  │   └── it should revert with YieldcoinShare__NoZeroAddress
-  ├── when already initialized
-  │   └── it should revert with InvalidInitialization
-  ├── when called on the implementation directly
-  │   └── it should revert with InvalidInitialization
-  └── when called via the inherited ComplianceTokenERC3643 initializer selector
-      └── it should revert with YieldcoinShare__InvalidInitialize
+├── when initialization succeeds
+│   ├── it should set the token metadata
+│   ├── it should start unpaused
+│   ├── it should set the CCIP admin
+│   ├── it should set the default admin
+│   ├── it should grant PAUSER_ROLE
+│   ├── it should grant UNPAUSER_ROLE
+│   ├── it should grant CONFIG_OPERATOR_ROLE
+│   └── it should grant UPGRADER_ROLE
+├── when default admin is the zero address
+│   └── it should revert with YieldcoinShare__NoZeroAddress
+├── when pauser is the zero address
+│   └── it should revert with YieldcoinShare__NoZeroAddress
+├── when unpauser is the zero address
+│   └── it should revert with YieldcoinShare__NoZeroAddress
+├── when config operator is the zero address
+│   └── it should revert with YieldcoinShare__NoZeroAddress
+├── when initial CCIP admin is the zero address
+│   └── it should revert with YieldcoinShare__NoZeroAddress
+├── when upgrader is the zero address
+│   └── it should revert with YieldcoinShare__NoZeroAddress
+├── when already initialized
+│   └── it should revert with InvalidInitialization
+└── when called on the implementation directly
+    └── it should revert with InvalidInitialization

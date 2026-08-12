@@ -29,6 +29,9 @@ contract CompoundV3Adapter_ClaimRewardsUnitTest is BaseCompoundV3AdapterUnitTest
     }
 
     function test_CompoundV3Adapter_claimRewards_Success() external {
+        uint256 strandedRewards = 10e6;
+        s_mockUsdc.mint(address(s_compoundV3Adapter), strandedRewards);
+
         _changePrank(s_rewardsOperator);
         vm.recordLogs();
         s_compoundV3Adapter.claimRewards(i_nonOwner);
@@ -36,5 +39,7 @@ contract CompoundV3Adapter_ClaimRewardsUnitTest is BaseCompoundV3AdapterUnitTest
         Vm.Log memory log = _assertEmittedBy(keccak256("RewardsClaimed(address)"), address(s_compoundV3Adapter));
         assertEq(address(uint160(uint256(log.topics[1]))), i_nonOwner);
         assertEq(s_mockCometRewards.lastTo(), i_nonOwner);
+        assertEq(s_mockUsdc.balanceOf(address(s_compoundV3Adapter)), 0);
+        assertEq(s_mockUsdc.balanceOf(i_nonOwner), strandedRewards);
     }
 }

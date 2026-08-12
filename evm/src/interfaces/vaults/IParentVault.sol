@@ -149,15 +149,6 @@ interface IParentVault is IBaseVault {
     /// @param rebalanceNonce The nonce of the rebalance that collected the fee
     /// @param feeShares The number of shares minted to the treasury
     event ManagementFeeCollected(uint256 indexed rebalanceNonce, uint256 indexed feeShares);
-    /// @notice Emitted when performance fees are collected
-    /// @param epochNonce The epoch nonce that collected the fee
-    /// @param feeShares The number of shares minted to the treasury
-    /// @param settlementPricePerShare The price per share after fee-share dilution. This raises the high water
-    ///        mark, except when rounding causes it to land a dust amount below the existing high water mark -
-    ///        the high water mark is only ever raised, never lowered, so it may not equal this value
-    event PerformanceFeeCollected(
-        uint256 indexed epochNonce, uint256 indexed feeShares, uint256 indexed settlementPricePerShare
-    );
     /// @notice Emitted when a deposit is cancelled
     /// @param epochNonce The epoch nonce of the deposit
     /// @param depositor The address of the depositor
@@ -221,7 +212,7 @@ interface IParentVault is IBaseVault {
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the current epoch is not open
     /// @dev Reverts if user has no deposit in the current epoch
-    /// @dev Deliberately callable while paused and not subject to the caller's attached ACE policies
+    /// @dev Deliberately callable while paused
     function forceCancelDeposit(address user) external;
 
     /*//////////////////////////////////////////////////////////////
@@ -233,7 +224,6 @@ interface IParentVault is IBaseVault {
     /// @dev Reverts if amount is less than the minimum deposit amount
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the vault is paused
-    /// @dev Reverts if the call is rejected by the attached ACE policies
     /// @dev Reverts if the current epoch is not open
     /// @dev Requires the caller to have sufficient underlying-asset balance and allowance for amount
     function deposit(uint256 amount) external returns (uint256 epochNonce);
@@ -244,7 +234,6 @@ interface IParentVault is IBaseVault {
     /// @dev Reverts if shareBurnAmount is zero
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the vault is paused
-    /// @dev Reverts if the call is rejected by the attached ACE policies
     /// @dev Reverts if the current epoch is not open
     /// @dev Requires the caller to have sufficient share balance and allowance for shareBurnAmount
     function withdraw(uint256 shareBurnAmount) external returns (uint256 epochNonce);
@@ -254,7 +243,6 @@ interface IParentVault is IBaseVault {
     /// @return shareMintAmount The amount of Yieldcoin shares minted for the deposit
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the vault is paused
-    /// @dev Reverts if the call is rejected by the attached ACE policies
     /// @dev Reverts if the epoch is not claimable
     /// @dev Reverts if the caller has no deposit in the epoch
     function claimShares(uint256 epochNonce) external returns (uint256 shareMintAmount);
@@ -264,16 +252,13 @@ interface IParentVault is IBaseVault {
     /// @return withdrawAmount The amount of underlying asset transferred to the withdrawer
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the vault is paused
-    /// @dev Reverts if the call is rejected by the attached ACE policies
     /// @dev Reverts if the epoch is not claimable
     /// @dev Reverts if the caller has no withdraw intent in the epoch
-    /// @dev Reverts if burning the escrowed shares is rejected by the share token's attached ACE policies
     function claimAsset(uint256 epochNonce) external returns (uint256 withdrawAmount);
 
     /// @notice Cancels and refunds the caller's deposit in the current open epoch
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the vault is paused
-    /// @dev Reverts if the call is rejected by the attached ACE policies
     /// @dev Reverts if the current epoch is not open
     /// @dev Reverts if the caller has no deposit in the current epoch
     function cancelDeposit() external;
@@ -281,7 +266,6 @@ interface IParentVault is IBaseVault {
     /// @notice Cancels the caller's withdraw intent in the current open epoch and returns the escrowed shares
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the vault is paused
-    /// @dev Reverts if the call is rejected by the attached ACE policies
     /// @dev Reverts if the current epoch is not open
     /// @dev Reverts if the caller has no withdraw intent in the current epoch
     function cancelWithdraw() external;
@@ -361,10 +345,6 @@ interface IParentVault is IBaseVault {
     /// @notice Returns whether the initial active protocol adapter has been set
     /// @return initialActiveProtocolAdapterSet Whether the initial active protocol adapter has been set
     function getInitialActiveProtocolAdapterSet() external view returns (bool initialActiveProtocolAdapterSet);
-
-    /// @notice Returns the performance fee high water mark
-    /// @return highWaterMark The highest price per share recorded for performance fee purposes
-    function getPerformanceFeeHighWaterMark() external view returns (uint256 highWaterMark);
 
     /// @notice Returns the share precision factor (fixed at SHARE_PRECISION)
     /// @return sharePrecision The share precision factor

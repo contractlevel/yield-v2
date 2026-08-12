@@ -24,11 +24,6 @@ abstract contract Constants {
     uint256 internal constant MIN_EPOCH_PERIOD = 1 hours;
     uint256 internal constant MIN_REBALANCE_PERIOD = 1 hours;
 
-    bytes32 internal constant KYC_CREDENTIAL = keccak256("common.kyc");
-    bytes32 internal constant KYC_REQUIREMENT = keccak256("KYC");
-    bytes32 internal constant AML_CREDENTIAL = keccak256("common.aml");
-    bytes32 internal constant AML_REQUIREMENT = keccak256("AML");
-
     uint256 internal constant DEFAULT_CCIP_GAS_LIMIT = 500_000;
 
     uint256 internal constant ARBITRUM_CHAIN_ID = 42161;

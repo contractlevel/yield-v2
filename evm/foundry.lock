@@ -8,12 +8,6 @@
       "rev": "cdacec509e4f848bff1a5556f503afa83eee3b79"
     }
   },
-  "lib/chainlink-ace": {
-    "tag": {
-      "name": "v1.0.0",
-      "rev": "288c393af4da077b49e5138ac47965aed9ca4b3a"
-    }
-  },
   "lib/chainlink-ccip": {
     "rev": "249241a98800078a576f88b284ec73349213bd6f"
   },

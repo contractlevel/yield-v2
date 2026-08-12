@@ -23,7 +23,6 @@ contract ChildWithdraw_EpochIntegrationTest is BaseIntegrationTest {
         _deployLocalParentChildTopology();
 
         s_childAaveV3Pool = child.aaveV3Adapter.getProtocolPool();
-        _registerKyc(i_depositor);
         _configureCloseEpochWorkflow(parent.workflowRouter, PARENT_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner);
         _configureExecuteEpochWithdrawWorkflow(
             child.workflowRouter, CHILD_WORKFLOW_ID, EXECUTE_WITHDRAW_WORKFLOW_NAME, i_owner

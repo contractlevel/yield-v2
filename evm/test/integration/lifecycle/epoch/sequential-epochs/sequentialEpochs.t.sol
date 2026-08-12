@@ -9,8 +9,6 @@ import {MockAaveV3Pool} from "../../../../mocks/MockAaveV3Pool.sol";
 contract SequentialEpochs_EpochIntegrationTest is BaseIntegrationTest {
     bytes32 private constant WORKFLOW_ID = keccak256("sequential-epochs");
     bytes10 private constant WORKFLOW_NAME = bytes10("closeEpoch");
-    uint256 private constant PERFORMANCE_FEE_BPS = 777;
-    uint256 private constant BPS_DENOMINATOR = 10_000;
 
     uint256 private s_sharesA;
     address private s_aaveV3Pool;
@@ -18,8 +16,6 @@ contract SequentialEpochs_EpochIntegrationTest is BaseIntegrationTest {
     function setUp() public override {
         super.setUp();
         _deployParent();
-        _registerKyc(i_depositor);
-        _registerKyc(i_recipient1);
         _configureCloseEpochWorkflow(parent.workflowRouter, WORKFLOW_ID, WORKFLOW_NAME, i_owner);
         s_aaveV3Pool = parent.aaveV3Adapter.getProtocolPool();
 
@@ -47,12 +43,8 @@ contract SequentialEpochs_EpochIntegrationTest is BaseIntegrationTest {
         _warpPastMinEpoch();
         _closeEpochThroughWorkflow(parent.workflowRouter, WORKFLOW_ID, WORKFLOW_NAME, i_owner, epochTwoTvl);
 
-        uint256 grossPricePerShare = epochTwoTvl * YIELD_PRECISION / s_sharesA;
-        uint256 yieldAmount = (grossPricePerShare - ASSET_PRECISION) * s_sharesA / YIELD_PRECISION;
-        uint256 performanceFee = _mulDivUp(yieldAmount, PERFORMANCE_FEE_BPS, BPS_DENOMINATOR);
-        uint256 feeShares = _mulDivUp(performanceFee, s_sharesA, epochTwoTvl - performanceFee);
-        uint256 expectedPricePerShare = epochTwoTvl * YIELD_PRECISION / (s_sharesA + feeShares);
-        uint256 expectedRecipientShares = epochTwoDeposit * (s_sharesA + feeShares) / epochTwoTvl;
+        uint256 expectedPricePerShare = epochTwoTvl * YIELD_PRECISION / s_sharesA;
+        uint256 expectedRecipientShares = epochTwoDeposit * s_sharesA / epochTwoTvl;
 
         _changePrank(i_recipient1);
         parent.vault.claimShares(2);
@@ -67,9 +59,5 @@ contract SequentialEpochs_EpochIntegrationTest is BaseIntegrationTest {
         assertEq(parent.vault.getDepositAmount(i_depositor, 2), 0);
         assertEq(parent.vault.getDepositAmount(i_recipient1, 1), 0);
         assertEq(parent.vault.getDepositAmount(i_recipient1, 2), 0);
-    }
-
-    function _mulDivUp(uint256 x, uint256 y, uint256 denominator) private pure returns (uint256) {
-        return (x * y + denominator - 1) / denominator;
     }
 }

@@ -16,29 +16,27 @@ Several entries below trace to a deliberate architectural choice rather than a r
 
 **Last reviewed:** 2026-06-02
 
-**Component:** Access control across vaults, router, registry, token, and PolicyEngine.
+**Component:** Access control across vaults, router, registry, and token.
 
-**Applies to:** ParentVault, ChildVault, WorkflowRouter, AdapterRegistry, YieldcoinShare, and PolicyEngine-governed ACE policy administration.
+**Applies to:** ParentVault, ChildVault, WorkflowRouter, AdapterRegistry, and YieldcoinShare.
 
 ### Summary
 
 Yieldcoin v2 relies on multiple privileged roles for protocol operation. Human-held privileged roles include:
 
 - **`DEFAULT_ADMIN_ROLE`** for local role administration (grant/revoke and admin-transfer acceptance via `AccessControlDefaultAdminRules`).
-- **`CONFIG_OPERATOR_ROLE`** for protocol configuration (vault/router/registry settings, adapter registration, treasury, workflow metadata/selectors, token metadata/CCIP admin wiring).
+- **`CONFIG_OPERATOR_ROLE`** for protocol configuration (vault/router/registry settings, adapter registration, treasury, workflow metadata/selectors, and token CCIP admin wiring).
 - **`PAUSER_ROLE` / `UNPAUSER_ROLE`** for pause controls across vaults, WorkflowRouter, and YieldcoinShare.
 - **`LINK_OPERATOR_ROLE`** for LINK withdrawal from vaults.
-- **`POLICY_ENGINE_MANAGER_ROLE`** for replacing attached policy engines on policy-protected contracts.
-- **`COMPLIANCE_OPERATOR_ROLE`** for forced transfer and freeze/unfreeze functions on YieldcoinShare.
-- **PolicyEngine `ADMIN_ROLE` / `POLICY_CONFIG_ADMIN_ROLE`** for policy wiring and policy configuration.
+- **`REWARDS_OPERATOR_ROLE`** for claiming supported protocol rewards through adapters.
+- **`CANCEL_DEPOSIT_OPERATOR_ROLE`** for force-cancelling a stuck current-epoch deposit.
+- **`UPGRADER_ROLE`** for authorizing UUPS implementation upgrades.
 
-The system also includes contract-held or infrastructure roles such as `KEYSTONE_FORWARDER_ROLE` (CRE report ingress) and token `MINTER_ROLE`/`BURNER_ROLE` held by ParentVault.
-
-_Note: `DEFAULT_ADMIN_ROLE` for ACE components does not have the same `AccessControlDefaultAdminRules` safeguards as `DEFAULT_ADMIN_ROLE` for the native Yieldcoin v2 components. Please see [ACCESS_CONTROL_MATRIX](./ACCESS_CONTROL_MATRIX.md) for further info._
+The system also includes contract-held or infrastructure roles: `KEYSTONE_FORWARDER_ROLE` for CRE report ingress, `EPOCH_OPERATOR_ROLE` and `REBALANCE_OPERATOR_ROLE` held by WorkflowRouter, and token `MINTER_ROLE`/`BURNER_ROLE` held by ParentVault.
 
 ### Threat model
 
-A compromised or malicious signer controlling a privileged role can take adverse actions within that role's authorized scope (for example, misconfiguration, service interruption, policy rewiring, compliance actions, pausing, temporary break-glass role grants, or upgrades).
+A compromised or malicious signer controlling a privileged role can take adverse actions within that role's authorized scope, including misconfiguration, service interruption, pausing, temporary break-glass role grants, reward or LINK withdrawal, forced deposit cancellation, or upgrades.
 
 ### Mitigations
 
@@ -318,7 +316,7 @@ The failure mode is delayed settlement:
 - For remote-strategy net-withdraw epochs, the second CRE step (`EpochWithdrawExecuting` log handling on the child chain) is required before the parent epoch can become claimable.
 - For remote-strategy net-deposit epochs, CRE must observe the destination ChildVault's `EpochDepositToStrategySuccess` event and submit `completeEpochDeposit()` before the parent epoch can become claimable.
 
-This does not by itself create an accounting inconsistency or direct loss of funds. User deposits and withdraw-intent shares remain escrowed by the protocol. While the epoch is still open, users may cancel their current-epoch deposit or withdraw intent through the normal cancellation functions, subject to the usual pause and policy checks. Once the epoch itself is no longer open — including the `EXECUTING` window described above — cancellation is not available either; see [KI-017](#ki-017--deposit-and-withdraw-cancellation-is-scoped-to-the-current-epoch-only).
+This does not by itself create an accounting inconsistency or direct loss of funds. User deposits and withdraw-intent shares remain escrowed by the protocol. While the epoch is still open, users may cancel their current-epoch deposit or withdraw intent through the normal cancellation functions, subject to the usual pause and state checks. Once the epoch itself is no longer open — including the `EXECUTING` window described above — cancellation is not available either; see [KI-017](#ki-017--deposit-and-withdraw-cancellation-is-scoped-to-the-current-epoch-only).
 
 ### Why this is accepted, not mitigated on-chain
 
@@ -409,7 +407,7 @@ A third party can still use real capital to inflate the active adapter's raw pro
 - the epoch price per share,
 - shares minted to pending depositors,
 - assets allocated to pending withdrawers,
-- performance-fee and high-water-mark accounting, and
+- management-fee accounting, and
 - rebalances that withdraw the adapter's full raw position.
 
 An attacker with a pending withdrawal may recover a pro-rata portion of their own unsolicited supply through that epoch's withdrawal settlement. Any unrecovered amount is absorbed by other participants, remaining shareholders, or protocol fees. The attacker cannot atomically recover the full supplied amount unless they also control privileged workflow or vault execution paths, which is outside the permissionless threat model.

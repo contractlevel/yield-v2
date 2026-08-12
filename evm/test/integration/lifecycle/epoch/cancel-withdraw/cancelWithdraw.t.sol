@@ -12,7 +12,6 @@ contract CancelWithdraw_EpochIntegrationTest is BaseIntegrationTest {
     function setUp() public override {
         super.setUp();
         _deployParent();
-        _registerKyc(i_depositor);
         _configureCloseEpochWorkflow(parent.workflowRouter, WORKFLOW_ID, WORKFLOW_NAME, i_owner);
         s_shareAmount = _depositAndClaimShares();
     }

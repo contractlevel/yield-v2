@@ -20,7 +20,6 @@ contract RoundTrip_EpochIntegrationTest is BaseIntegrationTest {
     function setUp() public override {
         super.setUp();
         _deployLocalParentChildTopology();
-        _registerKyc(i_depositor);
         _configureCloseEpochWorkflow(parent.workflowRouter, CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner);
         _configureInitiateRebalanceWorkflow(
             parent.workflowRouter, REBALANCE_WORKFLOW_ID, REBALANCE_WORKFLOW_NAME, i_owner

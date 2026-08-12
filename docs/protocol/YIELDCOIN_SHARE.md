@@ -1,15 +1,79 @@
 # YieldcoinShare
 
-[`YieldcoinShare`](../../evm/src/token/YieldcoinShare.sol) is the compliance-ready share token for Yieldcoin v2. It is a [Chainlink ACE `ComplianceTokenERC3643`](https://github.com/smartcontractkit/chainlink-ace/blob/main/packages/tokens/erc-3643/src/ComplianceTokenERC3643.sol), and its policy checks are part of the token's security model.
+[`YieldcoinShare`](../../evm/src/token/YieldcoinShare.sol) is the upgradeable ERC20 share token for
+Yieldcoin v2.
 
-[`ParentVault`](../../evm/src/vaults/ParentVault.sol) is the only protocol component intended to mint and burn shares for normal user accounting. Deposits do not mint shares immediately; users claim shares after an epoch closes. Withdraw intents escrow shares in `ParentVault`, and those shares are burned when the user claims the settled underlying asset. See: [`USER_GUIDE`](../USER_GUIDE.md).
+| Property | Value |
+| --- | --- |
+| Name | Yieldcoin |
+| Symbol | YIELD |
+| Decimals | 18 |
+| Proxy pattern | ERC-1967 with UUPS upgrades |
+| Access control | OpenZeppelin `AccessControlDefaultAdminRulesUpgradeable` |
 
-User-facing token actions are ACE-gated. The deployment wires KYC policy checks for transfer and approval flows. Depending on the selector, the caller and relevant counterparty addresses must be KYC-approved. For example, transfers check the caller and recipient, while `transferFrom` checks the caller, source, and recipient. `decreaseAllowance` checks only the caller so a user can reduce approval exposure even if a spender later loses KYC status.
+## Share Lifecycle
 
-Administrative token functions also use ACE policy checks. The [deploy script](../../evm/script/deploy/DeployParent.s.sol) configures [`RoleBasedAccessControlPolicy`](https://github.com/smartcontractkit/chainlink-ace/blob/main/packages/policy-management/src/policies/RoleBasedAccessControlPolicy.sol) permissions for roles such as `MINTER_ROLE`, `BURNER_ROLE`, `CONFIG_OPERATOR_ROLE`, `POLICY_ENGINE_MANAGER_ROLE`, `PAUSER_ROLE`, `UNPAUSER_ROLE`, and `COMPLIANCE_OPERATOR_ROLE`.
+ParentVault is granted `MINTER_ROLE` and `BURNER_ROLE` during deployment. No other protocol
+component needs supply-changing authority.
 
-Compliance operations include freeze, unfreeze, address freeze, and forced transfer behavior inherited through the compliance token stack and gated through ACE RBAC. These powers are intentionally privileged and are part of the protocol's compliance trust boundary.
+1. A deposit records underlying assets for the current epoch; it does not mint shares immediately.
+2. After the epoch becomes claimable, `claimShares` mints the user's settled share allocation.
+3. A withdrawal intent transfers the user's shares into ParentVault escrow.
+4. `cancelWithdraw` returns escrowed shares while the epoch remains open.
+5. After settlement, `claimAsset` burns the escrowed shares held by ParentVault and transfers the
+   user's underlying-asset allocation.
 
-`getCCIPAdmin()` returns the stored CCIP admin configured by `setCCIPAdmin`. This is separate from the token's `owner()`. The token's `owner()` is used for UUPS upgrade authorization, and `renounceOwnership()` is disabled to avoid permanently removing upgrade capability.
+ParentVault maintains its own epoch-level total-share accounting. This can temporarily differ from
+the token's `totalSupply()` between epoch close and the final claim because the accounting delta is
+recorded before the corresponding token mint or burn occurs.
 
-For role authority, see [`ACCESS_CONTROL_MATRIX`](../security/ACCESS_CONTROL_MATRIX.md#yieldcoinshare). For accepted role-trust risks, see [`KNOWN_ISSUES`](../security/KNOWN_ISSUES.md#ki-001--centralized-trust-in-privileged-operatoradmin-roles).
+## ERC20 and Pause Behavior
+
+YieldcoinShare follows standard ERC20 balance and allowance behavior.
+
+When paused:
+
+- `transfer` and `transferFrom` revert;
+- `mint` and `burn` revert; and
+- approvals remain available because they do not change balances or total supply.
+
+Token pause therefore also blocks ParentVault operations that transfer, mint, or burn shares. This
+includes creating or cancelling a withdrawal intent and claiming settled shares or assets. Vault and
+token pause state should be coordinated during incident response.
+
+`PAUSER_ROLE` and `UNPAUSER_ROLE` are separate so emergency pause authority does not automatically
+include restart authority.
+
+## Roles
+
+| Role | Authority |
+| --- | --- |
+| `DEFAULT_ADMIN_ROLE` | Grant and revoke token roles; manage the two-step default-admin transfer |
+| `MINTER_ROLE` | Mint shares; granted to ParentVault |
+| `BURNER_ROLE` | Burn shares held in ParentVault escrow; granted to ParentVault |
+| `PAUSER_ROLE` | Pause transfers, minting, and burning |
+| `UNPAUSER_ROLE` | Unpause the token |
+| `CONFIG_OPERATOR_ROLE` | Update the stored CCIP token administrator |
+| `UPGRADER_ROLE` | Authorize UUPS implementation upgrades |
+
+See [`ACCESS_CONTROL_MATRIX`](../security/ACCESS_CONTROL_MATRIX.md#yieldcoinshare) for launch role
+holders and protocol-wide authority.
+
+## CCIP Admin
+
+`getCCIPAdmin()` returns the stored Chainlink CCIP token administrator identity.
+`setCCIPAdmin(newAdmin)` requires `CONFIG_OPERATOR_ROLE`, rejects the zero address, and emits
+`CCIPAdminTransferred`.
+
+The CCIP admin value does not grant token roles or UUPS upgrade authority.
+
+## Upgrade Safety
+
+- The implementation constructor disables initializers.
+- The proxy is initialized atomically during deployment.
+- Initialization validates every role holder and the initial CCIP admin, initializes the transient
+  reentrancy guard, and can execute only once.
+- `_authorizeUpgrade` requires `UPGRADER_ROLE`.
+- Token-specific mutable state uses ERC-7201 namespaced storage.
+- Upgrade tests verify preservation of metadata, CCIP admin, balances, allowances, total supply,
+  pause state, default admin, and roles.

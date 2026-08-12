@@ -29,9 +29,3 @@ Not a pure duplicate check: the second lookup also returns the vault address nee
 Both functions check their `activeAdapter` parameter for the zero address before proceeding. At several call sites this is provably redundant, since the caller already proved the adapter non-zero moments earlier (via `_setActiveAdapter`, which reverts on an unregistered protocol, or via a locally-computed boolean derived from the same storage read).
 
 Unlike everything else on this page, this isn't a storage read - the adapter address is already a function parameter sitting in memory, so the check is a cheap comparison (roughly 10-15 gas), not a ~100 gas warm SLOAD. Splitting the shared helper into checked/unchecked variants isn't worth the surface area for single-digit gas.
-
-## GAS-005 - Deliberate overlap between ParentVault policy checks and share-token transfer checks
-
-`ParentVault.withdraw`/`cancelWithdraw` run a full ACE policy check, then move `YieldcoinShare` tokens - which independently re-enforces KYC and frozen-account restrictions through the share token's own ERC-3643 transfer policy. The extra policy calls are accepted as defense-in-depth despite the additional gas cost.
-
-See [COMPLIANCE - Deliberate overlap with share-token checks](../operator/COMPLIANCE.md#deliberate-overlap-with-share-token-checks) for the full rationale.

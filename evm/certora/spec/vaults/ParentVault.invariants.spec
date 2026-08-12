@@ -2,7 +2,6 @@ using MockUSDC as asset;
 using MockLINK as link;
 using MockYieldcoinShare as share;
 using MockProtocolAdapter as adapter;
-using MockPolicyEngine as policyEngine;
 
 /// Verification of ParentVault-specific behavior
 /// @author @contractlevel
@@ -20,7 +19,6 @@ methods {
     function getTotalShares() external returns (uint256) envfree;
     function getDepositAmount(address, uint256) external returns (uint256) envfree;
     function getWithdrawShareBurnAmount(address, uint256) external returns (uint256) envfree;
-    function getPerformanceFeeHighWaterMark() external returns (uint256) envfree;
     function getTreasury() external returns (address) envfree;
     function getAsset() external returns (address) envfree;
     function getRecoveryMode() external returns (Types.RecoveryMode) envfree;
@@ -30,13 +28,11 @@ methods {
     function getThisChainSelector() external returns (uint64) envfree;
     function getCrosschainVault(uint64) external returns (address) envfree;
     function getActiveProtocolAdapter() external returns (address) envfree;
-    function getPolicyEngine() external returns (address) envfree;
 
     function asset.balanceOf(address) external returns (uint256) envfree;
     function share.balanceOf(address) external returns (uint256) envfree;
     function share.totalSupply() external returns (uint256) envfree;
     function adapter.getVault() external returns (address) envfree;
-    function policyEngine.runCount() external returns (uint256) envfree;
 
     /*//////////////////////////////////////////////////////////////
                          DISPATCHER SUMMARIES
@@ -56,9 +52,6 @@ methods {
     function _.getAdapter(bytes32) external => DISPATCHER(true);
     function _.getFee(uint64, Client.EVM2AnyMessage) external => DISPATCHER(true);
     function _.ccipSend(uint64, Client.EVM2AnyMessage) external => DISPATCHER(true);
-    function _.attach() external => DISPATCHER(true);
-    function _.detach() external => DISPATCHER(true);
-    function _.run(IPolicyEngine.Payload) external => DISPATCHER(true);
 }
 
 /*//////////////////////////////////////////////////////////////
@@ -80,15 +73,6 @@ definition isProductionMethod(method f) returns bool =
 /// @notice State-changing production methods that can preserve or violate protocol invariants.
 definition isInvariantPreservationMethod(method f) returns bool =
     isProductionMethod(f) && !f.isView && !f.isPure;
-
-/// @notice ParentVault user entry points protected by the configured ACE policy stack.
-definition isPolicyProtectedUserMethod(method f) returns bool =
-    f.selector == sig:deposit(uint256).selector
-        || f.selector == sig:withdraw(uint256).selector
-        || f.selector == sig:claimShares(uint256).selector
-        || f.selector == sig:claimAsset(uint256).selector
-        || f.selector == sig:cancelDeposit().selector
-        || f.selector == sig:cancelWithdraw().selector;
 
 /// @notice Deposits in the current OPEN epoch are still held by ParentVault and remain refundable.
 definition currentOpenEpochDepositBacking() returns mathint =
@@ -267,8 +251,6 @@ invariant CFG_zeroChainSelectorIsUnregistered()
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address policyEngineManager,
-            address newPolicyEngine,
             address cancelDepositOperator
         ) with (env e) {
             require !getSupportedProtocol(to_bytes32(0));
@@ -304,8 +286,6 @@ invariant REBAL_004_rebalancingStateHasPendingStrategy()
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address policyEngineManager,
-            address newPolicyEngine,
             address cancelDepositOperator
         ) with (env e) {
             require getRebalance().state == Types.RebalanceState.NONE;
@@ -331,8 +311,6 @@ invariant REBAL_004_noneStateHasNoPendingStrategy()
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address policyEngineManager,
-            address newPolicyEngine,
             address cancelDepositOperator
         ) with (env e) {
             require getRebalance().state == Types.RebalanceState.NONE;
@@ -361,8 +339,6 @@ invariant ADAPTER_002_REBAL_006_activeAdapterIsBoundToParentVault()
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address policyEngineManager,
-            address newPolicyEngine,
             address cancelDepositOperator
         ) with (env e) {
             require getActiveProtocolAdapter() == 0;
@@ -389,8 +365,6 @@ invariant REBAL_009_rebalanceExcludesExecutingPreviousEpoch()
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address policyEngineManager,
-            address newPolicyEngine,
             address cancelDepositOperator
         ) with (env e) {
             require getRebalance().state == Types.RebalanceState.NONE;
@@ -442,8 +416,6 @@ invariant NONCE_009_parentLifecycleNoncesArePositive()
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address policyEngineManager,
-            address newPolicyEngine,
             address cancelDepositOperator
         ) with (env e) {
         }
@@ -472,8 +444,6 @@ invariant EPOCH_001_EPOCH_020_exactlyCurrentEpochIsOpen(uint256 epochNonce)
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address policyEngineManager,
-            address newPolicyEngine,
             address cancelDepositOperator
         ) with (env e) {
             require getEpoch(epochNonce).status == Types.EpochStatus.NONE;
@@ -496,8 +466,6 @@ invariant EPOCH_001_EPOCH_020_epochsBeyondCurrentHaveNoneStatus(uint256 otherEpo
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address policyEngineManager,
-            address newPolicyEngine,
             address cancelDepositOperator
         ) with (env e) {
             /// @dev genesis fact, not provable as an invariant: if initialize() is about to succeed,
@@ -545,8 +513,6 @@ invariant EPOCH_020_historicalEpochsHaveCanonicalStatus(uint256 epochNonce)
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address policyEngineManager,
-            address newPolicyEngine,
             address cancelDepositOperator
         ) with (env e) {
         }
@@ -590,8 +556,6 @@ invariant EPOCH_008_EPOCH_011_EPOCH_013_epochRemainingCountersAreZeroBeforeClose
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address policyEngineManager,
-            address newPolicyEngine,
             address cancelDepositOperator
         ) with (env e) {
             /// @dev genesis fact, not provable as an invariant - see
@@ -643,8 +607,6 @@ invariant EPOCH_005_futureEpochDepositTotalsAreZero(uint256 epochNonce)
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address policyEngineManager,
-            address newPolicyEngine,
             address cancelDepositOperator
         ) with (env e) {
             require getEpochNonce() == 0;
@@ -664,8 +626,6 @@ invariant EPOCH_005_futureEpochShareBurnTotalsAreZero(uint256 epochNonce)
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address policyEngineManager,
-            address newPolicyEngine,
             address cancelDepositOperator
         ) with (env e) {
             require getEpochNonce() == 0;
@@ -724,7 +684,7 @@ invariant EPOCH_011_epochWithdrawCountersStayBounded(uint256 epochNonce)
 ///      whose share-burn pool is zero from inception, are intentionally outside this Certora property
 ///      because Solady fullMulDiv's zero-multiplicand path is not modeled reliably. The implication
 ///      remains one-directional because a non-final claimant's asset amount may reach zero first
-///      through rounding or the documented DEV-004 dust case while shares remain to be burned.
+///      through rounding or the documented DEV-003 dust case while shares remain to be burned.
 invariant EPOCH_013_exhaustedShareBurnHasNoRemainingAssetClaim(uint256 epochNonce)
     (
         getEpoch(epochNonce).totalShareBurnAmount != 0
@@ -808,8 +768,6 @@ invariant SOLV_001_parentCoversReservedLiquidObligations()
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address policyEngineManager,
-            address newPolicyEngine,
             address cancelDepositOperator
         ) with (env e) {
             /// @dev A successful proxy initialization is the genesis transition, before any epoch,
@@ -860,8 +818,6 @@ invariant SOLV_003_withdrawEscrowReconcilesWithEpochAccounting()
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address policyEngineManager,
-            address newPolicyEngine,
             address cancelDepositOperator
         ) with (env e) {
             /// @dev A successful proxy initialization opens untouched epoch 1.
@@ -891,8 +847,6 @@ invariant SOLV_006_depositEscrowReconcilesWithEpochAccounting()
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address policyEngineManager,
-            address newPolicyEngine,
             address cancelDepositOperator
         ) with (env e) {
             require getEpochNonce() == 0;
@@ -933,8 +887,6 @@ invariant SHARE_001_SHARE_003_totalSupplyReconcilesWithTotalShares()
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address policyEngineManager,
-            address newPolicyEngine,
             address cancelDepositOperator
         ) with (env e) {
             /// @dev genesis fact, not provable as an invariant - see
@@ -1013,7 +965,7 @@ rule storageBehaviorMatchesMutability(env e, method f, calldataarg args) filtere
     storage after = lastStorage;
     bool isReadOnly = f.isView || f.isPure;
     bool isImplementationInitializer =
-        f.selector == sig:initialize(BaseVault.InitParams,address,address,address,address).selector;
+        f.selector == sig:initialize(BaseVault.InitParams,address,address).selector;
     bool changesExpectedExternalStorage =
         f.selector == sig:withdrawLink(uint256).selector && before[link] != after[link];
 
@@ -1024,35 +976,6 @@ rule storageBehaviorMatchesMutability(env e, method f, calldataarg args) filtere
         || changesExpectedExternalStorage;
 }
 
-/// @notice The performance fee high water mark never decreases
-/// @dev Verifies docs/INVARIANTS.md FEE-003. This is a parametric before/after rule rather than a
-///      persistent invariant because it compares two states across one arbitrary transaction. A
-///      bare rule considers a fully arbitrary "before" storage state (unlike an invariant, it is not
-///      anchored to anything already proven), so without a guard, hwmBefore could be picked as an
-///      unreachable garbage value exceeding i_assetPrecision, and initialize()'s unconditional
-///      `s_performanceFeeHighWaterMark = i_assetPrecision` write would then look like a decrease.
-///      Guarding on getTreasury() == 0 is insufficient here: that branch is vacuously satisfied
-///      whenever getTreasury() != 0, so hwmBefore is still unconstrained in exactly the scenario
-///      Certora would pick - a prestate where getTreasury() is already nonzero (so the guard says
-///      nothing) while the unrelated `initializer` modifier's own storage still permits calling
-///      initialize(). The fact that actually matters doesn't need treasury at all: if initialize()
-///      is about to succeed, this must be the vault's first-ever initialization, so HWM must already
-///      be at its untouched genesis value of 0 - regardless of what getTreasury() happens to read.
-rule FEE_003_performanceFeeHighWaterMark_NeverDecreases(method f) filtered {
-        f -> isInvariantPreservationMethod(f)
-} {
-    require f.selector == sig:initialize(BaseVault.InitParams,address,address,address,address).selector
-        => getPerformanceFeeHighWaterMark() == 0;
-
-    uint256 hwmBefore = getPerformanceFeeHighWaterMark();
-
-    env e;
-    calldataarg args;
-    f(e, args);
-
-    assert getPerformanceFeeHighWaterMark() >= hwmBefore;
-}
-
 /// @notice Parent lifecycle nonces never decrease across a successful production call
 /// @dev Verifies docs/security/INVARIANTS.md NONCE-009 for both the epoch and rebalance domains.
 ///      initialize() is the only transition from untouched nonce storage, so its arbitrary rule
@@ -1060,7 +983,7 @@ rule FEE_003_performanceFeeHighWaterMark_NeverDecreases(method f) filtered {
 rule NONCE_009_parentLifecycleNoncesNeverDecrease(method f) filtered {
         f -> isInvariantPreservationMethod(f)
 } {
-    require f.selector == sig:initialize(BaseVault.InitParams,address,address,address,address).selector
+    require f.selector == sig:initialize(BaseVault.InitParams,address,address).selector
         => (getEpochNonce() == 0 && getRebalance().nonce == 0);
 
     uint256 epochNonceBefore = getEpochNonce();
@@ -1089,12 +1012,12 @@ rule NONCE_010_NONCE_011_onlyLifecycleTransitionsChangeNonces(method f) filtered
     f(e, args);
 
     assert (
-        f.selector != sig:initialize(BaseVault.InitParams,address,address,address,address).selector
+        f.selector != sig:initialize(BaseVault.InitParams,address,address).selector
             && f.selector != sig:closeEpoch(uint256).selector
     ) => getEpochNonce() == epochNonceBefore;
 
     assert (
-        f.selector != sig:initialize(BaseVault.InitParams,address,address,address,address).selector
+        f.selector != sig:initialize(BaseVault.InitParams,address,address).selector
             && f.selector != sig:ccipReceive(Client.Any2EVMMessage).selector
             && f.selector != sig:initiateRebalance(Types.Strategy).selector
             && f.selector != sig:completeRebalance().selector
@@ -1166,7 +1089,7 @@ rule EPOCH_002_epochTransitionsAreValid(method f, uint256 epochNonce) filtered {
         f -> isInvariantPreservationMethod(f)
 } {
     requireInvariant EPOCH_001_EPOCH_020_epochsBeyondCurrentHaveNoneStatus(epochNonce);
-    require f.selector == sig:initialize(BaseVault.InitParams,address,address,address,address).selector
+    require f.selector == sig:initialize(BaseVault.InitParams,address,address).selector
         => getEpoch(1).status == Types.EpochStatus.NONE;
 
     Types.EpochStatus statusBefore = getEpoch(epochNonce).status;
@@ -1224,21 +1147,4 @@ rule AC_009_userEpochEscrowOnlyChangedByOwnerOutsideForceCancel(method f, addres
 
     assert getDepositAmount(user, epochNonce) == depositBefore;
     assert getWithdrawShareBurnAmount(user, epochNonce) == withdrawBefore;
-}
-
-/// @notice AC-004: every successful protected user entry point invokes the configured policy engine
-/// @dev Verified against ParentVault's production ABI because ParentVault.rules.spec intentionally
-///      stubs policy hooks while testing the underlying user-operation behavior.
-rule AC_004_userEntryPointsInvokePolicyEngine(method f) filtered {
-    f -> isPolicyProtectedUserMethod(f)
-} {
-    require getPolicyEngine() == policyEngine;
-
-    uint256 runCountBefore = policyEngine.runCount();
-
-    env e;
-    calldataarg args;
-    f(e, args);
-
-    assert policyEngine.runCount() == runCountBefore + 1;
 }

@@ -2,7 +2,8 @@
 
 Yieldcoin v2 users interact with `ParentVault` on the parent chain.
 
-Before interacting, a user must complete KYC through the configured [identity provider or compliance operator](./operator/COMPLIANCE.md#kyc-and-identity-provider). That offchain process writes the user's KYC status to the onchain identity and credential registries. `ParentVault` user functions are protected by ACE policy checks that read this onchain confirmation. Share transfers and approvals are also policy-gated.
+ParentVault user functions do not require a role. Calls remain subject to the vault's pause state,
+epoch state, amount checks, balances, and allowances.
 
 ## Deposit
 
@@ -53,7 +54,8 @@ Cancels only apply to current-epoch intents before they settle. Claims and cance
 
 ## Share Transfers
 
-Yieldcoin share transfers and approvals are ACE-gated. Depending on the action, the caller and counterparties must satisfy the configured KYC policy. Direct users should expect transfer, approval, and `transferFrom` behavior to depend on the integrated identity and credential registries.
+YieldcoinShare uses standard ERC20 transfers and approvals. When the token is paused, transfers
+revert while approvals remain available.
 
 ## Delays And Availability
 

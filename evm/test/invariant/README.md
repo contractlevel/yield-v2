@@ -55,6 +55,6 @@ halmos --contract ClaimSolvency --forge-build-out out-halmos --function check_ \
 halmos --forge-build-out out-halmos --solver-timeout-assertion 0
 ```
 
-The `halmos` profile targets `shanghai` (avoids the MCOPY opcode that Halmos does not support). `via_ir` is required by dependencies and stays on. Artifacts go to `out-halmos/` to avoid conflicting with the main build.
+The `halmos` profile targets `shanghai` (avoids the MCOPY opcode that Halmos does not support). Artifacts go to `out-halmos/` to avoid conflicting with the main build.
 
 Each `check_*` function writes symbolic counter values directly into vault storage via `stdstore`, then calls the real contract function. This proves the counter-pair solvency property holds for every possible input, not just sampled ones.

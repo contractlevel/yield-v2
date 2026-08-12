@@ -7,11 +7,3 @@ BaseVault_supportsInterface
 │   └── it should return true
 └── when the interface is not supported
     └── it should return false
-
-ParentVault_supportsInterface
-└── when the interface is IPolicyProtected
-    └── it should return true
-
-ChildVault_supportsInterface
-└── when the interface is IPolicyProtected
-    └── it should return false

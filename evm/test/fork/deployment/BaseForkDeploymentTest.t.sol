@@ -15,19 +15,18 @@ abstract contract BaseForkDeploymentTest is BaseForkTest {
         assertTrue(parent.vault.hasRole(Roles.LINK_OPERATOR_ROLE, arbitrumConfig.roles.linkOperator));
         assertTrue(parent.vault.hasRole(Roles.PAUSER_ROLE, arbitrumConfig.roles.pauser));
         assertTrue(parent.vault.hasRole(Roles.UNPAUSER_ROLE, arbitrumConfig.roles.unpauser));
-        assertTrue(parent.vault.hasRole(Roles.POLICY_ENGINE_MANAGER_ROLE, arbitrumConfig.roles.policy.engineManager));
         assertTrue(parent.vault.hasRole(Roles.UPGRADER_ROLE, arbitrumConfig.roles.upgrader));
 
         assertGt(address(parent.vaultImpl).code.length, 0);
         assertNotEq(address(parent.vaultImpl), address(parent.vault));
-        assertEq(parent.share.owner(), arbitrumConfig.roles.upgrader);
+        assertEq(parent.share.defaultAdmin(), parentForkDeployer);
+        assertTrue(parent.share.hasRole(Roles.UPGRADER_ROLE, arbitrumConfig.roles.upgrader));
+        assertTrue(parent.share.hasRole(Roles.MINTER_ROLE, address(parent.vault)));
+        assertTrue(parent.share.hasRole(Roles.BURNER_ROLE, address(parent.vault)));
 
         assertEq(parent.vault.getAdapterRegistry(), address(parent.adapterRegistry));
         assertEq(parent.vault.getShare(), address(parent.share));
         assertEq(parent.vault.getTreasury(), arbitrumConfig.treasury);
-        assertEq(parent.identityRegistry.getIdentity(arbitrumConfig.treasury), parent.treasuryCcid);
-        assertTrue(parent.vaultKycPolicy.validate(arbitrumConfig.treasury, ""));
-        assertTrue(parent.shareKycPolicy.validate(arbitrumConfig.treasury, ""));
         assertEq(parent.vault.getAsset(), parent.asset);
         assertEq(parent.vault.getAssetPrecision(), 10 ** 6);
         assertEq(parent.vault.getSharePrecision(), 1e18);

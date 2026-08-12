@@ -144,6 +144,7 @@ abstract contract BaseVault is
     /// @dev Reverts if params.ccipRouter is the zero address
     /// @dev Reverts if params.adapterRegistry is the zero address
     /// @dev Reverts if params.thisChainSelector is zero
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(ConstructorParams memory params) CCIPReceiver(params.ccipRouter) {
         _revertIfZeroAddress(params.link);
         _revertIfZeroAddress(params.asset);

@@ -33,8 +33,6 @@ ParentVault_closeEpoch
 ├── it should update totalShares
 ├── it should make the epoch claimable
 ├── it should open the next epoch
-├── when fee would consume TVL
-│   └── it should skip fee and leave high water mark unchanged
 ├── when local strategy has net deposit
 │   ├── it should deposit net flow into the adapter
 │   ├── it should emit EpochClaimable

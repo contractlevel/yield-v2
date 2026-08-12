@@ -2,8 +2,6 @@
 
 This runbook covers testnet and production deployments. Run EVM commands from `evm/`. Keep deployed addresses, role holders, transaction hashes, and approvals in environment-specific deployment records rather than this document.
 
-Production deployment also requires every gate in [`LAUNCH_REQUIREMENTS`](./LAUNCH_REQUIREMENTS.md) to be complete.
-
 ## Prerequisites
 
 - Configure the required RPC URLs without committing secrets.
@@ -14,7 +12,7 @@ Production deployment also requires every gate in [`LAUNCH_REQUIREMENTS`](./LAUN
 
 ## Deploy
 
-Deploy the parent-chain contracts, including the ACE contracts and policy wiring:
+Deploy the parent-chain vault, share token, adapters, registry, and workflow router:
 
 ```bash
 forge script script/deploy/DeployParent.s.sol:DeployParent \
@@ -48,7 +46,7 @@ After all vaults are deployed:
 6. Fund every vault with sufficient LINK for CCIP.
 7. Assign production roles to their approved holders and remove temporary deployer access.
 
-Use [`CONFIG`](./CONFIG.md) for configuration functions, [`COMPLIANCE`](./COMPLIANCE.md) to verify the parent deployment's ACE configuration, and [`ACCESS_CONTROL_MATRIX`](../security/ACCESS_CONTROL_MATRIX.md) for required authorities.
+Use [`CONFIG`](./CONFIG.md) for configuration functions and [`ACCESS_CONTROL_MATRIX`](../security/ACCESS_CONTROL_MATRIX.md) for required authorities.
 
 ## Verify
 
@@ -59,7 +57,7 @@ Before handoff:
 - Confirm adapters are registered for the correct vault, asset, and protocol.
 - Confirm cross-chain vault mappings and CCIP gas limits on every chain.
 - Confirm WorkflowRouter metadata and selector allowlists.
-- Confirm ACE policies and role assignments created by the parent deployment.
+- Confirm role assignments created by the parent deployment, including that `ParentVault` holds the share token's minter and burner roles.
 - Confirm vault LINK balances and CRE secrets without exposing secret values.
 - Run the applicable deployment and fork tests.
 

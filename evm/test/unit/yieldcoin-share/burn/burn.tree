@@ -1,0 +1,10 @@
+YieldcoinShare_burn
+├── when the caller does not have BURNER_ROLE
+│   └── it should revert with AccessControlUnauthorizedAccount
+├── when the user is the zero address
+│   └── it should revert with ERC20InvalidSender
+├── when the user's balance is insufficient
+│   └── it should revert with ERC20InsufficientBalance
+└── when the burn is valid
+    ├── it should decrease the user balance and total supply
+    └── it should emit Transfer to the zero address

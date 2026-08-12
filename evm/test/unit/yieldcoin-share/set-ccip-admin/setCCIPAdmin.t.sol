@@ -3,13 +3,30 @@ pragma solidity 0.8.34;
 
 import {BaseUnitTest, Vm} from "../../BaseUnitTest.t.sol";
 
+import {IShare} from "../../../../src/interfaces/token/IShare.sol";
 import {YieldcoinShare} from "../../../../src/token/YieldcoinShare.sol";
+import {Roles} from "../../../../src/libraries/Roles.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 contract YieldcoinShare_SetCCIPAdminUnitTest is BaseUnitTest {
     address internal immutable i_newCcipAdmin = makeAddr("newCcipAdmin");
 
+    function setUp() public {
+        _changePrank(i_configOperator);
+    }
+
+    function test_YieldcoinShare_setCCIPAdmin_RevertWhen_CallerLacksConfigOperatorRole() external {
+        _changePrank(i_nonOwner);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, i_nonOwner, Roles.CONFIG_OPERATOR_ROLE
+            )
+        );
+        s_yieldcoin.setCCIPAdmin(i_newCcipAdmin);
+    }
+
     function test_YieldcoinShare_TOKEN_001_setCCIPAdmin_RevertWhen_NewAdminIsZeroAddress() external {
-        vm.expectRevert(YieldcoinShare.YieldcoinShare__NoZeroAddress.selector);
+        vm.expectRevert(IShare.YieldcoinShare__NoZeroAddress.selector);
         s_yieldcoin.setCCIPAdmin(address(0));
     }
 

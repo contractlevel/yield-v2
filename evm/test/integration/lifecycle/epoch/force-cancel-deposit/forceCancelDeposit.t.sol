@@ -9,7 +9,6 @@ contract ForceCancelDeposit_EpochIntegrationTest is BaseIntegrationTest {
     function setUp() public override {
         super.setUp();
         _deployParent();
-        _registerKyc(i_depositor);
     }
 
     function test_Epoch_forceCancelDeposit_ReturnsUsdcAndClearsDeposit() external {

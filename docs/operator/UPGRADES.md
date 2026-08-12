@@ -19,7 +19,7 @@ The timelock must hold `UPGRADER_ROLE` on each vault and own `YieldcoinShare`. T
 - Confirm the new implementation's immutable asset, router, registry, chain selector, share token, and parent selector values match the target proxy.
 - Confirm implementation contracts cannot be initialized directly.
 - Do not call the original initializer again. An upgrade must preserve the state already initialized and subsequently updated through the proxy, including roles or ownership, configuration, accounting, pause state, and lifecycle state.
-- In particular, do not reset ParentVault epoch or rebalance nonces to `1`, reopen an initialized epoch, reset completion timestamps or the performance-fee high-water mark, clear recovery state, or reset ChildVault handled-nonce high-water marks.
+- In particular, do not reset ParentVault epoch or rebalance nonces to `1`, reopen an initialized epoch, reset completion timestamps, clear recovery state, or reset ChildVault handled-nonce high-water marks.
 - Any migration call must be explicit, idempotent where practical, and separately reviewed. It may change existing state only when that change is part of the approved migration.
 - Test the complete timelock proposal and execution against a fork of every affected chain.
 

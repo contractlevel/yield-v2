@@ -66,10 +66,6 @@ contract ParentVaultEpochLibHarness is ParentVaultStore, HelperHarness {
         totalShares = _parentVaultStorage().s_totalShares;
     }
 
-    function getPerformanceFeeHighWaterMark() external view returns (uint256 highWaterMark) {
-        highWaterMark = _parentVaultStorage().s_performanceFeeHighWaterMark;
-    }
-
     function getTreasury() external view returns (address treasury) {
         treasury = _parentVaultStorage().s_treasury;
     }

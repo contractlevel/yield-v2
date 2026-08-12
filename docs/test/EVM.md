@@ -17,6 +17,7 @@ forge build src/vaults/ParentVault.sol --sizes
 Run for coverage:
 
 ```
+forge coverage --report lcov
 forge coverage --ir-minimum --report lcov
 forge coverage --ir-minimum --report lcov --no-match-path "test/fork/**"
 ```
@@ -111,13 +112,6 @@ certoraRun ./certora/conf/modules/adapters/CompoundV3Adapter.conf
 
 certoraRun ./certora/conf/modules/WorkflowRouter.conf
 
-certoraRun ./certora/conf/modules/extractors/SenderExtractor.conf
-certoraRun ./certora/conf/modules/extractors/YieldcoinShareKycExtractor.conf
-
-certoraRun ./certora/conf/modules/policies/TerminalAllowPolicy.conf
-certoraRun ./certora/conf/modules/policies/CredentialRegistryAccountListValidatorPolicy.conf
-certoraRun ./certora/conf/modules/policies/YieldcoinShareFrozenAccountPolicy.conf
-
 certoraRun ./certora/conf/token/YieldcoinShare.conf
 
 certoraRun certora/conf/libraries/BaseVaultCcipLib.conf
@@ -136,12 +130,6 @@ certoraRun certora/conf/vaults/ParentVault.BaseVault.conf
 
 certoraRun certora/conf/vaults/ChildVault.rules.conf
 certoraRun certora/conf/vaults/ChildVault.invariants.conf
-
-/// @notice ParentVault::_finalizeRebalance() should be marked virtual and overridden in the harness with internal library implementation
-///         to avoid havoc issues for ccipReceive_REBALANCE_* rules!
-
-/// @notice ParentVault::_finalizeLocalToLocalRebalance() should be marked virtual and overridden in the harness with internal library implementation
-///         to avoid havoc issues for initiateRebalance rules!
 
 certoraRun certora/conf/vaults/ParentVault.rules.conf
 certoraRun certora/conf/vaults/ParentVault.localAdapter.conf

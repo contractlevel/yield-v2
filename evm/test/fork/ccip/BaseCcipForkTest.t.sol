@@ -132,15 +132,6 @@ abstract contract BaseCcipForkTest is BaseForkTest {
         ccipLocalSimulatorFork.switchChainAndRouteMessageWithUSDC(forkId, attesters, attesterPks);
     }
 
-    function _registerKyc(address account) internal {
-        bytes32 ccid = keccak256(abi.encodePacked(account));
-
-        _selectArbitrumFork();
-        _changePrank(arbitrumConfig.kycProvider);
-        parent.identityRegistry.registerIdentity(ccid, account, "");
-        parent.credentialRegistry.registerCredential(ccid, KYC_CREDENTIAL, 0, "", "");
-    }
-
     function _fundAndApproveParentUsdc(address account, uint256 amount) internal {
         _selectArbitrumFork();
         deal(parent.asset, account, amount);
@@ -354,7 +345,6 @@ abstract contract BaseCcipForkTest is BaseForkTest {
     function _depositAndClaimParentShares(bytes32 workflowId) internal returns (uint256 shareAmount) {
         _selectArbitrumFork();
 
-        _registerKyc(i_depositor);
         _fundAndApproveParentUsdc(i_depositor, DEPOSIT_AMOUNT);
 
         _changePrank(i_depositor);

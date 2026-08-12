@@ -156,23 +156,6 @@ abstract contract EpochGhosts is ActorGhosts {
         }
     }
 
-    function _recordPerformanceFeeBurden(
-        FeeSnapshot memory snapshot,
-        uint256 grossPricePerShare,
-        uint256 settlementPricePerShare
-    ) internal {
-        if (settlementPricePerShare >= grossPricePerShare) return;
-        if (parent.share.balanceOf(parent.vault.getTreasury()) <= snapshot.treasuryShareBalance) return;
-
-        for (uint256 i; i < s_actors.length; ++i) {
-            address actor = s_actors[i];
-            uint256 feeBearingShares = snapshot.actorShares[i];
-            uint256 valueBefore = feeBearingShares * grossPricePerShare / SHARE_PRECISION;
-            uint256 valueAfter = feeBearingShares * settlementPricePerShare / SHARE_PRECISION;
-            if (valueBefore > valueAfter) ghost_feeBurdenByActor[actor] += valueBefore - valueAfter;
-        }
-    }
-
     function _recordManagementFeeBurden(FeeSnapshot memory snapshot) internal {
         if (snapshot.totalShares == 0) return;
 

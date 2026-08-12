@@ -5,6 +5,7 @@ import {BaseForkTest} from "../../BaseForkTest.t.sol";
 import {CompoundV3Adapter} from "../../../../src/modules/adapters/CompoundV3Adapter.sol";
 import {ICompoundV3Adapter} from "../../../../src/interfaces/adapters/ICompoundV3Adapter.sol";
 import {IProtocolAdapter} from "../../../../src/interfaces/adapters/IProtocolAdapter.sol";
+import {ICometRewards} from "../../../../src/interfaces/external/ICometRewards.sol";
 import {Roles} from "../../../../src/libraries/Roles.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
@@ -94,9 +95,14 @@ abstract contract BaseCompoundV3ForkTest is BaseForkTest {
         internal
     {
         address operator = makeAddr("forkRewardsOperator");
+        address rewardToken = ICometRewards(adapter.getCometRewards()).rewardConfig(adapter.getProtocolPool());
+        uint256 strandedRewards = 1;
 
         _changePrank(deployer);
         IAccessControl(vault).grantRole(Roles.REWARDS_OPERATOR_ROLE, operator);
+
+        deal(rewardToken, address(adapter), strandedRewards);
+        uint256 operatorBalanceBefore = IERC20(rewardToken).balanceOf(operator);
 
         vm.recordLogs();
         _changePrank(operator);
@@ -108,6 +114,8 @@ abstract contract BaseCompoundV3ForkTest is BaseForkTest {
             ),
             operator
         );
+        assertEq(IERC20(rewardToken).balanceOf(address(adapter)), 0);
+        assertGe(IERC20(rewardToken).balanceOf(operator), operatorBalanceBefore + strandedRewards);
     }
 
     function test_baseCompoundV3ForkTest() public virtual {}

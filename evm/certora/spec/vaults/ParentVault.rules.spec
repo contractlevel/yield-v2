@@ -6,7 +6,6 @@ using MockUSDC as asset;
 using MockLINK as link;
 using MockCCIPRouter as ccipRouter;
 using MockYieldcoinShare as share;
-using MockPolicyEngine as policyEngine;
 
 /// Verification of ParentVault-specific function behavior
 /// @author @contractlevel
@@ -15,10 +14,6 @@ using MockPolicyEngine as policyEngine;
 /// @notice Deposit/withdraw/claim/cancel/closeEpoch/initiateRebalance/completeRebalance internals are
 ///         verified in isolation in the corresponding ParentVault*Lib.spec files; this spec covers the
 ///         vault's own entry-point wiring, access control, and state/events that live in ParentVault.sol itself.
-/// @notice ParentVaultHarness stubs _runPolicyBefore/_runPolicyAfter to no-ops, so runPolicy-gated reverts
-///         (e.g. PolicyEngineUndefined) are out of scope here for deposit/withdraw/claimShares/claimAsset/
-///         cancelDeposit/cancelWithdraw. attachPolicyEngine itself does not go through that stub and is
-///         fully covered.
 
 /*//////////////////////////////////////////////////////////////
                             METHODS
@@ -27,7 +22,7 @@ methods {
     /*//////////////////////////////////////////////////////////////
                        PARENTVAULT ENTRY POINTS
     //////////////////////////////////////////////////////////////*/
-    function initialize(BaseVault.InitParams, address, address, address, address) external;
+    function initialize(BaseVault.InitParams, address, address) external;
     function setInitialActiveProtocolAdapter(bytes32) external;
     function setTreasury(address) external;
     function deposit(uint256) external returns (uint256);
@@ -44,7 +39,6 @@ methods {
     function completeRebalance() external;
     function executeRecovery() external;
     function setSupportedProtocol(bytes32, bool) external;
-    function attachPolicyEngine(address) external;
 
     /*//////////////////////////////////////////////////////////////
                              GETTERS
@@ -56,14 +50,11 @@ methods {
     function getDepositAmount(address, uint256) external returns (uint256) envfree;
     function getWithdrawShareBurnAmount(address, uint256) external returns (uint256) envfree;
     function getInitialActiveProtocolAdapterSet() external returns (bool) envfree;
-    function getPerformanceFeeHighWaterMark() external returns (uint256) envfree;
     function getTreasury() external returns (address) envfree;
     function getShare() external returns (address) envfree;
     function getSharePrecision() external returns (uint256) envfree;
     function getMinDepositAmount() external returns (uint256) envfree;
     function getSupportedProtocol(bytes32) external returns (bool) envfree;
-    function getPolicyEngine() external returns (address) envfree;
-    function owner() external returns (address) envfree;
     function supportsInterface(bytes4) external returns (bool) envfree;
 
     /// BaseVault getters this spec's rules read directly
@@ -109,7 +100,6 @@ methods {
     function CONFIG_OPERATOR_ROLE() external returns (bytes32) envfree;
     function EPOCH_OPERATOR_ROLE() external returns (bytes32) envfree;
     function REBALANCE_OPERATOR_ROLE() external returns (bytes32) envfree;
-    function POLICY_ENGINE_MANAGER_ROLE() external returns (bytes32) envfree;
     function CANCEL_DEPOSIT_OPERATOR_ROLE() external returns (bytes32) envfree;
 
     /*//////////////////////////////////////////////////////////////
@@ -135,7 +125,6 @@ methods {
     function erc165InterfaceId() external returns (bytes4) envfree;
     function accessControlDefaultAdminRulesInterfaceId() external returns (bytes4) envfree;
     function any2EVMMessageReceiverInterfaceId() external returns (bytes4) envfree;
-    function policyProtectedInterfaceId() external returns (bytes4) envfree;
 
     /*//////////////////////////////////////////////////////////////
                          DISPATCHER SUMMARIES
@@ -155,8 +144,6 @@ methods {
     function _.getAdapter(bytes32) external => DISPATCHER(true);
     function _.getFee(uint64, Client.EVM2AnyMessage) external => DISPATCHER(true);
     function _.ccipSend(uint64, Client.EVM2AnyMessage) external => DISPATCHER(true);
-    function _.attach() external => DISPATCHER(true);
-    function _.detach() external => DISPATCHER(true);
 }
 
 /*//////////////////////////////////////////////////////////////
@@ -222,10 +209,6 @@ definition ManagementFeeCollectedEvent() returns bytes32 =
 // keccak256("ManagementFeeCollected(uint256,uint256)")
     to_bytes32(0x6f4a589972e181c1010960e6cb88e05776a4f3a28373e49c69ffdf8cc30f1a31);
 
-definition PerformanceFeeCollectedEvent() returns bytes32 =
-// keccak256("PerformanceFeeCollected(uint256,uint256,uint256)")
-    to_bytes32(0xdc4f167bfca42a54abc7c7dd90ec178ea116a54329d32a1a6cb1c6208d17177c);
-
 definition InitialActiveProtocolAdapterSetEvent() returns bytes32 =
 // keccak256("InitialActiveProtocolAdapterSet(bytes32,address)")
     to_bytes32(0x389c4eb5fd9b7beba97816c41d88380c67872bdd8d51e708ac90598a3725b112);
@@ -237,14 +220,6 @@ definition TreasurySetEvent() returns bytes32 =
 definition SupportedProtocolSetEvent() returns bytes32 =
 // keccak256("SupportedProtocolSet(bytes32,bool)")
     to_bytes32(0x56cc71f639333b7ecd9179fddeb0ecc00bcb82b3f98664a11601a28652604c48);
-
-definition PolicyEngineAttachedEvent() returns bytes32 =
-// keccak256("PolicyEngineAttached(address)")
-    to_bytes32(0x57d241970863a27bedbf58b705b45a0b267f76f9a3a7fd432e217a37e4173fac);
-
-definition PolicyEngineDetachFailedEvent() returns bytes32 =
-// keccak256("PolicyEngineDetachFailed(address,bytes)")
-    to_bytes32(0x5c3a3f63e48796286c8d14b455ed70b560ab62290af416cbe00f3f18afcbd4cd);
 
 /// @dev IBaseVault events emitted directly from ParentVault.sol entry points (setInitialActiveProtocolAdapter,
 ///      initiateRebalance) via the shared _setActiveAdapter/_clearActiveAdapter internal helpers. Tracked here
@@ -281,7 +256,6 @@ definition RebalanceDepositRecoveryClearedEvent() returns bytes32 =
 
 /// @dev Mirrors the constants in ParentVaultFeesLib for modeling the management fee formula inline.
 definition BPS_DENOMINATOR() returns uint256 = 10000;
-definition PERFORMANCE_FEE_BPS() returns uint256 = 777;
 definition MANAGEMENT_FEE_BPS() returns uint256 = 100;
 definition YEAR() returns uint256 = 31536000;
 
@@ -496,14 +470,6 @@ ghost mathint ghost_totalShares_StoreCount {
 }
 ghost uint256 ghost_totalShares_StoredValue {
     init_state axiom ghost_totalShares_StoredValue == 0;
-}
-
-/// ─── s_performanceFeeHighWaterMark ────────────────────────────
-ghost mathint ghost_performanceFeeHighWaterMark_StoreCount {
-    init_state axiom ghost_performanceFeeHighWaterMark_StoreCount == 0;
-}
-ghost uint256 ghost_performanceFeeHighWaterMark_StoredValue {
-    init_state axiom ghost_performanceFeeHighWaterMark_StoredValue == 0;
 }
 
 /// ─── s_epochNonce ──────────────────────────────────────────────
@@ -867,20 +833,6 @@ ghost uint256 ghost_ManagementFeeCollected_Param_feeShares {
     init_state axiom ghost_ManagementFeeCollected_Param_feeShares == 0;
 }
 
-/// ─── Event: PerformanceFeeCollected ───────────────────────────────
-ghost mathint ghost_PerformanceFeeCollected_EventCount {
-    init_state axiom ghost_PerformanceFeeCollected_EventCount == 0;
-}
-ghost uint256 ghost_PerformanceFeeCollected_Param_epochNonce {
-    init_state axiom ghost_PerformanceFeeCollected_Param_epochNonce == 0;
-}
-ghost uint256 ghost_PerformanceFeeCollected_Param_feeShares {
-    init_state axiom ghost_PerformanceFeeCollected_Param_feeShares == 0;
-}
-ghost uint256 ghost_PerformanceFeeCollected_Param_settlementPricePerShare {
-    init_state axiom ghost_PerformanceFeeCollected_Param_settlementPricePerShare == 0;
-}
-
 /// ─── Event: InitialActiveProtocolAdapterSet ───────────────────────
 ghost mathint ghost_InitialActiveProtocolAdapterSet_EventCount {
     init_state axiom ghost_InitialActiveProtocolAdapterSet_EventCount == 0;
@@ -909,24 +861,6 @@ ghost bytes32 ghost_SupportedProtocolSet_Param_protocolId {
 }
 ghost bool ghost_SupportedProtocolSet_Param_isSupported {
     init_state axiom ghost_SupportedProtocolSet_Param_isSupported == false;
-}
-
-/// ─── Event: PolicyEngineAttached ──────────────────────────────────
-ghost mathint ghost_PolicyEngineAttached_EventCount {
-    init_state axiom ghost_PolicyEngineAttached_EventCount == 0;
-}
-ghost address ghost_PolicyEngineAttached_Param_policyEngine {
-    init_state axiom ghost_PolicyEngineAttached_Param_policyEngine == 0;
-}
-
-/// ─── Event: PolicyEngineDetachFailed ──────────────────────────────
-/// @dev `reason` (bytes) is non-indexed and not decodable from LOG topics; only EventCount + the
-///      indexed `policyEngine` param are tracked here.
-ghost mathint ghost_PolicyEngineDetachFailed_EventCount {
-    init_state axiom ghost_PolicyEngineDetachFailed_EventCount == 0;
-}
-ghost address ghost_PolicyEngineDetachFailed_Param_policyEngine {
-    init_state axiom ghost_PolicyEngineDetachFailed_Param_policyEngine == 0;
 }
 
 /*//////////////////////////////////////////////////////////////
@@ -972,11 +906,6 @@ hook Sstore currentContract.ext_yieldcoin_storage_ParentVault.s_rebalance.lastRe
 hook Sstore currentContract.ext_yieldcoin_storage_ParentVault.s_totalShares uint256 newValue {
     ghost_totalShares_StoreCount = ghost_totalShares_StoreCount + 1;
     ghost_totalShares_StoredValue = newValue;
-}
-
-hook Sstore currentContract.ext_yieldcoin_storage_ParentVault.s_performanceFeeHighWaterMark uint256 newValue {
-    ghost_performanceFeeHighWaterMark_StoreCount = ghost_performanceFeeHighWaterMark_StoreCount + 1;
-    ghost_performanceFeeHighWaterMark_StoredValue = newValue;
 }
 
 hook Sstore currentContract.ext_yieldcoin_storage_ParentVault.s_epochNonce uint256 newValue {
@@ -1091,12 +1020,6 @@ hook LOG2(uint offset, uint length, bytes32 t0, bytes32 t1) {
     } else if (t0 == TreasurySetEvent()) {
         ghost_TreasurySet_EventCount = ghost_TreasurySet_EventCount + 1;
         ghost_TreasurySet_Param_treasury = bytes32ToAddress(t1);
-    } else if (t0 == PolicyEngineAttachedEvent()) {
-        ghost_PolicyEngineAttached_EventCount = ghost_PolicyEngineAttached_EventCount + 1;
-        ghost_PolicyEngineAttached_Param_policyEngine = bytes32ToAddress(t1);
-    } else if (t0 == PolicyEngineDetachFailedEvent()) {
-        ghost_PolicyEngineDetachFailed_EventCount = ghost_PolicyEngineDetachFailed_EventCount + 1;
-        ghost_PolicyEngineDetachFailed_Param_policyEngine = bytes32ToAddress(t1);
     } else if (t0 == ActiveProtocolAdapterClearedEvent()) {
         ghost_ActiveProtocolAdapterCleared_EventCount = ghost_ActiveProtocolAdapterCleared_EventCount + 1;
         ghost_ActiveProtocolAdapterCleared_Param_adapter = bytes32ToAddress(t1);
@@ -1211,11 +1134,6 @@ hook LOG4(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2, bytes32 
         ghost_RebalanceCompleted_Param_rebalanceNonce = bytes32ToUint256(t1);
         ghost_RebalanceCompleted_Param_newProtocolId = t2;
         ghost_RebalanceCompleted_Param_newChainSelector = bytes32ToUint64(t3);
-    } else if (t0 == PerformanceFeeCollectedEvent()) {
-        ghost_PerformanceFeeCollected_EventCount = ghost_PerformanceFeeCollected_EventCount + 1;
-        ghost_PerformanceFeeCollected_Param_epochNonce = bytes32ToUint256(t1);
-        ghost_PerformanceFeeCollected_Param_feeShares = bytes32ToUint256(t2);
-        ghost_PerformanceFeeCollected_Param_settlementPricePerShare = bytes32ToUint256(t3);
     } else if (t0 == CCIPBridgedEvent()) {
         ghost_CCIPBridged_EventCount = ghost_CCIPBridged_EventCount + 1;
         ghost_CCIPBridged_Param_ccipMessageId = t1;
@@ -1250,8 +1168,6 @@ rule REENT_001_initialize_RevertWhen_ReentrantCall() {
     env e;
     BaseVault.InitParams params;
     address treasury;
-    address policyEngineManager;
-    address newPolicyEngine;
     address cancelDepositOperator;
 
     /// @dev revert conditions NOT being verified
@@ -1266,14 +1182,12 @@ rule REENT_001_initialize_RevertWhen_ReentrantCall() {
     require params.upgrader != 0, "upgrader should not be zero";
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
-    require policyEngineManager != 0, "policy engine manager should not be zero";
-    require newPolicyEngine != 0, "policy engine should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
 
     /// @dev revert condition being verified
     require reentrancyGuardEntered(), "reentrancy guard should be entered";
 
-    initialize@withrevert(e, params, treasury, policyEngineManager, newPolicyEngine, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator);
 
     assert lastReverted;
 }
@@ -1283,8 +1197,6 @@ rule initialize_RevertWhen_AlreadyInitializing() {
     env e;
     BaseVault.InitParams params;
     address treasury;
-    address policyEngineManager;
-    address newPolicyEngine;
     address cancelDepositOperator;
 
     /// @dev revert conditions NOT being verified
@@ -1299,14 +1211,12 @@ rule initialize_RevertWhen_AlreadyInitializing() {
     require params.upgrader != 0, "upgrader should not be zero";
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
-    require policyEngineManager != 0, "policy engine manager should not be zero";
-    require newPolicyEngine != 0, "policy engine should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
 
     /// @dev revert condition being verified
     require isInitializing(), "contract should already be initializing";
 
-    initialize@withrevert(e, params, treasury, policyEngineManager, newPolicyEngine, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator);
 
     assert lastReverted;
 }
@@ -1316,8 +1226,6 @@ rule initialize_RevertWhen_DefaultAdminAlreadySet() {
     env e;
     BaseVault.InitParams params;
     address treasury;
-    address policyEngineManager;
-    address newPolicyEngine;
     address cancelDepositOperator;
 
     /// @dev revert conditions NOT being verified
@@ -1332,14 +1240,12 @@ rule initialize_RevertWhen_DefaultAdminAlreadySet() {
     require params.upgrader != 0, "upgrader should not be zero";
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
-    require policyEngineManager != 0, "policy engine manager should not be zero";
-    require newPolicyEngine != 0, "policy engine should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
 
     /// @dev revert condition being verified
     require defaultAdmin() != 0, "default admin should already be set";
 
-    initialize@withrevert(e, params, treasury, policyEngineManager, newPolicyEngine, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator);
 
     assert lastReverted;
 }
@@ -1350,8 +1256,6 @@ rule CFG_001_initialize_RevertWhen_DefaultAdminIsZeroAddress() {
     env e;
     BaseVault.InitParams params;
     address treasury;
-    address policyEngineManager;
-    address newPolicyEngine;
     address cancelDepositOperator;
 
     /// @dev revert conditions NOT being verified
@@ -1366,14 +1270,12 @@ rule CFG_001_initialize_RevertWhen_DefaultAdminIsZeroAddress() {
     require params.upgrader != 0, "upgrader should not be zero";
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
-    require policyEngineManager != 0, "policy engine manager should not be zero";
-    require newPolicyEngine != 0, "policy engine should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
 
     /// @dev revert condition being verified
     require params.defaultAdmin == 0, "default admin should be zero";
 
-    initialize@withrevert(e, params, treasury, policyEngineManager, newPolicyEngine, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator);
 
     assert lastReverted;
 }
@@ -1383,8 +1285,6 @@ rule CFG_001_initialize_RevertWhen_PauserIsZeroAddress() {
     env e;
     BaseVault.InitParams params;
     address treasury;
-    address policyEngineManager;
-    address newPolicyEngine;
     address cancelDepositOperator;
 
     /// @dev revert conditions NOT being verified
@@ -1399,14 +1299,12 @@ rule CFG_001_initialize_RevertWhen_PauserIsZeroAddress() {
     require params.upgrader != 0, "upgrader should not be zero";
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
-    require policyEngineManager != 0, "policy engine manager should not be zero";
-    require newPolicyEngine != 0, "policy engine should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
 
     /// @dev revert condition being verified
     require params.pauser == 0, "pauser should be zero";
 
-    initialize@withrevert(e, params, treasury, policyEngineManager, newPolicyEngine, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator);
 
     assert lastReverted;
 }
@@ -1416,8 +1314,6 @@ rule CFG_001_initialize_RevertWhen_UnpauserIsZeroAddress() {
     env e;
     BaseVault.InitParams params;
     address treasury;
-    address policyEngineManager;
-    address newPolicyEngine;
     address cancelDepositOperator;
 
     /// @dev revert conditions NOT being verified
@@ -1432,14 +1328,12 @@ rule CFG_001_initialize_RevertWhen_UnpauserIsZeroAddress() {
     require params.upgrader != 0, "upgrader should not be zero";
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
-    require policyEngineManager != 0, "policy engine manager should not be zero";
-    require newPolicyEngine != 0, "policy engine should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
 
     /// @dev revert condition being verified
     require params.unpauser == 0, "unpauser should be zero";
 
-    initialize@withrevert(e, params, treasury, policyEngineManager, newPolicyEngine, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator);
 
     assert lastReverted;
 }
@@ -1449,8 +1343,6 @@ rule CFG_001_initialize_RevertWhen_ConfigOperatorIsZeroAddress() {
     env e;
     BaseVault.InitParams params;
     address treasury;
-    address policyEngineManager;
-    address newPolicyEngine;
     address cancelDepositOperator;
 
     /// @dev revert conditions NOT being verified
@@ -1465,14 +1357,12 @@ rule CFG_001_initialize_RevertWhen_ConfigOperatorIsZeroAddress() {
     require params.upgrader != 0, "upgrader should not be zero";
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
-    require policyEngineManager != 0, "policy engine manager should not be zero";
-    require newPolicyEngine != 0, "policy engine should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
 
     /// @dev revert condition being verified
     require params.configOperator == 0, "config operator should be zero";
 
-    initialize@withrevert(e, params, treasury, policyEngineManager, newPolicyEngine, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator);
 
     assert lastReverted;
 }
@@ -1482,8 +1372,6 @@ rule CFG_001_initialize_RevertWhen_UpgraderIsZeroAddress() {
     env e;
     BaseVault.InitParams params;
     address treasury;
-    address policyEngineManager;
-    address newPolicyEngine;
     address cancelDepositOperator;
 
     /// @dev revert conditions NOT being verified
@@ -1498,14 +1386,12 @@ rule CFG_001_initialize_RevertWhen_UpgraderIsZeroAddress() {
     require params.configOperator != 0, "config operator should not be zero";
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
-    require policyEngineManager != 0, "policy engine manager should not be zero";
-    require newPolicyEngine != 0, "policy engine should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
 
     /// @dev revert condition being verified
     require params.upgrader == 0, "upgrader should be zero";
 
-    initialize@withrevert(e, params, treasury, policyEngineManager, newPolicyEngine, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator);
 
     assert lastReverted;
 }
@@ -1515,8 +1401,6 @@ rule CFG_004_initialize_RevertWhen_InitialDefaultCcipGasLimitIsZero() {
     env e;
     BaseVault.InitParams params;
     address treasury;
-    address policyEngineManager;
-    address newPolicyEngine;
     address cancelDepositOperator;
 
     /// @dev revert conditions NOT being verified
@@ -1531,14 +1415,12 @@ rule CFG_004_initialize_RevertWhen_InitialDefaultCcipGasLimitIsZero() {
     require params.configOperator != 0, "config operator should not be zero";
     require params.upgrader != 0, "upgrader should not be zero";
     require treasury != 0, "treasury should not be zero";
-    require policyEngineManager != 0, "policy engine manager should not be zero";
-    require newPolicyEngine != 0, "policy engine should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
 
     /// @dev revert condition being verified
     require params.initialDefaultCcipGasLimit == 0, "default CCIP gas limit should be zero";
 
-    initialize@withrevert(e, params, treasury, policyEngineManager, newPolicyEngine, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator);
 
     assert lastReverted;
 }
@@ -1549,8 +1431,6 @@ rule UPGRADE_002_initialize_RevertWhen_AlreadyInitialized() {
     env e;
     BaseVault.InitParams params;
     address treasury;
-    address policyEngineManager;
-    address newPolicyEngine;
     address cancelDepositOperator;
 
     /// @dev revert conditions NOT being verified
@@ -1564,14 +1444,12 @@ rule UPGRADE_002_initialize_RevertWhen_AlreadyInitialized() {
     require params.upgrader != 0, "upgrader should not be zero";
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
-    require policyEngineManager != 0, "policy engine manager should not be zero";
-    require newPolicyEngine != 0, "policy engine should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
 
     /// @dev revert condition being verified
     require isInitialized(), "contract should already be initialized";
 
-    initialize@withrevert(e, params, treasury, policyEngineManager, newPolicyEngine, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator);
 
     assert lastReverted;
 }
@@ -1582,8 +1460,6 @@ rule CFG_001_initialize_RevertWhen_TreasuryIsZeroAddress() {
     env e;
     BaseVault.InitParams params;
     address treasury;
-    address policyEngineManager;
-    address newPolicyEngine;
     address cancelDepositOperator;
 
     /// @dev revert conditions NOT being verified
@@ -1598,82 +1474,12 @@ rule CFG_001_initialize_RevertWhen_TreasuryIsZeroAddress() {
     require params.configOperator != 0, "config operator should not be zero";
     require params.upgrader != 0, "upgrader should not be zero";
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
-    require policyEngineManager != 0, "policy engine manager should not be zero";
-    require newPolicyEngine != 0, "policy engine should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
 
     /// @dev revert condition being verified
     require treasury == 0, "treasury should be zero";
 
-    initialize@withrevert(e, params, treasury, policyEngineManager, newPolicyEngine, cancelDepositOperator);
-
-    assert lastReverted;
-}
-
-/// @notice ParentVault initialization reverts when the policy engine manager address is zero
-/// @dev Verifies that a malformed policyEngineManager argument leaves all vault state unchanged
-rule CFG_001_initialize_RevertWhen_PolicyEngineManagerIsZeroAddress() {
-    env e;
-    BaseVault.InitParams params;
-    address treasury;
-    address policyEngineManager;
-    address newPolicyEngine;
-    address cancelDepositOperator;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
-    require !isInitialized(), "contract should not be initialized";
-    require !isInitializing(), "contract should not be initializing";
-    require defaultAdmin() == 0, "default admin should not be initialized";
-    require params.defaultAdmin != 0, "default admin should not be zero";
-    require params.pauser != 0, "pauser should not be zero";
-    require params.unpauser != 0, "unpauser should not be zero";
-    require params.configOperator != 0, "config operator should not be zero";
-    require params.upgrader != 0, "upgrader should not be zero";
-    require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
-    require treasury != 0, "treasury should not be zero";
-    require newPolicyEngine != 0, "policy engine should not be zero";
-    require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
-
-    /// @dev revert condition being verified
-    require policyEngineManager == 0, "policy engine manager should be zero";
-
-    initialize@withrevert(e, params, treasury, policyEngineManager, newPolicyEngine, cancelDepositOperator);
-
-    assert lastReverted;
-}
-
-/// @notice ParentVault initialization reverts when the policy engine address is zero
-/// @dev Verifies that a malformed policyEngine argument leaves all vault state unchanged
-rule CFG_001_initialize_RevertWhen_PolicyEngineIsZeroAddress() {
-    env e;
-    BaseVault.InitParams params;
-    address treasury;
-    address policyEngineManager;
-    address newPolicyEngine;
-    address cancelDepositOperator;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
-    require !isInitialized(), "contract should not be initialized";
-    require !isInitializing(), "contract should not be initializing";
-    require defaultAdmin() == 0, "default admin should not be initialized";
-    require params.defaultAdmin != 0, "default admin should not be zero";
-    require params.pauser != 0, "pauser should not be zero";
-    require params.unpauser != 0, "unpauser should not be zero";
-    require params.configOperator != 0, "config operator should not be zero";
-    require params.upgrader != 0, "upgrader should not be zero";
-    require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
-    require treasury != 0, "treasury should not be zero";
-    require policyEngineManager != 0, "policy engine manager should not be zero";
-    require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
-
-    /// @dev revert condition being verified
-    require newPolicyEngine == 0, "policy engine should be zero";
-
-    initialize@withrevert(e, params, treasury, policyEngineManager, newPolicyEngine, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator);
 
     assert lastReverted;
 }
@@ -1683,8 +1489,6 @@ rule CFG_001_initialize_RevertWhen_CancelDepositOperatorIsZeroAddress() {
     env e;
     BaseVault.InitParams params;
     address treasury;
-    address policyEngineManager;
-    address newPolicyEngine;
     address cancelDepositOperator;
 
     /// @dev revert conditions NOT being verified
@@ -1700,27 +1504,21 @@ rule CFG_001_initialize_RevertWhen_CancelDepositOperatorIsZeroAddress() {
     require params.upgrader != 0, "upgrader should not be zero";
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
-    require policyEngineManager != 0, "policy engine manager should not be zero";
-    require newPolicyEngine != 0, "policy engine should not be zero";
 
     /// @dev revert condition being verified
     require cancelDepositOperator == 0, "cancel deposit operator should be zero";
 
-    initialize@withrevert(e, params, treasury, policyEngineManager, newPolicyEngine, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator);
 
     assert lastReverted;
 }
 
-/// @notice ParentVault initialization sets up epoch 1, rebalance nonce 1, performance fee high water
-///         mark, treasury, and grants POLICY_ENGINE_MANAGER_ROLE, and attaches the policy engine
-/// @dev __PolicyProtected_init attaches the policy engine as its very first attach (no prior engine),
-///      so only PolicyEngineAttached fires, not PolicyEngineDetachFailed.
+/// @notice ParentVault initialization sets up epoch 1, rebalance nonce 1, treasury, and the
+///         cancel-deposit operator role.
 rule NONCE_008_UPGRADE_003_initialize_Success() {
     env e;
     BaseVault.InitParams params;
     address treasury;
-    address policyEngineManager;
-    address newPolicyEngine;
     address cancelDepositOperator;
 
     /// @dev revert conditions NOT being verified
@@ -1736,42 +1534,27 @@ rule NONCE_008_UPGRADE_003_initialize_Success() {
     require params.upgrader != 0, "upgrader should not be zero";
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
-    require policyEngineManager != 0, "policy engine manager should not be zero";
-    require newPolicyEngine != 0, "policy engine should not be zero";
-    require newPolicyEngine == policyEngine, "policy engine should be the mock policy engine";
-    require getPolicyEngine() == 0, "policy engine storage should be uninitialized";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
 
     /// @dev set ghost starting values
-    require ghost_PolicyEngineAttached_EventCount == 0;
-    require ghost_PolicyEngineDetachFailed_EventCount == 0;
     require ghost_treasury_StoreCount == 0;
     require ghost_epochNonce_StoreCount == 0;
     require ghost_epoch_status_StoreCount == 0;
     require ghost_epoch_openedAtTimestamp_StoreCount == 0;
     require ghost_rebalance_nonce_StoreCount == 0;
     require ghost_rebalance_lastRebalanceCompletedTimestamp_StoreCount == 0;
-    require ghost_performanceFeeHighWaterMark_StoreCount == 0;
 
-    initialize@withrevert(e, params, treasury, policyEngineManager, newPolicyEngine, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator);
 
     assert !lastReverted;
     assert isInitialized();
     assert getEpochNonce() == 1;
     assert getEpoch(1).status == Types.EpochStatus.OPEN;
     assert getEpoch(1).openedAtTimestamp == e.block.timestamp;
-    assert getPerformanceFeeHighWaterMark() == getAssetPrecision();
     assert getRebalance().nonce == 1;
     assert getRebalance().lastRebalanceCompletedTimestamp == e.block.timestamp;
     assert getTreasury() == treasury;
-    assert owner() == params.defaultAdmin;
-    assert owner() == defaultAdmin();
-    assert hasRole(POLICY_ENGINE_MANAGER_ROLE(), policyEngineManager);
     assert hasRole(CANCEL_DEPOSIT_OPERATOR_ROLE(), cancelDepositOperator);
-    assert getPolicyEngine() == newPolicyEngine;
-    assert ghost_PolicyEngineAttached_EventCount == 1;
-    assert ghost_PolicyEngineAttached_Param_policyEngine == newPolicyEngine;
-    assert ghost_PolicyEngineDetachFailed_EventCount == 0;
 }
 
 /// ─────────────── SET INITIAL ACTIVE PROTOCOL ADAPTER ──────────
@@ -2127,87 +1910,18 @@ rule setSupportedProtocol_Success_WhenDisablingInactiveNonPendingProtocol() {
     assert !ghost_SupportedProtocolSet_Param_isSupported;
 }
 
-/// ───────────────────── ATTACH POLICY ENGINE ───────────────────
-
-/// @notice Attaching a policy engine reverts when the caller lacks POLICY_ENGINE_MANAGER_ROLE
-/// @dev Verifies that an unauthorized call leaves all vault state unchanged
-rule attachPolicyEngine_RevertWhen_CallerDoesNotHavePOLICY_ENGINE_MANAGER_ROLE() {
-    env e;
-    address newPolicyEngine;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require newPolicyEngine != 0, "policy engine should not be zero";
-    require newPolicyEngine != currentContract, "policy engine should not be the vault";
-
-    /// @dev revert condition being verified
-    require !hasRole(POLICY_ENGINE_MANAGER_ROLE(), e.msg.sender);
-
-    attachPolicyEngine@withrevert(e, newPolicyEngine);
-
-    assert lastReverted;
-}
-
-/// @notice Attaching a policy engine reverts when the new policy engine address is zero
-/// @dev Verifies that a malformed policy engine argument leaves all vault state unchanged
-rule CFG_001_attachPolicyEngine_RevertWhen_PolicyEngineIsZeroAddress() {
-    env e;
-    address newPolicyEngine;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require hasRole(POLICY_ENGINE_MANAGER_ROLE(), e.msg.sender);
-
-    /// @dev revert condition being verified
-    require newPolicyEngine == 0, "policy engine should be zero";
-
-    attachPolicyEngine@withrevert(e, newPolicyEngine);
-
-    assert lastReverted;
-}
-
-/// @notice Attaching a policy engine stores the new engine and emits PolicyEngineAttached
-/// @dev Verifies the clean attach path. The mock policy engine's attach/detach calls do not revert,
-///      so replacing an existing engine should not emit PolicyEngineDetachFailed.
-/// @dev NOT verified: the PolicyEngineDetachFailed branch (old engine's detach() reverting). This is
-///      currently unreachable because MockPolicyEngine.detach() is hardcoded to never revert.
-rule attachPolicyEngine_Success() {
-    env e;
-    address newPolicyEngine;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require hasRole(POLICY_ENGINE_MANAGER_ROLE(), e.msg.sender);
-    require newPolicyEngine == policyEngine, "policy engine should be the mock policy engine";
-    require newPolicyEngine != 0, "policy engine should not be zero";
-    require newPolicyEngine != currentContract, "policy engine should not be the vault";
-
-    /// @dev set ghost starting values
-    require ghost_PolicyEngineAttached_EventCount == 0;
-    require ghost_PolicyEngineDetachFailed_EventCount == 0;
-
-    attachPolicyEngine@withrevert(e, newPolicyEngine);
-
-    assert !lastReverted;
-    assert getPolicyEngine() == newPolicyEngine;
-    assert ghost_PolicyEngineAttached_EventCount == 1;
-    assert ghost_PolicyEngineAttached_Param_policyEngine == newPolicyEngine;
-    assert ghost_PolicyEngineDetachFailed_EventCount == 0;
-}
-
 /// ────────────────────── SUPPORTS INTERFACE ────────────────────
 
 /// @notice ParentVault reports support for its expected ERC165 interfaces
 /// @dev Verifies the positive supportsInterface cases: IERC165,
-///      IAccessControlDefaultAdminRules, IAny2EVMMessageReceiver, and IPolicyProtected.
+///      IAccessControlDefaultAdminRules, and IAny2EVMMessageReceiver.
 rule supportsInterface_Success_WhenInterfaceIsSupported() {
     bytes4 interfaceId;
 
     /// @dev supported interface cases being verified
     require interfaceId == erc165InterfaceId()
         || interfaceId == accessControlDefaultAdminRulesInterfaceId()
-        || interfaceId == any2EVMMessageReceiverInterfaceId()
-        || interfaceId == policyProtectedInterfaceId();
+        || interfaceId == any2EVMMessageReceiverInterfaceId();
 
     assert supportsInterface(interfaceId);
 }
@@ -2221,53 +1935,8 @@ rule supportsInterface_ReturnsFalse_WhenInterfaceIsNotSupported() {
     require interfaceId != erc165InterfaceId();
     require interfaceId != accessControlDefaultAdminRulesInterfaceId();
     require interfaceId != any2EVMMessageReceiverInterfaceId();
-    require interfaceId != policyProtectedInterfaceId();
 
     assert !supportsInterface(interfaceId);
-}
-
-/// ───────────────────────────── OWNER ───────────────────────────
-
-/// @notice ParentVault owner resolves to AccessControlDefaultAdminRules' current default admin
-/// @dev Verifies the explicit owner() override that resolves the Ownable/AccessControl inheritance conflict
-rule owner_ReturnsDefaultAdmin() {
-    assert owner() == defaultAdmin();
-}
-
-/// @notice After initialization, ParentVault owner is the initializer's default admin
-/// @dev Verifies that __PolicyProtected_init ownership and AccessControl default admin agree
-rule owner_Success_AfterInitialize() {
-    env e;
-    BaseVault.InitParams params;
-    address treasury;
-    address policyEngineManager;
-    address newPolicyEngine;
-    address cancelDepositOperator;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "non-payable";
-    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
-    require !isInitialized(), "contract should not be initialized";
-    require !isInitializing(), "contract should not be initializing";
-    require defaultAdmin() == 0, "default admin should not be initialized";
-    require params.defaultAdmin != 0, "default admin should not be zero";
-    require params.pauser != 0, "pauser should not be zero";
-    require params.unpauser != 0, "unpauser should not be zero";
-    require params.configOperator != 0, "config operator should not be zero";
-    require params.upgrader != 0, "upgrader should not be zero";
-    require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
-    require treasury != 0, "treasury should not be zero";
-    require policyEngineManager != 0, "policy engine manager should not be zero";
-    require newPolicyEngine != 0, "policy engine should not be zero";
-    require newPolicyEngine == policyEngine, "policy engine should be the mock policy engine";
-    require getPolicyEngine() == 0, "policy engine storage should be uninitialized";
-    require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
-
-    initialize@withrevert(e, params, treasury, policyEngineManager, newPolicyEngine, cancelDepositOperator);
-
-    assert !lastReverted;
-    assert owner() == params.defaultAdmin;
-    assert owner() == defaultAdmin();
 }
 
 /// ─────────────────────────── GET TVL ──────────────────────────
@@ -3875,9 +3544,6 @@ rule CCIP_003_CCIP_004_EPOCH_014_NONCE_012_ccipReceive_EPOCH_NET_WITHDRAW_Succes
 
 /// ─────────────────────── CCIP RECEIVE: REBALANCE ────────────────
 
-/// @notice ParentVault::_finalizeRebalance() should be marked virtual and overridden in the harness with internal library implementation
-///         to avoid havoc issues for these rules!
-
 /// @notice CCIP rebalance callback reverts when no rebalance is in progress
 /// @dev Verifies that an unexpected callback leaves all vault state unchanged
 rule CCIP_004_NONCE_013_ccipReceive_REBALANCE_RevertWhen_NoRebalanceInProgress() {
@@ -4108,7 +3774,7 @@ rule REC_009_ccipReceive_REBALANCE_RevertWhen_TargetAdapterVaultIsInvalid() {
 ///         state, and takes the zero-share management-fee path)
 /// @dev Management-fee calculation and collection are verified in ParentVaultFeesLib.spec and
 ///      ParentVaultRebalanceLib.spec; this rule verifies ParentVault's CCIP integration wiring.
-rule CCIP_003_CCIP_004_FEE_004_NONCE_011_NONCE_013_ccipReceive_REBALANCE_Success() {
+rule CCIP_003_CCIP_004_FEE_002_NONCE_011_NONCE_013_ccipReceive_REBALANCE_Success() {
     env e;
     Client.Any2EVMMessage message;
     uint256 rebalanceNonce;
@@ -4293,9 +3959,6 @@ rule REC_002_REC_009_ccipReceive_REBALANCE_When_DepositFails_StoresRecovery() {
 }
 
 /// ───────────────────────── INITIATE REBALANCE ──────────────────
-
-/// @notice ParentVault::_finalizeLocalToLocalRebalance() should be marked virtual and overridden in the harness with internal library implementation
-///         to avoid havoc issues for initiateRebalance rules!
 
 /// @dev ParentVaultRebalanceLib's internal validation and pure state transition rules are verified
 ///      in isolation in ParentVaultRebalanceLib.spec. This section verifies the ParentVault entry
@@ -4934,7 +4597,7 @@ rule NONCE_011_initiateRebalance_LOCAL_TO_REMOTE_Success() {
 ///      ParentVaultRebalanceLib.spec; this rule verifies ParentVault's local integration wiring.
 /// @dev Run with ParentVault.localAdapter.conf, which links the initial active-adapter storage path
 ///      to MockProtocolAdapter so Certora can resolve the withdrawal before the adapter switch.
-rule FEE_004_NONCE_011_initiateRebalance_LOCAL_TO_LOCAL_Success() {
+rule FEE_002_NONCE_011_initiateRebalance_LOCAL_TO_LOCAL_Success() {
     env e;
     Types.Strategy newStrategy;
 
@@ -5026,9 +4689,6 @@ rule FEE_004_NONCE_011_initiateRebalance_LOCAL_TO_LOCAL_Success() {
 ///      access control/pause/reentrancy/recovery guards, and the external-action dispatch that
 ///      lives in ParentVault.sol itself (_executeDeposit/_ccipSend/_executeWithdraw/events),
 ///      which the library spec cannot see since the library only returns the action to take.
-///      Success rules below reuse the exact simplifying preconditions from the library spec's own
-///      closeEpoch_Success_* rules (bootstrap/tvl==totalShares tricks to avoid performance fee
-///      collection) rather than re-deriving the fee formula.
 
 /// @notice Closing an epoch reverts when the caller lacks EPOCH_OPERATOR_ROLE
 /// @dev Verifies that an unauthorized call leaves all vault state unchanged
@@ -5182,7 +4842,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_closeEpoch_DEPOSIT_TO_LOCAL_STRATEGY_Success(
     require getAssetPrecision() == 1000000, "asset precision should be 1e6";
     require getMinDepositAmount() == 1000000, "minimum deposit should be one asset unit";
     require getTotalShares() == 0, "use bootstrap settlement";
-    require getPerformanceFeeHighWaterMark() >= getSharePrecision(), "performance fee should not be collected";
     require depositAmount == 1000000, "use one minimum deposit";
     require getEpoch(epochNonce).totalShareBurnAmount == 0, "no withdrawal intent";
     require tvl == 0, "bootstrap tvl should be zero";
@@ -5243,7 +4902,6 @@ rule REC_009_closeEpoch_DEPOSIT_TO_LOCAL_STRATEGY_RevertWhen_DepositFails() {
     require getAssetPrecision() == 1000000, "asset precision should be 1e6";
     require getMinDepositAmount() == 1000000, "minimum deposit should be one asset unit";
     require getTotalShares() == 0, "use bootstrap settlement";
-    require getPerformanceFeeHighWaterMark() >= getSharePrecision(), "performance fee should not be collected";
     require depositAmount == 1000000, "use one minimum deposit";
     require getEpoch(epochNonce).totalShareBurnAmount == 0, "no withdrawal intent";
     require tvl == 0, "bootstrap tvl should be zero";
@@ -5297,7 +4955,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_closeEpoch_SEND_DEPOSIT_TO_REMOTE_STRATEGY_Su
     require getAssetPrecision() == 1000000, "asset precision should be 1e6";
     require getMinDepositAmount() == 1000000, "minimum deposit should be one asset unit";
     require getTotalShares() == 0, "use bootstrap settlement";
-    require getPerformanceFeeHighWaterMark() >= getSharePrecision(), "performance fee should not be collected";
     require depositAmount == 1000000, "use one minimum deposit";
     require getEpoch(epochNonce).totalShareBurnAmount == 0, "no withdrawal intent";
     require tvl == 0, "bootstrap tvl should be zero";
@@ -5379,7 +5036,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_closeEpoch_WITHDRAW_FROM_LOCAL_STRATEGY_Succe
     require getSharePrecision() == 1000000000000000000, "share precision should be 1e18";
     require totalShares == 1000000, "use one whole asset unit of shares";
     require tvl == 1000000, "use one whole asset unit of tvl";
-    require getPerformanceFeeHighWaterMark() >= getSharePrecision(), "performance fee should not be collected";
     require getEpoch(epochNonce).totalDepositAmount == 0, "no deposits should be made";
     require shareBurnAmount == 500000, "withdraw half of the outstanding shares";
 
@@ -5443,7 +5099,6 @@ rule REC_009_closeEpoch_WITHDRAW_FROM_LOCAL_STRATEGY_RevertWhen_WithdrawFails() 
     require getSharePrecision() == 1000000000000000000, "share precision should be 1e18";
     require totalShares == 1000000, "use one whole asset unit of shares";
     require tvl == 1000000, "use one whole asset unit of tvl";
-    require getPerformanceFeeHighWaterMark() >= getSharePrecision(), "performance fee should not be collected";
     require getEpoch(epochNonce).totalDepositAmount == 0, "no deposits should be made";
     require shareBurnAmount == 500000, "withdraw half of the outstanding shares";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
@@ -5488,7 +5143,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_closeEpoch_WAIT_FOR_REMOTE_WITHDRAW_Success()
     require getSharePrecision() == 1000000000000000000, "share precision should be 1e18";
     require totalShares == 1000000, "use one whole asset unit of shares";
     require tvl == 1000000, "use one whole asset unit of tvl";
-    require getPerformanceFeeHighWaterMark() >= getSharePrecision(), "performance fee should not be collected";
     require getEpoch(epochNonce).totalDepositAmount == 0, "no deposits should be made";
     require shareBurnAmount == 500000, "withdraw half of the outstanding shares";
     require getActiveProtocolAdapter() == 0, "no active adapter on this chain (remote strategy)";
@@ -5722,7 +5376,7 @@ rule completeRebalance_RevertWhen_NoRebalanceInProgress() {
 
 /// @notice Completing a rebalance activates the pending strategy, increments the rebalance nonce,
 ///         and mints the management fee to the treasury when fee shares are nonzero
-rule FEE_002_FEE_004_NONCE_011_PAUSE_006_completeRebalance_Success_WhenManagementFeeSharesAreCollected() {
+rule FEE_001_FEE_002_NONCE_011_PAUSE_006_completeRebalance_Success_WhenManagementFeeSharesAreCollected() {
     env e;
 
     /// @dev revert conditions NOT being verified
@@ -5898,7 +5552,7 @@ rule REC_005_executeRecovery_RevertWhen_DepositFails() {
 
 /// @notice Executing recovery deposits the stored recovery amount into the active adapter, clears
 ///         the recovery, and finalizes the rebalance (activating the pending strategy)
-rule FEE_004_NONCE_011_REC_001_REC_004_REC_007_executeRecovery_Success() {
+rule FEE_002_NONCE_011_REC_001_REC_004_REC_007_executeRecovery_Success() {
     env e;
 
     /// @dev revert conditions NOT being verified

@@ -1055,6 +1055,19 @@
   },
   {
     "type": "event",
+    "name": "ActiveProtocolAdapterCleared",
+    "inputs": [
+      {
+        "name": "adapter",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "ActiveProtocolAdapterSet",
     "inputs": [
       {
@@ -1087,6 +1100,31 @@
         "type": "address",
         "indexed": true,
         "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "CCIPBridged",
+    "inputs": [
+      {
+        "name": "ccipMessageId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "destinationChainSelector",
+        "type": "uint64",
+        "indexed": true,
+        "internalType": "uint64"
+      },
+      {
+        "name": "ccipTxType",
+        "type": "uint8",
+        "indexed": true,
+        "internalType": "enum Types.CcipTx"
       }
     ],
     "anonymous": false
@@ -1128,31 +1166,6 @@
       },
       {
         "name": "sourceChainSelector",
-        "type": "uint64",
-        "indexed": true,
-        "internalType": "uint64"
-      },
-      {
-        "name": "ccipTxType",
-        "type": "uint8",
-        "indexed": true,
-        "internalType": "enum Types.CcipTx"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "CCIPBridged",
-    "inputs": [
-      {
-        "name": "ccipMessageId",
-        "type": "bytes32",
-        "indexed": true,
-        "internalType": "bytes32"
-      },
-      {
-        "name": "destinationChainSelector",
         "type": "uint64",
         "indexed": true,
         "internalType": "uint64"

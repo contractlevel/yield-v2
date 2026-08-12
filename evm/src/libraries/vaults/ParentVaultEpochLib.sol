@@ -47,6 +47,25 @@ library ParentVaultEpochLib {
         uint256 totalDepositAmount;
     }
 
+    struct CloseEpochParams {
+        uint256 tvl;
+        address share;
+        uint256 sharePrecision;
+        uint256 assetPrecision;
+        uint256 minDepositAmount;
+        bool isLocalStrategy;
+    }
+
+    struct EpochAccounting {
+        uint256 totalDepositAmount;
+        uint256 totalShareBurnAmount;
+        uint256 totalShares;
+        uint256 settlementPricePerShare;
+        uint256 totalWithdraw;
+        uint256 newShares;
+        int256 netFlow;
+    }
+
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
@@ -86,7 +105,7 @@ library ParentVaultEpochLib {
     /// @dev Reverts if the epoch contains neither deposits nor withdraw intents
     /// @dev Reverts if TVL is zero while shares are outstanding or the resulting price per share is zero
     /// @dev Reverts if deposit settlement would allocate zero shares to a minimum-size deposit
-    /// @dev Collects the performance fee and computes the settlement price per share before computing net flow
+    /// @dev Computes the settlement price per share before computing net flow
     function closeEpoch(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 tvl,
@@ -116,7 +135,7 @@ library ParentVaultEpochLib {
     /// @dev Reverts if the epoch contains neither deposits nor withdraw intents
     /// @dev Reverts if TVL is zero while shares are outstanding or the resulting price per share is zero
     /// @dev Reverts if deposit settlement would allocate zero shares to a minimum-size deposit
-    /// @dev Collects the performance fee and computes the settlement price per share before computing net flow
+    /// @dev Computes the settlement price per share before computing net flow
     function _closeEpoch(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 tvl,
@@ -126,6 +145,21 @@ library ParentVaultEpochLib {
         uint256 minDepositAmount,
         bool isLocalStrategy
     ) internal returns (CloseEpochExternalAction memory externalAction) {
+        CloseEpochParams memory params = CloseEpochParams({
+            tvl: tvl,
+            share: share,
+            sharePrecision: sharePrecision,
+            assetPrecision: assetPrecision,
+            minDepositAmount: minDepositAmount,
+            isLocalStrategy: isLocalStrategy
+        });
+        externalAction = _closeEpoch($, params);
+    }
+
+    function _closeEpoch(ParentVaultStore.ParentVaultStorage storage $, CloseEpochParams memory params)
+        private
+        returns (CloseEpochExternalAction memory externalAction)
+    {
         if ($.s_rebalance.state != Types.RebalanceState.NONE) {
             revert IParentVault.ParentVault__RebalanceInProgress();
         }
@@ -141,41 +175,40 @@ library ParentVaultEpochLib {
         if (block.timestamp < s_epoch.openedAtTimestamp + MIN_EPOCH_PERIOD) {
             revert IParentVault.ParentVault__EpochTooShort(epochNonce);
         }
-        uint256 totalDepositAmount = s_epoch.totalDepositAmount;
-        uint256 totalShareBurnAmount = s_epoch.totalShareBurnAmount;
-        if (totalDepositAmount == 0 && totalShareBurnAmount == 0) {
+        EpochAccounting memory accounting;
+        accounting.totalDepositAmount = s_epoch.totalDepositAmount;
+        accounting.totalShareBurnAmount = s_epoch.totalShareBurnAmount;
+        if (accounting.totalDepositAmount == 0 && accounting.totalShareBurnAmount == 0) {
             revert IParentVault.ParentVault__EmptyEpoch(epochNonce);
         }
 
-        uint256 totalShares = $.s_totalShares;
-        uint256 grossPricePerShare =
-            ParentVaultFeesLib._calculatePricePerShare(tvl, totalShares, sharePrecision, assetPrecision);
-        (uint256 settlementPricePerShare, uint256 feeShares) = ParentVaultFeesLib._collectPerformanceFee(
-            $, epochNonce, tvl, grossPricePerShare, totalShares, share, sharePrecision, assetPrecision
+        accounting.totalShares = $.s_totalShares;
+        accounting.settlementPricePerShare = ParentVaultFeesLib._calculatePricePerShare(
+            params.tvl, accounting.totalShares, params.sharePrecision, params.assetPrecision
         );
 
-        uint256 totalWithdraw =
-            ParentVaultMathLib._mulDivDown(totalShareBurnAmount, settlementPricePerShare, sharePrecision);
-        int256 netFlow = int256(totalDepositAmount) - int256(totalWithdraw);
-
-        uint256 newShares = ParentVaultFeesLib._calculateNewShares(
-            tvl, totalDepositAmount, totalShares + feeShares, sharePrecision, assetPrecision
+        accounting.totalWithdraw = ParentVaultMathLib._mulDivDown(
+            accounting.totalShareBurnAmount, accounting.settlementPricePerShare, params.sharePrecision
         );
-        if (totalDepositAmount != 0 && newShares * minDepositAmount < totalDepositAmount) {
+        accounting.netFlow = int256(accounting.totalDepositAmount) - int256(accounting.totalWithdraw);
+
+        accounting.newShares = _calculateNewShares(params, accounting.totalDepositAmount, accounting.totalShares);
+        if (
+            accounting.totalDepositAmount != 0
+                && accounting.newShares * params.minDepositAmount < accounting.totalDepositAmount
+        ) {
             revert IParentVault.ParentVault__DepositWouldMintZeroShares();
         }
-        // This is the sole write to s_totalShares for the epoch: totalShares is the pre-fee value
-        // read above, feeShares folds in any performance-fee dilution _collectPerformanceFee minted
-        // (without itself writing storage - see its NatSpec), and newShares/totalShareBurnAmount
-        // fold in this epoch's deposits and withdrawals
-        $.s_totalShares = totalShares + feeShares + newShares - totalShareBurnAmount;
+        // This is the sole write to s_totalShares for the epoch and folds in the epoch's
+        // deposit allocation and submitted withdrawals.
+        $.s_totalShares = accounting.totalShares + accounting.newShares - accounting.totalShareBurnAmount;
 
-        s_epoch.pricePerShare = settlementPricePerShare;
-        s_epoch.remainingDepositClaimAmount = totalDepositAmount;
-        s_epoch.remainingShareMintAmount = newShares;
-        s_epoch.remainingShareBurnAmount = totalShareBurnAmount;
+        s_epoch.pricePerShare = accounting.settlementPricePerShare;
+        s_epoch.remainingDepositClaimAmount = accounting.totalDepositAmount;
+        s_epoch.remainingShareMintAmount = accounting.newShares;
+        s_epoch.remainingShareBurnAmount = accounting.totalShareBurnAmount;
 
-        bool isSynchronousLocalWithdraw = isLocalStrategy && netFlow < 0;
+        bool isSynchronousLocalWithdraw = params.isLocalStrategy && accounting.netFlow < 0;
         if (!isSynchronousLocalWithdraw) {
             // WITHDRAW_FROM_LOCAL_STRATEGY resolves synchronously within the same
             // transaction via finalizeLocalNetWithdraw, which writes the actual (not
@@ -184,33 +217,33 @@ library ParentVaultEpochLib {
             // here would just be overwritten moments later. Every other case (both deposit
             // branches, and the remote-withdraw path - which resolves in a later transaction,
             // so the theoretical value must be observable in the meantime) still needs it.
-            s_epoch.totalWithdrawClaimAmount = totalWithdraw;
-            s_epoch.remainingWithdrawClaimAmount = totalWithdraw;
+            s_epoch.totalWithdrawClaimAmount = accounting.totalWithdraw;
+            s_epoch.remainingWithdrawClaimAmount = accounting.totalWithdraw;
         }
 
         externalAction.epochNonce = epochNonce;
-        externalAction.totalDepositAmount = totalDepositAmount;
-        if (netFlow >= 0) {
-            if (netFlow == 0 || isLocalStrategy) {
+        externalAction.totalDepositAmount = accounting.totalDepositAmount;
+        if (accounting.netFlow >= 0) {
+            if (accounting.netFlow == 0 || params.isLocalStrategy) {
                 s_epoch.status = Types.EpochStatus.CLAIMABLE;
                 emit EpochClaimable(epochNonce);
             } else {
                 s_epoch.status = Types.EpochStatus.EXECUTING;
-                emit EpochDepositExecuting(epochNonce, uint256(netFlow));
+                emit EpochDepositExecuting(epochNonce, uint256(accounting.netFlow));
             }
 
-            if (netFlow == 0) return externalAction;
+            if (accounting.netFlow == 0) return externalAction;
 
-            externalAction.amount = uint256(netFlow);
-            if (isLocalStrategy) {
+            externalAction.amount = uint256(accounting.netFlow);
+            if (params.isLocalStrategy) {
                 externalAction.action = ExternalAction.DEPOSIT_TO_LOCAL_STRATEGY;
             } else {
                 externalAction.action = ExternalAction.SEND_DEPOSIT_TO_REMOTE_STRATEGY;
             }
         } else {
-            uint256 netWithdrawAmount = uint256(-netFlow);
+            uint256 netWithdrawAmount = uint256(-accounting.netFlow);
             externalAction.amount = netWithdrawAmount;
-            if (isLocalStrategy) {
+            if (params.isLocalStrategy) {
                 externalAction.action = ExternalAction.WITHDRAW_FROM_LOCAL_STRATEGY;
             } else {
                 externalAction.action = ExternalAction.WAIT_FOR_REMOTE_WITHDRAW;
@@ -218,6 +251,16 @@ library ParentVaultEpochLib {
                 emit EpochWithdrawExecuting(epochNonce, netWithdrawAmount);
             }
         }
+    }
+
+    function _calculateNewShares(CloseEpochParams memory params, uint256 totalDepositAmount, uint256 totalShares)
+        private
+        pure
+        returns (uint256 newShares)
+    {
+        newShares = ParentVaultFeesLib._calculateNewShares(
+            params.tvl, totalDepositAmount, totalShares, params.sharePrecision, params.assetPrecision
+        );
     }
 
     /// @notice Completes the most recently closed remote net-deposit epoch

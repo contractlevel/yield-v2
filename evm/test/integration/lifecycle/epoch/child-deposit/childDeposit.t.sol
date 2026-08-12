@@ -32,7 +32,6 @@ contract ChildDeposit_EpochIntegrationTest is BaseIntegrationTest {
 
         uint256 childPoolBalanceBefore = IERC20(parent.asset).balanceOf(childPool);
 
-        _registerKyc(i_depositor);
         _fundAndApproveUsdc(i_depositor, DEPOSIT_AMOUNT);
 
         _changePrank(i_depositor);

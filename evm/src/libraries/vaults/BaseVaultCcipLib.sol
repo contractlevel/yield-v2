@@ -16,6 +16,18 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 library BaseVaultCcipLib {
     using SafeERC20 for IERC20;
 
+    struct SendParams {
+        uint256 bridgeAmount;
+        uint64 destinationChainSelector;
+        Types.CcipTx ccipTxType;
+        uint256 nonce;
+        bytes32 protocolId;
+        address asset;
+        address link;
+        address ccipRouter;
+        uint64 thisChainSelector;
+    }
+
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
@@ -166,13 +178,33 @@ library BaseVaultCcipLib {
         address ccipRouter,
         uint64 thisChainSelector
     ) internal {
-        address vault = _validateCcipSend($, bridgeAmount, destinationChainSelector, thisChainSelector);
-        uint256 gasLimit = _getCcipGasLimit($, destinationChainSelector);
-        bytes memory txData = ccipTxType == Types.CcipTx.REBALANCE ? abi.encode(nonce, protocolId) : abi.encode(nonce);
-        bytes memory data = abi.encode(ccipTxType, txData);
+        _sendPacked(
+            $,
+            SendParams({
+                bridgeAmount: bridgeAmount,
+                destinationChainSelector: destinationChainSelector,
+                ccipTxType: ccipTxType,
+                nonce: nonce,
+                protocolId: protocolId,
+                asset: asset,
+                link: link,
+                ccipRouter: ccipRouter,
+                thisChainSelector: thisChainSelector
+            })
+        );
+    }
+
+    function _sendPacked(BaseVaultStore.BaseVaultStorage storage $, SendParams memory params) private {
+        address vault =
+            _validateCcipSend($, params.bridgeAmount, params.destinationChainSelector, params.thisChainSelector);
+        uint256 gasLimit = _getCcipGasLimit($, params.destinationChainSelector);
+        bytes memory txData = params.ccipTxType == Types.CcipTx.REBALANCE
+            ? abi.encode(params.nonce, params.protocolId)
+            : abi.encode(params.nonce);
+        bytes memory data = abi.encode(params.ccipTxType, txData);
 
         Client.EVMTokenAmount[] memory tokenAmounts = new Client.EVMTokenAmount[](1);
-        tokenAmounts[0] = Client.EVMTokenAmount({token: asset, amount: bridgeAmount});
+        tokenAmounts[0] = Client.EVMTokenAmount({token: params.asset, amount: params.bridgeAmount});
 
         Client.EVM2AnyMessage memory message = Client.EVM2AnyMessage({
             receiver: abi.encode(vault),
@@ -181,14 +213,14 @@ library BaseVaultCcipLib {
             extraArgs: Client._argsToBytes(
                 Client.GenericExtraArgsV2({gasLimit: gasLimit, allowOutOfOrderExecution: false})
             ),
-            feeToken: link
+            feeToken: params.link
         });
 
-        uint256 fee = IRouterClient(ccipRouter).getFee(destinationChainSelector, message);
-        IERC20(link).forceApprove(ccipRouter, fee);
-        IERC20(asset).forceApprove(ccipRouter, bridgeAmount);
-        bytes32 ccipMessageId = IRouterClient(ccipRouter).ccipSend(destinationChainSelector, message);
-        emit CCIPBridged(ccipMessageId, destinationChainSelector, ccipTxType);
+        uint256 fee = IRouterClient(params.ccipRouter).getFee(params.destinationChainSelector, message);
+        IERC20(params.link).forceApprove(params.ccipRouter, fee);
+        IERC20(params.asset).forceApprove(params.ccipRouter, params.bridgeAmount);
+        bytes32 ccipMessageId = IRouterClient(params.ccipRouter).ccipSend(params.destinationChainSelector, message);
+        emit CCIPBridged(ccipMessageId, params.destinationChainSelector, params.ccipTxType);
     }
 
     /// @notice Validates the tokens delivered by a CCIP message and returns the underlying-asset amount

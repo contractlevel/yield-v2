@@ -17,14 +17,10 @@ import {IProtocolAdapter} from "../interfaces/adapters/IProtocolAdapter.sol";
 
 import {Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
 import {IAny2EVMMessageReceiver} from "@chainlink/contracts-ccip/contracts/applications/CCIPReceiver.sol";
-import {PolicyProtectedUpgradeable} from "@chainlink/policy-management/core/PolicyProtectedUpgradeable.sol";
-import {IPolicyProtected} from "@chainlink/policy-management/interfaces/IPolicyProtected.sol";
 
 import {
-    AccessControlDefaultAdminRulesUpgradeable,
     IAccessControlDefaultAdminRules
 } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 /// @title Yieldcoin v2 ParentVault
@@ -32,7 +28,7 @@ import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 /// @notice The user entry and exit point for deposits and withdraw intents in Yieldcoin v2
 /// @dev Coordinates user accounting, epoch settlement, fees, and crosschain strategy allocation
 /// @dev The Yieldcoin v2 system has one ParentVault
-contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtectedUpgradeable {
+contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /*//////////////////////////////////////////////////////////////
                                CONSTANTS
     //////////////////////////////////////////////////////////////*/
@@ -55,6 +51,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @param share The address of the Yieldcoin (YIELD) share token
     /// @dev Reverts if BaseVault immutable configuration is invalid
     /// @dev Reverts if share is the zero address
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(BaseVault.ConstructorParams memory params, address share) BaseVault(params) {
         _revertIfZeroAddress(share);
 
@@ -67,44 +64,32 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @notice Initializes ParentVault mutable proxy state
     /// @param params BaseVault initializer parameters for roles and mutable vault configuration
     /// @param treasury The address of the operator multisig for protocol fees
-    /// @param policyEngineManager The address authorized to replace this vault's attached policy engine
-    /// @param policyEngine The address of the Yieldcoin v2 PolicyEngine
     /// @param cancelDepositOperator The address authorized to force-cancel stuck deposits
     /// @dev Reverts if any BaseVault initializer parameter is invalid
     /// @dev Reverts if treasury is the zero address
-    /// @dev Reverts if policyEngineManager is the zero address
-    /// @dev Reverts if policyEngine is the zero address or does not support IPolicyEngine
     /// @dev Reverts if cancelDepositOperator is the zero address
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the proxy has already been initialized
-    /// @dev Grants POLICY_ENGINE_MANAGER_ROLE to policyEngineManager
     /// @dev Grants CANCEL_DEPOSIT_OPERATOR_ROLE to cancelDepositOperator
-    /// @dev Opens epoch one, initializes rebalance nonce one, and sets the initial high water mark to one asset unit
+    /// @dev Opens epoch one and initializes rebalance nonce one
     /// @dev The initial active protocol adapter must be configured separately after its deployment and registration
-    function initialize(
-        BaseVault.InitParams memory params,
-        address treasury,
-        address policyEngineManager,
-        address policyEngine,
-        address cancelDepositOperator
-    ) external nonReentrant initializer {
+    function initialize(BaseVault.InitParams memory params, address treasury, address cancelDepositOperator)
+        external
+        nonReentrant
+        initializer
+    {
         _revertIfZeroAddress(treasury);
-        _revertIfZeroAddress(policyEngineManager);
         _revertIfZeroAddress(cancelDepositOperator);
-        _validatePolicyEngine(policyEngine);
 
         __BaseVault_init(params);
-        __PolicyProtected_init(params.defaultAdmin, policyEngine);
 
         ParentVaultStorage storage $ = _parentVaultStorage();
-        $.s_performanceFeeHighWaterMark = i_assetPrecision;
         $.s_epochNonce = 1;
         $.s_epochs[1].status = Types.EpochStatus.OPEN;
         $.s_epochs[1].openedAtTimestamp = block.timestamp;
         $.s_rebalance.nonce = 1;
         $.s_rebalance.lastRebalanceCompletedTimestamp = block.timestamp;
         $.s_treasury = treasury;
-        _grantRole(Roles.POLICY_ENGINE_MANAGER_ROLE, policyEngineManager);
         _grantRole(Roles.CANCEL_DEPOSIT_OPERATOR_ROLE, cancelDepositOperator);
     }
 
@@ -139,14 +124,6 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         emit InitialActiveProtocolAdapterSet(protocolId, adapter);
     }
 
-    /// @notice Sets the treasury address
-    /// @param treasury The address of the treasury
-    /// @dev Reverts if the caller does not have CONFIG_OPERATOR_ROLE
-    /// @dev Reverts if treasury is the zero address
-    function setTreasury(address treasury) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
-        ParentVaultConfigLib.setTreasury(_parentVaultStorage(), treasury);
-    }
-
     /*//////////////////////////////////////////////////////////////
                              USER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -156,10 +133,9 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @dev Reverts if amount is less than the minimum deposit amount
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the vault is paused
-    /// @dev Reverts if the call is rejected by the attached ACE policies
     /// @dev Reverts if the current epoch is not open
     /// @dev Requires the caller to have sufficient underlying-asset balance and allowance for amount
-    function deposit(uint256 amount) external nonReentrant whenNotPaused runPolicy returns (uint256 epochNonce) {
+    function deposit(uint256 amount) external nonReentrant whenNotPaused returns (uint256 epochNonce) {
         epochNonce =
             ParentVaultUserEpochLib.deposit(_parentVaultStorage(), i_asset, msg.sender, amount, i_minDepositAmount);
     }
@@ -170,16 +146,9 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @dev Reverts if shareBurnAmount is zero
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the vault is paused
-    /// @dev Reverts if the call is rejected by the attached ACE policies
     /// @dev Reverts if the current epoch is not open
     /// @dev Requires the caller to have sufficient share balance and allowance for shareBurnAmount
-    function withdraw(uint256 shareBurnAmount)
-        external
-        nonReentrant
-        whenNotPaused
-        runPolicy
-        returns (uint256 epochNonce)
-    {
+    function withdraw(uint256 shareBurnAmount) external nonReentrant whenNotPaused returns (uint256 epochNonce) {
         epochNonce = ParentVaultUserEpochLib.withdraw(_parentVaultStorage(), i_share, msg.sender, shareBurnAmount);
     }
 
@@ -188,16 +157,9 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @return shareMintAmount The amount of Yieldcoin shares minted for the deposit
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the vault is paused
-    /// @dev Reverts if the call is rejected by the attached ACE policies
     /// @dev Reverts if the epoch is not claimable
     /// @dev Reverts if the caller has no deposit in the epoch
-    function claimShares(uint256 epochNonce)
-        external
-        nonReentrant
-        whenNotPaused
-        runPolicy
-        returns (uint256 shareMintAmount)
-    {
+    function claimShares(uint256 epochNonce) external nonReentrant whenNotPaused returns (uint256 shareMintAmount) {
         shareMintAmount = ParentVaultUserEpochLib.claimShares(_parentVaultStorage(), i_share, msg.sender, epochNonce);
     }
 
@@ -206,39 +168,28 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @return withdrawAmount The amount of underlying asset transferred to the withdrawer
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the vault is paused
-    /// @dev Reverts if the call is rejected by the attached ACE policies
     /// @dev Reverts if the epoch is not claimable
     /// @dev Reverts if the caller has no withdraw intent in the epoch
-    /// @dev Reverts if burning the escrowed shares is rejected by the share token's attached ACE policies
-    function claimAsset(uint256 epochNonce)
-        external
-        nonReentrant
-        whenNotPaused
-        runPolicy
-        returns (uint256 withdrawAmount)
-    {
-        withdrawAmount = ParentVaultUserEpochLib.claimAsset(
-            _parentVaultStorage(), i_share, i_asset, msg.sender, epochNonce
-        );
+    function claimAsset(uint256 epochNonce) external nonReentrant whenNotPaused returns (uint256 withdrawAmount) {
+        withdrawAmount =
+            ParentVaultUserEpochLib.claimAsset(_parentVaultStorage(), i_share, i_asset, msg.sender, epochNonce);
     }
 
     /// @notice Cancels and refunds the caller's deposit in the current open epoch
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the vault is paused
-    /// @dev Reverts if the call is rejected by the attached ACE policies
     /// @dev Reverts if the current epoch is not open
     /// @dev Reverts if the caller has no deposit in the current epoch
-    function cancelDeposit() external nonReentrant whenNotPaused runPolicy {
+    function cancelDeposit() external nonReentrant whenNotPaused {
         ParentVaultUserEpochLib.cancelDeposit(_parentVaultStorage(), i_asset, msg.sender);
     }
 
     /// @notice Cancels the caller's withdraw intent in the current open epoch and returns the escrowed shares
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the vault is paused
-    /// @dev Reverts if the call is rejected by the attached ACE policies
     /// @dev Reverts if the current epoch is not open
     /// @dev Reverts if the caller has no withdraw intent in the current epoch
-    function cancelWithdraw() external nonReentrant whenNotPaused runPolicy {
+    function cancelWithdraw() external nonReentrant whenNotPaused {
         ParentVaultUserEpochLib.cancelWithdraw(_parentVaultStorage(), i_share, msg.sender);
     }
 
@@ -248,7 +199,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the current epoch is not open
     /// @dev Reverts if user has no deposit in the current epoch
-    /// @dev Deliberately callable while paused and not subject to the caller's attached ACE policies
+    /// @dev Deliberately callable while paused
     function forceCancelDeposit(address user) external nonReentrant onlyRole(Roles.CANCEL_DEPOSIT_OPERATOR_ROLE) {
         ParentVaultUserEpochLib.forceCancelDeposit(_parentVaultStorage(), i_asset, user);
     }
@@ -468,20 +419,15 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @param rebalanceNonce The nonce of the rebalance to finalize
     /// @param newStrategy The pending strategy to activate
     /// @dev Reverts if no rebalance is in progress
-    // @review remove virtual before deployment
-    function _finalizeRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy) internal virtual {
-        ParentVaultRebalanceLib.finalizeRebalance(_parentVaultStorage(), i_share, rebalanceNonce, newStrategy, false);
+    function _finalizeRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy) internal {
+        ParentVaultRebalanceLib._finalizeRebalance(_parentVaultStorage(), i_share, rebalanceNonce, newStrategy, false);
     }
 
     /// @notice Finalizes a local-to-local rebalance that completed synchronously without persisted pending state
     /// @param rebalanceNonce The rebalance nonce, already known by the caller
     /// @param newStrategy The new strategy, already known by the caller
-    // @review remove virtual before deployment
-    function _finalizeLocalToLocalRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy)
-        internal
-        virtual
-    {
-        ParentVaultRebalanceLib.finalizeRebalance(_parentVaultStorage(), i_share, rebalanceNonce, newStrategy, true);
+    function _finalizeLocalToLocalRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy) internal {
+        ParentVaultRebalanceLib._finalizeRebalance(_parentVaultStorage(), i_share, rebalanceNonce, newStrategy, true);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -519,6 +465,14 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
     /// @dev When removing support, reverts if protocolId belongs to the pending strategy
     function setSupportedProtocol(bytes32 protocolId, bool isSupported) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
         ParentVaultConfigLib.setSupportedProtocol(_parentVaultStorage(), protocolId, isSupported);
+    }
+
+    /// @notice Sets the treasury address
+    /// @param treasury The address of the treasury
+    /// @dev Reverts if the caller does not have CONFIG_OPERATOR_ROLE
+    /// @dev Reverts if treasury is the zero address
+    function setTreasury(address treasury) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
+        ParentVaultConfigLib.setTreasury(_parentVaultStorage(), treasury);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -581,14 +535,10 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
         shareBurnAmount = _parentVaultStorage().s_withdraws[user][epochNonce];
     }
 
-    /// @inheritdoc IParentVault
+    /// @notice Returns whether the initial active protocol adapter has been set
+    /// @return initialActiveProtocolAdapterSet Whether the initial active protocol adapter has been set
     function getInitialActiveProtocolAdapterSet() external view returns (bool initialActiveProtocolAdapterSet) {
         initialActiveProtocolAdapterSet = _parentVaultStorage().s_initialActiveProtocolAdapterSet;
-    }
-
-    /// @inheritdoc IParentVault
-    function getPerformanceFeeHighWaterMark() external view returns (uint256 highWaterMark) {
-        highWaterMark = _parentVaultStorage().s_performanceFeeHighWaterMark;
     }
 
     /// @notice Returns the operator multisig that receives protocol fees
@@ -626,41 +576,14 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault, PolicyProtect
                                 OVERRIDE
     //////////////////////////////////////////////////////////////*/
     /// @notice Returns the current default admin
-    /// @return owner_ The address of the current default admin
-    /// @dev Resolves the owner() override shared by PolicyProtectedUpgradeable and
-    ///      AccessControlDefaultAdminRulesUpgradeable
-    function owner()
-        public
-        view
-        override(OwnableUpgradeable, AccessControlDefaultAdminRulesUpgradeable)
-        returns (address owner_)
-    {
-        owner_ = AccessControlDefaultAdminRulesUpgradeable.owner();
-    }
-
-    /// @notice Replaces the policy engine attached to this vault
-    /// @param policyEngine The policy engine to attach
-    /// @dev Reverts if the caller does not have POLICY_ENGINE_MANAGER_ROLE
-    /// @dev Reverts if policyEngine is the zero address or does not support IPolicyEngine
-    function attachPolicyEngine(address policyEngine) external override onlyRole(Roles.POLICY_ENGINE_MANAGER_ROLE) {
-        _validatePolicyEngine(policyEngine);
-        _attachPolicyEngine(policyEngine);
-    }
-
     /// @notice Returns whether this contract implements the given interface ID
     /// @param interfaceId The interface identifier, as specified in ERC-165
-    /// @return Whether this contract implements `interfaceId`
-    /// @dev Supports IERC165, IAccessControlDefaultAdminRules, IAny2EVMMessageReceiver, and IPolicyProtected
-    function supportsInterface(bytes4 interfaceId)
-        public
-        pure
-        override(BaseVault, PolicyProtectedUpgradeable)
-        returns (bool)
-    {
-        return interfaceId == type(IERC165).interfaceId
+    /// @return isSupported Whether this contract implements `interfaceId`
+    /// @dev Supports IERC165, IAccessControlDefaultAdminRules, and IAny2EVMMessageReceiver
+    function supportsInterface(bytes4 interfaceId) public pure override(BaseVault) returns (bool isSupported) {
+        isSupported = interfaceId == type(IERC165).interfaceId
             || interfaceId == type(IAccessControlDefaultAdminRules).interfaceId
-            || interfaceId == type(IAny2EVMMessageReceiver).interfaceId
-            || interfaceId == type(IPolicyProtected).interfaceId;
+            || interfaceId == type(IAny2EVMMessageReceiver).interfaceId;
     }
 
     /// @notice Returns this vault's accounted underlying-asset value

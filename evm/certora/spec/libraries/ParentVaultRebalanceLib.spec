@@ -707,7 +707,7 @@ rule finalizeRebalance_RevertWhen_LastCompletedTimestampIsFuture() {
 
 /// @notice Finalizing a persisted rebalance uses the caller-supplied nonce and strategy.
 /// @dev Verifies active strategy, state, pending strategy, timestamp, nonce, events, and the zero-fee path.
-rule FEE_004_NONCE_011_finalizeRebalance_Success_WhenPersistedRebalanceHasNoManagementFeeShares() {
+rule FEE_002_NONCE_011_finalizeRebalance_Success_WhenPersistedRebalanceHasNoManagementFeeShares() {
     env e;
     uint256 rebalanceNonce;
     bytes32 protocolId;
@@ -753,7 +753,7 @@ rule FEE_004_NONCE_011_finalizeRebalance_Success_WhenPersistedRebalanceHasNoMana
 
 /// @notice Finalizing a persisted rebalance collects no management fee when no time has elapsed.
 /// @dev Verifies the zero-fee path with outstanding shares and no share-token mutation.
-rule FEE_004_NONCE_011_finalizeRebalance_Success_WhenManagementFeeElapsedTimeIsZero() {
+rule FEE_002_NONCE_011_finalizeRebalance_Success_WhenManagementFeeElapsedTimeIsZero() {
     env e;
     uint256 rebalanceNonce;
     bytes32 protocolId;
@@ -801,7 +801,7 @@ rule FEE_004_NONCE_011_finalizeRebalance_Success_WhenManagementFeeElapsedTimeIsZ
 
 /// @notice Finalizing a synchronous local-to-local rebalance does not require or clear persisted rebalance state.
 /// @dev Verifies the local-to-local state/pending bypass and all common finalization writes and events.
-rule FEE_004_NONCE_011_finalizeRebalance_Success_WhenLocalToLocal() {
+rule FEE_002_NONCE_011_finalizeRebalance_Success_WhenLocalToLocal() {
     env e;
     uint256 rebalanceNonce;
     bytes32 protocolId;
@@ -850,7 +850,7 @@ rule FEE_004_NONCE_011_finalizeRebalance_Success_WhenLocalToLocal() {
 
 /// @notice Finalizing a persisted rebalance collects a nonzero uncapped management fee.
 /// @dev Verifies management-fee state, token, and event integration using a concrete one-share fee.
-rule FEE_002_FEE_004_NONCE_011_finalizeRebalance_Success_WhenManagementFeeSharesAreCollected() {
+rule FEE_001_FEE_002_NONCE_011_finalizeRebalance_Success_WhenManagementFeeSharesAreCollected() {
     env e;
     uint256 rebalanceNonce;
     bytes32 protocolId;
@@ -905,7 +905,7 @@ rule FEE_002_FEE_004_NONCE_011_finalizeRebalance_Success_WhenManagementFeeShares
 
 /// @notice Finalizing a persisted rebalance caps management-fee accrual at one year.
 /// @dev Verifies the elapsed-time cap through finalization using a concrete one-share fee.
-rule FEE_002_FEE_004_NONCE_011_finalizeRebalance_Success_WhenManagementFeeElapsedTimeIsCapped() {
+rule FEE_001_FEE_002_NONCE_011_finalizeRebalance_Success_WhenManagementFeeElapsedTimeIsCapped() {
     env e;
     uint256 rebalanceNonce;
     bytes32 protocolId;

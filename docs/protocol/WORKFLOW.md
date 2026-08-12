@@ -13,7 +13,7 @@ The workflow has two flows:
 
 | Trigger                                       | Handler                               | Purpose                                                                                                                                   |
 | --------------------------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Rebalance cron                                | `rebalance.OnCronTrigger`             | Select the best approved pool and, when policy permits, call `ParentVault.initiateRebalance`.                                             |
+| Rebalance cron                                | `rebalance.OnCronTrigger`             | Select the best approved pool and, when the workflow guards and APY threshold permit, call `ParentVault.initiateRebalance`.                |
 | `ParentVault.RebalanceInitiated`              | `rebalance.OnRebalanceInitiated`      | If the current strategy is remote, call `ChildVault.executeRebalance` on its chain to withdraw and route the capital to the new strategy. |
 | `RebalanceDepositSuccess` on each child vault | `rebalance.OnRebalanceDepositSuccess` | Call `ParentVault.completeRebalance` after a child strategy receives and deposits the capital.                                            |
 | Epoch cron                                    | `epoch.OnEpochCronTrigger`            | Read the active strategy's TVL and call `ParentVault.closeEpoch`.                                                                         |

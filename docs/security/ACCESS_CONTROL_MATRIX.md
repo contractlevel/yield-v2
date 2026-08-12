@@ -1,229 +1,128 @@
 # Access Control Matrix
 
-## Purpose
+## Model
 
-This document defines the access control model for Yieldcoin v2.
+Yieldcoin v2 uses OpenZeppelin AccessControl directly. There is no policy or compliance
+authorization layer.
 
-It is the source of truth for how authority should be named, assigned, implemented, and reviewed across the codebase. Contract changes should preserve this model unless this document is updated first.
+- `DEFAULT_ADMIN_ROLE` grants and revokes roles. It does not implicitly bypass other role checks.
+- Pause and unpause authority are separate.
+- User vault actions are permissionless while the ParentVault is unpaused.
+- UUPS upgrades require `UPGRADER_ROLE`.
+- Recovery execution is permissionless and uses previously stored recovery data.
 
-## Fundamental Principles
+## Roles
 
-| Principle                                           | Rule                                                                                                                                                         |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `DEFAULT_ADMIN_ROLE` grants and revokes roles only  | Default admin roles administer roles for their own contract. They should not operate privileged business functions.                                          |
-| ACE policies control runtime permissions            | Selector-level permissions, KYC, compliance actions, token operations, and provider authorization are enforced through Chainlink ACE where practical.        |
-| `PolicyEngine` owns ACE policies                    | ACE policy contracts are owned/administered by `PolicyEngine` where practical, so policy internals are configured through one engine role.                   |
-| Policy wiring and policy configuration are separate | `PolicyEngine.ADMIN_ROLE` wires policy stacks. `PolicyEngine.POLICY_CONFIG_ADMIN_ROLE` configures policy internals. They may be co-held but remain distinct. |
-| Local roles control system administration           | Upgrades, vault/router/registry configuration, and operational system functions use explicit local roles. Policy engine replacement follows this for `ParentVault` (local `POLICY_ENGINE_MANAGER_ROLE`), but not for `YieldcoinShare`, where replacement is instead ACE-policy-controlled via `runPolicy`. |
-| Compliance operation is not policy administration   | A compliance operator can perform compliance actions, but should not automatically rewire, replace, or administer the policy system.                         |
-| Role names describe real power                      | Broad authority uses broad names. Narrow operational authority stays narrow.                                                                                 |
+| Role                           | Held by                        | Authority                                                                                                                     |
+| ------------------------------ | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `DEFAULT_ADMIN_ROLE`           | Multisig A                     | Grant and revoke roles; manage the two-step default-admin transfer. On ParentVault, also set the initial active adapter once. |
+| `UPGRADER_ROLE`                | Multisig B                     | Authorize UUPS upgrades to YieldcoinShare, ParentVault, or ChildVault.                                                        |
+| `PAUSER_ROLE`                  | Hardware wallet and Multisig C | Pause YieldcoinShare, a vault, or WorkflowRouter.                                                                             |
+| `UNPAUSER_ROLE`                | Multisig C                     | Unpause YieldcoinShare, a vault, or WorkflowRouter.                                                                           |
+| `CONFIG_OPERATOR_ROLE`         | Multisig C                     | Update token, vault, and router configuration; register, replace, or remove protocol adapters in AdapterRegistry.             |
+| `EPOCH_OPERATOR_ROLE`          | WorkflowRouter                 | Execute vault epoch operations.                                                                                               |
+| `REBALANCE_OPERATOR_ROLE`      | WorkflowRouter                 | Execute vault rebalance operations.                                                                                           |
+| `LINK_OPERATOR_ROLE`           | Multisig C                     | Withdraw LINK from a vault.                                                                                                   |
+| `KEYSTONE_FORWARDER_ROLE`      | CRE Forwarder                  | Submit reports to WorkflowRouter.                                                                                             |
+| `MINTER_ROLE`                  | ParentVault                    | Mint YieldcoinShare tokens.                                                                                                   |
+| `BURNER_ROLE`                  | ParentVault                    | Burn YieldcoinShare tokens.                                                                                                   |
+| `REWARDS_OPERATOR_ROLE`        | Multisig C                     | Claim Compound v3 rewards through an adapter.                                                                                 |
+| `CANCEL_DEPOSIT_OPERATOR_ROLE` | Multisig C                     | Force-cancel a ParentVault deposit.                                                                                           |
 
-## Authority Matrix
+Roles use `DEFAULT_ADMIN_ROLE` as their administrator unless the contract explicitly says
+otherwise.
 
-| Authority                   | System                                  | Controller                                                                        | Can do                                                                                                  | Notes                                                                                            |
-| --------------------------- | --------------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| Local role admin            | Vaults, WorkflowRouter, AdapterRegistry | `DEFAULT_ADMIN_ROLE`                                                              | Grant/revoke local roles                                                                                | Use `AccessControlDefaultAdminRules`; avoid direct operational functions where possible          |
-| ACE role admin              | `PolicyEngine`                          | `PolicyEngine.DEFAULT_ADMIN_ROLE`                                                 | Grant/revoke `PolicyEngine` roles                                                                       | Same role-admin purpose as vault default admin, but without default-admin transfer guardrails    |
-| Policy wiring               | `PolicyEngine`                          | `POLICY_ADMIN_ROLE` actor holding `PolicyEngine.ADMIN_ROLE`                       | Add/remove/reorder policies, set extractors, set mappers, set target/default allow behavior             | High privilege; distinct from policy configuration and compliance operation                      |
-| Policy configuration        | `PolicyEngine`                          | `POLICY_CONFIG_ADMIN_ROLE` actor holding `PolicyEngine.POLICY_CONFIG_ADMIN_ROLE`  | Configure internals of policies owned/administered by `PolicyEngine`                                    | High privilege; distinct from policy wiring; may be held by the same multisig initially          |
-| Policy engine replacement   | `ParentVault`                           | `POLICY_ENGINE_MANAGER_ROLE`                                                      | Replace attached policy engine                                                                          | Local `AccessControl` role; separate from compliance operation and default admin role administration |
-| Policy engine replacement   | `YieldcoinShare` through ACE RBAC       | `POLICY_ENGINE_MANAGER_ROLE`                                                      | Replace attached policy engine                                                                          | Enforced via `runPolicy`, not a local role; separate from compliance operation and default admin role administration |
-| RBAC policy administration  | `RoleBasedAccessControlPolicy`          | `PolicyEngine` controlled by `POLICY_CONFIG_ADMIN_ROLE`                           | Manage operation allowances and RBAC role membership through `setPolicyConfiguration`                   | `PolicyEngine` is RBAC `owner()` and holds RBAC `DEFAULT_ADMIN_ROLE`                             |
-| Token compliance operations | `YieldcoinShare` through ACE RBAC       | `COMPLIANCE_OPERATOR_ROLE`                                                        | Forced transfers, freeze/unfreeze, address freeze, possibly pause/unpause                               | Runtime authority enforced by ACE policy                                                         |
-| Token pause                 | `YieldcoinShare` through ACE RBAC       | `PAUSER_ROLE`                                                                     | Pause token                                                                                             | Can also allow `COMPLIANCE_OPERATOR_ROLE` if desired                                             |
-| Token unpause               | `YieldcoinShare` through ACE RBAC       | `UNPAUSER_ROLE`                                                                   | Unpause token                                                                                           | Separate from pause if asymmetric safety is desired                                              |
-| Share supply                | `YieldcoinShare` through ACE RBAC       | `ParentVault` with `MINTER_ROLE` / `BURNER_ROLE`                                  | Mint and burn shares                                                                                    | Share supply authority belongs to the vault flow                                                 |
-| Vault user access           | `ParentVault` through ACE policies      | KYC/compliance policy stack                                                       | Gate deposit, withdraw, claim, cancel functions                                                         | ACE is the user eligibility layer                                                                |
-| Epoch execution             | Vaults                                  | `WorkflowRouter` holding `EPOCH_OPERATOR_ROLE`                                    | Epoch execution (`closeEpoch`, `completeEpochDeposit`, `executeEpochWithdraw`)                          | Keep operational vault roles local; only user-facing functions should move through ACE           |
-| Rebalance execution         | Vaults                                  | `WorkflowRouter` holding `REBALANCE_OPERATOR_ROLE`                                | Rebalance execution (`initiateRebalance`, `completeRebalance`, `executeRebalance`)                      | Keep operational vault roles local; only user-facing functions should move through ACE           |
-| Vault recovery              | Vaults                                  | Public stored-state retry                                                         | Execute recovery from previously stored recovery state                                                  | Caller must not choose amount, strategy, destination, or recipient                               |
-| Deposit dust cancellation   | `ParentVault`                           | `CANCEL_DEPOSIT_OPERATOR_ROLE`                                                     | Force-cancel a user's current-epoch deposit with `forceCancelDeposit(user)`                             | Narrow liveness authority for clearing dust deposits that could block `closeEpoch`               |
-| Protocol rewards claiming   | `CompoundV3Adapter`                     | `REWARDS_OPERATOR_ROLE` on the vault, checked via `IAccessControl(vault).hasRole` | Call `claimRewards(to)` to forward protocol rewards from the adapter to a recipient                     | Role is granted on the vault; adapter delegates the check rather than inheriting `AccessControl` |
-| Protocol config             | Vaults, routers, registry               | `CONFIG_OPERATOR_ROLE`                                                            | Set vault/router config, adapters, workflow metadata/selectors, and supported protocols                 | Explicit and narrow                                                                              |
-| CCIP token admin            | `YieldcoinShare`                        | `CONFIG_OPERATOR_ROLE` actor through ACE RBAC                                     | Set Chainlink CCIP token admin identity                                                                 | `getCCIPAdmin()` returns stored CCIP admin state, never token `owner()`                          |
-| Upgrades                    | Vaults (UUPS)                           | `UPGRADER_ROLE`                                                                   | Upgrade implementation contracts via `_authorizeUpgrade`                                                | Granted at initialization; `YieldcoinShare` instead uses its OZ `owner()` as upgrade authority, see below |
-
-## Contract-Level Matrix
-
-### ParentVault
-
-| Function or authority                                | Control                                                                 |
-| ---------------------------------------------------- | ----------------------------------------------------------------------- |
-| Grant/revoke roles                                   | `DEFAULT_ADMIN_ROLE`                                                    |
-| `setInitialActiveProtocolAdapter`                    | `DEFAULT_ADMIN_ROLE` because this is a one-time deploy-time action      |
-| Config setters                                       | `CONFIG_OPERATOR_ROLE`                                                  |
-| Pause/unpause                                        | `PAUSER_ROLE` / `UNPAUSER_ROLE`                                         |
-| Epoch (`closeEpoch`, `completeEpochDeposit`)         | `EPOCH_OPERATOR_ROLE` granted to `WorkflowRouter`                       |
-| Rebalance (`initiateRebalance`, `completeRebalance`) | `REBALANCE_OPERATOR_ROLE` granted to `WorkflowRouter`                   |
-| Recovery                                             | Public stored-state retry                                               |
-| `forceCancelDeposit(user)`                           | `CANCEL_DEPOSIT_OPERATOR_ROLE`                                          |
-| `claimRewards()` (CompoundV3Adapter)                 | `REWARDS_OPERATOR_ROLE`                                                 |
-| LINK withdrawal                                      | `LINK_OPERATOR_ROLE`                                                    |
-| `attachPolicyEngine`                                 | `POLICY_ENGINE_MANAGER_ROLE`                                            |
-| User deposit/withdraw/claim/cancel                   | ACE policy stack                                                        |
-
-### ChildVault
-
-| Function or authority                | Control                                                                 |
-| ------------------------------------ | ----------------------------------------------------------------------- |
-| Grant/revoke roles                   | `DEFAULT_ADMIN_ROLE`                                                    |
-| Config setters                       | `CONFIG_OPERATOR_ROLE`                                                  |
-| Pause/unpause                        | `PAUSER_ROLE` / `UNPAUSER_ROLE`                                         |
-| Epoch (`executeEpochWithdraw`)       | `EPOCH_OPERATOR_ROLE` granted to `WorkflowRouter`                       |
-| Rebalance (`executeRebalance`)       | `REBALANCE_OPERATOR_ROLE` granted to `WorkflowRouter`                   |
-| Recovery                             | Public stored-state retry                                               |
-| `claimRewards()` (CompoundV3Adapter) | `REWARDS_OPERATOR_ROLE`                                                 |
-| LINK withdrawal                      | `LINK_OPERATOR_ROLE`                                                    |
-
-### WorkflowRouter
-
-| Function or authority       | Control                         |
-| --------------------------- | ------------------------------- |
-| Grant/revoke roles          | `DEFAULT_ADMIN_ROLE`            |
-| Workflow metadata/selectors | `CONFIG_OPERATOR_ROLE`          |
-| `onReport`                  | `KEYSTONE_FORWARDER_ROLE`       |
-| Pause/unpause               | `PAUSER_ROLE` / `UNPAUSER_ROLE` |
-
-### AdapterRegistry
-
-| Function or authority | Control                |
-| --------------------- | ---------------------- |
-| Grant/revoke roles    | `DEFAULT_ADMIN_ROLE`   |
-| Adapter registration  | `CONFIG_OPERATOR_ROLE` |
+## Contracts
 
 ### YieldcoinShare
 
-| Function or authority                      | Control                                                                                       |
-| ------------------------------------------ | --------------------------------------------------------------------------------------------- |
-| ACE RBAC administration                    | `PolicyEngine.POLICY_CONFIG_ADMIN_ROLE` is RBAC `owner()` and holds RBAC `DEFAULT_ADMIN_ROLE` |
-| `mint` / `burn`                            | ACE RBAC: `ParentVault` holds `MINTER_ROLE` / `BURNER_ROLE`                                   |
-| `pause`                                    | ACE RBAC: `PAUSER_ROLE`, optionally also `COMPLIANCE_OPERATOR_ROLE`                           |
-| `unpause`                                  | ACE RBAC: `UNPAUSER_ROLE`, optionally also `COMPLIANCE_OPERATOR_ROLE`                         |
-| `forcedTransfer` and batch forced transfer | ACE RBAC: `COMPLIANCE_OPERATOR_ROLE`                                                          |
-| Freeze/unfreeze functions                  | ACE RBAC: `COMPLIANCE_OPERATOR_ROLE`                                                          |
-| Transfers and approvals                    | ACE policy stack for KYC/compliance as needed                                                 |
-| Metadata setters                           | ACE RBAC: `CONFIG_OPERATOR_ROLE`                                                              |
-| `attachPolicyEngine`                       | ACE RBAC: `POLICY_ENGINE_MANAGER_ROLE` (enforced via `runPolicy`, not a local role); do not rely on token `owner()` |
-| `setCCIPAdmin()`                           | ACE RBAC: `CONFIG_OPERATOR_ROLE`                                                              |
-| `getCCIPAdmin()`                           | Return stored CCIP admin, e.g. `s_ccipAdmin` or namespaced storage equivalent                 |
-| `owner()`                                  | Set to `UPGRADER_ROLE` holder at initialization via `_transferOwnership(upgrader)`; controls only `_authorizeUpgrade` because `getCCIPAdmin()` is overridden. Required by inherited mechanics — do not treat as general token admin. `renounceOwnership` is overridden to revert. `transferOwnership` is inherited from `OwnableUpgradeable` and is single-step with no acceptance confirmation — sending to a wrong address permanently removes upgrade capability. Rotate the upgrader key with extreme care. |
+| Function       | Access                                 |
+| -------------- | -------------------------------------- |
+| `mint`         | `MINTER_ROLE` — granted to ParentVault |
+| `burn`         | `BURNER_ROLE` — granted to ParentVault |
+| `pause`        | `PAUSER_ROLE`                          |
+| `unpause`      | `UNPAUSER_ROLE`                        |
+| `setCCIPAdmin` | `CONFIG_OPERATOR_ROLE`                 |
+| UUPS upgrade   | `UPGRADER_ROLE`                        |
+| Transfers      | Public; disabled while paused          |
+| Approvals      | Public; remain available while paused  |
 
-## Chainlink ACE Model
+Pausing YieldcoinShare disables transfers, minting, and burning.
 
-### PolicyEngine
+### ParentVault
 
-| Role                       | Holder                       | Direct power                                                      |
-| -------------------------- | ---------------------------- | ----------------------------------------------------------------- |
-| `DEFAULT_ADMIN_ROLE`       | Default admin multisig       | Grant/revoke `PolicyEngine` roles                                 |
-| `ADMIN_ROLE`               | Policy admin multisig        | Wire policies, extractors, mappers, target/default allow behavior |
-| `POLICY_CONFIG_ADMIN_ROLE` | Policy config admin multisig | Configure policy internals through the engine                     |
+| Function                                              | Access                                                 |
+| ----------------------------------------------------- | ------------------------------------------------------ |
+| `setInitialActiveProtocolAdapter`                     | `DEFAULT_ADMIN_ROLE`; callable successfully once       |
+| `setTreasury`                                         | `CONFIG_OPERATOR_ROLE`                                 |
+| `setSupportedProtocol`                                | `CONFIG_OPERATOR_ROLE`                                 |
+| Cross-chain vault and CCIP gas setters                | `CONFIG_OPERATOR_ROLE`                                 |
+| `deposit`, `withdraw`, claims, and user cancellations | Public; disabled while paused                          |
+| `forceCancelDeposit`                                  | `CANCEL_DEPOSIT_OPERATOR_ROLE`; available while paused |
+| `closeEpoch`, `completeEpochDeposit`                  | `EPOCH_OPERATOR_ROLE`                                  |
+| `initiateRebalance`, `completeRebalance`              | `REBALANCE_OPERATOR_ROLE`                              |
+| `executeRecovery`                                     | Public; disabled while paused                          |
+| `withdrawLink`                                        | `LINK_OPERATOR_ROLE`                                   |
+| UUPS upgrade                                          | `UPGRADER_ROLE`                                        |
 
-`PolicyEngine.DEFAULT_ADMIN_ROLE` grants and revokes ACE `PolicyEngine` roles. It has the same role-admin purpose as local default admin roles, but without the `AccessControlDefaultAdminRules` guardrails used by local contracts.
+`closeEpoch` and `initiateRebalance` are disabled while paused. Their completion functions remain
+available so an operation already in progress can be finalized.
 
-`PolicyEngine.ADMIN_ROLE` is policy-wiring authority. It controls which policies apply to which targets and selectors.
+### ChildVault
 
-`PolicyEngine.POLICY_CONFIG_ADMIN_ROLE` is policy-configuration authority. It calls `setPolicyConfiguration`, which makes `PolicyEngine` call a configuration function on a policy contract. For policies owned or administered by `PolicyEngine`, this is the human-facing authority for mutable policy internals.
+| Function                               | Access                                           |
+| -------------------------------------- | ------------------------------------------------ |
+| Cross-chain vault and CCIP gas setters | `CONFIG_OPERATOR_ROLE`                           |
+| `executeEpochWithdraw`                 | `EPOCH_OPERATOR_ROLE`; disabled while paused     |
+| `executeRebalance`                     | `REBALANCE_OPERATOR_ROLE`; disabled while paused |
+| `executeRecovery`                      | Public; disabled while paused                    |
+| `withdrawLink`                         | `LINK_OPERATOR_ROLE`                             |
+| UUPS upgrade                           | `UPGRADER_ROLE`                                  |
 
-`ADMIN_ROLE` and `POLICY_CONFIG_ADMIN_ROLE` remain conceptually separate. They may be granted to the same multisig initially, but that is a holder choice, not a role-meaning change.
+### WorkflowRouter
 
-### Policy Ownership
+| Function                               | Access                                                                            |
+| -------------------------------------- | --------------------------------------------------------------------------------- |
+| `onReport`                             | `KEYSTONE_FORWARDER_ROLE`, registered workflow metadata, and allowlisted selector |
+| Workflow metadata and selector setters | `CONFIG_OPERATOR_ROLE`                                                            |
+| `pause`                                | `PAUSER_ROLE`                                                                     |
+| `unpause`                              | `UNPAUSER_ROLE`                                                                   |
 
-| Policy authority                       | Holder         |
-| -------------------------------------- | -------------- |
-| Policy contract `owner()`              | `PolicyEngine` |
-| Policy-specific admin roles, if needed | `PolicyEngine` |
+WorkflowRouter must also hold the role required by the forwarded vault function. Its selector
+allowlist does not bypass vault access control.
 
-Human governance administers policy internals through `PolicyEngine.POLICY_CONFIG_ADMIN_ROLE`. `PolicyEngine` is the on-chain executor that owns or administers individual policy contracts.
+### AdapterRegistry
 
-### RoleBasedAccessControlPolicy
+| Function or authority                                                                    | Access                 |
+| ---------------------------------------------------------------------------------------- | ---------------------- |
+| Register or replace the adapter for a protocol ID with `setAdapter(protocolId, adapter)` | `CONFIG_OPERATOR_ROLE` |
+| Remove a protocol by setting its adapter to `address(0)`                                 | `CONFIG_OPERATOR_ROLE` |
+| Read the adapter registered for a protocol ID with `getAdapter(protocolId)`              | Public                 |
 
-| RBAC authority                   | Holder         | Direct power                                |
-| -------------------------------- | -------------- | ------------------------------------------- |
-| RBAC policy `DEFAULT_ADMIN_ROLE` | `PolicyEngine` | Grants/revokes RBAC roles inside the policy |
-| RBAC policy `owner()`            | `PolicyEngine` | Grants/removes operation allowances         |
+### Protocol Adapters
 
-RBAC access is complete only when both pieces align:
+| Function                   | Access                                                      |
+| -------------------------- | ----------------------------------------------------------- |
+| `deposit`, `withdraw`      | Immutable bound vault only                                  |
+| Compound v3 `claimRewards` | Caller must hold `REWARDS_OPERATOR_ROLE` on the bound vault |
+| Read functions             | Public                                                      |
 
-- role membership decides who has a role;
-- operation allowances decide what that role can do.
+## Non-Role Trust Boundaries
 
-`PolicyEngine` must hold both RBAC `owner()` and RBAC `DEFAULT_ADMIN_ROLE`, so role membership and operation allowances are governed together through `PolicyEngine.POLICY_CONFIG_ADMIN_ROLE`.
+| Boundary                        | Check                                                                                           |
+| ------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Incoming CCIP message           | Called through the immutable CCIP router and sent by the registered vault for the source chain  |
+| `BaseVault.tryDepositToAdapter` | External self-call only                                                                         |
+| `ChildVault.tryCcipSend`        | External self-call only                                                                         |
+| Recovery execution              | Uses stored recovery data; caller cannot choose the amount, recipient, strategy, or destination |
 
-RBAC changes are made through `PolicyEngine.setPolicyConfiguration`:
+## Launch Configuration
 
-| RBAC change                | Selector                                                           |
-| -------------------------- | ------------------------------------------------------------------ |
-| Grant operation allowance  | `grantOperationAllowanceToRole(bytes4 operation, bytes32 role)`    |
-| Remove operation allowance | `removeOperationAllowanceFromRole(bytes4 operation, bytes32 role)` |
-| Grant role membership      | `grantRole(bytes32 role, address account)`                         |
-| Revoke role membership     | `revokeRole(bytes32 role, address account)`                        |
+The holders above are the initial launch configuration. Role separation, signer thresholds, and
+holder assignments should be revisited if protocol TVL warrants stronger controls.
 
-### OnlyAuthorizedSenderPolicy
+The deployer temporarily holds administration and configuration authority needed for wiring. The
+scripts revoke temporary configuration roles and begin the two-step transfer to the configured
+default admin. The configured admin must accept that transfer on-chain.
 
-| Policy authority | Holder         | Direct power                           |
-| ---------------- | -------------- | -------------------------------------- |
-| Policy `owner()` | `PolicyEngine` | Add/remove authorized sender addresses |
-
-Authorized sender changes are made through `PolicyEngine.setPolicyConfiguration`:
-
-| Sender change      | Selector                             |
-| ------------------ | ------------------------------------ |
-| Authorize sender   | `authorizeSender(address account)`   |
-| Unauthorize sender | `unauthorizeSender(address account)` |
-
-Human governance administers authorized senders through `PolicyEngine.POLICY_CONFIG_ADMIN_ROLE`. `PolicyEngine` is the on-chain executor that owns `OnlyAuthorizedSenderPolicy`, so provider allowlists are not controlled directly by a provider or compliance operator.
-
-### IdentityRegistry and CredentialRegistry
-
-| Function or authority                                                                                    | Control                                                                                         |
-| -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Registry `owner()`                                                                                       | `PolicyEngine`                                                                                  |
-| `attachPolicyEngine`                                                                                     | Registry `owner()`; effectively disabled in normal operation by making `PolicyEngine` the owner |
-| `IdentityRegistry.registerIdentity` / `registerIdentities` / `removeIdentity`                            | Authorized identity provider senders in `OnlyAuthorizedSenderPolicy`, plus terminal allow       |
-| `CredentialRegistry.registerCredential` / `registerCredentials` / `removeCredential` / `renewCredential` | Authorized credential provider senders in `OnlyAuthorizedSenderPolicy`, plus terminal allow     |
-| Add/remove authorized provider senders                                                                   | `PolicyEngine.POLICY_CONFIG_ADMIN_ROLE` via `PolicyEngine.setPolicyConfiguration`               |
-| Registry selector policy wiring                                                                          | `PolicyEngine.ADMIN_ROLE`                                                                       |
-| Credential validation policy configuration                                                               | `PolicyEngine.POLICY_CONFIG_ADMIN_ROLE`                                                         |
-
-`IdentityRegistry` and `CredentialRegistry` are Chainlink ACE `PolicyProtectedUpgradeable` contracts. Their mutable registry functions are protected by ACE policies, while inherited ownership controls policy engine attachment. Registry `owner()` must therefore be the `PolicyEngine`, not a credential issuer or compliance operator.
-
-Identity and credential providers can write registry entries only when their sender address is authorized in the registry's `OnlyAuthorizedSenderPolicy`. `PolicyEngine.ADMIN_ROLE` wires that policy to the registry selectors. `PolicyEngine.POLICY_CONFIG_ADMIN_ROLE` changes the authorized provider senders by calling `PolicyEngine.setPolicyConfiguration`, which makes `PolicyEngine` call `authorizeSender` or `unauthorizeSender` on the policy.
-
-## Runtime Policy Mapping
-
-| Target                                    | Functions                                                                             | Policy                                                                       |
-| ----------------------------------------- | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `ParentVault`                             | `deposit`, `withdraw`, `claimShares`, `claimAsset`, `cancelDeposit`, `cancelWithdraw` | KYC/compliance policy stack plus terminal allow                              |
-| `YieldcoinShare`                          | `transfer`, `transferFrom`, approvals                                                 | KYC/compliance transfer policy stack                                         |
-| `YieldcoinShare`                          | `mint`, `burn`                                                                        | RBAC policy: `MINTER_ROLE` / `BURNER_ROLE` held by `ParentVault`             |
-| `YieldcoinShare`                          | freeze/unfreeze and forced transfer functions                                         | RBAC policy: `COMPLIANCE_OPERATOR_ROLE`                                      |
-| `YieldcoinShare`                          | `pause`, `unpause`                                                                    | RBAC policy: `PAUSER_ROLE` / `UNPAUSER_ROLE`, optionally compliance operator |
-| `IdentityRegistry` / `CredentialRegistry` | Provider registration/removal/renewal selectors                                       | Authorized sender policy for KYC provider plus terminal allow                |
-
-## Vault Recovery
-
-Vault recovery functions are permissionless stored-state retries.
-
-Recovery entry points may be public when they satisfy all of these conditions:
-
-- recovery amount comes from stored recovery state;
-- recovery strategy comes from stored recovery state or existing active vault state;
-- destination chain, receiver, and recipient are not caller-controlled;
-- failed retry reverts without clearing stored recovery state;
-- successful retry clears stored recovery state and completes the intended operation.
-
-Under this model, a separate `RECOVERY_OPERATOR_ROLE` is not needed. Authorization happens when the failed operation stores recovery state; execution only consumes that state.
-
-## Summary
-
-The codebase uses one clear rule per authority type:
-
-- ACE controls runtime permission decisions.
-- Local OpenZeppelin roles control system administration.
-- `DEFAULT_ADMIN_ROLE` grants and revokes roles only.
-- `PolicyEngine` owns/administers ACE policies where practical.
-- `PolicyEngine.ADMIN_ROLE` wires policy stacks.
-- `PolicyEngine.POLICY_CONFIG_ADMIN_ROLE` configures policy internals.
-- Policy administration is separate from compliance operation.
-- Policy engine replacement is separate from policy wiring.
-- Token `owner()` is not the hidden center of operational authority.
+<!-- should mention treasury ? -->

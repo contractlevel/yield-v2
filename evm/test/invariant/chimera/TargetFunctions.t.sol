@@ -23,7 +23,6 @@ import {WorkflowRouter} from "../../../src/modules/WorkflowRouter.sol";
 
 abstract contract TargetFunctions is BaseTargetFunctions, Properties {
     uint256 internal constant BPS_DENOMINATOR = 10_000;
-    uint256 internal constant PERFORMANCE_FEE_BPS = 777;
     uint256 internal constant MANAGEMENT_FEE_BPS = 100;
     uint256 internal constant SHARE_BOOTSTRAP_DEPOSIT_AMOUNT = 1_000_000_000_000 * 1e6;
     address internal constant INVALID_CCIP_RECEIVER = address(1);
@@ -199,7 +198,6 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         }
 
         uint256 tvl = _activeStrategyTvl();
-        uint256 grossPricePerShare = _settlementPricePerShare(tvl);
         uint256 settlementPricePerShare = _closeEpochSettlementPricePerShare(tvl);
         uint256 totalWithdrawUsdc =
             parent.vault.getEpoch(epochNonce).totalShareBurnAmount * settlementPricePerShare / SHARE_PRECISION;
@@ -209,8 +207,6 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         if (netWithdrawAmount != 0) {
             _setActiveStrategyWithdrawReturn(netWithdrawAmount);
         }
-
-        FeeSnapshot memory feeSnapshot = _feeSnapshot();
 
         __before();
 
@@ -235,11 +231,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         __after();
 
         _recordEpochClosed(epochNonce);
-        _recordPerformanceFeeBurden(feeSnapshot, grossPricePerShare, parent.vault.getEpoch(epochNonce).pricePerShare);
         _assertCloseEpochShareAccounting(epochNonce);
-        _assertPerformanceFeeMintedToTreasury();
-        _assertPerformanceFeeConditions(tvl, grossPricePerShare);
-        _assertPerformanceFeeHighWaterMarkNotDecreased();
 
         if (_before.totalShares == 0) {
             eq(
@@ -381,7 +373,6 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _recordManagementFeeBurden(feeSnapshot);
         _assertManagementFeeMintedToTreasury();
         _assertManagementFeeAmount();
-        _assertPerformanceFeeHighWaterMarkNotDecreased();
 
         Types.Rebalance memory rebalance = parent.vault.getRebalance();
         t(rebalance.activeStrategy.protocolId == target.protocolId, "REBAL-006: active protocol mismatch");
@@ -1138,7 +1129,6 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _withdrawAndAssert(actor, shareBurnAmount, "recovery setup: shares not escrowed");
 
         uint256 tvl = _activeStrategyTvl();
-        uint256 grossPricePerShare = _settlementPricePerShare(tvl);
         uint256 settlementPricePerShare = _closeEpochSettlementPricePerShare(tvl);
         uint256 totalWithdrawUsdc = shareBurnAmount * settlementPricePerShare / SHARE_PRECISION;
         uint256 totalDepositAmount = parent.vault.getEpoch(epochNonce).totalDepositAmount;
@@ -1157,7 +1147,6 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             _withdrawAndAssert(actor, shareBurnAmount, "recovery setup: shares not escrowed");
 
             tvl = _activeStrategyTvl();
-            grossPricePerShare = _settlementPricePerShare(tvl);
             settlementPricePerShare = _closeEpochSettlementPricePerShare(tvl);
             totalWithdrawUsdc = shareBurnAmount * settlementPricePerShare / SHARE_PRECISION;
             totalDepositAmount = parent.vault.getEpoch(epochNonce).totalDepositAmount;
@@ -1167,8 +1156,6 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         t(netWithdrawAmount != 0, "recovery setup: net withdraw is zero");
 
         _setActiveStrategyWithdrawReturn(netWithdrawAmount);
-
-        FeeSnapshot memory feeSnapshot = _feeSnapshot();
 
         __before();
 
@@ -1186,8 +1173,6 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         __after();
 
         _assertCloseEpochShareAccounting(epochNonce);
-        _assertPerformanceFeeMintedToTreasury();
-        _assertPerformanceFeeHighWaterMarkNotDecreased();
 
         _breakParentDestination(activeChild);
         _executeEpochWithdraw(activeChild, epochNonce, netWithdrawAmount);
@@ -1208,7 +1193,6 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         );
 
         _recordEpochShareAccounting(epochNonce);
-        _recordPerformanceFeeBurden(feeSnapshot, grossPricePerShare, parent.vault.getEpoch(epochNonce).pricePerShare);
     }
 
     /// @notice When the outbound CCIP send message fails for a Types.CcipTx.REBALANCE
@@ -1311,7 +1295,6 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             _recordManagementFeeBurden(feeSnapshot);
             _assertManagementFeeMintedToTreasury();
             _assertManagementFeeAmount();
-            _assertPerformanceFeeHighWaterMarkNotDecreased();
         } else {
             t(false, "REC-002: invalid CCIP recovery tx type");
         }
@@ -1355,7 +1338,6 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
                 parent.vault.getRecoveryMode(),
                 parent.vault.getRebalanceDepositRecovery(),
                 parent.vault.getTotalShares(),
-                parent.vault.getPerformanceFeeHighWaterMark(),
                 parent.share.balanceOf(parent.vault.getTreasury())
             )
         );
@@ -1419,7 +1401,6 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _withdrawAndAssert(actor, shareBurnAmount, "recovery setup: shares not escrowed");
 
         uint256 tvl = _activeStrategyTvl();
-        uint256 grossPricePerShare = _settlementPricePerShare(tvl);
         uint256 settlementPricePerShare = _closeEpochSettlementPricePerShare(tvl);
         uint256 netWithdrawAmount = shareBurnAmount * settlementPricePerShare / SHARE_PRECISION;
 
@@ -1435,14 +1416,11 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             _withdrawAndAssert(actor, shareBurnAmount, "recovery setup: shares not escrowed");
 
             tvl = _activeStrategyTvl();
-            grossPricePerShare = _settlementPricePerShare(tvl);
             settlementPricePerShare = _closeEpochSettlementPricePerShare(tvl);
             netWithdrawAmount = shareBurnAmount * settlementPricePerShare / SHARE_PRECISION;
         }
 
         t(netWithdrawAmount != 0, "recovery setup: net withdraw is zero");
-
-        FeeSnapshot memory feeSnapshot = _feeSnapshot();
 
         __before();
 
@@ -1460,14 +1438,11 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         __after();
 
         _assertCloseEpochShareAccounting(epochNonce);
-        _assertPerformanceFeeMintedToTreasury();
-        _assertPerformanceFeeHighWaterMarkNotDecreased();
 
         _setActiveChildWithdrawReverts(activeChild, true);
         _executeEpochWithdraw(activeChild, epochNonce, netWithdrawAmount);
         _setActiveChildWithdrawReverts(activeChild, false);
 
-        _recordPerformanceFeeBurden(feeSnapshot, grossPricePerShare, parent.vault.getEpoch(epochNonce).pricePerShare);
         _recordEpochShareAccounting(epochNonce);
         _assertPendingEpochWithdrawRecovery(activeChild, epochNonce, netWithdrawAmount);
         t(
@@ -1589,7 +1564,6 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _recordManagementFeeBurden(feeSnapshot);
         _assertManagementFeeMintedToTreasury();
         _assertManagementFeeAmount();
-        _assertPerformanceFeeHighWaterMarkNotDecreased();
         eq(_recoveryModeCount(), 0, "REC-004: recovery mode not cleared");
     }
 
@@ -1736,7 +1710,6 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _recordManagementFeeBurden(feeSnapshot);
         _assertManagementFeeMintedToTreasury();
         _assertManagementFeeAmount();
-        _assertPerformanceFeeHighWaterMarkNotDecreased();
         eq(_recoveryModeCount(), 0, "REC-004: recovery mode not cleared");
     }
 
@@ -1780,50 +1753,9 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
     function _assertCloseEpochShareAccounting(uint256 epochNonce) internal {
         Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
-        uint256 feeShares = _after.treasuryShareBalance - _before.treasuryShareBalance;
-        uint256 expectedTotalShares =
-            _before.totalShares + feeShares + epoch.remainingShareMintAmount - epoch.totalShareBurnAmount;
+        uint256 expectedTotalShares = _before.totalShares + epoch.remainingShareMintAmount - epoch.totalShareBurnAmount;
 
         eq(_after.totalShares, expectedTotalShares, "SHARE-002: closeEpoch total share accounting mismatch");
-    }
-
-    function _assertPerformanceFeeMintedToTreasury() internal {
-        Types.Epoch memory epoch = parent.vault.getEpoch(_before.epochNonce);
-        uint256 treasuryShareIncrease = _after.treasuryShareBalance - _before.treasuryShareBalance;
-        uint256 derivedFeeShares =
-            _after.totalShares + epoch.totalShareBurnAmount - _before.totalShares - epoch.remainingShareMintAmount;
-
-        eq(derivedFeeShares, treasuryShareIncrease, "FEE-002: performance fee did not mint to treasury");
-    }
-
-    function _assertPerformanceFeeConditions(uint256 tvl, uint256 grossPricePerShare) internal {
-        uint256 actualFeeShares = _after.treasuryShareBalance - _before.treasuryShareBalance;
-        if (grossPricePerShare <= _before.performanceFeeHighWaterMark || _before.totalShares == 0) {
-            eq(actualFeeShares, 0, "FEE-001: fee minted without yield above high-water mark");
-            eq(
-                _after.performanceFeeHighWaterMark,
-                _before.performanceFeeHighWaterMark,
-                "FEE-003: high-water mark changed when no performance fee was due"
-            );
-            return;
-        }
-
-        uint256 totalYield = FixedPointMathLib.fullMulDivUp(
-            grossPricePerShare - _before.performanceFeeHighWaterMark, _before.totalShares, SHARE_PRECISION
-        );
-        uint256 feeAmount = FixedPointMathLib.fullMulDivUp(totalYield, PERFORMANCE_FEE_BPS, BPS_DENOMINATOR);
-        if (feeAmount >= tvl) {
-            eq(actualFeeShares, 0, "FEE-001: fee minted when fee consumes TVL");
-            eq(
-                _after.performanceFeeHighWaterMark,
-                _before.performanceFeeHighWaterMark,
-                "FEE-003: high-water mark changed when fee collection was skipped"
-            );
-            return;
-        }
-
-        uint256 expectedFeeShares = FixedPointMathLib.fullMulDivUp(feeAmount, _before.totalShares, tvl - feeAmount);
-        eq(actualFeeShares, expectedFeeShares, "FEE-001: incorrect performance fee shares");
     }
 
     function _assertManagementFeeMintedToTreasury() internal {
@@ -1832,7 +1764,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         eq(
             _after.totalShares,
             _before.totalShares + treasuryShareIncrease,
-            "FEE-002: management fee did not mint to treasury"
+            "FEE-001: management fee did not mint to treasury"
         );
     }
 
@@ -1848,15 +1780,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         eq(
             _after.treasuryShareBalance - _before.treasuryShareBalance,
             expectedFeeShares,
-            "FEE-004: incorrect capped management fee"
-        );
-    }
-
-    function _assertPerformanceFeeHighWaterMarkNotDecreased() internal {
-        lte(
-            _before.performanceFeeHighWaterMark,
-            _after.performanceFeeHighWaterMark,
-            "FEE-003: performance fee high-water mark decreased"
+            "FEE-002: incorrect capped management fee"
         );
     }
 
@@ -1867,18 +1791,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
     }
 
     function _closeEpochSettlementPricePerShare(uint256 tvl) internal view returns (uint256 settlementPricePerShare) {
-        uint256 grossPricePerShare = _settlementPricePerShare(tvl);
-        uint256 highWaterMark = parent.vault.getPerformanceFeeHighWaterMark();
-        if (grossPricePerShare <= highWaterMark) return grossPricePerShare;
-
-        uint256 totalShares = parent.vault.getTotalShares();
-        uint256 totalYield =
-            FixedPointMathLib.fullMulDivUp(grossPricePerShare - highWaterMark, totalShares, SHARE_PRECISION);
-        uint256 feeUsdc = FixedPointMathLib.fullMulDivUp(totalYield, PERFORMANCE_FEE_BPS, BPS_DENOMINATOR);
-        if (feeUsdc >= tvl) return grossPricePerShare;
-
-        uint256 feeShares = FixedPointMathLib.fullMulDivUp(feeUsdc, totalShares, tvl - feeUsdc);
-        return tvl * SHARE_PRECISION / (totalShares + feeShares);
+        return _settlementPricePerShare(tvl);
     }
 
     function _rebalanceTo(Types.Strategy memory target) internal {

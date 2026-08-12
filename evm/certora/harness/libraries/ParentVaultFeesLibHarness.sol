@@ -56,38 +56,8 @@ contract ParentVaultFeesLibHarness is ParentVaultStore, HelperHarness {
         );
     }
 
-    function collectPerformanceFee(
-        uint256 epochNonce,
-        uint256 tvl,
-        uint256 grossPricePerShare,
-        uint256 totalShares,
-        uint256 sharePrecision,
-        uint256 assetPrecision
-    ) external returns (uint256 settlementPricePerShare, uint256 feeShares) {
-        (settlementPricePerShare, feeShares) = ParentVaultFeesLib._collectPerformanceFee(
-            _parentVaultStorage(), epochNonce, tvl, grossPricePerShare, totalShares, i_share, sharePrecision,
-            assetPrecision
-        );
-    }
-
-    function collectPerformanceFeePublic(
-        uint256 epochNonce,
-        uint256 tvl,
-        uint256 grossPricePerShare,
-        uint256 sharePrecision,
-        uint256 assetPrecision
-    ) external returns (uint256 settlementPricePerShare) {
-        settlementPricePerShare = ParentVaultFeesLib.collectPerformanceFee(
-            _parentVaultStorage(), epochNonce, tvl, grossPricePerShare, i_share, sharePrecision, assetPrecision
-        );
-    }
-
     function getTotalShares() external view returns (uint256 totalShares) {
         totalShares = _parentVaultStorage().s_totalShares;
-    }
-
-    function getPerformanceFeeHighWaterMark() external view returns (uint256 highWaterMark) {
-        highWaterMark = _parentVaultStorage().s_performanceFeeHighWaterMark;
     }
 
     function getTreasury() external view returns (address treasury) {

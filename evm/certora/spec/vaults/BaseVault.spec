@@ -114,9 +114,9 @@ methods {
 ///      from wrappers/helpers verified present identically on both ChildVaultHarness and
 ///      ParentVaultHarness (HelperHarness is shared by both; each harness's own wrappers were written
 ///      to match) - deliberately excludes each harness's few harness-specific extras (e.g.
-///      ChildVaultHarness's ccipSend/clearCcipSendRecovery/getCcipSendRecovery* helpers,
-///      ParentVaultHarness's policyProtectedInterfaceId) since referencing a selector that doesn't
-///      exist on the other conf's verification target would fail to resolve there.
+///      ChildVaultHarness's ccipSend/clearCcipSendRecovery/getCcipSendRecovery* helpers) since
+///      referencing a selector that doesn't exist on the other conf's verification target would
+///      fail to resolve there.
 definition isHarnessHelper(method f) returns bool =
     // Harness internal-logic wrappers (present on both ChildVaultHarness and ParentVaultHarness)
     f.selector == sig:initializeBaseVault(BaseVault.InitParams).selector ||
@@ -169,11 +169,8 @@ definition isHarnessHelper(method f) returns bool =
     f.selector == sig:REBALANCE_OPERATOR_ROLE().selector ||
     f.selector == sig:EPOCH_OPERATOR_ROLE().selector ||
     f.selector == sig:LINK_OPERATOR_ROLE().selector ||
-    f.selector == sig:DONATE_OPERATOR_ROLE().selector ||
-    f.selector == sig:COMPLIANCE_OPERATOR_ROLE().selector ||
     f.selector == sig:EMERGENCY_DRAINER_ROLE().selector ||
     f.selector == sig:KEYSTONE_FORWARDER_ROLE().selector ||
-    f.selector == sig:POLICY_ENGINE_MANAGER_ROLE().selector ||
     f.selector == sig:MINTER_ROLE().selector ||
     f.selector == sig:BURNER_ROLE().selector ||
     f.selector == sig:REWARDS_OPERATOR_ROLE().selector;

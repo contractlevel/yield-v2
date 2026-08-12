@@ -77,19 +77,6 @@
   },
   {
     "type": "function",
-    "name": "attachPolicyEngine",
-    "inputs": [
-      {
-        "name": "policyEngine",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "beginDefaultAdminTransfer",
     "inputs": [
       {
@@ -223,13 +210,6 @@
         "internalType": "uint256"
       }
     ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "clearContext",
-    "inputs": [],
-    "outputs": [],
     "stateMutability": "nonpayable"
   },
   {
@@ -449,19 +429,6 @@
   },
   {
     "type": "function",
-    "name": "getContext",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes",
-        "internalType": "bytes"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "getCrosschainVault",
     "inputs": [
       {
@@ -635,32 +602,6 @@
         "name": "minDepositAmount",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getPerformanceFeeHighWaterMark",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "highWaterMark",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getPolicyEngine",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -1009,16 +950,6 @@
         "internalType": "address"
       },
       {
-        "name": "policyEngineManager",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "policyEngine",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
         "name": "cancelDepositOperator",
         "type": "address",
         "internalType": "address"
@@ -1136,13 +1067,6 @@
   },
   {
     "type": "function",
-    "name": "renounceOwnership",
-    "inputs": [],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "renounceRole",
     "inputs": [
       {
@@ -1197,19 +1121,6 @@
         "name": "gasLimit",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setContext",
-    "inputs": [
-      {
-        "name": "context",
-        "type": "bytes",
-        "internalType": "bytes"
       }
     ],
     "outputs": [],
@@ -1302,25 +1213,12 @@
     ],
     "outputs": [
       {
-        "name": "",
+        "name": "isSupported",
         "type": "bool",
         "internalType": "bool"
       }
     ],
     "stateMutability": "pure"
-  },
-  {
-    "type": "function",
-    "name": "transferOwnership",
-    "inputs": [
-      {
-        "name": "newOwner",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -1695,6 +1593,19 @@
   },
   {
     "type": "event",
+    "name": "EpochClaimable",
+    "inputs": [
+      {
+        "name": "epochNonce",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "EpochDepositExecuting",
     "inputs": [
       {
@@ -1737,6 +1648,31 @@
     "inputs": [
       {
         "name": "epochNonce",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "EpochWithdrawAmountShort",
+    "inputs": [
+      {
+        "name": "epochNonce",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "expectedAmount",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "actualAmount",
         "type": "uint256",
         "indexed": true,
         "internalType": "uint256"
@@ -1879,19 +1815,19 @@
   },
   {
     "type": "event",
-    "name": "OwnershipTransferred",
+    "name": "ManagementFeeCollected",
     "inputs": [
       {
-        "name": "previousOwner",
-        "type": "address",
+        "name": "rebalanceNonce",
+        "type": "uint256",
         "indexed": true,
-        "internalType": "address"
+        "internalType": "uint256"
       },
       {
-        "name": "newOwner",
-        "type": "address",
+        "name": "feeShares",
+        "type": "uint256",
         "indexed": true,
-        "internalType": "address"
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -1911,57 +1847,25 @@
   },
   {
     "type": "event",
-    "name": "PerformanceFeeCollected",
+    "name": "RebalanceCompleted",
     "inputs": [
       {
-        "name": "epochNonce",
+        "name": "rebalanceNonce",
         "type": "uint256",
         "indexed": true,
         "internalType": "uint256"
       },
       {
-        "name": "feeShares",
-        "type": "uint256",
+        "name": "newProtocolId",
+        "type": "bytes32",
         "indexed": true,
-        "internalType": "uint256"
+        "internalType": "bytes32"
       },
       {
-        "name": "settlementPricePerShare",
-        "type": "uint256",
+        "name": "newChainSelector",
+        "type": "uint64",
         "indexed": true,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "PolicyEngineAttached",
-    "inputs": [
-      {
-        "name": "policyEngine",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "PolicyEngineDetachFailed",
-    "inputs": [
-      {
-        "name": "policyEngine",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "reason",
-        "type": "bytes",
-        "indexed": false,
-        "internalType": "bytes"
+        "internalType": "uint64"
       }
     ],
     "anonymous": false
@@ -2627,28 +2531,6 @@
   },
   {
     "type": "error",
-    "name": "OwnableInvalidOwner",
-    "inputs": [
-      {
-        "name": "owner",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "OwnableUnauthorizedAccount",
-    "inputs": [
-      {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
     "name": "ParentVault__AmountTooSmall",
     "inputs": [
       {
@@ -2903,11 +2785,6 @@
   {
     "type": "error",
     "name": "ParentVault__ZeroTvlWithOutstandingShares",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "PolicyEngineUndefined",
     "inputs": []
   },
   {

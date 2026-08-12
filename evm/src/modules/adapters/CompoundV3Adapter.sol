@@ -112,7 +112,7 @@ contract CompoundV3Adapter is ProtocolAdapter, ICompoundV3Adapter {
         IERC20(i_asset).safeTransfer(i_vault, actualWithdrawnAmount);
     }
 
-    /// @notice Claims rewards accrued by the adapter's Comet position and sends them to a recipient
+    /// @notice Claims accrued rewards and sends any reward tokens already held by the adapter to the recipient
     /// @param to The address to receive the claimed rewards
     /// @dev Reverts if the caller does not have REWARDS_OPERATOR_ROLE on the vault
     /// @dev Reverts if to is the zero address
@@ -122,7 +122,13 @@ contract CompoundV3Adapter is ProtocolAdapter, ICompoundV3Adapter {
         }
         _revertIfZeroAddress(to);
         emit RewardsClaimed(to);
-        ICometRewards(i_cometRewards).claimTo(i_comet, address(this), to, true);
+
+        ICometRewards cometRewards = ICometRewards(i_cometRewards);
+        address rewardToken = cometRewards.rewardConfig(i_comet);
+        cometRewards.claimTo(i_comet, address(this), to, true);
+
+        uint256 rewardBalance = IERC20(rewardToken).balanceOf(address(this));
+        if (rewardBalance != 0) IERC20(rewardToken).safeTransfer(to, rewardBalance);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -152,6 +158,6 @@ contract CompoundV3Adapter is ProtocolAdapter, ICompoundV3Adapter {
     /// @notice Returns the Compound v3 rewards contract address
     /// @return cometRewards The Compound v3 rewards contract address
     function getCometRewards() external view returns (address cometRewards) {
-        return i_cometRewards;
+        cometRewards = i_cometRewards;
     }
 }

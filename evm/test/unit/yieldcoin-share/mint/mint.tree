@@ -1,0 +1,8 @@
+YieldcoinShare_mint
+├── when the caller does not have MINTER_ROLE
+│   └── it should revert with AccessControlUnauthorizedAccount
+├── when the recipient is the zero address
+│   └── it should revert with ERC20InvalidReceiver
+└── when the mint is valid
+    ├── it should increase the recipient balance and total supply
+    └── it should emit Transfer from the zero address
