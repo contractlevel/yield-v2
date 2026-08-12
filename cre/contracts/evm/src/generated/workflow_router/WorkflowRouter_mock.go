@@ -29,6 +29,7 @@ type WorkflowRouterMock struct {
 	GetAllowlistedWorkflowSelector func(GetAllowlistedWorkflowSelectorInput) (bool, error)
 	GetRoleAdmin                   func(GetRoleAdminInput) ([32]byte, error)
 	GetVault                       func() (common.Address, error)
+	GetWorkflowGeneration          func(GetWorkflowGenerationInput) (*big.Int, error)
 	GetWorkflowMetadata            func(GetWorkflowMetadataInput) (IWorkflowRouterWorkflowMetadata, error)
 	HasRole                        func(HasRoleInput) (bool, error)
 	Owner                          func() (common.Address, error)
@@ -149,6 +150,30 @@ func NewWorkflowRouterMock(address common.Address, clientMock *evmmock.ClientCap
 				return nil, err
 			}
 			return abi.Methods["getVault"].Outputs.Pack(result)
+		},
+		string(abi.Methods["getWorkflowGeneration"].ID[:4]): func(payload []byte) ([]byte, error) {
+			if mock.GetWorkflowGeneration == nil {
+				return nil, errors.New("getWorkflowGeneration method not mocked")
+			}
+			inputs := abi.Methods["getWorkflowGeneration"].Inputs
+
+			values, err := inputs.Unpack(payload)
+			if err != nil {
+				return nil, errors.New("Failed to unpack payload")
+			}
+			if len(values) != 1 {
+				return nil, errors.New("expected 1 input value")
+			}
+
+			args := GetWorkflowGenerationInput{
+				WorkflowId: values[0].([32]byte),
+			}
+
+			result, err := mock.GetWorkflowGeneration(args)
+			if err != nil {
+				return nil, err
+			}
+			return abi.Methods["getWorkflowGeneration"].Outputs.Pack(result)
 		},
 		string(abi.Methods["getWorkflowMetadata"].ID[:4]): func(payload []byte) ([]byte, error) {
 			if mock.GetWorkflowMetadata == nil {

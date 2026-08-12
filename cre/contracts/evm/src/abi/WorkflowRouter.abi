@@ -197,6 +197,25 @@
   },
   {
     "type": "function",
+    "name": "getWorkflowGeneration",
+    "inputs": [
+      {
+        "name": "workflowId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "generation",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getWorkflowMetadata",
     "inputs": [
       {
@@ -790,6 +809,27 @@
   },
   {
     "type": "error",
+    "name": "WorkflowRouter__MetadataUnchanged",
+    "inputs": [
+      {
+        "name": "workflowId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "name",
+        "type": "bytes10",
+        "internalType": "bytes10"
+      },
+      {
+        "name": "owner",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "WorkflowRouter__MetadataZero",
     "inputs": [
       {
@@ -808,6 +848,11 @@
         "internalType": "address"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "WorkflowRouter__NoSelectors",
+    "inputs": []
   },
   {
     "type": "error",
@@ -843,6 +888,17 @@
         "name": "selector",
         "type": "bytes4",
         "internalType": "bytes4"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "WorkflowRouter__WorkflowNotRegistered",
+    "inputs": [
+      {
+        "name": "workflowId",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ]
   }
