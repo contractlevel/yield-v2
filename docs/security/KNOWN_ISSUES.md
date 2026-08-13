@@ -312,7 +312,7 @@ The failure mode is delayed settlement:
 - The current epoch remains open until a valid workflow report closes it.
 - Depositors and withdrawers for that epoch cannot claim shares or assets while the epoch remains open.
 - The next epoch is not opened, so later user intents continue to accrue into the same open epoch rather than a new scheduled epoch.
-- The settlement price is based on TVL at the eventual close, not at the missed scheduled close time.
+- Settlement allocations use TVL at the eventual close, not at the missed scheduled close time.
 - For remote-strategy net-withdraw epochs, the second CRE step (`EpochWithdrawExecuting` log handling on the child chain) is required before the parent epoch can become claimable.
 - For remote-strategy net-deposit epochs, CRE must observe the destination ChildVault's `EpochDepositToStrategySuccess` event and submit `completeEpochDeposit()` before the parent epoch can become claimable.
 
@@ -404,7 +404,7 @@ Unexpected TVL changes should be investigated before epoch close where operation
 
 A third party can still use real capital to inflate the active adapter's raw protocol balance before CRE samples TVL. This can affect:
 
-- the epoch price per share,
+- the epoch's implied TVL-to-share ratio,
 - shares minted to pending depositors,
 - assets allocated to pending withdrawers,
 - management-fee accounting, and
@@ -449,7 +449,7 @@ A withdraw intent is not treated as an immediate economic exit from the vault. U
 - the withdrawer can cancel the intent and receive the escrowed shares back;
 - the shares have not been burned;
 - the withdrawal amount has not been price-locked;
-- the user remains exposed to the epoch's eventual settlement price; and
+- the user remains exposed to the epoch's eventual settlement ratio; and
 - the shares remain part of the vault's authoritative share accounting.
 
 For that reason, management fee collection uses the same `s_totalShares` value that the rest of the vault treats as authoritative before epoch settlement. Excluding pending-withdraw shares from the management-fee base would require either decrementing `s_totalShares` at withdraw submission or tracking a separate pending-withdraw fee exclusion. That would add cancel-withdraw, close-epoch, and claim-path complexity and would create a split between shares that are still economically exposed to settlement and shares counted for management-fee purposes.
@@ -477,34 +477,35 @@ The failure mode is an accepted fee-timing effect of epoch-batched withdrawal se
 
 ---
 
-## KI-010 — Bootstrap price-per-share ignores residual TVL when total shares return to zero
+## KI-010 — Bootstrap share allocation ignores residual TVL when total shares return to zero
 
 **Status:** Accepted — bounded to dust-level amounts and further mitigated operationally by a permanent admin seed deposit.
 
 **Last reviewed:** 2026-07-10
 
-**Component:** `ParentVaultFeesLib._calculatePricePerShare`, `ParentVaultEpochLib.closeEpoch`.
+**Component:** `ParentVaultEpochLib.closeEpoch`.
 
 ### Summary
 
-`_calculatePricePerShare` prices shares at par (`sharePrecision`) whenever `s_totalShares == 0`, regardless of `tvl`:
+When `s_totalShares == 0`, `closeEpoch` allocates bootstrap shares from the deposit amount and token precisions, regardless of `tvl`:
 
 ```solidity
-uint256 totalShares = $.s_totalShares;
-if (totalShares != 0 && tvl != 0) {
-    pricePerShare = tvl * sharePrecision / totalShares;
-    ...
-} else if (totalShares == 0) {
-    pricePerShare = sharePrecision;
+if (accounting.totalShares == 0) {
+    accounting.newShares = ParentVaultMathLib._mulDivDown(
+        accounting.totalDepositAmount,
+        params.sharePrecision,
+        params.assetPrecision
+    );
+}
 ```
 
 `s_totalShares` can reach exactly zero through ordinary use: a full-supply exit, where the last holder's withdraw intent burns all outstanding shares in a `closeEpoch`. Nothing prevents this — `minDepositAmount` only floors new mints, not burns.
 
 At the epoch closing a full exit, the withdraw amount pulled from the strategy is the epoch's computed `netWithdrawAmount` (derived from the operator-supplied `tvl` snapshot), not a "withdraw everything" call. If the strategy's actual balance drifts even slightly above that snapshot by execution time (e.g. interest accrued between the CRE workflow's off-chain TVL read and the on-chain `closeEpoch` transaction), a small residual is left behind in the adapter after `s_totalShares` hits zero.
 
-The next epoch's depositor then mints shares at par against `_calculatePricePerShare`, which ignores that residual. Their shares end up backed by `residual + their own deposit`, so they receive the residual for free instead of it going to the exited shareholders.
+The next epoch's depositor then receives the bootstrap share allocation, which ignores that residual. Their shares end up backed by `residual + their own deposit`, so they receive the residual for free instead of it going to the exited shareholders.
 
-The root cause is bootstrap pricing ignoring existing TVL when `s_totalShares == 0`, allowing the first depositor after a full reset to capture residual value.
+The root cause is bootstrap share allocation ignoring existing TVL when `s_totalShares == 0`, allowing the first depositor after a full reset to capture residual value.
 
 ### Why this is accepted, not mitigated
 
@@ -520,7 +521,7 @@ The root cause is bootstrap pricing ignoring existing TVL when `s_totalShares ==
 
 ### Residual risk
 
-If the seed-deposit practice is not followed, or the admin's seed position is ever fully redeemed alongside all other holders, the next depositor after a full-supply reset can receive a small amount of value (bounded by inter-transaction yield accrual / rounding on the prior full exit) that arguably belonged to the exited shareholders. This does not affect protocol solvency, other users' balances, or any live position — it is a bounded, one-time bootstrap-pricing artifact, and under normal operation is not expected to be reachable at all.
+If the seed-deposit practice is not followed, or the admin's seed position is ever fully redeemed alongside all other holders, the next depositor after a full-supply reset can receive a small amount of value (bounded by inter-transaction yield accrual / rounding on the prior full exit) that arguably belonged to the exited shareholders. This does not affect protocol solvency, other users' balances, or any live position — it is a bounded, one-time bootstrap-allocation artifact, and under normal operation is not expected to be reachable at all.
 
 ### Conditions that would warrant revisiting
 

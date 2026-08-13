@@ -21,8 +21,7 @@ abstract contract ParentVaultStore {
     /// have not yet been burned, so totalSupply() would read higher than the true count during that window.
     /// @param s_epochNonce Nonce of the currently open epoch. Starts at 1 in initialize(), so a
     /// previous epoch nonce of 0 means no prior epoch exists.
-    /// @param s_epochs Per-epoch-nonce accounting: total deposit and withdraw amounts, price per share,
-    /// remaining claimable amounts, open timestamp, and status.
+    /// @param s_epochs Per-epoch-nonce deposit, withdrawal, claim-pool, timestamp, and status accounting.
     /// @param s_deposits Per-depositor, per-epoch underlying-asset amount deposited.
     /// @param s_withdraws Per-withdrawer, per-epoch share amount escrowed for burning.
     /// @param s_supportedProtocol Protocol IDs Yieldcoin v2 supports across all chains. This CAN include

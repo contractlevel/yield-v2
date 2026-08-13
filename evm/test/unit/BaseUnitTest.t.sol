@@ -199,8 +199,13 @@ abstract contract BaseUnitTest is BaseTest {
     }
 
     function _setParentEpochStatus(uint256 epochNonce, Types.EpochStatus status) internal {
-        stdstore.target(address(s_parentVault)).sig("getEpoch(uint256)").with_key(epochNonce).depth(9)
+        stdstore.target(address(s_parentVault)).sig("getEpoch(uint256)").with_key(epochNonce).depth(8)
             .checked_write(uint256(status));
+    }
+
+    function _setParentEpochTotalShareBurnAmount(uint256 epochNonce, uint256 totalShareBurnAmount) internal {
+        stdstore.target(address(s_parentVault)).sig("getEpoch(uint256)").with_key(epochNonce).depth(1)
+            .checked_write(totalShareBurnAmount);
     }
 
     function _setParentActiveStrategy(bytes32 protocolId, uint64 chainSelector) internal {

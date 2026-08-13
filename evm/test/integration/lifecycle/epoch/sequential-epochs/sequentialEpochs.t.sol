@@ -43,7 +43,6 @@ contract SequentialEpochs_EpochIntegrationTest is BaseIntegrationTest {
         _warpPastMinEpoch();
         _closeEpochThroughWorkflow(parent.workflowRouter, WORKFLOW_ID, WORKFLOW_NAME, i_owner, epochTwoTvl);
 
-        uint256 expectedPricePerShare = epochTwoTvl * YIELD_PRECISION / s_sharesA;
         uint256 expectedRecipientShares = epochTwoDeposit * s_sharesA / epochTwoTvl;
 
         _changePrank(i_recipient1);
@@ -53,7 +52,6 @@ contract SequentialEpochs_EpochIntegrationTest is BaseIntegrationTest {
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.CLAIMABLE));
         assertEq(uint256(parent.vault.getEpoch(3).status), uint256(Types.EpochStatus.OPEN));
         assertEq(parent.vault.getEpochNonce(), 3);
-        assertEq(parent.vault.getEpoch(2).pricePerShare, expectedPricePerShare);
         assertEq(parent.share.balanceOf(i_depositor), s_sharesA);
         assertEq(parent.share.balanceOf(i_recipient1), expectedRecipientShares);
         assertEq(parent.vault.getDepositAmount(i_depositor, 2), 0);

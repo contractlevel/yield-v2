@@ -529,17 +529,6 @@ ghost uint256 ghost_epoch_totalWithdrawClaimAmount_StoredValue {
     init_state axiom ghost_epoch_totalWithdrawClaimAmount_StoredValue == 0;
 }
 
-/// ─── s_epochs[epochNonce].pricePerShare ──────────────────────────
-ghost mathint ghost_epoch_pricePerShare_StoreCount {
-    init_state axiom ghost_epoch_pricePerShare_StoreCount == 0;
-}
-ghost uint256 ghost_epoch_pricePerShare_StoredKey {
-    init_state axiom ghost_epoch_pricePerShare_StoredKey == 0;
-}
-ghost uint256 ghost_epoch_pricePerShare_StoredValue {
-    init_state axiom ghost_epoch_pricePerShare_StoredValue == 0;
-}
-
 /// ─── s_epochs[epochNonce].remainingDepositClaimAmount ────────────
 ghost mathint ghost_epoch_remainingDepositClaimAmount_StoreCount {
     init_state axiom ghost_epoch_remainingDepositClaimAmount_StoreCount == 0;
@@ -939,12 +928,6 @@ hook Sstore currentContract.ext_yieldcoin_storage_ParentVault.s_epochs[KEY uint2
     ghost_epoch_totalWithdrawClaimAmount_StoreCount = ghost_epoch_totalWithdrawClaimAmount_StoreCount + 1;
     ghost_epoch_totalWithdrawClaimAmount_StoredKey = epochNonce;
     ghost_epoch_totalWithdrawClaimAmount_StoredValue = newValue;
-}
-
-hook Sstore currentContract.ext_yieldcoin_storage_ParentVault.s_epochs[KEY uint256 epochNonce].pricePerShare uint256 newValue {
-    ghost_epoch_pricePerShare_StoreCount = ghost_epoch_pricePerShare_StoreCount + 1;
-    ghost_epoch_pricePerShare_StoredKey = epochNonce;
-    ghost_epoch_pricePerShare_StoredValue = newValue;
 }
 
 hook Sstore currentContract.ext_yieldcoin_storage_ParentVault.s_epochs[KEY uint256 epochNonce].remainingDepositClaimAmount uint256 newValue {
@@ -4866,6 +4849,11 @@ rule EPOCH_004_EPOCH_014_NONCE_010_closeEpoch_DEPOSIT_TO_LOCAL_STRATEGY_Success(
     assert ghost_EpochDepositToStrategySuccess_EventCount == 1;
     assert ghost_EpochDepositToStrategySuccess_Param_epochNonce == epochNonce;
     assert ghost_EpochDepositToStrategySuccess_Param_amount == depositAmount;
+    assert getTotalShares() == 1000000000000000000;
+    assert getEpoch(epochNonce).remainingDepositClaimAmount == depositAmount;
+    assert getEpoch(epochNonce).remainingShareMintAmount == 1000000000000000000;
+    assert getEpoch(epochNonce).totalWithdrawClaimAmount == 0;
+    assert getEpoch(epochNonce).remainingWithdrawClaimAmount == 0;
     assert getEpochNonce() == epochNonce + 1;
     assert ghost_EpochOpen_EventCount == 1;
     assert ghost_EpochOpen_Param_epochNonce == epochNonce + 1;
@@ -4998,6 +4986,11 @@ rule EPOCH_004_EPOCH_014_NONCE_010_closeEpoch_SEND_DEPOSIT_TO_REMOTE_STRATEGY_Su
     assert ghost_EpochDepositExecuting_EventCount == 1;
     assert ghost_EpochDepositExecuting_Param_epochNonce == epochNonce;
     assert ghost_EpochDepositExecuting_Param_amount == depositAmount;
+    assert getTotalShares() == 1000000000000000000;
+    assert getEpoch(epochNonce).remainingDepositClaimAmount == depositAmount;
+    assert getEpoch(epochNonce).remainingShareMintAmount == 1000000000000000000;
+    assert getEpoch(epochNonce).totalWithdrawClaimAmount == 0;
+    assert getEpoch(epochNonce).remainingWithdrawClaimAmount == 0;
     assert getEpochNonce() == epochNonce + 1;
     assert ghost_EpochOpen_EventCount == 1;
     assert ghost_EpochOpen_Param_epochNonce == epochNonce + 1;
@@ -5062,6 +5055,10 @@ rule EPOCH_004_EPOCH_014_NONCE_010_closeEpoch_WITHDRAW_FROM_LOCAL_STRATEGY_Succe
     assert ghost_EpochWithdrawFromStrategySuccess_Param_amount == shareBurnAmount;
     assert ghost_EpochClaimable_EventCount == 1;
     assert ghost_EpochClaimable_Param_epochNonce == epochNonce;
+    assert getTotalShares() == 500000;
+    assert getEpoch(epochNonce).remainingShareBurnAmount == shareBurnAmount;
+    assert getEpoch(epochNonce).totalWithdrawClaimAmount == shareBurnAmount;
+    assert getEpoch(epochNonce).remainingWithdrawClaimAmount == shareBurnAmount;
     assert getEpochNonce() == epochNonce + 1;
     assert ghost_EpochOpen_EventCount == 1;
     assert ghost_EpochOpen_Param_epochNonce == epochNonce + 1;
@@ -5158,6 +5155,10 @@ rule EPOCH_004_EPOCH_014_NONCE_010_closeEpoch_WAIT_FOR_REMOTE_WITHDRAW_Success()
     assert ghost_EpochWithdrawExecuting_EventCount == 1;
     assert ghost_EpochWithdrawExecuting_Param_epochNonce == epochNonce;
     assert ghost_EpochWithdrawExecuting_Param_amount == shareBurnAmount;
+    assert getTotalShares() == 500000;
+    assert getEpoch(epochNonce).remainingShareBurnAmount == shareBurnAmount;
+    assert getEpoch(epochNonce).totalWithdrawClaimAmount == shareBurnAmount;
+    assert getEpoch(epochNonce).remainingWithdrawClaimAmount == shareBurnAmount;
     assert getEpochNonce() == epochNonce + 1;
     assert ghost_EpochOpen_EventCount == 1;
     assert ghost_EpochOpen_Param_epochNonce == epochNonce + 1;

@@ -40,8 +40,10 @@ interface IParentVault is IBaseVault {
     error ParentVault__EmptyEpoch(uint256 epochNonce);
     /// @dev Thrown when closeEpoch is called with zero TVL while shares are outstanding
     error ParentVault__ZeroTvlWithOutstandingShares();
-    /// @dev Thrown when the price per share rounds down to zero (near-total loss with a large outstanding share supply)
+    /// @dev Thrown when the scaled TVL-to-share ratio rounds down to zero
     error ParentVault__ZeroPricePerShare();
+    /// @dev Thrown when an epoch contains shares to burn while the authoritative share supply is zero
+    error ParentVault__ShareBurnWithZeroTotalShares();
     /// @dev Thrown when closeEpoch would settle deposits into too few shares for minimum-size depositors
     error ParentVault__DepositWouldMintZeroShares();
     /// @dev Thrown when the epoch is not executing
@@ -294,7 +296,8 @@ interface IParentVault is IBaseVault {
     /// @dev Reverts if the current epoch has been open for less than MIN_EPOCH_PERIOD
     /// @dev Reverts if the epoch contains neither deposits nor withdraw intents
     /// @dev Reverts if tvl is zero while shares are outstanding
-    /// @dev Reverts if the resulting price per share rounds down to zero
+    /// @dev Reverts if the scaled TVL-to-share ratio rounds down to zero
+    /// @dev Reverts if shares are submitted for withdrawal while the authoritative share supply is zero
     /// @dev Reverts if deposit settlement would allocate zero shares to a minimum-size deposit
     /// @dev Requires any local strategy or CCIP interaction selected by the net-flow branch to succeed
     /// @dev The preceding-epoch guard prevents claims and strategy changes while a remote epoch remains executing
@@ -373,7 +376,6 @@ interface IParentVault is IBaseVault {
     ///         uint256 totalDepositAmount - the total underlying asset deposited in the epoch
     ///         uint256 totalShareBurnAmount - the total shares submitted for withdraw in the epoch
     ///         uint256 totalWithdrawClaimAmount - the total underlying asset allocated to epoch withdraw claims
-    ///         uint256 pricePerShare - the settlement price per share
     ///         uint256 remainingDepositClaimAmount - the unclaimed underlying asset attributed to deposits
     ///         uint256 remainingShareMintAmount - the shares remaining to mint for deposits
     ///         uint256 remainingShareBurnAmount - the escrowed shares remaining to burn for withdraw claims

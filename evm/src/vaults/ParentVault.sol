@@ -287,7 +287,8 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /// @dev Reverts if the current epoch has been open for less than MIN_EPOCH_PERIOD
     /// @dev Reverts if the epoch contains neither deposits nor withdraw intents
     /// @dev Reverts if tvl is zero while shares are outstanding
-    /// @dev Reverts if the resulting price per share rounds down to zero
+    /// @dev Reverts if the scaled TVL-to-share ratio rounds down to zero
+    /// @dev Reverts if shares are submitted for withdrawal while the authoritative share supply is zero
     /// @dev Reverts if deposit settlement would allocate zero shares to a minimum-size deposit
     /// @dev Requires any local strategy or CCIP interaction selected by the net-flow branch to succeed
     /// @dev The preceding-epoch guard prevents claims and strategy changes while a remote epoch remains executing
@@ -304,7 +305,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
         address activeAdapter = $_baseVault.s_activeProtocolAdapter;
         bool isLocalStrategy = activeAdapter != address(0);
         ParentVaultEpochLib.CloseEpochExternalAction memory externalAction = ParentVaultEpochLib.closeEpoch(
-            $, tvl, i_share, SHARE_PRECISION, i_assetPrecision, i_minDepositAmount, isLocalStrategy
+            $, tvl, SHARE_PRECISION, i_assetPrecision, i_minDepositAmount, isLocalStrategy
         );
 
         if (externalAction.action == ParentVaultEpochLib.ExternalAction.DEPOSIT_TO_LOCAL_STRATEGY) {
@@ -505,7 +506,6 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     ///         uint256 totalDepositAmount - the total underlying asset deposited in the epoch
     ///         uint256 totalShareBurnAmount - the total shares submitted for withdraw in the epoch
     ///         uint256 totalWithdrawClaimAmount - the total underlying asset allocated to epoch withdraw claims
-    ///         uint256 pricePerShare - the settlement price per share
     ///         uint256 remainingDepositClaimAmount - the unclaimed underlying asset attributed to deposits
     ///         uint256 remainingShareMintAmount - the shares remaining to mint for deposits
     ///         uint256 remainingShareBurnAmount - the escrowed shares remaining to burn for withdraw claims

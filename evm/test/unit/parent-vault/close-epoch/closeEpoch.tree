@@ -15,8 +15,10 @@ ParentVault_closeEpoch
 │   └── it should revert with ParentVault__EmptyEpoch
 ├── when TVL is zero and shares are outstanding
 │   └── it should revert with ParentVault__ZeroTvlWithOutstandingShares
-├── when price per share rounds down to zero
+├── when the scaled TVL-to-share ratio rounds down to zero
 │   └── it should revert with ParentVault__ZeroPricePerShare
+├── when shares are submitted for burn with zero authoritative shares
+│   └── it should revert with ParentVault__ShareBurnWithZeroTotalShares
 ├── when deposits would settle into too few aggregate shares
 │   ├── it should revert with ParentVault__DepositWouldMintZeroShares
 │   ├── it should leave the epoch open
@@ -25,12 +27,10 @@ ParentVault_closeEpoch
 │   └── it should revert with ParentVault__EpochNotClaimable
 ├── when TVL is restored by donation
 │   └── it should close the current epoch
-├── it should store bootstrap pricePerShare on the epoch
-├── when shares exist
-│   └── it should store calculated pricePerShare on the epoch
 ├── it should store totalWithdrawClaimAmount on the epoch
 ├── it should initialize remaining claim amounts on the epoch
 ├── it should update totalShares
+├── it should settle deposits and withdrawals with direct full-precision ratios
 ├── it should make the epoch claimable
 ├── it should open the next epoch
 ├── when local strategy has net deposit

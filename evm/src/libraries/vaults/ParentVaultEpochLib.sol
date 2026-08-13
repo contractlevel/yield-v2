@@ -3,7 +3,6 @@ pragma solidity 0.8.34;
 
 import {ParentVaultStore} from "../../vaults/ParentVaultStore.sol";
 import {IParentVault} from "../../interfaces/vaults/IParentVault.sol";
-import {ParentVaultFeesLib} from "./ParentVaultFeesLib.sol";
 import {ParentVaultMathLib} from "./ParentVaultMathLib.sol";
 import {Types} from "../Types.sol";
 
@@ -49,7 +48,6 @@ library ParentVaultEpochLib {
 
     struct CloseEpochParams {
         uint256 tvl;
-        address share;
         uint256 sharePrecision;
         uint256 assetPrecision;
         uint256 minDepositAmount;
@@ -60,7 +58,6 @@ library ParentVaultEpochLib {
         uint256 totalDepositAmount;
         uint256 totalShareBurnAmount;
         uint256 totalShares;
-        uint256 settlementPricePerShare;
         uint256 totalWithdraw;
         uint256 newShares;
         int256 netFlow;
@@ -91,9 +88,8 @@ library ParentVaultEpochLib {
     /// @notice Settles the current epoch and returns the external action ParentVault must execute
     /// @param $ ParentVault namespaced storage
     /// @param tvl The underlying-asset value of the active strategy before settling the current epoch
-    /// @param share The Yieldcoin share token
     /// @param sharePrecision The share precision factor
-    /// @param assetPrecision The underlying asset precision factor, used as the bootstrap price per share
+    /// @param assetPrecision The underlying asset precision factor used for bootstrap share allocation
     /// @param minDepositAmount The minimum deposit amount
     /// @param isLocalStrategy Whether this chain currently has the active strategy adapter
     /// @return externalAction The external action, epoch nonce, net amount, and total deposit amount ParentVault
@@ -103,27 +99,25 @@ library ParentVaultEpochLib {
     /// @dev Reverts if the preceding epoch is not claimable
     /// @dev Reverts if the current epoch is not open or has been open for less than MIN_EPOCH_PERIOD
     /// @dev Reverts if the epoch contains neither deposits nor withdraw intents
-    /// @dev Reverts if TVL is zero while shares are outstanding or the resulting price per share is zero
+    /// @dev Reverts if TVL is zero while shares are outstanding or the scaled TVL-to-share ratio is zero
+    /// @dev Reverts if shares are submitted for withdrawal while the authoritative share supply is zero
     /// @dev Reverts if deposit settlement would allocate zero shares to a minimum-size deposit
-    /// @dev Computes the settlement price per share before computing net flow
     function closeEpoch(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 tvl,
-        address share,
         uint256 sharePrecision,
         uint256 assetPrecision,
         uint256 minDepositAmount,
         bool isLocalStrategy
     ) public returns (CloseEpochExternalAction memory externalAction) {
-        externalAction = _closeEpoch($, tvl, share, sharePrecision, assetPrecision, minDepositAmount, isLocalStrategy);
+        externalAction = _closeEpoch($, tvl, sharePrecision, assetPrecision, minDepositAmount, isLocalStrategy);
     }
 
     /// @notice Settles the current epoch and returns the external action ParentVault must execute
     /// @param $ ParentVault namespaced storage
     /// @param tvl The underlying-asset value of the active strategy before settling the current epoch
-    /// @param share The Yieldcoin share token
     /// @param sharePrecision The share precision factor
-    /// @param assetPrecision The underlying asset precision factor, used as the bootstrap price per share
+    /// @param assetPrecision The underlying asset precision factor used for bootstrap share allocation
     /// @param minDepositAmount The minimum deposit amount
     /// @param isLocalStrategy Whether this chain currently has the active strategy adapter
     /// @return externalAction The external action, epoch nonce, net amount, and total deposit amount ParentVault
@@ -133,13 +127,12 @@ library ParentVaultEpochLib {
     /// @dev Reverts if the preceding epoch is not claimable
     /// @dev Reverts if the current epoch is not open or has been open for less than MIN_EPOCH_PERIOD
     /// @dev Reverts if the epoch contains neither deposits nor withdraw intents
-    /// @dev Reverts if TVL is zero while shares are outstanding or the resulting price per share is zero
+    /// @dev Reverts if TVL is zero while shares are outstanding or the scaled TVL-to-share ratio is zero
+    /// @dev Reverts if shares are submitted for withdrawal while the authoritative share supply is zero
     /// @dev Reverts if deposit settlement would allocate zero shares to a minimum-size deposit
-    /// @dev Computes the settlement price per share before computing net flow
     function _closeEpoch(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 tvl,
-        address share,
         uint256 sharePrecision,
         uint256 assetPrecision,
         uint256 minDepositAmount,
@@ -147,7 +140,6 @@ library ParentVaultEpochLib {
     ) internal returns (CloseEpochExternalAction memory externalAction) {
         CloseEpochParams memory params = CloseEpochParams({
             tvl: tvl,
-            share: share,
             sharePrecision: sharePrecision,
             assetPrecision: assetPrecision,
             minDepositAmount: minDepositAmount,
@@ -183,16 +175,26 @@ library ParentVaultEpochLib {
         }
 
         accounting.totalShares = $.s_totalShares;
-        accounting.settlementPricePerShare = ParentVaultFeesLib._calculatePricePerShare(
-            params.tvl, accounting.totalShares, params.sharePrecision, params.assetPrecision
-        );
+        if (accounting.totalShares != 0) {
+            if (params.tvl == 0) revert IParentVault.ParentVault__ZeroTvlWithOutstandingShares();
+            if (ParentVaultMathLib._mulDivDown(params.tvl, params.sharePrecision, accounting.totalShares) == 0) {
+                revert IParentVault.ParentVault__ZeroPricePerShare();
+            }
 
-        accounting.totalWithdraw = ParentVaultMathLib._mulDivDown(
-            accounting.totalShareBurnAmount, accounting.settlementPricePerShare, params.sharePrecision
-        );
+            accounting.totalWithdraw =
+                ParentVaultMathLib._mulDivDown(accounting.totalShareBurnAmount, params.tvl, accounting.totalShares);
+            accounting.newShares =
+                ParentVaultMathLib._mulDivDown(accounting.totalDepositAmount, accounting.totalShares, params.tvl);
+        } else {
+            if (accounting.totalShareBurnAmount != 0) {
+                revert IParentVault.ParentVault__ShareBurnWithZeroTotalShares();
+            }
+            accounting.newShares = ParentVaultMathLib._mulDivDown(
+                accounting.totalDepositAmount, params.sharePrecision, params.assetPrecision
+            );
+        }
+
         accounting.netFlow = int256(accounting.totalDepositAmount) - int256(accounting.totalWithdraw);
-
-        accounting.newShares = _calculateNewShares(params, accounting.totalDepositAmount, accounting.totalShares);
         if (
             accounting.totalDepositAmount != 0
                 && accounting.newShares * params.minDepositAmount < accounting.totalDepositAmount
@@ -203,7 +205,6 @@ library ParentVaultEpochLib {
         // deposit allocation and submitted withdrawals.
         $.s_totalShares = accounting.totalShares + accounting.newShares - accounting.totalShareBurnAmount;
 
-        s_epoch.pricePerShare = accounting.settlementPricePerShare;
         s_epoch.remainingDepositClaimAmount = accounting.totalDepositAmount;
         s_epoch.remainingShareMintAmount = accounting.newShares;
         s_epoch.remainingShareBurnAmount = accounting.totalShareBurnAmount;
@@ -251,16 +252,6 @@ library ParentVaultEpochLib {
                 emit EpochWithdrawExecuting(epochNonce, netWithdrawAmount);
             }
         }
-    }
-
-    function _calculateNewShares(CloseEpochParams memory params, uint256 totalDepositAmount, uint256 totalShares)
-        private
-        pure
-        returns (uint256 newShares)
-    {
-        newShares = ParentVaultFeesLib._calculateNewShares(
-            params.tvl, totalDepositAmount, totalShares, params.sharePrecision, params.assetPrecision
-        );
     }
 
     /// @notice Completes the most recently closed remote net-deposit epoch

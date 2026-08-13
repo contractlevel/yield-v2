@@ -15,96 +15,95 @@ contract ParentVault_ClaimAssetUnitTest is BaseUnitTest {
     uint256 internal constant SHARE_BURN_AMOUNT = 100 * YIELD_PRECISION;
     uint256 internal constant LARGE_DEPOSIT_AMOUNT = 1000 * 1e6;
     uint256 internal constant EXPECTED_ASSET = 100 * ASSET_PRECISION;
+    uint256 internal constant WITHDRAW_EPOCH_NONCE = 2;
+    uint256 internal constant OPEN_EPOCH_NONCE = 3;
 
     function setUp() public {
-        // Mint shares to withdrawer via the vault (which holds MINTER_ROLE)
-        _changePrank(address(s_parentVault));
-        s_yieldcoin.mint(i_withdrawer, SHARE_BURN_AMOUNT);
-
-        // Deposit enough asset so netFlow > 0 → epoch closes to CLAIMABLE without CCIP
-        deal(address(s_mockUsdc), i_depositor, LARGE_DEPOSIT_AMOUNT);
-        _changePrank(i_depositor);
-        s_mockUsdc.approve(address(s_parentVault), type(uint256).max);
-        s_parentVault.deposit(LARGE_DEPOSIT_AMOUNT);
-
-        // Submit withdraw intent
+        // Epoch 1: deposit and claim 1,000 shares at bootstrap par.
+        deal(address(s_mockUsdc), i_withdrawer, LARGE_DEPOSIT_AMOUNT);
         _changePrank(i_withdrawer);
-        s_yieldcoin.approve(address(s_parentVault), type(uint256).max);
-        s_parentVault.withdraw(SHARE_BURN_AMOUNT);
+        s_mockUsdc.approve(address(s_parentVault), LARGE_DEPOSIT_AMOUNT);
+        s_parentVault.deposit(LARGE_DEPOSIT_AMOUNT);
+        _closeEpoch(0);
+        _changePrank(i_withdrawer);
+        s_parentVault.claimShares(1);
 
-        // Advance time past minimum epoch period and close epoch 1
-        vm.warp(block.timestamp + MIN_EPOCH_PERIOD + 1);
-        _changePrank(i_epochOperator);
-        s_parentVault.closeEpoch(0);
-        // Bootstrap price is one whole asset per one whole share.
+        // Epoch 2: withdraw 100 shares from 1,000 USDC of strategy TVL.
+        s_yieldcoin.approve(address(s_parentVault), SHARE_BURN_AMOUNT);
+        s_parentVault.withdraw(SHARE_BURN_AMOUNT);
+        _closeEpoch(LARGE_DEPOSIT_AMOUNT);
+
+        // MockProtocolAdapter reports the withdrawn amount but does not transfer mock USDC.
+        deal(address(s_mockUsdc), address(s_parentVault), EXPECTED_ASSET);
 
         _changePrank(i_withdrawer);
     }
 
     function test_ParentVault_claimAsset_RevertWhen_Paused() public givenContractIsPaused(address(s_parentVault)) {
         vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
-        s_parentVault.claimAsset(1);
+        s_parentVault.claimAsset(WITHDRAW_EPOCH_NONCE);
     }
 
     function test_ParentVault_claimAsset_RevertWhen_EpochNotClaimable() public {
-        // Epoch 2 is OPEN after setUp, not CLAIMABLE
-        vm.expectRevert(abi.encodeWithSelector(IParentVault.ParentVault__EpochNotClaimable.selector, 2));
-        s_parentVault.claimAsset(2);
+        vm.expectRevert(abi.encodeWithSelector(IParentVault.ParentVault__EpochNotClaimable.selector, OPEN_EPOCH_NONCE));
+        s_parentVault.claimAsset(OPEN_EPOCH_NONCE);
     }
 
     function test_ParentVault_claimAsset_RevertWhen_NoWithdraw() public {
         _changePrank(i_nonOwner);
-        vm.expectRevert(abi.encodeWithSelector(IParentVault.ParentVault__NoWithdraw.selector, i_nonOwner, 1));
-        s_parentVault.claimAsset(1);
+        vm.expectRevert(
+            abi.encodeWithSelector(IParentVault.ParentVault__NoWithdraw.selector, i_nonOwner, WITHDRAW_EPOCH_NONCE)
+        );
+        s_parentVault.claimAsset(WITHDRAW_EPOCH_NONCE);
     }
 
     function test_ParentVault_claimAsset_Success_TransfersAsset() public {
         uint256 withdrawerBefore = s_mockUsdc.balanceOf(i_withdrawer);
-        s_parentVault.claimAsset(1);
+        s_parentVault.claimAsset(WITHDRAW_EPOCH_NONCE);
         assertEq(s_mockUsdc.balanceOf(i_withdrawer), withdrawerBefore + EXPECTED_ASSET);
     }
 
     function test_ParentVault_claimAsset_Success_BurnsShares() public {
         uint256 supplyBefore = s_yieldcoin.totalSupply();
-        s_parentVault.claimAsset(1);
+        s_parentVault.claimAsset(WITHDRAW_EPOCH_NONCE);
         assertEq(s_yieldcoin.totalSupply(), supplyBefore - SHARE_BURN_AMOUNT);
     }
 
     function test_ParentVault_claimAsset_Success_SingleClaimantZeroesRemainingCounters() public {
-        s_parentVault.claimAsset(1);
+        s_parentVault.claimAsset(WITHDRAW_EPOCH_NONCE);
 
-        assertEq(s_parentVault.getEpoch(1).remainingShareBurnAmount, 0);
-        assertEq(s_parentVault.getEpoch(1).remainingWithdrawClaimAmount, 0);
+        assertEq(s_parentVault.getEpoch(WITHDRAW_EPOCH_NONCE).remainingShareBurnAmount, 0);
+        assertEq(s_parentVault.getEpoch(WITHDRAW_EPOCH_NONCE).remainingWithdrawClaimAmount, 0);
     }
 
     function test_ParentVault_claimAsset_Success_DeletesWithdrawMapping() public {
-        s_parentVault.claimAsset(1);
-        assertEq(s_parentVault.getWithdrawShareBurnAmount(i_withdrawer, 1), 0);
+        s_parentVault.claimAsset(WITHDRAW_EPOCH_NONCE);
+        assertEq(s_parentVault.getWithdrawShareBurnAmount(i_withdrawer, WITHDRAW_EPOCH_NONCE), 0);
     }
 
     function test_ParentVault_claimAsset_Success_ReturnsWithdrawAmount() public {
-        uint256 withdrawAmount = s_parentVault.claimAsset(1);
+        uint256 withdrawAmount = s_parentVault.claimAsset(WITHDRAW_EPOCH_NONCE);
         assertEq(withdrawAmount, EXPECTED_ASSET);
     }
 
     function test_ParentVault_claimAsset_Success_UsesTotalWithdrawClaimAmount() public {
         uint256 adjustedWithdrawClaimAmount = EXPECTED_ASSET - 1;
-        stdstore.target(address(s_parentVault)).sig("getEpoch(uint256)").with_key(1).depth(2)
+        stdstore.target(address(s_parentVault)).sig("getEpoch(uint256)").with_key(WITHDRAW_EPOCH_NONCE).depth(2)
             .checked_write(adjustedWithdrawClaimAmount);
-        stdstore.target(address(s_parentVault)).sig("getEpoch(uint256)").with_key(1).depth(7)
+        stdstore.target(address(s_parentVault)).sig("getEpoch(uint256)").with_key(WITHDRAW_EPOCH_NONCE).depth(6)
             .checked_write(adjustedWithdrawClaimAmount);
 
-        uint256 withdrawAmount = s_parentVault.claimAsset(1);
+        uint256 withdrawAmount = s_parentVault.claimAsset(WITHDRAW_EPOCH_NONCE);
 
         assertEq(withdrawAmount, adjustedWithdrawClaimAmount);
     }
 
     function test_ParentVault_claimAsset_Success_EmitsWithdrawClaimed() public {
         vm.recordLogs();
-        s_parentVault.claimAsset(1);
+        s_parentVault.claimAsset(WITHDRAW_EPOCH_NONCE);
         Vm.Log memory log =
             _assertEmittedBy(keccak256("WithdrawClaimed(uint256,address,uint256)"), address(s_parentVault));
-        assertEq(uint256(log.topics[1]), 1);
+        assertEq(uint256(log.topics[1]), WITHDRAW_EPOCH_NONCE);
         assertEq(address(uint160(uint256(log.topics[2]))), i_withdrawer);
         assertEq(uint256(log.topics[3]), EXPECTED_ASSET);
     }

@@ -139,7 +139,6 @@ library Types {
     /// @param totalDepositAmount The total underlying asset recorded for deposit intents, reduced by cancellations while OPEN and fixed at settlement
     /// @param totalShareBurnAmount The total shares recorded for withdraw intents, reduced by cancellations while OPEN and fixed at settlement
     /// @param totalWithdrawClaimAmount The underlying asset allocated to withdraw claims at settlement; provisional during a remote withdraw
-    /// @param pricePerShare The price per share set when the epoch settles
     /// @param remainingDepositClaimAmount The unclaimed underlying-asset deposit amount used for shrinking-pool share claims
     /// @param remainingShareMintAmount The unclaimed shares to mint for deposit claims
     /// @param remainingShareBurnAmount The unclaimed shares submitted for withdraw claims
@@ -154,7 +153,6 @@ library Types {
         uint256 totalDepositAmount;
         uint256 totalShareBurnAmount;
         uint256 totalWithdrawClaimAmount;
-        uint256 pricePerShare;
         uint256 remainingDepositClaimAmount;
         uint256 remainingShareMintAmount;
         uint256 remainingShareBurnAmount;

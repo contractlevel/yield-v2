@@ -4,7 +4,7 @@ Epochs batch user deposits and withdraw intents into discrete settlement periods
 
 Users submit deposits and withdraw intents to [`ParentVault`](../../evm/src/vaults/ParentVault.sol) during the current open epoch. Deposits escrow the underlying asset. Withdraw intents escrow Yieldcoin shares. No deposit shares are minted immediately when a user deposits.
 
-At epoch close, the CRE [workflow](../../cre/workflow/) reads TVL from the active strategy chain, then calls `ParentVault.closeEpoch(tvl)` through [`WorkflowRouter`](../../evm/src/modules/WorkflowRouter.sol). The vault uses that CRE-supplied TVL to settle the epoch price, account for new deposit shares, account for shares submitted for withdrawal, and open the next epoch.
+At epoch close, the CRE [workflow](../../cre/workflow/) reads TVL from the active strategy chain, then calls `ParentVault.closeEpoch(tvl)` through [`WorkflowRouter`](../../evm/src/modules/WorkflowRouter.sol). The vault uses that CRE-supplied TVL to calculate deposit-share allocations and withdrawal-asset entitlements directly, then opens the next epoch.
 
 After settlement:
 
@@ -19,7 +19,7 @@ If the active strategy is local to the parent chain, settlement can complete syn
 An epoch moves through up to three statuses after it opens:
 
 - `OPEN` — the epoch accepts deposits and withdraw intents.
-- `EXECUTING` — settlement has priced the epoch, but a remote strategy operation is not yet confirmed on ParentVault. A remote net deposit waits for successful ChildVault deposit acknowledgement; a remote net withdrawal waits for the child withdrawal and CCIP return path.
+- `EXECUTING` — settlement has calculated the epoch allocations, but a remote strategy operation is not yet confirmed on ParentVault. A remote net deposit waits for successful ChildVault deposit acknowledgement; a remote net withdrawal waits for the child withdrawal and CCIP return path.
 - `CLAIMABLE` — settlement is finalized. Depositors and withdrawers can claim.
 
 `NONE` is the zero value for a nonce that has never been opened, not a state an opened epoch passes through.
@@ -32,7 +32,6 @@ The returned `Epoch` value includes:
 
 - `totalDepositAmount` / `totalShareBurnAmount` — the epoch's total inflow and outflow, fixed at settlement.
 - `totalWithdrawClaimAmount` — the total underlying asset available for withdraw claims. For a remote net withdrawal, the value recorded at epoch close is provisional and is replaced with the actual amount returned through CCIP before the epoch becomes `CLAIMABLE`.
-- `pricePerShare` — the settlement price used to convert between asset and shares for this epoch.
 - `remainingDepositClaimAmount` / `remainingShareMintAmount` — the unclaimed portion of deposit-side settlement; both reach zero once every depositor has claimed.
 - `remainingShareBurnAmount` / `remainingWithdrawClaimAmount` — the unclaimed portion of withdraw-side settlement; both reach zero once every withdrawer has claimed.
 - `openedAtTimestamp` — when the epoch opened; used to enforce the minimum epoch period before it can close.

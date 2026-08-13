@@ -35,7 +35,7 @@ More deposits than withdrawals. Active strategy is on Parent chain.
 
 - **CRE cron triggers** closeEpoch(tvl) on Parent.
 
-- Parent calculates pricePerShare, newShares, totalWithdraw, netFlow.
+- Parent calculates `newShares` and `totalWithdraw` directly from TVL and authoritative shares, then calculates `netFlow`.
 
 - Parent updates totalShares: += newShares, -= totalShareBurnAmount.
 
@@ -61,7 +61,7 @@ More withdrawals than deposits. Active strategy is on Parent chain.
 
 - **CRE cron triggers** closeEpoch(tvl) on Parent.
 
-- Parent calculates pricePerShare, newShares, totalWithdraw, netFlow.
+- Parent calculates `newShares` and `totalWithdraw` directly from TVL and authoritative shares, then calculates `netFlow`.
 
 - Parent updates totalShares: += newShares, -= totalShareBurnAmount.
 
@@ -87,7 +87,7 @@ More deposits than withdrawals. Active strategy is on a Child chain.
 
 - **CRE cron triggers** closeEpoch(tvl) on Parent.
 
-- Parent calculates pricePerShare, newShares, totalWithdraw, netFlow.
+- Parent calculates `newShares` and `totalWithdraw` directly from TVL and authoritative shares, then calculates `netFlow`.
 
 - Parent updates totalShares: += newShares, -= totalShareBurnAmount.
 
@@ -119,7 +119,7 @@ More withdrawals than deposits. Active strategy is on a Child chain.
 
 - **CRE cron triggers** closeEpoch(tvl) on Parent.
 
-- Parent calculates pricePerShare, newShares, totalWithdraw, netFlow.
+- Parent calculates `newShares` and `totalWithdraw` directly from TVL and authoritative shares, then calculates `netFlow`.
 
 - Parent updates totalShares: += newShares, -= totalShareBurnAmount.
 

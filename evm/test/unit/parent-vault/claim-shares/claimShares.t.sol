@@ -87,8 +87,7 @@ contract ParentVault_ClaimSharesUnitTest is BaseUnitTest {
         uint256 totalDeposit = firstDeposit + secondDeposit + thirdDeposit;
         uint256 totalShares = 1_000 * YIELD_PRECISION;
         uint256 tvl = 2_000 * 1e6;
-        uint256 pricePerShare = 2 * ASSET_PRECISION;
-        uint256 expectedTotalMinted = totalDeposit * SHARE_PRECISION / pricePerShare;
+        uint256 expectedTotalMinted = totalDeposit * totalShares / tvl;
         uint256 expectedFirstMint = firstDeposit * expectedTotalMinted / totalDeposit;
         uint256 expectedSecondMint =
             secondDeposit * (expectedTotalMinted - expectedFirstMint) / (totalDeposit - firstDeposit);
@@ -137,8 +136,7 @@ contract ParentVault_ClaimSharesUnitTest is BaseUnitTest {
         uint256 epochOneTotalDeposit = firstDeposit + secondDeposit + thirdDeposit;
         uint256 totalShares = 1_000 * YIELD_PRECISION;
         uint256 tvl = 2_000 * 1e6;
-        uint256 pricePerShare = 2 * ASSET_PRECISION;
-        uint256 epochOneTotalMinted = epochOneTotalDeposit * SHARE_PRECISION / pricePerShare;
+        uint256 epochOneTotalMinted = epochOneTotalDeposit * totalShares / tvl;
         uint256 firstMint = firstDeposit * epochOneTotalMinted / epochOneTotalDeposit;
         uint256 epochTwoTotalMinted = DEPOSIT_AMOUNT * (totalShares + epochOneTotalMinted) / tvl;
 

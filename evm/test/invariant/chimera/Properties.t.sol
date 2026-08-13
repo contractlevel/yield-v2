@@ -46,6 +46,15 @@ abstract contract Properties is BeforeAfter, Asserts {
         );
     }
 
+    function invariant_EPOCH_017_openEpochShareBurnDoesNotExceedAuthoritativeShares() public {
+        uint256 epochNonce = parent.vault.getEpochNonce();
+        lte(
+            parent.vault.getEpoch(epochNonce).totalShareBurnAmount,
+            parent.vault.getTotalShares(),
+            "EPOCH-017: open epoch share burns exceed authoritative shares"
+        );
+    }
+
     /// @dev The protocol mocks do not model involuntary strategy loss. This fixture-only
     ///      conservation check is not evidence of production principal protection.
     function invariant_SOLV_005_losslessFixtureEntitlementCoversPrincipalNetOfFees() public {

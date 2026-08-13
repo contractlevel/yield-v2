@@ -185,22 +185,21 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             _assertCloseRejectedAndUnchanged(0, "EPOCH-017: zero TVL accepted with outstanding shares");
 
             if (authoritativeShares > SHARE_PRECISION) {
-                _assertCloseRejectedAndUnchanged(1, "EPOCH-017: zero price-per-share settlement succeeded");
+                _assertCloseRejectedAndUnchanged(1, "EPOCH-017: zero scaled TVL-to-share ratio accepted");
             }
 
             uint256 highTvl = type(uint128).max;
-            uint256 settlementPrice = _closeEpochSettlementPricePerShare(highTvl);
             uint256 deposits = parent.vault.getEpoch(epochNonce).totalDepositAmount;
-            uint256 newShares = deposits * SHARE_PRECISION / settlementPrice;
+            uint256 newShares = deposits * authoritativeShares / highTvl;
             if (deposits != 0 && newShares * MIN_DEPOSIT_AMOUNT < deposits) {
                 _assertCloseRejectedAndUnchanged(highTvl, "EPOCH-018: zero-share deposit allocation succeeded");
             }
         }
 
         uint256 tvl = _activeStrategyTvl();
-        uint256 settlementPricePerShare = _closeEpochSettlementPricePerShare(tvl);
-        uint256 totalWithdrawUsdc =
-            parent.vault.getEpoch(epochNonce).totalShareBurnAmount * settlementPricePerShare / SHARE_PRECISION;
+        uint256 totalWithdrawUsdc = authoritativeShares == 0
+            ? 0
+            : parent.vault.getEpoch(epochNonce).totalShareBurnAmount * tvl / authoritativeShares;
         uint256 totalDepositAmount = parent.vault.getEpoch(epochNonce).totalDepositAmount;
         uint256 netWithdrawAmount = totalWithdrawUsdc > totalDepositAmount ? totalWithdrawUsdc - totalDepositAmount : 0;
 
@@ -208,6 +207,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             _setActiveStrategyWithdrawReturn(netWithdrawAmount);
         }
 
+        _recordEpochSettlement(epochNonce, tvl, authoritativeShares);
         __before();
 
         _warpPastEpoch(epochNonce);
@@ -232,14 +232,6 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         _recordEpochClosed(epochNonce);
         _assertCloseEpochShareAccounting(epochNonce);
-
-        if (_before.totalShares == 0) {
-            eq(
-                parent.vault.getEpoch(epochNonce).pricePerShare,
-                ASSET_PRECISION,
-                "EPOCH-017: bootstrap price is not asset precision"
-            );
-        }
 
         eq(_after.epochNonce, epochNonce + 1, "EPOCH-004/NONCE-010: closeEpoch did not increment epoch nonce");
         t(
@@ -1129,8 +1121,8 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _withdrawAndAssert(actor, shareBurnAmount, "recovery setup: shares not escrowed");
 
         uint256 tvl = _activeStrategyTvl();
-        uint256 settlementPricePerShare = _closeEpochSettlementPricePerShare(tvl);
-        uint256 totalWithdrawUsdc = shareBurnAmount * settlementPricePerShare / SHARE_PRECISION;
+        uint256 totalShares = parent.vault.getTotalShares();
+        uint256 totalWithdrawUsdc = shareBurnAmount * tvl / totalShares;
         uint256 totalDepositAmount = parent.vault.getEpoch(epochNonce).totalDepositAmount;
         uint256 netWithdrawAmount = totalWithdrawUsdc - totalDepositAmount;
 
@@ -1147,8 +1139,8 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             _withdrawAndAssert(actor, shareBurnAmount, "recovery setup: shares not escrowed");
 
             tvl = _activeStrategyTvl();
-            settlementPricePerShare = _closeEpochSettlementPricePerShare(tvl);
-            totalWithdrawUsdc = shareBurnAmount * settlementPricePerShare / SHARE_PRECISION;
+            totalShares = parent.vault.getTotalShares();
+            totalWithdrawUsdc = shareBurnAmount * tvl / totalShares;
             totalDepositAmount = parent.vault.getEpoch(epochNonce).totalDepositAmount;
             netWithdrawAmount = totalWithdrawUsdc - totalDepositAmount;
         }
@@ -1401,8 +1393,8 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _withdrawAndAssert(actor, shareBurnAmount, "recovery setup: shares not escrowed");
 
         uint256 tvl = _activeStrategyTvl();
-        uint256 settlementPricePerShare = _closeEpochSettlementPricePerShare(tvl);
-        uint256 netWithdrawAmount = shareBurnAmount * settlementPricePerShare / SHARE_PRECISION;
+        uint256 totalShares = parent.vault.getTotalShares();
+        uint256 netWithdrawAmount = shareBurnAmount * tvl / totalShares;
 
         if (netWithdrawAmount == 0) {
             _bootstrapActorShares(actor);
@@ -1416,8 +1408,8 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             _withdrawAndAssert(actor, shareBurnAmount, "recovery setup: shares not escrowed");
 
             tvl = _activeStrategyTvl();
-            settlementPricePerShare = _closeEpochSettlementPricePerShare(tvl);
-            netWithdrawAmount = shareBurnAmount * settlementPricePerShare / SHARE_PRECISION;
+            totalShares = parent.vault.getTotalShares();
+            netWithdrawAmount = shareBurnAmount * tvl / totalShares;
         }
 
         t(netWithdrawAmount != 0, "recovery setup: net withdraw is zero");
@@ -1782,16 +1774,6 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             expectedFeeShares,
             "FEE-002: incorrect capped management fee"
         );
-    }
-
-    function _settlementPricePerShare(uint256 tvl) internal view returns (uint256 pricePerShare) {
-        uint256 totalShares = parent.vault.getTotalShares();
-        if (totalShares != 0 && tvl != 0) return tvl * SHARE_PRECISION / totalShares;
-        return ASSET_PRECISION;
-    }
-
-    function _closeEpochSettlementPricePerShare(uint256 tvl) internal view returns (uint256 settlementPricePerShare) {
-        return _settlementPricePerShare(tvl);
     }
 
     function _rebalanceTo(Types.Strategy memory target) internal {

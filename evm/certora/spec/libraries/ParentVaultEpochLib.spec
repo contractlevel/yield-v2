@@ -1,5 +1,3 @@
-using MockYieldcoinShare as share;
-
 /// Verification of ParentVaultEpochLib
 /// @author @contractlevel
 /// @notice ParentVaultEpochLib handles ParentVault epoch closing, local net-withdraw finalization, and opening the next epoch.
@@ -14,12 +12,10 @@ methods {
     function getPreviousEpochNonce() external returns (uint256) envfree;
     function getPreviousEpochStatus() external returns (Types.EpochStatus) envfree;
     function getTotalShares() external returns (uint256) envfree;
-    function getTreasury() external returns (address) envfree;
     function getRebalanceState() external returns (Types.RebalanceState) envfree;
     function getEpochTotalDepositAmount(uint256) external returns (uint256) envfree;
     function getEpochTotalShareBurnAmount(uint256) external returns (uint256) envfree;
     function getEpochTotalWithdrawClaimAmount(uint256) external returns (uint256) envfree;
-    function getEpochPricePerShare(uint256) external returns (uint256) envfree;
     function getEpochRemainingDepositClaimAmount(uint256) external returns (uint256) envfree;
     function getEpochRemainingShareMintAmount(uint256) external returns (uint256) envfree;
     function getEpochRemainingShareBurnAmount(uint256) external returns (uint256) envfree;
@@ -34,15 +30,9 @@ methods {
     function finalizeLocalNetWithdraw(uint256, uint256, uint256) external;
     function openNextEpoch(uint256) external;
 
-    // Mock methods
-    function share.balanceOf(address) external returns (uint256) envfree;
-    function share.totalSupply() external returns (uint256) envfree;
-
     // Harness helper methods
     function bytes32ToUint256(bytes32) external returns (uint256) envfree;
 
-    // Dispatcher summaries
-    function _.mint(address, uint256) external => DISPATCHER(true);
 }
 
 /*//////////////////////////////////////////////////////////////
@@ -255,7 +245,7 @@ rule EPOCH_003_closeEpoch_RevertWhen_RebalanceInProgress() {
         "minimum epoch period has elapsed";
     require getEpochTotalDepositAmount(getEpochNonce()) == 1, "one asset unit is deposited";
     require getEpochTotalShareBurnAmount(getEpochNonce()) == 0, "no shares are burned";
-    require getTotalShares() == 0, "bootstrap price per share path";
+    require getTotalShares() == 0, "bootstrap share-allocation path";
     require tvl == 0, "bootstrap tvl is zero";
     require sharePrecision == 1, "share precision is one";
     require minDepositAmount == 1, "minimum deposit amount is one";
@@ -291,7 +281,7 @@ rule closeEpoch_RevertWhen_CurrentEpochNonceIsZero() {
         "minimum epoch period has elapsed";
     require getEpochTotalDepositAmount(0) == 1, "one asset unit is deposited";
     require getEpochTotalShareBurnAmount(0) == 0, "no shares are burned";
-    require getTotalShares() == 0, "bootstrap price per share path";
+    require getTotalShares() == 0, "bootstrap share-allocation path";
     require tvl == 0, "bootstrap tvl is zero";
     require sharePrecision == 1, "share precision is one";
     require minDepositAmount == 1, "minimum deposit amount is one";
@@ -332,7 +322,7 @@ rule EPOCH_003_closeEpoch_RevertWhen_PreviousEpochNotClaimable() {
         "minimum epoch period has elapsed";
     require getEpochTotalDepositAmount(epochNonce) == 1, "one asset unit is deposited";
     require getEpochTotalShareBurnAmount(epochNonce) == 0, "no shares are burned";
-    require getTotalShares() == 0, "bootstrap price per share path";
+    require getTotalShares() == 0, "bootstrap share-allocation path";
     require tvl == 0, "bootstrap tvl is zero";
     require sharePrecision == 1, "share precision is one";
     require minDepositAmount == 1, "minimum deposit amount is one";
@@ -373,7 +363,7 @@ rule closeEpoch_RevertWhen_EpochNotOpen() {
         "minimum epoch period has elapsed";
     require getEpochTotalDepositAmount(epochNonce) == 1, "one asset unit is deposited";
     require getEpochTotalShareBurnAmount(epochNonce) == 0, "no shares are burned";
-    require getTotalShares() == 0, "bootstrap price per share path";
+    require getTotalShares() == 0, "bootstrap share-allocation path";
     require tvl == 0, "bootstrap tvl is zero";
     require sharePrecision == 1, "share precision is one";
     require minDepositAmount == 1, "minimum deposit amount is one";
@@ -414,7 +404,7 @@ rule closeEpoch_RevertWhen_EpochOpenTimestampOverflows() {
         "minimum epoch period addition overflows";
     require getEpochTotalDepositAmount(epochNonce) == 1, "one asset unit is deposited";
     require getEpochTotalShareBurnAmount(epochNonce) == 0, "no shares are burned";
-    require getTotalShares() == 0, "bootstrap price per share path";
+    require getTotalShares() == 0, "bootstrap share-allocation path";
     require tvl == 0, "bootstrap tvl is zero";
     require sharePrecision == 1, "share precision is one";
     require minDepositAmount == 1, "minimum deposit amount is one";
@@ -455,7 +445,7 @@ rule EPOCH_016_closeEpoch_RevertWhen_EpochTooShort() {
         "minimum epoch period has not elapsed";
     require getEpochTotalDepositAmount(epochNonce) == 1, "one asset unit is deposited";
     require getEpochTotalShareBurnAmount(epochNonce) == 0, "no shares are burned";
-    require getTotalShares() == 0, "bootstrap price per share path";
+    require getTotalShares() == 0, "bootstrap share-allocation path";
     require tvl == 0, "bootstrap tvl is zero";
     require sharePrecision == 1, "share precision is one";
     require minDepositAmount == 1, "minimum deposit amount is one";
@@ -496,7 +486,7 @@ rule EPOCH_016_closeEpoch_RevertWhen_EmptyEpoch() {
         "minimum epoch period has elapsed";
     require getEpochTotalDepositAmount(epochNonce) == 0, "total deposit amount is zero";
     require getEpochTotalShareBurnAmount(epochNonce) == 0, "total share burn amount is zero";
-    require getTotalShares() == 0, "bootstrap price per share path";
+    require getTotalShares() == 0, "bootstrap share-allocation path";
     require tvl == 0, "bootstrap tvl is zero";
     require sharePrecision == 1, "share precision is one";
     require minDepositAmount == 1, "minimum deposit amount is one";
@@ -550,6 +540,48 @@ rule EPOCH_017_closeEpoch_RevertWhen_ZeroTvlWithOutstandingShares() {
     assert EpochLifecycleEventCountsAreZero();
 }
 
+/// @notice Closing an epoch reverts when shares are submitted for burn with zero authoritative supply.
+/// @dev Verifies the bootstrap branch rejects inconsistent share accounting before settlement.
+rule EPOCH_017_closeEpoch_RevertWhen_ShareBurnExistsWithZeroTotalShares() {
+    env e;
+    bool isLocalStrategy;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "closeEpoch is nonpayable";
+    require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
+    require getEpochNonce() != 0, "current epoch nonce is nonzero";
+    require getEpochNonce() == 1 || getPreviousEpochStatus() == Types.EpochStatus.CLAIMABLE,
+        "previous epoch is claimable when required";
+
+    uint256 epochNonce = getEpochNonce();
+    uint256 minEpochPeriod = getMinEpochPeriod();
+
+    /// @dev revert condition being verified
+    require getEpochStatus(epochNonce) == Types.EpochStatus.OPEN, "epoch is open";
+    require getEpochOpenedAtTimestamp(epochNonce) <= max_uint256 - minEpochPeriod,
+        "minimum epoch period addition does not overflow";
+    require e.block.timestamp >= getEpochOpenedAtTimestamp(epochNonce) + minEpochPeriod,
+        "minimum epoch period has elapsed";
+    require getEpochTotalDepositAmount(epochNonce) == 0, "no assets are deposited";
+    require getEpochTotalShareBurnAmount(epochNonce) == 1, "one share unit is submitted for burn";
+    require getTotalShares() == 0, "authoritative share supply is zero";
+
+    /// @dev ghost starting values
+    require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
+    require ghost_totalShares_StoreCount == 0, "total shares store count starts at zero";
+    require ghost_epoch_totalWithdrawClaimAmount_StoreCount == 0,
+        "totalWithdrawClaimAmount store count starts at zero";
+    require ghost_epoch_status_StoreCount == 0, "epoch status store count starts at zero";
+
+    closeEpoch@withrevert(e, 0, 1, 1, 1, isLocalStrategy);
+
+    assert lastReverted;
+    assert EpochLifecycleEventCountsAreZero();
+    assert ghost_totalShares_StoreCount == 0;
+    assert ghost_epoch_totalWithdrawClaimAmount_StoreCount == 0;
+    assert ghost_epoch_status_StoreCount == 0;
+}
+
 /// @notice Closing an epoch reverts when deposits would mint zero shares.
 /// @dev Verifies the explicit zero-share deposit guard, not fee collection behavior.
 rule EPOCH_018_closeEpoch_RevertWhen_DepositWouldMintZeroShares() {
@@ -581,9 +613,9 @@ rule EPOCH_018_closeEpoch_RevertWhen_DepositWouldMintZeroShares() {
     require sharePrecision != 0, "share precision is nonzero";
     require totalShares != 0, "shares are outstanding";
     require tvl != 0, "tvl is nonzero";
-    require tvl <= max_uint256 / sharePrecision, "gross price per share does not overflow";
-    mathint grossPricePerShare = tvl * sharePrecision / totalShares;
-    require grossPricePerShare != 0, "gross price per share is nonzero";
+    require tvl <= max_uint256 / sharePrecision, "scaled ratio product does not overflow";
+    mathint scaledTvlToShareRatio = tvl * sharePrecision / totalShares;
+    require scaledTvlToShareRatio != 0, "scaled TVL-to-share ratio is nonzero";
     require getEpochTotalDepositAmount(epochNonce) <= max_uint256 / totalShares,
         "new share calculation does not overflow";
     mathint newShares = getEpochTotalDepositAmount(epochNonce) * totalShares / tvl;
@@ -603,7 +635,7 @@ rule EPOCH_018_closeEpoch_RevertWhen_DepositWouldMintZeroShares() {
 }
 
 /// @notice Closing an epoch reverts when share precision is zero.
-/// @dev Verifies the total-withdraw mulDiv denominator guard even when no shares are burned.
+/// @dev Verifies that bootstrap allocation cannot mint shares when the numerator precision is zero.
 rule closeEpoch_RevertWhen_SharePrecisionIsZero() {
     env e;
     uint256 minDepositAmount;
@@ -628,7 +660,7 @@ rule closeEpoch_RevertWhen_SharePrecisionIsZero() {
     require getEpochTotalDepositAmount(epochNonce) != 0, "total deposit amount is nonzero";
     require getEpochTotalDepositAmount(epochNonce) <= max_uint256 / 2, "deposit amount fits int256";
     require getEpochTotalShareBurnAmount(epochNonce) == 0, "no shares are burned";
-    require getTotalShares() == 0, "bootstrap price per share path";
+    require getTotalShares() == 0, "bootstrap share-allocation path";
     uint256 tvl = 0;
     uint256 sharePrecision = 0;
     uint256 assetPrecision = 1;
@@ -668,7 +700,7 @@ rule closeEpoch_RevertWhen_AssetPrecisionIsZero() {
     require getEpochTotalDepositAmount(epochNonce) != 0, "total deposit amount is nonzero";
     require getEpochTotalDepositAmount(epochNonce) <= max_uint256 / 2, "deposit amount fits int256";
     require getEpochTotalShareBurnAmount(epochNonce) == 0, "no shares are burned";
-    require getTotalShares() == 0, "bootstrap price per share path";
+    require getTotalShares() == 0, "bootstrap share-allocation path";
     uint256 tvl = 0;
     uint256 sharePrecision = 1;
     uint256 assetPrecision = 0;
@@ -682,9 +714,9 @@ rule closeEpoch_RevertWhen_AssetPrecisionIsZero() {
     assert EpochLifecycleEventCountsAreZero();
 }
 
-/// @notice Closing an epoch reverts when the full-precision gross price per share exceeds uint256.
-/// @dev Verifies the price-per-share mulDiv result-overflow path.
-rule closeEpoch_RevertWhen_GrossPricePerShareOverflows() {
+/// @notice Closing an epoch reverts when the scaled TVL-to-share quotient exceeds uint256.
+/// @dev Verifies the near-total-loss guard's full-precision mulDiv result-overflow path.
+rule closeEpoch_RevertWhen_ScaledTvlToShareRatioOverflows() {
     env e;
     uint256 tvl = max_uint256;
     uint256 sharePrecision = max_uint256;
@@ -760,9 +792,9 @@ rule closeEpoch_RevertWhen_TotalWithdrawOverflows() {
     assert EpochLifecycleEventCountsAreZero();
 }
 
-/// @notice Closing an epoch reverts when the full-precision new-share amount exceeds uint256.
-/// @dev Verifies the deposit-share mulDiv result-overflow path.
-rule closeEpoch_RevertWhen_NewSharesOverflows() {
+/// @notice Closing a bootstrap epoch reverts when the full-precision new-share amount exceeds uint256.
+/// @dev Verifies the bootstrap deposit-share mulDiv result-overflow path.
+rule closeEpoch_RevertWhen_BootstrapNewSharesOverflows() {
     env e;
     uint256 sharePrecision = max_uint256;
     uint256 assetPrecision = 1;
@@ -788,7 +820,7 @@ rule closeEpoch_RevertWhen_NewSharesOverflows() {
         "minimum epoch period has elapsed";
     require depositAmount == max_uint256 / 2, "deposit amount is the maximum positive int256";
     require getEpochTotalShareBurnAmount(epochNonce) == 0, "no shares are burned";
-    require getTotalShares() == 0, "bootstrap price per share path";
+    require getTotalShares() == 0, "bootstrap share-allocation path";
 
     uint256 tvl = 0;
     /// @dev ghost starting values
@@ -800,9 +832,47 @@ rule closeEpoch_RevertWhen_NewSharesOverflows() {
     assert EpochLifecycleEventCountsAreZero();
 }
 
-/// @notice Closing an epoch reverts when settlement price per share is zero.
-/// @dev Verifies the explicit zero-price-per-share guard before new-share calculation.
-rule EPOCH_017_closeEpoch_RevertWhen_SettlementPricePerShareIsZero() {
+/// @notice Closing an existing-supply epoch reverts when the full-precision new-share amount exceeds uint256.
+/// @dev Verifies the direct deposit-share mulDiv result-overflow path independently of bootstrap allocation.
+rule closeEpoch_RevertWhen_ExistingSupplyNewSharesOverflows() {
+    env e;
+    uint256 tvl = 1;
+    uint256 sharePrecision = max_uint256;
+    uint256 minDepositAmount;
+    bool isLocalStrategy;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "closeEpoch is nonpayable";
+    require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
+    require getEpochNonce() != 0, "current epoch nonce is nonzero";
+    require getEpochNonce() == 1 || getPreviousEpochStatus() == Types.EpochStatus.CLAIMABLE,
+        "previous epoch is claimable when required";
+
+    uint256 epochNonce = getEpochNonce();
+    uint256 minEpochPeriod = getMinEpochPeriod();
+
+    /// @dev revert condition being verified
+    require getEpochStatus(epochNonce) == Types.EpochStatus.OPEN, "epoch is open";
+    require getEpochOpenedAtTimestamp(epochNonce) <= max_uint256 - minEpochPeriod,
+        "minimum epoch period addition does not overflow";
+    require e.block.timestamp >= getEpochOpenedAtTimestamp(epochNonce) + minEpochPeriod,
+        "minimum epoch period has elapsed";
+    require getEpochTotalDepositAmount(epochNonce) == 2, "two asset units are deposited";
+    require getEpochTotalShareBurnAmount(epochNonce) == 0, "no shares are burned";
+    require getTotalShares() == max_uint256, "maximum share supply is outstanding";
+
+    /// @dev ghost starting values
+    require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
+
+    closeEpoch@withrevert(e, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+
+    assert lastReverted;
+    assert EpochLifecycleEventCountsAreZero();
+}
+
+/// @notice Closing an epoch reverts when the scaled TVL-to-share ratio is zero.
+/// @dev Verifies the near-total-loss guard before deposit and withdrawal settlement.
+rule EPOCH_017_closeEpoch_RevertWhen_ScaledTvlToShareRatioIsZero() {
     env e;
     uint256 tvl;
     uint256 sharePrecision;
@@ -832,13 +902,113 @@ rule EPOCH_017_closeEpoch_RevertWhen_SettlementPricePerShareIsZero() {
     require sharePrecision != 0, "share precision is nonzero";
     require totalShares != 0, "shares are outstanding";
     require tvl != 0, "tvl is nonzero";
-    require tvl <= max_uint256 / sharePrecision, "gross price per share does not overflow";
-    require tvl * sharePrecision < totalShares, "settlement price per share is zero";
+    require tvl <= max_uint256 / sharePrecision, "scaled ratio product does not overflow";
+    require tvl * sharePrecision < totalShares, "scaled TVL-to-share ratio is zero";
 
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
     closeEpoch@withrevert(e, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+
+    assert lastReverted;
+    assert EpochLifecycleEventCountsAreZero();
+}
+
+/// @notice Closing an epoch reverts when signed net-flow subtraction overflows positively.
+/// @dev The withdrawal amount casts to int256.min while the deposit amount casts to int256.max.
+rule closeEpoch_RevertWhen_NetFlowSubtractionOverflowsPositive() {
+    env e;
+    bool isLocalStrategy;
+
+    require e.msg.value == 0, "closeEpoch is nonpayable";
+    require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
+    require getEpochNonce() != 0, "current epoch nonce is nonzero";
+    require getEpochNonce() == 1 || getPreviousEpochStatus() == Types.EpochStatus.CLAIMABLE,
+        "previous epoch is claimable when required";
+
+    uint256 epochNonce = getEpochNonce();
+    uint256 minEpochPeriod = getMinEpochPeriod();
+    uint256 maxInt = max_uint256 / 2;
+    uint256 minIntAsUint = 0x8000000000000000000000000000000000000000000000000000000000000000;
+
+    require getEpochStatus(epochNonce) == Types.EpochStatus.OPEN, "epoch is open";
+    require getEpochOpenedAtTimestamp(epochNonce) <= max_uint256 - minEpochPeriod,
+        "minimum epoch period addition does not overflow";
+    require e.block.timestamp >= getEpochOpenedAtTimestamp(epochNonce) + minEpochPeriod,
+        "minimum epoch period has elapsed";
+    require getTotalShares() == 2, "two authoritative share units exist";
+    require getEpochTotalDepositAmount(epochNonce) == maxInt, "deposit casts to int256.max";
+    require getEpochTotalShareBurnAmount(epochNonce) == 2, "all shares are submitted for burn";
+
+    require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
+
+    closeEpoch@withrevert(e, minIntAsUint, 1, 1, maxInt, isLocalStrategy);
+
+    assert lastReverted;
+    assert EpochLifecycleEventCountsAreZero();
+}
+
+/// @notice Closing an epoch reverts when signed net-flow subtraction overflows negatively.
+/// @dev The deposit amount casts to int256.min and a one-unit withdrawal is subtracted from it.
+rule closeEpoch_RevertWhen_NetFlowSubtractionOverflowsNegative() {
+    env e;
+    bool isLocalStrategy;
+
+    require e.msg.value == 0, "closeEpoch is nonpayable";
+    require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
+    require getEpochNonce() != 0, "current epoch nonce is nonzero";
+    require getEpochNonce() == 1 || getPreviousEpochStatus() == Types.EpochStatus.CLAIMABLE,
+        "previous epoch is claimable when required";
+
+    uint256 epochNonce = getEpochNonce();
+    uint256 minEpochPeriod = getMinEpochPeriod();
+    uint256 minIntAsUint = 0x8000000000000000000000000000000000000000000000000000000000000000;
+
+    require getEpochStatus(epochNonce) == Types.EpochStatus.OPEN, "epoch is open";
+    require getEpochOpenedAtTimestamp(epochNonce) <= max_uint256 - minEpochPeriod,
+        "minimum epoch period addition does not overflow";
+    require e.block.timestamp >= getEpochOpenedAtTimestamp(epochNonce) + minEpochPeriod,
+        "minimum epoch period has elapsed";
+    require getTotalShares() == 2, "two authoritative share units exist";
+    require getEpochTotalDepositAmount(epochNonce) == minIntAsUint, "deposit casts to int256.min";
+    require getEpochTotalShareBurnAmount(epochNonce) == 1, "one share unit is submitted for burn";
+
+    require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
+
+    closeEpoch@withrevert(e, 2, 1, 1, 1, isLocalStrategy);
+
+    assert lastReverted;
+    assert EpochLifecycleEventCountsAreZero();
+}
+
+/// @notice Closing an epoch reverts when negating int256.min to derive the withdraw action amount.
+/// @dev Bootstrap allocation succeeds and produces netFlow == int256.min before the negation.
+rule closeEpoch_RevertWhen_NetWithdrawNegationOverflows() {
+    env e;
+    bool isLocalStrategy;
+
+    require e.msg.value == 0, "closeEpoch is nonpayable";
+    require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
+    require getEpochNonce() != 0, "current epoch nonce is nonzero";
+    require getEpochNonce() == 1 || getPreviousEpochStatus() == Types.EpochStatus.CLAIMABLE,
+        "previous epoch is claimable when required";
+
+    uint256 epochNonce = getEpochNonce();
+    uint256 minEpochPeriod = getMinEpochPeriod();
+    uint256 minIntAsUint = 0x8000000000000000000000000000000000000000000000000000000000000000;
+
+    require getEpochStatus(epochNonce) == Types.EpochStatus.OPEN, "epoch is open";
+    require getEpochOpenedAtTimestamp(epochNonce) <= max_uint256 - minEpochPeriod,
+        "minimum epoch period addition does not overflow";
+    require e.block.timestamp >= getEpochOpenedAtTimestamp(epochNonce) + minEpochPeriod,
+        "minimum epoch period has elapsed";
+    require getTotalShares() == 0, "bootstrap share supply is zero";
+    require getEpochTotalDepositAmount(epochNonce) == minIntAsUint, "deposit casts to int256.min";
+    require getEpochTotalShareBurnAmount(epochNonce) == 0, "no shares are submitted for burn";
+
+    require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
+
+    closeEpoch@withrevert(e, 0, 1, 1, 1, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -873,52 +1043,9 @@ rule closeEpoch_RevertWhen_ZeroShareGuardMultiplicationOverflows() {
     require depositAmount <= max_uint256 / 2, "deposit amount fits int256";
     require depositAmount > max_uint256 / minDepositAmount, "zero-share guard multiplication overflows";
     require getEpochTotalShareBurnAmount(epochNonce) == 0, "no shares are burned";
-    require getTotalShares() == 0, "bootstrap price per share path";
+    require getTotalShares() == 0, "bootstrap share-allocation path";
 
     uint256 tvl = 0;
-    /// @dev ghost starting values
-    require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
-
-    closeEpoch@withrevert(e, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
-
-    assert lastReverted;
-    assert EpochLifecycleEventCountsAreZero();
-}
-
-/// @notice Closing an epoch reverts when total share addition overflows.
-/// @dev Verifies s_totalShares + newShares overflow before share burns are subtracted.
-rule closeEpoch_RevertWhen_TotalSharesAdditionOverflows() {
-    env e;
-    bool isLocalStrategy;
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "closeEpoch is nonpayable";
-    require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
-    require getEpochNonce() != 0, "current epoch nonce is nonzero";
-    require getEpochNonce() == 1 || getPreviousEpochStatus() == Types.EpochStatus.CLAIMABLE,
-        "previous epoch is claimable when required";
-
-    uint256 epochNonce = getEpochNonce();
-    uint256 minEpochPeriod = getMinEpochPeriod();
-    uint256 totalShares = getTotalShares();
-    uint256 depositAmount = getEpochTotalDepositAmount(epochNonce);
-    uint256 sharePrecision = 1;
-    uint256 minDepositAmount = 1000000;
-
-    /// @dev revert condition being verified
-    require getEpochStatus(epochNonce) == Types.EpochStatus.OPEN, "epoch is open";
-    require getEpochOpenedAtTimestamp(epochNonce) <= max_uint256 - minEpochPeriod,
-        "minimum epoch period addition does not overflow";
-    require e.block.timestamp >= getEpochOpenedAtTimestamp(epochNonce) + minEpochPeriod,
-        "minimum epoch period has elapsed";
-    require totalShares != 0, "shares are outstanding";
-    require depositAmount != 0, "total deposit amount is nonzero";
-    require depositAmount <= max_uint256 / 2, "deposit amount fits int256";
-    require depositAmount <= max_uint256 / minDepositAmount, "zero-share guard multiplication does not overflow";
-    require totalShares > max_uint256 - depositAmount, "total shares addition overflows";
-    require getEpochTotalShareBurnAmount(epochNonce) == 0, "no shares are burned";
-    uint256 tvl = totalShares;
-
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
@@ -973,6 +1100,125 @@ rule closeEpoch_RevertWhen_TotalSharesSubtractionUnderflows() {
 
 /// ─────────────────── CLOSE EPOCH SUCCESS ────────────────────
 
+/// @notice A zero-supply epoch bootstraps shares from the asset and share precisions.
+/// @dev Verifies the successful side of the zero-supply branch with no artificial TVL requirement.
+rule EPOCH_017_closeEpoch_Success_BootstrapsZeroSupply() {
+    env e;
+    uint256 sharePrecision = 1000000000000000000;
+    uint256 assetPrecision = 1000000;
+    uint256 depositAmount = assetPrecision;
+    uint256 minDepositAmount = assetPrecision;
+    uint256 tvl = 0;
+
+    require e.msg.value == 0, "closeEpoch is nonpayable";
+    require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
+    require getEpochNonce() != 0, "current epoch nonce is nonzero";
+    require getEpochNonce() == 1 || getPreviousEpochStatus() == Types.EpochStatus.CLAIMABLE,
+        "previous epoch is claimable when required";
+
+    uint256 epochNonce = getEpochNonce();
+    uint256 minEpochPeriod = getMinEpochPeriod();
+    require getEpochStatus(epochNonce) == Types.EpochStatus.OPEN, "epoch is open";
+    require getEpochOpenedAtTimestamp(epochNonce) <= max_uint256 - minEpochPeriod,
+        "minimum epoch period addition does not overflow";
+    require e.block.timestamp >= getEpochOpenedAtTimestamp(epochNonce) + minEpochPeriod,
+        "minimum epoch period has elapsed";
+    require getTotalShares() == 0, "share supply is zero";
+    require getEpochTotalDepositAmount(epochNonce) == depositAmount, "one asset token is deposited";
+    require getEpochTotalShareBurnAmount(epochNonce) == 0, "no shares are burned";
+    require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
+    require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
+
+    uint256 returnedEpochNonce; uint8 returnedAction; uint256 returnedAmount; uint256 returnedTotalDepositAmount;
+    (returnedEpochNonce, returnedAction, returnedAmount, returnedTotalDepositAmount) =
+        closeEpoch@withrevert(e, tvl, sharePrecision, assetPrecision, minDepositAmount, true);
+
+    assert !lastReverted;
+    assert returnedEpochNonce == epochNonce;
+    assert returnedAction == ACTION_DEPOSIT_TO_LOCAL_STRATEGY();
+    assert returnedAmount == depositAmount;
+    assert returnedTotalDepositAmount == depositAmount;
+    assert getTotalShares() == sharePrecision;
+    assert getEpochStatus(epochNonce) == Types.EpochStatus.CLAIMABLE;
+    assert getEpochTotalWithdrawClaimAmount(epochNonce) == 0;
+    assert getEpochRemainingDepositClaimAmount(epochNonce) == depositAmount;
+    assert getEpochRemainingShareMintAmount(epochNonce) == sharePrecision;
+    assert getEpochRemainingShareBurnAmount(epochNonce) == 0;
+    assert getEpochRemainingWithdrawClaimAmount(epochNonce) == 0;
+    assert ghost_EpochClaimable_EventCount == 1;
+    assert ghost_EpochClaimable_Param_epochNonce == epochNonce;
+}
+
+/// @notice Existing-supply settlement uses direct full-precision ratios for deposits and withdrawals.
+/// @dev Concrete regression witness: the former rounded-price intermediate returned 9,999,999
+///      asset units for the full-supply withdrawal, while direct settlement returns 10,000,000.
+rule EPOCH_004_SHARE_002_closeEpoch_Success_UsesDirectFullPrecisionRatios() {
+    env e;
+
+    require e.msg.value == 0, "closeEpoch is nonpayable";
+    require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
+    require getEpochNonce() != 0, "current epoch nonce is nonzero";
+    require getEpochNonce() == 1 || getPreviousEpochStatus() == Types.EpochStatus.CLAIMABLE,
+        "previous epoch is claimable when required";
+
+    uint256 epochNonce = getEpochNonce();
+    uint256 minEpochPeriod = getMinEpochPeriod();
+    uint256 sharePrecision = 1000000000000000000;
+    uint256 assetPrecision = 1000000;
+    uint256 totalShares = 3000000000000000000;
+    uint256 tvl = 10000000;
+    uint256 depositAmount = assetPrecision;
+    uint256 shareBurnAmount = totalShares;
+    uint256 expectedNewShares = 300000000000000000;
+    uint256 expectedTotalWithdraw = tvl;
+    uint256 expectedNetWithdraw = 9000000;
+
+    require getEpochStatus(epochNonce) == Types.EpochStatus.OPEN, "epoch is open";
+    require getEpochOpenedAtTimestamp(epochNonce) <= max_uint256 - minEpochPeriod,
+        "minimum epoch period addition does not overflow";
+    require e.block.timestamp >= getEpochOpenedAtTimestamp(epochNonce) + minEpochPeriod,
+        "minimum epoch period has elapsed";
+    require getTotalShares() == totalShares, "three whole shares are outstanding";
+    require getEpochTotalDepositAmount(epochNonce) == depositAmount, "one asset token is deposited";
+    require getEpochTotalShareBurnAmount(epochNonce) == shareBurnAmount, "all shares are submitted for burn";
+
+    require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
+    require ghost_EpochWithdrawExecuting_EventCount == 0,
+        "EpochWithdrawExecuting event count starts at zero";
+    require ghost_totalShares_StoreCount == 0, "total shares store count starts at zero";
+    require ghost_epoch_totalWithdrawClaimAmount_StoreCount == 0,
+        "totalWithdrawClaimAmount store count starts at zero";
+    require ghost_epoch_status_StoreCount == 0, "epoch status store count starts at zero";
+
+    uint256 returnedEpochNonce; uint8 returnedAction; uint256 returnedAmount; uint256 returnedTotalDepositAmount;
+    (returnedEpochNonce, returnedAction, returnedAmount, returnedTotalDepositAmount) =
+        closeEpoch@withrevert(e, tvl, sharePrecision, assetPrecision, assetPrecision, false);
+
+    assert !lastReverted;
+    assert returnedEpochNonce == epochNonce;
+    assert returnedAction == ACTION_WAIT_FOR_REMOTE_WITHDRAW();
+    assert returnedAmount == expectedNetWithdraw;
+    assert returnedTotalDepositAmount == depositAmount;
+    assert getTotalShares() == expectedNewShares;
+    assert getEpochStatus(epochNonce) == Types.EpochStatus.EXECUTING;
+    assert getEpochTotalWithdrawClaimAmount(epochNonce) == expectedTotalWithdraw;
+    assert getEpochRemainingDepositClaimAmount(epochNonce) == depositAmount;
+    assert getEpochRemainingShareMintAmount(epochNonce) == expectedNewShares;
+    assert getEpochRemainingShareBurnAmount(epochNonce) == shareBurnAmount;
+    assert getEpochRemainingWithdrawClaimAmount(epochNonce) == expectedTotalWithdraw;
+    assert ghost_EpochWithdrawExecuting_EventCount == 1;
+    assert ghost_EpochWithdrawExecuting_Param_epochNonce == epochNonce;
+    assert ghost_EpochWithdrawExecuting_Param_amount == expectedNetWithdraw;
+    assert ghost_totalShares_StoreCount == 1;
+    assert ghost_totalShares_StoredValue == expectedNewShares;
+    assert ghost_epoch_totalWithdrawClaimAmount_StoreCount == 1;
+    assert ghost_epoch_totalWithdrawClaimAmount_StoredKey == epochNonce;
+    assert ghost_epoch_totalWithdrawClaimAmount_StoredValue == expectedTotalWithdraw;
+    assert ghost_epoch_status_StoreCount == 1;
+    assert ghost_epoch_status_StoredKey == epochNonce;
+    assert ghost_epoch_status_StoredValue == Types.EpochStatus.EXECUTING;
+}
+
 /// @notice Closing a balanced epoch makes it claimable and returns no external action.
 /// @dev Verifies the net-zero branch with a concrete non-fee arithmetic witness.
 rule EPOCH_004_NONCE_010_SHARE_002_closeEpoch_Success_WhenNetFlowIsZero() {
@@ -1000,7 +1246,7 @@ rule EPOCH_004_NONCE_010_SHARE_002_closeEpoch_Success_WhenNetFlowIsZero() {
     require e.block.timestamp >= getEpochOpenedAtTimestamp(epochNonce) + minEpochPeriod,
         "minimum epoch period has elapsed";
     require totalShares == 2, "two shares are outstanding";
-    require totalShares <= max_uint256 / sharePrecision, "gross price per share does not overflow";
+    require totalShares <= max_uint256 / sharePrecision, "scaled ratio product does not overflow";
     uint256 tvl = 2;
     require depositAmount == 1, "one asset unit is deposited";
     require shareBurnAmount == 1, "one share is burned";
@@ -1034,7 +1280,6 @@ rule EPOCH_004_NONCE_010_SHARE_002_closeEpoch_Success_WhenNetFlowIsZero() {
     assert getEpochTotalShareBurnAmount(epochNonce) == shareBurnAmount;
     assert getEpochStatus(epochNonce) == Types.EpochStatus.CLAIMABLE;
     assert getEpochTotalWithdrawClaimAmount(epochNonce) == shareBurnAmount;
-    assert getEpochPricePerShare(epochNonce) == sharePrecision;
     assert getEpochRemainingDepositClaimAmount(epochNonce) == depositAmount;
     assert getEpochRemainingShareMintAmount(epochNonce) == depositAmount;
     assert getEpochRemainingShareBurnAmount(epochNonce) == shareBurnAmount;
@@ -1053,9 +1298,9 @@ rule EPOCH_004_NONCE_010_SHARE_002_closeEpoch_Success_WhenNetFlowIsZero() {
     assert ghost_epoch_status_StoredValue == Types.EpochStatus.CLAIMABLE;
 }
 
-/// @notice A profitable epoch settles at the full undiluted price and does not mint treasury shares.
-/// @dev Uses a concrete 2x price witness to verify management fees are not collected during epoch close.
-rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenPriceExceedsParWithoutFeeDilution() {
+/// @notice A profitable epoch settles at its full undiluted TVL-to-share ratio.
+/// @dev Uses a concrete 2x TVL-to-share-value witness to verify direct deposit allocation.
+rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenTvlToShareRatioExceedsPar() {
     env e;
     uint256 sharePrecision = 100;
     uint256 assetPrecision = 1;
@@ -1072,9 +1317,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenPriceExceeds
 
     uint256 epochNonce = getEpochNonce();
     uint256 minEpochPeriod = getMinEpochPeriod();
-    address treasury = getTreasury();
-    uint256 treasuryBalanceBefore = share.balanceOf(treasury);
-    uint256 totalSupplyBefore = share.totalSupply();
 
     /// @dev success conditions being verified
     require getEpochStatus(epochNonce) == Types.EpochStatus.OPEN, "epoch is open";
@@ -1106,14 +1348,11 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenPriceExceeds
     assert getEpochNonce() == epochNonce;
     assert getTotalShares() == 101;
     assert getEpochStatus(epochNonce) == Types.EpochStatus.CLAIMABLE;
-    assert getEpochPricePerShare(epochNonce) == 200;
     assert getEpochRemainingDepositClaimAmount(epochNonce) == 2;
     assert getEpochRemainingShareMintAmount(epochNonce) == 1;
     assert getEpochRemainingShareBurnAmount(epochNonce) == 0;
     assert getEpochTotalWithdrawClaimAmount(epochNonce) == 0;
     assert getEpochRemainingWithdrawClaimAmount(epochNonce) == 0;
-    assert share.balanceOf(treasury) == treasuryBalanceBefore;
-    assert share.totalSupply() == totalSupplyBefore;
     assert ghost_EpochClaimable_EventCount == 1;
     assert ghost_EpochClaimable_Param_epochNonce == epochNonce;
     assert ghost_EpochDepositExecuting_EventCount == 0;
@@ -1153,7 +1392,7 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenLocalNetDepo
         "minimum epoch period addition does not overflow";
     require e.block.timestamp >= getEpochOpenedAtTimestamp(epochNonce) + minEpochPeriod,
         "minimum epoch period has elapsed";
-    require getTotalShares() == 0, "bootstrap price per share path";
+    require getTotalShares() == 0, "bootstrap share-allocation path";
     require depositAmount == assetPrecision, "deposit is one whole asset token";
     require getEpochTotalShareBurnAmount(epochNonce) == 0, "no shares are burned";
 
@@ -1180,7 +1419,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenLocalNetDepo
     assert getEpochTotalDepositAmount(epochNonce) == depositAmount;
     assert getEpochTotalShareBurnAmount(epochNonce) == 0;
     assert getEpochStatus(epochNonce) == Types.EpochStatus.CLAIMABLE;
-    assert getEpochPricePerShare(epochNonce) == assetPrecision;
     assert getEpochRemainingDepositClaimAmount(epochNonce) == depositAmount;
     assert getEpochRemainingShareMintAmount(epochNonce) == sharePrecision;
     assert getEpochRemainingShareBurnAmount(epochNonce) == 0;
@@ -1225,7 +1463,7 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenRemoteNetDep
     require e.block.timestamp >= getEpochOpenedAtTimestamp(epochNonce) + minEpochPeriod,
         "minimum epoch period has elapsed";
     require sharePrecision != 0, "share precision is nonzero";
-    require getTotalShares() == 0, "bootstrap price per share path";
+    require getTotalShares() == 0, "bootstrap share-allocation path";
     require depositAmount != 0, "net deposit amount is nonzero";
     require depositAmount <= max_uint256 / sharePrecision, "share calculation does not overflow";
     require depositAmount <= max_uint256 / 2, "deposit amount fits int256";
@@ -1258,7 +1496,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenRemoteNetDep
     assert getEpochTotalDepositAmount(epochNonce) == depositAmount;
     assert getEpochTotalShareBurnAmount(epochNonce) == 0;
     assert getEpochStatus(epochNonce) == Types.EpochStatus.EXECUTING;
-    assert getEpochPricePerShare(epochNonce) == sharePrecision;
     assert getEpochRemainingDepositClaimAmount(epochNonce) == depositAmount;
     assert getEpochRemainingShareMintAmount(epochNonce) == depositAmount;
     assert getEpochRemainingShareBurnAmount(epochNonce) == 0;
@@ -1307,7 +1544,7 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenLocalNetWith
     require e.block.timestamp >= getEpochOpenedAtTimestamp(epochNonce) + minEpochPeriod,
         "minimum epoch period has elapsed";
     require totalShares == 2, "two shares are outstanding";
-    require totalShares <= max_uint256 / sharePrecision, "gross price per share does not overflow";
+    require totalShares <= max_uint256 / sharePrecision, "scaled ratio product does not overflow";
     uint256 tvl = 2;
     require depositAmount == 1, "one asset unit is deposited";
     require shareBurnAmount == 2, "two shares are burned";
@@ -1348,7 +1585,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenLocalNetWith
     assert getEpochTotalDepositAmount(epochNonce) == depositAmount;
     assert getEpochTotalShareBurnAmount(epochNonce) == shareBurnAmount;
     assert getEpochStatus(epochNonce) == Types.EpochStatus.OPEN;
-    assert getEpochPricePerShare(epochNonce) == sharePrecision;
     assert getEpochRemainingDepositClaimAmount(epochNonce) == depositAmount;
     assert getEpochRemainingShareMintAmount(epochNonce) == depositAmount;
     assert getEpochRemainingShareBurnAmount(epochNonce) == shareBurnAmount;
@@ -1388,7 +1624,7 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenRemoteNetWit
     require e.block.timestamp >= getEpochOpenedAtTimestamp(epochNonce) + minEpochPeriod,
         "minimum epoch period has elapsed";
     require totalShares == 2, "two shares are outstanding";
-    require totalShares <= max_uint256 / sharePrecision, "gross price per share does not overflow";
+    require totalShares <= max_uint256 / sharePrecision, "scaled ratio product does not overflow";
     uint256 tvl = 2;
     require getEpochTotalDepositAmount(epochNonce) == 0, "no deposits were made";
     require shareBurnAmount == 1, "one share is burned";
@@ -1421,7 +1657,6 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenRemoteNetWit
     assert getEpochTotalDepositAmount(epochNonce) == 0;
     assert getEpochTotalShareBurnAmount(epochNonce) == shareBurnAmount;
     assert getEpochStatus(epochNonce) == Types.EpochStatus.EXECUTING;
-    assert getEpochPricePerShare(epochNonce) == sharePrecision;
     assert getEpochRemainingDepositClaimAmount(epochNonce) == 0;
     assert getEpochRemainingShareMintAmount(epochNonce) == 0;
     assert getEpochRemainingShareBurnAmount(epochNonce) == shareBurnAmount;

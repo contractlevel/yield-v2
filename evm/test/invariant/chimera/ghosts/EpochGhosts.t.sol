@@ -28,6 +28,8 @@ abstract contract EpochGhosts is ActorGhosts {
     uint256[] internal ghost_claimableEpochs;
     mapping(uint256 epochNonce => bool isTracked) internal ghost_epochShareAccountingTracked;
     uint256[] internal ghost_shareAccountingEpochs;
+    mapping(uint256 epochNonce => uint256 tvl) internal ghost_epochSettlementTvl;
+    mapping(uint256 epochNonce => uint256 totalShares) internal ghost_epochSettlementTotalShares;
     uint256 internal ghost_claimableWithdrawObligation;
     mapping(address actor => uint256 amount) internal ghost_totalUsdcClaimedByActor;
     mapping(address actor => uint256 amount) internal ghost_feeBurdenByActor;
@@ -75,6 +77,11 @@ abstract contract EpochGhosts is ActorGhosts {
         ghost_claimableEpochs.push(epochNonce);
     }
 
+    function _recordEpochSettlement(uint256 epochNonce, uint256 tvl, uint256 totalShares) internal {
+        ghost_epochSettlementTvl[epochNonce] = tvl;
+        ghost_epochSettlementTotalShares[epochNonce] = totalShares;
+    }
+
     function _recordEpochShareAccounting(uint256 epochNonce) internal {
         if (ghost_epochShareAccountingTracked[epochNonce]) return;
 
@@ -86,7 +93,7 @@ abstract contract EpochGhosts is ActorGhosts {
 
     function _recordSharesClaimed(address actor, uint256 epochNonce, uint256 shareMintAmount) internal {
         uint256 depositAmount = ghost_depositedByActorByEpoch[actor][epochNonce];
-        uint256 shareValue = shareMintAmount * parent.vault.getEpoch(epochNonce).pricePerShare / SHARE_PRECISION;
+        uint256 shareValue = _settledDepositShareValue(epochNonce, shareMintAmount);
         if (depositAmount > shareValue) {
             ghost_depositRoundingBurdenByActor[actor] += depositAmount - shareValue;
         }
@@ -164,14 +171,12 @@ abstract contract EpochGhosts is ActorGhosts {
 
         uint256 feeShares = treasuryShareBalanceAfter - snapshot.treasuryShareBalance;
         uint256 restoredTvl = _activeStrategyTvl();
-        uint256 pricePerShareBefore = restoredTvl * SHARE_PRECISION / snapshot.totalShares;
-        uint256 pricePerShareAfter = restoredTvl * SHARE_PRECISION / (snapshot.totalShares + feeShares);
 
         for (uint256 i; i < s_actors.length; ++i) {
             address actor = s_actors[i];
             uint256 feeBearingShares = snapshot.actorShares[i];
-            uint256 valueBefore = feeBearingShares * pricePerShareBefore / SHARE_PRECISION;
-            uint256 valueAfter = feeBearingShares * pricePerShareAfter / SHARE_PRECISION;
+            uint256 valueBefore = feeBearingShares * restoredTvl / snapshot.totalShares;
+            uint256 valueAfter = feeBearingShares * restoredTvl / (snapshot.totalShares + feeShares);
             if (valueBefore > valueAfter) ghost_feeBurdenByActor[actor] += valueBefore - valueAfter;
         }
     }
@@ -199,8 +204,7 @@ abstract contract EpochGhosts is ActorGhosts {
             uint256 depositAmount = ghost_depositedByActorByEpoch[actor][epochNonce];
             if (depositAmount == 0) continue;
 
-            uint256 shareValue = _claimableDepositShares(actor, epochNonce)
-                * parent.vault.getEpoch(epochNonce).pricePerShare / SHARE_PRECISION;
+            uint256 shareValue = _settledDepositShareValue(epochNonce, _claimableDepositShares(actor, epochNonce));
             if (depositAmount > shareValue) burden += depositAmount - shareValue;
         }
     }
@@ -220,6 +224,12 @@ abstract contract EpochGhosts is ActorGhosts {
 
     function _claimableDepositShareValue(address actor, uint256 epochNonce) internal view returns (uint256) {
         return _shareValue(_claimableDepositShares(actor, epochNonce));
+    }
+
+    function _settledDepositShareValue(uint256 epochNonce, uint256 shares) internal view returns (uint256) {
+        uint256 totalShares = ghost_epochSettlementTotalShares[epochNonce];
+        if (totalShares == 0) return shares * ASSET_PRECISION / SHARE_PRECISION;
+        return shares * ghost_epochSettlementTvl[epochNonce] / totalShares;
     }
 
     function _claimableDepositShares(address actor, uint256 epochNonce) internal view returns (uint256 shares) {
@@ -245,14 +255,10 @@ abstract contract EpochGhosts is ActorGhosts {
     }
 
     function _shareValue(uint256 shares) internal view returns (uint256) {
-        return shares * _currentPricePerShare() / SHARE_PRECISION;
-    }
-
-    function _currentPricePerShare() internal view returns (uint256) {
         uint256 totalShares = parent.vault.getTotalShares();
         uint256 tvl = _activeStrategyTvl();
 
-        if (totalShares != 0 && tvl != 0) return tvl * SHARE_PRECISION / totalShares;
-        return ASSET_PRECISION;
+        if (totalShares != 0) return shares * tvl / totalShares;
+        return shares * ASSET_PRECISION / SHARE_PRECISION;
     }
 }

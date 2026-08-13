@@ -7,11 +7,6 @@ import {ParentVaultEpochLib} from "../../../src/libraries/vaults/ParentVaultEpoc
 import {Types} from "../../../src/libraries/Types.sol";
 
 contract ParentVaultEpochLibHarness is ParentVaultStore, HelperHarness {
-    address internal immutable i_share;
-
-    constructor(address share) {
-        i_share = share;
-    }
 
     function closeEpoch(
         uint256 tvl,
@@ -24,7 +19,7 @@ contract ParentVaultEpochLibHarness is ParentVaultStore, HelperHarness {
         returns (uint256 epochNonce, uint8 action, uint256 amount, uint256 totalDepositAmount)
     {
         ParentVaultEpochLib.CloseEpochExternalAction memory externalAction = ParentVaultEpochLib.closeEpoch(
-            _parentVaultStorage(), tvl, i_share, sharePrecision, assetPrecision, minDepositAmount, isLocalStrategy
+            _parentVaultStorage(), tvl, sharePrecision, assetPrecision, minDepositAmount, isLocalStrategy
         );
         epochNonce = externalAction.epochNonce;
         action = uint8(externalAction.action);
@@ -66,10 +61,6 @@ contract ParentVaultEpochLibHarness is ParentVaultStore, HelperHarness {
         totalShares = _parentVaultStorage().s_totalShares;
     }
 
-    function getTreasury() external view returns (address treasury) {
-        treasury = _parentVaultStorage().s_treasury;
-    }
-
     function getRebalanceState() external view returns (Types.RebalanceState state) {
         state = _parentVaultStorage().s_rebalance.state;
     }
@@ -88,10 +79,6 @@ contract ParentVaultEpochLibHarness is ParentVaultStore, HelperHarness {
         returns (uint256 totalWithdrawClaimAmount)
     {
         totalWithdrawClaimAmount = _parentVaultStorage().s_epochs[epochNonce].totalWithdrawClaimAmount;
-    }
-
-    function getEpochPricePerShare(uint256 epochNonce) external view returns (uint256 pricePerShare) {
-        pricePerShare = _parentVaultStorage().s_epochs[epochNonce].pricePerShare;
     }
 
     function getEpochRemainingDepositClaimAmount(uint256 epochNonce)

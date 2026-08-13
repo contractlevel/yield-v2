@@ -456,8 +456,6 @@ contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
             .checked_write(SHARE_BURN_AMOUNT);
         stdstore.target(address(s_parentVault)).sig("getEpoch(uint256)").with_key(epochNonce).depth(2)
             .checked_write(TOTAL_WITHDRAW_USDC);
-        stdstore.target(address(s_parentVault)).sig("getEpoch(uint256)").with_key(epochNonce).depth(3)
-            .checked_write(PRICE_PER_SHARE);
     }
 
     function _withdrawMessage(uint256 epochNonce, uint256 amount) internal view returns (Client.Any2EVMMessage memory) {

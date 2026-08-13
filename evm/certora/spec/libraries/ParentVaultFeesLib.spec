@@ -2,7 +2,7 @@ using MockYieldcoinShare as share;
 
 /// Verification of ParentVaultFeesLib
 /// @author @contractlevel
-/// @notice ParentVaultFeesLib handles ParentVault price-per-share calculation and fee accounting.
+/// @notice ParentVaultFeesLib handles ParentVault fee accounting.
 
 /*//////////////////////////////////////////////////////////////
                             METHODS
@@ -13,10 +13,6 @@ methods {
     function getTreasury() external returns (address) envfree;
 
     // Library internal wrappers
-    function calculatePricePerShare(uint256, uint256, uint256) external returns (uint256) envfree;
-    function calculatePricePerSharePublic(uint256, uint256, uint256) external returns (uint256) envfree;
-    function calculateNewShares(uint256, uint256, uint256, uint256, uint256)
-        external returns (uint256) envfree;
     function collectManagementFee(uint256, uint256) external;
     function collectManagementFeePublic(uint256, uint256) external;
 
@@ -37,10 +33,6 @@ methods {
 definition BPS_DENOMINATOR() returns uint256 = 10000;
 definition MANAGEMENT_FEE_BPS() returns uint256 = 100;
 definition YEAR() returns uint256 = 31536000;
-definition SHARE_PRECISION() returns uint256 = 1000000000000;
-definition ASSET_PRECISION() returns uint256 = 1000000;
-definition ASSET_PRECISION_PLUS_ONE() returns uint256 = 1000001;
-
 definition ManagementFeeCollectedEvent() returns bytes32 =
 // keccak256("ManagementFeeCollected(uint256,uint256)")
     to_bytes32(0x6f4a589972e181c1010960e6cb88e05776a4f3a28373e49c69ffdf8cc30f1a31);
@@ -96,28 +88,6 @@ hook LOG3(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2) {
 //////////////////////////////////////////////////////////////*/
 /// ─────────────────── PUBLIC FORWARDERS ──────────────────────
 
-/// @notice The public price wrapper reads stored total shares and forwards both precisions.
-/// @dev Verifies the public library boundary independently of the internal calculation rules.
-rule calculatePricePerSharePublic_ForwardsStoredTotalSharesAndPrecisions() {
-    env e;
-    uint256 tvl = ASSET_PRECISION();
-    uint256 sharePrecision = SHARE_PRECISION();
-    uint256 assetPrecision = ASSET_PRECISION();
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "calculatePricePerSharePublic is nonpayable";
-    require getTotalShares() == sharePrecision, "stored total shares equal share precision";
-
-    /// @dev ghost starting values
-    require ghost_totalShares_StoreCount == 0, "total shares store count starts at zero";
-
-    uint256 pricePerShare = calculatePricePerSharePublic@withrevert(e, tvl, sharePrecision, assetPrecision);
-
-    assert !lastReverted;
-    assert pricePerShare == assetPrecision;
-    assert ghost_totalShares_StoreCount == 0;
-}
-
 /// @notice The public management-fee wrapper forwards nonce, timestamp, share, and vault storage.
 /// @dev Verifies an exact one-year fee collection through the public library boundary.
 rule collectManagementFeePublic_ForwardsParametersAndStorage() {
@@ -155,206 +125,6 @@ rule collectManagementFeePublic_ForwardsParametersAndStorage() {
     assert ghost_ManagementFeeCollected_EventCount == 1;
     assert ghost_ManagementFeeCollected_Param_rebalanceNonce == rebalanceNonce;
     assert ghost_ManagementFeeCollected_Param_feeShares == feeShares;
-}
-
-/// ─────────────────── PRICE PER SHARE ────────────────────────
-
-/// @notice Price per share returns asset precision when no shares exist.
-/// @dev Verifies the bootstrap price branch.
-rule EPOCH_017_calculatePricePerShare_Success_WhenNoShares() {
-    env e;
-    uint256 tvl;
-    uint256 sharePrecision = SHARE_PRECISION();
-    uint256 assetPrecision = ASSET_PRECISION();
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "calculatePricePerShare is nonpayable";
-
-    /// @dev success conditions being verified
-    require getTotalShares() == 0, "no shares exist";
-
-    /// @dev ghost starting values
-    require ghost_totalShares_StoreCount == 0, "total shares store count starts at zero";
-
-    uint256 pricePerShare = calculatePricePerShare@withrevert(e, tvl, sharePrecision, assetPrecision);
-
-    assert !lastReverted;
-    assert pricePerShare == assetPrecision;
-    assert ghost_totalShares_StoreCount == 0;
-}
-
-/// @notice Price per share reverts when TVL is zero while shares are outstanding.
-/// @dev Verifies the explicit zero-TVL-with-shares branch.
-rule EPOCH_017_calculatePricePerShare_RevertWhen_ZeroTvlWithOutstandingShares() {
-    env e;
-    uint256 sharePrecision = SHARE_PRECISION();
-    uint256 assetPrecision = ASSET_PRECISION();
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "calculatePricePerShare is nonpayable";
-
-    /// @dev revert condition being verified
-    require getTotalShares() != 0, "shares are outstanding";
-    uint256 tvl = 0;
-
-    calculatePricePerShare@withrevert(e, tvl, sharePrecision, assetPrecision);
-
-    assert lastReverted;
-}
-
-/// @notice Price per share reverts when the calculated nonzero-TVL price rounds down to zero.
-/// @dev Verifies ParentVault__ZeroPricePerShare independently of the zero-TVL guard.
-rule EPOCH_017_calculatePricePerShare_RevertWhen_CalculatedPriceIsZero() {
-    env e;
-    uint256 tvl;
-    uint256 sharePrecision = SHARE_PRECISION();
-    uint256 assetPrecision = ASSET_PRECISION();
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "calculatePricePerShare is nonpayable";
-
-    /// @dev revert conditions NOT being verified
-    require getTotalShares() != 0, "shares are outstanding";
-    require tvl != 0, "tvl is nonzero";
-    require tvl <= max_uint256 / sharePrecision, "price product does not overflow";
-
-    /// @dev revert condition being verified
-    require tvl * sharePrecision < getTotalShares(), "calculated price rounds down to zero";
-
-    calculatePricePerShare@withrevert(e, tvl, sharePrecision, assetPrecision);
-
-    assert lastReverted;
-}
-
-/// @notice Price per share reverts when the full-precision quotient exceeds uint256.
-/// @dev Verifies the Solady fullMulDiv result-overflow branch with a concrete witness.
-rule calculatePricePerShare_RevertWhen_ResultOverflows() {
-    env e;
-    uint256 tvl = max_uint256;
-    uint256 sharePrecision = SHARE_PRECISION();
-    uint256 assetPrecision = ASSET_PRECISION();
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "calculatePricePerShare is nonpayable";
-    require getTotalShares() == 1, "one share is outstanding";
-    require tvl != 0, "tvl is nonzero";
-
-    /// @dev revert condition being verified
-    /// @dev Solady fullMulDiv reconstructs a 512-bit product in assembly using mulmod.
-    ///      Certora does not reliably preserve that relationship for fully symbolic operands,
-    ///      so this rule uses a concrete input whose quotient necessarily exceeds uint256.
-
-    calculatePricePerShare@withrevert(e, tvl, sharePrecision, assetPrecision);
-
-    assert lastReverted;
-}
-
-/// @notice Price per share divides TVL value by total shares when both are nonzero.
-/// @dev Verifies the calculated price branch.
-rule EPOCH_017_calculatePricePerShare_Success_WhenSharesAndTvlExist() {
-    env e;
-    uint256 tvl;
-    uint256 sharePrecision = SHARE_PRECISION();
-    uint256 assetPrecision = ASSET_PRECISION();
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "calculatePricePerShare is nonpayable";
-
-    uint256 totalShares = getTotalShares();
-
-    /// @dev success conditions being verified
-    require totalShares != 0, "shares are outstanding";
-    require tvl != 0, "tvl is nonzero";
-    /// @dev Restrict inputs to Solady fullMulDiv's directly modeled 256-bit multiplication path.
-    ///      The 512-bit assembly path uses mulmod and cannot be reliably checked with arbitrary
-    ///      symbolic operands.
-    require tvl <= max_uint256 / sharePrecision, "price product does not overflow";
-    require tvl * sharePrecision >= totalShares, "calculated price is nonzero";
-
-    /// @dev ghost starting values
-    require ghost_totalShares_StoreCount == 0, "total shares store count starts at zero";
-
-    uint256 pricePerShare = calculatePricePerShare@withrevert(e, tvl, sharePrecision, assetPrecision);
-    mathint expectedPricePerShare = tvl * sharePrecision / totalShares;
-
-    assert !lastReverted;
-    assert pricePerShare == expectedPricePerShare;
-    assert ghost_totalShares_StoreCount == 0;
-}
-
-/// ─────────────────── NEW SHARE CALCULATION ──────────────────
-
-/// @notice New shares use one full-precision deposit/share-supply division.
-/// @dev The concrete witness has a price between asset units, where the former
-///      chained floor divisions produced a materially larger mint amount.
-rule calculateNewShares_Success_WhenSharesAndTvlExist() {
-    env e;
-    uint256 tvl;
-    uint256 depositAmount;
-    uint256 totalShares;
-    uint256 sharePrecision = 1000000000000000000;
-    uint256 assetPrecision = ASSET_PRECISION();
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "calculateNewShares is nonpayable";
-
-    /// @dev success conditions being verified
-    require tvl != 0, "tvl is nonzero";
-    require totalShares != 0, "shares are outstanding";
-    require depositAmount <= max_uint256 / totalShares, "share calculation does not overflow";
-    mathint expectedNewShares = depositAmount * totalShares / tvl;
-
-    uint256 newShares = calculateNewShares@withrevert(
-        e, tvl, depositAmount, totalShares, sharePrecision, assetPrecision
-    );
-
-    assert !lastReverted;
-    assert newShares == expectedNewShares;
-}
-
-/// @notice New shares use bootstrap pricing when no shares exist.
-rule calculateNewShares_Success_WhenNoShares() {
-    env e;
-    uint256 tvl;
-    uint256 depositAmount;
-    uint256 totalShares = 0;
-    uint256 sharePrecision = SHARE_PRECISION();
-    uint256 assetPrecision = ASSET_PRECISION();
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "calculateNewShares is nonpayable";
-
-    /// @dev success conditions being verified
-    require assetPrecision != 0, "bootstrap asset precision is nonzero";
-    require depositAmount * sharePrecision / assetPrecision <= max_uint256,
-        "bootstrap share calculation does not overflow";
-    mathint expectedNewShares = depositAmount * sharePrecision / assetPrecision;
-    uint256 newShares = calculateNewShares@withrevert(
-        e, tvl, depositAmount, totalShares, sharePrecision, assetPrecision
-    );
-
-    assert !lastReverted;
-    assert newShares == expectedNewShares;
-}
-
-/// @notice New-share calculation reverts when TVL is zero with outstanding shares.
-rule EPOCH_017_calculateNewShares_RevertWhen_ZeroTvlWithOutstandingShares() {
-    env e;
-    uint256 tvl = 0;
-    uint256 depositAmount;
-    uint256 totalShares;
-    uint256 sharePrecision = SHARE_PRECISION();
-    uint256 assetPrecision = ASSET_PRECISION();
-
-    /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "calculateNewShares is nonpayable";
-
-    /// @dev revert condition being verified
-    require totalShares != 0, "shares should be outstanding";
-
-    calculateNewShares@withrevert(e, tvl, depositAmount, totalShares, sharePrecision, assetPrecision);
-
-    assert lastReverted;
 }
 
 /// ─────────────────── MANAGEMENT FEE ─────────────────────────
