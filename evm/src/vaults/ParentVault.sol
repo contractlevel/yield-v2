@@ -484,6 +484,21 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
         rebalance = _parentVaultStorage().s_rebalance;
     }
 
+    /// @notice Returns the state required to determine the next ParentVault operation
+    /// @return state The current ParentVault operational state
+    function getParentOperationalState() external view returns (Types.ParentOperationalState memory state) {
+        BaseVaultStorage storage $_baseVault = _baseVaultStorage();
+        ParentVaultStorage storage $ = _parentVaultStorage();
+        uint256 currentEpochNonce = $.s_epochNonce;
+
+        state.paused = paused();
+        state.recoveryMode = $_baseVault.s_recoveryMode;
+        state.currentEpochNonce = currentEpochNonce;
+        state.currentEpoch = $.s_epochs[currentEpochNonce];
+        state.previousEpoch = $.s_epochs[currentEpochNonce - 1];
+        state.rebalance = $.s_rebalance;
+    }
+
     /// @notice Returns the epoch data for a given epoch nonce
     /// @param epochNonce The epoch nonce to query
     /// @return epoch Types.Epoch struct includes:

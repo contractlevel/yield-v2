@@ -141,6 +141,10 @@ interface IChildVault is IBaseVault {
     /// @return lastHandledRebalanceNonce The highest handled rebalance nonce
     function getLastHandledRebalanceNonce() external view returns (uint256 lastHandledRebalanceNonce);
 
+    /// @notice Returns the state required to determine the next ChildVault operation
+    /// @return state The current ChildVault operational state
+    function getChildOperationalState() external view returns (Types.ChildOperationalState memory state);
+
     /// @notice Returns the failed epoch deposit recovery state
     /// @return recovery Types.EpochRecovery struct includes:
     ///         uint256 epochNonce - the nonce of the failed epoch deposit

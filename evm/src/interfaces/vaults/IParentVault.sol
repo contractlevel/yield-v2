@@ -363,6 +363,10 @@ interface IParentVault is IBaseVault {
     /// @return rebalance The current rebalance state
     function getRebalance() external view returns (Types.Rebalance memory rebalance);
 
+    /// @notice Returns the state required to determine the next ParentVault operation
+    /// @return state The current ParentVault operational state
+    function getParentOperationalState() external view returns (Types.ParentOperationalState memory state);
+
     /// @notice Returns the epoch data for a given epoch nonce
     /// @param epochNonce The epoch nonce to query
     /// @return epoch Types.Epoch struct includes:

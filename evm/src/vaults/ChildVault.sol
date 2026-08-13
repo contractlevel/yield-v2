@@ -666,6 +666,18 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         lastHandledRebalanceNonce = _childVaultStorage().s_lastHandledRebalanceNonce;
     }
 
+    /// @notice Returns the state required to determine the next ChildVault operation
+    /// @return state The current ChildVault operational state
+    function getChildOperationalState() external view returns (Types.ChildOperationalState memory state) {
+        BaseVaultStorage storage $_baseVault = _baseVaultStorage();
+        ChildVaultStorage storage $ = _childVaultStorage();
+
+        state.paused = paused();
+        state.recoveryMode = $_baseVault.s_recoveryMode;
+        state.lastHandledEpochNonce = $.s_lastHandledEpochNonce;
+        state.lastHandledRebalanceNonce = $.s_lastHandledRebalanceNonce;
+    }
+
     /// @notice Returns the failed epoch deposit recovery state
     /// @return recovery Types.EpochRecovery struct includes:
     ///         uint256 epochNonce - the nonce of the failed epoch deposit

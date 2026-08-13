@@ -10,6 +10,7 @@ pragma solidity 0.8.34;
 /// @dev - Recovery: Recovery modes stored in the event of failures
 /// @dev - Rebalance: Defining an individual rebalance
 /// @dev - Epoch: Defining an individual epoch period
+/// @dev - Operational state: Defining all of the operational state for a single onchain read
 library Types {
     /*//////////////////////////////////////////////////////////////
                                 STRATEGY
@@ -160,5 +161,36 @@ library Types {
         uint256 remainingWithdrawClaimAmount;
         uint256 openedAtTimestamp;
         EpochStatus status;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                           OPERATIONAL STATE
+    //////////////////////////////////////////////////////////////*/
+    /// @notice Operational state required to determine the next ParentVault action
+    /// @param paused Whether the ParentVault is paused
+    /// @param recoveryMode The active recovery mode, or NONE when no recovery is active
+    /// @param currentEpochNonce The nonce of the currently open epoch
+    /// @param currentEpoch The currently open epoch
+    /// @param previousEpoch The epoch immediately preceding the current epoch
+    /// @param rebalance The current rebalance state
+    struct ParentOperationalState {
+        bool paused;
+        RecoveryMode recoveryMode;
+        uint256 currentEpochNonce;
+        Epoch currentEpoch;
+        Epoch previousEpoch;
+        Rebalance rebalance;
+    }
+
+    /// @notice Operational state required to determine the next ChildVault action
+    /// @param paused Whether the ChildVault is paused
+    /// @param recoveryMode The active recovery mode, or NONE when no recovery is active
+    /// @param lastHandledEpochNonce The highest epoch nonce handled by the ChildVault
+    /// @param lastHandledRebalanceNonce The highest rebalance nonce handled by the ChildVault
+    struct ChildOperationalState {
+        bool paused;
+        RecoveryMode recoveryMode;
+        uint256 lastHandledEpochNonce;
+        uint256 lastHandledRebalanceNonce;
     }
 }
