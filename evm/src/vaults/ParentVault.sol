@@ -201,7 +201,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /// @dev Reverts if user has no deposit in the current epoch
     /// @dev Deliberately callable while paused
     function forceCancelDeposit(address user) external nonReentrant onlyRole(Roles.CANCEL_DEPOSIT_OPERATOR_ROLE) {
-        ParentVaultUserEpochLib.forceCancelDeposit(_parentVaultStorage(), i_asset, user);
+        ParentVaultUserEpochLib._forceCancelDeposit(_parentVaultStorage(), i_asset, user);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -321,13 +321,13 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
         } else if (externalAction.action == ParentVaultEpochLib.ExternalAction.WITHDRAW_FROM_LOCAL_STRATEGY) {
             (, uint256 amountOut) = _executeWithdraw(externalAction.amount, true, activeAdapter);
             emit EpochWithdrawFromStrategySuccess(externalAction.epochNonce, amountOut);
-            ParentVaultEpochLib.finalizeLocalNetWithdraw(
+            ParentVaultEpochLib._finalizeLocalNetWithdraw(
                 $, externalAction.epochNonce, externalAction.totalDepositAmount, amountOut
             );
         }
         // else CRE is triggered by EpochWithdrawExecuting and writes to the strategy chain to withdraw and CCIP-send here
 
-        ParentVaultEpochLib.openNextEpoch($, externalAction.epochNonce);
+        ParentVaultEpochLib._openNextEpoch($, externalAction.epochNonce);
     }
 
     /// @notice Completes the most recently closed remote net-deposit epoch
@@ -336,7 +336,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the previous epoch is not an executing net-deposit epoch
     function completeEpochDeposit() external nonReentrant whenNotPaused onlyRole(Roles.EPOCH_OPERATOR_ROLE) {
-        ParentVaultEpochLib.completeEpochDeposit(_parentVaultStorage());
+        ParentVaultEpochLib._completeEpochDeposit(_parentVaultStorage());
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -373,7 +373,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
             || $_baseVault.s_crosschainVaults[newStrategy.chainSelector] != address(0);
 
         ParentVaultRebalanceLib.InitiateRebalanceResult memory result =
-            ParentVaultRebalanceLib.initiateRebalance($, newStrategy, i_thisChainSelector, isSupportedChain);
+            ParentVaultRebalanceLib._initiateRebalance($, newStrategy, i_thisChainSelector, isSupportedChain);
 
         // Continue synchronously when the previously active strategy is local
         //slither-disable-next-line incorrect-equality
