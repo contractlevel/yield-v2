@@ -306,7 +306,7 @@ interface IParentVault is IBaseVault {
     function closeEpoch(uint256 tvl) external;
 
     /// @notice Completes the most recently closed remote net-deposit epoch
-    /// @dev Callable while the vault is paused so confirmed remote settlement can be finalized
+    /// @dev Reverts if the vault is paused
     /// @dev Reverts if the caller does not have EPOCH_OPERATOR_ROLE
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the previous epoch is not an executing net-deposit epoch
@@ -332,7 +332,7 @@ interface IParentVault is IBaseVault {
     function initiateRebalance(Types.Strategy memory newStrategy) external;
 
     /// @notice Completes a rebalance
-    /// @dev Callable while the vault is paused so confirmed remote settlement can be finalized
+    /// @dev Reverts if the vault is paused
     /// @dev Reverts if the caller does not have REBALANCE_OPERATOR_ROLE
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if a recovery mode is active

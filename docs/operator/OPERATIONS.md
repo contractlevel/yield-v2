@@ -59,9 +59,17 @@ Use pause controls according to role assignments in [`ACCESS_CONTROL_MATRIX`](..
 
 ## Paused Cross-Chain Execution
 
-Pausing a vault blocks recovery, child epoch withdrawals, child rebalances, and inbound CCIP processing. An epoch or rebalance may therefore remain in progress across chains until operators deliberately resume it.
+Pausing a vault blocks recovery, child epoch withdrawals, child rebalances, inbound CCIP processing, and ParentVault completion calls. An epoch or rebalance may therefore remain in progress across chains, including after the destination action succeeded, until operators deliberately resume or finalize it.
 
 Before temporarily unpausing a vault, pause the normal `WorkflowRouter` or revoke its operational role on that vault. Record the relevant transactions, events, recovery modes, adapter state, balances, and CCIP message IDs. Determine whether execution stopped before the source-chain call, during stored recovery, after a CCIP send, or during destination execution. Never repeat a source-chain action unless its transaction and CCIP message status show that it was not successfully executed.
+
+### Parent Paused Before Completion
+
+1. For `completeEpochDeposit`, require the previous parent epoch to remain `EXECUTING` and net-positive, then verify the canonical destination ChildVault emitted `EpochDepositToStrategySuccess` for that epoch and that no relevant recovery remains outstanding.
+2. For `completeRebalance`, require the parent rebalance to remain `REBALANCING`, verify its nonce and pending strategy, and confirm the complete rebalance amount reached and was deposited into that strategy with no source withdrawal, CCIP delivery, target deposit, or relevant recovery outstanding.
+3. Keep the normal `WorkflowRouter` paused or unauthorized while performing reconciliation. Grant the appropriate completion role temporarily to an approved break-glass executor if the existing role assignment cannot be used safely.
+4. Unpause ParentVault, call only the reconciled `completeEpochDeposit()` or `completeRebalance()` function, and verify the expected `EpochClaimable` or `RebalanceCompleted` event and resulting state.
+5. Re-pause ParentVault if containment remains necessary, revoke temporary authority, and restore automation only after the full cross-chain state is reconciled and approved.
 
 ### Child Paused Before Rebalance Execution
 

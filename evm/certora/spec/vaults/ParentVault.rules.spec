@@ -5170,6 +5170,7 @@ rule REENT_001_completeEpochDeposit_RevertWhen_ReentrantCall() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !paused(), "vault should not be paused";
     require hasRole(EPOCH_OPERATOR_ROLE(), e.msg.sender);
     require getEpochNonce() > 1, "an epoch should have completed";
     uint256 epochNonce = assert_uint256(getEpochNonce() - 1);
@@ -5190,6 +5191,7 @@ rule completeEpochDeposit_RevertWhen_CallerDoesNotHaveEPOCH_OPERATOR_ROLE() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !paused(), "vault should not be paused";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
     require getEpochNonce() > 1, "an epoch should have completed";
     uint256 epochNonce = assert_uint256(getEpochNonce() - 1);
@@ -5210,6 +5212,7 @@ rule EPOCH_014_completeEpochDeposit_RevertWhen_NoCompletedEpoch() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !paused(), "vault should not be paused";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
     require hasRole(EPOCH_OPERATOR_ROLE(), e.msg.sender);
 
@@ -5226,6 +5229,7 @@ rule EPOCH_014_completeEpochDeposit_RevertWhen_PreviousEpochIsNotNetDeposit() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !paused(), "vault should not be paused";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
     require hasRole(EPOCH_OPERATOR_ROLE(), e.msg.sender);
     require getEpochNonce() > 1, "an epoch should have completed";
@@ -5245,6 +5249,7 @@ rule EPOCH_014_completeEpochDeposit_RevertWhen_PreviousEpochIsNotExecuting() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !paused(), "vault should not be paused";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
     require hasRole(EPOCH_OPERATOR_ROLE(), e.msg.sender);
     require getEpochNonce() > 1, "an epoch should have completed";
@@ -5261,15 +5266,38 @@ rule EPOCH_014_completeEpochDeposit_RevertWhen_PreviousEpochIsNotExecuting() {
     assert lastReverted;
 }
 
-/// @notice A confirmed remote deposit becomes claimable even while the vault is paused
-rule EPOCH_014_PAUSE_006_completeEpochDeposit_Success_WhenPaused() {
+/// @notice Completing a remote net-deposit epoch reverts while the vault is paused
+/// @dev Verifies that a paused vault leaves the epoch in its executing state
+rule PAUSE_003_completeEpochDeposit_RevertWhen_Paused() {
+    env e;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require hasRole(EPOCH_OPERATOR_ROLE(), e.msg.sender);
+    require getEpochNonce() > 1, "an epoch should have completed";
+    uint256 epochNonce = assert_uint256(getEpochNonce() - 1);
+    require getEpoch(epochNonce).totalDepositAmount > getEpoch(epochNonce).totalWithdrawClaimAmount,
+        "previous epoch should be a net deposit";
+    require getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING, "previous epoch should be executing";
+
+    /// @dev revert condition being verified
+    require paused(), "vault should be paused";
+
+    completeEpochDeposit@withrevert(e);
+
+    assert lastReverted;
+}
+
+/// @notice Completing a confirmed remote net-deposit epoch marks it claimable and emits its event
+rule EPOCH_014_completeEpochDeposit_Success() {
     env e;
 
     /// @dev success conditions being verified
     require e.msg.value == 0, "non-payable";
+    require !paused(), "vault should not be paused";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
     require hasRole(EPOCH_OPERATOR_ROLE(), e.msg.sender);
-    require paused(), "vault should be paused";
     require getEpochNonce() > 1, "an epoch should have completed";
     uint256 epochNonce = assert_uint256(getEpochNonce() - 1);
     require getEpoch(epochNonce).totalDepositAmount > getEpoch(epochNonce).totalWithdrawClaimAmount,
@@ -5300,6 +5328,7 @@ rule completeRebalance_RevertWhen_CallerDoesNotHaveREBALANCE_OPERATOR_ROLE() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !paused(), "vault should not be paused";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require getRebalance().state == Types.RebalanceState.REBALANCING, "rebalance should be in progress";
@@ -5320,6 +5349,7 @@ rule REENT_001_completeRebalance_RevertWhen_ReentrantCall() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !paused(), "vault should not be paused";
     require hasRole(REBALANCE_OPERATOR_ROLE(), e.msg.sender);
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require getRebalance().state == Types.RebalanceState.REBALANCING, "rebalance should be in progress";
@@ -5341,6 +5371,7 @@ rule REC_003_completeRebalance_RevertWhen_RecoveryAlreadyPending() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !paused(), "vault should not be paused";
     require hasRole(REBALANCE_OPERATOR_ROLE(), e.msg.sender);
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
 
@@ -5361,6 +5392,7 @@ rule completeRebalance_RevertWhen_NoRebalanceInProgress() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !paused(), "vault should not be paused";
     require hasRole(REBALANCE_OPERATOR_ROLE(), e.msg.sender);
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
@@ -5376,11 +5408,12 @@ rule completeRebalance_RevertWhen_NoRebalanceInProgress() {
 
 /// @notice Completing a rebalance activates the pending strategy, increments the rebalance nonce,
 ///         and mints the management fee to the treasury when fee shares are nonzero
-rule FEE_001_FEE_002_NONCE_011_PAUSE_006_completeRebalance_Success_WhenManagementFeeSharesAreCollected() {
+rule FEE_001_FEE_002_NONCE_011_completeRebalance_Success_WhenManagementFeeSharesAreCollected() {
     env e;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !paused(), "vault should not be paused";
     require hasRole(REBALANCE_OPERATOR_ROLE(), e.msg.sender);
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
@@ -5429,6 +5462,26 @@ rule FEE_001_FEE_002_NONCE_011_PAUSE_006_completeRebalance_Success_WhenManagemen
     assert ghost_ManagementFeeCollected_EventCount == 1;
     assert ghost_ManagementFeeCollected_Param_rebalanceNonce == rebalanceNonce;
     assert ghost_ManagementFeeCollected_Param_feeShares == feeShares;
+}
+
+/// @notice Completing a rebalance reverts while the vault is paused
+/// @dev Verifies that confirmed remote work cannot advance ParentVault lifecycle state during containment
+rule PAUSE_003_completeRebalance_RevertWhen_Paused() {
+    env e;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require hasRole(REBALANCE_OPERATOR_ROLE(), e.msg.sender);
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
+    require getRebalance().state == Types.RebalanceState.REBALANCING, "rebalance should be in progress";
+
+    /// @dev revert condition being verified
+    require paused(), "vault should be paused";
+
+    completeRebalance@withrevert(e);
+
+    assert lastReverted;
 }
 
 /// ────────────────────────── EXECUTE RECOVERY ────────────────────

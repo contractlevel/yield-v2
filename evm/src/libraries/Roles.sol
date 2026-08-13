@@ -27,7 +27,7 @@ library Roles {
     bytes32 internal constant MINTER_ROLE = keccak256("MINTER_ROLE");
     /// @notice Role authorizing ParentVault to burn Yieldcoin shares
     bytes32 internal constant BURNER_ROLE = keccak256("BURNER_ROLE");
-    /// @notice Role authorized to claim Compound v3 rewards through CompoundV3Adapter
+    /// @notice Role authorized to use supported protocol-specific reward claim hooks
     bytes32 internal constant REWARDS_OPERATOR_ROLE = keccak256("REWARDS_OPERATOR_ROLE");
     /// @notice Role authorized to force-cancel stuck deposits to unblock epoch settlement
     bytes32 internal constant CANCEL_DEPOSIT_OPERATOR_ROLE = keccak256("CANCEL_DEPOSIT_OPERATOR_ROLE");

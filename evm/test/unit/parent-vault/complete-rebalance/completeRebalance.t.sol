@@ -23,6 +23,15 @@ contract ParentVault_CompleteRebalanceUnitTest is BaseUnitTest {
         s_parentVault.completeRebalance();
     }
 
+    function test_ParentVault_completeRebalance_RevertWhen_Paused() public {
+        _changePrank(i_pauser);
+        s_parentVault.pause();
+
+        _changePrank(i_rebalanceOperator);
+        vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
+        s_parentVault.completeRebalance();
+    }
+
     function test_ParentVault_completeRebalance_RevertWhen_NoRebalanceInProgress() public {
         _setParentRebalanceState(Types.RebalanceState.NONE);
         vm.expectRevert(IParentVault.ParentVault__NoRebalanceInProgress.selector);

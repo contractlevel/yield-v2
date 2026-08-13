@@ -331,11 +331,11 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     }
 
     /// @notice Completes the most recently closed remote net-deposit epoch
-    /// @dev Callable while the vault is paused so confirmed remote settlement can be finalized
+    /// @dev Reverts if the vault is paused
     /// @dev Reverts if the caller does not have EPOCH_OPERATOR_ROLE
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the previous epoch is not an executing net-deposit epoch
-    function completeEpochDeposit() external nonReentrant onlyRole(Roles.EPOCH_OPERATOR_ROLE) {
+    function completeEpochDeposit() external nonReentrant whenNotPaused onlyRole(Roles.EPOCH_OPERATOR_ROLE) {
         ParentVaultEpochLib.completeEpochDeposit(_parentVaultStorage());
     }
 
@@ -404,12 +404,12 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     }
 
     /// @notice Completes a rebalance
-    /// @dev Callable while the vault is paused so confirmed remote settlement can be finalized
+    /// @dev Reverts if the vault is paused
     /// @dev Reverts if the caller does not have REBALANCE_OPERATOR_ROLE
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if a recovery mode is active
     /// @dev Reverts if no rebalance is in progress
-    function completeRebalance() external nonReentrant onlyRole(Roles.REBALANCE_OPERATOR_ROLE) {
+    function completeRebalance() external nonReentrant whenNotPaused onlyRole(Roles.REBALANCE_OPERATOR_ROLE) {
         _requireNoRecovery(_baseVaultStorage());
         Types.Rebalance storage s_rebalance = _parentVaultStorage().s_rebalance;
         _finalizeRebalance(s_rebalance.nonce, s_rebalance.pendingStrategy);

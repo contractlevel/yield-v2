@@ -10,4 +10,4 @@ ParentVault_completeEpochDeposit
 ├── it should mark the previous epoch claimable
 ├── it should emit EpochClaimable
 └── when the vault is paused
-    └── it should mark the previous epoch claimable
+    └── it should revert with EnforcedPause

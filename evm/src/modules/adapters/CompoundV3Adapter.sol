@@ -127,8 +127,10 @@ contract CompoundV3Adapter is ProtocolAdapter, ICompoundV3Adapter {
         address rewardToken = cometRewards.rewardConfig(i_comet);
         cometRewards.claimTo(i_comet, address(this), to, true);
 
-        uint256 rewardBalance = IERC20(rewardToken).balanceOf(address(this));
-        if (rewardBalance != 0) IERC20(rewardToken).safeTransfer(to, rewardBalance);
+        if (rewardToken != address(0)) {
+            uint256 rewardBalance = IERC20(rewardToken).balanceOf(address(this));
+            if (rewardBalance != 0) IERC20(rewardToken).safeTransfer(to, rewardBalance);
+        }
     }
 
     /*//////////////////////////////////////////////////////////////

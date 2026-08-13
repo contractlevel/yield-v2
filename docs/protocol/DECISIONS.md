@@ -37,13 +37,13 @@ The libraries contain accounting and validation logic. The vault contracts retai
 
 This split is an implementation boundary, not a trust boundary: linked libraries execute in the vault context.
 
-## DD-004 - Pause Contains External Execution
+## DD-004 - Pause Contains External Execution And Lifecycle Finalization
 
-While a vault is paused, it does not execute recovery, child epoch withdrawals, child rebalances, or inbound CCIP messages. These paths call strategy adapters, send CCIP messages, or process cross-chain state and must stop during incident containment.
+While a vault is paused, it does not execute recovery, child epoch withdrawals, child rebalances, inbound CCIP messages, or ParentVault epoch-deposit and rebalance completion. These paths either interact with external systems or make economically meaningful lifecycle transitions and must stop during incident containment.
 
-`completeRebalance` and `completeEpochDeposit` intentionally remain callable while paused because they perform only local finalization and do not call an adapter or CCIP router. For the same reason, the CRE deposit-completion handler does not apply the global recovery guard: it acknowledges an already-successful remote deposit and cannot create recovery or start another external operation.
+`completeRebalance` and `completeEpochDeposit` are submitted after CRE observes success on another chain. ParentVault cannot independently prove those offchain facts, and finalization changes authoritative accounting state: it makes an epoch claimable or activates a pending strategy, clears the rebalance state, advances its nonce, and may mint management-fee shares. A ParentVault pause therefore blocks both functions even though neither calls an adapter or CCIP router. The CRE deposit-completion handler does not apply the global recovery guard because it cannot create recovery or start another external operation; ParentVault independently enforces its pause and lifecycle preconditions.
 
-This containment boundary can leave an epoch or rebalance in an intermediate cross-chain state. Operators must inspect the parent, child, recovery, and CCIP message states before resuming the affected operation. The break-glass procedure is documented in [OPERATIONS](../operator/OPERATIONS.md#paused-cross-chain-execution).
+This containment boundary can leave an epoch or rebalance in an intermediate cross-chain state even after destination execution succeeded. Operators must inspect the parent, child, recovery, and CCIP message states before deliberately unpausing the affected vault and resuming or finalizing the operation. The break-glass procedure is documented in [OPERATIONS](../operator/OPERATIONS.md#paused-cross-chain-execution).
 
 Stored recovery handles accepted operations that failed transiently after protocol state had already advanced. Exceptional failures such as a strategy exploit, permanent insolvency, or a protocol-specific migration require operators to pause the affected paths, inspect the exact cross-chain and recovery state, and deploy a purpose-built UUPS upgrade if the existing recovery flow is insufficient. The vaults intentionally expose no generic asset-drain or recapitalization function because moving funds outside normal accounting cannot generically reconcile shares, epochs, rebalances, recovery, and in-flight CCIP state.
 
@@ -95,9 +95,11 @@ Vault accounting is denominated in the configured underlying asset.
 
 Share price, TVL, epoch settlement, withdraw claims, and fees are all expressed in the underlying asset. Strategy adapters report underlying TVL through `getTVL()`, and `claimAsset` pays only the underlying asset.
 
-Secondary protocol rewards are outside this accounting model. For Compound V3, COMP rewards may accrue to the `CompoundV3Adapter`, and a vault `REWARDS_OPERATOR_ROLE` holder can call `claimRewards(to)` to claim those rewards to a nonzero recipient. That hook is an operator custody/recovery mechanism, not a user distribution mechanism.
+Secondary protocol rewards are outside this accounting model. Adapters may accrue rewards from protocol-native controllers, external distributors such as Merkl, partner programs, or similar incentive systems. These rewards are not included in TVL or user entitlements and may remain unclaimed, expire, or become unrecoverable.
 
-The protocol does not currently decide whether claimed COMP is retained, sold, manually distributed, or routed into a future rewards distributor. Handling that on-chain would require additional reward-token accounting, distribution policy, and operational controls. The current design avoids that complexity and keeps user-facing yield calculations underlying-only.
+For Compound V3, COMP rewards may accrue to the `CompoundV3Adapter`, and a vault `REWARDS_OPERATOR_ROLE` holder can call `claimRewards(to)` to claim supported rewards to a nonzero recipient. This is a best-effort, protocol-specific custody/recovery hook, not a user distribution mechanism or a guarantee that secondary rewards are supported consistently across adapters.
+
+The protocol does not decide whether claimed rewards are retained, sold, manually distributed, or routed into a future rewards distributor. Supporting secondary rewards consistently would require protocol-specific integrations, reward-token accounting, distribution policy, and operational controls. The current design deliberately avoids that complexity and keeps user-facing yield calculations underlying-only.
 
 See [ACCESS_CONTROL_MATRIX - Protocol rewards claiming](../security/ACCESS_CONTROL_MATRIX.md#authority-matrix). If product requirements change to include secondary reward tokens in user yield, this design decision and related accounting invariants should be revisited.
 

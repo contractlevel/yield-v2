@@ -24,6 +24,8 @@ methods {
     function cometRewards.s_lastTo() external returns (address) envfree;
     function cometRewards.s_lastShouldAccrue() external returns (bool) envfree;
     function cometRewards.s_claimToCallCount() external returns (uint256) envfree;
+    function cometRewards.rewardConfig(address) external returns (address) envfree;
+    function cometRewards.disableRewardToken() external;
     function rewardToken.balanceOf(address) external returns (uint256) envfree;
     function vault.hasRole(bytes32, address) external returns (bool) envfree;
 
@@ -31,6 +33,10 @@ methods {
 
     // Roles
     function REWARDS_OPERATOR_ROLE() external returns (bytes32) envfree;
+
+    // Wildcard dispatcher summaries for the reward token returned at runtime
+    function _.balanceOf(address) external => DISPATCHER(true);
+    function _.transfer(address, uint256) external => DISPATCHER(true);
 }
 
 /*//////////////////////////////////////////////////////////////
@@ -135,6 +141,7 @@ rule claimRewards_Success_EmitsEventAndClaimsToRecipient() {
     require to != 0, "to is not zero";
     require to != currentContract, "recipient is not the adapter";
     require e.msg.value == 0, "non-payable";
+    require cometRewards.rewardConfig(comet) == rewardToken, "reward token is configured";
     require adapterRewardBalanceBefore > 0, "adapter has a stranded reward balance";
     require recipientRewardBalanceBefore <= max_uint256 - adapterRewardBalanceBefore,
         "recipient reward balance does not overflow";
@@ -156,4 +163,30 @@ rule claimRewards_Success_EmitsEventAndClaimsToRecipient() {
     assert cometRewards.s_lastShouldAccrue();
     assert rewardToken.balanceOf(currentContract) == 0;
     assert rewardToken.balanceOf(to) == recipientRewardBalanceBefore + adapterRewardBalanceBefore;
+}
+
+rule claimRewards_Success_WhenRewardTokenIsNotConfigured() {
+    env e;
+    address to;
+
+    require vault.hasRole(REWARDS_OPERATOR_ROLE(), e.msg.sender), "caller is rewards operator";
+    require to != 0, "to is not zero";
+    require e.msg.value == 0, "non-payable";
+
+    require ghost_RewardsClaimed_EventCount == 0, "RewardsClaimed event count starts at zero";
+    require ghost_RewardsClaimed_EventParam_to == 0, "RewardsClaimed to ghost starts at zero";
+    require cometRewards.s_claimToCallCount() == 0, "claimTo call count starts at zero";
+
+    cometRewards.disableRewardToken(e);
+    require cometRewards.rewardConfig(comet) == 0, "reward token is not configured";
+    claimRewards@withrevert(e, to);
+
+    assert !lastReverted;
+    assert ghost_RewardsClaimed_EventCount == 1;
+    assert ghost_RewardsClaimed_EventParam_to == to;
+    assert cometRewards.s_claimToCallCount() == 1;
+    assert cometRewards.s_lastComet() == getProtocolPool();
+    assert cometRewards.s_lastSrc() == currentContract;
+    assert cometRewards.s_lastTo() == to;
+    assert cometRewards.s_lastShouldAccrue();
 }

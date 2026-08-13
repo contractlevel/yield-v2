@@ -66,15 +66,14 @@ contract ParentVault_CompleteEpochDepositUnitTest is BaseUnitTest {
         assertEq(uint256(log.topics[1]), 1);
     }
 
-    function test_ParentVault_completeEpochDeposit_Success_WhenPaused() public {
+    function test_ParentVault_completeEpochDeposit_RevertWhen_Paused() public {
         _prepareExecutingNetDeposit();
         _changePrank(i_pauser);
         s_parentVault.pause();
 
         _changePrank(i_epochOperator);
+        vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
         s_parentVault.completeEpochDeposit();
-
-        assertEq(uint8(s_parentVault.getEpoch(1).status), uint8(Types.EpochStatus.CLAIMABLE));
     }
 
     function _prepareExecutingNetDeposit() internal {

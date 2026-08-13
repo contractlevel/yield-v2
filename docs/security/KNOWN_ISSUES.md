@@ -627,13 +627,13 @@ A DON node operator (or anyone able to read that node's process memory during wo
 
 ---
 
-## KI-013 — Paused child vault can leave a parent epoch or rebalance in progress
+## KI-013 — A paused parent or child vault can leave a cross-chain epoch or rebalance in progress
 
 **Status:** Accepted — intentional pause containment with an operator break-glass procedure.
 
-**Last reviewed:** 2026-07-21
+**Last reviewed:** 2026-08-13
 
-**Component:** `ParentVault`, `ChildVault.executeEpochWithdraw`, `ChildVault.executeRebalance`, CRE epoch and rebalance workflows, and `WorkflowRouter`.
+**Component:** `ParentVault.completeEpochDeposit`, `ParentVault.completeRebalance`, `ChildVault.executeEpochWithdraw`, `ChildVault.executeRebalance`, CRE epoch and rebalance workflows, and `WorkflowRouter`.
 
 ### Summary
 
@@ -641,30 +641,32 @@ For a remote-strategy net-withdraw epoch, `ParentVault.closeEpoch` records the e
 
 If the affected `ChildVault` is paused before CRE calls `executeEpochWithdraw` or `executeRebalance`, the call reverts at `whenNotPaused`. The pause check occurs before the child attempts the strategy operation, sends a CCIP message, or stores typed recovery state. The parent has already entered its intermediate state, so it cannot advance until the child operation is deliberately resumed.
 
-Repeated CRE execution cannot resolve the condition while the child remains paused. In particular:
+Likewise, if ParentVault is paused after a destination ChildVault successfully deposits a remote net epoch amount or rebalance amount but before CRE submits the corresponding completion report, `completeEpochDeposit` or `completeRebalance` reverts at `whenNotPaused`. ParentVault deliberately does not treat CRE's observation as sufficient to bypass incident containment. The epoch remains `EXECUTING` or the rebalance remains `REBALANCING` until operators reconcile the destination result and deliberately unpause ParentVault for finalization.
+
+Repeated CRE execution cannot resolve the condition while the affected parent or child vault remains paused. In particular:
 
 - The parent epoch remains `EXECUTING`, so its withdraw claims cannot become claimable and the previous-epoch guard prevents a later epoch from closing.
 - The parent rebalance remains `REBALANCING`, so another rebalance cannot begin and epoch close is blocked.
-- The child has no recovery state for the reverted call because execution stopped at the pause guard.
+- The child has no recovery state for a child execution reverted by its pause guard, and ParentVault records no new recovery for a completion reverted by its own pause guard.
 
 ### Why this is accepted, not mitigated on-chain
 
-Pause is an incident-containment boundary. While paused, a vault must not call strategy adapters, send CCIP messages, process inbound CCIP messages, or execute recovery. Allowing child epoch withdrawals or rebalances to bypass the pause guard would undermine that boundary precisely when operators are attempting to contain an incident.
+Pause is an incident-containment boundary. While paused, a vault must not call strategy adapters, send CCIP messages, process inbound CCIP messages, execute recovery, or accept CRE-authorized lifecycle finalization. ParentVault cannot independently prove the remote success that CRE reports, and completion makes economically meaningful accounting transitions. Allowing child execution or parent completion to bypass the pause guard would undermine that boundary precisely when operators are attempting to contain an incident.
 
-The parent cannot safely infer or reconcile the child operation on-chain. It cannot know whether the child is paused, whether a prior child transaction succeeded, or whether a CCIP message is already in flight without introducing additional cross-chain coordination and state. Automatically rolling back the parent is also unsafe because the parent transaction has already completed and a delayed or manually executed child action may still occur.
+ParentVault cannot safely infer or reconcile destination execution on-chain. It cannot know whether a child transaction succeeded or whether a CCIP message is already in flight without introducing additional cross-chain coordination and state. Automatically rolling back parent state is also unsafe because a delayed or manually executed child action may still occur.
 
-The design therefore favors explicit containment and operator reconciliation over automatic liveness while a child is paused. This is consistent with [DD-004](../protocol/DECISIONS.md#dd-004---pause-contains-external-execution).
+The design therefore favors explicit containment and operator reconciliation over automatic liveness while a parent or child vault is paused. This is consistent with [DD-004](../protocol/DECISIONS.md#dd-004---pause-contains-external-execution-and-lifecycle-finalization).
 
 ### Operational mitigation
 
-- Monitor failed CRE reports and `WorkflowRouter` calls for pause-related reverts after `EpochWithdrawExecuting` or `RebalanceInitiated` events.
+- Monitor failed CRE reports and `WorkflowRouter` calls for pause-related reverts after `EpochWithdrawExecuting`, `RebalanceInitiated`, `EpochDepositToStrategySuccess`, or `RebalanceDepositSuccess` events.
 - Alert when a parent epoch remains `EXECUTING` or a rebalance remains `REBALANCING` beyond its expected completion window.
 - Before retrying, reconcile the parent state, child state, recovery mode, transaction history, and CCIP message status so a source-chain action is not executed twice.
-- Follow the [Paused Cross-Chain Execution](../operator/OPERATIONS.md#paused-cross-chain-execution) playbook. Keep the normal router paused or unauthorized, temporarily unpause only the affected child, execute the exact event- or parent-state-derived calldata through an approved break-glass operator, and revoke temporary authority after reconciliation.
+- Follow the [Paused Cross-Chain Execution](../operator/OPERATIONS.md#paused-cross-chain-execution) playbook. Keep the normal router paused or unauthorized, temporarily unpause only the affected vault, execute the exact event- or parent-state-derived calldata through an approved break-glass operator, and revoke temporary authority after reconciliation.
 
 ### Residual risk
 
-An affected epoch or rebalance can remain in progress indefinitely while the child remains paused or if operators do not complete the break-glass procedure. During that interval, epoch settlement and new rebalances are unavailable, and the previous-epoch guard may also prevent subsequent epoch closes.
+An affected epoch or rebalance can remain in progress indefinitely while the parent or child remains paused or if operators do not complete the break-glass procedure. During that interval, epoch settlement and new rebalances are unavailable, and the previous-epoch guard may also prevent subsequent epoch closes.
 
 The failure mode is availability and operational delay. The pause-triggered revert occurs before strategy or CCIP side effects and does not itself corrupt accounting or cause a direct loss of funds. Operational error during manual reconciliation remains part of the privileged-operator trust assumption documented in [KI-001](#ki-001--centralized-trust-in-privileged-operatoradmin-roles).
 
@@ -672,7 +674,7 @@ For the epoch-`EXECUTING` case specifically, depositors and withdrawers whose in
 
 ### Conditions that would warrant revisiting
 
-- Product requirements no longer permit an in-progress epoch or rebalance to wait for operator intervention during a child-vault pause.
+- Product requirements no longer permit an in-progress epoch or rebalance to wait for operator intervention during a parent- or child-vault pause.
 - A safe on-chain acknowledgement or cancellation protocol is added between parent and child vaults.
 - Pause semantics change to permit narrowly scoped continuation of operations that began before the pause.
 - CRE or operator monitoring can no longer reliably detect and reconcile paused cross-chain execution.
@@ -841,7 +843,7 @@ Building a local recovery mode symmetric with `ChildVault`'s would mean storing 
 Under normal, healthy operation this has no visible effect: an epoch reaches `CLAIMABLE` promptly and its participants proceed straight to `claimShares`/`claimAsset`. The consequence only becomes material when an epoch's settlement stalls indefinitely for a reason documented elsewhere:
 
 - [KI-007](#ki-007--epoch-close-depends-on-cre-workflow-execution) — a remote net-deposit or net-withdraw epoch waiting on a second CRE step.
-- [KI-013](#ki-013--paused-child-vault-can-leave-a-parent-epoch-or-rebalance-in-progress) — a remote net-withdraw epoch stuck `EXECUTING` because the child vault is paused before `executeEpochWithdraw` runs.
+- [KI-013](#ki-013--a-paused-parent-or-child-vault-can-leave-a-cross-chain-epoch-or-rebalance-in-progress) — a cross-chain epoch stuck `EXECUTING` because parent completion or child execution is blocked by pause.
 - [KI-014](#ki-014--strategy-withdraw-recovery-requires-full-market-liquidity) — a remote net-withdraw epoch stuck `EXECUTING` because the strategy cannot supply the full requested liquidity (`EPOCH_WITHDRAW` recovery).
 
 In each of these cases, depositors and withdrawers whose intent belongs to the affected epoch have no self-service path to their funds during the stall: not cancellation (their epoch is no longer `OPEN`) and not claiming (their epoch is not yet `CLAIMABLE`). Funds are fully inaccessible, not merely delayed, for the duration of the underlying stall.
@@ -921,3 +923,85 @@ Adding caller-restricting access control (e.g. an `onlyOwner`/`onlyDeployer` che
 
 - A future deployment path decouples proxy creation from the `initialize` call (e.g. a two-step deploy-then-initialize flow, or a factory that deploys proxies for later initialization by a separate transaction).
 - `initialize` is added to a contract that isn't deployed exclusively through the atomic `ERC1967Proxy` constructor-calldata pattern used today.
+
+---
+
+## KI-020 — Pausing `YieldcoinShare` independently of a vault can stall rebalance finalization and, transitively, epoch settlement
+
+**Status:** Accepted — inherent to `YieldcoinShare` and the vaults having independent pause authority.
+
+**Last reviewed:** 2026-08-13
+
+**Component:** `ParentVaultFeesLib._collectManagementFee` (invoked from `ParentVaultRebalanceLib._finalizeRebalance`, reached via `ParentVault.completeRebalance`, `ParentVault.executeRecovery`, and the rebalance branch of `ParentVault._ccipReceive`), `YieldcoinShare.mint`/`_update`.
+
+### Summary
+
+`YieldcoinShare` and each vault hold separate `PAUSER_ROLE`/`UNPAUSER_ROLE` grants (see [ACCESS_CONTROL_MATRIX](./ACCESS_CONTROL_MATRIX.md)). Per [DD-004](../protocol/DECISIONS.md#dd-004---pause-contains-external-execution-and-lifecycle-finalization), pausing ParentVault blocks `completeRebalance` and `completeEpochDeposit`. Pausing only `YieldcoinShare` while ParentVault remains unpaused creates a separate finalization dependency.
+
+The rebalance finalization path mints management-fee shares: `ParentVaultRebalanceLib._finalizeRebalance` unconditionally calls `ParentVaultFeesLib._collectManagementFee`, which calls `IShare(share).mint($.s_treasury, feeShares)` whenever `feeShares != 0`. `YieldcoinShare.mint` routes through `_update`, gated `whenNotPaused` on the token's own pause state. If an operator pauses only `YieldcoinShare` while ParentVault remains unpaused, the fee mint reverts, and with it the entire `completeRebalance`/`executeRecovery`/CCIP-finalize transaction. `s_rebalance.state` remains `REBALANCING` until the token is unpaused and finalization is retried. While `REBALANCING`, `ParentVaultEpochLib._closeEpoch` unconditionally reverts (`ParentVault__RebalanceInProgress`), so no epoch anywhere in the deployment can settle until the stuck rebalance clears.
+
+Since `MIN_REBALANCE_PERIOD` is one hour and any live deployment carries `s_totalShares > 0`, `feeShares` rounds to nonzero on essentially every real finalization — this is the default outcome of a token-only pause during an in-progress rebalance, not a rare edge case.
+
+### Why this is accepted, not mitigated
+
+`YieldcoinShare` is deeply coupled into ordinary vault operation independent of this path: `claimShares` mints and `claimAsset` burns through the same token, so token pause necessarily disrupts vault-adjacent user flows. Wrapping the fee mint in a try/catch would decouple this one call site from token pause but would not change the operational dependency between independently pausable components. It would also weaken the atomic relationship between rebalance finalization and management-fee accounting. Operators therefore pause the token and vault together for full containment and avoid token-only pause while a rebalance is in flight.
+
+### Residual risk
+
+- No funds are lost, stuck, or misdirected — this is a liveness/availability effect only. `s_rebalance.state` and the affected epoch remain in a well-defined, inspectable state (`REBALANCING`, `OPEN`) rather than any corrupted or ambiguous one.
+- Users can still submit new deposits and withdraw intents into the current `OPEN` epoch while stuck, and can cancel them per the normal current-epoch cancellation path, but no epoch can settle and no existing claim can be paid until the token is unpaused.
+- The stall is fully recoverable by the same operator action that caused it: unpausing `YieldcoinShare` allows the next `completeRebalance`/`executeRecovery`/CCIP-finalize retry to succeed and immediately unblocks `closeEpoch`.
+- The specific trigger — pausing the token while leaving ParentVault unpaused during a `REBALANCING` state — requires deliberate, narrowly scoped operator action; it is not reachable by any unprivileged actor. Pausing ParentVault also blocks finalization under KI-013 before fee minting is attempted.
+
+### Conditions that would warrant revisiting
+
+- Incident-response experience shows operators reaching for "pause the token only" during an in-progress rebalance often enough that the resulting settlement stall becomes a recurring operational cost rather than a rare mistake.
+- A future change makes management-fee collection (or any other mint/burn folded into rebalance finalization) conditional or deferrable without weakening the atomicity the current design relies on for its invariant guarantees.
+- `YieldcoinShare` pause/unpause authority is ever separated from the operator group already coordinating vault pause/unpause, increasing the chance the two are toggled independently without full context.
+
+---
+
+## KI-021 — Secondary protocol rewards may be unclaimed, expire, or become unrecoverable
+
+**Status:** Accepted — secondary incentives are outside the audit-ready MVP's accounting and recovery requirements.
+
+**Last reviewed:** 2026-08-13
+
+**Component:** Protocol adapters and external incentive systems, including Aave rewards controllers, Merkl distributions, partner incentives, points programs, and Compound V3 rewards.
+
+**Applies to:** Any current or future strategy whose position may qualify for rewards beyond the underlying asset's base supply yield.
+
+### Summary
+
+Yieldcoin v2 accounts only for yield reflected in the underlying-asset value returned by each adapter's `getTVL()`. A protocol or third party may separately assign ERC-20 rewards, Merkle-based distributions, points, or other incentives to the adapter address holding a strategy position. Those secondary incentives are not included in vault TVL, share price, epoch settlement, withdrawal claims, fees, or any user entitlement.
+
+Reward systems are not uniform across supported strategies. Aave V3 may use protocol-native rewards controllers, Aave V4 may expose Merkl campaigns or off-chain points programs, Compound V3 may use its legacy CometRewards contract or external distribution systems, and partner programs may introduce other claim requirements. Some rewards require the earning adapter itself or an authorized operator to submit protocol-specific calls or Merkle proofs before a deadline. Where an adapter does not implement that mechanism, rewards may remain unclaimed, expire, or become permanently unrecoverable.
+
+`CompoundV3Adapter.claimRewards(to)` is a best-effort, Compound-specific custody/recovery hook. Its presence does not establish a protocol requirement or interface guarantee that secondary incentives are supported uniformly across adapters. A market with no configured Compound reward token is also valid: the adapter still attempts the protocol claim but skips the configured-token balance sweep.
+
+### Why this is accepted, not mitigated
+
+The audit-ready MVP is designed to capture the base supply yield that increases the underlying value of its lending position. Additional incentive rewards are not a product priority and are deliberately excluded from the protocol's user-facing accounting model under [DD-009](../protocol/DECISIONS.md#dd-009---yield-accounting-is-underlying-asset-only).
+
+Uniform secondary-reward recovery would not be a small adapter abstraction. It would require protocol-specific controller and distributor integrations, Merkle-proof sourcing, claim-deadline monitoring, recipient and operator management, treatment of off-chain points, reward-token custody policy, and decisions about sale or distribution. A generic token sweep would also create additional privileged authority and would need to protect position tokens and underlying principal. Adding that surface solely to recover non-required ancillary value would increase implementation, testing, operational, and audit complexity without improving user principal safety or the base-yield product.
+
+### Residual risk
+
+- Users and the protocol may forgo economic value from secondary incentives while a strategy is active.
+- Claimable rewards may expire or become unrecoverable when no compatible adapter claim path or external forwarding arrangement exists.
+- Secondary rewards do not back Yieldcoin shares, so foregoing them does not make the vault insolvent or reduce the underlying-asset TVL already reported by adapters.
+- The presence or absence of a reward program does not affect deposits, withdrawals, rebalances, or epoch settlement unless a future integration explicitly couples those paths.
+- The existing Compound claim hook is best effort and may not cover future Compound reward-delivery mechanisms.
+
+### Operational treatment
+
+- Do not include secondary incentives in advertised vault APY, TVL, user balances, or expected withdrawal value.
+- Treat any recovered Compound rewards as outside normal vault accounting and handle them according to the operator's off-chain custody policy.
+- No operational guarantee is made that Aave, Merkl, partner, points, or future Compound incentives will be monitored or claimed.
+
+### Conditions that would warrant revisiting
+
+- Product requirements change to include secondary incentives in advertised yield, protocol revenue, or user entitlements.
+- The expected value of foregone rewards becomes material relative to the cost and risk of supporting them.
+- A stable, common claiming or forwarding mechanism becomes available across the supported strategies.
+- A future adapter integration makes secondary-reward recovery a launch requirement.

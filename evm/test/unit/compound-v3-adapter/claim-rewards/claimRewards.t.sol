@@ -42,4 +42,13 @@ contract CompoundV3Adapter_ClaimRewardsUnitTest is BaseCompoundV3AdapterUnitTest
         assertEq(s_mockUsdc.balanceOf(address(s_compoundV3Adapter)), 0);
         assertEq(s_mockUsdc.balanceOf(i_nonOwner), strandedRewards);
     }
+
+    function test_CompoundV3Adapter_claimRewards_SuccessWhenRewardTokenIsNotConfigured() external {
+        s_mockCometRewards.setRewardToken(address(0));
+
+        _changePrank(s_rewardsOperator);
+        s_compoundV3Adapter.claimRewards(i_nonOwner);
+
+        assertEq(s_mockCometRewards.lastTo(), i_nonOwner);
+    }
 }

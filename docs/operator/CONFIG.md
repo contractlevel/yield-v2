@@ -80,7 +80,7 @@ Registering a workflow ID, or updating the metadata of one that is still registe
 | `pause()`   | `PAUSER_ROLE`   | Parent vault, child vault, WorkflowRouter, and YieldcoinShare | Stops the protected contract path during incidents or controlled maintenance.    |
 | `unpause()` | `UNPAUSER_ROLE` | Parent vault, child vault, WorkflowRouter, and YieldcoinShare | Resumes operation after the condition that required the pause has been resolved. |
 
-Vault pause state blocks normal user, epoch, rebalance, recovery, and inbound CCIP flows. Two ParentVault functions remain callable while paused because they perform only local finalization of already-confirmed work: `completeEpochDeposit()` finalizes the most recently closed remote net-deposit epoch, and `completeRebalance()` finalizes an in-progress rebalance. Their role and state-machine checks still apply.
+Vault pause state blocks normal user, epoch, rebalance, recovery, inbound CCIP, and ParentVault completion flows. In particular, `completeEpochDeposit()` and `completeRebalance()` cannot acknowledge CRE-observed remote success while ParentVault is paused. After reconciling cross-chain state, operators must use the controlled unpause procedure in [OPERATIONS](./OPERATIONS.md#paused-cross-chain-execution) to resume or finalize an in-flight operation.
 
 ## Adapter Registry Configuration
 
@@ -122,7 +122,7 @@ Before changing an adapter, verify it is deployed for the correct vault and unde
 
 The adapter checks the role on the vault rather than owning its own role state. The recipient `to` must not be the zero address. Operators should verify the recipient and expected reward token behavior before claiming.
 
-Beyond this ability to claim, COMP rewards handling is not explicitly part of the protocol and deferred. See [DESIGN DECISIONS](../protocol/DECISIONS.md#dd-009---yield-accounting-is-underlying-asset-only).
+This is a best-effort, Compound-specific recovery hook. Secondary incentives, including rewards from Aave controllers, Merkl, partner programs, and points programs, are not supported consistently across adapters and may remain unclaimed, expire, or become unrecoverable. They are excluded from vault TVL and user entitlements. See [DESIGN DECISIONS](../protocol/DECISIONS.md#dd-009---yield-accounting-is-underlying-asset-only).
 
 ## Upgrades and Role Administration
 
