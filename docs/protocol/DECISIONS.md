@@ -151,6 +151,32 @@ Because there is no contract-side backstop here, correctness depends entirely on
 
 See [DD-005](#dd-005---cre-is-the-automation-and-tvl-reporting-layer), [DD-006](#dd-006---closeepoch-trusts-cre-supplied-tvl), and [KI-007](../security/KNOWN_ISSUES.md#ki-007--epoch-close-depends-on-cre-workflow-execution).
 
-<!-- ccipAdmin in token contract is unused, but implemented to make future crosschain compatability with possible -->
+## DD-015 - YieldcoinShare's CCIP Admin Is Reserved For Future Cross-Chain Token Support
+
+`YieldcoinShare` stores a CCIP token administrator and exposes `getCCIPAdmin()` and
+`setCCIPAdmin(newAdmin)`. The current protocol does not register `YieldcoinShare` as a Chainlink
+Cross-Chain Token, deploy a token pool for it, or transfer shares through CCIP. Vault CCIP flows
+move the underlying asset and protocol messages; they do not move the share token. The stored value
+is therefore unused by the current deployment's execution paths.
+
+The field is retained to support CCIP's custom-admin registration path without introducing a new
+storage-layout change solely for that purpose. In that path, the stored address calls
+`RegistryModuleOwnerCustom.registerAdminViaGetCCIPAdmin(YieldcoinShare)`. The registry module reads
+`getCCIPAdmin()`, requires the returned address to equal the caller, and proposes that address as the
+token's administrator in `TokenAdminRegistry`. The proposed administrator must separately accept
+the role before it can associate a token pool with the token.
+
+`CONFIG_OPERATOR_ROLE` may update the identity returned by `getCCIPAdmin()`, but the identity itself
+is otherwise data only within Yieldcoin v2: it is not consulted for token operations, grants no
+`YieldcoinShare` role, cannot mint or burn shares, and cannot authorize a UUPS upgrade. It would
+acquire CCIP configuration authority only after completing the external TokenAdminRegistry flow.
+
+Cross-chain share support is not implied by this compatibility field. Enabling it would introduce a
+new security and accounting boundary and requires a separate review of token-pool authority,
+mint/burn permissions, rate limits, supported chains, and the relationship between cross-chain
+token supply and `ParentVault`'s canonical share accounting.
+
+See [YIELDCOIN_SHARE - CCIP Admin](./YIELDCOIN_SHARE.md#ccip-admin) and
+[ACCESS_CONTROL_MATRIX - YieldcoinShare](../security/ACCESS_CONTROL_MATRIX.md#yieldcoinshare).
 
 <!-- any extra yield beyond the apyBase, such as comet rewards is not cared for. we account for some as an extra precaution, but it is not a system priority, if some of it gets stranded, we dont care -->

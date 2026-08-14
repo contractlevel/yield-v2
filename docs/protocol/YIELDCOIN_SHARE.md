@@ -65,7 +65,15 @@ holders and protocol-wide authority.
 `setCCIPAdmin(newAdmin)` requires `CONFIG_OPERATOR_ROLE`, rejects the zero address, and emits
 `CCIPAdminTransferred`.
 
-The CCIP admin value does not grant token roles or UUPS upgrade authority.
+The value supports CCIP's custom-admin registration path. The stored address can call
+`RegistryModuleOwnerCustom.registerAdminViaGetCCIPAdmin(YieldcoinShare)`, which reads
+`getCCIPAdmin()`, verifies that the returned address is the caller, and proposes it as the token's
+administrator in `TokenAdminRegistry`. The proposed administrator must then accept that role before
+it can associate a token pool with the token.
+
+Yieldcoin v2 does not currently register the share token in `TokenAdminRegistry`, configure a share
+token pool, or transfer shares through CCIP. Merely being returned by `getCCIPAdmin()` grants no
+token role, mint/burn permission, or UUPS upgrade authority within `YieldcoinShare`.
 
 ## Upgrade Safety
 

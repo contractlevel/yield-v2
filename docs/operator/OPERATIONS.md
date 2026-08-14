@@ -4,7 +4,7 @@ This runbook covers normal public operator responsibilities for Yieldcoin v2. Us
 
 Potential post-MVP work is tracked separately in the [`ROADMAP`](../protocol/ROADMAP.md).
 
-// @review seal 911/usmans msig series - https://x.com/0xusmanf/status/2078584503350776182
+<!-- // @review seal 911/usmans msig series - https://x.com/0xusmanf/status/2078584503350776182 -->
 
 ## Routine Monitoring
 
