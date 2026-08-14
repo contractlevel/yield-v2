@@ -11,6 +11,51 @@ import {IProtocolAdapter} from "../../../src/interfaces/adapters/IProtocolAdapte
 
 abstract contract Properties is BeforeAfter, Asserts {
     /*//////////////////////////////////////////////////////////////
+                         THIRD-PARTY OPERATIONS
+    //////////////////////////////////////////////////////////////*/
+    function invariant_FOR_001_depositPositionsBelongToBeneficiaries() public {
+        uint256 epochNonce = parent.vault.getEpochNonce();
+        for (uint256 i; i < s_actors.length; ++i) {
+            address beneficiary = s_actors[i];
+            eq(
+                parent.vault.getDepositAmount(beneficiary, epochNonce),
+                ghost_depositedByActorByEpoch[beneficiary][epochNonce],
+                "FOR-001: beneficiary deposit position differs from ghost"
+            );
+        }
+    }
+
+    function invariant_FOR_002_withdrawPositionsBelongToBeneficiaries() public {
+        uint256 epochNonce = parent.vault.getEpochNonce();
+        for (uint256 i; i < s_actors.length; ++i) {
+            address beneficiary = s_actors[i];
+            eq(
+                parent.vault.getWithdrawShareBurnAmount(beneficiary, epochNonce),
+                ghost_shareBurnedByActorByEpoch[beneficiary][epochNonce],
+                "FOR-002: beneficiary withdraw position differs from ghost"
+            );
+        }
+    }
+
+    function invariant_FOR_007_thirdPartyFundingConservesModeledValue() public {
+        eq(ghost_totalForGiftValueSent, ghost_totalForGiftValueReceived, "FOR-007: sent and received gift value differ");
+    }
+
+    function invariant_FOR_008_forClaimsPreserveShrinkingPoolAccounting() public {
+        for (uint256 i; i < ghost_shareAccountingEpochs.length; ++i) {
+            Types.Epoch memory epoch = parent.vault.getEpoch(ghost_shareAccountingEpochs[i]);
+            t(
+                (epoch.remainingDepositClaimAmount == 0) == (epoch.remainingShareMintAmount == 0),
+                "FOR-008: deposit claim pools do not exhaust together"
+            );
+            t(
+                epoch.remainingShareBurnAmount != 0 || epoch.remainingWithdrawClaimAmount == 0,
+                "FOR-008: asset remains after withdraw pool exhaustion"
+            );
+        }
+    }
+
+    /*//////////////////////////////////////////////////////////////
                                   MISC
     //////////////////////////////////////////////////////////////*/
     function invariant_SOLV_006_depositGhostMatchesOpenEpochTotal() public {
@@ -62,6 +107,11 @@ abstract contract Properties is BeforeAfter, Asserts {
 
         for (uint256 i; i < s_actors.length; ++i) {
             address actor = s_actors[i];
+            // A share-funded gift transfers a pro-rata claim whose asset value continues to move with
+            // fees and TVL. The fixed principal ghost has no sound per-user cost basis after that
+            // transfer; FOR-007 separately proves exact aggregate gift conservation.
+            if (ghost_forGiftParticipant[actor]) continue;
+
             uint256 principal = ghost_totalDepositedByActor[actor];
             uint256 feeBurden = ghost_feeBurdenByActor[actor];
             uint256 requiredValue = principal > feeBurden ? principal - feeBurden : 0;

@@ -1,0 +1,14 @@
+ParentVault_depositFor
+├── when the contract is paused
+│   └── it should revert with EnforcedPause
+├── when the beneficiary is the zero address
+│   └── it should revert with BaseVault__NoZeroAddress
+├── when the amount is less than MIN_DEPOSIT_AMOUNT
+│   └── it should revert with ParentVault__AmountTooSmall
+├── when the epoch is not open
+│   └── it should revert with ParentVault__EpochNotOpen
+└── when the deposit is valid
+    ├── it should transfer USDC only from the payer
+    ├── it should record the position and event for the beneficiary
+    ├── it should update the epoch total and return its nonce
+    └── only the beneficiary should cancel and receive the refund

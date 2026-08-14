@@ -34,6 +34,11 @@ abstract contract EpochGhosts is ActorGhosts {
     mapping(address actor => uint256 amount) internal ghost_totalUsdcClaimedByActor;
     mapping(address actor => uint256 amount) internal ghost_feeBurdenByActor;
     mapping(address actor => uint256 amount) internal ghost_depositRoundingBurdenByActor;
+    mapping(address actor => uint256 value) internal ghost_forGiftValueSentByActor;
+    mapping(address actor => uint256 value) internal ghost_forGiftValueReceivedByActor;
+    mapping(address actor => bool participated) internal ghost_forGiftParticipant;
+    uint256 internal ghost_totalForGiftValueSent;
+    uint256 internal ghost_totalForGiftValueReceived;
 
     function _clampDepositAmount(uint256 amountSeed) internal pure returns (uint256) {
         return _boundToRange(amountSeed, MIN_DEPOSIT_AMOUNT, MAX_DEPOSIT_AMOUNT);
@@ -54,6 +59,16 @@ abstract contract EpochGhosts is ActorGhosts {
         ghost_totalDepositedByActor[actor] += amount;
         ghost_totalDepositedByEpoch[epochNonce] += amount;
         ghost_depositedByActorByEpoch[actor][epochNonce] += amount;
+    }
+
+    function _recordDepositFor(address payer, address beneficiary, uint256 amount) internal {
+        _recordDeposit(beneficiary, amount);
+        ghost_forGiftParticipant[payer] = true;
+        ghost_forGiftParticipant[beneficiary] = true;
+        ghost_forGiftValueSentByActor[payer] += amount;
+        ghost_forGiftValueReceivedByActor[beneficiary] += amount;
+        ghost_totalForGiftValueSent += amount;
+        ghost_totalForGiftValueReceived += amount;
     }
 
     function _recordDepositCancelled(address actor, uint256 amount) internal {
@@ -107,6 +122,21 @@ abstract contract EpochGhosts is ActorGhosts {
         ghost_shareBalanceByActor[actor] -= amount;
         ghost_totalShareBurnedByEpoch[epochNonce] += amount;
         ghost_shareBurnedByActorByEpoch[actor][epochNonce] += amount;
+    }
+
+    function _recordWithdrawFor(address payer, address beneficiary, uint256 amount) internal {
+        uint256 epochNonce = parent.vault.getEpochNonce();
+        uint256 giftValue = _shareValue(amount);
+
+        ghost_forGiftParticipant[payer] = true;
+        ghost_forGiftParticipant[beneficiary] = true;
+        ghost_shareBalanceByActor[payer] -= amount;
+        ghost_totalShareBurnedByEpoch[epochNonce] += amount;
+        ghost_shareBurnedByActorByEpoch[beneficiary][epochNonce] += amount;
+        ghost_forGiftValueSentByActor[payer] += giftValue;
+        ghost_forGiftValueReceivedByActor[beneficiary] += giftValue;
+        ghost_totalForGiftValueSent += giftValue;
+        ghost_totalForGiftValueReceived += giftValue;
     }
 
     function _recordWithdrawCancelled(address actor, uint256 amount) internal {

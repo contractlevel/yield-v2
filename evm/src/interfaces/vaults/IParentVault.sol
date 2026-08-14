@@ -230,6 +230,19 @@ interface IParentVault is IBaseVault {
     /// @dev Requires the caller to have sufficient underlying-asset balance and allowance for amount
     function deposit(uint256 amount) external returns (uint256 epochNonce);
 
+    /// @notice Deposits the caller's underlying asset for a beneficiary
+    /// @param beneficiary The user that owns the resulting epoch deposit position
+    /// @param amount The amount of underlying asset to deposit
+    /// @return epochNonce The epoch nonce of the deposit
+    /// @dev Reverts if beneficiary is the zero address
+    /// @dev Reverts if amount is less than the minimum deposit amount
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if the current epoch is not open
+    /// @dev Requires the caller to have sufficient underlying-asset balance and allowance for amount
+    /// @dev The beneficiary, not the caller, owns the epoch position and any cancellation refund
+    function depositFor(address beneficiary, uint256 amount) external returns (uint256 epochNonce);
+
     /// @notice Submits a withdraw intent by escrowing shares in the current epoch
     /// @param shareBurnAmount The amount of shares to escrow for burning when the withdraw is claimed
     /// @return epochNonce The nonce of the epoch containing the withdraw intent
@@ -240,6 +253,19 @@ interface IParentVault is IBaseVault {
     /// @dev Requires the caller to have sufficient share balance and allowance for shareBurnAmount
     function withdraw(uint256 shareBurnAmount) external returns (uint256 epochNonce);
 
+    /// @notice Submits a withdraw intent for a beneficiary by escrowing the caller's shares
+    /// @param beneficiary The user that owns the resulting epoch withdraw position
+    /// @param shareBurnAmount The amount of caller shares to escrow for burning when the withdraw is claimed
+    /// @return epochNonce The nonce of the epoch containing the withdraw intent
+    /// @dev Reverts if beneficiary is the zero address
+    /// @dev Reverts if shareBurnAmount is zero
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if the current epoch is not open
+    /// @dev Requires the caller to have sufficient share balance and allowance for shareBurnAmount
+    /// @dev The beneficiary, not the caller, owns the epoch position and any cancellation refund
+    function withdrawFor(address beneficiary, uint256 shareBurnAmount) external returns (uint256 epochNonce);
+
     /// @notice Claims the shares allocated to the caller's deposit in a settled epoch
     /// @param epochNonce The epoch nonce of the deposit
     /// @return shareMintAmount The amount of Yieldcoin shares minted for the deposit
@@ -249,6 +275,18 @@ interface IParentVault is IBaseVault {
     /// @dev Reverts if the caller has no deposit in the epoch
     function claimShares(uint256 epochNonce) external returns (uint256 shareMintAmount);
 
+    /// @notice Claims the shares allocated to a user's deposit in a settled epoch
+    /// @param user The depositor whose position is claimed and that receives the minted shares
+    /// @param epochNonce The epoch nonce of the deposit
+    /// @return shareMintAmount The amount of Yieldcoin shares minted to user
+    /// @dev Reverts if user is the zero address
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if the epoch is not claimable
+    /// @dev Reverts if user has no deposit in the epoch
+    /// @dev Anyone may call this function, but the minted shares are always sent to user
+    function claimSharesFor(address user, uint256 epochNonce) external returns (uint256 shareMintAmount);
+
     /// @notice Claims the underlying asset for a completed epoch withdraw
     /// @param epochNonce The nonce of the epoch to claim from
     /// @return withdrawAmount The amount of underlying asset transferred to the withdrawer
@@ -257,6 +295,18 @@ interface IParentVault is IBaseVault {
     /// @dev Reverts if the epoch is not claimable
     /// @dev Reverts if the caller has no withdraw intent in the epoch
     function claimAsset(uint256 epochNonce) external returns (uint256 withdrawAmount);
+
+    /// @notice Claims the underlying asset allocated to a user's withdraw intent in a settled epoch
+    /// @param user The withdrawer whose position is claimed and that receives the underlying asset
+    /// @param epochNonce The nonce of the epoch to claim from
+    /// @return withdrawAmount The amount of underlying asset transferred to user
+    /// @dev Reverts if user is the zero address
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if the epoch is not claimable
+    /// @dev Reverts if user has no withdraw intent in the epoch
+    /// @dev Anyone may call this function, but the underlying asset is always sent to user
+    function claimAssetFor(address user, uint256 epochNonce) external returns (uint256 withdrawAmount);
 
     /// @notice Cancels and refunds the caller's deposit in the current open epoch
     /// @dev Reverts if the call is reentered

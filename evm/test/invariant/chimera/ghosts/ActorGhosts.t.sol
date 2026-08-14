@@ -36,4 +36,19 @@ abstract contract ActorGhosts is Setup {
     function _actor(uint256 actorSeed) internal view returns (address) {
         return s_actors[_boundToRange(actorSeed, 0, s_actors.length - 1)];
     }
+
+    function _distinctActor(uint256 actorSeed, address excluded) internal view returns (address actor) {
+        actor = _actor(actorSeed);
+        if (actor == excluded) {
+            uint256 index = (_boundToRange(actorSeed, 0, s_actors.length - 1) + 1) % s_actors.length;
+            actor = s_actors[index];
+        }
+    }
+
+    function _actorIndex(address actor) internal view returns (uint256 index) {
+        for (uint256 i; i < s_actors.length; ++i) {
+            if (s_actors[i] == actor) return i;
+        }
+        revert("actor not found");
+    }
 }

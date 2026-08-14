@@ -58,6 +58,62 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         );
     }
 
+    function handler_depositFor(uint256 payerSeed, uint256 beneficiarySeed, uint256 amountSeed) public {
+        address payer = _actor(payerSeed);
+        address beneficiary = _distinctActor(beneficiarySeed, payer);
+        uint256 amount = _clampDepositAmount(amountSeed);
+        uint256 epochNonce = parent.vault.getEpochNonce();
+        uint256 payerBefore = IERC20(parent.vault.getAsset()).balanceOf(payer);
+        uint256 beneficiaryBefore = IERC20(parent.vault.getAsset()).balanceOf(beneficiary);
+        uint256 positionBefore = parent.vault.getDepositAmount(beneficiary, epochNonce);
+
+        _changePrank(payer);
+        parent.vault.depositFor(beneficiary, amount);
+        _recordDepositFor(payer, beneficiary, amount);
+
+        eq(
+            IERC20(parent.vault.getAsset()).balanceOf(payer),
+            payerBefore - amount,
+            "FOR-001: depositFor did not debit payer"
+        );
+        eq(
+            IERC20(parent.vault.getAsset()).balanceOf(beneficiary),
+            beneficiaryBefore,
+            "FOR-003: depositFor debited distinct beneficiary"
+        );
+        eq(
+            parent.vault.getDepositAmount(beneficiary, epochNonce),
+            positionBefore + amount,
+            "FOR-001: depositFor did not credit beneficiary position"
+        );
+        _assertDepositForCancellationOwnership(payer, beneficiary, epochNonce);
+    }
+
+    function _assertDepositForCancellationOwnership(address payer, address beneficiary, uint256 epochNonce) internal {
+        uint256 beneficiaryPosition = parent.vault.getDepositAmount(beneficiary, epochNonce);
+        uint256 beneficiaryBalance = IERC20(parent.vault.getAsset()).balanceOf(beneficiary);
+        uint256 payerPosition = parent.vault.getDepositAmount(payer, epochNonce);
+
+        _changePrank(payer);
+        (bool success,) = address(parent.vault).call(abi.encodeWithSelector(ParentVault.cancelDeposit.selector));
+        if (payerPosition == 0) {
+            t(!success, "FOR-006: payer cancelled beneficiary deposit");
+        } else {
+            t(success, "FOR-006: payer could not cancel own deposit");
+            _recordDepositCancelled(payer, payerPosition);
+        }
+        eq(
+            parent.vault.getDepositAmount(beneficiary, epochNonce),
+            beneficiaryPosition,
+            "FOR-006: payer changed beneficiary deposit"
+        );
+        eq(
+            IERC20(parent.vault.getAsset()).balanceOf(beneficiary),
+            beneficiaryBalance,
+            "FOR-006: payer redirected beneficiary refund"
+        );
+    }
+
     function _assertSubminimumDepositRejected(address actor) internal {
         uint256 epochNonce = parent.vault.getEpochNonce();
         uint256 epochTotal = parent.vault.getEpoch(epochNonce).totalDepositAmount;
@@ -585,6 +641,36 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         eq(_after.actorShareBalance, _before.actorShareBalance + shareMintAmount, "claimShares did not mint shares");
     }
 
+    function handler_claimSharesFor(uint256 userSeed, uint256 callerSeed, uint256 epochSeed, uint256 amountSeed)
+        public
+    {
+        address user = _actor(userSeed);
+        address caller = _distinctActor(callerSeed, user);
+        uint256 claimEpochNonce = _claimableDepositEpoch(user, epochSeed);
+        if (claimEpochNonce == 0) {
+            uint256 amount = _clampDepositAmount(amountSeed);
+            _changePrank(caller);
+            parent.vault.depositFor(user, amount);
+            _recordDepositFor(caller, user, amount);
+            handler_closeEpoch(0);
+            claimEpochNonce = _claimableDepositEpoch(user, epochSeed);
+        }
+
+        uint256 callerBefore = parent.share.balanceOf(caller);
+        uint256 userBefore = parent.share.balanceOf(user);
+        _changePrank(caller);
+        uint256 shareMintAmount = parent.vault.claimSharesFor(user, claimEpochNonce);
+        _recordSharesClaimed(user, claimEpochNonce, shareMintAmount);
+
+        eq(parent.share.balanceOf(caller), callerBefore, "FOR-004: claimSharesFor credited distinct caller");
+        eq(parent.share.balanceOf(user), userBefore + shareMintAmount, "FOR-004: claimSharesFor did not credit user");
+        eq(
+            parent.vault.getDepositAmount(user, claimEpochNonce),
+            0,
+            "FOR-004: claimSharesFor did not clear user position"
+        );
+    }
+
     function handler_withdraw(uint256 actorSeed, uint256 shareSeed, uint256 amountSeed) public {
         address actor = _actor(actorSeed);
 
@@ -595,6 +681,54 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         uint256 shareBurnAmount = _clampWithdrawShareBurnAmount(shareSeed, parent.share.balanceOf(actor));
         _assertZeroWithdrawRejected(actor);
         _withdrawAndAssert(actor, shareBurnAmount, "withdraw did not transfer shares");
+    }
+
+    function handler_withdrawFor(uint256 payerSeed, uint256 beneficiarySeed, uint256 shareSeed, uint256 amountSeed)
+        public
+    {
+        address payer = _actor(payerSeed);
+        address beneficiary = _distinctActor(beneficiarySeed, payer);
+        if (parent.share.balanceOf(payer) == 0) _ensureActorHasShares(payerSeed, amountSeed);
+
+        uint256 amount = _clampWithdrawShareBurnAmount(shareSeed, parent.share.balanceOf(payer));
+        uint256 epochNonce = parent.vault.getEpochNonce();
+        uint256 payerBefore = parent.share.balanceOf(payer);
+        uint256 beneficiaryBefore = parent.share.balanceOf(beneficiary);
+        uint256 positionBefore = parent.vault.getWithdrawShareBurnAmount(beneficiary, epochNonce);
+
+        _changePrank(payer);
+        parent.vault.withdrawFor(beneficiary, amount);
+        _recordWithdrawFor(payer, beneficiary, amount);
+
+        eq(parent.share.balanceOf(payer), payerBefore - amount, "FOR-002: withdrawFor did not debit payer");
+        eq(parent.share.balanceOf(beneficiary), beneficiaryBefore, "FOR-003: withdrawFor debited distinct beneficiary");
+        eq(
+            parent.vault.getWithdrawShareBurnAmount(beneficiary, epochNonce),
+            positionBefore + amount,
+            "FOR-002: withdrawFor did not credit beneficiary position"
+        );
+        _assertWithdrawForCancellationOwnership(payer, beneficiary, epochNonce);
+    }
+
+    function _assertWithdrawForCancellationOwnership(address payer, address beneficiary, uint256 epochNonce) internal {
+        uint256 beneficiaryPosition = parent.vault.getWithdrawShareBurnAmount(beneficiary, epochNonce);
+        uint256 beneficiaryBalance = parent.share.balanceOf(beneficiary);
+        uint256 payerPosition = parent.vault.getWithdrawShareBurnAmount(payer, epochNonce);
+
+        _changePrank(payer);
+        (bool success,) = address(parent.vault).call(abi.encodeWithSelector(ParentVault.cancelWithdraw.selector));
+        if (payerPosition == 0) {
+            t(!success, "FOR-006: payer cancelled beneficiary withdraw");
+        } else {
+            t(success, "FOR-006: payer could not cancel own withdraw");
+            _recordWithdrawCancelled(payer, payerPosition);
+        }
+        eq(
+            parent.vault.getWithdrawShareBurnAmount(beneficiary, epochNonce),
+            beneficiaryPosition,
+            "FOR-006: payer changed beneficiary withdraw"
+        );
+        eq(parent.share.balanceOf(beneficiary), beneficiaryBalance, "FOR-006: payer redirected beneficiary shares");
     }
 
     function _assertZeroWithdrawRejected(address actor) internal {
@@ -717,6 +851,50 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             _after.actorUsdcBalance,
             _before.actorUsdcBalance + usdcWithdrawAmount,
             "EPOCH-012: claimAsset did not transfer USDC"
+        );
+    }
+
+    function handler_claimAssetFor(
+        uint256 userSeed,
+        uint256 callerSeed,
+        uint256 epochSeed,
+        uint256 shareSeed,
+        uint256 amountSeed
+    ) public {
+        address user = _actor(userSeed);
+        address caller = _distinctActor(callerSeed, user);
+        uint256 claimEpochNonce = _claimableWithdrawEpoch(user, epochSeed);
+        if (claimEpochNonce == 0) {
+            uint256 callerIndex = _actorIndex(caller);
+            if (parent.share.balanceOf(caller) == 0) _ensureActorHasShares(callerIndex, amountSeed);
+            uint256 shareBurnAmount = _clampWithdrawShareBurnAmount(shareSeed, parent.share.balanceOf(caller));
+            _changePrank(caller);
+            parent.vault.withdrawFor(user, shareBurnAmount);
+            _recordWithdrawFor(caller, user, shareBurnAmount);
+            handler_closeEpoch(0);
+            claimEpochNonce = _claimableWithdrawEpoch(user, epochSeed);
+        }
+
+        uint256 callerBefore = IERC20(parent.vault.getAsset()).balanceOf(caller);
+        uint256 userBefore = IERC20(parent.vault.getAsset()).balanceOf(user);
+        _changePrank(caller);
+        uint256 withdrawAmount = parent.vault.claimAssetFor(user, claimEpochNonce);
+        _recordUsdcClaimed(user, claimEpochNonce, withdrawAmount);
+
+        eq(
+            IERC20(parent.vault.getAsset()).balanceOf(caller),
+            callerBefore,
+            "FOR-005: claimAssetFor credited distinct caller"
+        );
+        eq(
+            IERC20(parent.vault.getAsset()).balanceOf(user),
+            userBefore + withdrawAmount,
+            "FOR-005: claimAssetFor did not credit user"
+        );
+        eq(
+            parent.vault.getWithdrawShareBurnAmount(user, claimEpochNonce),
+            0,
+            "FOR-005: claimAssetFor did not clear user position"
         );
     }
 

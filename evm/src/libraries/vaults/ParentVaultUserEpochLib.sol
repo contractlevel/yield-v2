@@ -79,23 +79,47 @@ library ParentVaultUserEpochLib {
         uint256 amount,
         uint256 minDepositAmount
     ) public returns (uint256 epochNonce) {
-        epochNonce = _deposit($, asset, user, amount, minDepositAmount);
+        epochNonce = _deposit($, asset, user, user, amount, minDepositAmount);
     }
 
-    /// @notice Deposits the underlying asset into the vault
+    /// @notice Deposits a payer's underlying asset for a beneficiary
     /// @param $ ParentVault namespaced storage
     /// @param asset The underlying asset token
-    /// @param user The user depositing the underlying asset
+    /// @param payer The user supplying the underlying asset
+    /// @param beneficiary The user that owns the resulting epoch deposit position
     /// @param amount The amount of underlying asset to deposit
     /// @param minDepositAmount The minimum deposit amount
     /// @return epochNonce The epoch nonce of the deposit
     /// @dev Reverts if amount is less than minDepositAmount
     /// @dev Reverts if the current epoch is not open
-    /// @dev Requires user to have sufficient underlying-asset balance and allowance for amount
+    /// @dev Requires payer to have sufficient underlying-asset balance and allowance for amount
+    function depositFor(
+        ParentVaultStore.ParentVaultStorage storage $,
+        address asset,
+        address payer,
+        address beneficiary,
+        uint256 amount,
+        uint256 minDepositAmount
+    ) public returns (uint256 epochNonce) {
+        epochNonce = _deposit($, asset, payer, beneficiary, amount, minDepositAmount);
+    }
+
+    /// @notice Deposits the underlying asset into the vault
+    /// @param $ ParentVault namespaced storage
+    /// @param asset The underlying asset token
+    /// @param payer The user supplying the underlying asset
+    /// @param beneficiary The user that owns the resulting epoch deposit position
+    /// @param amount The amount of underlying asset to deposit
+    /// @param minDepositAmount The minimum deposit amount
+    /// @return epochNonce The epoch nonce of the deposit
+    /// @dev Reverts if amount is less than minDepositAmount
+    /// @dev Reverts if the current epoch is not open
+    /// @dev Requires payer to have sufficient underlying-asset balance and allowance for amount
     function _deposit(
         ParentVaultStore.ParentVaultStorage storage $,
         address asset,
-        address user,
+        address payer,
+        address beneficiary,
         uint256 amount,
         uint256 minDepositAmount
     ) internal returns (uint256 epochNonce) {
@@ -105,11 +129,11 @@ library ParentVaultUserEpochLib {
         // This condition should never be hit under normal operations because the epoch nonce is incremented by openNextEpoch
         if (s_epoch.status != Types.EpochStatus.OPEN) revert IParentVault.ParentVault__EpochNotOpen(epochNonce);
 
-        $.s_deposits[user][epochNonce] += amount;
+        $.s_deposits[beneficiary][epochNonce] += amount;
         s_epoch.totalDepositAmount += amount;
 
-        IERC20(asset).safeTransferFrom(user, address(this), amount);
-        emit DepositSubmitted(epochNonce, user, amount);
+        IERC20(asset).safeTransferFrom(payer, address(this), amount);
+        emit DepositSubmitted(epochNonce, beneficiary, amount);
     }
 
     /// @notice Submits a withdraw intent by escrowing shares in the current epoch
@@ -127,22 +151,44 @@ library ParentVaultUserEpochLib {
         address user,
         uint256 shareBurnAmount
     ) public returns (uint256 epochNonce) {
-        epochNonce = _withdraw($, share, user, shareBurnAmount);
+        epochNonce = _withdraw($, share, user, user, shareBurnAmount);
+    }
+
+    /// @notice Submits a beneficiary-owned withdraw intent using a payer's shares
+    /// @param $ ParentVault namespaced storage
+    /// @param share The Yieldcoin share token
+    /// @param payer The user supplying the shares
+    /// @param beneficiary The user that owns the resulting epoch withdraw position
+    /// @param shareBurnAmount The amount of shares to escrow for burning when the withdraw is claimed
+    /// @return epochNonce The epoch nonce of the withdraw
+    /// @dev Reverts if shareBurnAmount is zero
+    /// @dev Reverts if the current epoch is not open
+    /// @dev Requires payer to have sufficient share balance and allowance for shareBurnAmount
+    function withdrawFor(
+        ParentVaultStore.ParentVaultStorage storage $,
+        address share,
+        address payer,
+        address beneficiary,
+        uint256 shareBurnAmount
+    ) public returns (uint256 epochNonce) {
+        epochNonce = _withdraw($, share, payer, beneficiary, shareBurnAmount);
     }
 
     /// @notice Submits a withdraw intent by escrowing shares in the current epoch
     /// @param $ ParentVault namespaced storage
     /// @param share The Yieldcoin share token
-    /// @param user The user submitting the withdraw intent
+    /// @param payer The user supplying the shares
+    /// @param beneficiary The user that owns the resulting epoch withdraw position
     /// @param shareBurnAmount The amount of shares to escrow for burning when the withdraw is claimed
     /// @return epochNonce The epoch nonce of the withdraw
     /// @dev Reverts if shareBurnAmount is zero
     /// @dev Reverts if the current epoch is not open
-    /// @dev Requires user to have sufficient share balance and allowance for shareBurnAmount
+    /// @dev Requires payer to have sufficient share balance and allowance for shareBurnAmount
     function _withdraw(
         ParentVaultStore.ParentVaultStorage storage $,
         address share,
-        address user,
+        address payer,
+        address beneficiary,
         uint256 shareBurnAmount
     ) internal returns (uint256 epochNonce) {
         if (shareBurnAmount == 0) revert IParentVault.ParentVault__NoZeroAmount();
@@ -151,12 +197,12 @@ library ParentVaultUserEpochLib {
         // This condition should never be hit under normal operations because the epoch nonce is incremented by openNextEpoch
         if (s_epoch.status != Types.EpochStatus.OPEN) revert IParentVault.ParentVault__EpochNotOpen(epochNonce);
 
-        $.s_withdraws[user][epochNonce] += shareBurnAmount;
+        $.s_withdraws[beneficiary][epochNonce] += shareBurnAmount;
         s_epoch.totalShareBurnAmount += shareBurnAmount;
 
-        IERC20(share).safeTransferFrom(user, address(this), shareBurnAmount);
+        IERC20(share).safeTransferFrom(payer, address(this), shareBurnAmount);
 
-        emit WithdrawSubmitted(epochNonce, user, shareBurnAmount);
+        emit WithdrawSubmitted(epochNonce, beneficiary, shareBurnAmount);
     }
 
     /// @notice Claims the shares allocated to a user's deposit in a settled epoch

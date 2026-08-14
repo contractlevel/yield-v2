@@ -1,0 +1,13 @@
+ParentVault_claimSharesFor
+├── when the contract is paused
+│   └── it should revert with EnforcedPause
+├── when the user is the zero address
+│   └── it should revert with BaseVault__NoZeroAddress
+├── when the epoch is not claimable
+│   └── it should revert with ParentVault__EpochNotClaimable
+├── when the user has no deposit
+│   └── it should revert with ParentVault__NoDeposit
+└── when the claim is valid
+    ├── anyone should be able to trigger it
+    ├── it should mint and emit only for the user
+    └── it should clear the user's position and remaining counters

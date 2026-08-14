@@ -140,6 +140,29 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
             ParentVaultUserEpochLib.deposit(_parentVaultStorage(), i_asset, msg.sender, amount, i_minDepositAmount);
     }
 
+    /// @notice Deposits the caller's underlying asset for a beneficiary
+    /// @param beneficiary The user that owns the resulting epoch deposit position
+    /// @param amount The amount of underlying asset to deposit
+    /// @return epochNonce The epoch nonce of the deposit
+    /// @dev Reverts if beneficiary is the zero address
+    /// @dev Reverts if amount is less than the minimum deposit amount
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if the current epoch is not open
+    /// @dev Requires the caller to have sufficient underlying-asset balance and allowance for amount
+    /// @dev The beneficiary, not the caller, owns the epoch position and any cancellation refund
+    function depositFor(address beneficiary, uint256 amount)
+        external
+        nonReentrant
+        whenNotPaused
+        returns (uint256 epochNonce)
+    {
+        _revertIfZeroAddress(beneficiary);
+        epochNonce = ParentVaultUserEpochLib.depositFor(
+            _parentVaultStorage(), i_asset, msg.sender, beneficiary, amount, i_minDepositAmount
+        );
+    }
+
     /// @notice Submits a withdraw intent by escrowing shares in the current epoch
     /// @param shareBurnAmount The amount of shares to escrow for burning when the withdraw is claimed
     /// @return epochNonce The nonce of the epoch containing the withdraw intent
@@ -150,6 +173,29 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /// @dev Requires the caller to have sufficient share balance and allowance for shareBurnAmount
     function withdraw(uint256 shareBurnAmount) external nonReentrant whenNotPaused returns (uint256 epochNonce) {
         epochNonce = ParentVaultUserEpochLib.withdraw(_parentVaultStorage(), i_share, msg.sender, shareBurnAmount);
+    }
+
+    /// @notice Submits a withdraw intent for a beneficiary by escrowing the caller's shares
+    /// @param beneficiary The user that owns the resulting epoch withdraw position
+    /// @param shareBurnAmount The amount of caller shares to escrow for burning when the withdraw is claimed
+    /// @return epochNonce The nonce of the epoch containing the withdraw intent
+    /// @dev Reverts if beneficiary is the zero address
+    /// @dev Reverts if shareBurnAmount is zero
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if the current epoch is not open
+    /// @dev Requires the caller to have sufficient share balance and allowance for shareBurnAmount
+    /// @dev The beneficiary, not the caller, owns the epoch position and any cancellation refund
+    function withdrawFor(address beneficiary, uint256 shareBurnAmount)
+        external
+        nonReentrant
+        whenNotPaused
+        returns (uint256 epochNonce)
+    {
+        _revertIfZeroAddress(beneficiary);
+        epochNonce = ParentVaultUserEpochLib.withdrawFor(
+            _parentVaultStorage(), i_share, msg.sender, beneficiary, shareBurnAmount
+        );
     }
 
     /// @notice Claims the shares allocated to the caller's deposit in a settled epoch
@@ -163,6 +209,26 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
         shareMintAmount = ParentVaultUserEpochLib.claimShares(_parentVaultStorage(), i_share, msg.sender, epochNonce);
     }
 
+    /// @notice Claims the shares allocated to a user's deposit in a settled epoch
+    /// @param user The depositor whose position is claimed and that receives the minted shares
+    /// @param epochNonce The epoch nonce of the deposit
+    /// @return shareMintAmount The amount of Yieldcoin shares minted to user
+    /// @dev Reverts if user is the zero address
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if the epoch is not claimable
+    /// @dev Reverts if user has no deposit in the epoch
+    /// @dev Anyone may call this function, but the minted shares are always sent to user
+    function claimSharesFor(address user, uint256 epochNonce)
+        external
+        nonReentrant
+        whenNotPaused
+        returns (uint256 shareMintAmount)
+    {
+        _revertIfZeroAddress(user);
+        shareMintAmount = ParentVaultUserEpochLib.claimShares(_parentVaultStorage(), i_share, user, epochNonce);
+    }
+
     /// @notice Claims the underlying asset for a completed epoch withdraw
     /// @param epochNonce The nonce of the epoch to claim from
     /// @return withdrawAmount The amount of underlying asset transferred to the withdrawer
@@ -173,6 +239,26 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     function claimAsset(uint256 epochNonce) external nonReentrant whenNotPaused returns (uint256 withdrawAmount) {
         withdrawAmount =
             ParentVaultUserEpochLib.claimAsset(_parentVaultStorage(), i_share, i_asset, msg.sender, epochNonce);
+    }
+
+    /// @notice Claims the underlying asset allocated to a user's withdraw intent in a settled epoch
+    /// @param user The withdrawer whose position is claimed and that receives the underlying asset
+    /// @param epochNonce The nonce of the epoch to claim from
+    /// @return withdrawAmount The amount of underlying asset transferred to user
+    /// @dev Reverts if user is the zero address
+    /// @dev Reverts if the call is reentered
+    /// @dev Reverts if the vault is paused
+    /// @dev Reverts if the epoch is not claimable
+    /// @dev Reverts if user has no withdraw intent in the epoch
+    /// @dev Anyone may call this function, but the underlying asset is always sent to user
+    function claimAssetFor(address user, uint256 epochNonce)
+        external
+        nonReentrant
+        whenNotPaused
+        returns (uint256 withdrawAmount)
+    {
+        _revertIfZeroAddress(user);
+        withdrawAmount = ParentVaultUserEpochLib.claimAsset(_parentVaultStorage(), i_share, i_asset, user, epochNonce);
     }
 
     /// @notice Cancels and refunds the caller's deposit in the current open epoch
@@ -201,7 +287,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /// @dev Reverts if user has no deposit in the current epoch
     /// @dev Deliberately callable while paused
     function forceCancelDeposit(address user) external nonReentrant onlyRole(Roles.CANCEL_DEPOSIT_OPERATOR_ROLE) {
-        ParentVaultUserEpochLib._forceCancelDeposit(_parentVaultStorage(), i_asset, user);
+        ParentVaultUserEpochLib.forceCancelDeposit(_parentVaultStorage(), i_asset, user);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -374,7 +460,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
             || $_baseVault.s_crosschainVaults[newStrategy.chainSelector] != address(0);
 
         ParentVaultRebalanceLib.InitiateRebalanceResult memory result =
-            ParentVaultRebalanceLib._initiateRebalance($, newStrategy, i_thisChainSelector, isSupportedChain);
+            ParentVaultRebalanceLib.initiateRebalance($, newStrategy, i_thisChainSelector, isSupportedChain);
 
         // Continue synchronously when the previously active strategy is local
         //slither-disable-next-line incorrect-equality
