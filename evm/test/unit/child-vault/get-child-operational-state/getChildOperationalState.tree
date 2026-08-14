@@ -1,0 +1,5 @@
+ChildVault_getChildOperationalState
+├── when an active adapter exists
+│   └── it should return the complete ChildVault operational state including canonical TVL
+└── when no active adapter exists
+    └── it should return only CCIP-send recovery TVL

@@ -38,22 +38,6 @@ library ParentVaultFeesLib {
     /// @param share The Yieldcoin share token
     /// @dev Caps elapsed time at 365 days
     /// @dev Reverts if lastRebalanceCompletedTimestamp is in the future
-    function collectManagementFee(
-        ParentVaultStore.ParentVaultStorage storage $,
-        uint256 rebalanceNonce,
-        uint256 lastRebalanceCompletedTimestamp,
-        address share
-    ) public {
-        _collectManagementFee($, rebalanceNonce, lastRebalanceCompletedTimestamp, share);
-    }
-
-    /// @notice Calculates and collects management fees for time elapsed since the preceding rebalance completed
-    /// @param $ ParentVault namespaced storage
-    /// @param rebalanceNonce The nonce of the rebalance collecting the fee
-    /// @param lastRebalanceCompletedTimestamp The timestamp when the rebalance last completed
-    /// @param share The Yieldcoin share token
-    /// @dev Caps elapsed time at 365 days
-    /// @dev Reverts if lastRebalanceCompletedTimestamp is in the future
     function _collectManagementFee(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 rebalanceNonce,

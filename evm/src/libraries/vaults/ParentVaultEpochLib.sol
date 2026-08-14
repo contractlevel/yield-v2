@@ -47,6 +47,7 @@ library ParentVaultEpochLib {
     }
 
     struct CloseEpochParams {
+        uint256 expectedEpochNonce;
         uint256 tvl;
         uint256 sharePrecision;
         uint256 assetPrecision;
@@ -87,6 +88,7 @@ library ParentVaultEpochLib {
     //////////////////////////////////////////////////////////////*/
     /// @notice Settles the current epoch and returns the external action ParentVault must execute
     /// @param $ ParentVault namespaced storage
+    /// @param expectedEpochNonce The current epoch nonce expected by the caller
     /// @param tvl The underlying-asset value of the active strategy before settling the current epoch
     /// @param sharePrecision The share precision factor
     /// @param assetPrecision The underlying asset precision factor used for bootstrap share allocation
@@ -95,6 +97,7 @@ library ParentVaultEpochLib {
     /// @return externalAction The external action, epoch nonce, net amount, and total deposit amount ParentVault
     ///         needs to execute the action and finalize the epoch after settlement
     /// @dev The caller-supplied TVL is trusted and is not validated against onchain strategy state
+    /// @dev Reverts if expectedEpochNonce does not match the current epoch nonce
     /// @dev Reverts if a rebalance is in progress
     /// @dev Reverts if the preceding epoch is not claimable
     /// @dev Reverts if the current epoch is not open or has been open for less than MIN_EPOCH_PERIOD
@@ -104,17 +107,21 @@ library ParentVaultEpochLib {
     /// @dev Reverts if deposit settlement would allocate zero shares to a minimum-size deposit
     function closeEpoch(
         ParentVaultStore.ParentVaultStorage storage $,
+        uint256 expectedEpochNonce,
         uint256 tvl,
         uint256 sharePrecision,
         uint256 assetPrecision,
         uint256 minDepositAmount,
         bool isLocalStrategy
     ) public returns (CloseEpochExternalAction memory externalAction) {
-        externalAction = _closeEpoch($, tvl, sharePrecision, assetPrecision, minDepositAmount, isLocalStrategy);
+        externalAction = _closeEpoch(
+            $, expectedEpochNonce, tvl, sharePrecision, assetPrecision, minDepositAmount, isLocalStrategy
+        );
     }
 
     /// @notice Settles the current epoch and returns the external action ParentVault must execute
     /// @param $ ParentVault namespaced storage
+    /// @param expectedEpochNonce The current epoch nonce expected by the caller
     /// @param tvl The underlying-asset value of the active strategy before settling the current epoch
     /// @param sharePrecision The share precision factor
     /// @param assetPrecision The underlying asset precision factor used for bootstrap share allocation
@@ -123,6 +130,7 @@ library ParentVaultEpochLib {
     /// @return externalAction The external action, epoch nonce, net amount, and total deposit amount ParentVault
     ///         needs to execute the action and finalize the epoch after settlement
     /// @dev The caller-supplied TVL is trusted and is not validated against onchain strategy state
+    /// @dev Reverts if expectedEpochNonce does not match the current epoch nonce
     /// @dev Reverts if a rebalance is in progress
     /// @dev Reverts if the preceding epoch is not claimable
     /// @dev Reverts if the current epoch is not open or has been open for less than MIN_EPOCH_PERIOD
@@ -132,6 +140,7 @@ library ParentVaultEpochLib {
     /// @dev Reverts if deposit settlement would allocate zero shares to a minimum-size deposit
     function _closeEpoch(
         ParentVaultStore.ParentVaultStorage storage $,
+        uint256 expectedEpochNonce,
         uint256 tvl,
         uint256 sharePrecision,
         uint256 assetPrecision,
@@ -139,6 +148,7 @@ library ParentVaultEpochLib {
         bool isLocalStrategy
     ) internal returns (CloseEpochExternalAction memory externalAction) {
         CloseEpochParams memory params = CloseEpochParams({
+            expectedEpochNonce: expectedEpochNonce,
             tvl: tvl,
             sharePrecision: sharePrecision,
             assetPrecision: assetPrecision,
@@ -152,11 +162,14 @@ library ParentVaultEpochLib {
         private
         returns (CloseEpochExternalAction memory externalAction)
     {
+        uint256 epochNonce = $.s_epochNonce;
+        if (params.expectedEpochNonce != epochNonce) {
+            revert IParentVault.ParentVault__InvalidEpochNonce(params.expectedEpochNonce);
+        }
         if ($.s_rebalance.state != Types.RebalanceState.NONE) {
             revert IParentVault.ParentVault__RebalanceInProgress();
         }
 
-        uint256 epochNonce = $.s_epochNonce;
         uint256 previousEpochNonce = epochNonce - 1;
         if (previousEpochNonce != 0 && $.s_epochs[previousEpochNonce].status != Types.EpochStatus.CLAIMABLE) {
             revert IParentVault.ParentVault__EpochNotClaimable(previousEpochNonce);
@@ -256,21 +269,28 @@ library ParentVaultEpochLib {
 
     /// @notice Completes the most recently closed remote net-deposit epoch
     /// @param $ ParentVault namespaced storage
+    /// @param expectedEpochNonce The most recently closed epoch nonce expected by the caller
+    /// @dev Reverts if expectedEpochNonce does not match the most recently closed epoch nonce
     /// @dev Reverts if no epoch has completed
     /// @dev Reverts if the preceding epoch is not an executing net-deposit epoch
-    function completeEpochDeposit(ParentVaultStore.ParentVaultStorage storage $) public {
-        _completeEpochDeposit($);
+    function completeEpochDeposit(ParentVaultStore.ParentVaultStorage storage $, uint256 expectedEpochNonce) public {
+        _completeEpochDeposit($, expectedEpochNonce);
     }
 
     /// @notice Completes the most recently closed remote net-deposit epoch
     /// @param $ ParentVault namespaced storage
+    /// @param expectedEpochNonce The most recently closed epoch nonce expected by the caller
+    /// @dev Reverts if expectedEpochNonce does not match the most recently closed epoch nonce
     /// @dev Reverts if no epoch has completed
     /// @dev Reverts if the preceding epoch is not an executing net-deposit epoch
-    function _completeEpochDeposit(ParentVaultStore.ParentVaultStorage storage $) internal {
+    function _completeEpochDeposit(ParentVaultStore.ParentVaultStorage storage $, uint256 expectedEpochNonce) internal {
         uint256 currentEpochNonce = $.s_epochNonce;
+        uint256 epochNonce = currentEpochNonce - 1;
+        if (expectedEpochNonce != epochNonce) {
+            revert IParentVault.ParentVault__InvalidEpochNonce(expectedEpochNonce);
+        }
         if (currentEpochNonce == 1) revert IParentVault.ParentVault__NoCompletedEpoch();
 
-        uint256 epochNonce = currentEpochNonce - 1;
         Types.Epoch storage s_epoch = $.s_epochs[epochNonce];
         if (s_epoch.totalDepositAmount <= s_epoch.totalWithdrawClaimAmount) {
             revert IParentVault.ParentVault__EpochNotNetDeposit(epochNonce);

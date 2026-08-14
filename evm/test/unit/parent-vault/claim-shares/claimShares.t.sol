@@ -21,7 +21,7 @@ contract ParentVault_ClaimSharesUnitTest is BaseUnitTest {
         // Advance time past minimum epoch period and close epoch 1
         vm.warp(block.timestamp + MIN_EPOCH_PERIOD + 1);
         _changePrank(i_epochOperator);
-        s_parentVault.closeEpoch(0);
+        s_parentVault.closeEpoch(s_parentVault.getEpochNonce(), 0);
         // Epoch 1 → CLAIMABLE (netFlow = DEPOSIT_AMOUNT > 0), epoch 2 opened
 
         s_expectedShares = DEPOSIT_AMOUNT * YIELD_PRECISION / ASSET_PRECISION;
@@ -195,6 +195,6 @@ contract ParentVault_ClaimSharesUnitTest is BaseUnitTest {
     function _closeEpoch(uint256 tvl) internal {
         vm.warp(block.timestamp + MIN_EPOCH_PERIOD + 1);
         _changePrank(i_epochOperator);
-        s_parentVault.closeEpoch(tvl);
+        s_parentVault.closeEpoch(s_parentVault.getEpochNonce(), tvl);
     }
 }

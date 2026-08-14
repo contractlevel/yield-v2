@@ -8,20 +8,20 @@ The Chainlink [CRE Workflow](../../cre/workflow) drives rebalance decisions and 
 
 On each rebalance run, the workflow:
 
-1. Reads the current rebalance state from [`ParentVault`](../../evm/src/vaults/ParentVault.sol).
+1. Reads the current rebalance state, including its nonce, from [`ParentVault`](../../evm/src/vaults/ParentVault.sol).
 2. Skips if a rebalance is already active or the cooldown has not elapsed.
 3. Fetches approved yield pool data through the [DefiLlama relay](../../services/defillama-relay/).
 4. Selects the best approved pool and compares it with the current active strategy pool.
 5. Skips if the active strategy is already optimal or the APY improvement is below the rebalance threshold.
-6. Calls `ParentVault.initiateRebalance(newStrategy)` through the parent chain `WorkflowRouter`.
+6. Calls `ParentVault.initiateRebalance(expectedRebalanceNonce, newStrategy)` through the parent chain `WorkflowRouter`, passing the nonce read from ParentVault.
 
-`ParentVault` validates that the requested strategy is supported and registered. It then stores the requested strategy as the pending strategy and starts the rebalance.
+`ParentVault` first rejects the report if `expectedRebalanceNonce` no longer matches its current rebalance nonce. It then validates that the requested strategy is supported and registered, stores the requested strategy as the pending strategy, and starts the rebalance.
 
 Some rebalances are synchronous, such as parent-chain strategy to parent-chain strategy. Cross-chain rebalances are asynchronous and involve `ChildVault` on the relevant strategy chain. If the old active strategy is on a child chain, `ParentVault` emits `RebalanceInitiated`; a CRE log trigger then calls `ChildVault.executeRebalance(...)` on that child chain.
 
 Child vaults handle remote strategy withdraws and deposits. CCIP is used when funds must move between chains. Message-only coordination is handled by emitted events and CRE log-triggered writes to the relevant chain.
 
-When the new strategy deposit succeeds, a `RebalanceDepositSuccess` event is emitted. CRE observes that event and calls `ParentVault.completeRebalance(...)`, unless the path finalizes directly through the parent chain CCIP receive flow. Finalization makes the pending strategy active.
+When the new strategy deposit succeeds, a `RebalanceDepositSuccess` event is emitted. CRE observes that event, reads the current rebalance nonce from ParentVault, and calls `ParentVault.completeRebalance(expectedRebalanceNonce)`, unless the path finalizes directly through the parent chain CCIP receive flow. ParentVault requires the supplied nonce to match the persisted in-progress rebalance before finalization makes the pending strategy active and increments the nonce.
 
 During an in-progress cross-chain rebalance, the protocol may temporarily have a pending strategy and no local active adapter.
 

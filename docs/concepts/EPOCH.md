@@ -4,7 +4,7 @@ Epochs batch user deposits and withdraw intents into discrete settlement periods
 
 Users submit deposits and withdraw intents to [`ParentVault`](../../evm/src/vaults/ParentVault.sol) during the current open epoch. Deposits escrow the underlying asset. Withdraw intents escrow Yieldcoin shares. No deposit shares are minted immediately when a user deposits.
 
-At epoch close, the CRE [workflow](../../cre/workflow/) reads TVL from the active strategy chain, then calls `ParentVault.closeEpoch(tvl)` through [`WorkflowRouter`](../../evm/src/modules/WorkflowRouter.sol). The vault uses that CRE-supplied TVL to calculate deposit-share allocations and withdrawal-asset entitlements directly, then opens the next epoch.
+At epoch close, the CRE [workflow](../../cre/workflow/) reads the current epoch nonce from ParentVault and TVL from the active strategy chain, then calls `ParentVault.closeEpoch(expectedEpochNonce, tvl)` through [`WorkflowRouter`](../../evm/src/modules/WorkflowRouter.sol). ParentVault rejects the report if `expectedEpochNonce` no longer matches its current epoch. For a matching nonce, the vault uses the CRE-supplied TVL to calculate deposit-share allocations and withdrawal-asset entitlements directly, then opens the next epoch.
 
 After settlement:
 
@@ -12,7 +12,7 @@ After settlement:
 - withdrawers call `claimAsset(epochNonce)` to burn escrowed shares and receive the underlying asset;
 - users can cancel only current-epoch intents that have not yet settled.
 
-If the active strategy is local to the parent chain, settlement can complete synchronously. If the active strategy is on a child chain, a nonzero net flow enters an executing state. A remote net deposit remains executing until the ChildVault strategy deposit succeeds and CRE calls `completeEpochDeposit`; a remote net withdrawal remains executing until the child withdrawal and CCIP return to ParentVault complete.
+If the active strategy is local to the parent chain, settlement can complete synchronously. If the active strategy is on a child chain, a nonzero net flow enters an executing state. A remote net deposit remains executing until the ChildVault strategy deposit succeeds and CRE calls `completeEpochDeposit(expectedEpochNonce)` with the most recently closed parent epoch nonce; a remote net withdrawal remains executing until the child withdrawal and CCIP return to ParentVault complete.
 
 ## Epoch Status
 

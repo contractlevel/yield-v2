@@ -210,7 +210,7 @@ abstract contract BaseCcipForkTest is BaseForkTest {
             workflowId,
             CLOSE_EPOCH_WORKFLOW_NAME,
             i_owner,
-            abi.encodeWithSelector(ParentVault.closeEpoch.selector, tvl)
+            abi.encodeWithSelector(ParentVault.closeEpoch.selector, parent.vault.getEpochNonce(), tvl)
         );
     }
 
@@ -221,7 +221,7 @@ abstract contract BaseCcipForkTest is BaseForkTest {
             workflowId,
             CLOSE_EPOCH_WORKFLOW_NAME,
             i_owner,
-            abi.encodeWithSelector(ParentVault.completeEpochDeposit.selector)
+            abi.encodeWithSelector(ParentVault.completeEpochDeposit.selector, parent.vault.getEpochNonce() - 1)
         );
     }
 
@@ -249,7 +249,9 @@ abstract contract BaseCcipForkTest is BaseForkTest {
             workflowId,
             INITIATE_REBALANCE_WORKFLOW_NAME,
             i_owner,
-            abi.encodeWithSelector(ParentVault.initiateRebalance.selector, newStrategy)
+            abi.encodeWithSelector(
+                ParentVault.initiateRebalance.selector, parent.vault.getRebalance().nonce, newStrategy
+            )
         );
     }
 
@@ -272,7 +274,7 @@ abstract contract BaseCcipForkTest is BaseForkTest {
             workflowId,
             COMPLETE_REBALANCE_WORKFLOW_NAME,
             i_owner,
-            abi.encodeWithSelector(ParentVault.completeRebalance.selector)
+            abi.encodeWithSelector(ParentVault.completeRebalance.selector, parent.vault.getRebalance().nonce)
         );
     }
 

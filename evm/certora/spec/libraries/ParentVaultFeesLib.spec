@@ -14,7 +14,6 @@ methods {
 
     // Library internal wrappers
     function collectManagementFee(uint256, uint256) external;
-    function collectManagementFeePublic(uint256, uint256) external;
 
     // Harness helper methods
     function bytes32ToUint256(bytes32) external returns (uint256) envfree;
@@ -86,11 +85,11 @@ hook LOG3(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2) {
 /*//////////////////////////////////////////////////////////////
                              RULES
 //////////////////////////////////////////////////////////////*/
-/// ─────────────────── PUBLIC FORWARDERS ──────────────────────
+/// ─────────────────── MANAGEMENT FEE ─────────────────────────
 
-/// @notice The public management-fee wrapper forwards nonce, timestamp, share, and vault storage.
-/// @dev Verifies an exact one-year fee collection through the public library boundary.
-rule collectManagementFeePublic_ForwardsParametersAndStorage() {
+/// @notice Management fee collection charges exactly the annual fee after one year.
+/// @dev Verifies the concrete one-year boundary through the internal library harness wrapper.
+rule FEE_001_FEE_002_collectManagementFee_Success_WhenElapsedTimeIsOneYear() {
     env e;
     uint256 rebalanceNonce;
     uint256 lastRebalanceCompletedTimestamp;
@@ -101,7 +100,7 @@ rule collectManagementFeePublic_ForwardsParametersAndStorage() {
     uint256 totalSupplyBefore = share.totalSupply();
 
     /// @dev revert conditions NOT being verified
-    require e.msg.value == 0, "collectManagementFeePublic is nonpayable";
+    require e.msg.value == 0, "collectManagementFee is nonpayable";
     require e.block.timestamp >= YEAR(), "timestamp covers one year";
     require lastRebalanceCompletedTimestamp == e.block.timestamp - YEAR(), "elapsed time is one year";
     require getTotalShares() == totalShares, "stored total shares are fixed";
@@ -114,7 +113,7 @@ rule collectManagementFeePublic_ForwardsParametersAndStorage() {
     require ghost_ManagementFeeCollected_EventCount == 0, "ManagementFeeCollected event count starts at zero";
     require ghost_totalShares_StoreCount == 0, "total shares store count starts at zero";
 
-    collectManagementFeePublic@withrevert(e, rebalanceNonce, lastRebalanceCompletedTimestamp);
+    collectManagementFee@withrevert(e, rebalanceNonce, lastRebalanceCompletedTimestamp);
 
     assert !lastReverted;
     assert getTotalShares() == totalShares + feeShares;
@@ -126,8 +125,6 @@ rule collectManagementFeePublic_ForwardsParametersAndStorage() {
     assert ghost_ManagementFeeCollected_Param_rebalanceNonce == rebalanceNonce;
     assert ghost_ManagementFeeCollected_Param_feeShares == feeShares;
 }
-
-/// ─────────────────── MANAGEMENT FEE ─────────────────────────
 
 /// @notice Management fee collection reverts when the completed timestamp is in the future.
 /// @dev Verifies elapsed time subtraction underflow.

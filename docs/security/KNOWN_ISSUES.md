@@ -301,7 +301,7 @@ Shareholders can still pay management fees for time when the user-facing vault w
 
 ### Summary
 
-Epoch settlement is intentionally driven by the Chainlink CRE workflow. The workflow's cron handler reads the current parent epoch, checks that it is open, has activity, is past `MIN_EPOCH_PERIOD`, has no active rebalance, reads TVL from the active strategy chain, and submits `closeEpoch(tvl)` through `WorkflowRouter.onReport`.
+Epoch settlement is intentionally driven by the Chainlink CRE workflow. The workflow's cron handler reads the current parent epoch and its nonce, checks that it is open, has activity, is past `MIN_EPOCH_PERIOD`, has no active rebalance, reads TVL from the active strategy chain, and submits `closeEpoch(expectedEpochNonce, tvl)` through `WorkflowRouter.onReport`.
 
 If the initial CRE step does not execute, cannot read the required state, cannot submit a valid report, or the report does not reach `WorkflowRouter`, the current parent epoch remains `OPEN`. If a required remote continuation fails, the closed epoch remains `EXECUTING`. There is no autonomous on-chain timer or public completion path; `closeEpoch` and `completeEpochDeposit` are restricted to `EPOCH_OPERATOR_ROLE`, which is granted to the `WorkflowRouter` under the normal access-control model.
 
@@ -314,7 +314,7 @@ The failure mode is delayed settlement:
 - The next epoch is not opened, so later user intents continue to accrue into the same open epoch rather than a new scheduled epoch.
 - Settlement allocations use TVL at the eventual close, not at the missed scheduled close time.
 - For remote-strategy net-withdraw epochs, the second CRE step (`EpochWithdrawExecuting` log handling on the child chain) is required before the parent epoch can become claimable.
-- For remote-strategy net-deposit epochs, CRE must observe the destination ChildVault's `EpochDepositToStrategySuccess` event and submit `completeEpochDeposit()` before the parent epoch can become claimable.
+- For remote-strategy net-deposit epochs, CRE must observe the destination ChildVault's `EpochDepositToStrategySuccess` event, read the current parent epoch nonce, and submit `completeEpochDeposit(currentEpochNonce - 1)` before the parent epoch can become claimable.
 
 This does not by itself create an accounting inconsistency or direct loss of funds. User deposits and withdraw-intent shares remain escrowed by the protocol. While the epoch is still open, users may cancel their current-epoch deposit or withdraw intent through the normal cancellation functions, subject to the usual pause and state checks. Once the epoch itself is no longer open — including the `EXECUTING` window described above — cancellation is not available either; see [KI-017](#ki-017--deposit-and-withdraw-cancellation-is-scoped-to-the-current-epoch-only).
 
@@ -333,8 +333,8 @@ The current design keeps the authority narrow: the router validates workflow met
 
 - Monitor missed CRE cron executions, failed workflow runs, Keystone Forwarder delivery failures, and `WorkflowRouter.onReport` reverts.
 - Alert when `ParentVault.getEpochNonce()` has not advanced after the expected close window and the open epoch has nonzero activity.
-- Alert when a remote net-deposit epoch remains `EXECUTING` after the destination ChildVault emits `EpochDepositToStrategySuccess`, or when the corresponding `completeEpochDeposit()` report fails.
-- Ensure the deployed workflow metadata and selector allowlists include both `closeEpoch(uint256)` and `completeEpochDeposit()` for the active epoch workflow ID.
+- Alert when a remote net-deposit epoch remains `EXECUTING` after the destination ChildVault emits `EpochDepositToStrategySuccess`, or when the corresponding `completeEpochDeposit(expectedEpochNonce)` report fails.
+- Ensure the deployed workflow metadata and selector allowlists include both `closeEpoch(uint256,uint256)` and `completeEpochDeposit(uint256)` for the active epoch workflow ID.
 - Keep CRE configuration, Keystone Forwarder configuration, workflow ownership, gas limits, and chain selectors under deployment/runbook review.
 - In an emergency, the commercial operator can update workflow configuration or, if explicitly accepted through an operational runbook, grant temporary epoch authority to a replacement router/operator and revoke it after recovery. This is a privileged break-glass action and should be treated as an operational trust escalation.
 
@@ -371,7 +371,7 @@ The strategy adapters report TVL from the active lending-market position:
 
 The supported lending protocols allow assets to be supplied on behalf of another account. A third party can therefore supply underlying asset directly into the market on behalf of the adapter, increasing the adapter's reported strategy balance without interacting with the vault.
 
-Because the CRE epoch workflow reads TVL from the active strategy chain's `getTVL()` and submits that value to `ParentVault.closeEpoch(tvl)`, unsolicited on-behalf-of supplies can be included in the epoch settlement TVL.
+Because the CRE epoch workflow reads the current parent epoch nonce and TVL from the active strategy chain's `getTVL()`, then submits both to `ParentVault.closeEpoch(expectedEpochNonce, tvl)`, unsolicited on-behalf-of supplies can be included in the epoch settlement TVL.
 
 ### Why this is accepted, not mitigated in adapter accounting
 
@@ -379,7 +379,7 @@ Yieldcoin v2 settles deposits and withdrawals through epochs, not through synchr
 
 - `deposit()` records a pending deposit for the open epoch but does not mint shares immediately.
 - `withdraw()` records a pending withdraw intent and escrows shares but does not redeem immediately.
-- `closeEpoch(tvl)` is restricted to the epoch operator path and is executed by the CRE workflow.
+- `closeEpoch(expectedEpochNonce, tvl)` is restricted to the epoch operator path and is executed by the CRE workflow.
 - Cross-chain strategy settlement is asynchronous and may require a second workflow step before claims become available.
 
 This architecture prevents the standard single-transaction flash-loan donation attack. An attacker who supplies on behalf of the adapter cannot withdraw those supplied funds back from the lending market; control of the credited position belongs to the adapter. The attacker therefore cannot flash-borrow, inflate TVL, complete a profitable mint/redeem cycle, withdraw the supplied funds, and repay the flash loan in one transaction.
@@ -390,7 +390,7 @@ That mitigation was deferred because it materially increases adapter accounting 
 
 ### Operational mitigation
 
-The CRE/operator process should monitor active strategy TVL for unexpected jumps before submitting `closeEpoch(tvl)`, especially changes that cannot be explained by:
+The CRE/operator process should monitor active strategy TVL for unexpected jumps before submitting `closeEpoch(expectedEpochNonce, tvl)`, especially changes that cannot be explained by:
 
 - pending epoch net deposits or withdrawals,
 - expected strategy yield,
@@ -613,7 +613,7 @@ Separately, per the CRE architecture ("Each node in the DON executes the workflo
 
 - `cre-sdk-go`'s own test suite (`standard_tests/secrets_fail_in_node_mode`) confirms `runtime.GetSecret()` is hard-disallowed _inside_ a node-mode callback (`NodeRuntime` does not implement `SecretsProvider`; calling it sets `modeErr = DonModeCallInNodeMode()`). Resolving the secret in DON mode and passing it into node-mode params is the straightforward SDK-supported pattern for attaching a secret-derived auth header to a node-executed HTTP request — but it is not the _only_ possible design. Alternatives not adopted include an unauthenticated relay, a static non-secret shared value, or Chainlink's **Confidential HTTP** capability (Vault DON secrets resolved via `{{.SECRET_NAME}}` templating inside an enclave, which never places the plaintext value in node WASM/host memory). The bearer-token design was a deliberate choice, not a forced default — this entry accepts that choice's consequence rather than treating it as unavoidable.
 - The token's blast radius is narrow: it only gates read access to `services/defillama-relay`, a read-only proxy in front of DefiLlama's public pools API (see [KI-011](#ki-011--compromised-defillama-api-or-relay-can-skew-rebalance-inputs)). The relay holds no funds, signs no transactions, and writes no on-chain state. Worst case, a node operator who extracts the token calls the relay directly instead of through the workflow.
-- DON node operators already hold substantially greater trust in this system: they execute the APY comparison logic and produce the consensus report that drives `ParentVault.initiateRebalance()`. A node operator misusing this token is a strictly smaller concern than that operator's existing role in the rebalance decision path.
+- DON node operators already hold substantially greater trust in this system: they execute the APY comparison logic and produce the consensus report that drives `ParentVault.initiateRebalance(expectedRebalanceNonce, newStrategy)`. A node operator misusing this token is a strictly smaller concern than that operator's existing role in the rebalance decision path.
 - Adopting Confidential HTTP purely to hide this token would add Vault DON provisioning and enclave-based request construction — complexity disproportionate to a token whose worst-case misuse is querying a public-data proxy.
 
 ### Residual risk

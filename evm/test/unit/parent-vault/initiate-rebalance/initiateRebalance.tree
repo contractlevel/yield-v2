@@ -3,6 +3,8 @@ ParentVault_initiateRebalance
 │   └── it should revert
 ├── when the vault is paused
 │   └── it should revert with EnforcedPause
+├── when the expected rebalance nonce does not match the current rebalance nonce
+│   └── it should revert with ParentVault__InvalidRebalanceNonce
 ├── when a rebalance is already in progress
 │   └── it should revert with ParentVault__RebalanceInProgress
 ├── when MIN_REBALANCE_PERIOD has not elapsed

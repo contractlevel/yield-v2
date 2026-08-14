@@ -9,6 +9,7 @@ import {Types} from "../../../src/libraries/Types.sol";
 contract ParentVaultEpochLibHarness is ParentVaultStore, HelperHarness {
 
     function closeEpoch(
+        uint256 expectedEpochNonce,
         uint256 tvl,
         uint256 sharePrecision,
         uint256 assetPrecision,
@@ -19,7 +20,13 @@ contract ParentVaultEpochLibHarness is ParentVaultStore, HelperHarness {
         returns (uint256 epochNonce, uint8 action, uint256 amount, uint256 totalDepositAmount)
     {
         ParentVaultEpochLib.CloseEpochExternalAction memory externalAction = ParentVaultEpochLib.closeEpoch(
-            _parentVaultStorage(), tvl, sharePrecision, assetPrecision, minDepositAmount, isLocalStrategy
+            _parentVaultStorage(),
+            expectedEpochNonce,
+            tvl,
+            sharePrecision,
+            assetPrecision,
+            minDepositAmount,
+            isLocalStrategy
         );
         epochNonce = externalAction.epochNonce;
         action = uint8(externalAction.action);
@@ -27,8 +34,8 @@ contract ParentVaultEpochLibHarness is ParentVaultStore, HelperHarness {
         totalDepositAmount = externalAction.totalDepositAmount;
     }
 
-    function completeEpochDeposit() external {
-        ParentVaultEpochLib.completeEpochDeposit(_parentVaultStorage());
+    function completeEpochDeposit(uint256 expectedEpochNonce) external {
+        ParentVaultEpochLib.completeEpochDeposit(_parentVaultStorage(), expectedEpochNonce);
     }
 
     function finalizeLocalNetWithdraw(uint256 epochNonce, uint256 totalDepositAmount, uint256 amountOut) external {

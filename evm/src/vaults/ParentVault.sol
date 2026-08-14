@@ -329,7 +329,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
         }
 
         _requireNoRecovery(_baseVaultStorage());
-        uint256 receivedAmount = BaseVaultCcipLib._validateReceivedTokenAndGetAmount(message, i_asset);
+        uint256 receivedAmount = BaseVaultCcipLib.validateReceivedTokenAndGetAmount(message, i_asset);
 
         // data decodes to a uint256 epochNonce for epoch net withdrawals and a
         // (uint256 rebalanceNonce, bytes32 protocolId) for rebalances
@@ -353,7 +353,9 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
                                  EPOCH
     //////////////////////////////////////////////////////////////*/
     /// @notice Settles the current epoch, executes its net asset flow, and opens the next epoch
+    /// @param expectedEpochNonce The current epoch nonce the call is intended to close
     /// @param tvl The underlying-asset value of the active strategy before settling the current epoch
+    /// @dev Reverts if expectedEpochNonce does not match the current epoch nonce
     /// @dev Called by the WorkflowRouter
     /// @dev Net flow is the total deposited underlying asset minus the total underlying asset owed for withdraw claims
     /// @dev A zero net flow makes the epoch claimable without moving assets
@@ -383,7 +385,12 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /// @dev Zero TVL with outstanding shares requires restoring TVL through an on-behalf-of strategy supply before
     ///      settlement can continue; the permanent admin seed deposit means this requires a full strategy loss
     /// @dev See KI-008 and KI-010 in docs/KNOWN_ISSUES.md
-    function closeEpoch(uint256 tvl) external nonReentrant whenNotPaused onlyRole(Roles.EPOCH_OPERATOR_ROLE) {
+    function closeEpoch(uint256 expectedEpochNonce, uint256 tvl)
+        external
+        nonReentrant
+        whenNotPaused
+        onlyRole(Roles.EPOCH_OPERATOR_ROLE)
+    {
         ParentVaultStorage storage $ = _parentVaultStorage();
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
         _requireNoRecovery($_baseVault);
@@ -391,7 +398,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
         address activeAdapter = $_baseVault.s_activeProtocolAdapter;
         bool isLocalStrategy = activeAdapter != address(0);
         ParentVaultEpochLib.CloseEpochExternalAction memory externalAction = ParentVaultEpochLib.closeEpoch(
-            $, tvl, SHARE_PRECISION, i_assetPrecision, i_minDepositAmount, isLocalStrategy
+            $, expectedEpochNonce, tvl, SHARE_PRECISION, i_assetPrecision, i_minDepositAmount, isLocalStrategy
         );
 
         if (externalAction.action == ParentVaultEpochLib.ExternalAction.DEPOSIT_TO_LOCAL_STRATEGY) {
@@ -408,29 +415,38 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
         } else if (externalAction.action == ParentVaultEpochLib.ExternalAction.WITHDRAW_FROM_LOCAL_STRATEGY) {
             (, uint256 amountOut) = _executeWithdraw(externalAction.amount, true, activeAdapter);
             emit EpochWithdrawFromStrategySuccess(externalAction.epochNonce, amountOut);
-            ParentVaultEpochLib._finalizeLocalNetWithdraw(
+            ParentVaultEpochLib.finalizeLocalNetWithdraw(
                 $, externalAction.epochNonce, externalAction.totalDepositAmount, amountOut
             );
         }
         // else CRE is triggered by EpochWithdrawExecuting and writes to the strategy chain to withdraw and CCIP-send here
 
-        ParentVaultEpochLib._openNextEpoch($, externalAction.epochNonce);
+        ParentVaultEpochLib.openNextEpoch($, externalAction.epochNonce);
     }
 
     /// @notice Completes the most recently closed remote net-deposit epoch
+    /// @param expectedEpochNonce The completed epoch nonce the call is intended to finalize
+    /// @dev Reverts if expectedEpochNonce does not match the most recently closed epoch nonce
     /// @dev Reverts if the vault is paused
     /// @dev Reverts if the caller does not have EPOCH_OPERATOR_ROLE
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the previous epoch is not an executing net-deposit epoch
-    function completeEpochDeposit() external nonReentrant whenNotPaused onlyRole(Roles.EPOCH_OPERATOR_ROLE) {
-        ParentVaultEpochLib._completeEpochDeposit(_parentVaultStorage());
+    function completeEpochDeposit(uint256 expectedEpochNonce)
+        external
+        nonReentrant
+        whenNotPaused
+        onlyRole(Roles.EPOCH_OPERATOR_ROLE)
+    {
+        ParentVaultEpochLib.completeEpochDeposit(_parentVaultStorage(), expectedEpochNonce);
     }
 
     /*//////////////////////////////////////////////////////////////
                                REBALANCE
     //////////////////////////////////////////////////////////////*/
     /// @notice Initiates a rebalance from the current strategy to a new strategy
+    /// @param expectedRebalanceNonce The current rebalance nonce the call is intended to initiate
     /// @param newStrategy The new strategy to rebalance to
+    /// @dev Reverts if expectedRebalanceNonce does not match the current rebalance nonce
     /// @dev Reverts if the caller does not have REBALANCE_OPERATOR_ROLE
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the vault is paused
@@ -446,7 +462,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /// @dev If the new strategy is local, reverts if its protocol has no registered adapter
     /// @dev If the new strategy is local, reverts if the registered adapter is bound to another vault
     /// @dev Requires any local strategy or CCIP interaction selected by the rebalance branch to succeed
-    function initiateRebalance(Types.Strategy memory newStrategy)
+    function initiateRebalance(uint256 expectedRebalanceNonce, Types.Strategy memory newStrategy)
         external
         nonReentrant
         whenNotPaused
@@ -459,8 +475,9 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
         bool isSupportedChain = newStrategy.chainSelector == i_thisChainSelector
             || $_baseVault.s_crosschainVaults[newStrategy.chainSelector] != address(0);
 
-        ParentVaultRebalanceLib.InitiateRebalanceResult memory result =
-            ParentVaultRebalanceLib.initiateRebalance($, newStrategy, i_thisChainSelector, isSupportedChain);
+        ParentVaultRebalanceLib.InitiateRebalanceResult memory result = ParentVaultRebalanceLib.initiateRebalance(
+            $, expectedRebalanceNonce, newStrategy, i_thisChainSelector, isSupportedChain
+        );
 
         // Continue synchronously when the previously active strategy is local
         //slither-disable-next-line incorrect-equality
@@ -491,15 +508,22 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     }
 
     /// @notice Completes a rebalance
+    /// @param expectedRebalanceNonce The current rebalance nonce the call is intended to finalize
+    /// @dev Reverts if expectedRebalanceNonce does not match the current rebalance nonce
     /// @dev Reverts if the vault is paused
     /// @dev Reverts if the caller does not have REBALANCE_OPERATOR_ROLE
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if a recovery mode is active
     /// @dev Reverts if no rebalance is in progress
-    function completeRebalance() external nonReentrant whenNotPaused onlyRole(Roles.REBALANCE_OPERATOR_ROLE) {
+    function completeRebalance(uint256 expectedRebalanceNonce)
+        external
+        nonReentrant
+        whenNotPaused
+        onlyRole(Roles.REBALANCE_OPERATOR_ROLE)
+    {
         _requireNoRecovery(_baseVaultStorage());
         Types.Rebalance storage s_rebalance = _parentVaultStorage().s_rebalance;
-        _finalizeRebalance(s_rebalance.nonce, s_rebalance.pendingStrategy);
+        _finalizeRebalance(expectedRebalanceNonce, s_rebalance.pendingStrategy);
     }
 
     /// @notice Finalizes an in-progress rebalance with persisted pending state
@@ -507,14 +531,14 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /// @param newStrategy The pending strategy to activate
     /// @dev Reverts if no rebalance is in progress
     function _finalizeRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy) internal {
-        ParentVaultRebalanceLib._finalizeRebalance(_parentVaultStorage(), i_share, rebalanceNonce, newStrategy, false);
+        ParentVaultRebalanceLib.finalizeRebalance(_parentVaultStorage(), i_share, rebalanceNonce, newStrategy, false);
     }
 
     /// @notice Finalizes a local-to-local rebalance that completed synchronously without persisted pending state
     /// @param rebalanceNonce The rebalance nonce, already known by the caller
     /// @param newStrategy The new strategy, already known by the caller
     function _finalizeLocalToLocalRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy) internal {
-        ParentVaultRebalanceLib._finalizeRebalance(_parentVaultStorage(), i_share, rebalanceNonce, newStrategy, true);
+        ParentVaultRebalanceLib.finalizeRebalance(_parentVaultStorage(), i_share, rebalanceNonce, newStrategy, true);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -584,6 +608,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
         state.currentEpoch = $.s_epochs[currentEpochNonce];
         state.previousEpoch = $.s_epochs[currentEpochNonce - 1];
         state.rebalance = $.s_rebalance;
+        state.tvl = _getTVL();
     }
 
     /// @notice Returns the epoch data for a given epoch nonce

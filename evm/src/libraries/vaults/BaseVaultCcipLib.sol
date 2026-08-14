@@ -56,25 +56,6 @@ library BaseVaultCcipLib {
         _onlyAllowedSender($, sender, srcChainSelector);
     }
 
-    /// @notice Validates CCIP send parameters and returns the registered destination vault
-    /// @param $ BaseVault namespaced storage
-    /// @param bridgeAmount The amount of underlying asset to bridge
-    /// @param destinationChainSelector The CCIP selector of the destination chain
-    /// @param thisChainSelector The CCIP selector of this chain
-    /// @return vault The registered vault for the destination chain
-    /// @dev Reverts if bridgeAmount is zero
-    /// @dev Reverts if destinationChainSelector is zero
-    /// @dev Reverts if destinationChainSelector identifies this chain
-    /// @dev Reverts if no crosschain vault is registered for destinationChainSelector
-    function validateCcipSend(
-        BaseVaultStore.BaseVaultStorage storage $,
-        uint256 bridgeAmount,
-        uint64 destinationChainSelector,
-        uint64 thisChainSelector
-    ) public view returns (address vault) {
-        vault = _validateCcipSend($, bridgeAmount, destinationChainSelector, thisChainSelector);
-    }
-
     /// @notice Builds and sends a CCIP message that transfers the underlying asset
     /// @param $ BaseVault namespaced storage
     /// @param bridgeAmount The amount of underlying asset to bridge

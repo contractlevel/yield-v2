@@ -29,8 +29,9 @@ contract ParentVault_InitiateRebalanceUnitTest is BaseUnitTest {
 
     function test_ParentVault_initiateRebalance_RevertWhen_CallerDoesNotHaveREBALANCE_OPERATOR_ROLE() public {
         _changePrank(i_nonOwner);
+        uint256 rebalanceNonce = s_parentVault.getRebalance().nonce;
         vm.expectRevert();
-        s_parentVault.initiateRebalance(_localStrategy(AAVE_V4_PROTOCOL_ID));
+        s_parentVault.initiateRebalance(rebalanceNonce, _localStrategy(AAVE_V4_PROTOCOL_ID));
     }
 
     function test_ParentVault_initiateRebalance_RevertWhen_Paused() public {
@@ -38,84 +39,105 @@ contract ParentVault_InitiateRebalanceUnitTest is BaseUnitTest {
         s_parentVault.pause();
 
         _changePrank(i_rebalanceOperator);
+        uint256 rebalanceNonce = s_parentVault.getRebalance().nonce;
         vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
-        s_parentVault.initiateRebalance(_localStrategy(AAVE_V4_PROTOCOL_ID));
+        s_parentVault.initiateRebalance(rebalanceNonce, _localStrategy(AAVE_V4_PROTOCOL_ID));
+    }
+
+    function test_ParentVault_initiateRebalance_RevertWhen_InvalidRebalanceNonce() public {
+        uint256 invalidRebalanceNonce = s_parentVault.getRebalance().nonce + 1;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IParentVault.ParentVault__InvalidRebalanceNonce.selector, invalidRebalanceNonce)
+        );
+        s_parentVault.initiateRebalance(invalidRebalanceNonce, _localStrategy(AAVE_V4_PROTOCOL_ID));
     }
 
     function test_ParentVault_initiateRebalance_RevertWhen_RebalanceInProgress() public {
         _setParentRebalanceState(Types.RebalanceState.REBALANCING);
 
+        uint256 rebalanceNonce = s_parentVault.getRebalance().nonce;
         vm.expectRevert(IParentVault.ParentVault__RebalanceInProgress.selector);
-        s_parentVault.initiateRebalance(_localStrategy(AAVE_V4_PROTOCOL_ID));
+        s_parentVault.initiateRebalance(rebalanceNonce, _localStrategy(AAVE_V4_PROTOCOL_ID));
     }
 
     function test_ParentVault_initiateRebalance_RevertWhen_RecoveryExists() public {
         _setParentRecoveryMode(Types.RecoveryMode.REBALANCE_DEPOSIT);
 
+        uint256 rebalanceNonce = s_parentVault.getRebalance().nonce;
         vm.expectRevert(IBaseVault.BaseVault__RecoveryAlreadyPending.selector);
-        s_parentVault.initiateRebalance(_localStrategy(AAVE_V4_PROTOCOL_ID));
+        s_parentVault.initiateRebalance(rebalanceNonce, _localStrategy(AAVE_V4_PROTOCOL_ID));
     }
 
     function test_ParentVault_initiateRebalance_RevertWhen_RebalanceTooSoon() public {
         _setParentLastRebalanceCompletedTimestamp(block.timestamp);
 
+        uint256 rebalanceNonce = s_parentVault.getRebalance().nonce;
         vm.expectRevert(abi.encodeWithSelector(IParentVault.ParentVault__RebalanceTooSoon.selector, 1));
-        s_parentVault.initiateRebalance(_localStrategy(AAVE_V4_PROTOCOL_ID));
+        s_parentVault.initiateRebalance(rebalanceNonce, _localStrategy(AAVE_V4_PROTOCOL_ID));
     }
 
     function test_ParentVault_initiateRebalance_RevertWhen_SameStrategy() public {
+        uint256 rebalanceNonce = s_parentVault.getRebalance().nonce;
         vm.expectRevert(IParentVault.ParentVault__SameStrategy.selector);
-        s_parentVault.initiateRebalance(_localStrategy(AAVE_V3_PROTOCOL_ID));
+        s_parentVault.initiateRebalance(rebalanceNonce, _localStrategy(AAVE_V3_PROTOCOL_ID));
     }
 
     function test_ParentVault_initiateRebalance_RevertWhen_InvalidChainSelector() public {
+        uint256 rebalanceNonce = s_parentVault.getRebalance().nonce;
         vm.expectRevert(
             abi.encodeWithSelector(IParentVault.ParentVault__InvalidChainSelector.selector, REMOTE_CHILD_CHAIN_SELECTOR)
         );
-        s_parentVault.initiateRebalance(_remoteChildStrategy(AAVE_V4_PROTOCOL_ID));
+        s_parentVault.initiateRebalance(rebalanceNonce, _remoteChildStrategy(AAVE_V4_PROTOCOL_ID));
     }
 
     function test_ParentVault_initiateRebalance_RevertWhen_InvalidProtocolId() public {
         bytes32 unknownProtocolId = keccak256("unknown-protocol");
 
+        uint256 rebalanceNonce = s_parentVault.getRebalance().nonce;
         vm.expectRevert(abi.encodeWithSelector(IParentVault.ParentVault__InvalidProtocolId.selector, unknownProtocolId));
-        s_parentVault.initiateRebalance(_localStrategy(unknownProtocolId));
+        s_parentVault.initiateRebalance(rebalanceNonce, _localStrategy(unknownProtocolId));
     }
 
     function test_ParentVault_initiateRebalance_RevertWhen_NoCompletedEpoch() public {
         _setParentEpochNonce(1);
 
+        uint256 rebalanceNonce = s_parentVault.getRebalance().nonce;
         vm.expectRevert(IParentVault.ParentVault__NoCompletedEpoch.selector);
-        s_parentVault.initiateRebalance(_localStrategy(AAVE_V4_PROTOCOL_ID));
+        s_parentVault.initiateRebalance(rebalanceNonce, _localStrategy(AAVE_V4_PROTOCOL_ID));
     }
 
     function test_ParentVault_initiateRebalance_RevertWhen_PriorEpochExecuting() public {
         _setParentEpochNonce(2);
         _setParentEpochStatus(1, Types.EpochStatus.EXECUTING);
 
+        uint256 rebalanceNonce = s_parentVault.getRebalance().nonce;
         vm.expectRevert(abi.encodeWithSelector(IParentVault.ParentVault__EpochExecuting.selector, 1));
-        s_parentVault.initiateRebalance(_localStrategy(AAVE_V4_PROTOCOL_ID));
+        s_parentVault.initiateRebalance(rebalanceNonce, _localStrategy(AAVE_V4_PROTOCOL_ID));
     }
 
     function test_ParentVault_initiateRebalance_RevertWhen_LocalWithdrawAdapterReverts() public {
         s_mockProtocolAdapter.setWithdrawReverts(true);
 
+        uint256 rebalanceNonce = s_parentVault.getRebalance().nonce;
         vm.expectRevert(abi.encodeWithSelector(IBaseVault.BaseVault__WithdrawFailed.selector, type(uint256).max));
-        s_parentVault.initiateRebalance(_localStrategy(AAVE_V4_PROTOCOL_ID));
+        s_parentVault.initiateRebalance(rebalanceNonce, _localStrategy(AAVE_V4_PROTOCOL_ID));
     }
 
     function test_ParentVault_initiateRebalance_RevertWhen_LocalWithdrawReturnsZero() public {
         s_mockProtocolAdapter.setWithdrawReturnAmount(0);
 
+        uint256 rebalanceNonce = s_parentVault.getRebalance().nonce;
         vm.expectRevert(IBaseVault.BaseVault__NoZeroAmount.selector);
-        s_parentVault.initiateRebalance(_localStrategy(AAVE_V4_PROTOCOL_ID));
+        s_parentVault.initiateRebalance(rebalanceNonce, _localStrategy(AAVE_V4_PROTOCOL_ID));
     }
 
     function test_ParentVault_initiateRebalance_RevertWhen_LocalDepositAdapterReverts() public {
         s_newMockProtocolAdapter.setDepositReverts(true);
 
+        uint256 rebalanceNonce = s_parentVault.getRebalance().nonce;
         vm.expectRevert(abi.encodeWithSelector(IBaseVault.BaseVault__DepositFailed.selector, REBALANCE_AMOUNT));
-        s_parentVault.initiateRebalance(_localStrategy(AAVE_V4_PROTOCOL_ID));
+        s_parentVault.initiateRebalance(rebalanceNonce, _localStrategy(AAVE_V4_PROTOCOL_ID));
     }
 
     function test_ParentVault_initiateRebalance_LocalToLocal_WithdrawsFromOldAdapter() public {
@@ -212,8 +234,10 @@ contract ParentVault_InitiateRebalanceUnitTest is BaseUnitTest {
         _setParentCrosschainVault(CHILD_CHAIN_SELECTOR, address(s_childVault));
         s_mockCcipRouter.setCcipSendReverts(true);
 
+        _changePrank(i_rebalanceOperator);
+        uint256 rebalanceNonce = s_parentVault.getRebalance().nonce;
         vm.expectRevert(MockCCIPRouter.MockCCIPRouter__CcipSendReverts.selector);
-        _initiateLocalToChild();
+        s_parentVault.initiateRebalance(rebalanceNonce, _childStrategy(AAVE_V4_PROTOCOL_ID));
     }
 
     function test_ParentVault_initiateRebalance_LocalToChild_ClearsActiveProtocolAdapter() public {
@@ -250,12 +274,12 @@ contract ParentVault_InitiateRebalanceUnitTest is BaseUnitTest {
     //////////////////////////////////////////////////////////////*/
     function _initiateLocalToLocal() internal {
         _changePrank(i_rebalanceOperator);
-        s_parentVault.initiateRebalance(_localStrategy(AAVE_V4_PROTOCOL_ID));
+        s_parentVault.initiateRebalance(s_parentVault.getRebalance().nonce, _localStrategy(AAVE_V4_PROTOCOL_ID));
     }
 
     function _initiateLocalToChild() internal {
         _changePrank(i_rebalanceOperator);
-        s_parentVault.initiateRebalance(_childStrategy(AAVE_V4_PROTOCOL_ID));
+        s_parentVault.initiateRebalance(s_parentVault.getRebalance().nonce, _childStrategy(AAVE_V4_PROTOCOL_ID));
     }
 
     function _localStrategy(bytes32 protocolId) internal pure returns (Types.Strategy memory) {

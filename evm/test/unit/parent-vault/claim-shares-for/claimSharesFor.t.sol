@@ -17,7 +17,7 @@ contract ParentVault_ClaimSharesForUnitTest is BaseUnitTest {
         s_parentVault.deposit(DEPOSIT_AMOUNT);
         vm.warp(block.timestamp + MIN_EPOCH_PERIOD + 1);
         _changePrank(i_epochOperator);
-        s_parentVault.closeEpoch(0);
+        s_parentVault.closeEpoch(s_parentVault.getEpochNonce(), 0);
         s_expectedShares = DEPOSIT_AMOUNT * YIELD_PRECISION / ASSET_PRECISION;
         _changePrank(i_nonOwner);
     }
@@ -125,7 +125,7 @@ contract ParentVault_ClaimSharesForUnitTest is BaseUnitTest {
     function _closeEpoch(uint256 tvl) internal {
         vm.warp(block.timestamp + MIN_EPOCH_PERIOD + 1);
         _changePrank(i_epochOperator);
-        s_parentVault.closeEpoch(tvl);
+        s_parentVault.closeEpoch(s_parentVault.getEpochNonce(), tvl);
     }
 
     function _orderedUsers(uint8 seed) internal view returns (address[] memory users) {

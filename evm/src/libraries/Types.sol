@@ -171,6 +171,7 @@ library Types {
     /// @param currentEpoch The currently open epoch
     /// @param previousEpoch The epoch immediately preceding the current epoch
     /// @param rebalance The current rebalance state
+    /// @param tvl The vault's accounted underlying-asset value
     struct ParentOperationalState {
         bool paused;
         RecoveryMode recoveryMode;
@@ -178,6 +179,7 @@ library Types {
         Epoch currentEpoch;
         Epoch previousEpoch;
         Rebalance rebalance;
+        uint256 tvl;
     }
 
     /// @notice Operational state required to determine the next ChildVault action
@@ -185,10 +187,12 @@ library Types {
     /// @param recoveryMode The active recovery mode, or NONE when no recovery is active
     /// @param lastHandledEpochNonce The highest epoch nonce handled by the ChildVault
     /// @param lastHandledRebalanceNonce The highest rebalance nonce handled by the ChildVault
+    /// @param tvl The vault's accounted underlying-asset value
     struct ChildOperationalState {
         bool paused;
         RecoveryMode recoveryMode;
         uint256 lastHandledEpochNonce;
         uint256 lastHandledRebalanceNonce;
+        uint256 tvl;
     }
 }

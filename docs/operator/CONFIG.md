@@ -80,7 +80,7 @@ Registering a workflow ID, or updating the metadata of one that is still registe
 | `pause()`   | `PAUSER_ROLE`   | Parent vault, child vault, WorkflowRouter, and YieldcoinShare | Stops the protected contract path during incidents or controlled maintenance.    |
 | `unpause()` | `UNPAUSER_ROLE` | Parent vault, child vault, WorkflowRouter, and YieldcoinShare | Resumes operation after the condition that required the pause has been resolved. |
 
-Vault pause state blocks normal user, epoch, rebalance, recovery, inbound CCIP, and ParentVault completion flows. In particular, `completeEpochDeposit()` and `completeRebalance()` cannot acknowledge CRE-observed remote success while ParentVault is paused. After reconciling cross-chain state, operators must use the controlled unpause procedure in [OPERATIONS](./OPERATIONS.md#paused-cross-chain-execution) to resume or finalize an in-flight operation.
+Vault pause state blocks normal user, epoch, rebalance, recovery, inbound CCIP, and ParentVault completion flows. In particular, `completeEpochDeposit(expectedEpochNonce)` and `completeRebalance(expectedRebalanceNonce)` cannot acknowledge CRE-observed remote success while ParentVault is paused. After reconciling cross-chain state, operators must use the controlled unpause procedure in [OPERATIONS](./OPERATIONS.md#paused-cross-chain-execution) to resume or finalize an in-flight operation. Before submitting a completion report, read ParentVault state and pass the most recently closed epoch nonce (`getEpochNonce() - 1`) or current rebalance nonce (`getRebalance().nonce`), respectively.
 
 ## Adapter Registry Configuration
 

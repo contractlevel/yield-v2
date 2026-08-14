@@ -41,7 +41,7 @@ This split is an implementation boundary, not a trust boundary: linked libraries
 
 While a vault is paused, it does not execute recovery, child epoch withdrawals, child rebalances, inbound CCIP messages, or ParentVault epoch-deposit and rebalance completion. These paths either interact with external systems or make economically meaningful lifecycle transitions and must stop during incident containment.
 
-`completeRebalance` and `completeEpochDeposit` are submitted after CRE observes success on another chain. ParentVault cannot independently prove those offchain facts, and finalization changes authoritative accounting state: it makes an epoch claimable or activates a pending strategy, clears the rebalance state, advances its nonce, and may mint management-fee shares. A ParentVault pause therefore blocks both functions even though neither calls an adapter or CCIP router. The CRE deposit-completion handler does not apply the global recovery guard because it cannot create recovery or start another external operation; ParentVault independently enforces its pause and lifecycle preconditions.
+`completeRebalance(expectedRebalanceNonce)` and `completeEpochDeposit(expectedEpochNonce)` are submitted after CRE observes success on another chain. CRE reads the corresponding parent nonce before submitting the report, and ParentVault rejects a stale or otherwise mismatched nonce. ParentVault cannot independently prove the observed offchain success, however, and finalization changes authoritative accounting state: it makes an epoch claimable or activates a pending strategy, clears the rebalance state, advances its nonce, and may mint management-fee shares. A ParentVault pause therefore blocks both functions even though neither calls an adapter or CCIP router. The CRE deposit-completion handler does not apply the global recovery guard because it cannot create recovery or start another external operation; ParentVault independently enforces its pause and lifecycle preconditions.
 
 This containment boundary can leave an epoch or rebalance in an intermediate cross-chain state even after destination execution succeeded. Operators must inspect the parent, child, recovery, and CCIP message states before deliberately unpausing the affected vault and resuming or finalizing the operation. The break-glass procedure is documented in [OPERATIONS](../operator/OPERATIONS.md#paused-cross-chain-execution).
 
@@ -55,15 +55,15 @@ The contracts do not include autonomous timers or broad manual public execution 
 
 This keeps operational authority concentrated in the CRE/router path rather than duplicating privileged execution surfaces. CRE liveness remains an accepted operational dependency.
 
-Some asynchronous rebalance paths complete through CRE calling `completeRebalance()` after observing a successful deposit event on the receiving chain. Completion does not always depend on an inbound CCIP message to the parent chain; the parent records the pending strategy at initiation and finalizes when the workflow reports that the receiving side completed the deposit.
+Some asynchronous rebalance paths complete through CRE calling `completeRebalance(expectedRebalanceNonce)` after observing a successful deposit event on the receiving chain and reading the current parent rebalance nonce. Completion does not always depend on an inbound CCIP message to the parent chain; the parent records the pending strategy at initiation and finalizes when the workflow reports that the receiving side completed the deposit with a matching nonce.
 
 See [THREAT_MODEL - CRE, TVL, and rebalance decision failure](../security/THREAT_MODEL.md#33-cre-tvl-and-rebalance-decision-failure) and [KI-007](../security/KNOWN_ISSUES.md#ki-007--epoch-close-depends-on-cre-workflow-execution).
 
 ## DD-006 - `closeEpoch` Trusts CRE-Supplied TVL
 
-`ParentVault.closeEpoch(tvl)` does not independently verify the supplied TVL against on-chain adapter state.
+`ParentVault.closeEpoch(expectedEpochNonce, tvl)` verifies that `expectedEpochNonce` matches the current parent epoch, but it does not independently verify the supplied TVL against on-chain adapter state.
 
-This is deliberate because the active strategy may be on a child chain. The same `closeEpoch` path must support local and remote strategies, so TVL is provided by CRE after reading the active strategy chain. On-chain validation against a local adapter would only cover one topology and would not solve the cross-chain case.
+This is deliberate because the active strategy may be on a child chain. The same `closeEpoch` path must support local and remote strategies, so CRE reads the current nonce from ParentVault and TVL from the active strategy chain before submitting both values. On-chain validation against a local adapter would only cover one topology and would not solve the cross-chain TVL case.
 
 Incorrect TVL can corrupt epoch pricing once users claim against the affected epoch. This is a trust-boundary decision, not a hidden invariant.
 

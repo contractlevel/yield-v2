@@ -13,9 +13,10 @@ These are the functions in the Vaults that are called by WorkflowRouters. We don
 // @review double check these
 
 ```
-initiateRebalance((bytes32,uint64))                0x3d34b5e6
-completeRebalance()                                0x1f02a47d
-closeEpoch(uint256)                                0xd16d9057
+initiateRebalance(uint256,(bytes32,uint64))        0x3ba1b347
+completeRebalance(uint256)                         0x58b275bc
+closeEpoch(uint256,uint256)                        0xf5591e6e
+completeEpochDeposit(uint256)                      0x37129c0b
 executeRebalance(uint256,(bytes32,uint64))         0x1aa137ec
 executeEpochWithdraw(uint256,uint256)              0x1c12f962
 ```

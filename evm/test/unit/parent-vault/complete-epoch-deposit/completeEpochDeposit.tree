@@ -3,6 +3,8 @@ ParentVault_completeEpochDeposit
 │   └── it should revert
 ├── when no epoch has completed
 │   └── it should revert with ParentVault__NoCompletedEpoch
+├── when the expected epoch nonce does not match the most recently closed epoch nonce
+│   └── it should revert with ParentVault__InvalidEpochNonce
 ├── when the previous epoch is not a net-deposit epoch
 │   └── it should revert with ParentVault__EpochNotNetDeposit
 ├── when the previous net-deposit epoch is not executing

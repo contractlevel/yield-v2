@@ -333,7 +333,7 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
             workflowId,
             workflowName,
             workflowOwner,
-            abi.encodeWithSelector(ParentVault.closeEpoch.selector, tvl)
+            abi.encodeWithSelector(ParentVault.closeEpoch.selector, parent.vault.getEpochNonce(), tvl)
         );
     }
 
@@ -348,7 +348,7 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
             workflowId,
             workflowName,
             workflowOwner,
-            abi.encodeWithSelector(ParentVault.completeEpochDeposit.selector)
+            abi.encodeWithSelector(ParentVault.completeEpochDeposit.selector, parent.vault.getEpochNonce() - 1)
         );
     }
 
@@ -382,7 +382,9 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
             workflowId,
             workflowName,
             workflowOwner,
-            abi.encodeWithSelector(ParentVault.initiateRebalance.selector, newStrategy)
+            abi.encodeWithSelector(
+                ParentVault.initiateRebalance.selector, parent.vault.getRebalance().nonce, newStrategy
+            )
         );
     }
 
@@ -403,7 +405,7 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
             workflowId,
             workflowName,
             workflowOwner,
-            abi.encodeWithSelector(ParentVault.completeRebalance.selector)
+            abi.encodeWithSelector(ParentVault.completeRebalance.selector, parent.vault.getRebalance().nonce)
         );
     }
 

@@ -24,9 +24,9 @@ methods {
     function getEpochStatus(uint256) external returns (Types.EpochStatus) envfree;
 
     // Library public wrappers
-    function closeEpoch(uint256, uint256, uint256, uint256, bool)
+    function closeEpoch(uint256, uint256, uint256, uint256, uint256, bool)
         external returns (uint256, uint8, uint256, uint256);
-    function completeEpochDeposit() external;
+    function completeEpochDeposit(uint256) external;
     function finalizeLocalNetWithdraw(uint256, uint256, uint256) external;
     function openNextEpoch(uint256) external;
 
@@ -226,16 +226,58 @@ hook LOG3(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2) {
 //////////////////////////////////////////////////////////////*/
 /// ─────────────────── CLOSE EPOCH REVERTS ────────────────────
 
+/// @notice Closing an epoch reverts when the caller's expected nonce is incorrect.
+/// @dev Verifies the nonce guard independently of every later close condition.
+rule EPOCH_003_closeEpoch_RevertWhen_InvalidEpochNonce() {
+    env e;
+    uint256 expectedEpochNonce;
+    uint256 currentEpochNonce = getEpochNonce();
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "closeEpoch is nonpayable";
+    require getRebalanceState() == Types.RebalanceState.NONE, "no rebalance is in progress";
+    require currentEpochNonce == 1, "there is no preceding epoch";
+    require getEpochStatus(currentEpochNonce) == Types.EpochStatus.OPEN, "current epoch is open";
+    require getEpochOpenedAtTimestamp(currentEpochNonce) <= max_uint256 - getMinEpochPeriod(),
+        "minimum epoch period addition does not overflow";
+    require e.block.timestamp >= getEpochOpenedAtTimestamp(currentEpochNonce) + getMinEpochPeriod(),
+        "minimum epoch period has elapsed";
+    require getEpochTotalDepositAmount(currentEpochNonce) > 0, "current epoch is not empty";
+    require getEpochTotalShareBurnAmount(currentEpochNonce) == 0, "current epoch has no share burn";
+    require getTotalShares() == 0, "current epoch uses bootstrap settlement";
+
+    /// @dev revert condition being verified
+    require expectedEpochNonce != currentEpochNonce,
+        "expected epoch nonce does not match current epoch nonce";
+
+    /// @dev ghost starting values
+    require ghost_epochNonce_StoreCount == 0, "epoch nonce store count starts at zero";
+    require ghost_totalShares_StoreCount == 0, "total shares store count starts at zero";
+    require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
+
+    closeEpoch@withrevert(e, expectedEpochNonce, 1, 1, 1, 1, true);
+
+    assert lastReverted;
+    assert getEpochNonce() == currentEpochNonce;
+    assert getEpochStatus(currentEpochNonce) == Types.EpochStatus.OPEN;
+    assert getTotalShares() == 0;
+    assert ghost_epochNonce_StoreCount == 0;
+    assert ghost_totalShares_StoreCount == 0;
+    assert EpochLifecycleEventCountsAreZero();
+}
+
 /// @notice Closing an epoch reverts when a rebalance is in progress.
 /// @dev Verifies the targeted revert independently of competing conditions.
 rule EPOCH_003_closeEpoch_RevertWhen_RebalanceInProgress() {
     env e;
+    uint256 expectedEpochNonce;
     uint256 tvl;
     uint256 sharePrecision;
     uint256 minDepositAmount;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
     require e.msg.value == 0, "closeEpoch is nonpayable";
     require getEpochNonce() == 1, "current epoch is the first epoch";
     require getEpochStatus(getEpochNonce()) == Types.EpochStatus.OPEN, "epoch is open";
@@ -256,7 +298,7 @@ rule EPOCH_003_closeEpoch_RevertWhen_RebalanceInProgress() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -266,12 +308,14 @@ rule EPOCH_003_closeEpoch_RevertWhen_RebalanceInProgress() {
 /// @dev Verifies the checked subtraction used to derive the previous epoch nonce.
 rule closeEpoch_RevertWhen_CurrentEpochNonceIsZero() {
     env e;
+    uint256 expectedEpochNonce;
     uint256 tvl;
     uint256 sharePrecision;
     uint256 minDepositAmount;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
     require e.msg.value == 0, "closeEpoch is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
     require getEpochStatus(0) == Types.EpochStatus.OPEN, "epoch zero is open if reached";
@@ -292,7 +336,7 @@ rule closeEpoch_RevertWhen_CurrentEpochNonceIsZero() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -302,12 +346,14 @@ rule closeEpoch_RevertWhen_CurrentEpochNonceIsZero() {
 /// @dev Verifies the targeted revert independently of competing conditions.
 rule EPOCH_003_closeEpoch_RevertWhen_PreviousEpochNotClaimable() {
     env e;
+    uint256 expectedEpochNonce;
     uint256 tvl;
     uint256 sharePrecision;
     uint256 minDepositAmount;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
     require e.msg.value == 0, "closeEpoch is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
     require getEpochNonce() > 1, "previous epoch nonce is nonzero";
@@ -333,7 +379,7 @@ rule EPOCH_003_closeEpoch_RevertWhen_PreviousEpochNotClaimable() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -343,12 +389,14 @@ rule EPOCH_003_closeEpoch_RevertWhen_PreviousEpochNotClaimable() {
 /// @dev Verifies the targeted revert independently of competing conditions.
 rule closeEpoch_RevertWhen_EpochNotOpen() {
     env e;
+    uint256 expectedEpochNonce;
     uint256 tvl;
     uint256 sharePrecision;
     uint256 minDepositAmount;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
     require e.msg.value == 0, "closeEpoch is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
     require getEpochNonce() != 0, "current epoch nonce is nonzero";
@@ -374,7 +422,7 @@ rule closeEpoch_RevertWhen_EpochNotOpen() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -384,12 +432,14 @@ rule closeEpoch_RevertWhen_EpochNotOpen() {
 /// @dev Verifies the targeted revert independently of competing conditions.
 rule closeEpoch_RevertWhen_EpochOpenTimestampOverflows() {
     env e;
+    uint256 expectedEpochNonce;
     uint256 tvl;
     uint256 sharePrecision;
     uint256 minDepositAmount;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
     require e.msg.value == 0, "closeEpoch is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
     require getEpochNonce() != 0, "current epoch nonce is nonzero";
@@ -412,7 +462,7 @@ rule closeEpoch_RevertWhen_EpochOpenTimestampOverflows() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -422,12 +472,14 @@ rule closeEpoch_RevertWhen_EpochOpenTimestampOverflows() {
 /// @dev Verifies the targeted revert independently of competing conditions.
 rule EPOCH_016_closeEpoch_RevertWhen_EpochTooShort() {
     env e;
+    uint256 expectedEpochNonce;
     uint256 tvl;
     uint256 sharePrecision;
     uint256 minDepositAmount;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
     require e.msg.value == 0, "closeEpoch is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
     require getEpochNonce() != 0, "current epoch nonce is nonzero";
@@ -453,7 +505,7 @@ rule EPOCH_016_closeEpoch_RevertWhen_EpochTooShort() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -463,12 +515,14 @@ rule EPOCH_016_closeEpoch_RevertWhen_EpochTooShort() {
 /// @dev Verifies the targeted revert independently of competing conditions.
 rule EPOCH_016_closeEpoch_RevertWhen_EmptyEpoch() {
     env e;
+    uint256 expectedEpochNonce;
     uint256 tvl;
     uint256 sharePrecision;
     uint256 minDepositAmount;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
     require e.msg.value == 0, "closeEpoch is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
     require getEpochNonce() != 0, "current epoch nonce is nonzero";
@@ -494,7 +548,7 @@ rule EPOCH_016_closeEpoch_RevertWhen_EmptyEpoch() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -504,11 +558,13 @@ rule EPOCH_016_closeEpoch_RevertWhen_EmptyEpoch() {
 /// @dev Verifies the targeted revert independently of competing conditions.
 rule EPOCH_017_closeEpoch_RevertWhen_ZeroTvlWithOutstandingShares() {
     env e;
+    uint256 expectedEpochNonce;
     uint256 sharePrecision;
     uint256 minDepositAmount;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
     require e.msg.value == 0, "closeEpoch is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
     require getEpochNonce() != 0, "current epoch nonce is nonzero";
@@ -534,7 +590,7 @@ rule EPOCH_017_closeEpoch_RevertWhen_ZeroTvlWithOutstandingShares() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -544,9 +600,11 @@ rule EPOCH_017_closeEpoch_RevertWhen_ZeroTvlWithOutstandingShares() {
 /// @dev Verifies the bootstrap branch rejects inconsistent share accounting before settlement.
 rule EPOCH_017_closeEpoch_RevertWhen_ShareBurnExistsWithZeroTotalShares() {
     env e;
+    uint256 expectedEpochNonce;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
     require e.msg.value == 0, "closeEpoch is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
     require getEpochNonce() != 0, "current epoch nonce is nonzero";
@@ -573,7 +631,7 @@ rule EPOCH_017_closeEpoch_RevertWhen_ShareBurnExistsWithZeroTotalShares() {
         "totalWithdrawClaimAmount store count starts at zero";
     require ghost_epoch_status_StoreCount == 0, "epoch status store count starts at zero";
 
-    closeEpoch@withrevert(e, 0, 1, 1, 1, isLocalStrategy);
+    closeEpoch@withrevert(e, expectedEpochNonce, 0, 1, 1, 1, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -586,11 +644,13 @@ rule EPOCH_017_closeEpoch_RevertWhen_ShareBurnExistsWithZeroTotalShares() {
 /// @dev Verifies the explicit zero-share deposit guard, not fee collection behavior.
 rule EPOCH_018_closeEpoch_RevertWhen_DepositWouldMintZeroShares() {
     env e;
+    uint256 expectedEpochNonce;
     uint256 tvl;
     uint256 sharePrecision;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
     require e.msg.value == 0, "closeEpoch is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
     require getEpochNonce() != 0, "current epoch nonce is nonzero";
@@ -628,7 +688,7 @@ rule EPOCH_018_closeEpoch_RevertWhen_DepositWouldMintZeroShares() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -638,10 +698,12 @@ rule EPOCH_018_closeEpoch_RevertWhen_DepositWouldMintZeroShares() {
 /// @dev Verifies that bootstrap allocation cannot mint shares when the numerator precision is zero.
 rule closeEpoch_RevertWhen_SharePrecisionIsZero() {
     env e;
+    uint256 expectedEpochNonce;
     uint256 minDepositAmount;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
     require e.msg.value == 0, "closeEpoch is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
     require getEpochNonce() != 0, "current epoch nonce is nonzero";
@@ -668,7 +730,7 @@ rule closeEpoch_RevertWhen_SharePrecisionIsZero() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, tvl, sharePrecision, assetPrecision, minDepositAmount, isLocalStrategy);
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, assetPrecision, minDepositAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -678,10 +740,12 @@ rule closeEpoch_RevertWhen_SharePrecisionIsZero() {
 /// @dev Verifies the new-share mulDiv denominator guard independently of share precision.
 rule closeEpoch_RevertWhen_AssetPrecisionIsZero() {
     env e;
+    uint256 expectedEpochNonce;
     uint256 minDepositAmount;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
     require e.msg.value == 0, "closeEpoch is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
     require getEpochNonce() != 0, "current epoch nonce is nonzero";
@@ -708,7 +772,7 @@ rule closeEpoch_RevertWhen_AssetPrecisionIsZero() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, tvl, sharePrecision, assetPrecision, minDepositAmount, isLocalStrategy);
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, assetPrecision, minDepositAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -718,12 +782,14 @@ rule closeEpoch_RevertWhen_AssetPrecisionIsZero() {
 /// @dev Verifies the near-total-loss guard's full-precision mulDiv result-overflow path.
 rule closeEpoch_RevertWhen_ScaledTvlToShareRatioOverflows() {
     env e;
+    uint256 expectedEpochNonce;
     uint256 tvl = max_uint256;
     uint256 sharePrecision = max_uint256;
     uint256 minDepositAmount;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
     require e.msg.value == 0, "closeEpoch is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
     require getEpochNonce() != 0, "current epoch nonce is nonzero";
@@ -746,7 +812,7 @@ rule closeEpoch_RevertWhen_ScaledTvlToShareRatioOverflows() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -756,12 +822,14 @@ rule closeEpoch_RevertWhen_ScaledTvlToShareRatioOverflows() {
 /// @dev Verifies the share-burn settlement mulDiv result-overflow path.
 rule closeEpoch_RevertWhen_TotalWithdrawOverflows() {
     env e;
+    uint256 expectedEpochNonce;
     uint256 tvl = max_uint256;
     uint256 sharePrecision = 1;
     uint256 minDepositAmount;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
     require e.msg.value == 0, "closeEpoch is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
     require getEpochNonce() != 0, "current epoch nonce is nonzero";
@@ -786,7 +854,7 @@ rule closeEpoch_RevertWhen_TotalWithdrawOverflows() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -796,12 +864,14 @@ rule closeEpoch_RevertWhen_TotalWithdrawOverflows() {
 /// @dev Verifies the bootstrap deposit-share mulDiv result-overflow path.
 rule closeEpoch_RevertWhen_BootstrapNewSharesOverflows() {
     env e;
+    uint256 expectedEpochNonce;
     uint256 sharePrecision = max_uint256;
     uint256 assetPrecision = 1;
     uint256 minDepositAmount;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
     require e.msg.value == 0, "closeEpoch is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
     require getEpochNonce() != 0, "current epoch nonce is nonzero";
@@ -826,7 +896,7 @@ rule closeEpoch_RevertWhen_BootstrapNewSharesOverflows() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, tvl, sharePrecision, assetPrecision, minDepositAmount, isLocalStrategy);
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, assetPrecision, minDepositAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -836,12 +906,14 @@ rule closeEpoch_RevertWhen_BootstrapNewSharesOverflows() {
 /// @dev Verifies the direct deposit-share mulDiv result-overflow path independently of bootstrap allocation.
 rule closeEpoch_RevertWhen_ExistingSupplyNewSharesOverflows() {
     env e;
+    uint256 expectedEpochNonce;
     uint256 tvl = 1;
     uint256 sharePrecision = max_uint256;
     uint256 minDepositAmount;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
     require e.msg.value == 0, "closeEpoch is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
     require getEpochNonce() != 0, "current epoch nonce is nonzero";
@@ -864,7 +936,7 @@ rule closeEpoch_RevertWhen_ExistingSupplyNewSharesOverflows() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -874,12 +946,14 @@ rule closeEpoch_RevertWhen_ExistingSupplyNewSharesOverflows() {
 /// @dev Verifies the near-total-loss guard before deposit and withdrawal settlement.
 rule EPOCH_017_closeEpoch_RevertWhen_ScaledTvlToShareRatioIsZero() {
     env e;
+    uint256 expectedEpochNonce;
     uint256 tvl;
     uint256 sharePrecision;
     uint256 minDepositAmount;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
     require e.msg.value == 0, "closeEpoch is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
     require getEpochNonce() != 0, "current epoch nonce is nonzero";
@@ -908,7 +982,7 @@ rule EPOCH_017_closeEpoch_RevertWhen_ScaledTvlToShareRatioIsZero() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -918,8 +992,10 @@ rule EPOCH_017_closeEpoch_RevertWhen_ScaledTvlToShareRatioIsZero() {
 /// @dev The withdrawal amount casts to int256.min while the deposit amount casts to int256.max.
 rule closeEpoch_RevertWhen_NetFlowSubtractionOverflowsPositive() {
     env e;
+    uint256 expectedEpochNonce;
     bool isLocalStrategy;
 
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
     require e.msg.value == 0, "closeEpoch is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
     require getEpochNonce() != 0, "current epoch nonce is nonzero";
@@ -942,7 +1018,7 @@ rule closeEpoch_RevertWhen_NetFlowSubtractionOverflowsPositive() {
 
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, minIntAsUint, 1, 1, maxInt, isLocalStrategy);
+    closeEpoch@withrevert(e, expectedEpochNonce, minIntAsUint, 1, 1, maxInt, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -952,8 +1028,10 @@ rule closeEpoch_RevertWhen_NetFlowSubtractionOverflowsPositive() {
 /// @dev The deposit amount casts to int256.min and a one-unit withdrawal is subtracted from it.
 rule closeEpoch_RevertWhen_NetFlowSubtractionOverflowsNegative() {
     env e;
+    uint256 expectedEpochNonce;
     bool isLocalStrategy;
 
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
     require e.msg.value == 0, "closeEpoch is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
     require getEpochNonce() != 0, "current epoch nonce is nonzero";
@@ -975,7 +1053,7 @@ rule closeEpoch_RevertWhen_NetFlowSubtractionOverflowsNegative() {
 
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, 2, 1, 1, 1, isLocalStrategy);
+    closeEpoch@withrevert(e, expectedEpochNonce, 2, 1, 1, 1, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -985,8 +1063,10 @@ rule closeEpoch_RevertWhen_NetFlowSubtractionOverflowsNegative() {
 /// @dev Bootstrap allocation succeeds and produces netFlow == int256.min before the negation.
 rule closeEpoch_RevertWhen_NetWithdrawNegationOverflows() {
     env e;
+    uint256 expectedEpochNonce;
     bool isLocalStrategy;
 
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
     require e.msg.value == 0, "closeEpoch is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
     require getEpochNonce() != 0, "current epoch nonce is nonzero";
@@ -1008,7 +1088,7 @@ rule closeEpoch_RevertWhen_NetWithdrawNegationOverflows() {
 
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, 0, 1, 1, 1, isLocalStrategy);
+    closeEpoch@withrevert(e, expectedEpochNonce, 0, 1, 1, 1, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -1018,9 +1098,11 @@ rule closeEpoch_RevertWhen_NetWithdrawNegationOverflows() {
 /// @dev Verifies the explicit min-deposit multiplication overflow path.
 rule closeEpoch_RevertWhen_ZeroShareGuardMultiplicationOverflows() {
     env e;
+    uint256 expectedEpochNonce;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
     require e.msg.value == 0, "closeEpoch is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
     require getEpochNonce() != 0, "current epoch nonce is nonzero";
@@ -1049,7 +1131,7 @@ rule closeEpoch_RevertWhen_ZeroShareGuardMultiplicationOverflows() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -1059,9 +1141,11 @@ rule closeEpoch_RevertWhen_ZeroShareGuardMultiplicationOverflows() {
 /// @dev Verifies s_totalShares + newShares - burned shares underflow.
 rule closeEpoch_RevertWhen_TotalSharesSubtractionUnderflows() {
     env e;
+    uint256 expectedEpochNonce;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
     require e.msg.value == 0, "closeEpoch is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
     require getEpochNonce() != 0, "current epoch nonce is nonzero";
@@ -1092,7 +1176,7 @@ rule closeEpoch_RevertWhen_TotalSharesSubtractionUnderflows() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -1104,12 +1188,14 @@ rule closeEpoch_RevertWhen_TotalSharesSubtractionUnderflows() {
 /// @dev Verifies the successful side of the zero-supply branch with no artificial TVL requirement.
 rule EPOCH_017_closeEpoch_Success_BootstrapsZeroSupply() {
     env e;
+    uint256 expectedEpochNonce;
     uint256 sharePrecision = 1000000000000000000;
     uint256 assetPrecision = 1000000;
     uint256 depositAmount = assetPrecision;
     uint256 minDepositAmount = assetPrecision;
     uint256 tvl = 0;
 
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
     require e.msg.value == 0, "closeEpoch is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
     require getEpochNonce() != 0, "current epoch nonce is nonzero";
@@ -1131,7 +1217,7 @@ rule EPOCH_017_closeEpoch_Success_BootstrapsZeroSupply() {
 
     uint256 returnedEpochNonce; uint8 returnedAction; uint256 returnedAmount; uint256 returnedTotalDepositAmount;
     (returnedEpochNonce, returnedAction, returnedAmount, returnedTotalDepositAmount) =
-        closeEpoch@withrevert(e, tvl, sharePrecision, assetPrecision, minDepositAmount, true);
+        closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, assetPrecision, minDepositAmount, true);
 
     assert !lastReverted;
     assert returnedEpochNonce == epochNonce;
@@ -1154,7 +1240,9 @@ rule EPOCH_017_closeEpoch_Success_BootstrapsZeroSupply() {
 ///      asset units for the full-supply withdrawal, while direct settlement returns 10,000,000.
 rule EPOCH_004_SHARE_002_closeEpoch_Success_UsesDirectFullPrecisionRatios() {
     env e;
+    uint256 expectedEpochNonce;
 
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
     require e.msg.value == 0, "closeEpoch is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
     require getEpochNonce() != 0, "current epoch nonce is nonzero";
@@ -1192,7 +1280,7 @@ rule EPOCH_004_SHARE_002_closeEpoch_Success_UsesDirectFullPrecisionRatios() {
 
     uint256 returnedEpochNonce; uint8 returnedAction; uint256 returnedAmount; uint256 returnedTotalDepositAmount;
     (returnedEpochNonce, returnedAction, returnedAmount, returnedTotalDepositAmount) =
-        closeEpoch@withrevert(e, tvl, sharePrecision, assetPrecision, assetPrecision, false);
+        closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, assetPrecision, assetPrecision, false);
 
     assert !lastReverted;
     assert returnedEpochNonce == epochNonce;
@@ -1223,10 +1311,12 @@ rule EPOCH_004_SHARE_002_closeEpoch_Success_UsesDirectFullPrecisionRatios() {
 /// @dev Verifies the net-zero branch with a concrete non-fee arithmetic witness.
 rule EPOCH_004_NONCE_010_SHARE_002_closeEpoch_Success_WhenNetFlowIsZero() {
     env e;
+    uint256 expectedEpochNonce;
     uint256 sharePrecision = 1;
     bool isLocalStrategy = false;
 
     /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
     require e.msg.value == 0, "closeEpoch is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
     require getEpochNonce() != 0, "current epoch nonce is nonzero";
@@ -1267,7 +1357,7 @@ rule EPOCH_004_NONCE_010_SHARE_002_closeEpoch_Success_WhenNetFlowIsZero() {
 
     uint256 returnedEpochNonce; uint8 returnedAction; uint256 returnedAmount; uint256 returnedTotalDepositAmount;
     (returnedEpochNonce, returnedAction, returnedAmount, returnedTotalDepositAmount) =
-    closeEpoch@withrevert(e, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
 
     assert !lastReverted;
     assert returnedEpochNonce == epochNonce;
@@ -1302,6 +1392,7 @@ rule EPOCH_004_NONCE_010_SHARE_002_closeEpoch_Success_WhenNetFlowIsZero() {
 /// @dev Uses a concrete 2x TVL-to-share-value witness to verify direct deposit allocation.
 rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenTvlToShareRatioExceedsPar() {
     env e;
+    uint256 expectedEpochNonce;
     uint256 sharePrecision = 100;
     uint256 assetPrecision = 1;
     uint256 minDepositAmount = 2;
@@ -1309,6 +1400,7 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenTvlToShareRa
     bool isLocalStrategy = true;
 
     /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
     require e.msg.value == 0, "closeEpoch is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
     require getEpochNonce() != 0, "current epoch nonce is nonzero";
@@ -1338,7 +1430,7 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenTvlToShareRa
 
     uint256 returnedEpochNonce; uint8 returnedAction; uint256 returnedAmount; uint256 returnedTotalDepositAmount;
     (returnedEpochNonce, returnedAction, returnedAmount, returnedTotalDepositAmount) =
-        closeEpoch@withrevert(e, tvl, sharePrecision, assetPrecision, minDepositAmount, isLocalStrategy);
+        closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, assetPrecision, minDepositAmount, isLocalStrategy);
 
     assert !lastReverted;
     assert returnedEpochNonce == epochNonce;
@@ -1371,11 +1463,13 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenTvlToShareRa
 /// @dev Verifies the positive-net-flow local branch with production share/asset precisions.
 rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenLocalNetDeposit() {
     env e;
+    uint256 expectedEpochNonce;
     uint256 sharePrecision = 1000000000000000000;
     uint256 assetPrecision = 1000000;
     uint256 minDepositAmount = 1000000;
 
     /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
     require e.msg.value == 0, "closeEpoch is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
     require getEpochNonce() != 0, "current epoch nonce is nonzero";
@@ -1407,7 +1501,7 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenLocalNetDepo
     bool isLocalStrategy = true;
     uint256 returnedEpochNonce; uint8 returnedAction; uint256 returnedAmount; uint256 returnedTotalDepositAmount;
     (returnedEpochNonce, returnedAction, returnedAmount, returnedTotalDepositAmount) =
-        closeEpoch@withrevert(e, 0, sharePrecision, assetPrecision, minDepositAmount, isLocalStrategy);
+        closeEpoch@withrevert(e, expectedEpochNonce, 0, sharePrecision, assetPrecision, minDepositAmount, isLocalStrategy);
 
     assert !lastReverted;
     assert returnedEpochNonce == epochNonce;
@@ -1442,10 +1536,12 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenLocalNetDepo
 /// @dev Verifies the positive-net-flow remote branch while fee collection is not active.
 rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenRemoteNetDeposit() {
     env e;
+    uint256 expectedEpochNonce;
     uint256 sharePrecision;
     uint256 minDepositAmount;
 
     /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
     require e.msg.value == 0, "closeEpoch is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
     require getEpochNonce() != 0, "current epoch nonce is nonzero";
@@ -1484,7 +1580,7 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenRemoteNetDep
     bool isLocalStrategy = false;
     uint256 returnedEpochNonce; uint8 returnedAction; uint256 returnedAmount; uint256 returnedTotalDepositAmount;
     (returnedEpochNonce, returnedAction, returnedAmount, returnedTotalDepositAmount) =
-        closeEpoch@withrevert(e, 0, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+        closeEpoch@withrevert(e, expectedEpochNonce, 0, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
 
     assert !lastReverted;
     assert returnedEpochNonce == epochNonce;
@@ -1520,9 +1616,11 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenRemoteNetDep
 /// @dev Verifies the negative-net-flow local branch with a concrete non-fee arithmetic witness.
 rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenLocalNetWithdraw() {
     env e;
+    uint256 expectedEpochNonce;
     uint256 sharePrecision = 1;
 
     /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
     require e.msg.value == 0, "closeEpoch is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
     require getEpochNonce() != 0, "current epoch nonce is nonzero";
@@ -1573,7 +1671,7 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenLocalNetWith
     bool isLocalStrategy = true;
     uint256 returnedEpochNonce; uint8 returnedAction; uint256 returnedAmount; uint256 returnedTotalDepositAmount;
     (returnedEpochNonce, returnedAction, returnedAmount, returnedTotalDepositAmount) =
-        closeEpoch@withrevert(e, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+        closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
 
     assert !lastReverted;
     assert returnedEpochNonce == epochNonce;
@@ -1603,9 +1701,11 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenLocalNetWith
 /// @dev Verifies the remote branch, executing status, and event with a concrete non-fee arithmetic witness.
 rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenRemoteNetWithdraw() {
     env e;
+    uint256 expectedEpochNonce;
     uint256 sharePrecision = 1;
 
     /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
     require e.msg.value == 0, "closeEpoch is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
     require getEpochNonce() != 0, "current epoch nonce is nonzero";
@@ -1645,7 +1745,7 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenRemoteNetWit
     uint256 minDepositAmount = 1;
     uint256 returnedEpochNonce; uint8 returnedAction; uint256 returnedAmount; uint256 returnedTotalDepositAmount;
     (returnedEpochNonce, returnedAction, returnedAmount, returnedTotalDepositAmount) =
-        closeEpoch@withrevert(e, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+        closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
 
     assert !lastReverted;
     assert returnedEpochNonce == epochNonce;
@@ -1679,12 +1779,46 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenRemoteNetWit
 
 /// ─────────────── COMPLETE EPOCH DEPOSIT ───────────────
 
+/// @notice Completing an epoch deposit reverts when the caller's expected nonce is incorrect.
+/// @dev Verifies the nonce guard independently of the epoch type and status guards.
+rule EPOCH_014_completeEpochDeposit_RevertWhen_InvalidEpochNonce() {
+    env e;
+    uint256 expectedEpochNonce;
+    uint256 currentEpochNonce = getEpochNonce();
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "completeEpochDeposit is nonpayable";
+    require currentEpochNonce > 1, "at least one epoch has completed";
+    uint256 previousEpochNonce = getPreviousEpochNonce();
+    require getEpochStatus(previousEpochNonce) == Types.EpochStatus.EXECUTING, "previous epoch is executing";
+    require getEpochTotalDepositAmount(previousEpochNonce) > getEpochTotalWithdrawClaimAmount(previousEpochNonce),
+        "previous epoch is a net-deposit epoch";
+
+    /// @dev revert condition being verified
+    require expectedEpochNonce != previousEpochNonce,
+        "expected epoch nonce does not match most recently closed epoch nonce";
+
+    /// @dev ghost starting values
+    require ghost_epoch_status_StoreCount == 0, "epoch status store count starts at zero";
+    require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
+
+    completeEpochDeposit@withrevert(e, expectedEpochNonce);
+
+    assert lastReverted;
+    assert getEpochNonce() == currentEpochNonce;
+    assert getEpochStatus(previousEpochNonce) == Types.EpochStatus.EXECUTING;
+    assert ghost_epoch_status_StoreCount == 0;
+    assert ghost_EpochClaimable_EventCount == 0;
+}
+
 /// @notice Completing an epoch deposit reverts when the current epoch nonce is zero.
 /// @dev Verifies the checked subtraction used to access the previous epoch.
 rule EPOCH_014_completeEpochDeposit_RevertWhen_CurrentEpochNonceIsZero() {
     env e;
+    uint256 expectedEpochNonce;
 
     /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == 0, "expected epoch nonce is fixed but is not reached";
     require e.msg.value == 0, "completeEpochDeposit is nonpayable";
 
     /// @dev revert condition being verified
@@ -1693,7 +1827,7 @@ rule EPOCH_014_completeEpochDeposit_RevertWhen_CurrentEpochNonceIsZero() {
     /// @dev ghost starting values
     require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
 
-    completeEpochDeposit@withrevert(e);
+    completeEpochDeposit@withrevert(e, expectedEpochNonce);
 
     assert lastReverted;
     assert ghost_EpochClaimable_EventCount == 0;
@@ -1703,8 +1837,11 @@ rule EPOCH_014_completeEpochDeposit_RevertWhen_CurrentEpochNonceIsZero() {
 /// @dev Verifies the no-completed-epoch guard independently of later conditions.
 rule EPOCH_014_completeEpochDeposit_RevertWhen_NoCompletedEpoch() {
     env e;
+    uint256 expectedEpochNonce;
 
     /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == getEpochNonce() - 1,
+        "expected epoch nonce matches most recently closed epoch nonce";
     require e.msg.value == 0, "completeEpochDeposit is nonpayable";
 
     /// @dev revert condition being verified
@@ -1713,7 +1850,7 @@ rule EPOCH_014_completeEpochDeposit_RevertWhen_NoCompletedEpoch() {
     /// @dev ghost starting values
     require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
 
-    completeEpochDeposit@withrevert(e);
+    completeEpochDeposit@withrevert(e, expectedEpochNonce);
 
     assert lastReverted;
     assert ghost_EpochClaimable_EventCount == 0;
@@ -1723,8 +1860,11 @@ rule EPOCH_014_completeEpochDeposit_RevertWhen_NoCompletedEpoch() {
 /// @dev Verifies the net-deposit guard independently of the executing-status guard.
 rule EPOCH_014_completeEpochDeposit_RevertWhen_PreviousEpochIsNotNetDeposit() {
     env e;
+    uint256 expectedEpochNonce;
 
     /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == getEpochNonce() - 1,
+        "expected epoch nonce matches most recently closed epoch nonce";
     require e.msg.value == 0, "completeEpochDeposit is nonpayable";
     require getEpochNonce() > 1, "at least one epoch has completed";
     require getPreviousEpochStatus() == Types.EpochStatus.EXECUTING, "previous epoch is executing";
@@ -1738,7 +1878,7 @@ rule EPOCH_014_completeEpochDeposit_RevertWhen_PreviousEpochIsNotNetDeposit() {
     /// @dev ghost starting values
     require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
 
-    completeEpochDeposit@withrevert(e);
+    completeEpochDeposit@withrevert(e, expectedEpochNonce);
 
     assert lastReverted;
     assert ghost_EpochClaimable_EventCount == 0;
@@ -1748,8 +1888,11 @@ rule EPOCH_014_completeEpochDeposit_RevertWhen_PreviousEpochIsNotNetDeposit() {
 /// @dev Verifies the shared epoch-finalization status guard.
 rule EPOCH_014_completeEpochDeposit_RevertWhen_PreviousEpochIsNotExecuting() {
     env e;
+    uint256 expectedEpochNonce;
 
     /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == getEpochNonce() - 1,
+        "expected epoch nonce matches most recently closed epoch nonce";
     require e.msg.value == 0, "completeEpochDeposit is nonpayable";
     require getEpochNonce() > 1, "at least one epoch has completed";
 
@@ -1763,7 +1906,7 @@ rule EPOCH_014_completeEpochDeposit_RevertWhen_PreviousEpochIsNotExecuting() {
     /// @dev ghost starting values
     require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
 
-    completeEpochDeposit@withrevert(e);
+    completeEpochDeposit@withrevert(e, expectedEpochNonce);
 
     assert lastReverted;
     assert ghost_EpochClaimable_EventCount == 0;
@@ -1773,8 +1916,11 @@ rule EPOCH_014_completeEpochDeposit_RevertWhen_PreviousEpochIsNotExecuting() {
 /// @dev Verifies status transition and EpochClaimable event parameters.
 rule EPOCH_014_completeEpochDeposit_Success() {
     env e;
+    uint256 expectedEpochNonce;
 
     /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == getEpochNonce() - 1,
+        "expected epoch nonce matches most recently closed epoch nonce";
     require e.msg.value == 0, "completeEpochDeposit is nonpayable";
     require getEpochNonce() > 1, "at least one epoch has completed";
 
@@ -1793,7 +1939,7 @@ rule EPOCH_014_completeEpochDeposit_Success() {
     require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
     require ghost_epoch_status_StoreCount == 0, "epoch status store count starts at zero";
 
-    completeEpochDeposit@withrevert(e);
+    completeEpochDeposit@withrevert(e, expectedEpochNonce);
 
     assert !lastReverted;
     assert getEpochNonce() == currentEpochNonce;

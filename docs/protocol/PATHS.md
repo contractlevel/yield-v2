@@ -33,7 +33,7 @@ More deposits than withdrawals. Active strategy is on Parent chain.
 
 - Users submit deposit and withdraw intents on Parent. Underlying asset for deposits and Yieldcoin for withdraws escrowed on Parent.
 
-- **CRE cron triggers** closeEpoch(tvl) on Parent.
+- **CRE cron reads** the current parent epoch nonce and active-strategy TVL, then triggers `closeEpoch(expectedEpochNonce, tvl)` on Parent.
 
 - Parent calculates `newShares` and `totalWithdraw` directly from TVL and authoritative shares, then calculates `netFlow`.
 
@@ -59,7 +59,7 @@ More withdrawals than deposits. Active strategy is on Parent chain.
 
 - Users submit deposit and withdraw intents on Parent. Underlying asset for deposits and Yieldcoin for withdraws escrowed on Parent.
 
-- **CRE cron triggers** closeEpoch(tvl) on Parent.
+- **CRE cron reads** the current parent epoch nonce and active-strategy TVL, then triggers `closeEpoch(expectedEpochNonce, tvl)` on Parent.
 
 - Parent calculates `newShares` and `totalWithdraw` directly from TVL and authoritative shares, then calculates `netFlow`.
 
@@ -85,7 +85,7 @@ More deposits than withdrawals. Active strategy is on a Child chain.
 
 - Users submit deposit and withdraw intents on Parent. Underlying asset for deposits and Yieldcoin for withdraws escrowed on Parent.
 
-- **CRE cron triggers** closeEpoch(tvl) on Parent.
+- **CRE cron reads** the current parent epoch nonce and active-strategy TVL, then triggers `closeEpoch(expectedEpochNonce, tvl)` on Parent.
 
 - Parent calculates `newShares` and `totalWithdraw` directly from TVL and authoritative shares, then calculates `netFlow`.
 
@@ -97,7 +97,7 @@ More deposits than withdrawals. Active strategy is on a Child chain.
 
 - Child \_handleCCIPDeposit() → \_executeDeposit(amount, false). Emits EpochDepositToStrategySuccess on success. On failure, stores epoch deposit recovery and emits EpochDepositToStrategyFailure; `executeRecovery()` retries the stored deposit.
 
-- **CRE log trigger** (EpochDepositToStrategySuccess from the destination ChildVault) → Parent.completeEpochDeposit().
+- **CRE log trigger** (EpochDepositToStrategySuccess from the destination ChildVault) → read the current parent epoch nonce and call `Parent.completeEpochDeposit(expectedEpochNonce)` with `expectedEpochNonce = currentEpochNonce - 1`.
 
 - Parent verifies the most recently closed epoch is a positive-net-flow EXECUTING epoch, then transitions it to CLAIMABLE and emits EpochClaimable.
 
@@ -117,7 +117,7 @@ More withdrawals than deposits. Active strategy is on a Child chain.
 
 - Users submit deposit and withdraw intents on Parent. Underlying asset for deposits and Yieldcoin for withdraws escrowed on Parent.
 
-- **CRE cron triggers** closeEpoch(tvl) on Parent.
+- **CRE cron reads** the current parent epoch nonce and active-strategy TVL, then triggers `closeEpoch(expectedEpochNonce, tvl)` on Parent.
 
 - Parent calculates `newShares` and `totalWithdraw` directly from TVL and authoritative shares, then calculates `netFlow`.
 
@@ -149,13 +149,13 @@ More withdrawals than deposits. Active strategy is on a Child chain.
 
 Rebalance migrates the protocol's position from the current active strategy to a new one. It only initiates when s_rebalance.state == NONE, no recovery is pending, no prior epoch is EXECUTING, and the requested strategy is not the active strategy. All paths complete by calling \_finalizeRebalance(), which updates activeStrategy, resets state to NONE, increments the rebalance nonce, records lastRebalanceCompletedTimestamp, and mints any management fee.
 
-CRE monitors RebalanceDepositSuccess events on the receiving chain and calls completeRebalance() on Parent to finalize — except for the local-to-local path (synchronous) and the remote-Child-to-Parent success path (finalized inside Parent ccipReceive).
+CRE monitors RebalanceDepositSuccess events on the receiving chain, reads the current parent rebalance nonce, and calls `completeRebalance(expectedRebalanceNonce)` on Parent to finalize — except for the local-to-local path (synchronous) and the remote-Child-to-Parent success path (finalized inside Parent ccipReceive).
 
 ## **3a — Rebalance, Parent Local to Local**
 
 Both old and new strategy are on Parent chain. Different protocols.
 
-- **CRE cron triggers** parent.initiateRebalance(newStrategy).
+- **CRE cron reads** the current parent rebalance nonce and triggers `parent.initiateRebalance(expectedRebalanceNonce, newStrategy)`.
 
 - Guards: state == NONE, no recovery pending, MIN_REBALANCE_PERIOD cooldown elapsed since the last completed rebalance, at least one epoch has already completed, no prior epoch EXECUTING, new strategy differs from active strategy, target chain is a supported chain, target protocol is a supported protocol.
 
@@ -183,7 +183,7 @@ Both old and new strategy are on Parent chain. Different protocols.
 
 Old strategy on Parent, new strategy on a Child chain.
 
-- **CRE cron triggers** parent.initiateRebalance(newStrategy).
+- **CRE cron reads** the current parent rebalance nonce and triggers `parent.initiateRebalance(expectedRebalanceNonce, newStrategy)`.
 
 - Guards: state == NONE, no recovery pending, MIN_REBALANCE_PERIOD cooldown elapsed since the last completed rebalance, at least one epoch has already completed, no prior epoch EXECUTING, new strategy differs from active strategy, target chain is a supported chain, target protocol is a supported protocol.
 
@@ -199,7 +199,7 @@ Old strategy on Parent, new strategy on a Child chain.
 
 - Child \_handleCCIPRebalance() → \_setActiveAdapter(protocolId) → \_executeDeposit(amount, false). Emits RebalanceDepositSuccess on success. On failure, stores rebalance deposit recovery and emits RebalanceDepositFailure; `executeRecovery()` retries the stored deposit.
 
-- **CRE log trigger** (RebalanceDepositSuccess) → parent.completeRebalance().
+- **CRE log trigger** (RebalanceDepositSuccess) → read the current parent rebalance nonce and call `parent.completeRebalance(expectedRebalanceNonce)`.
 
 - \_finalizeRebalance() → activeStrategy = pendingStrategy, state → NONE, s_rebalance.nonce++, lastRebalanceCompletedTimestamp updated, management fee minted. Emits RebalanceCompleted.
 
@@ -213,7 +213,7 @@ Old strategy on Parent, new strategy on a Child chain.
 
 Old strategy on a Child chain, new strategy on Parent chain.
 
-- **CRE cron triggers** parent.initiateRebalance(newStrategy).
+- **CRE cron reads** the current parent rebalance nonce and triggers `parent.initiateRebalance(expectedRebalanceNonce, newStrategy)`.
 
 - Guards: state == NONE, no recovery pending, MIN_REBALANCE_PERIOD cooldown elapsed since the last completed rebalance, at least one epoch has already completed, no prior epoch EXECUTING, new strategy differs from active strategy, target chain is a supported chain, target protocol is a supported protocol.
 
@@ -245,7 +245,7 @@ Old strategy on a Child chain, new strategy on Parent chain.
 
 Old and new strategy are both locally on the same Child chain. Different protocols.
 
-- **CRE cron triggers** parent.initiateRebalance(newStrategy).
+- **CRE cron reads** the current parent rebalance nonce and triggers `parent.initiateRebalance(expectedRebalanceNonce, newStrategy)`.
 
 - Guards: state == NONE, no recovery pending, MIN_REBALANCE_PERIOD cooldown elapsed since the last completed rebalance, at least one epoch has already completed, no prior epoch EXECUTING, new strategy differs from active strategy, target chain is a supported chain, target protocol is a supported protocol.
 
@@ -263,7 +263,7 @@ Old and new strategy are both locally on the same Child chain. Different protoco
 
 - \_executeDeposit(amountOut, false). Emits RebalanceDepositSuccess on success. On failure, stores rebalance deposit recovery and emits RebalanceDepositFailure; `executeRecovery()` retries the stored deposit.
 
-- **CRE log trigger** (RebalanceDepositSuccess) → parent.completeRebalance().
+- **CRE log trigger** (RebalanceDepositSuccess) → read the current parent rebalance nonce and call `parent.completeRebalance(expectedRebalanceNonce)`.
 
 - \_finalizeRebalance() → activeStrategy = pendingStrategy, state → NONE, s_rebalance.nonce++, lastRebalanceCompletedTimestamp updated, management fee minted. Emits RebalanceCompleted.
 
@@ -277,7 +277,7 @@ Old and new strategy are both locally on the same Child chain. Different protoco
 
 Old strategy on one Child A chain, new strategy on a different Child B chain.
 
-- **CRE cron triggers** parent.initiateRebalance(newStrategy).
+- **CRE cron reads** the current parent rebalance nonce and triggers `parent.initiateRebalance(expectedRebalanceNonce, newStrategy)`.
 
 - Guards: state == NONE, no recovery pending, MIN_REBALANCE_PERIOD cooldown elapsed since the last completed rebalance, at least one epoch has already completed, no prior epoch EXECUTING, new strategy differs from active strategy, target chain is a supported chain, target protocol is a supported protocol.
 
@@ -295,7 +295,7 @@ Old strategy on one Child A chain, new strategy on a different Child B chain.
 
 - New Child B \_handleCCIPRebalance() → \_setActiveAdapter(protocolId) → \_executeDeposit(amount, false). Emits RebalanceDepositSuccess on success. On failure, stores rebalance deposit recovery and emits RebalanceDepositFailure; `executeRecovery()` retries the stored deposit.
 
-- **CRE log trigger** (RebalanceDepositSuccess) → parent.completeRebalance().
+- **CRE log trigger** (RebalanceDepositSuccess) → read the current parent rebalance nonce and call `parent.completeRebalance(expectedRebalanceNonce)`.
 
 - \_finalizeRebalance() → activeStrategy = pendingStrategy, state → NONE, s_rebalance.nonce++, lastRebalanceCompletedTimestamp updated, management fee minted. Emits RebalanceCompleted.
 

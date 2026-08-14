@@ -26,8 +26,9 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
     function test_ParentVault_closeEpoch_RevertWhen_CallerDoesNotHaveEPOCH_OPERATOR_ROLE() public {
         _changePrank(i_nonOwner);
         _warpPastMinEpoch();
+        uint256 epochNonce = s_parentVault.getEpochNonce();
         vm.expectRevert();
-        s_parentVault.closeEpoch(0);
+        s_parentVault.closeEpoch(epochNonce, 0);
     }
 
     function test_ParentVault_closeEpoch_RevertWhen_Paused() public {
@@ -36,43 +37,56 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
 
         _changePrank(i_epochOperator);
         _warpPastMinEpoch();
+        uint256 epochNonce = s_parentVault.getEpochNonce();
         vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
-        s_parentVault.closeEpoch(0);
+        s_parentVault.closeEpoch(epochNonce, 0);
+    }
+
+    function test_ParentVault_closeEpoch_RevertWhen_InvalidEpochNonce() public {
+        uint256 invalidEpochNonce = s_parentVault.getEpochNonce() + 1;
+
+        vm.expectRevert(abi.encodeWithSelector(IParentVault.ParentVault__InvalidEpochNonce.selector, invalidEpochNonce));
+        s_parentVault.closeEpoch(invalidEpochNonce, 0);
     }
 
     function test_ParentVault_closeEpoch_RevertWhen_RebalanceInProgress() public {
         _setParentRebalanceState(Types.RebalanceState.REBALANCING);
 
         _warpPastMinEpoch();
+        uint256 epochNonce = s_parentVault.getEpochNonce();
         vm.expectRevert(IParentVault.ParentVault__RebalanceInProgress.selector);
-        s_parentVault.closeEpoch(0);
+        s_parentVault.closeEpoch(epochNonce, 0);
     }
 
     function test_ParentVault_closeEpoch_RevertWhen_RecoveryExists() public {
         _setParentRecoveryMode(Types.RecoveryMode.REBALANCE_DEPOSIT);
 
         _warpPastMinEpoch();
+        uint256 epochNonce = s_parentVault.getEpochNonce();
         vm.expectRevert(IBaseVault.BaseVault__RecoveryAlreadyPending.selector);
-        s_parentVault.closeEpoch(0);
+        s_parentVault.closeEpoch(epochNonce, 0);
     }
 
     function test_ParentVault_closeEpoch_RevertWhen_EpochNotOpen() public {
         _setParentEpochStatus(1, Types.EpochStatus.CLAIMABLE);
 
         _warpPastMinEpoch();
+        uint256 epochNonce = s_parentVault.getEpochNonce();
         vm.expectRevert(abi.encodeWithSelector(IParentVault.ParentVault__EpochNotOpen.selector, 1));
-        s_parentVault.closeEpoch(0);
+        s_parentVault.closeEpoch(epochNonce, 0);
     }
 
     function test_ParentVault_closeEpoch_RevertWhen_EpochTooShort() public {
+        uint256 epochNonce = s_parentVault.getEpochNonce();
         vm.expectRevert(abi.encodeWithSelector(IParentVault.ParentVault__EpochTooShort.selector, 1));
-        s_parentVault.closeEpoch(0);
+        s_parentVault.closeEpoch(epochNonce, 0);
     }
 
     function test_ParentVault_closeEpoch_RevertWhen_EmptyEpoch() public {
         _warpPastMinEpoch();
+        uint256 epochNonce = s_parentVault.getEpochNonce();
         vm.expectRevert(abi.encodeWithSelector(IParentVault.ParentVault__EmptyEpoch.selector, 1));
-        s_parentVault.closeEpoch(0);
+        s_parentVault.closeEpoch(epochNonce, 0);
     }
 
     function test_ParentVault_closeEpoch_RevertWhen_ZeroTvlWithOutstandingShares() public {
@@ -81,8 +95,9 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
 
         _warpPastMinEpoch();
         _changePrank(i_epochOperator);
+        uint256 epochNonce = s_parentVault.getEpochNonce();
         vm.expectRevert(IParentVault.ParentVault__ZeroTvlWithOutstandingShares.selector);
-        s_parentVault.closeEpoch(0);
+        s_parentVault.closeEpoch(epochNonce, 0);
     }
 
     function test_ParentVault_closeEpoch_RevertWhen_ScaledTvlToShareRatioRoundsToZero() public {
@@ -91,16 +106,18 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
 
         _warpPastMinEpoch();
         _changePrank(i_epochOperator);
+        uint256 epochNonce = s_parentVault.getEpochNonce();
         vm.expectRevert(IParentVault.ParentVault__ZeroPricePerShare.selector);
-        s_parentVault.closeEpoch(1);
+        s_parentVault.closeEpoch(epochNonce, 1);
     }
 
     function test_ParentVault_closeEpoch_RevertWhen_ShareBurnExistsWithZeroTotalShares() public {
         _setParentEpochTotalShareBurnAmount(1, 1);
 
         _warpPastMinEpoch();
+        uint256 epochNonce = s_parentVault.getEpochNonce();
         vm.expectRevert(IParentVault.ParentVault__ShareBurnWithZeroTotalShares.selector);
-        s_parentVault.closeEpoch(0);
+        s_parentVault.closeEpoch(epochNonce, 0);
     }
 
     function test_ParentVault_closeEpoch_RevertWhen_DepositWouldMintZeroShares() public {
@@ -111,8 +128,9 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
 
         _warpPastMinEpoch();
         _changePrank(i_epochOperator);
+        uint256 epochNonce = s_parentVault.getEpochNonce();
         vm.expectRevert(IParentVault.ParentVault__DepositWouldMintZeroShares.selector);
-        s_parentVault.closeEpoch(tvl);
+        s_parentVault.closeEpoch(epochNonce, tvl);
 
         assertEq(uint8(s_parentVault.getEpoch(1).status), uint8(Types.EpochStatus.OPEN));
 
@@ -128,8 +146,9 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
 
         _changePrank(i_epochOperator);
         _warpPastMinEpoch();
+        uint256 epochNonce = s_parentVault.getEpochNonce();
         vm.expectRevert(abi.encodeWithSelector(IBaseVault.BaseVault__DepositFailed.selector, DEPOSIT_AMOUNT));
-        s_parentVault.closeEpoch(TVL);
+        s_parentVault.closeEpoch(epochNonce, TVL);
     }
 
     function test_ParentVault_closeEpoch_RevertWhen_LocalNetWithdrawAdapterReverts() public {
@@ -138,8 +157,9 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
 
         _changePrank(i_epochOperator);
         _warpPastMinEpoch();
+        uint256 epochNonce = s_parentVault.getEpochNonce();
         vm.expectRevert(abi.encodeWithSelector(IBaseVault.BaseVault__WithdrawFailed.selector, TVL));
-        s_parentVault.closeEpoch(TVL);
+        s_parentVault.closeEpoch(epochNonce, TVL);
     }
 
     function test_ParentVault_closeEpoch_Success_MakesEpochClaimable() public {
@@ -209,8 +229,9 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
 
         _warpPastMinEpoch();
         _changePrank(i_epochOperator);
+        uint256 epochNonce = s_parentVault.getEpochNonce();
         vm.expectRevert(MockCCIPRouter.MockCCIPRouter__CcipSendReverts.selector);
-        s_parentVault.closeEpoch(TVL);
+        s_parentVault.closeEpoch(epochNonce, TVL);
     }
 
     function test_ParentVault_closeEpoch_RemoteNetWithdraw_MarksEpochExecuting() public {
@@ -244,8 +265,9 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
 
         _warpPastMinEpoch();
         _changePrank(i_epochOperator);
+        uint256 epochNonce = s_parentVault.getEpochNonce();
         vm.expectRevert(abi.encodeWithSelector(IParentVault.ParentVault__EpochNotClaimable.selector, 1));
-        s_parentVault.closeEpoch(TVL);
+        s_parentVault.closeEpoch(epochNonce, TVL);
     }
 
     function test_ParentVault_closeEpoch_WhenPreviousEpochClaimable_ClosesCurrentEpoch() public {
@@ -457,7 +479,7 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
     function _closeEpoch(uint256 tvl) internal {
         _warpPastMinEpoch();
         _changePrank(i_epochOperator);
-        s_parentVault.closeEpoch(tvl);
+        s_parentVault.closeEpoch(s_parentVault.getEpochNonce(), tvl);
     }
 
     function _warpPastMinEpoch() internal {

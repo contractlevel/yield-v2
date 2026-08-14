@@ -308,7 +308,8 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
     function _assertCloseRejectedAndUnchanged(uint256 tvl, string memory message) internal {
         bytes32 stateHash = _parentLifecycleHash();
         _changePrank(address(parent.workflowRouter));
-        (bool success,) = address(parent.vault).call(abi.encodeWithSelector(ParentVault.closeEpoch.selector, tvl));
+        (bool success,) = address(parent.vault)
+            .call(abi.encodeWithSelector(ParentVault.closeEpoch.selector, parent.vault.getEpochNonce(), tvl));
 
         t(!success, message);
         t(_parentLifecycleHash() == stateHash, "EPOCH-016/EPOCH-017/EPOCH-018: failed close changed state");
@@ -317,7 +318,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
     function _assertWorkflowRouterGuards() internal {
         WorkflowRouter router = parent.workflowRouter;
         bytes memory metadata = _buildMetadata(CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner);
-        bytes memory report = abi.encodeWithSelector(ParentVault.closeEpoch.selector, 0);
+        bytes memory report = abi.encodeWithSelector(ParentVault.closeEpoch.selector, parent.vault.getEpochNonce(), 0);
         bytes32 stateHash = _parentLifecycleHash();
 
         _changePrank(i_nonOwner);
@@ -351,7 +352,8 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         t(_parentLifecycleHash() == stateHash, "ROUTER-006: rejected report changed vault state");
 
         _changePrank(i_nonOwner);
-        (success,) = address(parent.vault).call(abi.encodeWithSelector(ParentVault.closeEpoch.selector, 0));
+        (success,) = address(parent.vault)
+            .call(abi.encodeWithSelector(ParentVault.closeEpoch.selector, parent.vault.getEpochNonce(), 0));
         t(!success, "AC-003: unauthorized epoch close succeeded");
         t(_parentLifecycleHash() == stateHash, "AC-003: unauthorized epoch close changed state");
     }
@@ -359,8 +361,12 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
     function _assertUnauthorizedRebalanceRejected(Types.Strategy memory target) internal {
         bytes32 stateHash = _parentLifecycleHash();
         _changePrank(i_nonOwner);
-        (bool success,) =
-            address(parent.vault).call(abi.encodeWithSelector(ParentVault.initiateRebalance.selector, target));
+        (bool success,) = address(parent.vault)
+            .call(
+                abi.encodeWithSelector(
+                    ParentVault.initiateRebalance.selector, parent.vault.getRebalance().nonce, target
+                )
+            );
         t(!success, "AC-003: unauthorized rebalance succeeded");
         t(_parentLifecycleHash() == stateHash, "AC-003: unauthorized rebalance changed state");
     }
@@ -374,8 +380,12 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         bytes32 stateHash = _parentLifecycleHash();
 
         _changePrank(address(parent.workflowRouter));
-        (bool success,) =
-            address(parent.vault).call(abi.encodeWithSelector(ParentVault.initiateRebalance.selector, target));
+        (bool success,) = address(parent.vault)
+            .call(
+                abi.encodeWithSelector(
+                    ParentVault.initiateRebalance.selector, parent.vault.getRebalance().nonce, target
+                )
+            );
         t(!success, "CFG-003: rebalance consumed a missing target route");
         t(_parentLifecycleHash() == stateHash, "CFG-003: missing-route rebalance changed state");
 
@@ -515,8 +525,12 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         _markParentRebalanceCooldownElapsed();
         Types.Rebalance memory rebalanceBefore = parent.vault.getRebalance();
         _changePrank(address(parent.workflowRouter));
-        (bool success,) =
-            address(parent.vault).call(abi.encodeWithSelector(ParentVault.initiateRebalance.selector, target));
+        (bool success,) = address(parent.vault)
+            .call(
+                abi.encodeWithSelector(
+                    ParentVault.initiateRebalance.selector, parent.vault.getRebalance().nonce, target
+                )
+            );
 
         t(!success, label);
         t(
@@ -575,8 +589,12 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         Types.Rebalance memory rebalanceBefore = parent.vault.getRebalance();
         _setParentActiveWithdrawReverts(true);
         _changePrank(address(parent.workflowRouter));
-        (bool success,) =
-            address(parent.vault).call(abi.encodeWithSelector(ParentVault.initiateRebalance.selector, target));
+        (bool success,) = address(parent.vault)
+            .call(
+                abi.encodeWithSelector(
+                    ParentVault.initiateRebalance.selector, parent.vault.getRebalance().nonce, target
+                )
+            );
         _setParentActiveWithdrawReverts(false);
 
         t(!success, "REC-009: synchronous local adapter failure succeeded");
@@ -1068,7 +1086,8 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         }
 
         _changePrank(address(parent.workflowRouter));
-        (bool success,) = address(parent.vault).call(abi.encodeWithSelector(ParentVault.closeEpoch.selector, 0));
+        (bool success,) = address(parent.vault)
+            .call(abi.encodeWithSelector(ParentVault.closeEpoch.selector, parent.vault.getEpochNonce(), 0));
 
         t(!success, "EPOCH-003: closeEpoch succeeded during an active lifecycle");
         eq(parent.vault.getEpochNonce(), currentNonce, "EPOCH-003: failed closeEpoch changed nonce");
@@ -1083,7 +1102,9 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             (bool success,) = address(parent.vault)
                 .call(
                     abi.encodeWithSelector(
-                        ParentVault.initiateRebalance.selector, parent.vault.getRebalance().activeStrategy
+                        ParentVault.initiateRebalance.selector,
+                        parent.vault.getRebalance().nonce,
+                        parent.vault.getRebalance().activeStrategy
                     )
                 );
 

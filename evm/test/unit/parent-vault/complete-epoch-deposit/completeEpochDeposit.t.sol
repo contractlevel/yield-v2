@@ -19,38 +19,51 @@ contract ParentVault_CompleteEpochDepositUnitTest is BaseUnitTest {
         _prepareExecutingNetDeposit();
 
         _changePrank(i_nonOwner);
+        uint256 epochNonce = s_parentVault.getEpochNonce() - 1;
         vm.expectRevert();
-        s_parentVault.completeEpochDeposit();
+        s_parentVault.completeEpochDeposit(epochNonce);
     }
 
     function test_ParentVault_completeEpochDeposit_RevertWhen_NoEpochHasCompleted() public {
         _changePrank(i_epochOperator);
+        uint256 epochNonce = s_parentVault.getEpochNonce() - 1;
         vm.expectRevert(IParentVault.ParentVault__NoCompletedEpoch.selector);
-        s_parentVault.completeEpochDeposit();
+        s_parentVault.completeEpochDeposit(epochNonce);
+    }
+
+    function test_ParentVault_completeEpochDeposit_RevertWhen_InvalidEpochNonce() public {
+        _prepareExecutingNetDeposit();
+        uint256 invalidEpochNonce = s_parentVault.getEpochNonce();
+
+        _changePrank(i_epochOperator);
+        vm.expectRevert(abi.encodeWithSelector(IParentVault.ParentVault__InvalidEpochNonce.selector, invalidEpochNonce));
+        s_parentVault.completeEpochDeposit(invalidEpochNonce);
     }
 
     function test_ParentVault_completeEpochDeposit_RevertWhen_PreviousEpochIsNotNetDeposit() public {
         _prepareExecutingNetWithdraw();
 
         _changePrank(i_epochOperator);
+        uint256 epochNonce = s_parentVault.getEpochNonce() - 1;
         vm.expectRevert(abi.encodeWithSelector(IParentVault.ParentVault__EpochNotNetDeposit.selector, 1));
-        s_parentVault.completeEpochDeposit();
+        s_parentVault.completeEpochDeposit(epochNonce);
     }
 
     function test_ParentVault_completeEpochDeposit_RevertWhen_PreviousEpochIsNotExecuting() public {
         _prepareExecutingNetDeposit();
         _changePrank(i_epochOperator);
-        s_parentVault.completeEpochDeposit();
+        s_parentVault.completeEpochDeposit(s_parentVault.getEpochNonce() - 1);
 
+        uint256 epochNonce = s_parentVault.getEpochNonce() - 1;
         vm.expectRevert(abi.encodeWithSelector(IParentVault.ParentVault__EpochNotExecuting.selector, 1));
-        s_parentVault.completeEpochDeposit();
+        s_parentVault.completeEpochDeposit(epochNonce);
     }
 
     function test_ParentVault_completeEpochDeposit_Success_MarksPreviousEpochClaimable() public {
         _prepareExecutingNetDeposit();
 
         _changePrank(i_epochOperator);
-        s_parentVault.completeEpochDeposit();
+        s_parentVault.completeEpochDeposit(s_parentVault.getEpochNonce() - 1);
 
         assertEq(uint8(s_parentVault.getEpoch(1).status), uint8(Types.EpochStatus.CLAIMABLE));
     }
@@ -60,7 +73,7 @@ contract ParentVault_CompleteEpochDepositUnitTest is BaseUnitTest {
 
         vm.recordLogs();
         _changePrank(i_epochOperator);
-        s_parentVault.completeEpochDeposit();
+        s_parentVault.completeEpochDeposit(s_parentVault.getEpochNonce() - 1);
 
         Vm.Log memory log = _assertEmittedBy(keccak256("EpochClaimable(uint256)"), address(s_parentVault));
         assertEq(uint256(log.topics[1]), 1);
@@ -72,8 +85,9 @@ contract ParentVault_CompleteEpochDepositUnitTest is BaseUnitTest {
         s_parentVault.pause();
 
         _changePrank(i_epochOperator);
+        uint256 epochNonce = s_parentVault.getEpochNonce() - 1;
         vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
-        s_parentVault.completeEpochDeposit();
+        s_parentVault.completeEpochDeposit(epochNonce);
     }
 
     function _prepareExecutingNetDeposit() internal {
@@ -82,7 +96,7 @@ contract ParentVault_CompleteEpochDepositUnitTest is BaseUnitTest {
         s_parentVault.deposit(DEPOSIT_AMOUNT);
         _warpPastMinEpoch();
         _changePrank(i_epochOperator);
-        s_parentVault.closeEpoch(TVL);
+        s_parentVault.closeEpoch(s_parentVault.getEpochNonce(), TVL);
     }
 
     function _prepareExecutingNetWithdraw() internal {
@@ -91,7 +105,7 @@ contract ParentVault_CompleteEpochDepositUnitTest is BaseUnitTest {
         _submitParentWithdraw(YIELD_PRECISION);
         _warpPastMinEpoch();
         _changePrank(i_epochOperator);
-        s_parentVault.closeEpoch(TVL);
+        s_parentVault.closeEpoch(s_parentVault.getEpochNonce(), TVL);
     }
 
     function _prepareRemoteStrategy() internal {

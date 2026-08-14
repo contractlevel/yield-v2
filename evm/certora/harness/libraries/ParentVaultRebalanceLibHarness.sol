@@ -14,6 +14,7 @@ contract ParentVaultRebalanceLibHarness is ParentVaultStore, HelperHarness {
     }
 
     function initiateRebalance(
+        uint256 expectedRebalanceNonce,
         bytes32 protocolId,
         uint64 chainSelector,
         uint64 thisChainSelector,
@@ -22,7 +23,7 @@ contract ParentVaultRebalanceLibHarness is ParentVaultStore, HelperHarness {
         Types.Strategy memory newStrategy = Types.Strategy({protocolId: protocolId, chainSelector: chainSelector});
         ParentVaultRebalanceLib.InitiateRebalanceResult memory result =
             ParentVaultRebalanceLib.initiateRebalance(
-                _parentVaultStorage(), newStrategy, thisChainSelector, isSupportedChain
+                _parentVaultStorage(), expectedRebalanceNonce, newStrategy, thisChainSelector, isSupportedChain
             );
         rebalanceNonce = result.rebalanceNonce;
         action = uint8(result.action);

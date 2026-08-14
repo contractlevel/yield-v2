@@ -36,24 +36,6 @@ library ParentVaultCcipLib {
     /// @return protocolId Pending strategy protocol ID for the rebalance callback
     /// @dev Reverts if ccipTxType is not EPOCH_NET_WITHDRAW or REBALANCE
     /// @dev Reverts if data is malformed or fails the selected transaction type's validation
-    function receiveCcip(
-        ParentVaultStore.ParentVaultStorage storage $,
-        Types.CcipTx ccipTxType,
-        bytes memory data,
-        uint256 receivedAmount
-    ) public returns (uint256 rebalanceNonce, bytes32 protocolId) {
-        (rebalanceNonce, protocolId) = _receiveCcip($, ccipTxType, data, receivedAmount);
-    }
-
-    /// @notice Handles ParentVault-specific CCIP message data after BaseVault validates the sender and delivered token
-    /// @param $ ParentVault namespaced storage
-    /// @param ccipTxType The decoded CCIP transaction type
-    /// @param data The decoded CCIP payload data
-    /// @param receivedAmount The amount of underlying asset delivered by CCIP
-    /// @return rebalanceNonce Nonzero rebalance nonce when ParentVault must handle a rebalance callback
-    /// @return protocolId Pending strategy protocol ID for the rebalance callback
-    /// @dev Reverts if ccipTxType is not EPOCH_NET_WITHDRAW or REBALANCE
-    /// @dev Reverts if data is malformed or fails the selected transaction type's validation
     function _receiveCcip(
         ParentVaultStore.ParentVaultStorage storage $,
         Types.CcipTx ccipTxType,

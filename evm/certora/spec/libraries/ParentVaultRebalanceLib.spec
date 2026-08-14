@@ -23,7 +23,7 @@ methods {
     function getTreasury() external returns (address) envfree;
 
     // Library public wrappers
-    function initiateRebalance(bytes32, uint64, uint64, bool) external returns (uint256, uint8);
+    function initiateRebalance(uint256, bytes32, uint64, uint64, bool) external returns (uint256, uint8);
     function finalizeRebalance(uint256, bytes32, uint64, bool) external;
 
     // Harness helper methods
@@ -151,16 +151,60 @@ hook LOG4(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2, bytes32 
 //////////////////////////////////////////////////////////////*/
 /// ─────────────────── INITIATE REBALANCE ─────────────────────
 
+/// @notice Initiating a rebalance reverts when the caller's expected nonce is incorrect.
+/// @dev Verifies the nonce guard independently of every later initiation condition.
+rule REBAL_002_initiateRebalance_RevertWhen_InvalidRebalanceNonce() {
+    env e;
+    uint256 expectedRebalanceNonce;
+    uint256 currentRebalanceNonce = getRebalanceNonce();
+    bytes32 protocolId;
+    uint64 chainSelector;
+    uint64 thisChainSelector;
+    bool isSupportedChain = true;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "initiateRebalance is nonpayable";
+    require getRebalanceState() == Types.RebalanceState.NONE, "no rebalance is in progress";
+    require getLastRebalanceCompletedTimestamp() <= max_uint256 - MIN_REBALANCE_PERIOD(),
+        "cooldown timestamp addition does not overflow";
+    require e.block.timestamp >= getLastRebalanceCompletedTimestamp() + MIN_REBALANCE_PERIOD(),
+        "rebalance cooldown has elapsed";
+    require protocolId != getActiveStrategyProtocolId() || chainSelector != getActiveStrategyChainSelector(),
+        "new strategy differs from active strategy";
+    require getSupportedProtocol(protocolId), "protocol is supported";
+    require getEpochNonce() > 1, "at least one epoch has completed";
+    require getPreviousEpochStatus() != Types.EpochStatus.EXECUTING, "previous epoch is not executing";
+
+    /// @dev revert condition being verified
+    require expectedRebalanceNonce != currentRebalanceNonce,
+        "expected rebalance nonce does not match current rebalance nonce";
+
+    /// @dev ghost starting values
+    require ghost_RebalanceInitiated_EventCount == 0, "RebalanceInitiated event count starts at zero";
+
+    initiateRebalance@withrevert(
+        e, expectedRebalanceNonce, protocolId, chainSelector, thisChainSelector, isSupportedChain
+    );
+
+    assert lastReverted;
+    assert getRebalanceNonce() == currentRebalanceNonce;
+    assert getRebalanceState() == Types.RebalanceState.NONE;
+    assert ghost_RebalanceInitiated_EventCount == 0;
+}
+
 /// @notice Initiating a rebalance reverts when another rebalance is already in progress.
 /// @dev Verifies active rebalance guard.
 rule REBAL_002_initiateRebalance_RevertWhen_RebalanceInProgress() {
     env e;
+    uint256 expectedRebalanceNonce;
     bytes32 protocolId;
     uint64 chainSelector;
     uint64 thisChainSelector;
     bool isSupportedChain;
 
     /// @dev revert conditions NOT being verified
+    require expectedRebalanceNonce == getRebalanceNonce(),
+        "expected rebalance nonce matches current rebalance nonce";
     require e.msg.value == 0, "initiateRebalance is nonpayable";
     require getLastRebalanceCompletedTimestamp() <= max_uint256 - MIN_REBALANCE_PERIOD(),
         "cooldown timestamp addition does not overflow";
@@ -179,7 +223,7 @@ rule REBAL_002_initiateRebalance_RevertWhen_RebalanceInProgress() {
     /// @dev ghost starting values
     require ghost_RebalanceInitiated_EventCount == 0, "RebalanceInitiated event count starts at zero";
 
-    initiateRebalance@withrevert(e, protocolId, chainSelector, thisChainSelector, isSupportedChain);
+    initiateRebalance@withrevert(e, expectedRebalanceNonce, protocolId, chainSelector, thisChainSelector, isSupportedChain);
 
     assert lastReverted;
     assert ghost_RebalanceInitiated_EventCount == 0;
@@ -189,12 +233,15 @@ rule REBAL_002_initiateRebalance_RevertWhen_RebalanceInProgress() {
 /// @dev Verifies the checked addition used by the cooldown guard.
 rule REBAL_002_initiateRebalance_RevertWhen_CooldownTimestampOverflows() {
     env e;
+    uint256 expectedRebalanceNonce;
     bytes32 protocolId;
     uint64 chainSelector;
     uint64 thisChainSelector;
     bool isSupportedChain;
 
     /// @dev revert conditions NOT being verified
+    require expectedRebalanceNonce == getRebalanceNonce(),
+        "expected rebalance nonce matches current rebalance nonce";
     require e.msg.value == 0, "initiateRebalance is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "no rebalance is in progress";
     require protocolId != getActiveStrategyProtocolId() || chainSelector != getActiveStrategyChainSelector(),
@@ -211,7 +258,7 @@ rule REBAL_002_initiateRebalance_RevertWhen_CooldownTimestampOverflows() {
     /// @dev ghost starting values
     require ghost_RebalanceInitiated_EventCount == 0, "RebalanceInitiated event count starts at zero";
 
-    initiateRebalance@withrevert(e, protocolId, chainSelector, thisChainSelector, isSupportedChain);
+    initiateRebalance@withrevert(e, expectedRebalanceNonce, protocolId, chainSelector, thisChainSelector, isSupportedChain);
 
     assert lastReverted;
     assert ghost_RebalanceInitiated_EventCount == 0;
@@ -221,12 +268,15 @@ rule REBAL_002_initiateRebalance_RevertWhen_CooldownTimestampOverflows() {
 /// @dev Verifies the rebalance cooldown guard independently of its checked addition.
 rule REBAL_002_initiateRebalance_RevertWhen_CooldownHasNotElapsed() {
     env e;
+    uint256 expectedRebalanceNonce;
     bytes32 protocolId;
     uint64 chainSelector;
     uint64 thisChainSelector;
     bool isSupportedChain;
 
     /// @dev revert conditions NOT being verified
+    require expectedRebalanceNonce == getRebalanceNonce(),
+        "expected rebalance nonce matches current rebalance nonce";
     require e.msg.value == 0, "initiateRebalance is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "no rebalance is in progress";
     require getLastRebalanceCompletedTimestamp() <= max_uint256 - MIN_REBALANCE_PERIOD(),
@@ -245,7 +295,7 @@ rule REBAL_002_initiateRebalance_RevertWhen_CooldownHasNotElapsed() {
     /// @dev ghost starting values
     require ghost_RebalanceInitiated_EventCount == 0, "RebalanceInitiated event count starts at zero";
 
-    initiateRebalance@withrevert(e, protocolId, chainSelector, thisChainSelector, isSupportedChain);
+    initiateRebalance@withrevert(e, expectedRebalanceNonce, protocolId, chainSelector, thisChainSelector, isSupportedChain);
 
     assert lastReverted;
     assert ghost_RebalanceInitiated_EventCount == 0;
@@ -255,10 +305,13 @@ rule REBAL_002_initiateRebalance_RevertWhen_CooldownHasNotElapsed() {
 /// @dev Verifies same strategy guard.
 rule REBAL_002_initiateRebalance_RevertWhen_SameStrategy() {
     env e;
+    uint256 expectedRebalanceNonce;
     uint64 thisChainSelector;
     bool isSupportedChain;
 
     /// @dev revert conditions NOT being verified
+    require expectedRebalanceNonce == getRebalanceNonce(),
+        "expected rebalance nonce matches current rebalance nonce";
     require e.msg.value == 0, "initiateRebalance is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "no rebalance is in progress";
     require getLastRebalanceCompletedTimestamp() <= max_uint256 - MIN_REBALANCE_PERIOD(),
@@ -280,7 +333,7 @@ rule REBAL_002_initiateRebalance_RevertWhen_SameStrategy() {
     /// @dev ghost starting values
     require ghost_RebalanceInitiated_EventCount == 0, "RebalanceInitiated event count starts at zero";
 
-    initiateRebalance@withrevert(e, protocolId, chainSelector, thisChainSelector, isSupportedChain);
+    initiateRebalance@withrevert(e, expectedRebalanceNonce, protocolId, chainSelector, thisChainSelector, isSupportedChain);
 
     assert lastReverted;
     assert ghost_RebalanceInitiated_EventCount == 0;
@@ -290,11 +343,14 @@ rule REBAL_002_initiateRebalance_RevertWhen_SameStrategy() {
 /// @dev Verifies invalid chain selector guard.
 rule REBAL_003_initiateRebalance_RevertWhen_InvalidChainSelector() {
     env e;
+    uint256 expectedRebalanceNonce;
     bytes32 protocolId;
     uint64 chainSelector;
     uint64 thisChainSelector;
 
     /// @dev revert conditions NOT being verified
+    require expectedRebalanceNonce == getRebalanceNonce(),
+        "expected rebalance nonce matches current rebalance nonce";
     require e.msg.value == 0, "initiateRebalance is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "no rebalance is in progress";
     require getLastRebalanceCompletedTimestamp() <= max_uint256 - MIN_REBALANCE_PERIOD(),
@@ -313,7 +369,7 @@ rule REBAL_003_initiateRebalance_RevertWhen_InvalidChainSelector() {
     /// @dev ghost starting values
     require ghost_RebalanceInitiated_EventCount == 0, "RebalanceInitiated event count starts at zero";
 
-    initiateRebalance@withrevert(e, protocolId, chainSelector, thisChainSelector, isSupportedChain);
+    initiateRebalance@withrevert(e, expectedRebalanceNonce, protocolId, chainSelector, thisChainSelector, isSupportedChain);
 
     assert lastReverted;
     assert ghost_RebalanceInitiated_EventCount == 0;
@@ -323,11 +379,14 @@ rule REBAL_003_initiateRebalance_RevertWhen_InvalidChainSelector() {
 /// @dev Verifies invalid protocol ID guard.
 rule REBAL_003_initiateRebalance_RevertWhen_InvalidProtocolId() {
     env e;
+    uint256 expectedRebalanceNonce;
     bytes32 protocolId;
     uint64 chainSelector;
     uint64 thisChainSelector;
 
     /// @dev revert conditions NOT being verified
+    require expectedRebalanceNonce == getRebalanceNonce(),
+        "expected rebalance nonce matches current rebalance nonce";
     require e.msg.value == 0, "initiateRebalance is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "no rebalance is in progress";
     require getLastRebalanceCompletedTimestamp() <= max_uint256 - MIN_REBALANCE_PERIOD(),
@@ -346,7 +405,7 @@ rule REBAL_003_initiateRebalance_RevertWhen_InvalidProtocolId() {
     /// @dev ghost starting values
     require ghost_RebalanceInitiated_EventCount == 0, "RebalanceInitiated event count starts at zero";
 
-    initiateRebalance@withrevert(e, protocolId, chainSelector, thisChainSelector, isSupportedChain);
+    initiateRebalance@withrevert(e, expectedRebalanceNonce, protocolId, chainSelector, thisChainSelector, isSupportedChain);
 
     assert lastReverted;
     assert ghost_RebalanceInitiated_EventCount == 0;
@@ -356,11 +415,14 @@ rule REBAL_003_initiateRebalance_RevertWhen_InvalidProtocolId() {
 /// @dev Verifies no completed epoch guard.
 rule REBAL_010_initiateRebalance_RevertWhen_NoCompletedEpoch() {
     env e;
+    uint256 expectedRebalanceNonce;
     bytes32 protocolId;
     uint64 chainSelector;
     uint64 thisChainSelector;
 
     /// @dev revert conditions NOT being verified
+    require expectedRebalanceNonce == getRebalanceNonce(),
+        "expected rebalance nonce matches current rebalance nonce";
     require e.msg.value == 0, "initiateRebalance is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "no rebalance is in progress";
     require getLastRebalanceCompletedTimestamp() <= max_uint256 - MIN_REBALANCE_PERIOD(),
@@ -379,7 +441,7 @@ rule REBAL_010_initiateRebalance_RevertWhen_NoCompletedEpoch() {
     /// @dev ghost starting values
     require ghost_RebalanceInitiated_EventCount == 0, "RebalanceInitiated event count starts at zero";
 
-    initiateRebalance@withrevert(e, protocolId, chainSelector, thisChainSelector, isSupportedChain);
+    initiateRebalance@withrevert(e, expectedRebalanceNonce, protocolId, chainSelector, thisChainSelector, isSupportedChain);
 
     assert lastReverted;
     assert ghost_RebalanceInitiated_EventCount == 0;
@@ -389,11 +451,14 @@ rule REBAL_010_initiateRebalance_RevertWhen_NoCompletedEpoch() {
 /// @dev Verifies the checked subtraction used to access the previous epoch.
 rule initiateRebalance_RevertWhen_EpochNonceIsZero() {
     env e;
+    uint256 expectedRebalanceNonce;
     bytes32 protocolId;
     uint64 chainSelector;
     uint64 thisChainSelector;
 
     /// @dev revert conditions NOT being verified
+    require expectedRebalanceNonce == getRebalanceNonce(),
+        "expected rebalance nonce matches current rebalance nonce";
     require e.msg.value == 0, "initiateRebalance is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "no rebalance is in progress";
     require getLastRebalanceCompletedTimestamp() <= max_uint256 - MIN_REBALANCE_PERIOD(),
@@ -411,7 +476,7 @@ rule initiateRebalance_RevertWhen_EpochNonceIsZero() {
     /// @dev ghost starting values
     require ghost_RebalanceInitiated_EventCount == 0, "RebalanceInitiated event count starts at zero";
 
-    initiateRebalance@withrevert(e, protocolId, chainSelector, thisChainSelector, isSupportedChain);
+    initiateRebalance@withrevert(e, expectedRebalanceNonce, protocolId, chainSelector, thisChainSelector, isSupportedChain);
 
     assert lastReverted;
     assert ghost_RebalanceInitiated_EventCount == 0;
@@ -421,11 +486,14 @@ rule initiateRebalance_RevertWhen_EpochNonceIsZero() {
 /// @dev Verifies prior executing epoch guard.
 rule initiateRebalance_RevertWhen_PreviousEpochExecuting() {
     env e;
+    uint256 expectedRebalanceNonce;
     bytes32 protocolId;
     uint64 chainSelector;
     uint64 thisChainSelector;
 
     /// @dev revert conditions NOT being verified
+    require expectedRebalanceNonce == getRebalanceNonce(),
+        "expected rebalance nonce matches current rebalance nonce";
     require e.msg.value == 0, "initiateRebalance is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "no rebalance is in progress";
     require getLastRebalanceCompletedTimestamp() <= max_uint256 - MIN_REBALANCE_PERIOD(),
@@ -444,7 +512,7 @@ rule initiateRebalance_RevertWhen_PreviousEpochExecuting() {
     /// @dev ghost starting values
     require ghost_RebalanceInitiated_EventCount == 0, "RebalanceInitiated event count starts at zero";
 
-    initiateRebalance@withrevert(e, protocolId, chainSelector, thisChainSelector, isSupportedChain);
+    initiateRebalance@withrevert(e, expectedRebalanceNonce, protocolId, chainSelector, thisChainSelector, isSupportedChain);
 
     assert lastReverted;
     assert ghost_RebalanceInitiated_EventCount == 0;
@@ -454,10 +522,13 @@ rule initiateRebalance_RevertWhen_PreviousEpochExecuting() {
 /// @dev Verifies state/pending preservation, RebalanceInitiated event, and WITHDRAW_LOCAL_TO_LOCAL action.
 rule NONCE_011_initiateRebalance_Success_WhenLocalToLocal() {
     env e;
+    uint256 expectedRebalanceNonce;
     bytes32 protocolId;
     uint64 thisChainSelector;
 
     /// @dev revert conditions NOT being verified
+    require expectedRebalanceNonce == getRebalanceNonce(),
+        "expected rebalance nonce matches current rebalance nonce";
     require e.msg.value == 0, "initiateRebalance is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "no rebalance is in progress";
     require getLastRebalanceCompletedTimestamp() <= max_uint256 - MIN_REBALANCE_PERIOD(),
@@ -488,7 +559,7 @@ rule NONCE_011_initiateRebalance_Success_WhenLocalToLocal() {
     uint256 returnedNonce;
     uint8 action;
     (returnedNonce, action) =
-        initiateRebalance@withrevert(e, protocolId, chainSelector, thisChainSelector, isSupportedChain);
+        initiateRebalance@withrevert(e, expectedRebalanceNonce, protocolId, chainSelector, thisChainSelector, isSupportedChain);
 
     assert !lastReverted;
     assert returnedNonce == rebalanceNonce;
@@ -510,11 +581,14 @@ rule NONCE_011_initiateRebalance_Success_WhenLocalToLocal() {
 /// @dev Verifies state writes, RebalanceInitiated event, and WITHDRAW_LOCAL_TO_REMOTE action.
 rule NONCE_011_initiateRebalance_Success_WhenLocalToRemote() {
     env e;
+    uint256 expectedRebalanceNonce;
     bytes32 protocolId;
     uint64 chainSelector;
     uint64 thisChainSelector;
 
     /// @dev revert conditions NOT being verified
+    require expectedRebalanceNonce == getRebalanceNonce(),
+        "expected rebalance nonce matches current rebalance nonce";
     require e.msg.value == 0, "initiateRebalance is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "no rebalance is in progress";
     require getLastRebalanceCompletedTimestamp() <= max_uint256 - MIN_REBALANCE_PERIOD(),
@@ -543,7 +617,7 @@ rule NONCE_011_initiateRebalance_Success_WhenLocalToRemote() {
     uint256 returnedNonce;
     uint8 action;
     (returnedNonce, action) =
-        initiateRebalance@withrevert(e, protocolId, chainSelector, thisChainSelector, isSupportedChain);
+        initiateRebalance@withrevert(e, expectedRebalanceNonce, protocolId, chainSelector, thisChainSelector, isSupportedChain);
 
     assert !lastReverted;
     assert returnedNonce == rebalanceNonce;
@@ -565,11 +639,14 @@ rule NONCE_011_initiateRebalance_Success_WhenLocalToRemote() {
 /// @dev Verifies state writes, RebalanceInitiated event, and NONE action.
 rule NONCE_011_initiateRebalance_Success_WhenActiveStrategyIsRemote() {
     env e;
+    uint256 expectedRebalanceNonce;
     bytes32 protocolId;
     uint64 chainSelector;
     uint64 thisChainSelector;
 
     /// @dev revert conditions NOT being verified
+    require expectedRebalanceNonce == getRebalanceNonce(),
+        "expected rebalance nonce matches current rebalance nonce";
     require e.msg.value == 0, "initiateRebalance is nonpayable";
     require getRebalanceState() == Types.RebalanceState.NONE, "no rebalance is in progress";
     require getLastRebalanceCompletedTimestamp() <= max_uint256 - MIN_REBALANCE_PERIOD(),
@@ -597,7 +674,7 @@ rule NONCE_011_initiateRebalance_Success_WhenActiveStrategyIsRemote() {
     uint256 returnedNonce;
     uint8 action;
     (returnedNonce, action) =
-        initiateRebalance@withrevert(e, protocolId, chainSelector, thisChainSelector, isSupportedChain);
+        initiateRebalance@withrevert(e, expectedRebalanceNonce, protocolId, chainSelector, thisChainSelector, isSupportedChain);
 
     assert !lastReverted;
     assert returnedNonce == rebalanceNonce;
@@ -617,6 +694,43 @@ rule NONCE_011_initiateRebalance_Success_WhenActiveStrategyIsRemote() {
 
 /// ─────────────────── FINALIZE REBALANCE ─────────────────────
 
+/// @notice Finalizing a rebalance reverts when the caller's expected nonce is incorrect.
+/// @dev Verifies the nonce guard independently of the persisted state and management fee guards.
+rule finalizeRebalance_RevertWhen_InvalidRebalanceNonce() {
+    env e;
+    uint256 expectedRebalanceNonce;
+    uint256 currentRebalanceNonce = getRebalanceNonce();
+    bytes32 protocolId;
+    uint64 chainSelector;
+    bool isLocalToLocalRebalance = false;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "finalizeRebalance is nonpayable";
+    require getRebalanceState() == Types.RebalanceState.REBALANCING, "rebalance is in progress";
+    require currentRebalanceNonce < max_uint256, "rebalance nonce increment does not overflow";
+    require getLastRebalanceCompletedTimestamp() <= e.block.timestamp,
+        "management fee elapsed time does not underflow";
+    require getTotalShares() == 0, "management fee collection does not revert";
+
+    /// @dev revert condition being verified
+    require expectedRebalanceNonce != currentRebalanceNonce,
+        "expected rebalance nonce does not match current rebalance nonce";
+
+    /// @dev ghost starting values
+    require ghost_RebalanceCompleted_EventCount == 0, "RebalanceCompleted event count starts at zero";
+    require ghost_ManagementFeeCollected_EventCount == 0, "ManagementFeeCollected event count starts at zero";
+
+    finalizeRebalance@withrevert(
+        e, expectedRebalanceNonce, protocolId, chainSelector, isLocalToLocalRebalance
+    );
+
+    assert lastReverted;
+    assert getRebalanceNonce() == currentRebalanceNonce;
+    assert getRebalanceState() == Types.RebalanceState.REBALANCING;
+    assert ghost_RebalanceCompleted_EventCount == 0;
+    assert ghost_ManagementFeeCollected_EventCount == 0;
+}
+
 /// @notice Finalizing a rebalance reverts when no rebalance is in progress.
 /// @dev Verifies the persisted-rebalance guard independently of later finalization reverts.
 rule finalizeRebalance_RevertWhen_NoRebalanceInProgress() {
@@ -627,6 +741,8 @@ rule finalizeRebalance_RevertWhen_NoRebalanceInProgress() {
     bool isLocalToLocalRebalance = false;
 
     /// @dev revert conditions NOT being verified
+    require rebalanceNonce == getRebalanceNonce(),
+        "expected rebalance nonce matches current rebalance nonce";
     require e.msg.value == 0, "finalizeRebalance is nonpayable";
     require rebalanceNonce < max_uint256, "rebalance nonce increment does not overflow";
     require getLastRebalanceCompletedTimestamp() <= e.block.timestamp,
@@ -651,11 +767,14 @@ rule finalizeRebalance_RevertWhen_NoRebalanceInProgress() {
 /// @dev Verifies overflow of the caller-supplied rebalance nonce.
 rule finalizeRebalance_RevertWhen_RebalanceNonceOverflows() {
     env e;
+    uint256 rebalanceNonce = max_uint256;
     bytes32 protocolId;
     uint64 chainSelector;
     bool isLocalToLocalRebalance = false;
 
     /// @dev revert conditions NOT being verified
+    require rebalanceNonce == getRebalanceNonce(),
+        "expected rebalance nonce matches current rebalance nonce";
     require e.msg.value == 0, "finalizeRebalance is nonpayable";
     require getRebalanceState() == Types.RebalanceState.REBALANCING, "rebalance is in progress";
     require getLastRebalanceCompletedTimestamp() <= e.block.timestamp,
@@ -663,7 +782,7 @@ rule finalizeRebalance_RevertWhen_RebalanceNonceOverflows() {
     require getTotalShares() == 0, "management fee collection does not revert";
 
     /// @dev revert condition being verified
-    uint256 rebalanceNonce = max_uint256;
+    require getRebalanceNonce() == max_uint256, "current rebalance nonce cannot be incremented";
 
     /// @dev ghost starting values
     require ghost_RebalanceCompleted_EventCount == 0, "RebalanceCompleted event count starts at zero";
@@ -686,6 +805,8 @@ rule finalizeRebalance_RevertWhen_LastCompletedTimestampIsFuture() {
     bool isLocalToLocalRebalance = false;
 
     /// @dev revert conditions NOT being verified
+    require rebalanceNonce == getRebalanceNonce(),
+        "expected rebalance nonce matches current rebalance nonce";
     require e.msg.value == 0, "finalizeRebalance is nonpayable";
     require rebalanceNonce < max_uint256, "rebalance nonce increment does not overflow";
     require getRebalanceState() == Types.RebalanceState.REBALANCING, "rebalance is in progress";
@@ -718,6 +839,8 @@ rule FEE_002_NONCE_011_finalizeRebalance_Success_WhenPersistedRebalanceHasNoMana
     uint256 totalSupplyBefore = share.totalSupply();
 
     /// @dev revert conditions NOT being verified
+    require rebalanceNonce == getRebalanceNonce(),
+        "expected rebalance nonce matches current rebalance nonce";
     require e.msg.value == 0, "finalizeRebalance is nonpayable";
     require rebalanceNonce < max_uint256, "rebalance nonce increment does not overflow";
     require getLastRebalanceCompletedTimestamp() <= e.block.timestamp,
@@ -761,6 +884,8 @@ rule FEE_002_NONCE_011_finalizeRebalance_Success_WhenManagementFeeElapsedTimeIsZ
     bool isLocalToLocalRebalance = false;
 
     /// @dev revert conditions NOT being verified
+    require rebalanceNonce == getRebalanceNonce(),
+        "expected rebalance nonce matches current rebalance nonce";
     require e.msg.value == 0, "finalizeRebalance is nonpayable";
     require rebalanceNonce < max_uint256, "rebalance nonce increment does not overflow";
 
@@ -812,6 +937,8 @@ rule FEE_002_NONCE_011_finalizeRebalance_Success_WhenLocalToLocal() {
     uint256 totalSupplyBefore = share.totalSupply();
 
     /// @dev revert conditions NOT being verified
+    require rebalanceNonce == getRebalanceNonce(),
+        "expected rebalance nonce matches current rebalance nonce";
     require e.msg.value == 0, "finalizeRebalance is nonpayable";
     require rebalanceNonce < max_uint256, "rebalance nonce increment does not overflow";
     require getLastRebalanceCompletedTimestamp() <= e.block.timestamp,
@@ -858,6 +985,8 @@ rule FEE_001_FEE_002_NONCE_011_finalizeRebalance_Success_WhenManagementFeeShares
     bool isLocalToLocalRebalance = false;
 
     /// @dev revert conditions NOT being verified
+    require rebalanceNonce == getRebalanceNonce(),
+        "expected rebalance nonce matches current rebalance nonce";
     require e.msg.value == 0, "finalizeRebalance is nonpayable";
     require rebalanceNonce < max_uint256, "rebalance nonce increment does not overflow";
     require getLastRebalanceCompletedTimestamp() < max_uint256,
@@ -913,6 +1042,8 @@ rule FEE_001_FEE_002_NONCE_011_finalizeRebalance_Success_WhenManagementFeeElapse
     bool isLocalToLocalRebalance = false;
 
     /// @dev revert conditions NOT being verified
+    require rebalanceNonce == getRebalanceNonce(),
+        "expected rebalance nonce matches current rebalance nonce";
     require e.msg.value == 0, "finalizeRebalance is nonpayable";
     require rebalanceNonce < max_uint256, "rebalance nonce increment does not overflow";
     require getLastRebalanceCompletedTimestamp() <= max_uint256 - (YEAR() + 1),

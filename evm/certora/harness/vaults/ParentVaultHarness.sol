@@ -6,6 +6,7 @@ import {ParentVault} from "../../../src/vaults/ParentVault.sol";
 import {BaseVault} from "../../../src/vaults/BaseVault.sol";
 import {BaseVaultStrategyLib} from "../../../src/libraries/vaults/BaseVaultStrategyLib.sol";
 import {BaseVaultCcipLib} from "../../../src/libraries/vaults/BaseVaultCcipLib.sol";
+import {ParentVaultRebalanceLib} from "../../../src/libraries/vaults/ParentVaultRebalanceLib.sol";
 import {Types} from "../../../src/libraries/Types.sol";
 import {Roles} from "../../../src/libraries/Roles.sol";
 
@@ -98,6 +99,21 @@ contract ParentVaultHarness is ParentVault, HelperHarness {
     ///      Parent is near the contract size limit and can't inline this like ChildVault does.
     function _setActiveAdapter(bytes32 protocolId) internal override returns (address adapter) {
         adapter = BaseVaultStrategyLib._setActiveAdapter(_baseVaultStorage(), protocolId, i_adapterRegistry, address(this));
+    }
+
+    function _finalizeRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy) internal override {
+        ParentVaultRebalanceLib._finalizeRebalance(
+            _parentVaultStorage(), i_share, rebalanceNonce, newStrategy, false
+        );
+    }
+
+    function _finalizeLocalToLocalRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy)
+        internal
+        override
+    {
+        ParentVaultRebalanceLib._finalizeRebalance(
+            _parentVaultStorage(), i_share, rebalanceNonce, newStrategy, true
+        );
     }
 
     function requireNoRecovery() external view {

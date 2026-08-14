@@ -326,7 +326,9 @@ interface IParentVault is IBaseVault {
                               OPERATIONS
     //////////////////////////////////////////////////////////////*/
     /// @notice Settles the current epoch, executes its net asset flow, and opens the next epoch
+    /// @param expectedEpochNonce The current epoch nonce the call is intended to close
     /// @param tvl The underlying-asset value of the active strategy before settling the current epoch
+    /// @dev Reverts if expectedEpochNonce does not match the current epoch nonce
     /// @dev Called by the WorkflowRouter
     /// @dev Net flow is the total deposited underlying asset minus the total underlying asset owed for withdraw claims
     /// @dev A zero net flow makes the epoch claimable without moving assets
@@ -356,17 +358,21 @@ interface IParentVault is IBaseVault {
     /// @dev Zero TVL with outstanding shares requires restoring TVL through an on-behalf-of strategy supply before
     ///      settlement can continue; the permanent admin seed deposit means this requires a full strategy loss
     /// @dev See KI-008 and KI-010 in docs/KNOWN_ISSUES.md
-    function closeEpoch(uint256 tvl) external;
+    function closeEpoch(uint256 expectedEpochNonce, uint256 tvl) external;
 
     /// @notice Completes the most recently closed remote net-deposit epoch
+    /// @param expectedEpochNonce The completed epoch nonce the call is intended to finalize
+    /// @dev Reverts if expectedEpochNonce does not match the most recently closed epoch nonce
     /// @dev Reverts if the vault is paused
     /// @dev Reverts if the caller does not have EPOCH_OPERATOR_ROLE
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the previous epoch is not an executing net-deposit epoch
-    function completeEpochDeposit() external;
+    function completeEpochDeposit(uint256 expectedEpochNonce) external;
 
     /// @notice Initiates a rebalance from the current strategy to a new strategy
+    /// @param expectedRebalanceNonce The current rebalance nonce the call is intended to initiate
     /// @param newStrategy The new strategy to rebalance to
+    /// @dev Reverts if expectedRebalanceNonce does not match the current rebalance nonce
     /// @dev Reverts if the caller does not have REBALANCE_OPERATOR_ROLE
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the vault is paused
@@ -382,15 +388,17 @@ interface IParentVault is IBaseVault {
     /// @dev If the new strategy is local, reverts if its protocol has no registered adapter
     /// @dev If the new strategy is local, reverts if the registered adapter is bound to another vault
     /// @dev Requires any local strategy or CCIP interaction selected by the rebalance branch to succeed
-    function initiateRebalance(Types.Strategy memory newStrategy) external;
+    function initiateRebalance(uint256 expectedRebalanceNonce, Types.Strategy memory newStrategy) external;
 
     /// @notice Completes a rebalance
+    /// @param expectedRebalanceNonce The current rebalance nonce the call is intended to finalize
+    /// @dev Reverts if expectedRebalanceNonce does not match the current rebalance nonce
     /// @dev Reverts if the vault is paused
     /// @dev Reverts if the caller does not have REBALANCE_OPERATOR_ROLE
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if a recovery mode is active
     /// @dev Reverts if no rebalance is in progress
-    function completeRebalance() external;
+    function completeRebalance(uint256 expectedRebalanceNonce) external;
 
     /*//////////////////////////////////////////////////////////////
                                GETTERS
@@ -416,7 +424,7 @@ interface IParentVault is IBaseVault {
     /// @return rebalance The current rebalance state
     function getRebalance() external view returns (Types.Rebalance memory rebalance);
 
-    /// @notice Returns the state required to determine the next ParentVault operation
+    /// @notice Returns the state and TVL required to determine the next ParentVault operation
     /// @return state The current ParentVault operational state
     function getParentOperationalState() external view returns (Types.ParentOperationalState memory state);
 

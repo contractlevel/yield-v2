@@ -438,7 +438,7 @@ invariant EPOCH_001_EPOCH_020_exactlyCurrentEpochIsOpen(uint256 epochNonce)
         preserved {
             require getTreasury() != 0;
         }
-        preserved closeEpoch(uint256 tvl) with (env e) {
+        preserved closeEpoch(uint256 expectedEpochNonce, uint256 tvl) with (env e) {
             requireInvariant EPOCH_001_EPOCH_020_epochsBeyondCurrentHaveNoneStatus(epochNonce);
         }
         preserved initialize(
@@ -550,7 +550,7 @@ invariant EPOCH_008_EPOCH_011_EPOCH_013_epochRemainingCountersAreZeroBeforeClose
         f -> isInvariantPreservationMethod(f)
     }
     {
-        preserved closeEpoch(uint256 tvl) with (env e) {
+        preserved closeEpoch(uint256 expectedEpochNonce, uint256 tvl) with (env e) {
             requireInvariant EPOCH_001_EPOCH_020_epochsBeyondCurrentHaveNoneStatus(epochNonce);
         }
         preserved initialize(
@@ -735,17 +735,24 @@ invariant SOLV_001_parentCoversReservedLiquidObligations()
     to_mathint(asset.balanceOf(currentContract)) >= reservedLiquidObligations()
     filtered {
         f -> isInvariantPreservationMethod(f)
-            && f.selector != sig:closeEpoch(uint256).selector
+            && f.selector != sig:closeEpoch(uint256,uint256).selector
     }
     {
         preserved deposit(uint256 amount) with (env e) {
+            require e.msg.sender != currentContract;
+        }
+        preserved depositFor(address beneficiary, uint256 amount) with (env e) {
             require e.msg.sender != currentContract;
         }
         preserved claimAsset(uint256 epochNonce) with (env e) {
             requireInvariant ghostEpochStatusMatchesStorage(epochNonce);
             requireInvariant ghostEpochRemainingWithdrawMatchesStorage(epochNonce);
         }
-        preserved completeEpochDeposit() with (env e) {
+        preserved claimAssetFor(address user, uint256 epochNonce) with (env e) {
+            requireInvariant ghostEpochStatusMatchesStorage(epochNonce);
+            requireInvariant ghostEpochRemainingWithdrawMatchesStorage(epochNonce);
+        }
+        preserved completeEpochDeposit(uint256 expectedEpochNonce) with (env e) {
             require getEpochNonce() > 1;
             requireInvariant ghostEpochStatusMatchesStorage(assert_uint256(getEpochNonce() - 1));
             requireInvariant ghostEpochRemainingWithdrawMatchesStorage(assert_uint256(getEpochNonce() - 1));
@@ -798,6 +805,10 @@ invariant SOLV_003_shareBalanceCoversWithdrawEscrow()
             ///      balance-neutral while increasing the recorded escrow.
             require e.msg.sender != currentContract;
         }
+        preserved withdrawFor(address beneficiary, uint256 shareBurnAmount) with (env e) {
+            /// @dev withdrawFor also escrows shares from msg.sender, while beneficiary owns the position.
+            require e.msg.sender != currentContract;
+        }
     }
 
 /// @notice Accounted withdrawal escrow reconciles with open and closed epoch settlement state
@@ -810,7 +821,7 @@ invariant SOLV_003_withdrawEscrowReconcilesWithEpochAccounting()
         f -> isInvariantPreservationMethod(f)
     }
     {
-        preserved closeEpoch(uint256 tvl) with (env e) {
+        preserved closeEpoch(uint256 expectedEpochNonce, uint256 tvl) with (env e) {
             require getEpochNonce() != max_uint256;
             requireInvariant EPOCH_008_EPOCH_011_EPOCH_013_epochRemainingCountersAreZeroBeforeClose(getEpochNonce());
             requireInvariant EPOCH_005_futureEpochShareBurnTotalsAreZero(assert_uint256(getEpochNonce() + 1));
@@ -839,7 +850,7 @@ invariant SOLV_006_depositEscrowReconcilesWithEpochAccounting()
         f -> isInvariantPreservationMethod(f)
     }
     {
-        preserved closeEpoch(uint256 tvl) with (env e) {
+        preserved closeEpoch(uint256 expectedEpochNonce, uint256 tvl) with (env e) {
             require getEpochNonce() != max_uint256;
             requireInvariant EPOCH_008_EPOCH_011_EPOCH_013_epochRemainingCountersAreZeroBeforeClose(getEpochNonce());
             requireInvariant EPOCH_005_futureEpochDepositTotalsAreZero(assert_uint256(getEpochNonce() + 1));
@@ -880,7 +891,7 @@ invariant SHARE_001_SHARE_003_totalSupplyReconcilesWithTotalShares()
         preserved {
             require getTreasury() != 0;
         }
-        preserved closeEpoch(uint256 tvl) with (env e) {
+        preserved closeEpoch(uint256 expectedEpochNonce, uint256 tvl) with (env e) {
             require getTreasury() != 0;
             requireInvariant EPOCH_008_EPOCH_011_EPOCH_013_epochRemainingCountersAreZeroBeforeClose(getEpochNonce());
         }
@@ -905,6 +916,7 @@ invariant SHARE_001_SHARE_003_totalSupplyReconcilesWithTotalShares()
 
 /// @dev SOLV-001's directly executable closeEpoch preservation is decomposed by settlement branch
 ///      because combining the zero-flow and net-deposit paths causes prohibitive path explosion.
+/// @dev This is timing-out.
 rule SOLV_001_closeEpochPreservesBacking_ZeroNetFlow(env e, uint256 tvl) {
     requireInvariant SOLV_001_parentCoversReservedLiquidObligations();
     uint256 epochNonce = getEpochNonce();
@@ -913,7 +925,7 @@ rule SOLV_001_closeEpochPreservesBacking_ZeroNetFlow(env e, uint256 tvl) {
     requireInvariant ghostEpochRemainingWithdrawMatchesStorage(epochNonce);
     requireInvariant EPOCH_005_futureEpochDepositTotalsAreZero(assert_uint256(epochNonce + 1));
 
-    closeEpoch(e, tvl);
+    closeEpoch(e, epochNonce, tvl);
 
     require getEpoch(epochNonce).status == Types.EpochStatus.CLAIMABLE;
     require getEpoch(epochNonce).totalDepositAmount == getEpoch(epochNonce).totalWithdrawClaimAmount;
@@ -928,7 +940,7 @@ rule SOLV_001_closeEpochPreservesBacking_LocalNetDeposit(env e, uint256 tvl) {
     requireInvariant ghostEpochRemainingWithdrawMatchesStorage(epochNonce);
     requireInvariant EPOCH_005_futureEpochDepositTotalsAreZero(assert_uint256(epochNonce + 1));
 
-    closeEpoch(e, tvl);
+    closeEpoch(e, epochNonce, tvl);
 
     require getEpoch(epochNonce).status == Types.EpochStatus.CLAIMABLE;
     require getEpoch(epochNonce).totalDepositAmount > getEpoch(epochNonce).totalWithdrawClaimAmount;
@@ -943,7 +955,7 @@ rule SOLV_001_closeEpochPreservesBacking_RemoteNetDeposit(env e, uint256 tvl) {
     requireInvariant ghostEpochRemainingWithdrawMatchesStorage(epochNonce);
     requireInvariant EPOCH_005_futureEpochDepositTotalsAreZero(assert_uint256(epochNonce + 1));
 
-    closeEpoch(e, tvl);
+    closeEpoch(e, epochNonce, tvl);
 
     require getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING;
     require getEpoch(epochNonce).totalDepositAmount > getEpoch(epochNonce).totalWithdrawClaimAmount;
@@ -1013,14 +1025,14 @@ rule NONCE_010_NONCE_011_onlyLifecycleTransitionsChangeNonces(method f) filtered
 
     assert (
         f.selector != sig:initialize(BaseVault.InitParams,address,address).selector
-            && f.selector != sig:closeEpoch(uint256).selector
+            && f.selector != sig:closeEpoch(uint256,uint256).selector
     ) => getEpochNonce() == epochNonceBefore;
 
     assert (
         f.selector != sig:initialize(BaseVault.InitParams,address,address).selector
             && f.selector != sig:ccipReceive(Client.Any2EVMMessage).selector
-            && f.selector != sig:initiateRebalance(Types.Strategy).selector
-            && f.selector != sig:completeRebalance().selector
+            && f.selector != sig:initiateRebalance(uint256,Types.Strategy).selector
+            && f.selector != sig:completeRebalance(uint256).selector
             && f.selector != sig:executeRecovery().selector
     ) => getRebalance().nonce == rebalanceNonceBefore;
 }
@@ -1128,14 +1140,17 @@ rule EPOCH_005_closedEpochTotalsAreFrozen(method f, uint256 epochNonce) filtered
 }
 
 
-/// @notice Outside authorized force-cancellation, a caller cannot alter another user's escrowed
-///         deposit or withdrawal entry for any epoch
-/// @dev Every included function writing s_deposits or s_withdraws derives the affected user from
-///      msg.sender. forceCancelDeposit is the intentional exception and is excluded here; its
-///      authorization, target-user handling, and exact refund effects are verified separately.
-rule AC_009_userEpochEscrowOnlyChangedByOwnerOutsideForceCancel(method f, address user, uint256 epochNonce) filtered {
+/// @notice A method without an explicit target-user parameter cannot change another user's escrow
+/// @dev Explicit target-user methods are excluded here and verified by function-specific rules that
+///      bind their storage changes and transfers to the supplied target. For every other production
+///      method, a caller distinct from user cannot change that user's deposit or withdrawal entry.
+rule AC_009_nonTargetedMethodsCannotChangeAnotherUsersEscrow(method f, address user, uint256 epochNonce) filtered {
     f -> isInvariantPreservationMethod(f)
         && f.selector != sig:forceCancelDeposit(address).selector
+        && f.selector != sig:depositFor(address,uint256).selector
+        && f.selector != sig:withdrawFor(address,uint256).selector
+        && f.selector != sig:claimSharesFor(address,uint256).selector
+        && f.selector != sig:claimAssetFor(address,uint256).selector
 } {
     uint256 depositBefore = getDepositAmount(user, epochNonce);
     uint256 withdrawBefore = getWithdrawShareBurnAmount(user, epochNonce);

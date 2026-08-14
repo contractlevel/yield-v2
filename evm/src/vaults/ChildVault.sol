@@ -676,6 +676,7 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         state.recoveryMode = $_baseVault.s_recoveryMode;
         state.lastHandledEpochNonce = $.s_lastHandledEpochNonce;
         state.lastHandledRebalanceNonce = $.s_lastHandledRebalanceNonce;
+        state.tvl = _getTVL();
     }
 
     /// @notice Returns the failed epoch deposit recovery state
@@ -716,7 +717,14 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /*//////////////////////////////////////////////////////////////
                              CONFIG SETTERS
     //////////////////////////////////////////////////////////////*/
-    /// @inheritdoc IBaseVault
+    /// @notice Sets or removes the crosschain vault registered for each supplied chain selector
+    /// @param chainSelectors The CCIP selectors of the remote chains
+    /// @param vaults The vault addresses, using address(0) to remove a registration
+    /// @dev Reverts if the caller does not have CONFIG_OPERATOR_ROLE
+    /// @dev Reverts if chainSelectors is empty
+    /// @dev Reverts if chainSelectors and vaults have different lengths
+    /// @dev Reverts if any chain selector is zero
+    /// @dev Changing or removing a registration can orphan an in-flight CCIP message from the prior vault
     function setCrosschainVaults(uint64[] calldata chainSelectors, address[] calldata vaults)
         external
         override(BaseVault, IBaseVault)
@@ -725,7 +733,11 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         BaseVaultConfigLib._setCrosschainVaults(_baseVaultStorage(), chainSelectors, vaults);
     }
 
-    /// @inheritdoc IBaseVault
+    /// @notice Sets the CCIP gas limit for a given chain selector
+    /// @param chainSelector The CCIP selector of the chain
+    /// @param gasLimit The CCIP gas limit, or zero to clear the override and use the default
+    /// @dev Reverts if the caller does not have CONFIG_OPERATOR_ROLE
+    /// @dev Reverts if chainSelector is zero
     function setCcipGasLimit(uint64 chainSelector, uint256 gasLimit)
         external
         override(BaseVault, IBaseVault)
@@ -734,7 +746,11 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         BaseVaultConfigLib._setCcipGasLimit(_baseVaultStorage(), chainSelector, gasLimit);
     }
 
-    /// @inheritdoc IBaseVault
+    /// @notice Sets the default CCIP gas limit
+    /// @param gasLimit The default CCIP gas limit
+    /// @dev Used when a destination chain has no nonzero per-chain gas-limit override
+    /// @dev Reverts if the caller does not have CONFIG_OPERATOR_ROLE
+    /// @dev Reverts if gasLimit is zero
     function setDefaultCcipGasLimit(uint256 gasLimit)
         external
         override(BaseVault, IBaseVault)

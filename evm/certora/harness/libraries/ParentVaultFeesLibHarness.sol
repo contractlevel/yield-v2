@@ -18,12 +18,6 @@ contract ParentVaultFeesLibHarness is ParentVaultStore, HelperHarness {
         );
     }
 
-    function collectManagementFeePublic(uint256 rebalanceNonce, uint256 lastRebalanceCompletedTimestamp) external {
-        ParentVaultFeesLib.collectManagementFee(
-            _parentVaultStorage(), rebalanceNonce, lastRebalanceCompletedTimestamp, i_share
-        );
-    }
-
     function getTotalShares() external view returns (uint256 totalShares) {
         totalShares = _parentVaultStorage().s_totalShares;
     }

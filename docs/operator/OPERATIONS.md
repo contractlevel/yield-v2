@@ -35,7 +35,7 @@ The technical trigger mapping is documented in [`WORKFLOW`](../protocol/WORKFLOW
 
 ## Epoch Operations
 
-Epoch close is executed through Chainlink CRE and `WorkflowRouter`. Operators should verify the workflow is live and uses the intended configuration.
+Epoch close is executed through Chainlink CRE and `WorkflowRouter`. Operators should verify the workflow is live, uses the intended configuration, and reads the current parent epoch nonce before submitting `closeEpoch(expectedEpochNonce, tvl)`.
 
 The epoch cron handler does not currently check recovery state before submitting TVL — see `ENV-001` in [`INVARIANTS`](../security/INVARIANTS.md). Until that check is added to the workflow, operators should manually confirm no recovery is pending on the active strategy's vault before an epoch close is expected to run.
 
@@ -43,7 +43,7 @@ If an epoch remains executing, operators should identify whether it is waiting o
 
 ## Rebalance Operations
 
-Rebalances are executed through Chainlink CRE and `WorkflowRouter`. Operators should monitor the old active strategy, pending strategy, CCIP status for cross-chain moves, and completion events.
+Rebalances are executed through Chainlink CRE and `WorkflowRouter`. Operators should monitor the old active strategy, pending strategy, current rebalance nonce, CCIP status for cross-chain moves, and completion events. Rebalance initiation and completion reports must include the current nonce read from `ParentVault.getRebalance()`.
 
 Do not treat rebalancing as a manual user action. Strategy selection and execution authority should follow the configured CRE and router path.
 
@@ -65,10 +65,10 @@ Before temporarily unpausing a vault, pause the normal `WorkflowRouter` or revok
 
 ### Parent Paused Before Completion
 
-1. For `completeEpochDeposit`, require the previous parent epoch to remain `EXECUTING` and net-positive, then verify the canonical destination ChildVault emitted `EpochDepositToStrategySuccess` for that epoch and that no relevant recovery remains outstanding.
-2. For `completeRebalance`, require the parent rebalance to remain `REBALANCING`, verify its nonce and pending strategy, and confirm the complete rebalance amount reached and was deposited into that strategy with no source withdrawal, CCIP delivery, target deposit, or relevant recovery outstanding.
+1. For `completeEpochDeposit(expectedEpochNonce)`, read `ParentVault.getEpochNonce()`, set `expectedEpochNonce` to that current nonce minus one, require that epoch to remain `EXECUTING` and net-positive, then verify the canonical destination ChildVault emitted `EpochDepositToStrategySuccess` for that epoch and that no relevant recovery remains outstanding.
+2. For `completeRebalance(expectedRebalanceNonce)`, read `ParentVault.getRebalance()`, set `expectedRebalanceNonce` to its current nonce, require the rebalance to remain `REBALANCING`, verify its pending strategy, and confirm the complete rebalance amount reached and was deposited into that strategy with no source withdrawal, CCIP delivery, target deposit, or relevant recovery outstanding.
 3. Keep the normal `WorkflowRouter` paused or unauthorized while performing reconciliation. Grant the appropriate completion role temporarily to an approved break-glass executor if the existing role assignment cannot be used safely.
-4. Unpause ParentVault, call only the reconciled `completeEpochDeposit()` or `completeRebalance()` function, and verify the expected `EpochClaimable` or `RebalanceCompleted` event and resulting state.
+4. Unpause ParentVault, call only the reconciled `completeEpochDeposit(expectedEpochNonce)` or `completeRebalance(expectedRebalanceNonce)` function with the state-derived nonce, and verify the expected `EpochClaimable` or `RebalanceCompleted` event and resulting state.
 5. Re-pause ParentVault if containment remains necessary, revoke temporary authority, and restore automation only after the full cross-chain state is reconciled and approved.
 
 ### Child Paused Before Rebalance Execution

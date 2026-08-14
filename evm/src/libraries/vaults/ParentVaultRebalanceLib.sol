@@ -60,45 +60,55 @@ library ParentVaultRebalanceLib {
     //////////////////////////////////////////////////////////////*/
     /// @notice Starts a rebalance and returns the external strategy or CCIP action ParentVault must execute
     /// @param $ ParentVault namespaced storage
+    /// @param expectedRebalanceNonce The current rebalance nonce expected by the caller
     /// @param newStrategy The new strategy to rebalance to
     /// @param thisChainSelector The chain selector for the ParentVault chain
     /// @param isSupportedChain Whether the target strategy chain is local or registered in BaseVault storage
     /// @return result The external action ParentVault should execute after state is updated
+    /// @dev Reverts if expectedRebalanceNonce does not match the current rebalance nonce
     /// @dev Reverts if a rebalance is already in progress or the rebalance cooldown has not elapsed
     /// @dev Reverts if newStrategy matches the active strategy
     /// @dev Reverts if the target chain or protocol is unsupported
     /// @dev Reverts if no epoch has completed or the preceding epoch is still executing
     function initiateRebalance(
         ParentVaultStore.ParentVaultStorage storage $,
+        uint256 expectedRebalanceNonce,
         Types.Strategy memory newStrategy,
         uint64 thisChainSelector,
         bool isSupportedChain
     ) public returns (InitiateRebalanceResult memory result) {
-        result = _initiateRebalance($, newStrategy, thisChainSelector, isSupportedChain);
+        result = _initiateRebalance($, expectedRebalanceNonce, newStrategy, thisChainSelector, isSupportedChain);
     }
 
     /// @notice Starts a rebalance and returns the external strategy or CCIP action ParentVault must execute
     /// @param $ ParentVault namespaced storage
+    /// @param expectedRebalanceNonce The current rebalance nonce expected by the caller
     /// @param newStrategy The new strategy to rebalance to
     /// @param thisChainSelector The chain selector for the ParentVault chain
     /// @param isSupportedChain Whether the target strategy chain is local or registered in BaseVault storage
     /// @return result The external action ParentVault should execute after state is updated
+    /// @dev Reverts if expectedRebalanceNonce does not match the current rebalance nonce
     /// @dev Reverts if a rebalance is already in progress or the rebalance cooldown has not elapsed
     /// @dev Reverts if newStrategy matches the active strategy
     /// @dev Reverts if the target chain or protocol is unsupported
     /// @dev Reverts if no epoch has completed or the preceding epoch is still executing
     function _initiateRebalance(
         ParentVaultStore.ParentVaultStorage storage $,
+        uint256 expectedRebalanceNonce,
         Types.Strategy memory newStrategy,
         uint64 thisChainSelector,
         bool isSupportedChain
     ) internal returns (InitiateRebalanceResult memory result) {
         Types.Rebalance storage s_rebalance = $.s_rebalance;
+        uint256 rebalanceNonce = s_rebalance.nonce;
+        if (expectedRebalanceNonce != rebalanceNonce) {
+            revert IParentVault.ParentVault__InvalidRebalanceNonce(expectedRebalanceNonce);
+        }
         if (s_rebalance.state != Types.RebalanceState.NONE) {
             revert IParentVault.ParentVault__RebalanceInProgress();
         }
         if (block.timestamp < s_rebalance.lastRebalanceCompletedTimestamp + MIN_REBALANCE_PERIOD) {
-            revert IParentVault.ParentVault__RebalanceTooSoon(s_rebalance.nonce);
+            revert IParentVault.ParentVault__RebalanceTooSoon(rebalanceNonce);
         }
 
         Types.Strategy memory activeStrategy = s_rebalance.activeStrategy;
@@ -120,7 +130,6 @@ library ParentVaultRebalanceLib {
             revert IParentVault.ParentVault__EpochExecuting(currentEpochNonce - 1);
         }
 
-        uint256 rebalanceNonce = s_rebalance.nonce;
         emit RebalanceInitiated(rebalanceNonce, newStrategy.protocolId, newStrategy.chainSelector);
         result.rebalanceNonce = rebalanceNonce;
 
@@ -143,39 +152,43 @@ library ParentVaultRebalanceLib {
     /// @notice Finalizes a rebalance and collects management fees
     /// @param $ ParentVault namespaced storage
     /// @param share The Yieldcoin share token
-    /// @param rebalanceNonce The current `s_rebalance.nonce`
+    /// @param expectedRebalanceNonce The current `s_rebalance.nonce` expected by the caller
     /// @param newStrategy The current `s_rebalance.pendingStrategy`
     /// @param isLocalToLocalRebalance Whether the rebalance resolved synchronously without persisted pending state
+    /// @dev Reverts if expectedRebalanceNonce does not match the current rebalance nonce
     /// @dev For an asynchronous rebalance, reverts if no rebalance is in progress
-    /// @dev Assumes rebalanceNonce and newStrategy were validated by ParentVault; this function does not validate them
     function finalizeRebalance(
         ParentVaultStore.ParentVaultStorage storage $,
         address share,
-        uint256 rebalanceNonce,
+        uint256 expectedRebalanceNonce,
         Types.Strategy memory newStrategy,
         bool isLocalToLocalRebalance
     ) public {
-        _finalizeRebalance($, share, rebalanceNonce, newStrategy, isLocalToLocalRebalance);
+        _finalizeRebalance($, share, expectedRebalanceNonce, newStrategy, isLocalToLocalRebalance);
     }
 
     /// @notice Finalizes a rebalance and collects management fees
     /// @param $ ParentVault namespaced storage
     /// @param share The Yieldcoin share token
-    /// @param rebalanceNonce The current `s_rebalance.nonce`
+    /// @param expectedRebalanceNonce The current `s_rebalance.nonce` expected by the caller
     /// @param newStrategy The current `s_rebalance.pendingStrategy`
     /// @param isLocalToLocalRebalance True when finalizing a rebalance that stayed on this chain and
     ///        resolved synchronously within the same initiateRebalance() call; state and pendingStrategy
     ///        were never written to storage, so there is nothing to clear
+    /// @dev Reverts if expectedRebalanceNonce does not match the current rebalance nonce
     /// @dev For an asynchronous rebalance, reverts if no rebalance is in progress
-    /// @dev Assumes rebalanceNonce and newStrategy were validated by ParentVault; this function does not validate them
     function _finalizeRebalance(
         ParentVaultStore.ParentVaultStorage storage $,
         address share,
-        uint256 rebalanceNonce,
+        uint256 expectedRebalanceNonce,
         Types.Strategy memory newStrategy,
         bool isLocalToLocalRebalance
     ) internal {
         Types.Rebalance storage s_rebalance = $.s_rebalance;
+        uint256 rebalanceNonce = s_rebalance.nonce;
+        if (expectedRebalanceNonce != rebalanceNonce) {
+            revert IParentVault.ParentVault__InvalidRebalanceNonce(expectedRebalanceNonce);
+        }
         if (!isLocalToLocalRebalance && s_rebalance.state != Types.RebalanceState.REBALANCING) {
             revert IParentVault.ParentVault__NoRebalanceInProgress();
         }
