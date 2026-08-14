@@ -27,7 +27,9 @@ Recovery functions are designed as public retries of already-authorized failed o
 
 This avoids a separate recovery operator role while still allowing anyone to advance the system when the original failure condition clears. Authorization happens when the failed operation stores recovery state; execution consumes that state.
 
-See [ACCESS_CONTROL_MATRIX - Vault Recovery](../security/ACCESS_CONTROL_MATRIX.md#vault-recovery) and [INVARIANTS - Recovery](../security/INVARIANTS.md#recovery).
+See the ParentVault and ChildVault entries in
+[ACCESS_CONTROL_MATRIX](../security/ACCESS_CONTROL_MATRIX.md#parentvault) and
+[INVARIANTS - Recovery](../security/INVARIANTS.md#recovery).
 
 ## DD-003 - Vault Logic Is Split Into Libraries
 
@@ -101,7 +103,7 @@ For Compound V3, COMP rewards may accrue to the `CompoundV3Adapter`, and a vault
 
 The protocol does not decide whether claimed rewards are retained, sold, manually distributed, or routed into a future rewards distributor. Supporting secondary rewards consistently would require protocol-specific integrations, reward-token accounting, distribution policy, and operational controls. The current design deliberately avoids that complexity and keeps user-facing yield calculations underlying-only.
 
-See [ACCESS_CONTROL_MATRIX - Protocol rewards claiming](../security/ACCESS_CONTROL_MATRIX.md#authority-matrix). If product requirements change to include secondary reward tokens in user yield, this design decision and related accounting invariants should be revisited.
+See [ACCESS_CONTROL_MATRIX - Protocol Adapters](../security/ACCESS_CONTROL_MATRIX.md#protocol-adapters). If product requirements change to include secondary reward tokens in user yield, this design decision and related accounting invariants should be revisited.
 
 ## DD-010 - Management Fee Accrual Is Gated On Rebalance Finalization
 
@@ -131,7 +133,7 @@ This authority exists because an individual deposit can produce a zero-share all
 
 No equivalent forced withdrawal-cancellation or forced claim functions are provided. Those positions do not create the same zero-share epoch-settlement failure, so they do not justify expanding operator authority over user positions.
 
-See [ACCESS_CONTROL_MATRIX - Authority Matrix](../security/ACCESS_CONTROL_MATRIX.md#authority-matrix) and [CONFIG - Operational Functions](../operator/CONFIG.md#operational-functions).
+See [ACCESS_CONTROL_MATRIX - ParentVault](../security/ACCESS_CONTROL_MATRIX.md#parentvault) and [CONFIG - Operational Functions](../operator/CONFIG.md#operational-functions).
 
 ## DD-013 - Trusted Configuration Setters Are Idempotent
 

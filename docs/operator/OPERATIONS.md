@@ -37,7 +37,11 @@ The technical trigger mapping is documented in [`WORKFLOW`](../protocol/WORKFLOW
 
 Epoch close is executed through Chainlink CRE and `WorkflowRouter`. Operators should verify the workflow is live, uses the intended configuration, and reads the current parent epoch nonce before submitting `closeEpoch(expectedEpochNonce, tvl)`.
 
-The epoch cron handler does not currently check recovery state before submitting TVL — see `ENV-001` in [`INVARIANTS`](../security/INVARIANTS.md). Until that check is added to the workflow, operators should manually confirm no recovery is pending on the active strategy's vault before an epoch close is expected to run.
+The reconciled epoch handler should use `getParentOperationalState()` and, for a remote active
+strategy, `getChildOperationalState()` to obtain the required pause, recovery, nonce, epoch,
+rebalance, and TVL state with aggregate reads. Until that workflow revision is implemented and
+simulated, operators should manually confirm that no relevant recovery is pending before an epoch
+close is expected to run.
 
 If an epoch remains executing, operators should identify whether it is waiting on child-chain execution, CCIP delivery, or stored recovery state.
 

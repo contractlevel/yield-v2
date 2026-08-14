@@ -65,8 +65,10 @@ Pausing YieldcoinShare disables transfers, minting, and burning.
 | `withdrawLink`                                        | `LINK_OPERATOR_ROLE`                                   |
 | UUPS upgrade                                          | `UPGRADER_ROLE`                                        |
 
-`closeEpoch` and `initiateRebalance` are disabled while paused. Their completion functions remain
-available so an operation already in progress can be finalized.
+`closeEpoch`, `completeEpochDeposit`, `initiateRebalance`, and `completeRebalance` are all disabled
+while ParentVault is paused. An in-progress operation can be finalized only after ParentVault is
+deliberately unpaused following cross-chain state reconciliation. See
+[`OPERATIONS`](../operator/OPERATIONS.md#paused-cross-chain-execution).
 
 ### ChildVault
 
@@ -123,6 +125,5 @@ holder assignments should be revisited if protocol TVL warrants stronger control
 
 The deployer temporarily holds administration and configuration authority needed for wiring. The
 scripts revoke temporary configuration roles and begin the two-step transfer to the configured
-default admin. The configured admin must accept that transfer on-chain.
-
-<!-- should mention treasury ? -->
+default admin. The configured admin must accept that transfer on-chain. The treasury receives
+management-fee shares but has no authority solely by being configured as treasury.

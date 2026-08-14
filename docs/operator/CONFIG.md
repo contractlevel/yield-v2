@@ -39,7 +39,8 @@ For the full authority model, use [`ACCESS_CONTROL_MATRIX`](../security/ACCESS_C
 | `EPOCH_OPERATOR_ROLE`             | Execute epoch settlement. This role is intended for [`WorkflowRouter`](../../evm/src/modules/WorkflowRouter.sol), not a routine human operator wallet. |
 | `REBALANCE_OPERATOR_ROLE`         | Execute strategy rebalances. This role is intended for `WorkflowRouter`, not a routine human operator wallet.                                          |
 
-See the matrix entries for [fundamental principles](../security/ACCESS_CONTROL_MATRIX.md#fundamental-principles), [authority mapping](../security/ACCESS_CONTROL_MATRIX.md#authority-matrix), and [contract-level controls](../security/ACCESS_CONTROL_MATRIX.md#contract-level-matrix).
+See [`ACCESS_CONTROL_MATRIX`](../security/ACCESS_CONTROL_MATRIX.md#roles) for role holders and the
+contract-specific tables that follow it for exact entry-point authority.
 
 ## Vault Configuration
 
@@ -130,4 +131,5 @@ UUPS vault and `YieldcoinShare` upgrades are authorized by `UPGRADER_ROLE`.
 
 Local `DEFAULT_ADMIN_ROLE` holders grant and revoke local roles with inherited `grantRole(...)` and `revokeRole(...)`. They should not be routine operators for vault, router, registry, or incident-response actions. Use the access matrix to verify the intended holder and scope before changing any role.
 
-See [`UPGRADES`](./UPGRADES.md) for upgrade procedure notes and [`ACCESS_CONTROL_MATRIX`](../security/ACCESS_CONTROL_MATRIX.md#summary) for the authority summary.
+See [`UPGRADES`](./UPGRADES.md) for upgrade procedure notes and
+[`ACCESS_CONTROL_MATRIX`](../security/ACCESS_CONTROL_MATRIX.md#roles) for the authority summary.

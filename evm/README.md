@@ -4,7 +4,14 @@
 
 ## Recovery
 
-All rebalance withdraw failures store withdraw recovery; all rebalance deposit failures store deposit recovery, regardless of whether the target is local or remote.
+Recovery depends on where an operation executes. Synchronous ParentVault strategy interactions and
+Parent-originated CCIP sends revert atomically on failure and do not store recovery state. Failures
+after an asynchronous operation reaches a ChildVault store typed recovery state where possible.
+ParentVault stores `REBALANCE_DEPOSIT` recovery only when an inbound cross-chain rebalance has
+already delivered assets to ParentVault and depositing them into the new local strategy fails.
+
+See [`docs/concepts/RECOVERY.md`](../docs/concepts/RECOVERY.md) for the recovery model and
+[`docs/protocol/PATHS.md`](../docs/protocol/PATHS.md) for the individual execution paths.
 
 ## WorkflowRouter-called selectors
 

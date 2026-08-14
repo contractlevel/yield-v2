@@ -29,4 +29,6 @@ While recovery is active, normal protocol progress is constrained. Epoch and reb
 
 ## Further Reading
 
-For exact recovery paths, see [`PATHS`](../protocol/PATHS.md). For recovery authority rules, see [`ACCESS_CONTROL_MATRIX`](../security/ACCESS_CONTROL_MATRIX.md#vault-recovery). For recovery invariants, see [`INVARIANTS`](../security/INVARIANTS.md#recovery).
+For exact recovery paths, see [`PATHS`](../protocol/PATHS.md). For recovery authority rules, see the
+ParentVault and ChildVault entries in [`ACCESS_CONTROL_MATRIX`](../security/ACCESS_CONTROL_MATRIX.md#parentvault).
+For recovery invariants, see [`INVARIANTS`](../security/INVARIANTS.md#recovery).

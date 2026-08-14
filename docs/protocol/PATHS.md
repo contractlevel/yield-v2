@@ -91,7 +91,9 @@ More deposits than withdrawals. Active strategy is on a Child chain.
 
 - Parent updates totalShares: += newShares, -= totalShareBurnAmount.
 
-- **netFlow > 0**: epoch → CLAIMABLE. Next epoch opens.
+- **netFlow > 0**: epoch → EXECUTING. Next epoch opens. The closed epoch remains
+  `EXECUTING` until the destination ChildVault deposits the assets and ParentVault accepts
+  `completeEpochDeposit(expectedEpochNonce)`.
 
 - Parent **\_ccipSend**(netFlow, strategyChain, DEPOSIT, epochNonce).
 

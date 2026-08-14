@@ -2,7 +2,9 @@
 
 This runbook covers UUPS upgrades of `ParentVault`, `ChildVault`, and `YieldcoinShare`. Production upgrades must be executed through the protocol operator's OpenZeppelin `TimelockController`.
 
-The timelock must hold `UPGRADER_ROLE` on each vault and own `YieldcoinShare`. These authorities must not be assigned to a routine operator wallet.
+The timelock must hold `UPGRADER_ROLE` on each vault and on `YieldcoinShare`. `YieldcoinShare` uses
+role-based access control rather than ownership; its default-admin authority is separate from
+`UPGRADER_ROLE`. These authorities must not be assigned to a routine operator wallet.
 
 ## 1. Prepare
 

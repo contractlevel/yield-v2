@@ -24,33 +24,34 @@ All EVM log triggers wait for finalized logs. Separate `RebalanceDepositSuccess`
 
 ## Service quotas
 
-Every handler that can move funds or start a new protocol action first checks recovery mode on all five configured
-vaults. Those five EVM reads are included in the per-execution totals below. The deposit-completion handler is the
-exception: it only acknowledges an already-successful ChildVault strategy deposit and cannot create recovery or
-perform an external call, so an unrelated recovery does not block it. Counts are worst-case attempted capability
-calls after all earlier guards pass; most executions use fewer calls because handlers return as soon as a guard
-produces a no-op.
+<!-- @review Replace the EVM-read X values after reconciling the CRE workflow with the current
+contracts. Use getParentOperationalState() and getChildOperationalState() to aggregate pause,
+recovery, nonce, epoch, rebalance, and TVL reads, then record worst-case simulated usage. -->
+
+Counts are worst-case attempted capability calls after all earlier guards pass; most executions use
+fewer calls because handlers return as soon as a guard produces a no-op. Trigger registration and
+the non-read capability counts remain current. Every workflow EVM write includes the relevant epoch
+or rebalance nonce obtained from the triggering event or operational-state read.
 
 | Handler                               | EVM reads | HTTPS requests | Secret reads | Consensus calls | EVM writes |
 | ------------------------------------- | --------: | -------------: | -----------: | --------------: | ---------: |
-| Rebalance cron                        |         8 |              1 |            1 |               1 |          1 |
-| `RebalanceInitiated`                  |         6 |              0 |            0 |               0 |          1 |
-| `RebalanceDepositSuccess`             |         6 |              0 |            0 |               0 |          1 |
-| Epoch cron                            |         9 |              0 |            0 |               0 |          1 |
-| `EpochWithdrawExecuting`              |         6 |              0 |            0 |               0 |          1 |
-| `EpochDepositToStrategySuccess`       |         1 |              0 |            0 |               0 |          1 |
+| Rebalance cron                        |         X |              1 |            1 |               1 |          1 |
+| `RebalanceInitiated`                  |         X |              0 |            0 |               0 |          1 |
+| `RebalanceDepositSuccess`             |         X |              0 |            0 |               0 |          1 |
+| Epoch cron                            |         X |              0 |            0 |               0 |          1 |
+| `EpochWithdrawExecuting`              |         X |              0 |            0 |               0 |          1 |
+| `EpochDepositToStrategySuccess`       |         X |              0 |            0 |               0 |          1 |
 
-The rebalance cron's eight reads are five recovery checks plus rebalance state, epoch nonce, and the previous
-epoch. Rebalance deposit completion adds one parent rebalance-state read to its five recovery checks. Epoch
-deposit completion reads the current parent epoch nonce without performing the unrelated recovery checks. The
-epoch cron adds rebalance state, epoch nonce, the current epoch, and active-strategy TVL to its five recovery
-checks. Its nine reads are the workflow's highest per-execution EVM-read usage.
+The reconciled workflow should begin with `getParentOperationalState()` and call
+`getChildOperationalState()` only for child vaults whose state is required by the selected action.
+This replaces separate reads for pause and recovery state, epoch nonce and data, rebalance state, and
+TVL. The exact handler read counts will be filled in after simulation.
 
 The current CRE production limits, as exported by `cre workflow limits export`, are:
 
 | Capability                            | Production limit | Maximum used here |
 | ------------------------------------- | ---------------: | ----------------: |
-| Chain reads per execution             |               15 |                 9 |
+| Chain reads per execution             |               15 |                 X |
 | HTTP actions per execution            |               15 |                 1 |
 | Secret reads per execution            |                5 |                 1 |
 | Consensus calls per execution         |               50 |                 1 |
