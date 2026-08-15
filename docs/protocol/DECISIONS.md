@@ -121,7 +121,7 @@ The vault reads and validates the AdapterRegistry when activating a strategy, th
 
 This prevents a configuration update from silently migrating active funds. Replacing a faulty active adapter requires an explicit rebalance or a purpose-built vault upgrade; changing the registry entry alone is insufficient.
 
-A pending destination strategy does not store an adapter address. The destination vault resolves the protocol ID from its local AdapterRegistry when execution arrives, so operators must preserve a valid vault-bound mapping until activation completes.
+A pending destination strategy does not store an adapter address. The destination vault resolves the protocol ID from its local AdapterRegistry when execution arrives, so operators must preserve a valid vault-bound mapping until activation completes. If that mapping is missing or misconfigured when execution arrives, adapter resolution reverts the activation transaction outright rather than degrading into the same typed-recovery bookkeeping that covers a subsequent deposit failure — see [KI-022](../security/KNOWN_ISSUES.md#ki-022--adapter-resolution-failure-during-rebalance-activation-reverts-atomically-instead-of-degrading-into-typed-recovery-state).
 
 See [INVARIANTS - Rebalance Lifecycle And TVL](../security/INVARIANTS.md#rebalance-lifecycle-and-tvl) and [INVARIANTS - Adapters](../security/INVARIANTS.md#adapters).
 

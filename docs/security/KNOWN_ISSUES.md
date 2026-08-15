@@ -1021,3 +1021,52 @@ Uniform secondary-reward recovery would not be a small adapter abstraction. It w
 - The expected value of foregone rewards becomes material relative to the cost and risk of supporting them.
 - A stable, common claiming or forwarding mechanism becomes available across the supported strategies.
 - A future adapter integration makes secondary-reward recovery a launch requirement.
+
+---
+
+## KI-022 — Adapter-resolution failure during rebalance activation reverts atomically instead of degrading into typed recovery state
+
+**Status:** Accepted — atomic revert is safe (no fund loss or state desync), but the failure surfaces outside Yieldcoin's own recovery bookkeeping.
+
+**Last reviewed:** 2026-08-15
+
+**Component:** `ChildVault._rebalanceToNewStrategy` (local branch, `ChildVault.sol`), `BaseVault._handleCCIPRebalance` (`BaseVault.sol`, reached from both vaults' `_ccipReceive` REBALANCE branch), `BaseVaultStrategyLib._setActiveAdapter`.
+
+### Summary
+
+When a rebalance activates a new strategy adapter on the destination chain, `_setActiveAdapter(protocolId)` is called directly, with no try/catch, immediately before the destination deposit attempt:
+
+```solidity
+// ChildVault._rebalanceToNewStrategy, local branch
+address newAdapter = _setActiveAdapter(newStrategy.protocolId); // reverts if unregistered/vault-mismatched
+bool success = _executeDeposit(tvlToRebalance, false, newAdapter); // this failure IS caught
+```
+
+`_setActiveAdapter` reverts if the target protocol has no registered adapter on this chain (`BaseVault__NoAdapterRegistered`) or the registered adapter is bound to a different vault (`BaseVault__InvalidAdapterVault`). Unlike the deposit call one line later — which uses `revertOnFailure = false` and, on failure, stores `RebalanceDepositRecovery` — a revert from `_setActiveAdapter` is not caught anywhere in the call chain up to the external entry point (`ChildVault.executeRebalance`, `ChildVault.executeRecovery`, or `_ccipReceive` on either vault). The whole transaction reverts.
+
+This is the same shape on the CCIP-receive side (`BaseVault._handleCCIPRebalance`, shared by both vaults' `_ccipReceive` REBALANCE handling): `_setActiveAdapter` is called before `_handleCCIPRebalanceDeposit`, uncaught, so an unregistered destination adapter reverts CCIP message execution itself rather than producing a Yieldcoin-tracked recovery.
+
+### Why this is accepted, not mitigated in code
+
+EVM atomicity makes the revert safe: nothing partially executes. For `ChildVault`'s same-chain continuation, an already-completed withdrawal from the old adapter earlier in the same transaction rolls back too — the old adapter still holds the funds and `s_activeProtocolAdapter` still points at it, exactly as if the call had never been attempted. For the CCIP-receive path, the message/tokens are not lost; CCIP's own execution-retry mechanics (external to these contracts, see [ENV-002](#external-assumptions)) apply, the same way [KI-014](#ki-014--strategy-withdraw-recovery-requires-full-market-liquidity) already accepts that "local recovery does not guarantee global CCIP liveness."
+
+Per [DD-011](../protocol/DECISIONS.md#dd-011---adapter-registry-changes-are-not-live-migrations), operators are already responsible for registering the destination adapter before a rebalance activates there. This entry exists to make explicit what DD-011 did not previously spell out: violating that responsibility does not degrade into the same typed-recovery framework (`s_recoveryMode` + its 5 structs, see [Recovery](./INVARIANTS.md#recovery)) that covers every other fallible step in the same call chain — it produces a raw transaction revert (same-chain case) or a CCIP-layer execution failure (cross-chain case) instead.
+
+Catching this specific revert and converting it into a 6th typed recovery mode was considered and rejected: it would add a new state-machine surface and reconciliation path for a failure that requires operator misconfiguration to trigger and has no fund-loss consequence today, contrary to the project's simplicity priority — the same reasoning [KI-016](#ki-016--parentvault-epoch-and-rebalance-calls-revert-atomically-with-no-stored-recovery-allowing-cost-bounded-settlement-griefing) applies to Parent's synchronous local-strategy reverts.
+
+### Residual risk
+
+An operator who initiates or continues a rebalance toward a protocol that is globally supported (`ParentVault.s_supportedProtocol`) but not yet adapter-registered on the specific destination chain will see the operation fail outright rather than land in `s_recoveryMode`. Monitoring that watches only `executeRecovery()`/`getRecoveryMode()` will not detect this failure. For the same-chain case, the fix is operational: register the adapter, then retry the CRE report. For the cross-chain case, operators must additionally check CCIP's own message-execution status, not only Yieldcoin's recovery state, before concluding the rebalance is stuck.
+
+No funds are lost or become unbacked in either case — this is an operational-visibility gap, not a solvency or accounting issue.
+
+### Operational mitigations
+
+- Before initiating or approving a rebalance to a new protocol, verify the destination chain's `AdapterRegistry` already has a valid, vault-bound adapter registered for that protocol ID (per [DD-011](../protocol/DECISIONS.md#dd-011---adapter-registry-changes-are-not-live-migrations)'s existing operator responsibility).
+- Extend the [KI-007](#ki-007--epoch-close-depends-on-cre-workflow-execution)/[KI-013](#ki-013--a-paused-parent-or-child-vault-can-leave-a-cross-chain-epoch-or-rebalance-in-progress) monitoring to also alert on `WorkflowRouter.onReport` reverts specifically during rebalance activation, and to check CCIP message-execution status (not just `s_recoveryMode`) whenever a cross-chain rebalance appears stuck.
+
+### Conditions that would warrant revisiting
+
+- Adapter-resolution failures during rebalance activation are observed in practice, rather than remaining a purely theoretical operator-sequencing mistake.
+- The project decides the added state-machine complexity of a 6th typed recovery mode is worth full symmetry with the deposit-failure case.
+- CCIP's own execution-retry visibility becomes difficult for operators to monitor independently of Yieldcoin's own recovery state.

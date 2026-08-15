@@ -49,6 +49,13 @@ library ParentVaultEpochLib {
         uint256 totalDepositAmount;
     }
 
+    /// @notice Parameters used to validate and settle the current epoch
+    /// @param expectedEpochNonce The current epoch nonce expected by the caller
+    /// @param tvl The underlying-asset value of the active strategy before settlement
+    /// @param sharePrecision The precision factor of the Yieldcoin share token
+    /// @param assetPrecision The precision factor of the underlying asset
+    /// @param minDepositAmount The minimum underlying-asset deposit amount
+    /// @param isLocalStrategy Whether the active strategy is on the ParentVault chain
     struct CloseEpochParams {
         uint256 expectedEpochNonce;
         uint256 tvl;
@@ -58,6 +65,13 @@ library ParentVaultEpochLib {
         bool isLocalStrategy;
     }
 
+    /// @notice Intermediate accounting values calculated while settling an epoch
+    /// @param totalDepositAmount The total underlying asset submitted for deposit in the epoch
+    /// @param totalShareBurnAmount The total shares submitted for withdrawal in the epoch
+    /// @param totalShares The authoritative share count immediately before epoch settlement
+    /// @param totalWithdraw The underlying asset allocated to all withdrawal intents at the supplied TVL
+    /// @param newShares The shares allocated to all deposit intents at the supplied TVL
+    /// @param netFlow Deposits minus withdrawal allocations, denominated in the underlying asset
     struct EpochAccounting {
         uint256 totalDepositAmount;
         uint256 totalShareBurnAmount;
