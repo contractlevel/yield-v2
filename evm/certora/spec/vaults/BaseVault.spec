@@ -42,6 +42,7 @@ methods {
     //////////////////////////////////////////////////////////////*/
     function asset.balanceOf(address) external returns (uint256) envfree;
     function asset.allowance(address, address) external returns (uint256) envfree;
+    function asset.decimals() external returns (uint8) envfree;
     function link.balanceOf(address) external returns (uint256) envfree;
     function adapter.getTVL() external returns (uint256) envfree;
     function adapter.getVault() external returns (address) envfree;
@@ -100,8 +101,6 @@ methods {
     function _.getAdapter(bytes32) external => DISPATCHER(true);
 
     function _.proxiableUUID() external => DISPATCHER(true);
-
-    function _.decimals() external => DISPATCHER(true);
 }
 
 /*//////////////////////////////////////////////////////////////
