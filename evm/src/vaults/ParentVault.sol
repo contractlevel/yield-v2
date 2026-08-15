@@ -385,7 +385,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /// @dev An epoch nonce of one has no preceding epoch because initialization opens epoch one
     /// @dev Zero TVL with outstanding shares requires restoring TVL through an on-behalf-of strategy supply before
     ///      settlement can continue; the permanent admin seed deposit means this requires a full strategy loss
-    /// @dev See KI-008 and KI-010 in docs/KNOWN_ISSUES.md
+    /// @dev See KI-008 and KI-010 in docs/security/KNOWN_ISSUES.md
     function closeEpoch(uint256 expectedEpochNonce, uint256 tvl)
         external
         nonReentrant
@@ -702,7 +702,6 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /*//////////////////////////////////////////////////////////////
                                 OVERRIDE
     //////////////////////////////////////////////////////////////*/
-    /// @notice Returns the current default admin
     /// @notice Returns whether this contract implements the given interface ID
     /// @param interfaceId The interface identifier, as specified in ERC-165
     /// @return isSupported Whether this contract implements `interfaceId`

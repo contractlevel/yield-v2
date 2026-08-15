@@ -4,7 +4,10 @@
 
 _All epoch and rebalance flows across parent and child strategy configurations_
 
-The system has nine execution paths across two categories: epoch settlement and rebalance. Each path is determined by whether the active strategy is on Parent chain or on a Child chain, and the direction of net capital flow.
+The system has nine positive- or negative-flow execution paths across two categories: epoch settlement
+and rebalance, plus the shared zero-net-flow epoch case described below. Each directional path is
+determined by whether the active strategy is on Parent chain or on a Child chain, and the direction of
+net capital flow.
 
 In local Parent paths, strategy interaction and CCIP send failures revert atomically.
 In remote Child paths, strategy interaction and Child-originated CCIP send failures store explicit recovery state and emit failure/recovery events. Recovery functions retry the failed step.
@@ -27,6 +30,13 @@ In remote Child paths, strategy interaction and Child-originated CCIP send failu
 
 At epoch close, CRE reads TVL from the active strategy chain and writes it to Parent. Parent executes all financial calculations onchain in a single transaction. The location of the active strategy and the direction of net capital flow — deposits minus withdrawals in underlying asset terms — determines which path executes.
 
+### **Zero Net Flow — Any Strategy Location**
+
+When deposits exactly equal withdrawal entitlements in underlying-asset terms, Parent updates epoch
+and authoritative share accounting, marks the epoch `CLAIMABLE`, emits `EpochClaimable`, and opens
+the next epoch. No adapter interaction or CCIP send is required, regardless of whether the active
+strategy is on the parent chain or a child chain.
+
 ## **1a — Epoch, Parent Local Strategy, Net Deposit**
 
 More deposits than withdrawals. Active strategy is on Parent chain.
@@ -39,7 +49,8 @@ More deposits than withdrawals. Active strategy is on Parent chain.
 
 - Parent updates totalShares: += newShares, -= totalShareBurnAmount.
 
-- **netFlow > 0**: epoch → EXECUTING. Next epoch opens. Emits EpochDepositExecuting(epochNonce, netFlow).
+- **netFlow > 0**: epoch → CLAIMABLE. Emits EpochClaimable(epochNonce). The local adapter deposit
+  executes synchronously in the same transaction, and the next epoch opens only if that deposit succeeds.
 
 - \_executeDeposit(netFlow, true) directly to local active adapter. Reverts on failure.
 
@@ -161,7 +172,8 @@ Both old and new strategy are on Parent chain. Different protocols.
 
 - Guards: state == NONE, no recovery pending, MIN_REBALANCE_PERIOD cooldown elapsed since the last completed rebalance, at least one epoch has already completed, no prior epoch EXECUTING, new strategy differs from active strategy, target chain is a supported chain, target protocol is a supported protocol.
 
-- state → REBALANCING. Emits RebalanceInitiated.
+- Emits RebalanceInitiated. Because this path completes atomically, Parent does not persist
+  `state = REBALANCING` or `pendingStrategy`.
 
 - \_executeWithdraw(max, true) from old local active adapter. Reverts on failure.
 
@@ -173,7 +185,9 @@ Both old and new strategy are on Parent chain. Different protocols.
 
 - Emits RebalanceDepositSuccess.
 
-- \_finalizeRebalance() → activeStrategy = newStrategy, s_rebalance.nonce++, state → NONE, lastRebalanceCompletedTimestamp updated, management fee minted. Emits RebalanceCompleted.
+- \_finalizeRebalance() → activeStrategy = newStrategy, s_rebalance.nonce++,
+  lastRebalanceCompletedTimestamp updated, management fee minted. There is no persisted rebalance
+  state or pending strategy to clear. Emits RebalanceCompleted.
 
 **CCIP sends: 0**
 

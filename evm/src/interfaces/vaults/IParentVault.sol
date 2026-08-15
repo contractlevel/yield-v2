@@ -56,11 +56,11 @@ interface IParentVault is IBaseVault {
     error ParentVault__RebalanceInProgress();
     /// @dev Thrown when no rebalance is in progress
     error ParentVault__NoRebalanceInProgress();
-    /// @dev Thrown when the decoded epoch nonce does not match s_epochNonce - 1
-    /// @param epochNonce The decoded epoch nonce from the CCIP message
+    /// @dev Thrown when a provided epoch nonce does not match the nonce required by the current operation
+    /// @param epochNonce The invalid epoch nonce provided by the caller or decoded from a CCIP message
     error ParentVault__InvalidEpochNonce(uint256 epochNonce);
-    /// @dev Thrown when the decoded rebalance nonce does not match s_rebalance.nonce
-    /// @param rebalanceNonce The decoded rebalance nonce from the CCIP message
+    /// @dev Thrown when a provided rebalance nonce does not match the current rebalance nonce
+    /// @param rebalanceNonce The invalid rebalance nonce provided by the caller or decoded from a CCIP message
     error ParentVault__InvalidRebalanceNonce(uint256 rebalanceNonce);
     /// @dev Thrown when the decoded protocol ID does not match s_rebalance.pendingStrategy.protocolId
     /// @param protocolId The decoded protocol ID from the CCIP message
@@ -358,7 +358,7 @@ interface IParentVault is IBaseVault {
     /// @dev An epoch nonce of one has no preceding epoch because initialization opens epoch one
     /// @dev Zero TVL with outstanding shares requires restoring TVL through an on-behalf-of strategy supply before
     ///      settlement can continue; the permanent admin seed deposit means this requires a full strategy loss
-    /// @dev See KI-008 and KI-010 in docs/KNOWN_ISSUES.md
+    /// @dev See KI-008 and KI-010 in docs/security/KNOWN_ISSUES.md
     function closeEpoch(uint256 expectedEpochNonce, uint256 tvl) external;
 
     /// @notice Completes the most recently closed remote net-deposit epoch

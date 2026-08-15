@@ -15,7 +15,7 @@ On each rebalance run, the workflow:
 5. Skips if the active strategy is already optimal or the APY improvement is below the rebalance threshold.
 6. Calls `ParentVault.initiateRebalance(expectedRebalanceNonce, newStrategy)` through the parent chain `WorkflowRouter`, passing the nonce read from ParentVault.
 
-`ParentVault` first rejects the report if `expectedRebalanceNonce` no longer matches its current rebalance nonce. It then validates that the requested strategy is supported and registered, stores the requested strategy as the pending strategy, and starts the rebalance.
+`ParentVault` first rejects the report if `expectedRebalanceNonce` no longer matches its current rebalance nonce. It then validates that the requested strategy is supported. For asynchronous paths, it stores the requested strategy as the pending strategy and marks the rebalance in progress. A parent-local-to-local rebalance instead withdraws, deposits, and finalizes atomically without persisting `pendingStrategy` or the `REBALANCING` state; the target adapter is validated when it is activated.
 
 Some rebalances are synchronous, such as parent-chain strategy to parent-chain strategy. Cross-chain rebalances are asynchronous and involve `ChildVault` on the relevant strategy chain. If the old active strategy is on a child chain, `ParentVault` emits `RebalanceInitiated`; a CRE log trigger then calls `ChildVault.executeRebalance(...)` on that child chain.
 
