@@ -9,6 +9,7 @@ Auditors should review the following documents as part of the audit context:
 - [`security/KNOWN_ISSUES.md`](./security/KNOWN_ISSUES.md) lists known and accepted issues.
 - [`protocol/DECISIONS.md`](./protocol/DECISIONS.md) records intentional design decisions and
   tradeoffs.
+- [`protocol/GAS.md`](./protocol/GAS.md) records known and accepted gas inefficiencies.
 
 Behavior already disclosed and accepted in those documents should not be reported as a new finding
 solely because that documented behavior exists. Undisclosed variants, incorrect assumptions,
@@ -26,9 +27,10 @@ Everything outside `evm/src/` is out of scope, including:
 - documentation, deployment configuration, and external dependencies
 
 Out-of-scope files may be referenced for context, but they do not expand the code audit scope beyond
-`evm/src/`. The contracts in `evm/src/` define the implemented behavior. `KNOWN_ISSUES.md` and
-`DECISIONS.md` document the team's intended behavior, accepted risks, and design rationale. Any
-inconsistency between those documents and `evm/src/` should be raised for clarification.
+`evm/src/`. The contracts in `evm/src/` define the implemented behavior. `KNOWN_ISSUES.md`,
+`DECISIONS.md`, and `GAS.md` document the team's intended behavior, accepted risks, design
+rationale, and accepted gas inefficiencies. Any inconsistency between those documents and
+`evm/src/` should be raised for clarification.
 
 ## CRE Notice
 
