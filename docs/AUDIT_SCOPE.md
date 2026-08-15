@@ -12,9 +12,8 @@ Auditors should review the following documents as part of the audit context:
 - [`protocol/GAS.md`](./protocol/GAS.md) records known and accepted gas inefficiencies.
 
 Behavior already disclosed and accepted in those documents should not be reported as a new finding
-solely because that documented behavior exists. Undisclosed variants, incorrect assumptions,
-greater-than-documented impact, and issues introduced by the implementation remain in scope for
-review.
+solely because that documented behavior exists. Issues arising from a distinct root cause remain in
+scope for review.
 
 ## Out of Scope
 
