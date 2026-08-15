@@ -3,7 +3,8 @@ pragma solidity 0.8.34;
 
 contract MockCometRewardsVerifier {
     address internal immutable i_rewardToken;
-    bool internal s_rewardTokenDisabled;
+    address internal s_rewardTokenOverride;
+    bool internal s_rewardTokenOverridden;
     address public s_lastComet;
     address public s_lastSrc;
     address public s_lastTo;
@@ -15,11 +16,17 @@ contract MockCometRewardsVerifier {
     }
 
     function disableRewardToken() external {
-        s_rewardTokenDisabled = true;
+        s_rewardTokenOverride = address(0);
+        s_rewardTokenOverridden = true;
+    }
+
+    function setRewardToken(address rewardToken) external {
+        s_rewardTokenOverride = rewardToken;
+        s_rewardTokenOverridden = true;
     }
 
     function rewardConfig(address) external view returns (address) {
-        return s_rewardTokenDisabled ? address(0) : i_rewardToken;
+        return s_rewardTokenOverridden ? s_rewardTokenOverride : i_rewardToken;
     }
 
     function claimTo(address comet, address src, address to, bool shouldAccrue) external {

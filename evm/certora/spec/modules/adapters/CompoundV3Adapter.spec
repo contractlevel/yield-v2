@@ -1,7 +1,7 @@
 using MockComet as comet;
 using MockCometRewardsVerifier as cometRewards;
 using MockAccessControlVault as vault;
-using MockUSDC as rewardToken;
+using MockRewardToken as rewardToken;
 
 /// Verification of CompoundV3Adapter protocol-specific behavior
 /// @author @contractlevel
@@ -26,6 +26,7 @@ methods {
     function cometRewards.s_claimToCallCount() external returns (uint256) envfree;
     function cometRewards.rewardConfig(address) external returns (address) envfree;
     function cometRewards.disableRewardToken() external;
+    function cometRewards.setRewardToken(address) external;
     function rewardToken.balanceOf(address) external returns (uint256) envfree;
     function vault.hasRole(bytes32, address) external returns (bool) envfree;
 
@@ -93,6 +94,8 @@ rule claimRewards_RevertWhen_CallerNotRewardsOperator() {
     /// @dev revert conditions NOT being verified
     require to != 0, "to is not zero";
     require e.msg.value == 0, "non-payable";
+    require cometRewards.rewardConfig(comet) != getAsset(), "reward token is not the asset";
+    require cometRewards.rewardConfig(comet) != comet, "reward token is not the Comet market";
 
     /// @dev revert condition being verified
     require !vault.hasRole(REWARDS_OPERATOR_ROLE(), e.msg.sender), "caller is not rewards operator";
@@ -114,9 +117,38 @@ rule claimRewards_RevertWhen_ToIsZeroAddress() {
     /// @dev revert conditions NOT being verified
     require vault.hasRole(REWARDS_OPERATOR_ROLE(), e.msg.sender), "caller is rewards operator";
     require e.msg.value == 0, "non-payable";
+    require cometRewards.rewardConfig(comet) != getAsset(), "reward token is not the asset";
+    require cometRewards.rewardConfig(comet) != comet, "reward token is not the Comet market";
 
     /// @dev revert condition being verified
     address to = 0;
+
+    /// @dev ghost starting values
+    require ghost_RewardsClaimed_EventCount == 0, "RewardsClaimed event count starts at zero";
+    require cometRewards.s_claimToCallCount() == 0, "claimTo call count starts at zero";
+
+    claimRewards@withrevert(e, to);
+
+    assert lastReverted;
+    assert ghost_RewardsClaimed_EventCount == 0;
+    assert cometRewards.s_claimToCallCount() == 0;
+}
+
+rule claimRewards_RevertWhen_RewardTokenIsAssetOrComet() {
+    env e;
+    address to;
+    address invalidRewardToken;
+
+    /// @dev revert conditions NOT being verified
+    require vault.hasRole(REWARDS_OPERATOR_ROLE(), e.msg.sender), "caller is rewards operator";
+    require to != 0, "to is not zero";
+    require e.msg.value == 0, "non-payable";
+
+    /// @dev revert condition being verified
+    require invalidRewardToken == getAsset() || invalidRewardToken == comet,
+        "reward token is the asset or Comet market";
+    cometRewards.setRewardToken(e, invalidRewardToken);
+    require cometRewards.rewardConfig(comet) == invalidRewardToken, "invalid reward token is configured";
 
     /// @dev ghost starting values
     require ghost_RewardsClaimed_EventCount == 0, "RewardsClaimed event count starts at zero";
@@ -142,6 +174,8 @@ rule claimRewards_Success_EmitsEventAndClaimsToRecipient() {
     require to != currentContract, "recipient is not the adapter";
     require e.msg.value == 0, "non-payable";
     require cometRewards.rewardConfig(comet) == rewardToken, "reward token is configured";
+    require rewardToken != getAsset(), "reward token is not the asset";
+    require rewardToken != comet, "reward token is not the Comet market";
     require adapterRewardBalanceBefore > 0, "adapter has a stranded reward balance";
     require recipientRewardBalanceBefore <= max_uint256 - adapterRewardBalanceBefore,
         "recipient reward balance does not overflow";
@@ -163,6 +197,41 @@ rule claimRewards_Success_EmitsEventAndClaimsToRecipient() {
     assert cometRewards.s_lastShouldAccrue();
     assert rewardToken.balanceOf(currentContract) == 0;
     assert rewardToken.balanceOf(to) == recipientRewardBalanceBefore + adapterRewardBalanceBefore;
+}
+
+rule claimRewards_Success_WhenConfiguredRewardTokenBalanceIsZero() {
+    env e;
+    address to;
+    uint256 recipientRewardBalanceBefore = rewardToken.balanceOf(e, to);
+
+    /// @dev revert conditions NOT being verified
+    require vault.hasRole(REWARDS_OPERATOR_ROLE(), e.msg.sender), "caller is rewards operator";
+    require to != 0, "to is not zero";
+    require e.msg.value == 0, "non-payable";
+    require cometRewards.rewardConfig(comet) == rewardToken, "reward token is configured";
+    require rewardToken != getAsset(), "reward token is not the asset";
+    require rewardToken != comet, "reward token is not the Comet market";
+
+    /// @dev branch being verified
+    require rewardToken.balanceOf(e, currentContract) == 0, "adapter reward balance is zero";
+
+    /// @dev ghost starting values
+    require ghost_RewardsClaimed_EventCount == 0, "RewardsClaimed event count starts at zero";
+    require ghost_RewardsClaimed_EventParam_to == 0, "RewardsClaimed to ghost starts at zero";
+    require cometRewards.s_claimToCallCount() == 0, "claimTo call count starts at zero";
+
+    claimRewards@withrevert(e, to);
+
+    assert !lastReverted;
+    assert ghost_RewardsClaimed_EventCount == 1;
+    assert ghost_RewardsClaimed_EventParam_to == to;
+    assert cometRewards.s_claimToCallCount() == 1;
+    assert cometRewards.s_lastComet() == getProtocolPool();
+    assert cometRewards.s_lastSrc() == currentContract;
+    assert cometRewards.s_lastTo() == to;
+    assert cometRewards.s_lastShouldAccrue();
+    assert rewardToken.balanceOf(currentContract) == 0;
+    assert rewardToken.balanceOf(to) == recipientRewardBalanceBefore;
 }
 
 rule claimRewards_Success_WhenRewardTokenIsNotConfigured() {

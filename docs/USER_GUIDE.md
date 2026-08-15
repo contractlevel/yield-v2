@@ -23,7 +23,7 @@ To fund a deposit for another account, call `depositFor(beneficiary, amount)`. T
 the underlying asset and allowance, but the beneficiary owns the resulting epoch position. Only the
 beneficiary can cancel it and receive the refund.
 
-Do not transfer tokens directly to a vault address; only use the documented protocol functions. Vaults do not provide a recovery path for unsolicited token transfers.
+Do not transfer tokens directly to a vault or any other contract in the Yieldcoin v2 system (adapters, registries, routers); only use the documented protocol functions. These contracts do not provide a recovery path for unsolicited token transfers.
 
 Useful reads:
 

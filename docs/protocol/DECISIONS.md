@@ -139,15 +139,15 @@ See [ACCESS_CONTROL_MATRIX - ParentVault](../security/ACCESS_CONTROL_MATRIX.md#p
 
 Trusted configuration setters may accept and re-emit an unchanged value. This keeps configuration behavior consistent and operationally idempotent. Event consumers must not assume every setter event represents a value transition.
 
-## DD-014 - `executeRebalance` Trusts CRE-Supplied Target Strategy
+## DD-014 - ChildVault Rebalance Entry Points Trust CRE/CCIP-Supplied Target Strategy
 
-`ChildVault.executeRebalance(rebalanceNonce, newStrategy)` does not independently verify `newStrategy` against `ParentVault.s_rebalance.pendingStrategy` before withdrawing from the old strategy and routing funds toward it.
+`ChildVault.executeRebalance(rebalanceNonce, newStrategy)` does not independently verify `newStrategy` against `ParentVault.s_rebalance.pendingStrategy` before withdrawing from the old strategy and routing funds toward it. The same gap exists symmetrically on the receive side: `ChildVault._ccipReceive`'s `REBALANCE` branch activates whatever `protocolId` is decoded from the inbound CCIP payload, with no local check against an expected value.
 
-This is deliberate, and structural: `executeRebalance` is called directly by `WorkflowRouter` off a CRE report, on a different chain than the one holding `s_rebalance.pendingStrategy`. Unlike `ParentVaultCcipLib._validateRebalance` — which checks a CCIP-delivered `protocolId` against Parent's own local storage as a defense-in-depth consistency check on top of CCIP's own sender authentication — `ChildVault` has no on-chain copy of Parent's pending strategy to check against at this entry point. Routing `newStrategy` through an authenticated CCIP message instead of a direct CRE-dispatched call would close this gap, but would also change the deliberately-direct (non-CCIP) design of the `Child→Parent`, `Child→same Child`, and `Child A→Child B` rebalance topologies documented in `PATHS.md`.
+This is deliberate, and structural, in both directions: `executeRebalance` is called directly by `WorkflowRouter` off a CRE report, and `_ccipReceive` is called by CCIP - both on a chain other than the one holding `s_rebalance.pendingStrategy`. Unlike `ParentVaultCcipLib._validateRebalance` - which checks a CCIP-delivered `protocolId` against Parent's own local storage as a defense-in-depth consistency check on top of CCIP's own sender authentication, because Parent is the chain that originated the rebalance decision and already persisted it before any message went out - `ChildVault` is never the originating chain for a rebalance. It has no on-chain copy of Parent's pending strategy to check against, at either its CRE-dispatched entry point or its CCIP-received one. Routing the target strategy through an additional authenticated CCIP round-trip to Child before acting would close this gap, but would also change the deliberately-direct (non-CCIP) design of the `Child→Parent`, `Child→same Child`, and `Child A→Child B` rebalance topologies documented in `PATHS.md`.
 
-This is the same trust class as [DD-006](#dd-006---closeepoch-trusts-cre-supplied-tvl): the contracts intentionally do not duplicate CRE's job of deriving the correct value, because there is no cheap on-chain source of truth available at every topology this function must support. A CRE workflow bug or misconfiguration that submits the wrong `newStrategy` is not caught on-chain; it results in the vault's real position diverging from what `ParentVault.s_rebalance.activeStrategy` believes is active until reconciled operationally.
+This is the same trust class as [DD-006](#dd-006---closeepoch-trusts-cre-supplied-tvl): the contracts intentionally do not duplicate CRE's job of deriving the correct value, because there is no cheap on-chain source of truth available at every topology these entry points must support. A CRE workflow bug or misconfiguration that submits the wrong target strategy - or a CCIP-delivered payload with the wrong `protocolId` - is not caught on-chain; it results in the vault's real position diverging from what `ParentVault.s_rebalance.activeStrategy` believes is active until reconciled operationally.
 
-Because there is no contract-side backstop here, correctness depends entirely on the CRE `RebalanceExecutor` sub-workflow deriving `newStrategy` from a value it can trust — in practice, reading it directly from the `RebalanceInitiated(rebalanceNonce, protocolId, chainSelector)` event that triggered the workflow, rather than re-deriving or caching it from other state. Get this wrong in the workflow and there is no on-chain check that will catch it.
+Because there is no contract-side backstop at either entry point, correctness depends entirely on the CRE `RebalanceExecutor` sub-workflow deriving the target strategy from a value it can trust - in practice, reading it directly from the `RebalanceInitiated(rebalanceNonce, protocolId, chainSelector)` event that triggered the workflow, rather than re-deriving or caching it from other state - and on CCIP's own sender authentication being the sole guarantee for the receive side. Get either wrong and there is no on-chain check that will catch it.
 
 See [DD-005](#dd-005---cre-is-the-automation-and-tvl-reporting-layer), [DD-006](#dd-006---closeepoch-trusts-cre-supplied-tvl), and [KI-007](../security/KNOWN_ISSUES.md#ki-007--epoch-close-depends-on-cre-workflow-execution).
 
@@ -178,5 +178,41 @@ token supply and `ParentVault`'s canonical share accounting.
 
 See [YIELDCOIN_SHARE - CCIP Admin](./YIELDCOIN_SHARE.md#ccip-admin) and
 [ACCESS_CONTROL_MATRIX - YieldcoinShare](../security/ACCESS_CONTROL_MATRIX.md#yieldcoinshare).
+
+## DD-016 - `WEI_TOLERANCE` Is A Fixed, USDC-Scaled Rounding Tolerance
+
+`ProtocolAdapter._revertIfIncompleteDeposit`/`_revertIfIncompleteWithdraw` permit up to `WEI_TOLERANCE`
+(100 raw units) of shortfall between a requested and an actual protocol-side deposit/withdraw amount
+before reverting, across all adapters (`AaveV3Adapter`, `AaveV4Adapter`, `CompoundV3Adapter`).
+
+The constant is a fixed raw-unit count, not scaled to `i_assetPrecision`. This is deliberate for the
+current USDC-only (6-decimal) deployment: 100 raw units is ~$0.0001, well below any meaningful
+rounding concern for the supported lending markets' aToken/index/base-unit rounding behavior.
+
+The constant is not asset-decimals-agnostic by design - it is sized for USDC specifically. Before
+onboarding an underlying asset with materially fewer decimals than USDC, `WEI_TOLERANCE` (or its
+usage in `ProtocolAdapter`) must be revisited so the tolerance stays a negligible fraction of a
+typical deposit/withdraw rather than a fixed absolute amount that becomes economically meaningful at
+lower precision.
+
+See [ProtocolAdapter](../../evm/src/modules/ProtocolAdapter.sol).
+
+## DD-017 - Aave Adapters Pin The Provider/Reserve Indirection, Not A Movable Pool Address
+
+`AaveV3Adapter` stores `i_poolAddressesProvider` as immutable and calls `getPool()` fresh on every
+deposit, withdraw, and TVL read, rather than caching the Pool address itself. This follows Aave's own
+documented integration guidance: the `PoolAddressesProvider` is the stable, canonical entry point,
+while the Pool proxy address it resolves to is the part Aave governance can change. Re-resolving
+through the provider on every call is the intended way to stay correct across an Aave-side Pool
+upgrade, not a coupling risk.
+
+`AaveV4Adapter` stores `i_reserveId` as immutable, caching the positional index of the vault's
+underlying asset in the Aave v4 Spoke's reserve list at construction time. This is deliberate: under
+the current Aave v4 Spoke implementation, a reserveId is assigned once and is not reused, removed, or
+remapped, so re-deriving the index on every call would only add an external call and gas cost for no
+correctness benefit.
+
+See [AaveV3Adapter](../../evm/src/modules/adapters/AaveV3Adapter.sol) and
+[AaveV4Adapter](../../evm/src/modules/adapters/AaveV4Adapter.sol).
 
 <!-- any extra yield beyond the apyBase, such as comet rewards is not cared for. we account for some as an extra precaution, but it is not a system priority, if some of it gets stranded, we dont care -->

@@ -15,7 +15,9 @@ abstract contract BaseCompoundV3AdapterUnitTest is BaseUnitTest {
     constructor() {
         s_mockComet = new MockComet(address(s_mockUsdc));
         s_mockCometRewards = new MockCometRewards();
-        s_mockCometRewards.setRewardToken(address(s_mockUsdc));
+        // Distinct from the vault's underlying asset (s_mockUsdc) and the Comet market itself, matching real
+        // Compound v3 deployments where the reward token (e.g. COMP) is never the base asset.
+        s_mockCometRewards.setRewardToken(address(s_mockLink));
         s_compoundV3Adapter =
             new CompoundV3Adapter(address(s_parentVault), address(s_mockComet), address(s_mockCometRewards));
 

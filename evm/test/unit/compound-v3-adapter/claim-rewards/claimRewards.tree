@@ -3,6 +3,10 @@ claimRewards
   │   └── it should revert
   ├── when the to address is zero
   │   └── it should revert
+  ├── when the configured reward token equals the vault's underlying asset
+  │   └── it should revert
+  ├── when the configured reward token equals the Comet market itself
+  │   └── it should revert
   └── when the caller has REWARDS_OPERATOR_ROLE on the vault
       ├── it should emit a RewardsClaimed event
       ├── it should call claimTo on the CometRewards contract

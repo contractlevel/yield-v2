@@ -357,9 +357,9 @@ The risk is accepted because the protocol already trusts CRE for TVL reporting a
 
 **Status:** Accepted — epoch batching prevents the flash-loan variant; residual unsolicited-donation risk is monitored operationally.
 
-**Last reviewed:** 2026-07-08
+**Last reviewed:** 2026-08-15
 
-**Component:** Strategy adapters (`AaveV3Adapter`, `AaveV4Adapter`, `CompoundV3Adapter`), active strategy `getTVL`, CRE epoch workflow, and `ParentVault.closeEpoch`.
+**Component:** Strategy adapters (`AaveV3Adapter`, `AaveV4Adapter`, `CompoundV3Adapter`), active strategy `getTVL`, CRE epoch workflow, `ParentVault.closeEpoch`, and its zero-share-mint guard (`ParentVault__DepositWouldMintZeroShares`).
 
 ### Summary
 
@@ -407,8 +407,9 @@ A third party can still use real capital to inflate the active adapter's raw pro
 - the epoch's implied TVL-to-share ratio,
 - shares minted to pending depositors,
 - assets allocated to pending withdrawers,
-- management-fee accounting, and
-- rebalances that withdraw the adapter's full raw position.
+- management-fee accounting,
+- rebalances that withdraw the adapter's full raw position, and
+- epoch settlement liveness: a donation large enough to push the exchange rate past the point where a same-epoch minimum-size deposit would round to zero shares trips `closeEpoch`'s `ParentVault__DepositWouldMintZeroShares` guard, reverting the entire epoch's settlement rather than just the affected deposit. This is a griefing variant of the same donation mechanism, in the same cost-bounded shape already accepted under [KI-016](#ki-016--parentvault-epoch-and-rebalance-calls-revert-atomically-with-no-stored-recovery-allowing-cost-bounded-settlement-griefing) — recoverable the same way, via `forceCancelDeposit`/`CANCEL_DEPOSIT_OPERATOR_ROLE` clearing the blocking deposit.
 
 An attacker with a pending withdrawal may recover a pro-rata portion of their own unsolicited supply through that epoch's withdrawal settlement. Any unrecovered amount is absorbed by other participants, remaining shareholders, or protocol fees. The attacker cannot atomically recover the full supplied amount unless they also control privileged workflow or vault execution paths, which is outside the permissionless threat model.
 
@@ -479,9 +480,9 @@ The failure mode is an accepted fee-timing effect of epoch-batched withdrawal se
 
 ## KI-010 — Bootstrap share allocation ignores residual TVL when total shares return to zero
 
-**Status:** Accepted — bounded to dust-level amounts and further mitigated operationally by a permanent admin seed deposit.
+**Status:** Accepted — bounded by elapsed time between the CRE TVL snapshot and on-chain settlement (dust-sized under normal cadence; see [KI-007](#ki-007--epoch-close-depends-on-cre-workflow-execution) for the settlement-delay dependency), and further mitigated operationally by a permanent admin seed deposit.
 
-**Last reviewed:** 2026-07-10
+**Last reviewed:** 2026-08-15
 
 **Component:** `ParentVaultEpochLib.closeEpoch`.
 
@@ -510,7 +511,7 @@ The root cause is bootstrap share allocation ignoring existing TVL when `s_total
 ### Why this is accepted, not mitigated
 
 - **Operationally, `s_totalShares` should never actually return to zero after the first epoch.** The deployer/admin makes an initial seed deposit as part of launch and does not redeem it. This is not enforced on-chain (there is no dead-shares burn or minimum-liquidity lock in the contracts) — it is a deployment-runbook practice, so the trigger condition requires both every other holder to exit _and_ the admin to redeem the permanent seed position, which is not expected operational behavior.
-- The residual is bounded to dust: the withdrawal amount is computed directly from a trusted, near-real-time operator TVL estimate, so any leftover is limited to accrual/rounding drift over a single transaction, not an arbitrary amount.
+- The residual is bounded by how stale the TVL snapshot is by the time `closeEpoch`/`executeEpochWithdraw` actually executes, not by a fixed cap: under normal operating cadence CRE settles within the same transaction window as its snapshot, so the leftover is accrual/rounding drift, not an arbitrary amount. If CRE settlement stalls, the gap widens with it — that is the same liveness dependency [KI-007](#ki-007--epoch-close-depends-on-cre-workflow-execution) already accepts as unbounded in duration, not a separate risk.
 - Reaching the trigger condition requires total share supply to hit exactly zero, which (even setting the seed deposit aside) is a specific and infrequent state (a full protocol exit), not routine operation.
 - Sweeping or reconciling the residual would require either tracking a per-reset "owed to exited holders" balance or an extra adapter call on the full-exit path — added accounting state and complexity to close a dust-sized gap, contrary to the project's simplicity priority.
 - No other user's balance is diluted or put at risk; the effect is a one-time transfer of dust value to whichever depositor happens to open the next epoch after a full reset.
@@ -521,12 +522,12 @@ The root cause is bootstrap share allocation ignoring existing TVL when `s_total
 
 ### Residual risk
 
-If the seed-deposit practice is not followed, or the admin's seed position is ever fully redeemed alongside all other holders, the next depositor after a full-supply reset can receive a small amount of value (bounded by inter-transaction yield accrual / rounding on the prior full exit) that arguably belonged to the exited shareholders. This does not affect protocol solvency, other users' balances, or any live position — it is a bounded, one-time bootstrap-allocation artifact, and under normal operation is not expected to be reachable at all.
+If the seed-deposit practice is not followed, or the admin's seed position is ever fully redeemed alongside all other holders, the next depositor after a full-supply reset can receive a small amount of value that arguably belonged to the exited shareholders. That amount is bounded by yield accrual / rounding over whatever elapsed time separates the CRE TVL snapshot from on-chain settlement — ordinarily inter-transaction and dust-sized, but scaling with any CRE settlement delay per [KI-007](#ki-007--epoch-close-depends-on-cre-workflow-execution), not with a fixed cap. This does not affect protocol solvency, other users' balances, or any live position — it is a one-time bootstrap-allocation artifact, and under normal operation is not expected to be reachable at all.
 
 ### Conditions that would warrant revisiting
 
 - The admin seed deposit is redeemed (removing the operational mitigation) and total shares can realistically return to zero.
-- An adapter or strategy topology is introduced where the gap between the operator's TVL snapshot and actual on-chain execution can be large rather than dust-sized.
+- CRE settlement delay (per [KI-007](#ki-007--epoch-close-depends-on-cre-workflow-execution)) or an adapter/strategy topology change widens the gap between the operator's TVL snapshot and actual on-chain execution beyond dust-sized.
 - Full-supply resets become a routine/expected operational pattern rather than an edge case.
 - A cheap way to reconcile or sweep residual TVL at the zero-shares boundary becomes available without adding meaningful accounting complexity.
 - The seed-deposit practice is formalized as a contract-enforced invariant (e.g. a permanent minimum-liquidity lock), at which point this entry could be closed rather than merely mitigated.
@@ -738,7 +739,7 @@ Partial recovery would require a substantially larger state machine: cumulative 
 
 **Status:** Accepted — trusted configuration authority with operational safeguards.
 
-**Last reviewed:** 2026-08-01
+**Last reviewed:** 2026-08-14
 
 **Component:** `BaseVault.setCrosschainVaults`, `AdapterRegistry.setAdapter`, cross-chain epoch and rebalance execution, and ChildVault recovery.
 
@@ -756,6 +757,12 @@ Changing a required route mid-flight can interrupt the affected operation:
 
 Recovery state is not lost when a retry reverts: EVM atomicity restores the stored recovery data and recovery mode. A trusted operator can normally restore the required mapping and retry. The primary risk is cross-chain liveness and operational misrouting, not an automatic loss of accounting state or funds.
 
+### Worst-case impact: irrecoverable fund redirection, not just liveness
+
+The failure modes above assume the replacement address is *wrong* (stale, unreachable, or misconfigured) — the message or deposit fails, and EVM atomicity or stored recovery lets an operator correct the route and retry. The worst case is stronger: if `CONFIG_OPERATOR_ROLE` sets `s_crosschainVaults[chainSelector]` or registers an `AdapterRegistry` entry to an address that is *live and responsive* but not a genuine Yieldcoin v2 counterpart (e.g. attacker-deployed), the next bridge or rebalance into that route does not fail — it succeeds, delivering the full transferred principal or rebalanced TVL to that address. `BaseVaultStrategyLib._setActiveAdapter`'s only check (`adapter.getVault() == vault`) is trivially satisfiable by a purpose-built malicious contract; `_setCrosschainVaults` performs no address validation at all. This is not a liveness incident with a recovery path — it is direct, permanent loss of the affected epoch's principal or the vault's active-strategy TVL.
+
+This is accepted under the same operator-trust boundary as the rest of this entry (see "Why this is accepted" below), not because the impact is bounded to liveness.
+
 ### Why this is accepted
 
 Cross-chain configuration must remain mutable so operators can deploy or rotate routes and adapters and respond to broken or compromised components. A universal on-chain lock could prevent an emergency correction when it is most needed.
@@ -769,6 +776,7 @@ The system therefore treats route continuity as a trusted operator responsibilit
 - Stop the relevant CRE automation before an emergency route change so it cannot submit new work against a partially updated deployment.
 - Apply coordinated configuration changes across the affected chains and verify both send-side destination and receive-side source authentication.
 - After restoring or replacing a route, retry stored recovery and monitor the parent epoch or rebalance through final completion.
+- Route and adapter-mapping changes require each signer to independently verify off-chain that the destination address is source-verified Yieldcoin v2 deployment code, not merely a nonzero address responding correctly to `getVault()` — this manual verification is the sole control against the worst-case fund-redirection impact above, since no on-chain validation or timelock exists for either setter.
 
 See [CONFIG - Vault Configuration](../operator/CONFIG.md#vault-configuration) and [OPERATIONS - Paused Cross-Chain Execution](../operator/OPERATIONS.md#paused-cross-chain-execution).
 
@@ -782,24 +790,27 @@ An incorrect or incomplete route change can leave an epoch or rebalance in progr
 - Operational monitoring cannot reliably identify messages and recoveries that still depend on an existing route.
 - A route-versioning or two-phase rotation design is introduced that can preserve old counterparties for outstanding messages.
 - CCIP exposes an on-chain mechanism that lets the vault reliably enumerate or prove all messages still in flight for a route.
+- A cheap, on-chain two-step commit (propose → delay → activate) for `setCrosschainVaults`/`setAdapter` becomes worth the added complexity, at which point the worst-case fund-redirection impact above would move from "operator-verification-only" to independently inspectable before it can take effect.
 
 ---
 
-## KI-016 — Local-strategy epoch and rebalance calls revert atomically with no stored recovery, allowing cost-bounded settlement griefing
+## KI-016 — ParentVault epoch and rebalance calls revert atomically with no stored recovery, allowing cost-bounded settlement griefing
 
 **Status:** Accepted — atomic revert is the deliberate design for parent-chain-only failures; no cross-chain or partially-executed state exists to recover.
 
-**Last reviewed:** 2026-08-08
+**Last reviewed:** 2026-08-15
 
-**Component:** `ParentVault.closeEpoch` (`DEPOSIT_TO_LOCAL_STRATEGY` / `WITHDRAW_FROM_LOCAL_STRATEGY` branches), `ParentVault.initiateRebalance` (local-to-local and local-withdraw branches), `BaseVault._executeDeposit` / `_executeWithdraw` (`revertOnFailure == true` path), and whichever strategy adapter is locally active on the parent chain.
+**Component:** `ParentVault.closeEpoch` (`DEPOSIT_TO_LOCAL_STRATEGY` / `WITHDRAW_FROM_LOCAL_STRATEGY` / `SEND_DEPOSIT_TO_REMOTE_STRATEGY` branches), `ParentVault.initiateRebalance` (local-to-local, local-withdraw, and `WITHDRAW_LOCAL_TO_REMOTE` branches), `BaseVault._executeDeposit` / `_executeWithdraw` (`revertOnFailure == true` path), `BaseVault._ccipSend` (Parent's direct, non-try/catch call, as opposed to `ChildVault`'s overridden version), and whichever strategy adapter is locally active on the parent chain.
 
 ### Summary
 
 When ParentVault's active strategy is local to the parent chain, `closeEpoch` and `initiateRebalance` call the active adapter's `deposit()`/`withdraw()` with `revertOnFailure = true`. If the adapter call fails — for example the underlying Aave/Compound reserve cannot supply the requested withdrawal liquidity, or a deposit cannot be credited because a supply cap is reached — `BaseVault` re-reverts the whole transaction (`BaseVault__DepositFailed` / `BaseVault__WithdrawFailed`) instead of catching the failure and storing typed recovery state the way every equivalent `ChildVault` call site does (`REBALANCE_WITHDRAW`, `REBALANCE_DEPOSIT`, `EPOCH_DEPOSIT`, `EPOCH_WITHDRAW`, `CCIP_SEND`).
 
-This is intentional, not an oversight: per `docs/concepts/RECOVERY.md`, "other parent-chain failures generally revert atomically. In those cases, no cross-chain state has escaped and the transaction can leave clean state without storing recovery," and `INVARIANTS.md` `REC-009` documents and Foundry/Medusa-tests this exact behavior — Parent's synchronous local strategy calls use `revertOnFailure == true` so a caught adapter failure is rethrown and the transaction reverts, creating no recovery state.
+The same shape applies to Parent's *outbound* CCIP sends. `closeEpoch`'s `SEND_DEPOSIT_TO_REMOTE_STRATEGY` branch and `initiateRebalance`'s `WITHDRAW_LOCAL_TO_REMOTE` branch call `BaseVault._ccipSend` directly, with no try/catch — unlike `ChildVault`, which overrides `_ccipSend` to catch a failed send and store `CCIP_SEND` recovery. A failed fee calculation, token approval, or router call (e.g. an underfunded LINK balance) reverts the whole `closeEpoch`/`initiateRebalance` transaction the same way a failed local adapter call does.
 
-Because the revert is atomic, nothing partially executed: the epoch remains `OPEN` (or the rebalance never leaves `NONE`), and the next attempt — the following CRE cron cycle calling `closeEpoch`/`initiateRebalance` again — is a complete, ordinary retry, not a specialized recovery path. This is architecturally different from `ChildVault`, where a caught failure follows funds that have already left the source chain (or already landed as an incoming CCIP transfer) and therefore do need stored state to resume correctly.
+This is intentional in both cases, not an oversight: per `docs/concepts/RECOVERY.md`, "other parent-chain failures generally revert atomically. In those cases, no cross-chain state has escaped and the transaction can leave clean state without storing recovery," and `INVARIANTS.md` `REC-009` documents and Foundry/Medusa-tests this exact behavior — Parent's synchronous local strategy calls use `revertOnFailure == true` so a caught adapter failure is rethrown and the transaction reverts, creating no recovery state. The CCIP-send branches carry the identical rationale: the epoch/rebalance state transition and the outbound send happen in the same transaction, so if the send fails, nothing has yet been committed that another chain is depending on or expecting a follow-up for — the whole transaction, including the epoch/rebalance state writes, rolls back together.
+
+Because the revert is atomic, nothing partially executed: the epoch remains `OPEN` (or the rebalance never leaves `NONE`), and the next attempt — the following CRE cron cycle calling `closeEpoch`/`initiateRebalance` again — is a complete, ordinary retry, not a specialized recovery path. This is architecturally different from `ChildVault`, where a caught failure follows funds that have already left the source chain, already landed as an incoming CCIP transfer, or where Parent has *already*, in a prior and separately-committed transaction, closed an epoch or initiated a rebalance that now expects Child to follow up — Parent cannot "undo" that already-finalized prior transaction, so Child must retry until it succeeds rather than revert and forget.
 
 ### Residual risk
 
@@ -808,16 +819,19 @@ While no state is lost and no funds are misplaced, an actor can hold the local r
 - `closeEpoch` cannot settle the current epoch, so its depositors and withdrawers cannot claim (though they retain the ability to cancel their own current-epoch intent while it remains `OPEN`, the same escape hatch `KI-007` already documents).
 - `initiateRebalance`'s local-to-local and local-withdraw paths hit the same adapter and fail identically, so the protocol cannot rebalance away from the affected strategy either.
 
+The CCIP-send branches carry the same settlement-blocking shape, but no attacker-controlled trigger for a CCIP send failure has been identified — LINK balance and CCIP router/fee liveness are operational concerns, not something a permissionless actor can force on demand.
+
 The failure mode is availability and settlement delay, not loss of funds or accounting corruption — consistent with the general shape already accepted in `KI-007` (CRE liveness dependency) and `KI-014` (child-side recovery requires full market liquidity), but this specific parent-side, cost-bounded griefing mechanic was not previously named by either entry.
 
 ### Why this is accepted, not mitigated on-chain
 
-Building a local recovery mode symmetric with `ChildVault`'s would mean storing and replaying state for a case where nothing needs replaying — the transaction already reverted cleanly with no committed side effects. Doing so would add a parallel state machine and reconciliation surface to `ParentVault`'s synchronous settlement path for no correctness benefit over simply retrying the same call once market conditions allow it, contrary to the project's simplicity priority. The atomic-revert design keeps parent state provably clean at every boundary, which the existing `REC-009`/`SOLV-*` invariant suite already relies on.
+Building a local recovery mode symmetric with `ChildVault`'s would mean storing and replaying state for a case where nothing needs replaying — the transaction already reverted cleanly with no committed side effects. Doing so would add a parallel state machine and reconciliation surface to `ParentVault`'s synchronous settlement path for no correctness benefit over simply retrying the same call once market conditions allow it, contrary to the project's simplicity priority. The atomic-revert design keeps parent state provably clean at every boundary, which the existing `REC-009`/`SOLV-*` invariant suite already relies on. This applies identically to the CCIP-send branches: they resolve within the same synchronous transaction as the local-adapter branches, so the same "nothing to replay" reasoning covers both.
 
 ### Operational mitigations
 
 - Monitor for repeated `closeEpoch`/`initiateRebalance` reverts against the local active adapter (distinguishable from other revert reasons via the `BaseVault__DepositFailed`/`BaseVault__WithdrawFailed` selectors).
 - Monitor local active-reserve utilization and available supply-cap headroom ahead of each scheduled epoch close or rebalance attempt, alongside the existing `KI-007` monitoring for epochs that fail to advance past their expected close window.
+- Monitor `ParentVault`'s LINK balance and CCIP fee levels ahead of each scheduled epoch close or rebalance attempt targeting a remote strategy, so a `closeEpoch`/`initiateRebalance` revert on the CCIP-send branches is distinguishable from local-adapter griefing and resolved by top-up rather than mistaken for a market-liquidity issue.
 - If sustained griefing is detected, operators can rebalance away from the affected local strategy once liquidity briefly recovers, or pause the vault while coordinating a response, consistent with the operator trust model in `KI-001`.
 
 ### Conditions that would warrant revisiting
@@ -826,6 +840,7 @@ Building a local recovery mode symmetric with `ChildVault`'s would mean storing 
 - Monitoring cannot reliably distinguish this condition from ordinary market illiquidity in time to respond operationally.
 - A low-cost, symmetry-preserving way to add local recovery (without duplicating `ChildVault`'s state machine) becomes available.
 - Supported lending markets are observed to have utilization or supply-cap dynamics that make sustained griefing meaningfully cheaper than assumed here.
+- A concrete, attacker-controlled trigger for a Parent-side CCIP send failure is identified, changing the CCIP-send branches from an operational-liveness concern to an adversarial one.
 
 ---
 

@@ -207,6 +207,8 @@ library ParentVaultEpochLib {
             );
         }
 
+        // Unchecked int256 cast: sign-flip requires either operand to exceed type(int256).max, unreachable for
+        // any real ERC-20 total supply.
         accounting.netFlow = int256(accounting.totalDepositAmount) - int256(accounting.totalWithdraw);
         if (
             accounting.totalDepositAmount != 0

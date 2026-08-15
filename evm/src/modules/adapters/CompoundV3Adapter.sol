@@ -116,6 +116,7 @@ contract CompoundV3Adapter is ProtocolAdapter, ICompoundV3Adapter {
     /// @param to The address to receive the claimed rewards
     /// @dev Reverts if the caller does not have REWARDS_OPERATOR_ROLE on the vault
     /// @dev Reverts if to is the zero address
+    /// @dev Reverts if the configured reward token equals the vault's underlying asset or the Comet market itself
     function claimRewards(address to) external {
         if (!IAccessControl(i_vault).hasRole(Roles.REWARDS_OPERATOR_ROLE, msg.sender)) {
             revert CompoundV3Adapter__CallerNotRewardsOperator();
@@ -125,6 +126,7 @@ contract CompoundV3Adapter is ProtocolAdapter, ICompoundV3Adapter {
 
         ICometRewards cometRewards = ICometRewards(i_cometRewards);
         address rewardToken = cometRewards.rewardConfig(i_comet);
+        if (rewardToken == i_asset || rewardToken == i_comet) revert CompoundV3Adapter__InvalidRewardToken();
         cometRewards.claimTo(i_comet, address(this), to, true);
 
         if (rewardToken != address(0)) {
