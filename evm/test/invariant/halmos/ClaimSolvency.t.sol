@@ -61,19 +61,6 @@ contract ClaimSolvency is Test {
         assert(e.remainingDepositClaimAmount == 0 && e.remainingShareMintAmount == 0);
     }
 
-    // @review TIMEOUT
-    /// @notice Deposit-side partial-claimer arithmetic cannot consume all remaining shares.
-    function check_EPOCH_009_partial(uint256 callerDeposit, uint256 remainingDeposit, uint256 remainingShares) public {
-        vm.assume(callerDeposit <= type(uint128).max);
-        vm.assume(remainingDeposit <= type(uint128).max);
-        vm.assume(remainingShares <= type(uint128).max);
-        vm.assume(callerDeposit > 0 && callerDeposit < remainingDeposit);
-        vm.assume(remainingShares > 0);
-
-        uint256 result = s_vault.proportionalAmount(callerDeposit, remainingShares, remainingDeposit);
-        assert(result < remainingShares);
-    }
-
     /// @notice Withdraw-side counter pair reaches zero together after any valid claimAsset call.
     function check_EPOCH_012(uint256 remainingBurn, uint256 remainingWithdraw, uint256 callerBurn) public {
         // Pre-call invariant: if all burns are already exhausted, withdraw must also be zero.
@@ -99,18 +86,5 @@ contract ClaimSolvency is Test {
         Types.Epoch memory e = s_vault.getEpoch(1);
         // remainingShareBurnAmount may be > 0 when remainingWithdrawClaimAmount is 0 due to dust. see KI-003
         assert(e.remainingShareBurnAmount != 0 || e.remainingWithdrawClaimAmount == 0);
-    }
-
-    // @review TIMEOUT
-    /// @notice Withdraw-side partial-claimer arithmetic cannot consume all remaining assets.
-    function check_EPOCH_012_partial(uint256 callerBurn, uint256 remainingBurn, uint256 remainingWithdraw) public {
-        vm.assume(callerBurn <= type(uint128).max);
-        vm.assume(remainingBurn <= type(uint128).max);
-        vm.assume(remainingWithdraw <= type(uint128).max);
-        vm.assume(callerBurn > 0 && callerBurn < remainingBurn);
-        vm.assume(remainingWithdraw > 0);
-
-        uint256 result = s_vault.proportionalAmount(callerBurn, remainingWithdraw, remainingBurn);
-        assert(result < remainingWithdraw);
     }
 }

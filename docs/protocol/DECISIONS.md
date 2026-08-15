@@ -214,3 +214,31 @@ correctness benefit.
 
 See [AaveV3Adapter](../../evm/src/modules/adapters/AaveV3Adapter.sol) and
 [AaveV4Adapter](../../evm/src/modules/adapters/AaveV4Adapter.sol).
+
+## DD-018 - Default Admin Role Transfer Delay Starts At Zero To Support Deploy-Script Bootstrapping
+
+`ParentVault`, `ChildVault`, and `YieldcoinShare` initialize `AccessControlDefaultAdminRules` with
+`INITIAL_DEFAULT_ADMIN_ROLE_TRANSFER_DELAY = 0`, unlike `AdapterRegistry` and `WorkflowRouter`, which
+accept a deploy-time-configurable `initialDelay`.
+
+This is deliberate. The deploy script needs the deployer EOA to briefly hold `DEFAULT_ADMIN_ROLE` so
+it can grant and configure the other launch roles (pauser, unpauser, config operator, upgrader, and so
+on) before handing administration off to the configured default admin. A nonzero initial delay would
+force that handoff itself to wait out the delay before the intended admin could accept the role, adding
+an idle window to every deployment for no security benefit - the deployer key is discarded immediately
+after handoff completes, so there is no compromised-key window during the deploy script's own brief
+tenure that a delay would meaningfully protect against.
+
+The atomic-proxy-construction pattern documented in
+[KI-019](../security/KNOWN_ISSUES.md#ki-019--initialize-functions-have-no-access-control) closes the
+equivalent front-running concern for `initialize()` itself; this decision is the analogous reasoning one
+level up, for the admin-transfer delay specifically.
+
+The intended default admin is expected to call `changeDefaultAdminDelay` to raise the delay to an
+operationally appropriate value (the team's current target is on the order of 3-7 days) as one of its
+first actions after accepting the role, outside the deploy script. The contracts do not enforce this -
+see
+[KI-023](../security/KNOWN_ISSUES.md#ki-023--default-admin-role-transfer-delay-remains-zero-until-the-admin-raises-it-post-handoff)
+for the residual risk while it remains unset.
+
+See [ACCESS_CONTROL_MATRIX - Launch Configuration](../security/ACCESS_CONTROL_MATRIX.md#launch-configuration).

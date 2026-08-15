@@ -1070,3 +1070,41 @@ No funds are lost or become unbacked in either case — this is an operational-v
 - Adapter-resolution failures during rebalance activation are observed in practice, rather than remaining a purely theoretical operator-sequencing mistake.
 - The project decides the added state-machine complexity of a 6th typed recovery mode is worth full symmetry with the deposit-failure case.
 - CCIP's own execution-retry visibility becomes difficult for operators to monitor independently of Yieldcoin's own recovery state.
+
+---
+
+## KI-023 — Default admin role transfer delay remains zero until the admin raises it post-handoff
+
+**Status:** Accepted — operational responsibility of the incoming default admin, not enforced on-chain.
+
+**Last reviewed:** 2026-08-15
+
+**Component:** `ParentVault`, `ChildVault`, `YieldcoinShare` (`AccessControlDefaultAdminRulesUpgradeable`).
+
+### Summary
+
+Per [DD-018](../protocol/DECISIONS.md#dd-018---default-admin-role-transfer-delay-starts-at-zero-to-support-deploy-script-bootstrapping), the three upgradeable contracts holding or minting/burning user funds (`ParentVault`, `ChildVault`, `YieldcoinShare`) initialize their default-admin transfer delay to zero, so the deploy script can hand off `DEFAULT_ADMIN_ROLE` from the deployer EOA to the configured default admin without waiting out a delay first.
+
+That zero delay is not automatically raised by the contracts themselves. Until the incoming default admin calls `changeDefaultAdminDelay(newDelay)` — expected to be one of its first actions after accepting the role, targeting roughly 3-7 days — any `beginDefaultAdminTransfer`/`acceptDefaultAdminTransfer` pair on any of these three contracts completes with no delay and no window for `cancelDefaultAdminTransfer()` to be used in response.
+
+### Why this is accepted, not enforced on-chain
+
+Enforcing a nonzero delay in the contracts themselves would reintroduce the exact deploy-script bootstrapping problem [DD-018](../protocol/DECISIONS.md#dd-018---default-admin-role-transfer-delay-starts-at-zero-to-support-deploy-script-bootstrapping) avoids: the deployer-to-admin handoff itself would have to wait out that delay, since the delay applies to every transfer, not only ones initiated after some hypothetical "launch complete" marker the contracts have no way to observe. There is no on-chain signal available to distinguish "this is the one-time deploy handoff" from "this is a later, potentially adversarial transfer" — the contracts intentionally do not try to guess, and instead rely on the incoming admin to raise the delay themselves once they hold the role.
+
+### Residual risk
+
+Between the deploy-script handoff completing and the default admin calling `changeDefaultAdminDelay`, a compromised `DEFAULT_ADMIN_ROLE` key on any of the three contracts can complete a hostile transfer instantly, with no cancellation window. If the admin never raises the delay at all, this window is indefinite rather than transient.
+
+This is bounded by the same operator-trust assumption already accepted in [KI-001](#ki-001--centralized-trust-in-privileged-operatoradmin-roles) (`DEFAULT_ADMIN_ROLE` is held behind a multisig with qualified signers) — a zero delay narrows the response window if that multisig is compromised, but does not itself grant any authority the multisig didn't already have. `DEFAULT_ADMIN_ROLE` alone administers roles only ([AC-001](./INVARIANTS.md#access-control)); it has no recurring operational authority unless separately granted an operational role, so a hostile transfer's immediate blast radius is role administration, not direct fund movement.
+
+### Operational mitigations
+
+- The incoming default admin raises the delay via `changeDefaultAdminDelay` on all three contracts (`ParentVault`, `ChildVault`, `YieldcoinShare`) as one of its first post-handoff actions, targeting a value in the 3-7 day range.
+- Monitor `DefaultAdminTransferScheduled`/`DefaultAdminDelayChangeScheduled` events (emitted by `AccessControlDefaultAdminRulesUpgradeable`) on all three contracts from deployment onward, so any transfer attempted before the delay is raised is visible immediately, not discovered after the fact.
+- Treat the delay-raise transaction as part of the launch runbook, not a follow-up task — verify it has landed before treating deployment as complete.
+
+### Conditions that would warrant revisiting
+
+- The delay-raise step is observed being skipped or delayed in practice across deployments.
+- OpenZeppelin's `AccessControlDefaultAdminRules` exposes a way to set a nonzero delay that takes effect only after a distinguishable "deployment complete" signal, removing the bootstrapping conflict this entry currently accepts.
+- `DEFAULT_ADMIN_ROLE` is ever granted additional recurring operational authority beyond role administration, which would raise the blast radius of a zero-delay-window compromise beyond what [KI-001](#ki-001--centralized-trust-in-privileged-operatoradmin-roles) already bounds.

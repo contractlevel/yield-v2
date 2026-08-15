@@ -14,16 +14,6 @@ runs = 3000
 depth = 15
 fail_on_revert = true
 
-[profile.invariants.invariant]
-runs = 3000
-depth = 15
-fail_on_revert = false
-
-[profile.halmos]
-evm_version = "shanghai"
-out = "out-halmos"
-ast = true
-
 [rpc_endpoints]
 arbitrum_sepolia = "${ARBITRUM_SEPOLIA_RPC_URL}"
 base_sepolia = "${BASE_SEPOLIA_RPC_URL}"

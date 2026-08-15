@@ -230,23 +230,6 @@ invariant CFG_zeroProtocolIsNeverSupported()
     filtered {
         f -> isInvariantPreservationMethod(f)
     }
-
-/// @notice ParentVault's immutable chain selector is nonzero
-/// @dev Supporting configuration invariant for rebalance and CCIP destination validation.
-invariant CFG_parentChainSelectorIsNonzero()
-    getThisChainSelector() != 0
-    filtered {
-        f -> isInvariantPreservationMethod(f)
-    }
-
-/// @notice Chain selector zero is never registered as a cross-chain vault
-/// @dev Supporting configuration invariant for rebalance target-chain validation. Zero is the
-///      unset sentinel and BaseVaultConfigLib rejects it as a setter key.
-invariant CFG_zeroChainSelectorIsUnregistered()
-    getCrosschainVault(0) == 0
-    filtered {
-        f -> isInvariantPreservationMethod(f)
-    }
     {
         preserved initialize(
             BaseVault.InitParams params,
@@ -263,6 +246,23 @@ invariant CFG_zeroChainSelectorIsUnregistered()
         preserved setSupportedProtocol(bytes32 protocolId, bool isSupported) with (env e) {
             require protocolId != to_bytes32(0);
         }
+    }
+
+/// @notice ParentVault's immutable chain selector is nonzero
+/// @dev Supporting configuration invariant for rebalance and CCIP destination validation.
+invariant CFG_parentChainSelectorIsNonzero()
+    getThisChainSelector() != 0
+    filtered {
+        f -> isInvariantPreservationMethod(f)
+    }
+
+/// @notice Chain selector zero is never registered as a cross-chain vault
+/// @dev Supporting configuration invariant for rebalance target-chain validation. Zero is the
+///      unset sentinel and BaseVaultConfigLib rejects it as a setter key.
+invariant CFG_zeroChainSelectorIsUnregistered()
+    getCrosschainVault(0) == 0
+    filtered {
+        f -> isInvariantPreservationMethod(f)
     }
 
 /// @notice A persisted rebalance always has a nonempty pending strategy
@@ -916,7 +916,6 @@ invariant SHARE_001_SHARE_003_totalSupplyReconcilesWithTotalShares()
 
 /// @dev SOLV-001's directly executable closeEpoch preservation is decomposed by settlement branch
 ///      because combining the zero-flow and net-deposit paths causes prohibitive path explosion.
-/// @dev This is timing-out.
 rule SOLV_001_closeEpochPreservesBacking_ZeroNetFlow(env e, uint256 tvl) {
     requireInvariant SOLV_001_parentCoversReservedLiquidObligations();
     uint256 epochNonce = getEpochNonce();

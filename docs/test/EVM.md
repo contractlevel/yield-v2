@@ -92,12 +92,13 @@ recon fuzz . \
 ```
 
 ```
-FOUNDRY_PROFILE=halmos forge build
 halmos --contract ClaimSolvency --forge-build-out out-halmos --function check_ \
          --solver-timeout-branching 10000 --solver-timeout-assertion 30000
 ```
 
 ## Certora
+
+_Note: Some of the ParentVault rules require ParentVault::\_finalizeRebalance and \_finalizeLocalToLocalRebalance to be virtual_
 
 ```
 certoraRun ./certora/conf/modules/AdapterRegistry.conf
@@ -142,15 +143,6 @@ certoraRun certora/conf/vaults/ParentVault.invariants.conf
 deposit and withdrawal calls. Keep this mutable-storage link out of the shared ParentVault
 configurations. The shared rules conf excludes these rules so they are verified only by the
 dedicated target.
-
-certoraRun certora/conf/vaults/ParentVault.conf --rule SOLV_001_parentCoversClaimableWithdrawObligations SOLV_003_shareEscrowAttributableToWithdrawIntents SHARE_001_totalSupplyReconcilesWithTotalShares
-
-certoraRun certora/conf/vaults/ParentVault.conf --rule EPOCH_009_epochDepositCountersReachZeroTogether EPOCH_011_epochWithdrawCountersStayBounded EPOCH_012_epochWithdrawCountersReachZeroTogether
-
-certoraRun certora/conf/vaults/ParentVault.conf --rule epochRemainingCountersAreZeroBeforeClose EPOCH_008_epochDepositCountersStayBounded
-certoraRun certora/conf/vaults/ParentVault.conf --rule EPOCH_001_currentEpochIsOpen epochsBeyondCurrentAreNeverTouched
-certoraRun certora/conf/vaults/ParentVault.conf --rule epochNonceIsNeverZero recoveryModeIsRestrictedToRebalanceDeposit
-
 ```
 
 ---
