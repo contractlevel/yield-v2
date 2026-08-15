@@ -455,6 +455,8 @@ hook Sstore currentContract.ext_yieldcoin_storage_ChildVault.s_ccipSendRecovery.
 }
 
 hook Sstore currentContract.ext_yieldcoin_storage_ChildVault.s_ccipSendRecovery.destinationChainSelector uint64 newValue {
+    // destinationChainSelector shares a packed slot with ccipTxType. Storing the full recovery struct
+    // writes this slot once for each packed member, so recovery-store paths trigger this hook twice.
     ghost_ccipSendRecovery_destinationChainSelector_StoreCount = ghost_ccipSendRecovery_destinationChainSelector_StoreCount + 1;
     ghost_ccipSendRecovery_destinationChainSelector_StoredValue = newValue;
 }
@@ -2783,7 +2785,7 @@ rule CCIP_005_REC_002_REC_009_ccipSend_When_RouterGetFeeReverts_StoresRecovery()
     assert ghost_CcipSendRecoveryStored_Param_amount == bridgeAmount;
     assert ghost_ccipSendRecovery_amount_StoreCount == 1;
     assert ghost_ccipSendRecovery_amount_StoredValue == bridgeAmount;
-    assert ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 1;
+    assert ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 2;
     assert ghost_ccipSendRecovery_destinationChainSelector_StoredValue == destinationChainSelector;
     assert ghost_ccipSendRecovery_nonce_StoreCount == 1;
     assert ghost_ccipSendRecovery_protocolId_StoreCount == 1;
@@ -2852,7 +2854,7 @@ rule CCIP_005_REC_002_REC_009_ccipSend_When_RouterCcipSendReverts_StoresRecovery
     assert ghost_CcipSendRecoveryStored_Param_amount == bridgeAmount;
     assert ghost_ccipSendRecovery_amount_StoreCount == 1;
     assert ghost_ccipSendRecovery_amount_StoredValue == bridgeAmount;
-    assert ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 1;
+    assert ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 2;
     assert ghost_ccipSendRecovery_destinationChainSelector_StoredValue == destinationChainSelector;
     assert ghost_ccipSendRecovery_nonce_StoreCount == 1;
     assert ghost_ccipSendRecovery_protocolId_StoreCount == 1;
@@ -3407,7 +3409,7 @@ rule CCIP_005_NONCE_005_NONCE_006_REC_002_REC_009_executeEpochWithdraw_When_Rout
     assert ghost_CcipSendRecoveryStored_Param_amount == amountOut;
     assert ghost_ccipSendRecovery_amount_StoreCount == 1;
     assert ghost_ccipSendRecovery_amount_StoredValue == amountOut;
-    assert ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 1;
+    assert ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 2;
     assert ghost_ccipSendRecovery_destinationChainSelector_StoredValue == getParentChainSelector();
     assert ghost_ccipSendRecovery_nonce_StoreCount == 1;
     assert ghost_ccipSendRecovery_nonce_StoredValue == epochNonce;
@@ -3497,7 +3499,7 @@ rule CCIP_005_NONCE_005_NONCE_006_REC_002_REC_009_executeEpochWithdraw_When_Rout
     assert ghost_CcipSendRecoveryStored_Param_amount == amountOut;
     assert ghost_ccipSendRecovery_amount_StoreCount == 1;
     assert ghost_ccipSendRecovery_amount_StoredValue == amountOut;
-    assert ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 1;
+    assert ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 2;
     assert ghost_ccipSendRecovery_destinationChainSelector_StoredValue == getParentChainSelector();
     assert ghost_ccipSendRecovery_nonce_StoreCount == 1;
     assert ghost_ccipSendRecovery_nonce_StoredValue == epochNonce;
@@ -4165,7 +4167,7 @@ rule CCIP_005_REC_001_REC_002_REC_004_REC_009_executeRecovery_REBALANCE_WITHDRAW
     assert ghost_rebalanceWithdrawRecovery_chainSelector_StoredValue == 0;
     assert ghost_ccipSendRecovery_amount_StoreCount == 1;
     assert ghost_ccipSendRecovery_amount_StoredValue == amountRebalanced;
-    assert ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 1;
+    assert ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 2;
     assert ghost_ccipSendRecovery_destinationChainSelector_StoredValue == recovery.strategy.chainSelector;
     assert ghost_ccipSendRecovery_nonce_StoreCount == 1;
     assert ghost_ccipSendRecovery_nonce_StoredValue == recovery.rebalanceNonce;
@@ -4268,7 +4270,7 @@ rule CCIP_005_REC_001_REC_002_REC_004_REC_009_executeRecovery_REBALANCE_WITHDRAW
     assert ghost_CcipSendRecoveryStored_Param_amount == amountRebalanced;
     assert ghost_ccipSendRecovery_amount_StoreCount == 1;
     assert ghost_ccipSendRecovery_amount_StoredValue == amountRebalanced;
-    assert ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 1;
+    assert ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 2;
     assert ghost_ccipSendRecovery_destinationChainSelector_StoredValue == recovery.strategy.chainSelector;
     assert ghost_ccipSendRecovery_nonce_StoreCount == 1;
     assert ghost_ccipSendRecovery_nonce_StoredValue == recovery.rebalanceNonce;
@@ -5024,7 +5026,7 @@ rule CCIP_005_NONCE_005_NONCE_006_REC_002_REC_009_executeRebalance_Remote_When_R
     assert ghost_activeProtocolAdapter_StoredValue == 0;
     assert ghost_ccipSendRecovery_amount_StoreCount == 1;
     assert ghost_ccipSendRecovery_amount_StoredValue == amountRebalanced;
-    assert ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 1;
+    assert ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 2;
     assert ghost_ccipSendRecovery_destinationChainSelector_StoredValue == newStrategy.chainSelector;
     assert ghost_ccipSendRecovery_nonce_StoreCount == 1;
     assert ghost_ccipSendRecovery_nonce_StoredValue == rebalanceNonce;
@@ -5112,7 +5114,7 @@ rule CCIP_005_NONCE_005_NONCE_006_REC_002_REC_009_executeRebalance_Remote_When_R
     assert ghost_activeProtocolAdapter_StoredValue == 0;
     assert ghost_ccipSendRecovery_amount_StoreCount == 1;
     assert ghost_ccipSendRecovery_amount_StoredValue == amountRebalanced;
-    assert ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 1;
+    assert ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 2;
     assert ghost_ccipSendRecovery_destinationChainSelector_StoredValue == newStrategy.chainSelector;
     assert ghost_ccipSendRecovery_nonce_StoreCount == 1;
     assert ghost_ccipSendRecovery_nonce_StoredValue == rebalanceNonce;
@@ -5506,7 +5508,7 @@ rule CCIP_005_REC_001_REC_002_REC_004_REC_009_executeRecovery_EPOCH_WITHDRAW_Whe
     assert ghost_epochWithdrawRecovery_amount_StoredValue == 0;
     assert ghost_ccipSendRecovery_amount_StoreCount == 1;
     assert ghost_ccipSendRecovery_amount_StoredValue == amountOut;
-    assert ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 1;
+    assert ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 2;
     assert ghost_ccipSendRecovery_destinationChainSelector_StoredValue == getParentChainSelector();
     assert ghost_ccipSendRecovery_nonce_StoreCount == 1;
     assert ghost_ccipSendRecovery_nonce_StoredValue == recovery.epochNonce;
@@ -5601,7 +5603,7 @@ rule CCIP_005_REC_001_REC_002_REC_004_REC_009_executeRecovery_EPOCH_WITHDRAW_Whe
     assert ghost_epochWithdrawRecovery_amount_StoredValue == 0;
     assert ghost_ccipSendRecovery_amount_StoreCount == 1;
     assert ghost_ccipSendRecovery_amount_StoredValue == amountOut;
-    assert ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 1;
+    assert ghost_ccipSendRecovery_destinationChainSelector_StoreCount == 2;
     assert ghost_ccipSendRecovery_destinationChainSelector_StoredValue == getParentChainSelector();
     assert ghost_ccipSendRecovery_nonce_StoreCount == 1;
     assert ghost_ccipSendRecovery_nonce_StoredValue == recovery.epochNonce;

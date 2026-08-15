@@ -126,6 +126,8 @@ certoraRun certora/conf/libraries/ParentVaultFeesLib.conf
 certoraRun certora/conf/libraries/ParentVaultRebalanceLib.conf
 certoraRun certora/conf/libraries/ParentVaultUserEpochLib.conf
 
+// Some of the ParentVault rules require ParentVault::_finalizeRebalance and _finalizeLocalToLocalRebalance to be virtual
+
 certoraRun certora/conf/vaults/ChildVault.BaseVault.conf
 certoraRun certora/conf/vaults/ParentVault.BaseVault.conf
 
