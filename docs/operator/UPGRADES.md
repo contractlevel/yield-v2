@@ -1,6 +1,6 @@
 # Upgrades
 
-This runbook covers UUPS upgrades of `ParentVault`, `ChildVault`, and `YieldcoinShare`. Production upgrades must be executed through the protocol operator's OpenZeppelin `TimelockController`.
+This runbook covers UUPS upgrades of `ParentVault`, `ChildVault`, and `YieldcoinShare`. Production upgrades must be executed through the upgrade-authority `TimelockController` — the instance intended to hold `UPGRADER_ROLE` (see [`ACCESS_CONTROL_MATRIX`](../security/ACCESS_CONTROL_MATRIX.md), target configuration, not yet finalized). This is a separate `TimelockController` instance from the one intended for `DEFAULT_ADMIN_ROLE`.
 
 The timelock must hold `UPGRADER_ROLE` on each vault and on `YieldcoinShare`. `YieldcoinShare` uses
 role-based access control rather than ownership; its default-admin authority is separate from
@@ -18,7 +18,7 @@ role-based access control rather than ownership; its default-admin authority is 
 
 - Validate storage-layout compatibility against the currently deployed implementation.
 - Confirm ERC-7201 storage namespaces have not changed or collided.
-- Confirm the new implementation's immutable asset, router, registry, chain selector, share token, and parent selector values match the target proxy.
+- Confirm the new implementation's immutable LINK token, underlying asset, CCIP router, adapter registry, local chain selector, ParentVault share token, and ChildVault parent-chain selector values match the target proxy.
 - Confirm implementation contracts cannot be initialized directly.
 - Do not call the original initializer again. An upgrade must preserve the state already initialized and subsequently updated through the proxy, including roles or ownership, configuration, accounting, pause state, and lifecycle state.
 - In particular, do not reset ParentVault epoch or rebalance nonces to `1`, reopen an initialized epoch, reset completion timestamps, clear recovery state, or reset ChildVault handled-nonce high-water marks.

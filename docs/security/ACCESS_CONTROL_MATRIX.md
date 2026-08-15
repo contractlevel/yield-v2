@@ -10,16 +10,21 @@ authorization layer.
 - User vault actions are permissionless while the ParentVault is unpaused.
 - UUPS upgrades require `UPGRADER_ROLE`.
 - Recovery execution is permissionless and uses previously stored recovery data.
+- `DEFAULT_ADMIN_ROLE` and `UPGRADER_ROLE` are each intended to be held directly by their own
+  `TimelockController` instance, with the corresponding multisig as that timelock's
+  proposer/executor rather than the direct role holder. **This role-holder configuration is a
+  target for the production deployment, not yet finalized, and subject to change before
+  mainnet launch** — see [`UPGRADES`](../operator/UPGRADES.md) for the upgrade runbook.
 
 ## Roles
 
-| Role                           | Held by                        | Authority                                                                                                                     |
+| Role                           | Intended holder                        | Authority                                                                                                                     |
 | ------------------------------ | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| `DEFAULT_ADMIN_ROLE`           | Multisig A                     | Grant and revoke roles; manage the two-step default-admin transfer. On ParentVault, also set the initial active adapter once. |
-| `UPGRADER_ROLE`                | Multisig B                     | Authorize UUPS upgrades to YieldcoinShare, ParentVault, or ChildVault.                                                        |
+| `DEFAULT_ADMIN_ROLE`           | TimelockController controlled by Multisig A (target, unconfirmed) | Grant and revoke roles; manage the two-step default-admin transfer. On ParentVault, also set the initial active adapter once. |
+| `UPGRADER_ROLE`                | TimelockController controlled by Multisig B (target, unconfirmed) | Authorize UUPS upgrades to YieldcoinShare, ParentVault, or ChildVault.                                                        |
 | `PAUSER_ROLE`                  | Hardware wallet and Multisig C | Pause YieldcoinShare, a vault, or WorkflowRouter.                                                                             |
 | `UNPAUSER_ROLE`                | Multisig C                     | Unpause YieldcoinShare, a vault, or WorkflowRouter.                                                                           |
-| `CONFIG_OPERATOR_ROLE`         | Multisig C                     | Update token, vault, and router configuration; register, replace, or remove protocol adapters in AdapterRegistry.             |
+| `CONFIG_OPERATOR_ROLE`         | Multisig C (target, unconfirmed) | Update token, vault, and router configuration; register, replace, or remove protocol adapters in AdapterRegistry.             |
 | `EPOCH_OPERATOR_ROLE`          | WorkflowRouter                 | Execute vault epoch operations.                                                                                               |
 | `REBALANCE_OPERATOR_ROLE`      | WorkflowRouter                 | Execute vault rebalance operations.                                                                                           |
 | `LINK_OPERATOR_ROLE`           | Multisig C                     | Withdraw LINK from a vault.                                                                                                   |

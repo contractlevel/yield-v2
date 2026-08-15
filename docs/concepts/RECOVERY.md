@@ -12,7 +12,7 @@ On [`ParentVault`](../../evm/src/vaults/ParentVault.sol), the only active recove
 
 Other parent-chain failures generally revert atomically. In those cases, no cross-chain state has escaped and the transaction can leave clean state without storing recovery.
 
-On [`ChildVault`](../../evm/src/vaults/ChildVault.sol), more recovery modes are needed because the child is acting after cross-chain epoch or rebalance state already exists. At that point the original parent-chain action cannot be cleanly reverted, so failed child strategy deposits, child strategy withdraws, rebalance withdraws, and child-originated CCIP sends store recovery state for retry.
+On [`ChildVault`](../../evm/src/vaults/ChildVault.sol), more recovery modes are needed because the child is acting after cross-chain epoch or rebalance state already exists. At that point the original parent-chain action cannot be cleanly reverted, so failed child strategy deposits, child strategy withdraws, rebalance deposits, rebalance withdraws, and child-originated CCIP sends store recovery state for retry.
 
 ## Monitoring And Execution
 

@@ -170,7 +170,7 @@ Both old and new strategy are on Parent chain. Different protocols.
 
 - **CRE cron reads** the current parent rebalance nonce and triggers `parent.initiateRebalance(expectedRebalanceNonce, newStrategy)`.
 
-- Guards: state == NONE, no recovery pending, MIN_REBALANCE_PERIOD cooldown elapsed since the last completed rebalance, at least one epoch has already completed, no prior epoch EXECUTING, new strategy differs from active strategy, target chain is a supported chain, target protocol is a supported protocol.
+- Guards: no recovery pending, expected rebalance nonce matches, state == NONE, MIN_REBALANCE_PERIOD cooldown elapsed since the last completed rebalance, new strategy differs from active strategy, target chain is a supported chain, target protocol is a supported protocol, at least one epoch has already completed, no prior epoch EXECUTING.
 
 - Emits RebalanceInitiated. Because this path completes atomically, Parent does not persist
   `state = REBALANCING` or `pendingStrategy`.
@@ -201,7 +201,7 @@ Old strategy on Parent, new strategy on a Child chain.
 
 - **CRE cron reads** the current parent rebalance nonce and triggers `parent.initiateRebalance(expectedRebalanceNonce, newStrategy)`.
 
-- Guards: state == NONE, no recovery pending, MIN_REBALANCE_PERIOD cooldown elapsed since the last completed rebalance, at least one epoch has already completed, no prior epoch EXECUTING, new strategy differs from active strategy, target chain is a supported chain, target protocol is a supported protocol.
+- Guards: no recovery pending, expected rebalance nonce matches, state == NONE, MIN_REBALANCE_PERIOD cooldown elapsed since the last completed rebalance, new strategy differs from active strategy, target chain is a supported chain, target protocol is a supported protocol, at least one epoch has already completed, no prior epoch EXECUTING.
 
 - state → REBALANCING. Emits RebalanceInitiated.
 
@@ -231,7 +231,7 @@ Old strategy on a Child chain, new strategy on Parent chain.
 
 - **CRE cron reads** the current parent rebalance nonce and triggers `parent.initiateRebalance(expectedRebalanceNonce, newStrategy)`.
 
-- Guards: state == NONE, no recovery pending, MIN_REBALANCE_PERIOD cooldown elapsed since the last completed rebalance, at least one epoch has already completed, no prior epoch EXECUTING, new strategy differs from active strategy, target chain is a supported chain, target protocol is a supported protocol.
+- Guards: no recovery pending, expected rebalance nonce matches, state == NONE, MIN_REBALANCE_PERIOD cooldown elapsed since the last completed rebalance, new strategy differs from active strategy, target chain is a supported chain, target protocol is a supported protocol, at least one epoch has already completed, no prior epoch EXECUTING.
 
 - state → REBALANCING. Emits RebalanceInitiated.
 
@@ -263,7 +263,7 @@ Old and new strategy are both locally on the same Child chain. Different protoco
 
 - **CRE cron reads** the current parent rebalance nonce and triggers `parent.initiateRebalance(expectedRebalanceNonce, newStrategy)`.
 
-- Guards: state == NONE, no recovery pending, MIN_REBALANCE_PERIOD cooldown elapsed since the last completed rebalance, at least one epoch has already completed, no prior epoch EXECUTING, new strategy differs from active strategy, target chain is a supported chain, target protocol is a supported protocol.
+- Guards: no recovery pending, expected rebalance nonce matches, state == NONE, MIN_REBALANCE_PERIOD cooldown elapsed since the last completed rebalance, new strategy differs from active strategy, target chain is a supported chain, target protocol is a supported protocol, at least one epoch has already completed, no prior epoch EXECUTING.
 
 - state → REBALANCING. Emits RebalanceInitiated.
 
@@ -295,7 +295,7 @@ Old strategy on one Child A chain, new strategy on a different Child B chain.
 
 - **CRE cron reads** the current parent rebalance nonce and triggers `parent.initiateRebalance(expectedRebalanceNonce, newStrategy)`.
 
-- Guards: state == NONE, no recovery pending, MIN_REBALANCE_PERIOD cooldown elapsed since the last completed rebalance, at least one epoch has already completed, no prior epoch EXECUTING, new strategy differs from active strategy, target chain is a supported chain, target protocol is a supported protocol.
+- Guards: no recovery pending, expected rebalance nonce matches, state == NONE, MIN_REBALANCE_PERIOD cooldown elapsed since the last completed rebalance, new strategy differs from active strategy, target chain is a supported chain, target protocol is a supported protocol, at least one epoch has already completed, no prior epoch EXECUTING.
 
 - state → REBALANCING. Emits RebalanceInitiated.
 

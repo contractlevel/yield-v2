@@ -261,11 +261,11 @@ Under the current adapter set (Aave V3 / V4, Compound V3 specific-amount withdra
 
 **Last reviewed:** 2026-06-13
 
-**Component:** `ParentVault._collectManagementFee`, vault pause controls, and rebalance finalization.
+**Component:** `ParentVaultFeesLib._collectManagementFee` (invoked from `ParentVaultRebalanceLib._finalizeRebalance`), vault pause controls, and rebalance finalization.
 
 ### Summary
 
-Management fees accrue on calendar time between completed rebalances. `ParentVault._collectManagementFee` uses the elapsed time between `s_rebalance.lastRebalanceCompletedTimestamp` and the current rebalance finalization, capped at `365 days` per collection. It does not subtract time where the vault was paused.
+Management fees accrue on calendar time between completed rebalances. `ParentVaultFeesLib._collectManagementFee` uses the elapsed time between `s_rebalance.lastRebalanceCompletedTimestamp` and the current rebalance finalization, capped at `365 days` per collection. It does not subtract time where the vault was paused.
 
 This means a pause interval can contribute to the next management fee collection. The fee remains bounded by the annual management fee formula for a single collection: at the current `MANAGEMENT_FEE_BPS = 100`, no rebalance finalization can collect more than the one-year management fee amount (`ceil(totalShares * 1%)`) regardless of how long the vault was paused or how long rebalance finalization was delayed.
 
