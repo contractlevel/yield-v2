@@ -25,7 +25,9 @@ methods {
 
     // Library internal wrappers
     function deposit(address, uint256, uint256) external returns (uint256);
+    function depositFor(address, address, uint256, uint256) external returns (uint256);
     function withdraw(address, uint256) external returns (uint256);
+    function withdrawFor(address, address, uint256) external returns (uint256);
     function claimShares(address, uint256) external returns (uint256);
     function claimAsset(address, uint256) external returns (uint256);
     function cancelDeposit(address) external;
@@ -533,6 +535,56 @@ rule EPOCH_005_deposit_Success() {
     assert ghost_DepositSubmitted_Param_amount == amount;
 }
 
+/// @notice Depositing for a beneficiary debits the payer while crediting only the beneficiary's epoch position.
+/// @dev Verifies the payer/beneficiary separation introduced by depositFor.
+rule EPOCH_005_depositFor_Success_DebitsPayerAndCreditsBeneficiary() {
+    env e;
+    address payer;
+    address beneficiary;
+    uint256 amount;
+    uint256 minDepositAmount;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "depositFor is nonpayable";
+    require amount >= minDepositAmount, "amount meets minimum";
+
+    uint256 epochNonce = getEpochNonce();
+    uint256 beneficiaryDepositBefore = getDeposit(beneficiary, epochNonce);
+    uint256 payerDepositBefore = getDeposit(payer, epochNonce);
+    uint256 totalDepositBefore = getEpochTotalDepositAmount(epochNonce);
+    uint256 payerBalanceBefore = asset.balanceOf(payer);
+    uint256 vaultBalanceBefore = asset.balanceOf(currentContract);
+
+    /// @dev success conditions being verified
+    require payer != beneficiary, "payer and beneficiary are distinct";
+    require payer != currentContract, "payer is not the vault";
+    require beneficiary != currentContract, "beneficiary is not the vault";
+    require beneficiary != 0, "beneficiary is not zero";
+    require getEpochStatus(epochNonce) == Types.EpochStatus.OPEN, "epoch is open";
+    require beneficiaryDepositBefore <= max_uint256 - amount, "beneficiary deposit addition does not overflow";
+    require totalDepositBefore <= max_uint256 - amount, "epoch total deposit addition does not overflow";
+    require payerBalanceBefore >= amount, "payer has enough asset";
+    require vaultBalanceBefore <= max_uint256 - amount, "vault asset balance does not overflow";
+    require asset.allowance(payer, currentContract) >= amount, "payer approved the vault to transfer asset";
+
+    /// @dev ghost starting values
+    require ghost_DepositSubmitted_EventCount == 0, "DepositSubmitted event count starts at zero";
+
+    uint256 returnedEpochNonce = depositFor@withrevert(e, payer, beneficiary, amount, minDepositAmount);
+
+    assert !lastReverted;
+    assert returnedEpochNonce == epochNonce;
+    assert getDeposit(beneficiary, epochNonce) == beneficiaryDepositBefore + amount;
+    assert getDeposit(payer, epochNonce) == payerDepositBefore;
+    assert getEpochTotalDepositAmount(epochNonce) == totalDepositBefore + amount;
+    assert asset.balanceOf(payer) == payerBalanceBefore - amount;
+    assert asset.balanceOf(currentContract) == vaultBalanceBefore + amount;
+    assert ghost_DepositSubmitted_EventCount == 1;
+    assert ghost_DepositSubmitted_Param_epochNonce == epochNonce;
+    assert ghost_DepositSubmitted_Param_depositor == beneficiary;
+    assert ghost_DepositSubmitted_Param_amount == amount;
+}
+
 /// ─────────────────── WITHDRAW ───────────────────────────────
 
 /// @notice Withdrawing reverts when share burn amount is zero.
@@ -719,6 +771,58 @@ rule EPOCH_005_withdraw_Success() {
     assert ghost_WithdrawSubmitted_EventCount == 1;
     assert ghost_WithdrawSubmitted_Param_epochNonce == epochNonce;
     assert ghost_WithdrawSubmitted_Param_withdrawer == user;
+    assert ghost_WithdrawSubmitted_Param_shareBurnAmount == shareBurnAmount;
+}
+
+/// @notice Withdrawing for a beneficiary debits the payer while crediting only the beneficiary's epoch position.
+/// @dev Verifies the payer/beneficiary separation introduced by withdrawFor.
+rule EPOCH_005_withdrawFor_Success_DebitsPayerAndCreditsBeneficiary() {
+    env e;
+    address payer;
+    address beneficiary;
+    uint256 shareBurnAmount;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "withdrawFor is nonpayable";
+    require shareBurnAmount != 0, "share burn amount is nonzero";
+
+    uint256 epochNonce = getEpochNonce();
+    uint256 beneficiaryWithdrawBefore = getWithdraw(beneficiary, epochNonce);
+    uint256 payerWithdrawBefore = getWithdraw(payer, epochNonce);
+    uint256 totalShareBurnBefore = getEpochTotalShareBurnAmount(epochNonce);
+    uint256 payerBalanceBefore = share.balanceOf(payer);
+    uint256 vaultBalanceBefore = share.balanceOf(currentContract);
+
+    /// @dev success conditions being verified
+    require payer != beneficiary, "payer and beneficiary are distinct";
+    require payer != currentContract, "payer is not the vault";
+    require beneficiary != currentContract, "beneficiary is not the vault";
+    require beneficiary != 0, "beneficiary is not zero";
+    require getEpochStatus(epochNonce) == Types.EpochStatus.OPEN, "epoch is open";
+    require beneficiaryWithdrawBefore <= max_uint256 - shareBurnAmount,
+        "beneficiary withdraw addition does not overflow";
+    require totalShareBurnBefore <= max_uint256 - shareBurnAmount,
+        "epoch total share burn addition does not overflow";
+    require payerBalanceBefore >= shareBurnAmount, "payer has enough shares";
+    require vaultBalanceBefore <= max_uint256 - shareBurnAmount, "vault share balance does not overflow";
+    require share.allowance(payer, currentContract) >= shareBurnAmount,
+        "payer approved the vault to transfer shares";
+
+    /// @dev ghost starting values
+    require ghost_WithdrawSubmitted_EventCount == 0, "WithdrawSubmitted event count starts at zero";
+
+    uint256 returnedEpochNonce = withdrawFor@withrevert(e, payer, beneficiary, shareBurnAmount);
+
+    assert !lastReverted;
+    assert returnedEpochNonce == epochNonce;
+    assert getWithdraw(beneficiary, epochNonce) == beneficiaryWithdrawBefore + shareBurnAmount;
+    assert getWithdraw(payer, epochNonce) == payerWithdrawBefore;
+    assert getEpochTotalShareBurnAmount(epochNonce) == totalShareBurnBefore + shareBurnAmount;
+    assert share.balanceOf(payer) == payerBalanceBefore - shareBurnAmount;
+    assert share.balanceOf(currentContract) == vaultBalanceBefore + shareBurnAmount;
+    assert ghost_WithdrawSubmitted_EventCount == 1;
+    assert ghost_WithdrawSubmitted_Param_epochNonce == epochNonce;
+    assert ghost_WithdrawSubmitted_Param_withdrawer == beneficiary;
     assert ghost_WithdrawSubmitted_Param_shareBurnAmount == shareBurnAmount;
 }
 
