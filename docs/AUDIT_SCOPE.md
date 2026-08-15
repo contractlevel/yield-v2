@@ -4,6 +4,17 @@
 
 Only the Solidity source files in [`evm/src/`](../evm/src/) are in scope for this audit.
 
+Auditors should review the following documents as part of the audit context:
+
+- [`security/KNOWN_ISSUES.md`](./security/KNOWN_ISSUES.md) lists known and accepted issues.
+- [`protocol/DECISIONS.md`](./protocol/DECISIONS.md) records intentional design decisions and
+  tradeoffs.
+
+Behavior already disclosed and accepted in those documents should not be reported as a new finding
+solely because that documented behavior exists. Undisclosed variants, incorrect assumptions,
+greater-than-documented impact, and issues introduced by the implementation remain in scope for
+review.
+
 ## Out of Scope
 
 Everything outside `evm/src/` is out of scope, including:
@@ -14,9 +25,10 @@ Everything outside `evm/src/` is out of scope, including:
 - `evm/script/`
 - documentation, deployment configuration, and external dependencies
 
-Out-of-scope files may be referenced for context, but they are not authoritative descriptions of
-the in-scope contracts. If any out-of-scope material conflicts with `evm/src/`, the implementation
-in `evm/src/` is authoritative.
+Out-of-scope files may be referenced for context, but they do not expand the code audit scope beyond
+`evm/src/`. The contracts in `evm/src/` define the implemented behavior. `KNOWN_ISSUES.md` and
+`DECISIONS.md` document the team's intended behavior, accepted risks, and design rationale. Any
+inconsistency between those documents and `evm/src/` should be raised for clarification.
 
 ## CRE Notice
 
