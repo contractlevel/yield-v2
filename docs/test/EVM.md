@@ -131,6 +131,8 @@ certoraRun certora/conf/vaults/ParentVault.BaseVault.conf
 certoraRun certora/conf/vaults/ChildVault.rules.conf
 certoraRun certora/conf/vaults/ChildVault.invariants.conf
 
+// Some of the ParentVault rules require ParentVault::_finalizeRebalance and _finalizeLocalToLocalRebalance to be virtual
+
 certoraRun certora/conf/vaults/ParentVault.rules.conf
 certoraRun certora/conf/vaults/ParentVault.localAdapter.conf
 certoraRun certora/conf/vaults/ParentVault.invariants.conf

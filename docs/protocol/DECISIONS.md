@@ -99,7 +99,7 @@ Share price, TVL, epoch settlement, withdraw claims, and fees are all expressed 
 
 Secondary protocol rewards are outside this accounting model. Adapters may accrue rewards from protocol-native controllers, external distributors such as Merkl, partner programs, or similar incentive systems. These rewards are not included in TVL or user entitlements and may remain unclaimed, expire, or become unrecoverable.
 
-For Compound V3, COMP rewards may accrue to the `CompoundV3Adapter`, and a vault `REWARDS_OPERATOR_ROLE` holder can call `claimRewards(to)` to claim supported rewards to a nonzero recipient. This is a best-effort, protocol-specific custody/recovery hook, not a user distribution mechanism or a guarantee that secondary rewards are supported consistently across adapters.
+For Compound V3, COMP rewards may accrue to the `CompoundV3Adapter`, and a vault `REWARDS_OPERATOR_ROLE` holder can call `claimRewards(to)` to claim supported rewards to a nonzero recipient. This is a best-effort, protocol-specific custody/recovery hook, not a user distribution mechanism or a guarantee that secondary rewards are supported consistently across adapters. `claimRewards` guards against sweeping the vault's underlying asset or the Comet market's own transferable base-asset balance disguised as a reward token, but this is a defensive precaution against a specific misconfiguration, not a completeness guarantee over reward handling generally - consistent with the rest of this decision, an edge case in reward-token identity that falls outside this guard is accepted, not chased.
 
 The protocol does not decide whether claimed rewards are retained, sold, manually distributed, or routed into a future rewards distributor. Supporting secondary rewards consistently would require protocol-specific integrations, reward-token accounting, distribution policy, and operational controls. The current design deliberately avoids that complexity and keeps user-facing yield calculations underlying-only.
 
@@ -214,5 +214,3 @@ correctness benefit.
 
 See [AaveV3Adapter](../../evm/src/modules/adapters/AaveV3Adapter.sol) and
 [AaveV4Adapter](../../evm/src/modules/adapters/AaveV4Adapter.sol).
-
-<!-- any extra yield beyond the apyBase, such as comet rewards is not cared for. we account for some as an extra precaution, but it is not a system priority, if some of it gets stranded, we dont care -->

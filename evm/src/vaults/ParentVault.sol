@@ -378,6 +378,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /// @dev Reverts if the scaled TVL-to-share ratio rounds down to zero
     /// @dev Reverts if shares are submitted for withdrawal while the authoritative share supply is zero
     /// @dev Reverts if deposit settlement would allocate zero shares to a minimum-size deposit
+    /// @dev Reverts if the epoch's total deposit or total withdraw amount cannot be safely cast to int256
     /// @dev Requires any local strategy or CCIP interaction selected by the net-flow branch to succeed
     /// @dev The preceding-epoch guard prevents claims and strategy changes while a remote epoch remains executing
     /// @dev If a remote strategy withdrawal fails, users cannot claim until recovery succeeds on the ChildVault

@@ -5,6 +5,7 @@ import {ParentVaultStore} from "../../vaults/ParentVaultStore.sol";
 import {IParentVault} from "../../interfaces/vaults/IParentVault.sol";
 import {ParentVaultMathLib} from "./ParentVaultMathLib.sol";
 import {Types} from "../Types.sol";
+import {SafeCastLib} from "@solady/utils/SafeCastLib.sol";
 
 /// @title Yieldcoin v2 ParentVault epoch lifecycle logic library
 /// @author @contractlevel
@@ -12,14 +13,16 @@ import {Types} from "../Types.sol";
 /// @dev Public library functions are linked by Solidity and execute by DELEGATECALL in the ParentVault context
 library ParentVaultEpochLib {
     /*//////////////////////////////////////////////////////////////
+                           TYPE DECLARATIONS
+    //////////////////////////////////////////////////////////////*/
+    using SafeCastLib for uint256;
+
+    /*//////////////////////////////////////////////////////////////
                                CONSTANTS
     //////////////////////////////////////////////////////////////*/
     /// @dev Minimum time an epoch must be open
     uint256 internal constant MIN_EPOCH_PERIOD = 1 hours;
 
-    /*//////////////////////////////////////////////////////////////
-                           TYPE DECLARATIONS
-    //////////////////////////////////////////////////////////////*/
     /// @notice The action ParentVault must take after closeEpoch settles net flow
     /// @param NONE No external action because deposits and withdraws netted to zero
     /// @param DEPOSIT_TO_LOCAL_STRATEGY Deposit the positive net flow into the local active strategy
@@ -105,6 +108,7 @@ library ParentVaultEpochLib {
     /// @dev Reverts if TVL is zero while shares are outstanding or the scaled TVL-to-share ratio is zero
     /// @dev Reverts if shares are submitted for withdrawal while the authoritative share supply is zero
     /// @dev Reverts if deposit settlement would allocate zero shares to a minimum-size deposit
+    /// @dev Reverts if totalDepositAmount or totalWithdraw cannot be safely cast to int256
     function closeEpoch(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 expectedEpochNonce,
@@ -138,6 +142,7 @@ library ParentVaultEpochLib {
     /// @dev Reverts if TVL is zero while shares are outstanding or the scaled TVL-to-share ratio is zero
     /// @dev Reverts if shares are submitted for withdrawal while the authoritative share supply is zero
     /// @dev Reverts if deposit settlement would allocate zero shares to a minimum-size deposit
+    /// @dev Reverts if totalDepositAmount or totalWithdraw cannot be safely cast to int256
     function _closeEpoch(
         ParentVaultStore.ParentVaultStorage storage $,
         uint256 expectedEpochNonce,
@@ -207,9 +212,7 @@ library ParentVaultEpochLib {
             );
         }
 
-        // Unchecked int256 cast: sign-flip requires either operand to exceed type(int256).max, unreachable for
-        // any real ERC-20 total supply.
-        accounting.netFlow = int256(accounting.totalDepositAmount) - int256(accounting.totalWithdraw);
+        accounting.netFlow = accounting.totalDepositAmount.toInt256() - accounting.totalWithdraw.toInt256();
         if (
             accounting.totalDepositAmount != 0
                 && accounting.newShares * params.minDepositAmount < accounting.totalDepositAmount

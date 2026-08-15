@@ -4770,7 +4770,7 @@ rule FEE_002_NONCE_011_initiateRebalance_LOCAL_TO_LOCAL_Success() {
 
 /// @dev closeEpoch's internal settlement logic (fee accounting, netFlow calculation, all the
 ///      arithmetic overflow guards) is exhaustively verified in isolation in
-///      ParentVaultEpochLib.spec (24 rules) - this section covers the vault-level entry point:
+///      ParentVaultEpochLib.spec - this section covers the vault-level entry point:
 ///      access control/pause/reentrancy/recovery guards, and the external-action dispatch that
 ///      lives in ParentVault.sol itself (_executeDeposit/_ccipSend/_executeWithdraw/events),
 ///      which the library spec cannot see since the library only returns the action to take.
@@ -4977,6 +4977,7 @@ rule EPOCH_004_EPOCH_014_NONCE_010_closeEpoch_DEPOSIT_TO_LOCAL_STRATEGY_Success(
     require getMinDepositAmount() == 1000000, "minimum deposit should be one asset unit";
     require getTotalShares() == 0, "use bootstrap settlement";
     require depositAmount == 1000000, "use one minimum deposit";
+    require depositAmount <= max_uint256 / 2, "deposit amount should fit int256";
     require getEpoch(epochNonce).totalShareBurnAmount == 0, "no withdrawal intent";
     require tvl == 0, "bootstrap tvl should be zero";
 
@@ -5044,6 +5045,7 @@ rule REC_009_closeEpoch_DEPOSIT_TO_LOCAL_STRATEGY_RevertWhen_DepositFails() {
     require getMinDepositAmount() == 1000000, "minimum deposit should be one asset unit";
     require getTotalShares() == 0, "use bootstrap settlement";
     require depositAmount == 1000000, "use one minimum deposit";
+    require depositAmount <= max_uint256 / 2, "deposit amount should fit int256";
     require getEpoch(epochNonce).totalShareBurnAmount == 0, "no withdrawal intent";
     require tvl == 0, "bootstrap tvl should be zero";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
@@ -5099,6 +5101,7 @@ rule EPOCH_004_EPOCH_014_NONCE_010_closeEpoch_SEND_DEPOSIT_TO_REMOTE_STRATEGY_Su
     require getMinDepositAmount() == 1000000, "minimum deposit should be one asset unit";
     require getTotalShares() == 0, "use bootstrap settlement";
     require depositAmount == 1000000, "use one minimum deposit";
+    require depositAmount <= max_uint256 / 2, "deposit amount should fit int256";
     require getEpoch(epochNonce).totalShareBurnAmount == 0, "no withdrawal intent";
     require tvl == 0, "bootstrap tvl should be zero";
 
@@ -5188,6 +5191,7 @@ rule EPOCH_004_EPOCH_014_NONCE_010_closeEpoch_WITHDRAW_FROM_LOCAL_STRATEGY_Succe
     require tvl == 1000000, "use one whole asset unit of tvl";
     require getEpoch(epochNonce).totalDepositAmount == 0, "no deposits should be made";
     require shareBurnAmount == 500000, "withdraw half of the outstanding shares";
+    require shareBurnAmount <= max_uint256 / 2, "calculated total withdrawal should fit int256";
 
     /// @dev local-strategy + adapter conditions
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
@@ -5257,6 +5261,7 @@ rule REC_009_closeEpoch_WITHDRAW_FROM_LOCAL_STRATEGY_RevertWhen_WithdrawFails() 
     require tvl == 1000000, "use one whole asset unit of tvl";
     require getEpoch(epochNonce).totalDepositAmount == 0, "no deposits should be made";
     require shareBurnAmount == 500000, "withdraw half of the outstanding shares";
+    require shareBurnAmount <= max_uint256 / 2, "calculated total withdrawal should fit int256";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
 
     /// @dev revert condition being verified
@@ -5303,6 +5308,7 @@ rule EPOCH_004_EPOCH_014_NONCE_010_closeEpoch_WAIT_FOR_REMOTE_WITHDRAW_Success()
     require tvl == 1000000, "use one whole asset unit of tvl";
     require getEpoch(epochNonce).totalDepositAmount == 0, "no deposits should be made";
     require shareBurnAmount == 500000, "withdraw half of the outstanding shares";
+    require shareBurnAmount <= max_uint256 / 2, "calculated total withdrawal should fit int256";
     require getActiveProtocolAdapter() == 0, "no active adapter on this chain (remote strategy)";
 
     /// @dev set ghost starting values
