@@ -16,12 +16,6 @@ import {ParentVaultUserEpochLib} from "../libraries/vaults/ParentVaultUserEpochL
 import {IProtocolAdapter} from "../interfaces/adapters/IProtocolAdapter.sol";
 
 import {Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
-import {IAny2EVMMessageReceiver} from "@chainlink/contracts-ccip/contracts/applications/CCIPReceiver.sol";
-
-import {
-    IAccessControlDefaultAdminRules
-} from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
-import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 /// @title Yieldcoin v2 ParentVault
 /// @author @contractlevel
@@ -697,19 +691,6 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /// @return isSupported Whether the protocol ID is supported
     function getSupportedProtocol(bytes32 protocolId) external view returns (bool isSupported) {
         isSupported = _parentVaultStorage().s_supportedProtocol[protocolId];
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                                OVERRIDE
-    //////////////////////////////////////////////////////////////*/
-    /// @notice Returns whether this contract implements the given interface ID
-    /// @param interfaceId The interface identifier, as specified in ERC-165
-    /// @return isSupported Whether this contract implements `interfaceId`
-    /// @dev Supports IERC165, IAccessControlDefaultAdminRules, and IAny2EVMMessageReceiver
-    function supportsInterface(bytes4 interfaceId) public pure override(BaseVault) returns (bool isSupported) {
-        isSupported = interfaceId == type(IERC165).interfaceId
-            || interfaceId == type(IAccessControlDefaultAdminRules).interfaceId
-            || interfaceId == type(IAny2EVMMessageReceiver).interfaceId;
     }
 
     /// @notice Returns this vault's accounted underlying-asset value

@@ -21,11 +21,13 @@ contract AdapterRegistry is IAdapterRegistry, AccessControlDefaultAdminRules {
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
-    // deployment steps:
-    // deploy AdapterRegistry
-    // deploy Vault, passing AdapterRegistry address - if Parent Vault, pass initialActiveProtocolId too
-    // deploy ProtocolAdapters
-    // point ProtocolAdapters to AdapterRegistry
+    /// @dev Deployment sequence:
+    ///      1. Deploy AdapterRegistry.
+    ///      2. Deploy the vault, passing this registry's address to the vault constructor.
+    ///      3. Deploy protocol adapters bound to the vault.
+    ///      4. Register each adapter with setAdapter.
+    ///      5. For ParentVault, configure supported protocols and call
+    ///         setInitialActiveProtocolAdapter once.
     /// @param initialDelay The initial delay for the default admin role
     /// @param initialOwner The address of the initial default admin
     /// @dev Reverts if initialOwner is the zero address

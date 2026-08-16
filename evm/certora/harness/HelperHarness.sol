@@ -5,6 +5,8 @@ import {Types} from "../../src/libraries/Types.sol";
 import {Client} from "@chainlink/contracts-ccip/contracts/libraries/Client.sol";
 
 import {IAny2EVMMessageReceiver} from "@chainlink/contracts-ccip/contracts/applications/CCIPReceiver.sol";
+import {IAny2EVMMessageReceiverV2} from "@chainlink/contracts-ccip/contracts/interfaces/IAny2EVMMessageReceiverV2.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {
     IAccessControlDefaultAdminRules
 } from "@openzeppelin/contracts/access/extensions/IAccessControlDefaultAdminRules.sol";
@@ -112,12 +114,20 @@ contract HelperHarness {
         return type(IERC165).interfaceId;
     }
 
+    function accessControlInterfaceId() external pure returns (bytes4) {
+        return type(IAccessControl).interfaceId;
+    }
+
     function accessControlDefaultAdminRulesInterfaceId() external pure returns (bytes4) {
         return type(IAccessControlDefaultAdminRules).interfaceId;
     }
 
     function any2EVMMessageReceiverInterfaceId() external pure returns (bytes4) {
         return type(IAny2EVMMessageReceiver).interfaceId;
+    }
+
+    function any2EVMMessageReceiverV2InterfaceId() external pure returns (bytes4) {
+        return type(IAny2EVMMessageReceiverV2).interfaceId;
     }
 
     /*//////////////////////////////////////////////////////////////

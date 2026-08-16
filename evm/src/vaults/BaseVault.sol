@@ -2,11 +2,13 @@
 pragma solidity 0.8.34;
 
 import {CCIPReceiver, IAny2EVMMessageReceiver} from "@chainlink/contracts-ccip/contracts/applications/CCIPReceiver.sol";
+import {IAny2EVMMessageReceiverV2} from "@chainlink/contracts-ccip/contracts/interfaces/IAny2EVMMessageReceiverV2.sol";
 
 import {
     AccessControlDefaultAdminRulesUpgradeable,
     IAccessControlDefaultAdminRules
 } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {
@@ -574,18 +576,18 @@ abstract contract BaseVault is
 
     /// @notice Returns whether this contract implements the given interface ID
     /// @param interfaceId The interface identifier, as specified in ERC-165
-    /// @return Whether this contract implements `interfaceId`
-    /// @dev Overrides CCIPReceiver and AccessControlDefaultAdminRulesUpgradeable. Supports IERC165,
-    ///      IAccessControlDefaultAdminRules, and IAny2EVMMessageReceiver interface IDs.
+    /// @return isSupported Whether this contract implements `interfaceId`
+    /// @dev Supports the interfaces implemented by CCIPReceiver and AccessControlDefaultAdminRulesUpgradeable
     function supportsInterface(bytes4 interfaceId)
         public
         pure
         virtual
         override(CCIPReceiver, AccessControlDefaultAdminRulesUpgradeable)
-        returns (bool)
+        returns (bool isSupported)
     {
-        return interfaceId == type(IERC165).interfaceId
+        isSupported = interfaceId == type(IERC165).interfaceId || interfaceId == type(IAccessControl).interfaceId
             || interfaceId == type(IAccessControlDefaultAdminRules).interfaceId
-            || interfaceId == type(IAny2EVMMessageReceiver).interfaceId;
+            || interfaceId == type(IAny2EVMMessageReceiver).interfaceId
+            || interfaceId == type(IAny2EVMMessageReceiverV2).interfaceId;
     }
 }

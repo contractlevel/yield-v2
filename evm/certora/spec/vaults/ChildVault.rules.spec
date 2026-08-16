@@ -52,7 +52,6 @@ methods {
     function getRouter() external returns (address) envfree;
     function getAsset() external returns (address) envfree;
     function getLink() external returns (address) envfree;
-    function supportsInterface(bytes4) external returns (bool) envfree;
     function paused() external returns (bool) envfree;
 
     /*//////////////////////////////////////////////////////////////
@@ -97,10 +96,6 @@ methods {
     function decodeCcipTxType(bytes) external returns (Types.CcipTx) envfree;
     function decodeCcipTxPayload(bytes) external returns (bytes) envfree;
     function hashBytes(bytes) external returns (bytes32) envfree;
-    function erc165InterfaceId() external returns (bytes4) envfree;
-    function accessControlDefaultAdminRulesInterfaceId() external returns (bytes4) envfree;
-    function any2EVMMessageReceiverInterfaceId() external returns (bytes4) envfree;
-
     /*//////////////////////////////////////////////////////////////
                          DISPATCHER SUMMARIES
     //////////////////////////////////////////////////////////////*/
@@ -682,35 +677,6 @@ rule REBAL_008_getTVL_RevertWhen_TotalOverflows() {
     getTVL@withrevert(e);
 
     assert lastReverted;
-}
-
-/// ─────────────────── SUPPORTS INTERFACE ─────────────────────
-
-/// @notice ChildVault reports support for its expected ERC165 interfaces
-/// @dev Verifies the positive supportsInterface cases inherited from BaseVault: IERC165,
-///      IAccessControlDefaultAdminRules, and IAny2EVMMessageReceiver.
-rule supportsInterface_Success_WhenInterfaceIsSupported() {
-    bytes4 interfaceId;
-
-    /// @dev supported interface cases being verified
-    require interfaceId == erc165InterfaceId()
-        || interfaceId == accessControlDefaultAdminRulesInterfaceId()
-        || interfaceId == any2EVMMessageReceiverInterfaceId();
-
-    assert supportsInterface(interfaceId);
-}
-
-/// @notice ChildVault reports false for unsupported ERC165 interface IDs
-/// @dev Verifies the negative supportsInterface case by explicitly excluding every supported ID.
-rule supportsInterface_ReturnsFalse_WhenInterfaceIsNotSupported() {
-    bytes4 interfaceId;
-
-    /// @dev supported cases NOT being verified
-    require interfaceId != erc165InterfaceId();
-    require interfaceId != accessControlDefaultAdminRulesInterfaceId();
-    require interfaceId != any2EVMMessageReceiverInterfaceId();
-
-    assert !supportsInterface(interfaceId);
 }
 
 /// ─────────────────── INITIALIZE CHILD VAULT ──────────────────

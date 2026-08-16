@@ -59,8 +59,6 @@ methods {
     function getSharePrecision() external returns (uint256) envfree;
     function getMinDepositAmount() external returns (uint256) envfree;
     function getSupportedProtocol(bytes32) external returns (bool) envfree;
-    function supportsInterface(bytes4) external returns (bool) envfree;
-
     /// BaseVault getters this spec's rules read directly
     function getActiveProtocolAdapter() external returns (address) envfree;
     function getRecoveryMode() external returns (Types.RecoveryMode) envfree;
@@ -126,10 +124,6 @@ methods {
     function decodeCcipTxType(bytes) external returns (Types.CcipTx) envfree;
     function decodeCcipTxPayload(bytes) external returns (bytes) envfree;
     function hashBytes(bytes) external returns (bytes32) envfree;
-    function erc165InterfaceId() external returns (bytes4) envfree;
-    function accessControlDefaultAdminRulesInterfaceId() external returns (bytes4) envfree;
-    function any2EVMMessageReceiverInterfaceId() external returns (bytes4) envfree;
-
     /*//////////////////////////////////////////////////////////////
                          DISPATCHER SUMMARIES
     //////////////////////////////////////////////////////////////*/
@@ -1895,35 +1889,6 @@ rule setSupportedProtocol_Success_WhenDisablingInactiveNonPendingProtocol() {
     assert ghost_SupportedProtocolSet_EventCount == 1;
     assert ghost_SupportedProtocolSet_Param_protocolId == protocolId;
     assert !ghost_SupportedProtocolSet_Param_isSupported;
-}
-
-/// ────────────────────── SUPPORTS INTERFACE ────────────────────
-
-/// @notice ParentVault reports support for its expected ERC165 interfaces
-/// @dev Verifies the positive supportsInterface cases: IERC165,
-///      IAccessControlDefaultAdminRules, and IAny2EVMMessageReceiver.
-rule supportsInterface_Success_WhenInterfaceIsSupported() {
-    bytes4 interfaceId;
-
-    /// @dev supported interface cases being verified
-    require interfaceId == erc165InterfaceId()
-        || interfaceId == accessControlDefaultAdminRulesInterfaceId()
-        || interfaceId == any2EVMMessageReceiverInterfaceId();
-
-    assert supportsInterface(interfaceId);
-}
-
-/// @notice ParentVault reports false for unsupported ERC165 interface IDs
-/// @dev Verifies the negative supportsInterface case by explicitly excluding every supported ID
-rule supportsInterface_ReturnsFalse_WhenInterfaceIsNotSupported() {
-    bytes4 interfaceId;
-
-    /// @dev supported cases NOT being verified
-    require interfaceId != erc165InterfaceId();
-    require interfaceId != accessControlDefaultAdminRulesInterfaceId();
-    require interfaceId != any2EVMMessageReceiverInterfaceId();
-
-    assert !supportsInterface(interfaceId);
 }
 
 /// ─────────────────────────── GET TVL ──────────────────────────

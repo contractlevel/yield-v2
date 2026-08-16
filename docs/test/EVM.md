@@ -98,7 +98,7 @@ halmos --contract ClaimSolvency --forge-build-out out-halmos --function check_ \
 
 ## Certora
 
-_Note: Some of the ParentVault rules require ParentVault::\_finalizeRebalance and \_finalizeLocalToLocalRebalance to be virtual_
+_Note: Some of the ParentVault rules require ParentVault::\_finalizeRebalance and \_finalizeLocalToLocalRebalance to be **virtual**. This is because these functions use a public library function, which Certora havocs and struggles to resolve. To get around this, the harness overrides the functions with the internal lib equivalent. Virtual should be removed after running the specs._
 
 ```
 certoraRun ./certora/conf/modules/AdapterRegistry.conf

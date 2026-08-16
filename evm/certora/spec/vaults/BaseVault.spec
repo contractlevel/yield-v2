@@ -56,6 +56,12 @@ methods {
     function getTVL() external returns (uint256) envfree;
     function supportsInterface(bytes4) external returns (bool) envfree;
 
+    function erc165InterfaceId() external returns (bytes4) envfree;
+    function accessControlInterfaceId() external returns (bytes4) envfree;
+    function accessControlDefaultAdminRulesInterfaceId() external returns (bytes4) envfree;
+    function any2EVMMessageReceiverInterfaceId() external returns (bytes4) envfree;
+    function any2EVMMessageReceiverV2InterfaceId() external returns (bytes4) envfree;
+
     function getLink() external returns (address) envfree;
     function getAsset() external returns (address) envfree;
     function getAssetPrecision() external returns (uint256) envfree;
@@ -158,8 +164,10 @@ definition isHarnessHelper(method f) returns bool =
     f.selector == sig:decodeCcipTxPayload(bytes).selector ||
     f.selector == sig:emptyParameters().selector ||
     f.selector == sig:erc165InterfaceId().selector ||
+    f.selector == sig:accessControlInterfaceId().selector ||
     f.selector == sig:accessControlDefaultAdminRulesInterfaceId().selector ||
     f.selector == sig:any2EVMMessageReceiverInterfaceId().selector ||
+    f.selector == sig:any2EVMMessageReceiverV2InterfaceId().selector ||
     // HelperHarness role-hash getters
     f.selector == sig:UPGRADER_ROLE().selector ||
     f.selector == sig:PAUSER_ROLE().selector ||
@@ -2035,4 +2043,19 @@ rule requireNoRecovery_SuccessWhen_NoRecoveryIsPending() {
 
     assert !lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
+}
+
+/// ─────────────────── SUPPORTS INTERFACE ─────────────────────
+
+/// @notice BaseVault reports support for exactly its inherited ERC-165 interfaces
+rule supportsInterface_ReturnsTrueIff_InterfaceIsSupported() {
+    bytes4 interfaceId;
+
+    bool isSupported = interfaceId == erc165InterfaceId()
+        || interfaceId == accessControlInterfaceId()
+        || interfaceId == accessControlDefaultAdminRulesInterfaceId()
+        || interfaceId == any2EVMMessageReceiverInterfaceId()
+        || interfaceId == any2EVMMessageReceiverV2InterfaceId();
+
+    assert supportsInterface(interfaceId) == isSupported;
 }
