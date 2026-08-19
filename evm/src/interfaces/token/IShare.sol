@@ -14,6 +14,8 @@ interface IShare is IERC20, IPauseable {
     //////////////////////////////////////////////////////////////*/
     /// @dev Thrown when a required address is the zero address
     error YieldcoinShare__NoZeroAddress();
+    /// @dev Thrown when the caller is not the ParentVault
+    error YieldcoinShare__OnlyParentVault();
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
@@ -29,7 +31,7 @@ interface IShare is IERC20, IPauseable {
     /// @notice Mints shares to an address
     /// @param to The address to mint shares to
     /// @param amount The amount of shares to mint
-    /// @dev Reverts if the caller does not have MINTER_ROLE
+    /// @dev Reverts if caller is not the ParentVault
     /// @dev Reverts if to is the zero address
     /// @dev Reverts if the token is paused
     function mint(address to, uint256 amount) external;
@@ -37,7 +39,7 @@ interface IShare is IERC20, IPauseable {
     /// @notice Burns shares from an address
     /// @param user The address to burn shares from
     /// @param amount The amount of shares to burn
-    /// @dev Reverts if the caller does not have BURNER_ROLE
+    /// @dev Reverts if caller is not the ParentVault
     /// @dev Reverts if user is the zero address
     /// @dev Reverts if amount exceeds the user's share balance
     /// @dev Reverts if the token is paused

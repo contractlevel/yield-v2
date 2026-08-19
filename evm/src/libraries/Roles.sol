@@ -23,10 +23,6 @@ library Roles {
     bytes32 internal constant LINK_OPERATOR_ROLE = keccak256("LINK_OPERATOR_ROLE");
     /// @notice Role authorizing the Chainlink Keystone Forwarder to call WorkflowRouter.onReport
     bytes32 internal constant KEYSTONE_FORWARDER_ROLE = keccak256("KEYSTONE_FORWARDER_ROLE");
-    /// @notice Role authorizing ParentVault to mint Yieldcoin shares
-    bytes32 internal constant MINTER_ROLE = keccak256("MINTER_ROLE");
-    /// @notice Role authorizing ParentVault to burn Yieldcoin shares
-    bytes32 internal constant BURNER_ROLE = keccak256("BURNER_ROLE");
     /// @notice Role authorized to use supported protocol-specific reward claim hooks
     bytes32 internal constant REWARDS_OPERATOR_ROLE = keccak256("REWARDS_OPERATOR_ROLE");
     /// @notice Role authorized to force-cancel stuck deposits to unblock epoch settlement

@@ -36,12 +36,38 @@ contract YieldcoinShare is
     uint48 internal constant INITIAL_DEFAULT_ADMIN_ROLE_TRANSFER_DELAY = 0;
 
     /*//////////////////////////////////////////////////////////////
+                              IMMUTABLE
+    //////////////////////////////////////////////////////////////*/
+    /// @dev ParentVault
+    address internal immutable i_parentVault;
+
+    /*//////////////////////////////////////////////////////////////
+                               MODIFIERS
+    //////////////////////////////////////////////////////////////*/
+    /// @notice Validates that caller is the ParentVault
+    /// @dev Reverts if caller is not the ParentVault
+    modifier onlyParentVault() {
+        _onlyParentVault();
+        _;
+    }
+
+    /// @notice Validates that caller is the ParentVault
+    /// @dev Reverts if caller is not the ParentVault
+    function _onlyParentVault() internal view {
+        if (msg.sender != i_parentVault) revert YieldcoinShare__OnlyParentVault();
+    }
+
+    /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
     /// @notice Disables initialization of the implementation contract
+    /// @param parentVault The address of the ParentVault (proxy)
+    /// @dev Reverts if parentVault is the zero address
     /// @dev The proxy must be initialized through `initialize`
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
+    constructor(address parentVault) {
+        _revertIfZeroAddress(parentVault);
+        i_parentVault = parentVault;
         _disableInitializers();
     }
 
@@ -96,21 +122,21 @@ contract YieldcoinShare is
     /// @notice Mints shares to an address
     /// @param to The address to mint shares to
     /// @param amount The amount of shares to mint
-    /// @dev Reverts if the caller does not have MINTER_ROLE
+    /// @dev Reverts if the caller is not the ParentVault
     /// @dev Reverts if to is the zero address
     /// @dev Reverts if the token is paused
-    function mint(address to, uint256 amount) external onlyRole(Roles.MINTER_ROLE) {
+    function mint(address to, uint256 amount) external onlyParentVault {
         _mint(to, amount);
     }
 
     /// @notice Burns shares from an address
     /// @param user The address to burn shares from
     /// @param amount The amount of shares to burn
-    /// @dev Reverts if the caller does not have BURNER_ROLE
+    /// @dev Reverts if the caller is not the ParentVault
     /// @dev Reverts if user is the zero address
     /// @dev Reverts if amount exceeds the user's share balance
     /// @dev Reverts if the token is paused
-    function burn(address user, uint256 amount) external onlyRole(Roles.BURNER_ROLE) {
+    function burn(address user, uint256 amount) external onlyParentVault {
         _burn(user, amount);
     }
 
