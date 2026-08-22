@@ -5,6 +5,7 @@ import {BaseUnitTest} from "../../BaseUnitTest.t.sol";
 import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
 
 import {BaseVault, IBaseVault} from "../../../../src/vaults/BaseVault.sol";
+import {Types} from "../../../../src/libraries/Types.sol";
 
 abstract contract BaseVault_GetTVLUnitTest is BaseUnitTest {
     using stdStorage for StdStorage;
@@ -90,18 +91,20 @@ contract ChildVault_GetTVLUnitTest is BaseVault_GetTVLUnitTest {
         assertEq(s_vault.getTVL(), RECOVERY_AMOUNT);
     }
 
-    function test_ChildVault_getTVL_ReturnsCcipSendRecovery_WhenNoActiveAdapter() external {
+    function test_ChildVault_getTVL_ReturnsRebalanceCcipSendRecovery_WhenNoActiveAdapter() external {
         _setChildCcipSendRecoveryAmount(RECOVERY_AMOUNT);
+        _setChildCcipSendRecoveryType(Types.CcipTx.REBALANCE);
 
         assertEq(s_vault.getTVL(), RECOVERY_AMOUNT);
     }
 
-    function test_ChildVault_getTVL_ReturnsAdapterTVLPlusCcipSendRecovery_WhenActiveAdapterExists() external {
+    function test_ChildVault_getTVL_ExcludesEpochWithdrawCcipSendRecovery_WhenActiveAdapterExists() external {
         _setActiveAdapter();
         s_mockProtocolAdapter.setTVL(TVL);
         _setChildCcipSendRecoveryAmount(RECOVERY_AMOUNT);
+        _setChildCcipSendRecoveryType(Types.CcipTx.EPOCH_NET_WITHDRAW);
 
-        assertEq(s_vault.getTVL(), TVL + RECOVERY_AMOUNT);
+        assertEq(s_vault.getTVL(), TVL);
     }
 
     function _setEpochDepositRecoveryAmount(uint256 amount) internal {

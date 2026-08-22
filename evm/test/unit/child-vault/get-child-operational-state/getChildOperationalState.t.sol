@@ -23,6 +23,7 @@ contract ChildVault_GetChildOperationalStateUnitTest is BaseUnitTest {
         _setEpochDepositRecoveryAmount(EPOCH_RECOVERY_AMOUNT);
         _setRebalanceDepositRecoveryAmount(REBALANCE_RECOVERY_AMOUNT);
         _setChildCcipSendRecoveryAmount(CCIP_RECOVERY_AMOUNT);
+        _setChildCcipSendRecoveryType(Types.CcipTx.REBALANCE);
         s_mockProtocolAdapter.setTVL(TVL);
 
         _changePrank(i_pauser);
@@ -41,6 +42,7 @@ contract ChildVault_GetChildOperationalStateUnitTest is BaseUnitTest {
     function test_ChildVault_getChildOperationalState_ReturnsCcipSendRecoveryTVLWhen_NoActiveAdapter() external {
         _clearChildActiveAdapter();
         _setChildCcipSendRecoveryAmount(CCIP_RECOVERY_AMOUNT);
+        _setChildCcipSendRecoveryType(Types.CcipTx.REBALANCE);
 
         Types.ChildOperationalState memory state = s_childVault.getChildOperationalState();
 
