@@ -3,6 +3,8 @@ ParentVault_depositFor
 │   └── it should revert with EnforcedPause
 ├── when the beneficiary is the zero address
 │   └── it should revert with BaseVault__NoZeroAddress
+├── when the beneficiary is the ParentVault
+│   └── it should revert with ParentVault__InvalidBeneficiary
 ├── when the amount is less than MIN_DEPOSIT_AMOUNT
 │   └── it should revert with ParentVault__AmountTooSmall
 ├── when the epoch is not open

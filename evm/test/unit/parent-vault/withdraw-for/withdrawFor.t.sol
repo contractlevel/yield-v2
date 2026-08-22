@@ -26,6 +26,13 @@ contract ParentVault_WithdrawForUnitTest is BaseUnitTest {
         s_parentVault.withdrawFor(address(0), SHARE_BURN_AMOUNT);
     }
 
+    function test_ParentVault_withdrawFor_RevertWhen_BeneficiaryIsParentVault() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(IParentVault.ParentVault__InvalidBeneficiary.selector, address(s_parentVault))
+        );
+        s_parentVault.withdrawFor(address(s_parentVault), SHARE_BURN_AMOUNT);
+    }
+
     function test_ParentVault_withdrawFor_RevertWhen_AmountIsZero() public {
         vm.expectRevert(IParentVault.ParentVault__NoZeroAmount.selector);
         s_parentVault.withdrawFor(i_recipient1, 0);

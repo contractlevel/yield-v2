@@ -139,6 +139,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /// @param amount The amount of underlying asset to deposit
     /// @return epochNonce The epoch nonce of the deposit
     /// @dev Reverts if beneficiary is the zero address
+    /// @dev Reverts if beneficiary is this ParentVault
     /// @dev Reverts if amount is less than the minimum deposit amount
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the vault is paused
@@ -152,6 +153,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
         returns (uint256 epochNonce)
     {
         _revertIfZeroAddress(beneficiary);
+        _revertIfInvalidBeneficiary(beneficiary);
         epochNonce = ParentVaultUserEpochLib.depositFor(
             _parentVaultStorage(), i_asset, msg.sender, beneficiary, amount, i_minDepositAmount
         );
@@ -174,6 +176,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /// @param shareBurnAmount The amount of caller shares to escrow for burning when the withdraw is claimed
     /// @return epochNonce The nonce of the epoch containing the withdraw intent
     /// @dev Reverts if beneficiary is the zero address
+    /// @dev Reverts if beneficiary is this ParentVault
     /// @dev Reverts if shareBurnAmount is zero
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the vault is paused
@@ -187,6 +190,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
         returns (uint256 epochNonce)
     {
         _revertIfZeroAddress(beneficiary);
+        _revertIfInvalidBeneficiary(beneficiary);
         epochNonce = ParentVaultUserEpochLib.withdrawFor(
             _parentVaultStorage(), i_share, msg.sender, beneficiary, shareBurnAmount
         );
@@ -579,6 +583,15 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /// @dev Reverts if treasury is the zero address
     function setTreasury(address treasury) external onlyRole(Roles.CONFIG_OPERATOR_ROLE) {
         ParentVaultConfigLib.setTreasury(_parentVaultStorage(), treasury);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                             INTERNAL VIEW
+    //////////////////////////////////////////////////////////////*/
+    /// @dev Reverts if beneficiary is this ParentVault
+    /// @param beneficiary The beneficiary address to validate
+    function _revertIfInvalidBeneficiary(address beneficiary) internal view {
+        if (beneficiary == address(this)) revert ParentVault__InvalidBeneficiary(beneficiary);
     }
 
     /*//////////////////////////////////////////////////////////////

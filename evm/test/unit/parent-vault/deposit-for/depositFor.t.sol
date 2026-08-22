@@ -23,6 +23,13 @@ contract ParentVault_DepositForUnitTest is BaseUnitTest {
         s_parentVault.depositFor(address(0), DEPOSIT_AMOUNT);
     }
 
+    function test_ParentVault_depositFor_RevertWhen_BeneficiaryIsParentVault() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(IParentVault.ParentVault__InvalidBeneficiary.selector, address(s_parentVault))
+        );
+        s_parentVault.depositFor(address(s_parentVault), DEPOSIT_AMOUNT);
+    }
+
     function test_ParentVault_depositFor_RevertWhen_AmountTooSmall() public {
         vm.expectRevert(abi.encodeWithSelector(IParentVault.ParentVault__AmountTooSmall.selector, DEPOSIT_AMOUNT - 1));
         s_parentVault.depositFor(i_recipient1, DEPOSIT_AMOUNT - 1);

@@ -3,6 +3,8 @@ ParentVault_withdrawFor
 │   └── it should revert with EnforcedPause
 ├── when the beneficiary is the zero address
 │   └── it should revert with BaseVault__NoZeroAddress
+├── when the beneficiary is the ParentVault
+│   └── it should revert with ParentVault__InvalidBeneficiary
 ├── when the amount is zero
 │   └── it should revert with ParentVault__NoZeroAmount
 ├── when the epoch is not open
