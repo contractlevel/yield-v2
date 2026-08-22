@@ -765,19 +765,23 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @notice Returns this vault's accounted underlying-asset value
     /// @return tvl The active strategy position plus applicable vault-held recovery assets
     /// @dev Returns zero when this vault has neither an active strategy position nor applicable recovery assets
-    /// @dev Includes pending epoch-deposit, rebalance-deposit, and CCIP-send recovery amounts held by this vault
-    /// @dev Returns only the pending CCIP-send recovery amount when no active adapter is set
+    /// @dev Includes pending epoch-deposit, rebalance-deposit, and rebalance CCIP-send recovery amounts held by this vault
+    /// @dev Excludes epoch-withdraw CCIP-send recovery because those assets are reserved for the settled epoch
+    /// @dev Returns only the pending rebalance CCIP-send recovery amount when no active adapter is set
     function _getTVL() internal view override returns (uint256 tvl) {
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
         ChildVaultStorage storage $ = _childVaultStorage();
+        Types.CcipSendRecovery storage ccipSendRecovery = $.s_ccipSendRecovery;
+        uint256 accountedCcipSendRecoveryAmount =
+            ccipSendRecovery.ccipTxType == Types.CcipTx.REBALANCE ? ccipSendRecovery.amount : 0;
 
         address activeAdapter = $_baseVault.s_activeProtocolAdapter;
         if (activeAdapter != address(0)) {
             tvl = IProtocolAdapter(activeAdapter).getTVL() + $.s_epochDepositRecovery.amount
-                + $_baseVault.s_rebalanceDepositRecovery.amount + $.s_ccipSendRecovery.amount;
+                + $_baseVault.s_rebalanceDepositRecovery.amount + accountedCcipSendRecoveryAmount;
         } else {
             // The adapter is cleared before a remote rebalance send; a failed send remains locally recoverable
-            tvl = $.s_ccipSendRecovery.amount;
+            tvl = accountedCcipSendRecoveryAmount;
         }
     }
 

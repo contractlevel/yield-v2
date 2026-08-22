@@ -64,6 +64,7 @@ contract CcipSend_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
             bytes32(0)
         );
         assertTrue(child.vault.getRecoveryMode() == Types.RecoveryMode.CCIP_SEND);
+        assertEq(child.vault.getTVL(), 0);
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.EXECUTING));
 
         _setCrosschainVault(child.vault, PARENT_CHAIN_SELECTOR, address(parent.vault));
@@ -84,6 +85,72 @@ contract CcipSend_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         parent.vault.claimAsset(2);
 
         assertEq(IERC20(parent.asset).balanceOf(i_depositor), depositorUsdcBeforeClaim + DEPOSIT_AMOUNT);
+    }
+
+    function test_Recovery_ChildVault_ccipSend_EpochWithdraw_ExcludesRecoveryFromTvlAcrossNextEpochEligibility()
+        external
+    {
+        uint256 shareAmount = _depositAndClaimParentLocalShares();
+
+        _initiateRebalanceThroughWorkflow(
+            parent.workflowRouter,
+            INITIATE_REBALANCE_WORKFLOW_ID,
+            INITIATE_REBALANCE_WORKFLOW_NAME,
+            i_owner,
+            _childStrategy(AAVE_V3_PROTOCOL_ID)
+        );
+        _completeRebalanceThroughWorkflow(
+            parent.workflowRouter, COMPLETE_REBALANCE_WORKFLOW_ID, COMPLETE_REBALANCE_WORKFLOW_NAME, i_owner
+        );
+
+        uint256 remainingShares = shareAmount / 2;
+        _changePrank(i_depositor);
+        parent.share.transfer(i_recipient1, remainingShares);
+
+        uint256 withdrawShares = parent.share.balanceOf(i_depositor);
+        _approveShares(i_depositor, address(parent.vault), withdrawShares);
+        _changePrank(i_depositor);
+        parent.vault.withdraw(withdrawShares);
+
+        _warpPastMinEpoch();
+        _closeEpochThroughWorkflow(
+            parent.workflowRouter, CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner, DEPOSIT_AMOUNT
+        );
+        uint256 epochWithdrawAmount = parent.vault.getEpoch(2).totalWithdrawClaimAmount;
+
+        _setCrosschainVault(child.vault, PARENT_CHAIN_SELECTOR, INVALID_CCIP_RECEIVER);
+        _executeEpochWithdrawThroughWorkflow(
+            child.workflowRouter,
+            EXECUTE_EPOCH_WITHDRAW_WORKFLOW_ID,
+            EXECUTE_EPOCH_WITHDRAW_WORKFLOW_NAME,
+            i_owner,
+            2,
+            epochWithdrawAmount
+        );
+
+        _assertCcipSendRecovery(
+            child.vault.getCcipSendRecovery(),
+            Types.CcipTx.EPOCH_NET_WITHDRAW,
+            PARENT_CHAIN_SELECTOR,
+            epochWithdrawAmount,
+            2,
+            bytes32(0)
+        );
+        uint256 remainingTvl = child.aaveV3Adapter.getTVL();
+        assertGt(remainingTvl, 0);
+
+        _approveShares(i_recipient1, address(parent.vault), remainingShares);
+        _changePrank(i_recipient1);
+        parent.vault.withdraw(remainingShares);
+
+        Types.Epoch memory nextEpoch = parent.vault.getEpoch(3);
+        assertLt(block.timestamp, nextEpoch.openedAtTimestamp + MIN_EPOCH_PERIOD);
+        assertEq(child.vault.getTVL(), remainingTvl);
+
+        _warpPastMinEpoch();
+        assertGt(block.timestamp, nextEpoch.openedAtTimestamp + MIN_EPOCH_PERIOD);
+        assertEq(child.vault.getTVL(), remainingTvl);
+        assertTrue(child.vault.getRecoveryMode() == Types.RecoveryMode.CCIP_SEND);
     }
 
     function test_Recovery_ChildVault_ccipSend_Rebalance_RetryCompletesParentRebalance() external {
@@ -133,6 +200,7 @@ contract CcipSend_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
             AAVE_V4_PROTOCOL_ID
         );
         assertTrue(child.vault.getRecoveryMode() == Types.RecoveryMode.CCIP_SEND);
+        assertEq(child.vault.getTVL(), tvl);
         assertEq(uint256(parent.vault.getRebalance().state), uint256(Types.RebalanceState.REBALANCING));
 
         _setCrosschainVault(child.vault, PARENT_CHAIN_SELECTOR, address(parent.vault));

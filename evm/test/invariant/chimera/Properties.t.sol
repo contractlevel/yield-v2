@@ -582,7 +582,8 @@ abstract contract Properties is BeforeAfter, Asserts {
 
     function _assertChildTvlEquation(ChildVault vault) internal {
         address adapter = vault.getActiveProtocolAdapter();
-        uint256 expectedTvl = vault.getCcipSendRecovery().amount;
+        Types.CcipSendRecovery memory ccipSendRecovery = vault.getCcipSendRecovery();
+        uint256 expectedTvl = ccipSendRecovery.ccipTxType == Types.CcipTx.REBALANCE ? ccipSendRecovery.amount : 0;
         if (adapter != address(0)) {
             expectedTvl += IProtocolAdapter(adapter).getTVL() + vault.getEpochDepositRecovery().amount
             + vault.getRebalanceDepositRecovery().amount;

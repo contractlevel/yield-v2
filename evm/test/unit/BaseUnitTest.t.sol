@@ -179,6 +179,16 @@ abstract contract BaseUnitTest is BaseTest {
             .checked_write(amount);
     }
 
+    function _setChildCcipSendRecoveryType(Types.CcipTx ccipTxType) internal {
+        uint256 amountSlot = stdstore.target(address(s_childVault)).sig("getCcipSendRecovery()").depth(0).find();
+        bytes32 packedSlot = bytes32(amountSlot + 3);
+        bytes32 packedValue = vm.load(address(s_childVault), packedSlot);
+        uint256 ccipTxTypeOffset = 64;
+        uint256 clearedValue = uint256(packedValue) & ~(uint256(0xff) << ccipTxTypeOffset);
+        vm.store(address(s_childVault), packedSlot, bytes32(clearedValue | (uint256(ccipTxType) << ccipTxTypeOffset)));
+        assertEq(uint256(s_childVault.getCcipSendRecovery().ccipTxType), uint256(ccipTxType));
+    }
+
     function _clearParentActiveAdapter() internal {
         _setActiveAdapter(s_parentVault, address(0));
     }
