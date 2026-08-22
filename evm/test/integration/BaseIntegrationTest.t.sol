@@ -262,7 +262,10 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
         bytes memory report
     ) internal {
         _changePrank(networkConfig.cre.keystoneForwarder);
-        router.onReport(_buildMetadata(workflowId, workflowName, workflowOwner), report);
+        router.onReport(
+            _buildMetadata(workflowId, workflowName, workflowOwner),
+            abi.encodePacked(router.getThisChainSelector(), address(router), block.timestamp, report)
+        );
     }
 
     function _configureCloseEpochWorkflow(

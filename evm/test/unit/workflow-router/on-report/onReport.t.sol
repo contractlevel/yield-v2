@@ -31,7 +31,7 @@ contract WorkflowRouter_OnReportUnitTest is BaseWorkflowRouterUnitTest {
         givenContractIsPaused(address(s_workflowRouter))
     {
         vm.expectRevert(Pausable.EnforcedPause.selector);
-        s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, s_workflowName, i_owner), abi.encodePacked(SELECTOR));
+        s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, s_workflowName, i_owner), _report(SELECTOR));
     }
 
     function test_WorkflowRouter_onReport_RevertWhen_CallerDoesNotHaveKeystoneForwarderRole() external {
@@ -41,7 +41,7 @@ contract WorkflowRouter_OnReportUnitTest is BaseWorkflowRouterUnitTest {
                 IAccessControl.AccessControlUnauthorizedAccount.selector, i_nonOwner, Roles.KEYSTONE_FORWARDER_ROLE
             )
         );
-        s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, s_workflowName, i_owner), abi.encodePacked(SELECTOR));
+        s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, s_workflowName, i_owner), _report(SELECTOR));
     }
 
     function test_WorkflowRouter_onReport_RevertWhen_MetadataIsTooShort() external {
@@ -49,7 +49,7 @@ contract WorkflowRouter_OnReportUnitTest is BaseWorkflowRouterUnitTest {
         vm.expectRevert(
             abi.encodeWithSelector(IWorkflowRouter.WorkflowRouter__InvalidMetadataLength.selector, metadata.length)
         );
-        s_workflowRouter.onReport(metadata, abi.encodePacked(SELECTOR));
+        s_workflowRouter.onReport(metadata, _report(SELECTOR));
     }
 
     function test_WorkflowRouter_onReport_RevertWhen_MetadataIsTooLong() external {
@@ -57,7 +57,7 @@ contract WorkflowRouter_OnReportUnitTest is BaseWorkflowRouterUnitTest {
         vm.expectRevert(
             abi.encodeWithSelector(IWorkflowRouter.WorkflowRouter__InvalidMetadataLength.selector, metadata.length)
         );
-        s_workflowRouter.onReport(metadata, abi.encodePacked(SELECTOR));
+        s_workflowRouter.onReport(metadata, _report(SELECTOR));
     }
 
     function test_WorkflowRouter_onReport_RevertWhen_WorkflowIdIsZero() external {
@@ -66,7 +66,7 @@ contract WorkflowRouter_OnReportUnitTest is BaseWorkflowRouterUnitTest {
                 IWorkflowRouter.WorkflowRouter__MetadataZero.selector, bytes32(0), s_workflowName, i_owner
             )
         );
-        s_workflowRouter.onReport(_buildMetadata(bytes32(0), s_workflowName, i_owner), abi.encodePacked(SELECTOR));
+        s_workflowRouter.onReport(_buildMetadata(bytes32(0), s_workflowName, i_owner), _report(SELECTOR));
     }
 
     function test_WorkflowRouter_onReport_RevertWhen_WorkflowNameIsZero() external {
@@ -75,7 +75,7 @@ contract WorkflowRouter_OnReportUnitTest is BaseWorkflowRouterUnitTest {
                 IWorkflowRouter.WorkflowRouter__MetadataZero.selector, WORKFLOW_ID, bytes10(0), i_owner
             )
         );
-        s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, bytes10(0), i_owner), abi.encodePacked(SELECTOR));
+        s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, bytes10(0), i_owner), _report(SELECTOR));
     }
 
     function test_WorkflowRouter_onReport_RevertWhen_WorkflowOwnerIsZero() external {
@@ -84,7 +84,7 @@ contract WorkflowRouter_OnReportUnitTest is BaseWorkflowRouterUnitTest {
                 IWorkflowRouter.WorkflowRouter__MetadataZero.selector, WORKFLOW_ID, s_workflowName, address(0)
             )
         );
-        s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, s_workflowName, address(0)), abi.encodePacked(SELECTOR));
+        s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, s_workflowName, address(0)), _report(SELECTOR));
     }
 
     function test_WorkflowRouter_onReport_RevertWhen_WorkflowMetadataDoesNotMatch() external {
@@ -95,7 +95,7 @@ contract WorkflowRouter_OnReportUnitTest is BaseWorkflowRouterUnitTest {
                 IWorkflowRouter.WorkflowRouter__MetadataMismatch.selector, unknownWorkflow, unknownName, i_nonOwner
             )
         );
-        s_workflowRouter.onReport(_buildMetadata(unknownWorkflow, unknownName, i_nonOwner), abi.encodePacked(SELECTOR));
+        s_workflowRouter.onReport(_buildMetadata(unknownWorkflow, unknownName, i_nonOwner), _report(SELECTOR));
     }
 
     function test_WorkflowRouter_onReport_RevertWhen_ReportIsTooShort() external {
@@ -106,6 +106,64 @@ contract WorkflowRouter_OnReportUnitTest is BaseWorkflowRouterUnitTest {
         s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, s_workflowName, i_owner), shortReport);
     }
 
+    function test_WorkflowRouter_onReport_RevertWhen_TargetChainSelectorDoesNotMatch() external {
+        uint64 targetChainSelector = TARGET_CHAIN_SELECTOR + 1;
+        bytes memory report =
+            _buildReport(targetChainSelector, address(s_workflowRouter), block.timestamp, abi.encodePacked(SELECTOR));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IWorkflowRouter.WorkflowRouter__InvalidReportDomain.selector,
+                targetChainSelector,
+                address(s_workflowRouter)
+            )
+        );
+        s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, s_workflowName, i_owner), report);
+    }
+
+    function test_WorkflowRouter_onReport_RevertWhen_TargetRouterDoesNotMatch() external {
+        bytes memory report =
+            _buildReport(TARGET_CHAIN_SELECTOR, i_nonOwner, block.timestamp, abi.encodePacked(SELECTOR));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IWorkflowRouter.WorkflowRouter__InvalidReportDomain.selector, TARGET_CHAIN_SELECTOR, i_nonOwner
+            )
+        );
+        s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, s_workflowName, i_owner), report);
+    }
+
+    function test_WorkflowRouter_onReport_RevertWhen_ObservationTimestampIsInFuture() external {
+        uint256 observedAt = block.timestamp + 1;
+        bytes memory report =
+            _buildReport(TARGET_CHAIN_SELECTOR, address(s_workflowRouter), observedAt, abi.encodePacked(SELECTOR));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IWorkflowRouter.WorkflowRouter__ReportFromFuture.selector, observedAt, block.timestamp
+            )
+        );
+        s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, s_workflowName, i_owner), report);
+    }
+
+    function test_WorkflowRouter_onReport_RevertWhen_ReportIsOlderThanThirtyMinutes() external {
+        uint256 observedAt = block.timestamp;
+        bytes memory report =
+            _buildReport(TARGET_CHAIN_SELECTOR, address(s_workflowRouter), observedAt, abi.encodePacked(SELECTOR));
+        vm.warp(block.timestamp + 30 minutes + 1);
+        vm.expectRevert(
+            abi.encodeWithSelector(IWorkflowRouter.WorkflowRouter__ReportExpired.selector, observedAt, block.timestamp)
+        );
+        s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, s_workflowName, i_owner), report);
+    }
+
+    function test_WorkflowRouter_onReport_Success_When_ReportIsExactlyThirtyMinutesOld() external {
+        uint256 observedAt = block.timestamp;
+        bytes memory report =
+            _buildReport(TARGET_CHAIN_SELECTOR, address(s_workflowRouter), observedAt, abi.encodePacked(SELECTOR));
+        vm.warp(block.timestamp + 30 minutes);
+        vm.recordLogs();
+        s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, s_workflowName, i_owner), report);
+        _assertEmittedBy(keccak256("TargetDepositSuccess()"), address(s_target));
+    }
+
     function test_WorkflowRouter_onReport_RevertWhen_SelectorIsNotAllowlisted() external {
         bytes4 unknownSelector = bytes4(keccak256("unknown()"));
         vm.expectRevert(
@@ -113,20 +171,18 @@ contract WorkflowRouter_OnReportUnitTest is BaseWorkflowRouterUnitTest {
                 IWorkflowRouter.WorkflowRouter__SelectorNotAllowlisted.selector, WORKFLOW_ID, unknownSelector
             )
         );
-        s_workflowRouter.onReport(
-            _buildMetadata(WORKFLOW_ID, s_workflowName, i_owner), abi.encodePacked(unknownSelector)
-        );
+        s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, s_workflowName, i_owner), _report(unknownSelector));
     }
 
     function test_WorkflowRouter_onReport_RevertWhen_CallFails() external {
         bytes memory targetError = abi.encodeWithSelector(Target.Target__Fail.selector);
         vm.expectRevert(abi.encodeWithSelector(IWorkflowRouter.WorkflowRouter__CallFailed.selector, targetError));
-        s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, s_workflowName, i_owner), abi.encodePacked(FAIL_SELECTOR));
+        s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, s_workflowName, i_owner), _report(FAIL_SELECTOR));
     }
 
     function test_WorkflowRouter_onReport_Success() external {
         vm.recordLogs();
-        s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, s_workflowName, i_owner), abi.encodePacked(SELECTOR));
+        s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, s_workflowName, i_owner), _report(SELECTOR));
         _assertEmittedBy(keccak256("TargetDepositSuccess()"), address(s_target));
     }
 
@@ -143,7 +199,7 @@ contract WorkflowRouter_OnReportUnitTest is BaseWorkflowRouterUnitTest {
                 IWorkflowRouter.WorkflowRouter__SelectorNotAllowlisted.selector, WORKFLOW_ID, SELECTOR
             )
         );
-        s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, newName, i_nonOwner), abi.encodePacked(SELECTOR));
+        s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, newName, i_nonOwner), _report(SELECTOR));
     }
 
     function test_WorkflowRouter_onReport_Success_AfterReregisterAndSelectorsReAdded() external {
@@ -158,7 +214,7 @@ contract WorkflowRouter_OnReportUnitTest is BaseWorkflowRouterUnitTest {
 
         _changePrank(i_keystoneForwarder);
         vm.recordLogs();
-        s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, newName, i_nonOwner), abi.encodePacked(SELECTOR));
+        s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, newName, i_nonOwner), _report(SELECTOR));
         _assertEmittedBy(keccak256("TargetDepositSuccess()"), address(s_target));
     }
 
@@ -174,6 +230,10 @@ contract WorkflowRouter_OnReportUnitTest is BaseWorkflowRouterUnitTest {
                 IWorkflowRouter.WorkflowRouter__SelectorNotAllowlisted.selector, WORKFLOW_ID, SELECTOR
             )
         );
-        s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, newName, i_nonOwner), abi.encodePacked(SELECTOR));
+        s_workflowRouter.onReport(_buildMetadata(WORKFLOW_ID, newName, i_nonOwner), _report(SELECTOR));
+    }
+
+    function _report(bytes4 selector) private view returns (bytes memory) {
+        return _buildReport(abi.encodePacked(selector));
     }
 }

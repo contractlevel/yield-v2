@@ -1,0 +1,9 @@
+StaleReportRetry
+  ├── when an authenticated close report fails after the triggering deposit is cancelled
+  │   └── it should remain retryable without advancing the epoch
+  ├── when the failed report is retried more than 30 minutes after observation
+  │   ├── it should remain failed
+  │   └── it should not settle the epoch with stale TVL
+  └── when a fresh report is signed with current TVL
+      ├── it should settle the epoch
+      └── it should not allocate previously accrued yield to the late depositor

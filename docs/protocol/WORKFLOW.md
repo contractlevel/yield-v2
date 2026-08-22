@@ -134,6 +134,7 @@ Every handler uses the same write path:
 ```text
 handler
   -> ABI-encode the vault function call
+  -> prefix the target chain selector, target WorkflowRouter, and observation timestamp
   -> generate a signed CRE report
   -> submit it to the chain's WorkflowRouter
   -> Keystone Forwarder calls WorkflowRouter.onReport
@@ -145,9 +146,11 @@ handler
 - the caller has the Keystone Forwarder role;
 - the router is not paused;
 - the report's workflow ID, name, and owner match registered metadata; and
+- the signed target chain selector and router address match this router;
+- the signed observation timestamp is not in the future or more than 30 minutes old; and
 - the vault function selector is allowlisted for that workflow.
 
-The router then calls its immutable vault with the report payload. The vault's role checks and state-machine guards are the final authorization layer. A reverted vault call reverts the router call, and the workflow treats an unsuccessful transaction or receiver execution as an error.
+The signed report payload is `abi.encodePacked(uint64 targetChainSelector, address targetRouter, uint256 observedAt, bytes vaultCall)`. The router strips the 60-byte envelope, then calls its immutable vault with `vaultCall`. The vault's role checks and state-machine guards are the final authorization layer. A reverted vault call reverts the router call, and the workflow treats an unsuccessful transaction or receiver execution as an error. Retrying the same signed report is possible only while its observation timestamp remains within the 30-minute window; after that, the workflow must read current state and produce a fresh report.
 
 ## Configuration
 

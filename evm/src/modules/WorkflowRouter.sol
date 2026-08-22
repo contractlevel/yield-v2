@@ -7,25 +7,32 @@ import {
 } from "@openzeppelin/contracts/access/extensions/AccessControlDefaultAdminRules.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {IWorkflowRouter} from "../interfaces/modules/IWorkflowRouter.sol";
+import {IBaseVault} from "../interfaces/vaults/IBaseVault.sol";
 import {Roles} from "../libraries/Roles.sol";
 
 /// @title Yieldcoin v2 WorkflowRouter
 /// @author @contractlevel
 /// @notice Handles incoming CRE reports from Chainlink's Keystone Forwarder for the Yieldcoin v2 system
-/// @dev Validates every incoming CRE report against a per-workflow metadata + selector allowlist,
-///      then dispatches the raw report calldata to the vault. No business logic lives here.
+/// @dev Validates workflow metadata, report destination, observation age, and selector allowlist,
+///      then strips the signed envelope and dispatches the vault calldata. No business logic lives here.
 contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Pausable {
     /*//////////////////////////////////////////////////////////////
                                CONSTANTS
     //////////////////////////////////////////////////////////////*/
     /// @dev Keystone metadata contains workflow ID (32), name (10), owner (20), and report ID (2)
     uint256 internal constant KEYSTONE_METADATA_LENGTH = 64;
+    /// @dev Maximum time between the signed observation and report delivery
+    uint256 internal constant MAX_REPORT_AGE = 30 minutes;
+    /// @dev Report envelope: chain selector (8), target router (20), observation timestamp (32)
+    uint256 internal constant REPORT_ENVELOPE_LENGTH = 60;
 
     /*//////////////////////////////////////////////////////////////
                                IMMUTABLE
     //////////////////////////////////////////////////////////////*/
     /// @dev The Yieldcoin v2 Vault
     address internal immutable i_vault;
+    /// @dev The vault's CCIP chain selector
+    uint64 internal immutable i_thisChainSelector;
 
     /*//////////////////////////////////////////////////////////////
                                  STATE
@@ -77,6 +84,7 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
     /// @dev Reverts if params.configOperator is the zero address
     /// @dev Reverts if params.keystoneForwarder is the zero address
     /// @dev Reverts if params.vault is the zero address
+    /// @dev Reverts if params.vault reports a zero chain selector
     constructor(ConstructorParams memory params)
         AccessControlDefaultAdminRules(params.initialDelay, params.defaultAdmin)
     {
@@ -87,6 +95,9 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
         _revertIfZeroAddress(params.vault);
 
         i_vault = params.vault;
+        uint64 chainSelector = IBaseVault(params.vault).getThisChainSelector();
+        if (chainSelector == 0) revert WorkflowRouter__NoZeroChainSelector();
+        i_thisChainSelector = chainSelector;
         _grantRole(Roles.PAUSER_ROLE, params.pauser);
         _grantRole(Roles.UNPAUSER_ROLE, params.unpauser);
         _grantRole(Roles.CONFIG_OPERATOR_ROLE, params.configOperator);
@@ -105,17 +116,21 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
     //////////////////////////////////////////////////////////////*/
     /// @notice Validates and forwards an incoming CRE workflow report to the vault
     /// @param metadata The packed Keystone metadata containing workflow ID, name, owner, and report ID
-    /// @param report The raw vault calldata, beginning with an allowlisted function selector
+    /// @param report The target chain selector, router, observation timestamp, and raw vault calldata
     /// @dev A report that fails because its execution gas limit is insufficient may be retried with a higher gas limit
+    ///      only while its signed observation timestamp remains valid
     /// @dev Reverts if the caller does not have KEYSTONE_FORWARDER_ROLE
     /// @dev Reverts if the router is paused
     /// @dev Reverts if metadata is not exactly 64 bytes
     /// @dev Reverts if the decoded workflow ID, name, or owner is zero
     /// @dev Reverts if the decoded workflow name and owner do not match the metadata registered for the workflow ID
-    /// @dev Reverts if report is shorter than a function selector
+    /// @dev Reverts if report is shorter than its envelope and a function selector
+    /// @dev Reverts if the report's target chain selector or router does not match this router
+    /// @dev Reverts if the observation timestamp is in the future or more than 30 minutes old
     /// @dev Reverts if the report selector is not allowlisted for the workflow
     /// @dev Reverts if the forwarded vault call fails
-    /// @dev The metadata report ID is unused; this router does not independently reject stale or replayed reports
+    /// @dev The metadata report ID is unused. This router rejects expired reports but does not independently reject an
+    ///      otherwise-valid replay within the 30-minute window; Keystone manages transmission replay state.
     function onReport(bytes calldata metadata, bytes calldata report)
         external
         whenNotPaused
@@ -131,8 +146,22 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
             revert WorkflowRouter__MetadataMismatch(workflowId, workflowName, workflowOwner);
         }
 
-        if (report.length < 4) revert WorkflowRouter__ReportTooShort(report.length);
-        bytes4 selector = bytes4(report[:4]);
+        if (report.length < REPORT_ENVELOPE_LENGTH + 4) revert WorkflowRouter__ReportTooShort(report.length);
+
+        uint64 targetChainSelector = uint64(bytes8(report[:8]));
+        address targetRouter = address(bytes20(report[8:28]));
+        if (targetChainSelector != i_thisChainSelector || targetRouter != address(this)) {
+            revert WorkflowRouter__InvalidReportDomain(targetChainSelector, targetRouter);
+        }
+
+        uint256 observedAt = uint256(bytes32(report[28:REPORT_ENVELOPE_LENGTH]));
+        if (observedAt > block.timestamp) revert WorkflowRouter__ReportFromFuture(observedAt, block.timestamp);
+        if (block.timestamp - observedAt > MAX_REPORT_AGE) {
+            revert WorkflowRouter__ReportExpired(observedAt, block.timestamp);
+        }
+
+        bytes calldata vaultCall = report[REPORT_ENVELOPE_LENGTH:];
+        bytes4 selector = bytes4(vaultCall[:4]);
 
         uint256 generation = s_workflowGenerations[workflowId];
         if (!s_workflowSelectors[workflowId][generation][selector]) {
@@ -140,7 +169,7 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
         }
 
         //slither-disable-next-line low-level-calls
-        (bool success, bytes memory returnData) = i_vault.call(report);
+        (bool success, bytes memory returnData) = i_vault.call(vaultCall);
         if (!success) revert WorkflowRouter__CallFailed(returnData);
     }
 
@@ -297,6 +326,12 @@ contract WorkflowRouter is IWorkflowRouter, AccessControlDefaultAdminRules, Paus
     /// @return vault The address of the vault
     function getVault() external view returns (address vault) {
         vault = i_vault;
+    }
+
+    /// @notice Returns the CCIP chain selector this router accepts reports for
+    /// @return chainSelector The CCIP chain selector read from the vault during construction
+    function getThisChainSelector() external view returns (uint64 chainSelector) {
+        chainSelector = i_thisChainSelector;
     }
 
     /*//////////////////////////////////////////////////////////////

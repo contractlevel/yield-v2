@@ -1,0 +1,13 @@
+ReceiverDomainReplay
+  ├── when an honest signed epoch-withdraw report is delivered to its intended Child
+  │   └── it should succeed
+  ├── when the identical signed report is redirected to a later activated Child
+      ├── it should fail with no successful transmission
+      ├── it should not reduce the destination strategy TVL
+      ├── it should not create recovery state
+      └── it should not spend attacker tokens
+  └── when an honest signed rebalance report is redirected to its activated destination Child
+      ├── it should fail with no successful transmission
+      ├── it should not withdraw the destination's active strategy
+      ├── it should not create recovery state
+      └── it should not spend attacker tokens

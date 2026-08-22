@@ -14,14 +14,15 @@ contract ConfigureWorkflowRouterTest is Test {
     bytes32 internal constant WORKFLOW_ID = keccak256("workflow-id");
     bytes10 internal constant WORKFLOW_NAME = bytes10("67d6954c97");
     address internal constant WORKFLOW_OWNER = address(0xA11CE);
-    address internal constant VAULT = address(0xBEEF);
 
     ConfigureWorkflowRouter internal script;
     WorkflowRouter internal router;
+    WorkflowRouterVaultMock internal s_vault;
     HelperConfig.CREConfig internal creConfig;
 
     function setUp() external {
         script = new ConfigureWorkflowRouter();
+        s_vault = new WorkflowRouterVaultMock();
         router = new WorkflowRouter(
             WorkflowRouter.ConstructorParams({
                 initialDelay: 0,
@@ -30,7 +31,7 @@ contract ConfigureWorkflowRouterTest is Test {
                 unpauser: address(this),
                 configOperator: address(script),
                 keystoneForwarder: address(1),
-                vault: VAULT
+                vault: address(s_vault)
             })
         );
         creConfig = HelperConfig.CREConfig({
@@ -42,7 +43,7 @@ contract ConfigureWorkflowRouterTest is Test {
     }
 
     function test_configure_parent() external {
-        script.configure(router, VAULT, creConfig, true);
+        script.configure(router, address(s_vault), creConfig, true);
 
         _assertMetadata();
         assertTrue(router.getAllowlistedWorkflowSelector(WORKFLOW_ID, IParentVault.closeEpoch.selector));
@@ -53,7 +54,7 @@ contract ConfigureWorkflowRouterTest is Test {
     }
 
     function test_configure_child() external {
-        script.configure(router, VAULT, creConfig, false);
+        script.configure(router, address(s_vault), creConfig, false);
 
         _assertMetadata();
         assertTrue(router.getAllowlistedWorkflowSelector(WORKFLOW_ID, IChildVault.executeEpochWithdraw.selector));
@@ -62,10 +63,10 @@ contract ConfigureWorkflowRouterTest is Test {
     }
 
     function test_configure_isIdempotent() external {
-        script.configure(router, VAULT, creConfig, true);
+        script.configure(router, address(s_vault), creConfig, true);
         uint256 generation = router.getWorkflowGeneration(WORKFLOW_ID);
 
-        script.configure(router, VAULT, creConfig, true);
+        script.configure(router, address(s_vault), creConfig, true);
 
         assertEq(router.getWorkflowGeneration(WORKFLOW_ID), generation);
         _assertMetadata();
@@ -74,7 +75,7 @@ contract ConfigureWorkflowRouterTest is Test {
     function test_configure_revertsOnVaultMismatch() external {
         vm.expectRevert(
             abi.encodeWithSelector(
-                ConfigureWorkflowRouter.ConfigureWorkflowRouter__VaultMismatch.selector, address(2), VAULT
+                ConfigureWorkflowRouter.ConfigureWorkflowRouter__VaultMismatch.selector, address(2), address(s_vault)
             )
         );
         script.configure(router, address(2), creConfig, true);
@@ -82,7 +83,7 @@ contract ConfigureWorkflowRouterTest is Test {
 
     function test_configure_revertsOnZeroValues() external {
         vm.expectRevert(ConfigureWorkflowRouter.ConfigureWorkflowRouter__ZeroRouter.selector);
-        script.configure(IWorkflowRouter(address(0)), VAULT, creConfig, true);
+        script.configure(IWorkflowRouter(address(0)), address(s_vault), creConfig, true);
 
         vm.expectRevert(ConfigureWorkflowRouter.ConfigureWorkflowRouter__ZeroVault.selector);
         script.configure(router, address(0), creConfig, true);
@@ -90,17 +91,17 @@ contract ConfigureWorkflowRouterTest is Test {
         HelperConfig.CREConfig memory invalid = creConfig;
         invalid.workflowId = bytes32(0);
         vm.expectRevert(ConfigureWorkflowRouter.ConfigureWorkflowRouter__ZeroWorkflowId.selector);
-        script.configure(router, VAULT, invalid, true);
+        script.configure(router, address(s_vault), invalid, true);
 
         invalid = creConfig;
         invalid.workflowName = bytes10(0);
         vm.expectRevert(ConfigureWorkflowRouter.ConfigureWorkflowRouter__ZeroWorkflowName.selector);
-        script.configure(router, VAULT, invalid, true);
+        script.configure(router, address(s_vault), invalid, true);
 
         invalid = creConfig;
         invalid.workflowOwner = address(0);
         vm.expectRevert(ConfigureWorkflowRouter.ConfigureWorkflowRouter__ZeroWorkflowOwner.selector);
-        script.configure(router, VAULT, invalid, true);
+        script.configure(router, address(s_vault), invalid, true);
     }
 
     function test_workflowSelectors() external view {
@@ -121,5 +122,11 @@ contract ConfigureWorkflowRouterTest is Test {
         IWorkflowRouter.WorkflowMetadata memory metadata = router.getWorkflowMetadata(WORKFLOW_ID);
         assertEq(metadata.name, WORKFLOW_NAME);
         assertEq(metadata.owner, WORKFLOW_OWNER);
+    }
+}
+
+contract WorkflowRouterVaultMock {
+    function getThisChainSelector() external pure returns (uint64) {
+        return 1;
     }
 }

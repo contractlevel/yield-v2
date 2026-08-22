@@ -34,6 +34,8 @@ interface IWorkflowRouter is IReceiver, IPauseable {
     error WorkflowRouter__MetadataZero(bytes32 workflowId, bytes10 workflowName, address workflowOwner);
     /// @dev Thrown when the zero address is provided for required configuration
     error WorkflowRouter__NoZeroAddress();
+    /// @dev Thrown when the configured vault reports a zero chain selector
+    error WorkflowRouter__NoZeroChainSelector();
     /// @dev Thrown when the zero workflow ID is provided
     error WorkflowRouter__NoZeroWorkflowId();
     /// @dev Thrown when no workflow selectors are provided
@@ -53,9 +55,21 @@ interface IWorkflowRouter is IReceiver, IPauseable {
     /// @dev Thrown when setWorkflowSelectors is called for a workflow ID with no registered metadata
     /// @param workflowId The unregistered workflow ID
     error WorkflowRouter__WorkflowNotRegistered(bytes32 workflowId);
-    /// @dev Thrown when the report is shorter than the 4-byte function selector
+    /// @dev Thrown when the report is shorter than the envelope and 4-byte function selector
     /// @param reportLength The length of the report received
     error WorkflowRouter__ReportTooShort(uint256 reportLength);
+    /// @dev Thrown when the report targets a different CCIP chain selector or workflow router
+    /// @param targetChainSelector The chain selector encoded in the signed report
+    /// @param targetRouter The router encoded in the signed report
+    error WorkflowRouter__InvalidReportDomain(uint64 targetChainSelector, address targetRouter);
+    /// @dev Thrown when the signed observation timestamp is in the future
+    /// @param observedAt The observation timestamp encoded in the signed report
+    /// @param timestamp The current block timestamp
+    error WorkflowRouter__ReportFromFuture(uint256 observedAt, uint256 timestamp);
+    /// @dev Thrown when the report is delivered more than 30 minutes after its signed observation timestamp
+    /// @param observedAt The observation timestamp encoded in the signed report
+    /// @param timestamp The current block timestamp
+    error WorkflowRouter__ReportExpired(uint256 observedAt, uint256 timestamp);
     /// @dev Thrown when the report's function selector is not allowlisted for the workflow ID
     /// @param workflowId The workflow ID the report was submitted for
     /// @param selector The function selector decoded from the report
@@ -143,4 +157,8 @@ interface IWorkflowRouter is IReceiver, IPauseable {
     /// @notice Returns the Yieldcoin v2 Vault address for this chain
     /// @return vault The address of the vault
     function getVault() external view returns (address vault);
+
+    /// @notice Returns the CCIP chain selector this router accepts reports for
+    /// @return chainSelector The CCIP chain selector read from the vault during construction
+    function getThisChainSelector() external view returns (uint64 chainSelector);
 }

@@ -11,6 +11,10 @@ contract WorkflowRouter_ConstructorUnitTest is BaseWorkflowRouterUnitTest {
         assertEq(s_workflowRouter.getVault(), address(s_target));
     }
 
+    function test_WorkflowRouter_constructor_SetsThisChainSelector() public view {
+        assertEq(s_workflowRouter.getThisChainSelector(), TARGET_CHAIN_SELECTOR);
+    }
+
     function test_WorkflowRouter_constructor_GrantsDefaultAdminRole() public view {
         assertTrue(s_workflowRouter.hasRole(DEFAULT_ADMIN_ROLE, i_owner));
     }
@@ -71,6 +75,14 @@ contract WorkflowRouter_ConstructorUnitTest is BaseWorkflowRouterUnitTest {
         new WorkflowRouter(params);
     }
 
+    function test_WorkflowRouter_constructor_RevertWhen_VaultChainSelectorIsZero() public {
+        WorkflowRouter.ConstructorParams memory params = _workflowRouterParams();
+        params.vault = address(new ZeroChainSelectorVault());
+
+        vm.expectRevert(IWorkflowRouter.WorkflowRouter__NoZeroChainSelector.selector);
+        new WorkflowRouter(params);
+    }
+
     function _workflowRouterParams() internal view returns (WorkflowRouter.ConstructorParams memory params) {
         params = WorkflowRouter.ConstructorParams({
             initialDelay: 0,
@@ -81,5 +93,11 @@ contract WorkflowRouter_ConstructorUnitTest is BaseWorkflowRouterUnitTest {
             keystoneForwarder: i_keystoneForwarder,
             vault: address(s_target)
         });
+    }
+}
+
+contract ZeroChainSelectorVault {
+    function getThisChainSelector() external pure returns (uint64) {
+        return 0;
     }
 }

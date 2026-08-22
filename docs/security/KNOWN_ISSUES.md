@@ -295,7 +295,7 @@ Shareholders can still pay management fees for time when the user-facing vault w
 
 **Status:** Accepted — operational liveness dependency.
 
-**Last reviewed:** 2026-07-08
+**Last reviewed:** 2026-08-22
 
 **Component:** CRE epoch workflow, `WorkflowRouter.onReport`, `ParentVault.closeEpoch`, and `ParentVault.completeEpochDeposit`.
 
@@ -312,22 +312,22 @@ The failure mode is delayed settlement:
 - The current epoch remains open until a valid workflow report closes it.
 - Depositors and withdrawers for that epoch cannot claim shares or assets while the epoch remains open.
 - The next epoch is not opened, so later user intents continue to accrue into the same open epoch rather than a new scheduled epoch.
-- Settlement allocations use TVL at the eventual close, not at the missed scheduled close time.
+- Settlement allocations use a TVL observation signed no more than 30 minutes before the eventual close, not a snapshot from an earlier missed close attempt. Once a report expires, settlement requires a fresh report.
 - For remote-strategy net-withdraw epochs, the second CRE step (`EpochWithdrawExecuting` log handling on the child chain) is required before the parent epoch can become claimable.
 - For remote-strategy net-deposit epochs, CRE must observe the destination ChildVault's `EpochDepositToStrategySuccess` event, read the current parent epoch nonce, and submit `completeEpochDeposit(currentEpochNonce - 1)` before the parent epoch can become claimable.
 
-This does not by itself create an accounting inconsistency or direct loss of funds. User deposits and withdraw-intent shares remain escrowed by the protocol. While the epoch is still open, users may cancel their current-epoch deposit or withdraw intent through the normal cancellation functions, subject to the usual pause and state checks. Once the epoch itself is no longer open — including the `EXECUTING` window described above — cancellation is not available either; see [KI-017](#ki-017--deposit-and-withdraw-cancellation-is-scoped-to-the-current-epoch-only).
+With the report freshness check, a missed workflow execution does not by itself create an accounting inconsistency or direct loss of funds: an old failed report cannot later settle changed epoch contents using its historical TVL observation. User deposits and withdraw-intent shares remain escrowed by the protocol. While the epoch is still open, users may cancel their current-epoch deposit or withdraw intent through the normal cancellation functions, subject to the usual pause and state checks. Once the epoch itself is no longer open — including the `EXECUTING` window described above — cancellation is not available either; see [KI-017](#ki-017--deposit-and-withdraw-cancellation-is-scoped-to-the-current-epoch-only).
 
 ### Why this is accepted, not mitigated on-chain
 
-Closing an epoch requires a fresh TVL value for the active strategy, which may live on the parent chain or a child chain. The contracts deliberately do not compute or validate that cross-chain TVL on-chain. Instead, CRE is the trusted automation and reporting layer for epoch settlement, and `WorkflowRouter` is the narrow on-chain ingress point for CRE reports.
+Closing an epoch requires a fresh TVL value for the active strategy, which may live on the parent chain or a child chain. The contracts deliberately do not compute or validate that cross-chain TVL on-chain. Instead, CRE is the trusted automation and reporting layer for epoch settlement, and `WorkflowRouter` is the narrow on-chain ingress point: it validates workflow metadata and selector allowlists, binds the report to its intended chain and router, and rejects observations more than 30 minutes old.
 
 Adding an on-chain time-based auto-close is not sufficient because the vault still needs the TVL input. Adding a broad manual close path would either:
 
 - require a privileged operator to provide the same trusted TVL value directly, increasing human operational authority; or
 - duplicate the existing CRE report path with another privileged ingress surface.
 
-The current design keeps the authority narrow: the router validates workflow metadata and selector allowlists, then calls only the configured vault. Liveness of that workflow is therefore an operational assumption, not a contract invariant.
+The current design keeps the authority narrow: the router validates workflow metadata, selector allowlists, report destination, and observation age, then calls only the configured vault. Liveness of that workflow is therefore an operational assumption, not a contract invariant.
 
 ### Operational mitigations
 
@@ -357,7 +357,7 @@ The risk is accepted because the protocol already trusts CRE for TVL reporting a
 
 **Status:** Accepted — epoch batching prevents the flash-loan variant; residual unsolicited-donation risk is monitored operationally.
 
-**Last reviewed:** 2026-08-15
+**Last reviewed:** 2026-08-22
 
 **Component:** Strategy adapters (`AaveV3Adapter`, `AaveV4Adapter`, `CompoundV3Adapter`), active strategy `getTVL`, CRE epoch workflow, `ParentVault.closeEpoch`, and its zero-share-mint guard (`ParentVault__DepositWouldMintZeroShares`).
 
@@ -480,7 +480,7 @@ The failure mode is an accepted fee-timing effect of epoch-batched withdrawal se
 
 ## KI-010 — Bootstrap share allocation ignores residual TVL when total shares return to zero
 
-**Status:** Accepted — bounded by elapsed time between the CRE TVL snapshot and on-chain settlement (dust-sized under normal cadence; see [KI-007](#ki-007--epoch-close-depends-on-cre-workflow-execution) for the settlement-delay dependency), and further mitigated operationally by a permanent admin seed deposit.
+**Status:** Accepted — bounded by snapshot-to-execution drift and further mitigated operationally by a permanent admin seed deposit.
 
 **Last reviewed:** 2026-08-15
 
@@ -511,7 +511,7 @@ The root cause is bootstrap share allocation ignoring existing TVL when `s_total
 ### Why this is accepted, not mitigated
 
 - **Operationally, `s_totalShares` should never actually return to zero after the first epoch.** The deployer/admin makes an initial seed deposit as part of launch and does not redeem it. This is not enforced on-chain (there is no dead-shares burn or minimum-liquidity lock in the contracts) — it is a deployment-runbook practice, so the trigger condition requires both every other holder to exit _and_ the admin to redeem the permanent seed position, which is not expected operational behavior.
-- The residual is bounded by how stale the TVL snapshot is by the time `closeEpoch`/`executeEpochWithdraw` actually executes, not by a fixed cap: under normal operating cadence CRE settles within the same transaction window as its snapshot, so the leftover is accrual/rounding drift, not an arbitrary amount. If CRE settlement stalls, the gap widens with it — that is the same liveness dependency [KI-007](#ki-007--epoch-close-depends-on-cre-workflow-execution) already accepts as unbounded in duration, not a separate risk.
+- For a local strategy, `WorkflowRouter` caps the TVL observation age at 30 minutes when `closeEpoch` executes, bounding the residual to accrual and rounding drift over that window. For a remote net withdrawal, the later `executeEpochWithdraw` step remains asynchronous, so strategy growth between Parent settlement and Child withdrawal can still widen with the continuation delay described in [KI-007](#ki-007--epoch-close-depends-on-cre-workflow-execution).
 - Reaching the trigger condition requires total share supply to hit exactly zero, which (even setting the seed deposit aside) is a specific and infrequent state (a full protocol exit), not routine operation.
 - Sweeping or reconciling the residual would require either tracking a per-reset "owed to exited holders" balance or an extra adapter call on the full-exit path — added accounting state and complexity to close a dust-sized gap, contrary to the project's simplicity priority.
 - No other user's balance is diluted or put at risk; the effect is a one-time transfer of dust value to whichever depositor happens to open the next epoch after a full reset.
@@ -522,7 +522,7 @@ The root cause is bootstrap share allocation ignoring existing TVL when `s_total
 
 ### Residual risk
 
-If the seed-deposit practice is not followed, or the admin's seed position is ever fully redeemed alongside all other holders, the next depositor after a full-supply reset can receive a small amount of value that arguably belonged to the exited shareholders. That amount is bounded by yield accrual / rounding over whatever elapsed time separates the CRE TVL snapshot from on-chain settlement — ordinarily inter-transaction and dust-sized, but scaling with any CRE settlement delay per [KI-007](#ki-007--epoch-close-depends-on-cre-workflow-execution), not with a fixed cap. This does not affect protocol solvency, other users' balances, or any live position — it is a one-time bootstrap-allocation artifact, and under normal operation is not expected to be reachable at all.
+If the seed-deposit practice is not followed, or the admin's seed position is ever fully redeemed alongside all other holders, the next depositor after a full-supply reset can receive a small amount of value that arguably belonged to the exited shareholders. For a local strategy, that amount is bounded by yield accrual and rounding over the report's maximum 30-minute observation window. A remote net withdrawal can accrue additional drift while its Child execution is delayed per [KI-007](#ki-007--epoch-close-depends-on-cre-workflow-execution). This does not affect protocol solvency, other users' balances, or any live position — it is a one-time bootstrap-allocation artifact, and under normal operation is not expected to be reachable at all.
 
 ### Conditions that would warrant revisiting
 
@@ -555,7 +555,7 @@ This is distinct from [KI-004](#ki-004--residual-cpumemory-dos-surface-in-defill
 - The relay does not hold funds, sign transactions, or write on-chain state.
 - The relay filters responses to configured pool IDs; arbitrary upstream pool IDs are discarded.
 - CRE reports still enter on-chain state only through `WorkflowRouter.onReport`.
-- `WorkflowRouter` validates workflow metadata and allowlisted selectors before dispatching.
+- `WorkflowRouter` validates workflow metadata, the signed destination, report freshness, and allowlisted selectors before dispatching.
 - Rebalance execution is constrained to supported protocols, registered adapters, and registered destination chains.
 
 ### Residual risk

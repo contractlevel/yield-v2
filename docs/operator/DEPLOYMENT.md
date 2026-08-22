@@ -41,7 +41,7 @@ After all vaults are deployed:
 1. Register the trusted cross-chain vaults with `SetCrosschainVaults.s.sol` on every chain.
 2. Deploy the DefiLlama relay with a fresh bearer token.
 3. Populate and validate the CRE environment configuration.
-4. Deploy the CRE workflow.
+4. Deploy the CRE workflow, which generates the signed report envelope containing the target chain selector, target router address, observation timestamp, and vault calldata.
 5. Configure each WorkflowRouter with `ConfigureWorkflowRouter.s.sol`.
 6. Fund every vault with sufficient LINK for CCIP.
 7. Assign production roles to their approved holders and remove temporary deployer access.
@@ -53,10 +53,10 @@ Use [`CONFIG`](./CONFIG.md) for configuration functions and [`ACCESS_CONTROL_MAT
 Before handoff:
 
 - Confirm every proxy points to the intended verified implementation.
-- Confirm immutable constructor values and proxy initialization values match the deployment record.
+- Confirm immutable constructor values and proxy initialization values match the deployment record, including each WorkflowRouter's vault-derived nonzero chain selector.
 - Confirm adapters are registered for the correct vault, asset, and protocol.
 - Confirm cross-chain vault mappings and CCIP gas limits on every chain.
-- Confirm WorkflowRouter metadata and selector allowlists.
+- Confirm WorkflowRouter metadata and selector allowlists, and verify a freshly generated report is accepted only by its configured chain and router.
 - Confirm role assignments created by the parent deployment, including that `ParentVault` holds the share token's minter and burner roles.
 - Confirm vault LINK balances and CRE secrets without exposing secret values.
 - Run the applicable deployment and fork tests.
