@@ -591,7 +591,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /// @dev Reverts if beneficiary is this ParentVault
     /// @param beneficiary The beneficiary address to validate
     function _revertIfInvalidBeneficiary(address beneficiary) internal view {
-        if (beneficiary == address(this)) revert ParentVault__InvalidBeneficiary(beneficiary);
+        if (beneficiary == address(this)) revert ParentVault__InvalidBeneficiary();
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -14,8 +14,7 @@ interface IParentVault is IBaseVault {
     /// @dev Thrown when the amount is zero
     error ParentVault__NoZeroAmount();
     /// @dev Thrown when the ParentVault itself is provided as a beneficiary
-    /// @param beneficiary The invalid beneficiary address
-    error ParentVault__InvalidBeneficiary(address beneficiary);
+    error ParentVault__InvalidBeneficiary();
     /// @dev Thrown when the zero protocol ID is provided
     error ParentVault__NoZeroProtocolId();
     /// @dev Thrown when the deposit amount is less than the minimum deposit amount
