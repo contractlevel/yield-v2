@@ -27,9 +27,7 @@ contract ParentVault_WithdrawForUnitTest is BaseUnitTest {
     }
 
     function test_ParentVault_withdrawFor_RevertWhen_BeneficiaryIsParentVault() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(IParentVault.ParentVault__InvalidBeneficiary.selector, address(s_parentVault))
-        );
+        vm.expectRevert(IParentVault.ParentVault__InvalidBeneficiary.selector);
         s_parentVault.withdrawFor(address(s_parentVault), SHARE_BURN_AMOUNT);
     }
 
