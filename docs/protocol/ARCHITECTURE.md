@@ -14,7 +14,7 @@ CCIP. A Chainlink CRE workflow drives epoch settlement and rebalancing through `
 - **Strategy adapters** — thin wrappers over external lending protocols (e.g. Aave). One per protocol per chain.
 - **AdapterRegistry** — maps registered local protocol IDs to their deployed strategy adapters.
 - **YieldcoinShare** — upgradeable, pausable ERC20 share token. ParentVault is intended to be the sole holder of the minter and burner roles; this is a deployment and role-administration assumption, not an on-chain identity check (see `ENV-010` in [`INVARIANTS`](../security/INVARIANTS.md#external-assumptions)).
-- **WorkflowRouter** — validates CRE workflow identity and allowlisted selectors, then forwards reports to its immutable vault.
+- **WorkflowRouter** — validates CRE workflow identity, the signed target chain and router, report freshness, and allowlisted selectors, then strips the report envelope and forwards its vault calldata to the immutable vault.
 - **Chainlink CRE workflow** — off-chain orchestrator. Triggers epoch close and rebalance actions on-chain.
 - **CCIP** — cross-chain messaging and token transport between parent and child vaults.
 - **DefiLlama relay** — off-chain process that fetches yield data from the DefiLlama API and feeds it to the CRE workflow; it does not touch on-chain state. The CRE workflow is what reaches contracts, via `WorkflowRouter`.

@@ -2,7 +2,7 @@
 
 All commands below run from the EVM project root, `evm/`.
 
-## Build
+## Build
 
 ```
 forge build --build-info
@@ -17,36 +17,48 @@ forge build src/vaults/ParentVault.sol --sizes
 Run for coverage:
 
 ```
+
 forge coverage --report lcov
 forge coverage --ir-minimum --report lcov
 forge coverage --ir-minimum --report lcov --no-match-path "test/fork/**"
+
 ```
 
 Inspect the report:
 
 ```
+
 genhtml lcov.info -o coverage
 open coverage/index.html
+
 ```
 
 ## Static Analysis
 
 ```
+
 slither . --filter-path lib
+
 ```
 
 ```
+
 aderyn .
+
 ```
 
 ## Invariants
 
 ```
+
 forge test --match-contract CryticToFoundry -vv
+
 ```
 
 ```
+
 medusa fuzz --config medusa.json --test-limit 1000 --timeout 60
+
 ```
 
 Do not delete medusa/ between runs if you want it to build on prior corpus. Delete it only when you need a clean rerun.
@@ -56,44 +68,56 @@ Do not delete medusa/ between runs if you want it to build on prior corpus. Dele
 The following command permanently deletes the accumulated Medusa corpus and coverage data. Run it only when you need a clean fuzzing run.
 
 ```
+
 rm -rf medusa
 medusa fuzz \
-    --config medusa.json \
-    --compilation-target test/invariant/chimera/CryticTester.t.sol \
-    --target-contracts CryticTester \
-    --test-limit 1000 \
-    --timeout 60
+ --config medusa.json \
+ --compilation-target test/invariant/chimera/CryticTester.t.sol \
+ --target-contracts CryticTester \
+ --test-limit 1000 \
+ --timeout 60
+
 ```
 
 ```
+
 medusa fuzz \
-    --config medusa.json \
-    --compilation-target test/invariant/chimera/CryticTester.t.sol \
-    --target-contracts CryticTester \
-    --test-limit 5000 \
-    --timeout 600
+ --config medusa.json \
+ --compilation-target test/invariant/chimera/CryticTester.t.sol \
+ --target-contracts CryticTester \
+ --test-limit 5000 \
+ --timeout 600
+
 ```
 
 ```
+
 open medusa/coverage/coverage_report.html
+
 ```
 
 ```
+
 recon fuzz . --config echidna.yaml --contract CryticTester
+
 ```
 
 ```
+
 recon fuzz . \
-    --config echidna.yaml \
-    --contract CryticTester \
-    --recon-corpus-dir recon-corpus \
-    --workers 10 \
-    --stop-on-fail
+ --config echidna.yaml \
+ --contract CryticTester \
+ --recon-corpus-dir recon-corpus \
+ --workers 10 \
+ --stop-on-fail
+
 ```
 
 ```
+
 halmos --contract ClaimSolvency --forge-build-out out-halmos --function check_ \
-         --solver-timeout-branching 10000 --solver-timeout-assertion 30000
+ --solver-timeout-branching 10000 --solver-timeout-assertion 30000
+
 ```
 
 ## Certora
@@ -101,6 +125,7 @@ halmos --contract ClaimSolvency --forge-build-out out-halmos --function check_ \
 _Note: Some of the ParentVault rules require ParentVault::\_finalizeRebalance and \_finalizeLocalToLocalRebalance to be **virtual**. This is because these functions use a public library function, which Certora havocs and struggles to resolve. To get around this, the harness overrides the functions with the internal lib equivalent. Virtual should be removed after running the specs._
 
 ```
+
 certoraRun ./certora/conf/modules/AdapterRegistry.conf
 
 certoraRun ./certora/conf/modules/adapters/AaveV3Adapter.ProtocolAdapter.conf
@@ -126,7 +151,7 @@ certoraRun certora/conf/libraries/ParentVaultFeesLib.conf
 certoraRun certora/conf/libraries/ParentVaultRebalanceLib.conf
 certoraRun certora/conf/libraries/ParentVaultUserEpochLib.conf
 
-// Some of the ParentVault rules require ParentVault::_finalizeRebalance and _finalizeLocalToLocalRebalance to be virtual
+// Some of the ParentVault rules require ParentVault::\_finalizeRebalance and \_finalizeLocalToLocalRebalance to be virtual
 
 certoraRun certora/conf/vaults/ChildVault.BaseVault.conf
 certoraRun certora/conf/vaults/ParentVault.BaseVault.conf
@@ -134,7 +159,7 @@ certoraRun certora/conf/vaults/ParentVault.BaseVault.conf
 certoraRun certora/conf/vaults/ChildVault.rules.conf
 certoraRun certora/conf/vaults/ChildVault.invariants.conf
 
-// Some of the ParentVault rules require ParentVault::_finalizeRebalance and _finalizeLocalToLocalRebalance to be virtual
+// Some of the ParentVault rules require ParentVault::\_finalizeRebalance and \_finalizeLocalToLocalRebalance to be virtual
 
 certoraRun certora/conf/vaults/ParentVault.rules.conf
 certoraRun certora/conf/vaults/ParentVault.localAdapter.conf
@@ -145,6 +170,31 @@ certoraRun certora/conf/vaults/ParentVault.invariants.conf
 deposit and withdrawal calls. Keep this mutable-storage link out of the shared ParentVault
 configurations. The shared rules conf excludes these rules so they are verified only by the
 dedicated target.
+
+```
+
+## Security Regression Fuzzing
+
+Run the receiver-domain replay regression with 64 fuzz cases:
+
+```
+
+forge test \
+ --match-path test/integration/security/receiver-domain-replay/receiverDomainReplay.t.sol \
+ --fuzz-runs 64 \
+ -vv
+
+```
+
+Run the stale-report retry regression with 64 fuzz cases:
+
+```
+
+forge test \
+ --match-path test/integration/security/stale-report-retry/staleReportRetry.t.sol \
+ --fuzz-runs 64 \
+ -vv
+
 ```
 
 ---

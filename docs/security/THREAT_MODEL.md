@@ -18,7 +18,7 @@ Primary assets at risk:
 - **External strategy protocols.** Active adapters place funds into third-party lending protocols. The protocol can validate adapter behavior, but cannot make an external market solvent or withdrawable.
 - **Commercial operator roles.** Privileged roles configure protocol components and operate pause, recovery-escalation, and break-glass controls. See [KI-001](./KNOWN_ISSUES.md#ki-001--centralized-trust-in-privileged-operatoradmin-roles).
 - **Underlying asset issuer.** The initial underlying asset is USDC, whose issuer can blacklist addresses or pause transfers. See [KI-002](./KNOWN_ISSUES.md#ki-002--underlying-asset-issuer-can-blacklist-or-pause-the-protocol).
-- **CRE and WorkflowRouter.** CRE supplies trusted TVL inputs and workflow-triggered actions. `WorkflowRouter` is the on-chain ingress for Keystone Forwarder reports and validates workflow metadata and selector allowlists before dispatching to the vault.
+- **CRE and WorkflowRouter.** CRE supplies trusted TVL inputs and workflow-triggered actions. `WorkflowRouter` is the on-chain ingress for Keystone Forwarder reports and validates workflow metadata, the signed destination, report freshness, and selector allowlists before dispatching to the vault.
 - **CCIP.** CCIP transports messages and tokens between parent and child vaults. Vaults validate the decoded sender against the configured crosschain vault for the source chain selector.
 - **Off-chain yield data.** The DefiLlama relay informs rebalance decisions, but does not directly write on-chain state. CRE and on-chain allowlists constrain what can be executed.
 
@@ -77,7 +77,7 @@ See [KI-008](./KNOWN_ISSUES.md#ki-008--strategy-tvl-can-include-permissionless-t
 
 Auditors should verify these controls against code and tests:
 
-- `WorkflowRouter.onReport` requires `KEYSTONE_FORWARDER_ROLE`, registered workflow metadata, and allowlisted selectors.
+- `WorkflowRouter.onReport` requires `KEYSTONE_FORWARDER_ROLE`, registered workflow metadata, a matching signed chain selector and router, a fresh observation timestamp, and an allowlisted selector.
 - Vault epoch/rebalance functions are callable only by `WorkflowRouter` through `EPOCH_OPERATOR_ROLE` or `REBALANCE_OPERATOR_ROLE`.
 - CCIP receivers validate the source chain selector and decoded sender against registered crosschain vaults.
 - Parent/local strategy failures revert atomically; child asynchronous failures store typed recovery state for retry.

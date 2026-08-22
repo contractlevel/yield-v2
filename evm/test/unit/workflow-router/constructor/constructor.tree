@@ -1,5 +1,6 @@
 constructor
   ├── it should set the vault
+  ├── it should set the chain selector reported by the vault
   ├── it should grant DEFAULT_ADMIN_ROLE to defaultAdmin
   ├── it should grant PAUSER_ROLE to pauser
   ├── it should grant UNPAUSER_ROLE to unpauser
@@ -13,5 +14,7 @@ constructor
   │   └── it should revert with WorkflowRouter__NoZeroAddress
   ├── when keystone forwarder is the zero address
   │   └── it should revert with WorkflowRouter__NoZeroAddress
-  └── when vault is the zero address
-      └── it should revert with WorkflowRouter__NoZeroAddress
+  ├── when vault is the zero address
+  │   └── it should revert with WorkflowRouter__NoZeroAddress
+  └── when the vault reports a zero chain selector
+      └── it should revert with WorkflowRouter__NoZeroChainSelector

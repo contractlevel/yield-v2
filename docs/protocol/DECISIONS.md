@@ -53,7 +53,7 @@ Stored recovery handles accepted operations that failed transiently after protoc
 
 Epoch close and rebalance execution are intentionally driven through Chainlink CRE and `WorkflowRouter`.
 
-The contracts do not include autonomous timers or broad manual public execution paths for these operations. `WorkflowRouter` is the narrow on-chain ingress point: it validates workflow metadata and selector allowlists, then dispatches to the configured vault.
+The contracts do not include autonomous timers or broad manual public execution paths for these operations. `WorkflowRouter` is the narrow on-chain ingress point: it validates workflow metadata, the signed destination, report freshness, and selector allowlists, then dispatches to the configured vault.
 
 This keeps operational authority concentrated in the CRE/router path rather than duplicating privileged execution surfaces. CRE liveness remains an accepted operational dependency.
 
@@ -68,6 +68,8 @@ See [THREAT_MODEL - CRE, TVL, and rebalance decision failure](../security/THREAT
 This is deliberate because the active strategy may be on a child chain. The same `closeEpoch` path must support local and remote strategies, so CRE reads the current nonce from ParentVault and TVL from the active strategy chain before submitting both values. On-chain validation against a local adapter would only cover one topology and would not solve the cross-chain TVL case.
 
 Incorrect TVL can corrupt epoch pricing once users claim against the affected epoch. This is a trust-boundary decision, not a hidden invariant.
+
+This trust decision concerns the accuracy of the value CRE reports. `WorkflowRouter` independently binds each signed report to its intended chain and router and rejects observations more than 30 minutes old; trusting CRE for TVL does not permit an otherwise accurate historical observation to settle an epoch indefinitely later.
 
 See [INVARIANTS - External Assumptions](../security/INVARIANTS.md#external-assumptions) and [THREAT_MODEL - CRE, TVL, and rebalance decision failure](../security/THREAT_MODEL.md#33-cre-tvl-and-rebalance-decision-failure).
 
@@ -87,7 +89,7 @@ The system uses CRE cron triggers and log-triggered follow-up reports to progres
 
 This keeps contract logic deterministic and avoids adding a second execution authority. When an operation fails and stores recovery state, retries occur through explicit recovery calls or later workflow execution, depending on the path.
 
-Log-triggered workflow submissions are expected only from standard protocol events emitted during normal state transitions, such as epoch execution and rebalance deposit success. The events do not themselves authorize arbitrary contract calls; `WorkflowRouter` still enforces workflow metadata, selector allowlists, and vault roles before dispatch.
+Log-triggered workflow submissions are expected only from standard protocol events emitted during normal state transitions, such as epoch execution and rebalance deposit success. The events do not themselves authorize arbitrary contract calls; `WorkflowRouter` still enforces workflow metadata, the signed destination, report freshness, selector allowlists, and vault roles before dispatch.
 
 This design means liveness depends on CRE, CCIP, and operator monitoring. Accepted liveness dependencies are tracked in [KNOWN_ISSUES](../security/KNOWN_ISSUES.md).
 

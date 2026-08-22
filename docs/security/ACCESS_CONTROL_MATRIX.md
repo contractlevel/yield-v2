@@ -90,7 +90,7 @@ deliberately unpaused following cross-chain state reconciliation. See
 
 | Function                               | Access                                                                            |
 | -------------------------------------- | --------------------------------------------------------------------------------- |
-| `onReport`                             | `KEYSTONE_FORWARDER_ROLE`, registered workflow metadata, and allowlisted selector |
+| `onReport`                             | `KEYSTONE_FORWARDER_ROLE`, registered workflow metadata, matching signed chain and router, fresh observation timestamp, and allowlisted selector |
 | Workflow metadata and selector setters | `CONFIG_OPERATOR_ROLE`                                                            |
 | `pause`                                | `PAUSER_ROLE`                                                                     |
 | `unpause`                              | `UNPAUSER_ROLE`                                                                   |

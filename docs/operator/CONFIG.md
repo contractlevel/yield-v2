@@ -63,6 +63,8 @@ Before changing the treasury, verify the address is controlled by the intended c
 
 [`WorkflowRouter`](../../evm/src/modules/WorkflowRouter.sol) validates Chainlink CRE reports before dispatching allowed calldata to the vault.
 
+Each router permanently derives its nonzero chain selector from its immutable vault during construction. Every signed report must contain that chain selector, the router's own address, an observation timestamp no more than 30 minutes old and not in the future, and the vault calldata. These destination fields prevent a report for one router from being redirected to another. A failed report may be retried only within its validity window; generate a fresh report from current state after expiry.
+
 | Function                                                     | Role                   | Purpose                                                                                                                           |
 | ------------------------------------------------------------ | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | `setWorkflowMetadata(workflowId, name, owner)`               | `CONFIG_OPERATOR_ROLE` | Registers or removes the expected workflow identity. Use zero `name` and zero `owner` together to remove metadata.                |

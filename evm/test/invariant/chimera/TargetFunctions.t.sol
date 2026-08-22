@@ -318,7 +318,9 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
     function _assertWorkflowRouterGuards() internal {
         WorkflowRouter router = parent.workflowRouter;
         bytes memory metadata = _buildMetadata(CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner);
-        bytes memory report = abi.encodeWithSelector(ParentVault.closeEpoch.selector, parent.vault.getEpochNonce(), 0);
+        bytes memory report = _workflowReport(
+            router, abi.encodeWithSelector(ParentVault.closeEpoch.selector, parent.vault.getEpochNonce(), 0)
+        );
         bytes32 stateHash = _parentLifecycleHash();
 
         _changePrank(i_nonOwner);
@@ -340,22 +342,67 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         (success,) = address(router).call(abi.encodeWithSelector(IReceiver.onReport.selector, metadata, bytes("abc")));
         t(!success, "ROUTER-009: short report succeeded");
 
-        bytes memory unallowlistedReport = abi.encodeWithSelector(ParentVault.deposit.selector, MIN_DEPOSIT_AMOUNT);
+        bytes memory wrongChainReport = abi.encodePacked(
+            router.getThisChainSelector() + 1,
+            address(router),
+            block.timestamp,
+            abi.encodeWithSelector(ParentVault.closeEpoch.selector, parent.vault.getEpochNonce(), 0)
+        );
+        (success,) =
+            address(router).call(abi.encodeWithSelector(IReceiver.onReport.selector, metadata, wrongChainReport));
+        t(!success, "ROUTER-011: wrong-chain report succeeded");
+
+        bytes memory wrongRouterReport = abi.encodePacked(
+            router.getThisChainSelector(),
+            i_nonOwner,
+            block.timestamp,
+            abi.encodeWithSelector(ParentVault.closeEpoch.selector, parent.vault.getEpochNonce(), 0)
+        );
+        (success,) =
+            address(router).call(abi.encodeWithSelector(IReceiver.onReport.selector, metadata, wrongRouterReport));
+        t(!success, "ROUTER-011: wrong-router report succeeded");
+
+        bytes memory futureReport = abi.encodePacked(
+            router.getThisChainSelector(),
+            address(router),
+            block.timestamp + 1,
+            abi.encodeWithSelector(ParentVault.closeEpoch.selector, parent.vault.getEpochNonce(), 0)
+        );
+        (success,) = address(router).call(abi.encodeWithSelector(IReceiver.onReport.selector, metadata, futureReport));
+        t(!success, "ROUTER-012: future report succeeded");
+
+        uint256 observedAt = block.timestamp;
+        vm.warp(observedAt + 30 minutes + 1);
+        (success,) = address(router).call(abi.encodeWithSelector(IReceiver.onReport.selector, metadata, report));
+        t(!success, "ROUTER-012: expired report succeeded");
+        vm.warp(observedAt);
+
+        bytes memory unallowlistedReport =
+            _workflowReport(router, abi.encodeWithSelector(ParentVault.deposit.selector, MIN_DEPOSIT_AMOUNT));
         (success,) =
             address(router).call(abi.encodeWithSelector(IReceiver.onReport.selector, metadata, unallowlistedReport));
         t(!success, "ROUTER-004: unallowlisted selector succeeded");
 
-        bytes memory malformedAllowedReport = abi.encodePacked(ParentVault.closeEpoch.selector);
+        bytes memory malformedAllowedReport = _workflowReport(router, abi.encodePacked(ParentVault.closeEpoch.selector));
         (success,) =
             address(router).call(abi.encodeWithSelector(IReceiver.onReport.selector, metadata, malformedAllowedReport));
         t(!success, "ROUTER-006: downstream revert did not revert report");
-        t(_parentLifecycleHash() == stateHash, "ROUTER-006: rejected report changed vault state");
+        t(_parentLifecycleHash() == stateHash, "ROUTER-006/ROUTER-011/ROUTER-012: rejected report changed state");
 
         _changePrank(i_nonOwner);
         (success,) = address(parent.vault)
             .call(abi.encodeWithSelector(ParentVault.closeEpoch.selector, parent.vault.getEpochNonce(), 0));
         t(!success, "AC-003: unauthorized epoch close succeeded");
         t(_parentLifecycleHash() == stateHash, "AC-003: unauthorized epoch close changed state");
+    }
+
+    /// @dev Builds the signed report body shape: chain selector, target router, observation timestamp, vault calldata.
+    function _workflowReport(WorkflowRouter router, bytes memory vaultCall)
+        internal
+        view
+        returns (bytes memory report)
+    {
+        report = abi.encodePacked(router.getThisChainSelector(), address(router), block.timestamp, vaultCall);
     }
 
     function _assertUnauthorizedRebalanceRejected(Types.Strategy memory target) internal {

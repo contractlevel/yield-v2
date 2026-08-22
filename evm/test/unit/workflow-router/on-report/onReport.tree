@@ -17,8 +17,20 @@ WorkflowRouter_onReport
   │   └── it should revert
   ├── when the report is too short
   │   └── it should revert
+  ├── when the target chain selector does not match
+  │   └── it should revert with WorkflowRouter__InvalidReportDomain
+  ├── when the target router does not match
+  │   └── it should revert with WorkflowRouter__InvalidReportDomain
+  ├── when the observation timestamp is in the future
+  │   └── it should revert with WorkflowRouter__ReportFromFuture
+  ├── when the report is older than 30 minutes
+  │   └── it should revert with WorkflowRouter__ReportExpired
+  ├── when the report is exactly 30 minutes old
+  │   └── it should succeed
   ├── when the selector is not allowlisted
   │   └── it should revert
+  ├── when the vault call fails
+  │   └── it should revert with WorkflowRouter__CallFailed
   ├── when all conditions are met
   │   └── it should succeed
   ├── when the workflow is removed and re-registered with a different name and owner

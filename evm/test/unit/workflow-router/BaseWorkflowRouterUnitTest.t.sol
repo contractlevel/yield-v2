@@ -7,6 +7,7 @@ import {WorkflowRouter} from "../../../src/modules/WorkflowRouter.sol";
 import {Roles} from "../../../src/libraries/Roles.sol";
 
 abstract contract BaseWorkflowRouterUnitTest is BaseUnitTest {
+    uint64 internal constant TARGET_CHAIN_SELECTOR = 1;
     address internal immutable i_keystoneForwarder = makeAddr("keystoneForwarder");
 
     WorkflowRouter internal s_workflowRouter;
@@ -35,12 +36,28 @@ abstract contract BaseWorkflowRouterUnitTest is BaseUnitTest {
 
     /// @notice Empty test function to ignore file in coverage report
     function test_baseTest() public virtual override {}
+
+    function _buildReport(bytes memory vaultCall) internal view returns (bytes memory report) {
+        report = _buildReport(TARGET_CHAIN_SELECTOR, address(s_workflowRouter), block.timestamp, vaultCall);
+    }
+
+    function _buildReport(uint64 chainSelector, address router, uint256 observedAt, bytes memory vaultCall)
+        internal
+        pure
+        returns (bytes memory report)
+    {
+        report = abi.encodePacked(chainSelector, router, observedAt, vaultCall);
+    }
 }
 
 contract Target {
     event TargetDepositSuccess();
 
     error Target__Fail();
+
+    function getThisChainSelector() external pure returns (uint64) {
+        return 1;
+    }
 
     function deposit() external {
         emit TargetDepositSuccess();

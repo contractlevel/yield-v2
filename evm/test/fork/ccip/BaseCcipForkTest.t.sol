@@ -200,7 +200,10 @@ abstract contract BaseCcipForkTest is BaseForkTest {
         bytes memory report
     ) internal {
         _changePrank(networkConfig.cre.keystoneForwarder);
-        router.onReport(_buildMetadata(workflowId, workflowName, workflowOwner), report);
+        router.onReport(
+            _buildMetadata(workflowId, workflowName, workflowOwner),
+            abi.encodePacked(router.getThisChainSelector(), address(router), block.timestamp, report)
+        );
     }
 
     function _closeEpochThroughWorkflow(bytes32 workflowId, uint256 tvl) internal {
