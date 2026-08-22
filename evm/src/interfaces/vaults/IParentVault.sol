@@ -238,6 +238,7 @@ interface IParentVault is IBaseVault {
     /// @param amount The amount of underlying asset to deposit
     /// @return epochNonce The epoch nonce of the deposit
     /// @dev Reverts if beneficiary is the zero address
+    /// @dev Reverts if beneficiary is this ParentVault
     /// @dev Reverts if amount is less than the minimum deposit amount
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the vault is paused
@@ -261,6 +262,7 @@ interface IParentVault is IBaseVault {
     /// @param shareBurnAmount The amount of caller shares to escrow for burning when the withdraw is claimed
     /// @return epochNonce The nonce of the epoch containing the withdraw intent
     /// @dev Reverts if beneficiary is the zero address
+    /// @dev Reverts if beneficiary is this ParentVault
     /// @dev Reverts if shareBurnAmount is zero
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the vault is paused
