@@ -355,7 +355,7 @@ The risk is accepted because the protocol already trusts CRE for TVL reporting a
 
 ## KI-008 — Strategy TVL can include permissionless third-party supplies
 
-**Status:** Accepted — epoch batching prevents the flash-loan variant; residual unsolicited-donation risk is monitored operationally.
+**Status:** Accepted — epoch batching prevents the flash-loan variant; the permanent locked seed position bounds the bootstrap variant described in KI-024.
 
 **Last reviewed:** 2026-08-22
 
@@ -411,9 +411,9 @@ A third party can still use real capital to inflate the active adapter's raw pro
 - rebalances that withdraw the adapter's full raw position, and
 - epoch settlement liveness: a donation large enough to push the exchange rate past the point where a same-epoch minimum-size deposit would round to zero shares trips `closeEpoch`'s `ParentVault__DepositWouldMintZeroShares` guard, reverting the entire epoch's settlement rather than just the affected deposit. This is a griefing variant of the same donation mechanism, in the same cost-bounded shape already accepted under [KI-016](#ki-016--parentvault-epoch-and-rebalance-calls-revert-atomically-with-no-stored-recovery-allowing-cost-bounded-settlement-griefing) — recoverable the same way, via `forceCancelDeposit`/`CANCEL_DEPOSIT_OPERATOR_ROLE` clearing the blocking deposit.
 
-An attacker with a pending withdrawal may recover a pro-rata portion of their own unsolicited supply through that epoch's withdrawal settlement. Any unrecovered amount is absorbed by other participants, remaining shareholders, or protocol fees. The attacker cannot atomically recover the full supplied amount unless they also control privileged workflow or vault execution paths, which is outside the permissionless threat model.
+An attacker with a pending withdrawal may recover a pro-rata portion of their own unsolicited supply through that epoch's withdrawal settlement. In a zero-net-flow epoch, fresh deposits can fund the withdrawal while the unsolicited strategy position remains as backing, allowing the supply to be recovered in full without privileged access.
 
-The accepted failure mode is settlement distortion funded by the attacker's own capital, not direct theft of protocol funds or a flash-loan-amplified insolvency path.
+With the permanent locked seed position established, this remains an attacker-funded settlement distortion rather than a practical principal-theft path. Without that supply floor, unsolicited TVL can be combined with coarse bootstrap shares and permissionless claim ordering to redirect depositor principal as described in [KI-024](#ki-024--unseeded-bootstrap-allows-adapter-donation-and-claim-ordering-to-redirect-depositor-principal).
 
 ### Conditions that would warrant revisiting
 
@@ -480,7 +480,7 @@ The failure mode is an accepted fee-timing effect of epoch-batched withdrawal se
 
 ## KI-010 — Bootstrap share allocation ignores residual TVL when total shares return to zero
 
-**Status:** Accepted — bounded by snapshot-to-execution drift and further mitigated operationally by a permanent admin seed deposit.
+**Status:** Accepted — bounded by snapshot-to-execution drift and mitigated operationally by a permanent locked seed position.
 
 **Last reviewed:** 2026-08-15
 
@@ -510,23 +510,23 @@ The root cause is bootstrap share allocation ignoring existing TVL when `s_total
 
 ### Why this is accepted, not mitigated
 
-- **Operationally, `s_totalShares` should never actually return to zero after the first epoch.** The deployer/admin makes an initial seed deposit as part of launch and does not redeem it. This is not enforced on-chain (there is no dead-shares burn or minimum-liquidity lock in the contracts) — it is a deployment-runbook practice, so the trigger condition requires both every other holder to exit _and_ the admin to redeem the permanent seed position, which is not expected operational behavior.
+- **Operationally, `s_totalShares` should never return to zero after the first epoch.** The launch procedure transfers the initial seed shares to the immutable `YieldcoinShareSeedLock`, which has no function capable of transferring or withdrawing them. This is operationally established rather than enforced by ParentVault accounting.
 - For a local strategy, `WorkflowRouter` caps the TVL observation age at 30 minutes when `closeEpoch` executes, bounding the residual to accrual and rounding drift over that window. For a remote net withdrawal, the later `executeEpochWithdraw` step remains asynchronous, so strategy growth between Parent settlement and Child withdrawal can still widen with the continuation delay described in [KI-007](#ki-007--epoch-close-depends-on-cre-workflow-execution).
 - Reaching the trigger condition requires total share supply to hit exactly zero, which (even setting the seed deposit aside) is a specific and infrequent state (a full protocol exit), not routine operation.
 - Sweeping or reconciling the residual would require either tracking a per-reset "owed to exited holders" balance or an extra adapter call on the full-exit path — added accounting state and complexity to close a dust-sized gap, contrary to the project's simplicity priority.
-- No other user's balance is diluted or put at risk; the effect is a one-time transfer of dust value to whichever depositor happens to open the next epoch after a full reset.
+- Once the locked seed is verified, the full-reset trigger is unreachable during ordinary operation. Before that mitigation is established, a low nonzero supply can expose other depositors to the combined issue in [KI-024](#ki-024--unseeded-bootstrap-allows-adapter-donation-and-claim-ordering-to-redirect-depositor-principal).
 
 ### Operational mitigation
 
-- Deployer/admin makes a seed deposit at launch and does not redeem it, keeping `s_totalShares > 0` permanently in practice. This is a runbook practice, not a contract-enforced invariant — nothing prevents the admin from redeeming it.
+- Follow the [deployment runbook](../operator/DEPLOYMENT.md#bootstrap-the-parent-vault): deposit at least 100 USDC in epoch one, close it through CRE, claim the resulting shares, and transfer them to the deployed `YieldcoinShareSeedLock` before launch.
 
 ### Residual risk
 
-If the seed-deposit practice is not followed, or the admin's seed position is ever fully redeemed alongside all other holders, the next depositor after a full-supply reset can receive a small amount of value that arguably belonged to the exited shareholders. For a local strategy, that amount is bounded by yield accrual and rounding over the report's maximum 30-minute observation window. A remote net withdrawal can accrue additional drift while its Child execution is delayed per [KI-007](#ki-007--epoch-close-depends-on-cre-workflow-execution). This does not affect protocol solvency, other users' balances, or any live position — it is a one-time bootstrap-allocation artifact, and under normal operation is not expected to be reachable at all.
+If the locked seed is not established, a full-supply reset can still transfer residual strategy value to the next depositor. For a local strategy, that residual is bounded by yield accrual and rounding over the report's maximum 30-minute observation window; a remote withdrawal can accrue additional drift while Child execution is delayed per [KI-007](#ki-007--epoch-close-depends-on-cre-workflow-execution). More importantly, low nonzero supply before the lock is established enables the principal-redirection sequence in [KI-024](#ki-024--unseeded-bootstrap-allows-adapter-donation-and-claim-ordering-to-redirect-depositor-principal).
 
 ### Conditions that would warrant revisiting
 
-- The admin seed deposit is redeemed (removing the operational mitigation) and total shares can realistically return to zero.
+- The seed shares are not transferred to the lock, or the deployed lock differs from the immutable blank contract documented in the runbook.
 - CRE settlement delay (per [KI-007](#ki-007--epoch-close-depends-on-cre-workflow-execution)) or an adapter/strategy topology change widens the gap between the operator's TVL snapshot and actual on-chain execution beyond dust-sized.
 - Full-supply resets become a routine/expected operational pattern rather than an edge case.
 - A cheap way to reconcile or sweep residual TVL at the zero-shares boundary becomes available without adding meaningful accounting complexity.
@@ -1108,3 +1108,46 @@ This is bounded by the same operator-trust assumption already accepted in [KI-00
 - The delay-raise step is observed being skipped or delayed in practice across deployments.
 - OpenZeppelin's `AccessControlDefaultAdminRules` exposes a way to set a nonzero delay that takes effect only after a distinguishable "deployment complete" signal, removing the bootstrapping conflict this entry currently accepts.
 - `DEFAULT_ADMIN_ROLE` is ever granted additional recurring operational authority beyond role administration, which would raise the blast radius of a zero-delay-window compromise beyond what [KI-001](#ki-001--centralized-trust-in-privileged-operatoradmin-roles) already bounds.
+
+---
+
+## KI-024 — Unseeded bootstrap allows adapter donation and claim ordering to redirect depositor principal
+
+**Status:** Accepted — mitigated by a permanent locked seed position established during launch.
+
+**Last reviewed:** 2026-08-25
+
+**Component:** `ParentVaultEpochLib._closeEpoch`, `ParentVaultUserEpochLib._claimShares`, `ParentVault.claimSharesFor`, strategy-adapter TVL accounting, and parent deployment.
+
+### Summary
+
+The parent vault begins with zero authoritative and ERC-20 share supply. If an unprivileged first depositor obtains the bootstrap supply, they can withdraw almost all of it and leave a deliberately coarse share unit. They can then supply underlying directly to the active lending protocol on behalf of the adapter, where it is included in strategy TVL as described in [KI-008](#ki-008--strategy-tvl-can-include-permissionless-third-party-supplies).
+
+In an epoch with equal deposits and withdrawals, `closeEpoch` performs no adapter movement. Fresh deposits can therefore pay the attacker's old withdrawal while the unsolicited adapter position remains as backing for newly allocated shares, fully recovering the out-of-band supply.
+
+Deposit claims are allocated from shrinking remaining-deposit and remaining-share pools. Each non-final claim rounds down, while the claim that exhausts the pool receives the remainder. Because `claimSharesFor` is permissionless, the attacker can claim for other depositors first and reserve that remainder for their own deposit. At a coarse share unit, the remainder can represent material principal rather than dust.
+
+### Why this is accepted, not mitigated in accounting
+
+The launch procedure permanently locks at least the shares produced by a 100 USDC bootstrap deposit. With 18-decimal shares and 6-decimal USDC, this establishes at least `100e18` non-withdrawable share wei. Making one share wei materially valuable would then require infeasible strategy TVL, and the existing zero-share-mint settlement guard binds first.
+
+The lock is a blank, non-upgradeable contract deployed with ParentVault and has no function capable of transferring, approving, or withdrawing its shares. Both `withdraw` and `withdrawFor` escrow shares from the caller, so neither can remove shares held by the lock.
+
+Changing claim allocation to use immutable epoch totals or reserving minimum liquidity in ParentVault would add accounting and invariant complexity. The permanent seed establishes the required supply floor without changing the settlement model.
+
+### Operational mitigation
+
+- Follow the [parent bootstrap procedure](../operator/DEPLOYMENT.md#bootstrap-the-parent-vault): deposit at least 100 USDC into epoch one, then activate CRE to close the epoch, manually claim the shares, and transfer all seed shares to the deployed `YieldcoinShareSeedLock`.
+- Verify the lock bytecode and confirm both `ParentVault.getTotalShares()` and its share-token balance are at least `100e18` before treating the vault as launched.
+- Monitor unexpected strategy TVL increases as required by [KI-008](#ki-008--strategy-tvl-can-include-permissionless-third-party-supplies).
+
+### Residual risk
+
+The contracts do not require the seed transfer before accepting ordinary deposits. Until launch operators complete and verify the lock step, an unprivileged bootstrapper can establish coarse supply and retain the combined donation and claim-ordering path. Once the locked supply floor exists, the shares cannot be withdrawn and the attack precondition cannot be recreated through ordinary vault use.
+
+### Conditions that would warrant revisiting
+
+- A deployment is opened for normal use before the locked seed position is verified.
+- The seed amount, underlying precision, share precision, or minimum deposit changes such that the documented supply floor no longer provides the intended bound.
+- A future lock contract gains executable or upgradeable behavior.
+- Claim allocation or adapter TVL accounting changes enough to remove the underlying attack path in code.

@@ -382,8 +382,8 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /// @dev If a remote strategy withdrawal fails, users cannot claim until recovery succeeds on the ChildVault
     /// @dev An epoch nonce of one has no preceding epoch because initialization opens epoch one
     /// @dev Zero TVL with outstanding shares requires restoring TVL through an on-behalf-of strategy supply before
-    ///      settlement can continue; the permanent admin seed deposit means this requires a full strategy loss
-    /// @dev See KI-008 and KI-010 in docs/security/KNOWN_ISSUES.md
+    ///      settlement can continue; the permanent locked seed position means this requires a full strategy loss
+    /// @dev See KI-008, KI-010, and KI-024 in docs/security/KNOWN_ISSUES.md
     function closeEpoch(uint256 expectedEpochNonce, uint256 tvl)
         external
         nonReentrant

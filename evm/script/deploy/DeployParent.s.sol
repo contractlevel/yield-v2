@@ -4,6 +4,7 @@ pragma solidity 0.8.34;
 import {Script} from "forge-std/Script.sol";
 import {HelperConfig} from "../HelperConfig.s.sol";
 import {TestnetProtocolConfigurator} from "./TestnetProtocolConfigurator.sol";
+import {YieldcoinShareSeedLock} from "./contracts/YieldcoinShareSeedLock.sol";
 import {ParentVault, BaseVault} from "../../src/vaults/ParentVault.sol";
 import {AdapterRegistry} from "../../src/modules/AdapterRegistry.sol";
 import {AaveV3Adapter} from "../../src/modules/adapters/AaveV3Adapter.sol";
@@ -28,6 +29,7 @@ contract DeployParent is Script {
         AdapterRegistry adapterRegistry;
         YieldcoinShare yieldcoinImpl;
         YieldcoinShare yieldcoinProxy;
+        YieldcoinShareSeedLock yieldcoinShareSeedLock;
         ParentVault parentVaultImpl;
         ParentVault parentVaultProxy;
         AaveV3Adapter aaveV3Adapter;
@@ -77,6 +79,7 @@ contract DeployParent is Script {
                 )
             )
         );
+        deploy.yieldcoinShareSeedLock = new YieldcoinShareSeedLock();
 
         BaseVault.ConstructorParams memory constructorParams = BaseVault.ConstructorParams({
             link: config.tokens.link,
