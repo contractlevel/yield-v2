@@ -2,6 +2,10 @@ AaveV4Adapter_withdraw
   ├── when the caller is not the vault
   │   └── it should revert
   ├── when the amount is type(uint256).max
+  │   ├── when only buffered assets exist
+  │   │   └── it should transfer the buffer without calling Aave
+  │   ├── when buffered and protocol assets exist
+  │   │   └── it should withdraw both and clear the buffer
   │   ├── when the actual withdrawn amount is less than the TVL
   │   │   └── it should revert
   │   ├── when the withdrawn shortfall exceeds the rounding tolerance
@@ -14,6 +18,14 @@ AaveV4Adapter_withdraw
   │       ├── it should emit a Withdraw event
   │       └── it should transfer USDC to the vault
   └── when performing an epoch withdraw
+      ├── when the request is less than the buffer
+      │   └── it should transfer the request and retain the unused buffer
+      ├── when the request equals the buffer
+      │   └── it should transfer the buffer without calling Aave
+      ├── when the request exceeds the buffer
+      │   ├── it should consume the buffer before withdrawing from Aave
+      │   ├── it should validate the protocol leg independently
+      │   └── it should restore the buffer if the protocol leg reverts
       ├── when the amount exceeds the TVL
       │   └── it should revert
       ├── when the actual withdrawn amount is less than the requested amount

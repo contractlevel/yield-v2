@@ -147,6 +147,94 @@ contract AaveV3Adapter_WithdrawUnitTest is BaseAaveV3AdapterUnitTest {
         assertEq(actualAmount, WITHDRAW_AMOUNT);
         assertEq(s_mockUsdc.balanceOf(address(s_parentVault)), WITHDRAW_AMOUNT);
     }
+
+    function test_AaveV3Adapter_withdraw_Success_EpochWithdrawFromBufferOnly() external {
+        _bufferAssets(10);
+        s_mockAaveV3Pool.setWithdrawReverts(true);
+
+        uint256 actualAmount = s_aaveV3Adapter.withdraw(10);
+
+        assertEq(actualAmount, 10);
+        assertEq(s_aaveV3Adapter.getBufferedAssets(), 0);
+        assertEq(s_mockUsdc.balanceOf(address(s_parentVault)), 10);
+    }
+
+    function test_AaveV3Adapter_withdraw_Success_EpochWithdrawLeavesUnusedBuffer() external {
+        _bufferAssets(10);
+        s_mockAaveV3Pool.setWithdrawReverts(true);
+
+        uint256 actualAmount = s_aaveV3Adapter.withdraw(9);
+
+        assertEq(actualAmount, 9);
+        assertEq(s_aaveV3Adapter.getBufferedAssets(), 1);
+        assertEq(s_aaveV3Adapter.getTVL(), 1);
+    }
+
+    function test_AaveV3Adapter_withdraw_Success_EpochWithdrawFromBufferAndProtocol() external {
+        uint256 bufferedAmount = 10;
+        uint256 protocolAmount = WITHDRAW_AMOUNT - bufferedAmount;
+        _bufferAssets(bufferedAmount);
+        s_mockAToken.mint(address(s_aaveV3Adapter), protocolAmount);
+        deal(address(s_mockUsdc), address(s_mockAaveV3Pool), protocolAmount);
+        s_mockAaveV3Pool.setWithdrawReturn(protocolAmount);
+
+        uint256 actualAmount = s_aaveV3Adapter.withdraw(WITHDRAW_AMOUNT);
+
+        assertEq(actualAmount, WITHDRAW_AMOUNT);
+        assertEq(s_aaveV3Adapter.getBufferedAssets(), 0);
+        assertEq(s_mockUsdc.balanceOf(address(s_parentVault)), WITHDRAW_AMOUNT);
+    }
+
+    function test_AaveV3Adapter_withdraw_Success_RebalanceWithdrawFromBufferOnly() external {
+        _bufferAssets(10);
+        s_mockAaveV3Pool.setWithdrawReverts(true);
+
+        uint256 actualAmount = s_aaveV3Adapter.withdraw(type(uint256).max);
+
+        assertEq(actualAmount, 10);
+        assertEq(s_aaveV3Adapter.getBufferedAssets(), 0);
+    }
+
+    function test_AaveV3Adapter_withdraw_Success_RebalanceWithdrawFromBufferAndProtocol() external {
+        _bufferAssets(1);
+        s_mockAToken.mint(address(s_aaveV3Adapter), WITHDRAW_AMOUNT);
+        deal(address(s_mockUsdc), address(s_mockAaveV3Pool), WITHDRAW_AMOUNT);
+
+        uint256 actualAmount = s_aaveV3Adapter.withdraw(type(uint256).max);
+
+        assertEq(actualAmount, WITHDRAW_AMOUNT + 1);
+        assertEq(s_aaveV3Adapter.getBufferedAssets(), 0);
+        assertEq(s_mockUsdc.balanceOf(address(s_parentVault)), WITHDRAW_AMOUNT + 1);
+    }
+
+    function test_AaveV3Adapter_withdraw_RevertWhen_ProtocolLegReturnsZeroWithBuffer() external {
+        _bufferAssets(1);
+        s_mockAToken.mint(address(s_aaveV3Adapter), 1);
+        s_mockAaveV3Pool.setWithdrawReturn(0);
+
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__NoZeroAmount.selector);
+        s_aaveV3Adapter.withdraw(2);
+
+        assertEq(s_aaveV3Adapter.getBufferedAssets(), 1);
+    }
+
+    function test_AaveV3Adapter_withdraw_RevertRestoresBufferWhenProtocolFails() external {
+        _bufferAssets(1);
+        s_mockAToken.mint(address(s_aaveV3Adapter), 1);
+        s_mockAaveV3Pool.setWithdrawReverts(true);
+
+        vm.expectRevert();
+        s_aaveV3Adapter.withdraw(2);
+
+        assertEq(s_aaveV3Adapter.getBufferedAssets(), 1);
+    }
+
+    function _bufferAssets(uint256 amount) internal {
+        deal(address(s_mockUsdc), address(s_aaveV3Adapter), amount);
+        s_mockAaveV3Pool.setNormalizedIncome((amount + 1) * 1e27);
+        s_aaveV3Adapter.deposit(amount);
+        s_mockAaveV3Pool.setNormalizedIncome(1e27);
+    }
 }
 
 contract UnderpayingAaveV3Pool {

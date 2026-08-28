@@ -7,6 +7,9 @@ import {IProtocolAdapter} from "./IProtocolAdapter.sol";
 /// @author @contractlevel
 /// @notice Interface for Aave v4-specific adapter behavior
 interface IAaveV4Adapter is IProtocolAdapter {
+    /// @dev Propagated from the Hub when a positive supply converts to zero added shares
+    error InvalidShares();
+
     /// @dev Thrown when the configured asset token is listed more than once on the Spoke
     error AaveV4Adapter__DuplicateReserveFound();
 

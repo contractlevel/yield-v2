@@ -151,6 +151,98 @@ contract AaveV4Adapter_WithdrawUnitTest is BaseAaveV4AdapterUnitTest {
         assertEq(actualAmount, EXCESS_AMOUNT);
         assertEq(s_mockUsdc.balanceOf(address(s_parentVault)), EXCESS_AMOUNT);
     }
+
+    function test_AaveV4Adapter_withdraw_Success_EpochWithdrawFromBufferOnly() external {
+        _bufferAssets(10);
+        s_mockAaveV4Spoke.setWithdrawReverts(true);
+
+        uint256 actualAmount = s_aaveV4Adapter.withdraw(10);
+
+        assertEq(actualAmount, 10);
+        assertEq(s_aaveV4Adapter.getBufferedAssets(), 0);
+        assertEq(s_mockUsdc.balanceOf(address(s_parentVault)), 10);
+    }
+
+    function test_AaveV4Adapter_withdraw_Success_EpochWithdrawLeavesUnusedBuffer() external {
+        _bufferAssets(10);
+        s_mockAaveV4Spoke.setWithdrawReverts(true);
+
+        uint256 actualAmount = s_aaveV4Adapter.withdraw(9);
+
+        assertEq(actualAmount, 9);
+        assertEq(s_aaveV4Adapter.getBufferedAssets(), 1);
+        assertEq(s_aaveV4Adapter.getTVL(), 1);
+    }
+
+    function test_AaveV4Adapter_withdraw_Success_EpochWithdrawFromBufferAndProtocol() external {
+        uint256 bufferedAmount = 10;
+        uint256 protocolAmount = WITHDRAW_AMOUNT - bufferedAmount;
+        _bufferAssets(bufferedAmount);
+        s_mockAaveV4Spoke.setUserSuppliedAssets(
+            s_aaveV4Adapter.getReserveId(), address(s_aaveV4Adapter), protocolAmount
+        );
+        deal(address(s_mockUsdc), address(s_mockAaveV4Spoke), protocolAmount);
+        s_mockAaveV4Spoke.setWithdrawReturn(protocolAmount);
+
+        uint256 actualAmount = s_aaveV4Adapter.withdraw(WITHDRAW_AMOUNT);
+
+        assertEq(actualAmount, WITHDRAW_AMOUNT);
+        assertEq(s_aaveV4Adapter.getBufferedAssets(), 0);
+        assertEq(s_mockUsdc.balanceOf(address(s_parentVault)), WITHDRAW_AMOUNT);
+    }
+
+    function test_AaveV4Adapter_withdraw_Success_RebalanceWithdrawFromBufferOnly() external {
+        _bufferAssets(10);
+        s_mockAaveV4Spoke.setWithdrawReverts(true);
+
+        uint256 actualAmount = s_aaveV4Adapter.withdraw(type(uint256).max);
+
+        assertEq(actualAmount, 10);
+        assertEq(s_aaveV4Adapter.getBufferedAssets(), 0);
+    }
+
+    function test_AaveV4Adapter_withdraw_Success_RebalanceWithdrawFromBufferAndProtocol() external {
+        _bufferAssets(1);
+        s_mockAaveV4Spoke.setUserSuppliedAssets(
+            s_aaveV4Adapter.getReserveId(), address(s_aaveV4Adapter), WITHDRAW_AMOUNT
+        );
+        deal(address(s_mockUsdc), address(s_mockAaveV4Spoke), WITHDRAW_AMOUNT);
+
+        uint256 actualAmount = s_aaveV4Adapter.withdraw(type(uint256).max);
+
+        assertEq(actualAmount, WITHDRAW_AMOUNT + 1);
+        assertEq(s_aaveV4Adapter.getBufferedAssets(), 0);
+        assertEq(s_mockUsdc.balanceOf(address(s_parentVault)), WITHDRAW_AMOUNT + 1);
+    }
+
+    function test_AaveV4Adapter_withdraw_RevertWhen_ProtocolLegReturnsZeroWithBuffer() external {
+        _bufferAssets(1);
+        s_mockAaveV4Spoke.setUserSuppliedAssets(s_aaveV4Adapter.getReserveId(), address(s_aaveV4Adapter), 1);
+        s_mockAaveV4Spoke.setWithdrawReturn(0);
+
+        vm.expectRevert(IProtocolAdapter.ProtocolAdapter__NoZeroAmount.selector);
+        s_aaveV4Adapter.withdraw(2);
+
+        assertEq(s_aaveV4Adapter.getBufferedAssets(), 1);
+    }
+
+    function test_AaveV4Adapter_withdraw_RevertRestoresBufferWhenProtocolFails() external {
+        _bufferAssets(1);
+        s_mockAaveV4Spoke.setUserSuppliedAssets(s_aaveV4Adapter.getReserveId(), address(s_aaveV4Adapter), 1);
+        s_mockAaveV4Spoke.setWithdrawReverts(true);
+
+        vm.expectRevert();
+        s_aaveV4Adapter.withdraw(2);
+
+        assertEq(s_aaveV4Adapter.getBufferedAssets(), 1);
+    }
+
+    function _bufferAssets(uint256 amount) internal {
+        deal(address(s_mockUsdc), address(s_aaveV4Adapter), amount);
+        s_mockAaveV4Spoke.setMinimumPreviewAmount(amount + 1);
+        s_aaveV4Adapter.deposit(amount);
+        s_mockAaveV4Spoke.setMinimumPreviewAmount(1);
+    }
 }
 
 contract UnderpayingAaveV4Spoke {

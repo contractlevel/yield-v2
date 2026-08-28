@@ -2,6 +2,29 @@ AaveV4Adapter_deposit
   ├── when the caller is not the vault
   │   └── it should revert
   └── when the caller is the vault
+      ├── when amount is zero
+      │   └── it should revert
+      ├── when the Hub preview cannot mint an added share
+      │   ├── it should buffer the deposit and emit DepositBuffered
+      │   ├── it should not call or approve the protocol
+      │   └── it should include the tracked buffer once in TVL
+      ├── when the resulting previewed buffer equals the fifty-unit cap
+      │   └── it should buffer the deposit
+      ├── when the resulting previewed buffer exceeds the fifty-unit cap
+      │   └── it should revert
+      ├── when a later deposit makes the aggregate supplyable
+      │   └── it should supply the aggregate and clear the buffer
+      ├── when the preview is nonzero but the Spoke returns InvalidShares
+      │   ├── it should buffer only that exact error and clear the allowance
+      │   └── it should revert if the resulting buffer exceeds the cap
+      ├── when Aave reverts with any other payload
+      │   └── it should bubble the exact revert
+      ├── when the Hub preview reverts
+      │   └── it should bubble the exact revert without buffering or approving
+      ├── when clearing the allowance fails after a dust revert
+      │   └── it should revert without recording a buffer
+      ├── when assets are donated directly to the adapter
+      │   └── it should exclude untracked donations from TVL
       ├── when the actual deposited amount is less than the amount supplied
       │   └── it should revert
       ├── when TVL decreases during the deposit

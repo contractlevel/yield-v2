@@ -2,6 +2,8 @@
 pragma solidity 0.8.34;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IAaveV4Adapter} from "../../src/interfaces/adapters/IAaveV4Adapter.sol";
+import {MockAaveV4Hub} from "./MockAaveV4Hub.sol";
 
 contract MockAaveV4Spoke {
     struct Reserve {
@@ -14,25 +16,29 @@ contract MockAaveV4Spoke {
         uint32 dynamicConfigKey;
     }
 
-    error MockAaveV4Spoke__SupplyReverts();
+    error MockAaveV4Spoke__SupplyReverts(uint256 amount);
     error MockAaveV4Spoke__WithdrawReverts();
     error MockAaveV4Spoke__UnexpectedWithdrawAmount(uint256 actual, uint256 expected);
 
     address internal immutable i_underlying;
+    MockAaveV4Hub internal immutable i_hub;
     Reserve[] internal s_reserves;
     uint256 internal s_withdrawReturn;
     uint256 internal s_expectedWithdrawAmount;
     uint256 internal s_supplyCreditAmount;
     uint256 internal s_supplyTVLDecreaseAmount;
+    uint256 internal s_minimumSupplyAmount;
     bool internal s_supplyReverts;
     bool internal s_withdrawReverts;
     bool internal s_useExpectedWithdrawAmount;
     bool internal s_useSupplyCreditAmount;
+    uint256 internal s_supplyCallCount;
 
     mapping(uint256 reserveId => mapping(address user => uint256 suppliedAssets)) internal s_suppliedAssets;
 
     constructor(address underlying) {
         i_underlying = underlying;
+        i_hub = new MockAaveV4Hub();
         _addReserve(underlying);
     }
 
@@ -75,11 +81,25 @@ contract MockAaveV4Spoke {
         s_supplyTVLDecreaseAmount = amount;
     }
 
+    function setMinimumSupplyAmount(uint256 amount) external {
+        s_minimumSupplyAmount = amount;
+    }
+
+    function setMinimumPreviewAmount(uint256 amount) external {
+        i_hub.setMinimumAssetsForShares(amount);
+    }
+
+    function setPreviewReverts(bool previewReverts) external {
+        i_hub.setPreviewReverts(previewReverts);
+    }
+
     function supply(uint256 reserveId, uint256 amount, address onBehalfOf)
         external
         returns (uint256 suppliedShares, uint256 suppliedAmount)
     {
-        if (s_supplyReverts) revert MockAaveV4Spoke__SupplyReverts();
+        ++s_supplyCallCount;
+        if (s_supplyReverts) revert MockAaveV4Spoke__SupplyReverts(amount);
+        if (amount < s_minimumSupplyAmount) revert IAaveV4Adapter.InvalidShares();
         IERC20(i_underlying).transferFrom(msg.sender, address(this), amount);
         if (s_supplyTVLDecreaseAmount != 0) {
             s_suppliedAssets[reserveId][onBehalfOf] -= s_supplyTVLDecreaseAmount;
@@ -131,12 +151,16 @@ contract MockAaveV4Spoke {
         return s_reserves[reserveId];
     }
 
+    function getSupplyCallCount() external view returns (uint256) {
+        return s_supplyCallCount;
+    }
+
     function _addReserve(address underlying) internal returns (uint256 reserveId) {
         reserveId = s_reserves.length;
         s_reserves.push(
             Reserve({
                 underlying: underlying,
-                hub: address(0),
+                hub: address(i_hub),
                 assetId: uint16(reserveId),
                 decimals: 6,
                 collateralRisk: 0,

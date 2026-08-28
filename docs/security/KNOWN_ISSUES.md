@@ -1151,3 +1151,31 @@ The contracts do not require the seed transfer before accepting ordinary deposit
 - The seed amount, underlying precision, share precision, or minimum deposit changes such that the documented supply floor no longer provides the intended bound.
 - A future lock contract gains executable or upgradeable behavior.
 - Claim allocation or adapter TVL accounting changes enough to remove the underlying attack path in code.
+
+---
+
+## KI-025 — Over-cap unrepresentable deposits can remain in Child recovery
+
+**Status:** Accepted — fail-closed dust-buffer bound; terminal deposit cancellation is deferred.
+
+**Last reviewed:** 2026-08-28
+
+**Component:** Aave V3/V4 adapters and `ChildVault` epoch-deposit recovery.
+
+### Summary
+
+The Aave adapters retain deposits that are too small to mint protocol shares, but cap the tracked buffer at 50 underlying base units. If an inbound Child deposit would still mint zero shares after the aggregate buffer exceeds that cap, the adapter reverts and `ChildVault` stores the exact amount as `EPOCH_DEPOSIT` recovery.
+
+Recovery retries the same amount. Because Aave's asset-per-share exchange rate is non-decreasing, waiting generally cannot make an unrepresentable amount mint shares, and the recovery may remain pending until an upgrade or state repair. The underlying assets remain held and accounted for in `ChildVault`; the risk is loss of liveness, not loss of funds.
+
+### Why this is accepted
+
+- The fixed cap prevents a paused, misconfigured, or malfunctioning protocol from causing a large deposit to be silently retained and reported as successfully invested.
+- Fifty base units is economically negligible for USDC and far above the current live rounding boundary. Reaching an exchange rate where more than 50 base units mint zero shares is not considered practically reachable for the configured reserves.
+- A safe terminal resolution requires coordinated Child-to-Parent cancellation or abort accounting, which is outside the adapter-level dust fix.
+
+### Conditions that would warrant revisiting
+
+- A configured reserve's first share-minting amount approaches the 50-base-unit cap.
+- An over-cap `EPOCH_DEPOSIT` recovery occurs in production.
+- The protocol adds an authenticated cross-chain deposit-abort or terminal-recovery mechanism.

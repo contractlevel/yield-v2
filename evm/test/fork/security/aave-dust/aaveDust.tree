@@ -1,0 +1,17 @@
+AaveDust security fork regression
+  ├── when one unit cannot mint an Aave V4 added share at the pinned block
+  │   ├── it should revert from the live Spoke with InvalidShares
+  │   ├── it should buffer the first Child epoch deposit without recovery
+  │   └── it should supply two units and clear the buffer on the next deposit
+  ├── when the live Aave V4 exchange rate increases after one year
+  │   ├── it should discover and assert the first positive-preview amount
+  │   ├── it should buffer the amount immediately below that boundary without recovery
+  │   └── it should supply at the boundary and clear the buffer
+  ├── when the Aave V3 floor preview converts one unit to zero scaled units
+  │   ├── it should confirm the live normalized-income boundary
+  │   ├── it should buffer the first Child epoch deposit without recovery
+  │   └── it should supply two units and clear the buffer on the next deposit
+  └── when the live Aave V3 normalized-income index increases after one year
+      ├── it should derive and assert the first positive floor-conversion amount
+      ├── it should buffer the amount immediately below that boundary without recovery
+      └── it should supply at the boundary and clear the buffer
