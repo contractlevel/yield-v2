@@ -4,6 +4,7 @@ pragma solidity 0.8.34;
 import {ProtocolAdapter} from "../ProtocolAdapter.sol";
 import {IAaveV4Adapter} from "../../interfaces/adapters/IAaveV4Adapter.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/IAaveV4Spoke.sol";
+import {IAaveV4Hub} from "../../interfaces/external/IAaveV4Hub.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -23,6 +24,10 @@ contract AaveV4Adapter is ProtocolAdapter, IAaveV4Adapter {
     address internal immutable i_spoke;
     /// @dev The Aave v4 reserve ID for the underlying asset on the Spoke
     uint256 internal immutable i_reserveId;
+    /// @dev The Hub associated with the configured Spoke reserve
+    address internal immutable i_hub;
+    /// @dev The configured reserve's asset identifier in the Hub
+    uint256 internal immutable i_hubAssetId;
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
@@ -36,7 +41,7 @@ contract AaveV4Adapter is ProtocolAdapter, IAaveV4Adapter {
     constructor(address vault, address spoke) ProtocolAdapter(vault) {
         _revertIfZeroAddress(spoke);
         i_spoke = spoke;
-        i_reserveId = _getReserveId(spoke, i_asset);
+        (i_reserveId, i_hub, i_hubAssetId) = _getReserveConfiguration(spoke, i_asset);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -49,13 +54,31 @@ contract AaveV4Adapter is ProtocolAdapter, IAaveV4Adapter {
     /// @dev Reverts if the protocol reports a lower position value after the deposit
     /// @dev Reverts if the protocol credits less than amount beyond the permitted rounding tolerance
     function deposit(uint256 amount) external nonReentrant onlyVault {
+        _revertIfZeroAmount(amount);
         emit Deposit(amount);
 
-        uint256 tvlBefore = _getTVL();
-        IERC20(i_asset).forceApprove(i_spoke, amount);
-        //slither-disable-next-line unused-return
-        IAaveV4Spoke(i_spoke).supply(i_reserveId, amount, address(this));
-        uint256 tvlAfter = _getTVL();
+        uint256 bufferedAssets = s_bufferedAssets;
+        uint256 amountToSupply = bufferedAssets + amount;
+
+        if (IAaveV4Hub(i_hub).previewAddByAssets(i_hubAssetId, amountToSupply) == 0) {
+            _bufferDeposit(amount, amountToSupply);
+            return;
+        }
+
+        uint256 tvlBefore = _getProtocolTVL() + bufferedAssets;
+        IERC20(i_asset).forceApprove(i_spoke, amountToSupply);
+
+        try IAaveV4Spoke(i_spoke).supply(i_reserveId, amountToSupply, address(this)) returns (uint256, uint256) {
+            if (bufferedAssets != 0) s_bufferedAssets = 0;
+        } catch (bytes memory reason) {
+            if (!_isExactRevert(reason, IAaveV4Adapter.InvalidShares.selector)) _revertWithReason(reason);
+
+            _bufferDeposit(amount, amountToSupply);
+            IERC20(i_asset).forceApprove(i_spoke, 0);
+            return;
+        }
+
+        uint256 tvlAfter = _getProtocolTVL();
 
         _revertIfIncompleteDeposit(tvlBefore, tvlAfter, amount);
     }
@@ -72,22 +95,40 @@ contract AaveV4Adapter is ProtocolAdapter, IAaveV4Adapter {
     /// @dev Reverts if the protocol returns zero assets
     /// @dev Reverts if the protocol returns less than the expected amount beyond the permitted rounding tolerance
     function withdraw(uint256 amount) external nonReentrant onlyVault returns (uint256 actualWithdrawnAmount) {
+        uint256 bufferedAssets = s_bufferedAssets;
+        uint256 protocolTVL = _getProtocolTVL();
+        uint256 totalTVL = protocolTVL + bufferedAssets;
+        uint256 amountFromBuffer;
+        uint256 amountFromProtocol;
+
         // Scenario 1: Epoch withdrawal - when the amount is a specific amount
         if (amount != type(uint256).max) {
-            _revertIfEpochWithdrawAmountExceedsTVL(amount, _getTVL());
+            _revertIfEpochWithdrawAmountExceedsTVL(amount, totalTVL);
 
-            //slither-disable-next-line unused-return
-            (, actualWithdrawnAmount) = IAaveV4Spoke(i_spoke).withdraw(i_reserveId, amount, address(this));
+            amountFromBuffer = amount < bufferedAssets ? amount : bufferedAssets;
+            uint256 protocolAmount = amount - amountFromBuffer;
+            if (amountFromBuffer != 0) s_bufferedAssets = bufferedAssets - amountFromBuffer;
+
+            if (protocolAmount != 0) {
+                (, amountFromProtocol) = IAaveV4Spoke(i_spoke).withdraw(i_reserveId, protocolAmount, address(this));
+                _revertIfIncompleteWithdraw(protocolAmount, amountFromProtocol);
+            }
+
+            actualWithdrawnAmount = amountFromBuffer + amountFromProtocol;
             _revertIfIncompleteWithdraw(amount, actualWithdrawnAmount);
         }
         // Scenario 2: Rebalance withdrawal - when the amount is type(uint256).max
         else {
-            uint256 tvl = _getTVL();
+            amountFromBuffer = bufferedAssets;
+            if (bufferedAssets != 0) s_bufferedAssets = 0;
 
-            //slither-disable-next-line unused-return
-            (, actualWithdrawnAmount) = IAaveV4Spoke(i_spoke).withdraw(i_reserveId, amount, address(this));
+            if (protocolTVL != 0) {
+                (, amountFromProtocol) = IAaveV4Spoke(i_spoke).withdraw(i_reserveId, amount, address(this));
+                _revertIfIncompleteWithdraw(protocolTVL, amountFromProtocol);
+            }
 
-            _revertIfIncompleteWithdraw(tvl, actualWithdrawnAmount);
+            actualWithdrawnAmount = amountFromBuffer + amountFromProtocol;
+            _revertIfIncompleteWithdraw(totalTVL, actualWithdrawnAmount);
         }
         emit Withdraw(actualWithdrawnAmount);
         IERC20(i_asset).safeTransfer(i_vault, actualWithdrawnAmount);
@@ -98,28 +139,42 @@ contract AaveV4Adapter is ProtocolAdapter, IAaveV4Adapter {
     //////////////////////////////////////////////////////////////*/
     /// @notice Returns the underlying-asset value of the adapter's Aave v4 position
     /// @return tvl The value of the adapter's position denominated in the underlying asset
-    function _getTVL() internal view returns (uint256 tvl) {
+    function _getProtocolTVL() internal view returns (uint256 tvl) {
         tvl = IAaveV4Spoke(i_spoke).getUserSuppliedAssets(i_reserveId, address(this));
     }
 
-    /// @notice Returns the reserve ID for an underlying token on an Aave v4 Spoke
+    /// @notice Returns the total accounted adapter position, including buffered assets
+    function _getTVL() internal view returns (uint256 tvl) {
+        tvl = _getProtocolTVL() + s_bufferedAssets;
+    }
+
+    /// @notice Returns the reserve configuration for an underlying token on an Aave v4 Spoke
     /// @param spoke The address of the Aave v4 Spoke
     /// @param underlying The address of the underlying token
     /// @return reserveId The Aave v4 reserve ID
+    /// @return hub The Hub associated with the reserve
+    /// @return hubAssetId The reserve's asset identifier in the Hub
     /// @dev Reverts if underlying is listed as more than one reserve
     /// @dev Reverts if underlying is not listed as a reserve
-    function _getReserveId(address spoke, address underlying) internal view returns (uint256 reserveId) {
+    function _getReserveConfiguration(address spoke, address underlying)
+        internal
+        view
+        returns (uint256 reserveId, address hub, uint256 hubAssetId)
+    {
         IAaveV4Spoke aaveV4Spoke = IAaveV4Spoke(spoke);
         uint256 reserveCount = aaveV4Spoke.getReserveCount();
         //slither-disable-next-line uninitialized-local
         bool found;
 
         for (uint256 i; i < reserveCount; ++i) {
-            if (aaveV4Spoke.getReserve(i).underlying != underlying) continue;
+            IAaveV4Spoke.Reserve memory reserve = aaveV4Spoke.getReserve(i);
+            if (reserve.underlying != underlying) continue;
             if (found) revert AaveV4Adapter__DuplicateReserveFound();
 
             found = true;
             reserveId = i;
+            hub = reserve.hub;
+            hubAssetId = reserve.assetId;
         }
 
         if (!found) revert ProtocolAdapter__AssetMismatch();

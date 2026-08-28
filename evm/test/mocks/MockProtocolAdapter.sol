@@ -44,6 +44,10 @@ contract MockProtocolAdapter is IProtocolAdapter {
         return address(0);
     }
 
+    function getBufferedAssets() external pure override returns (uint256) {
+        return 0;
+    }
+
     function setDepositReverts(bool depositReverts) external {
         s_depositReverts = depositReverts;
     }

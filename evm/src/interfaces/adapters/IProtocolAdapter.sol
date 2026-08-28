@@ -12,7 +12,7 @@ interface IProtocolAdapter {
     error ProtocolAdapter__OnlyVault();
     /// @dev Thrown when the zero address is provided
     error ProtocolAdapter__NoZeroAddress();
-    /// @dev Thrown when a protocol withdrawal returns zero assets
+    /// @dev Thrown when a zero deposit is requested or a protocol withdrawal returns zero assets
     error ProtocolAdapter__NoZeroAmount();
     /// @dev Thrown when an epoch withdraw amount exceeds the adapter TVL
     error ProtocolAdapter__WithdrawAmountExceedsTotalValue();
@@ -24,6 +24,8 @@ interface IProtocolAdapter {
     error ProtocolAdapter__IncompleteDeposit();
     /// @dev Thrown when the protocol returns less underlying asset than the requested withdrawal amount
     error ProtocolAdapter__IncorrectWithdrawAmount();
+    /// @dev Thrown when unrepresentable assets exceed the maximum amount the adapter may retain
+    error ProtocolAdapter__BufferedAssetsLimitExceeded();
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
@@ -31,6 +33,10 @@ interface IProtocolAdapter {
     /// @notice Emitted when a deposit to the protocol is executed
     /// @param amount The amount of underlying asset deposited
     event Deposit(uint256 indexed amount);
+    /// @notice Emitted when a deposit is retained by the adapter because the protocol cannot represent it
+    /// @param amount The newly accepted deposit amount
+    /// @param totalBufferedAssets The total assets retained by the adapter after the deposit
+    event DepositBuffered(uint256 indexed amount, uint256 indexed totalBufferedAssets);
     /// @notice Emitted when a withdrawal from the protocol is executed
     /// @param amount The amount of underlying asset withdrawn
     event Withdraw(uint256 indexed amount);
@@ -69,4 +75,7 @@ interface IProtocolAdapter {
     /// @notice Returns the underlying asset token used by this adapter
     /// @return asset The underlying asset token address
     function getAsset() external view returns (address asset);
+    /// @notice Returns assets accepted by the adapter but not yet supplied to the configured protocol
+    /// @return bufferedAssets The tracked idle assets held by the adapter
+    function getBufferedAssets() external view returns (uint256 bufferedAssets);
 }

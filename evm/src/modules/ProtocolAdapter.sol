@@ -15,6 +15,8 @@ abstract contract ProtocolAdapter is IProtocolAdapter, ReentrancyGuard {
     /// @dev Small tolerance for protocol-side share/index rounding on deposit and withdraw (e.g. Aave's
     /// ray-scaled aToken mint/balanceOf round-trip, Compound's base-index principal rounding)
     uint256 internal constant WEI_TOLERANCE = 100;
+    /// @dev Maximum unrepresentable protocol dust that an adapter may intentionally retain
+    uint256 internal constant MAX_BUFFERED_ASSETS = 50;
 
     /*//////////////////////////////////////////////////////////////
                                IMMUTABLE
@@ -23,6 +25,12 @@ abstract contract ProtocolAdapter is IProtocolAdapter, ReentrancyGuard {
     address internal immutable i_vault;
     /// @dev The underlying asset token
     address internal immutable i_asset;
+
+    /*//////////////////////////////////////////////////////////////
+                                STORAGE
+    //////////////////////////////////////////////////////////////*/
+    /// @dev Assets accepted from the vault but not yet supplied to the configured protocol
+    uint256 internal s_bufferedAssets;
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
@@ -41,6 +49,37 @@ abstract contract ProtocolAdapter is IProtocolAdapter, ReentrancyGuard {
     /// @dev Reverts if value is the zero address
     function _revertIfZeroAddress(address value) internal pure {
         if (value == address(0)) revert ProtocolAdapter__NoZeroAddress();
+    }
+
+    /// @notice Validates that an asset amount is nonzero
+    /// @param amount The amount to validate
+    /// @dev Reverts if amount is zero
+    function _revertIfZeroAmount(uint256 amount) internal pure {
+        if (amount == 0) revert ProtocolAdapter__NoZeroAmount();
+    }
+
+    /// @notice Returns whether revert data is exactly a no-argument custom error selector
+    function _isExactRevert(bytes memory reason, bytes4 selector) internal pure returns (bool) {
+        return reason.length == 4 && bytes4(reason) == selector;
+    }
+
+    /// @notice Bubbles revert data without modifying it
+    function _revertWithReason(bytes memory reason) internal pure {
+        assembly ("memory-safe") {
+            revert(add(reason, 0x20), mload(reason))
+        }
+    }
+
+    /// @notice Records an unrepresentable deposit as explicitly tracked adapter assets
+    /// @param amount The newly accepted deposit amount
+    /// @param totalBufferedAssets The total assets retained by the adapter after the deposit
+    /// @dev Reverts if totalBufferedAssets exceeds MAX_BUFFERED_ASSETS
+    function _bufferDeposit(uint256 amount, uint256 totalBufferedAssets) internal {
+        if (totalBufferedAssets > MAX_BUFFERED_ASSETS) {
+            revert ProtocolAdapter__BufferedAssetsLimitExceeded();
+        }
+        s_bufferedAssets = totalBufferedAssets;
+        emit DepositBuffered(amount, totalBufferedAssets);
     }
 
     /// @notice Validates that an epoch withdrawal does not exceed the adapter's position value
@@ -80,8 +119,7 @@ abstract contract ProtocolAdapter is IProtocolAdapter, ReentrancyGuard {
     /// @dev Reverts if actualAmount is zero
     /// @dev Reverts if actualAmount is less than expectedAmount beyond WEI_TOLERANCE
     function _revertIfIncompleteWithdraw(uint256 expectedAmount, uint256 actualAmount) internal pure {
-        //slither-disable-next-line incorrect-equality
-        if (actualAmount == 0) revert ProtocolAdapter__NoZeroAmount();
+        _revertIfZeroAmount(actualAmount);
         if (actualAmount < expectedAmount && expectedAmount - actualAmount > WEI_TOLERANCE) {
             revert ProtocolAdapter__IncorrectWithdrawAmount();
         }
@@ -115,5 +153,10 @@ abstract contract ProtocolAdapter is IProtocolAdapter, ReentrancyGuard {
     /// @return asset The underlying asset token address
     function getAsset() external view returns (address asset) {
         asset = i_asset;
+    }
+
+    /// @notice Returns assets accepted by the adapter but not yet supplied to the configured protocol
+    function getBufferedAssets() external view returns (uint256 bufferedAssets) {
+        bufferedAssets = s_bufferedAssets;
     }
 }

@@ -1,0 +1,9 @@
+AaveDust security integration
+  ├── when an Aave V3 epoch deposit cannot mint a scaled unit
+  │   ├── it should buffer the deposit without entering recovery
+  │   ├── it should include the buffer once in Child TVL
+  │   └── it should supply the aggregate and clear the buffer on the next deposit
+  └── when an Aave V4 epoch deposit cannot mint an added share
+      ├── it should buffer the deposit without entering recovery
+      ├── it should include the buffer once in Child TVL
+      └── it should supply the aggregate and clear the buffer on the next deposit

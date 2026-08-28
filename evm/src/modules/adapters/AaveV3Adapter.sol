@@ -18,6 +18,8 @@ contract AaveV3Adapter is ProtocolAdapter, IAaveV3Adapter {
     //////////////////////////////////////////////////////////////*/
     using SafeERC20 for IERC20;
 
+    uint256 internal constant RAY = 1e27;
+
     /*//////////////////////////////////////////////////////////////
                                IMMUTABLE
     //////////////////////////////////////////////////////////////*/
@@ -53,13 +55,26 @@ contract AaveV3Adapter is ProtocolAdapter, IAaveV3Adapter {
     /// @dev Reverts if the protocol reports a lower position value after the deposit
     /// @dev Reverts if the protocol credits less than amount beyond the permitted rounding tolerance
     function deposit(uint256 amount) external nonReentrant onlyVault {
+        _revertIfZeroAmount(amount);
         emit Deposit(amount);
 
         address pool = _getAavePool();
-        uint256 tvlBefore = _getTVL(pool);
-        IERC20(i_asset).forceApprove(pool, amount);
-        IPool(pool).supply(i_asset, amount, address(this), 0);
-        uint256 tvlAfter = _getTVL(pool);
+        uint256 bufferedAssets = s_bufferedAssets;
+        uint256 amountToSupply = bufferedAssets + amount;
+        uint256 index = IPool(pool).getReserveNormalizedIncome(i_asset);
+
+        // floor(amountToSupply * RAY / index) == 0 iff amountToSupply <= floor((index - 1) / RAY)
+        if (amountToSupply <= (index - 1) / RAY) {
+            _bufferDeposit(amount, amountToSupply);
+            return;
+        }
+
+        uint256 tvlBefore = _getProtocolTVL(pool) + bufferedAssets;
+        IERC20(i_asset).forceApprove(pool, amountToSupply);
+        IPool(pool).supply(i_asset, amountToSupply, address(this), 0);
+
+        if (bufferedAssets != 0) s_bufferedAssets = 0;
+        uint256 tvlAfter = _getProtocolTVL(pool);
 
         _revertIfIncompleteDeposit(tvlBefore, tvlAfter, amount);
     }
@@ -77,21 +92,40 @@ contract AaveV3Adapter is ProtocolAdapter, IAaveV3Adapter {
     /// @dev Reverts if the protocol returns less than the expected amount beyond the permitted rounding tolerance
     function withdraw(uint256 amount) external nonReentrant onlyVault returns (uint256 actualWithdrawnAmount) {
         address pool = _getAavePool();
+        uint256 bufferedAssets = s_bufferedAssets;
+        uint256 protocolTVL = _getProtocolTVL(pool);
+        uint256 totalTVL = protocolTVL + bufferedAssets;
+        uint256 amountFromBuffer;
+        uint256 amountFromProtocol;
 
         // Scenario 1: Epoch withdrawal - when the amount is a specific amount
         if (amount != type(uint256).max) {
-            _revertIfEpochWithdrawAmountExceedsTVL(amount, _getTVL(pool));
+            _revertIfEpochWithdrawAmountExceedsTVL(amount, totalTVL);
 
-            actualWithdrawnAmount = IPool(pool).withdraw(i_asset, amount, address(this));
+            amountFromBuffer = amount < bufferedAssets ? amount : bufferedAssets;
+            uint256 protocolAmount = amount - amountFromBuffer;
+            if (amountFromBuffer != 0) s_bufferedAssets = bufferedAssets - amountFromBuffer;
+
+            if (protocolAmount != 0) {
+                amountFromProtocol = IPool(pool).withdraw(i_asset, protocolAmount, address(this));
+                _revertIfIncompleteWithdraw(protocolAmount, amountFromProtocol);
+            }
+
+            actualWithdrawnAmount = amountFromBuffer + amountFromProtocol;
             _revertIfIncompleteWithdraw(amount, actualWithdrawnAmount);
         }
         // Scenario 2: Rebalance withdrawal - when the amount is type(uint256).max
         else {
-            uint256 tvl = _getTVL(pool);
+            amountFromBuffer = bufferedAssets;
+            if (bufferedAssets != 0) s_bufferedAssets = 0;
 
-            actualWithdrawnAmount = IPool(pool).withdraw(i_asset, amount, address(this));
+            if (protocolTVL != 0) {
+                amountFromProtocol = IPool(pool).withdraw(i_asset, amount, address(this));
+                _revertIfIncompleteWithdraw(protocolTVL, amountFromProtocol);
+            }
 
-            _revertIfIncompleteWithdraw(tvl, actualWithdrawnAmount);
+            actualWithdrawnAmount = amountFromBuffer + amountFromProtocol;
+            _revertIfIncompleteWithdraw(totalTVL, actualWithdrawnAmount);
         }
         emit Withdraw(actualWithdrawnAmount);
         IERC20(i_asset).safeTransfer(i_vault, actualWithdrawnAmount);
@@ -110,10 +144,15 @@ contract AaveV3Adapter is ProtocolAdapter, IAaveV3Adapter {
     /// @param pool The current Aave v3 pool address
     /// @return tvl The value of the adapter's position denominated in the underlying asset
     /// @dev The aToken balance can slightly overstate the withdrawable value, bounded by Aave's treasury fee rate
-    function _getTVL(address pool) internal view returns (uint256 tvl) {
+    function _getProtocolTVL(address pool) internal view returns (uint256 tvl) {
         DataTypes.ReserveDataLegacy memory reserveData = IPool(pool).getReserveData(i_asset);
         address aTokenAddress = reserveData.aTokenAddress;
         tvl = IERC20(aTokenAddress).balanceOf(address(this));
+    }
+
+    /// @notice Returns the total accounted adapter position, including buffered assets
+    function _getTVL(address pool) internal view returns (uint256 tvl) {
+        tvl = _getProtocolTVL(pool) + s_bufferedAssets;
     }
 
     /*//////////////////////////////////////////////////////////////

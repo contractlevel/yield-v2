@@ -2,6 +2,28 @@ AaveV3Adapter_deposit
   ├── when the caller is not the vault
   │   └── it should revert
   └── when the caller is the vault
+      ├── when amount is zero
+      │   └── it should revert
+      ├── when the floor preview cannot mint a scaled unit
+      │   ├── it should buffer the deposit and emit DepositBuffered
+      │   ├── it should not call or approve the protocol
+      │   └── it should include the tracked buffer once in TVL
+      ├── when floor division is zero but legacy half-up division is nonzero
+      │   └── it should conservatively buffer the deposit
+      ├── when the resulting buffer equals the fifty-unit cap
+      │   └── it should buffer the deposit
+      ├── when the resulting buffer exceeds the fifty-unit cap
+      │   └── it should revert
+      ├── when a later deposit makes the aggregate supplyable
+      │   └── it should supply the aggregate and clear the buffer
+      ├── when the preview is nonzero but Aave returns InvalidAmount or InvalidMintAmount
+      │   └── it should bubble the exact revert
+      ├── when Aave reverts with any other payload
+      │   └── it should bubble the exact revert
+      ├── when reading normalized income reverts
+      │   └── it should bubble the exact revert without buffering or approving
+      ├── when assets are donated directly to the adapter
+      │   └── it should exclude untracked donations from TVL
       ├── when the actual deposited amount is less than the amount requested
       │   └── it should revert
       ├── when TVL decreases during the deposit

@@ -35,4 +35,8 @@ contract RevertingProtocolAdapter is IProtocolAdapter {
     function getAsset() external view returns (address asset) {
         return i_asset;
     }
+
+    function getBufferedAssets() external pure returns (uint256 bufferedAssets) {
+        return 0;
+    }
 }

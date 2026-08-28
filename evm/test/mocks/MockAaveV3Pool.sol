@@ -6,20 +6,28 @@ import {DataTypes} from "@aave/v3-origin/src/contracts/protocol/libraries/types/
 import {MockAToken} from "./MockAToken.sol";
 
 contract MockAaveV3Pool {
-    error MockAaveV3Pool__SupplyReverts();
+    error MockAaveV3Pool__SupplyReverts(uint256 amount);
     error MockAaveV3Pool__WithdrawReverts();
     error MockAaveV3Pool__UnexpectedWithdrawAmount(uint256 actual, uint256 expected);
+    error MockAaveV3Pool__NormalizedIncomeReverts(uint256 marker);
+    error InvalidMintAmount();
+    error InvalidAmount();
 
     mapping(address asset => DataTypes.ReserveDataLegacy) internal s_reserveData;
     uint256 internal s_withdrawReturn;
     uint256 internal s_expectedWithdrawAmount;
     uint256 internal s_supplyCreditAmount;
     uint256 internal s_supplyTVLDecreaseAmount;
+    uint256 internal s_minimumSupplyAmount;
+    uint256 internal s_normalizedIncome = 1e27;
+    uint256 internal s_supplyCallCount;
     bool internal s_supplyReverts;
     bool internal s_withdrawReverts;
     bool internal s_useWithdrawReturn;
     bool internal s_useExpectedWithdrawAmount;
     bool internal s_useSupplyCreditAmount;
+    bool internal s_useDeployedDustError;
+    bool internal s_normalizedIncomeReverts;
 
     constructor(address asset) {
         s_reserveData[asset].aTokenAddress = address(new MockAToken());
@@ -57,8 +65,29 @@ contract MockAaveV3Pool {
         s_supplyTVLDecreaseAmount = amount;
     }
 
+    function setMinimumSupplyAmount(uint256 amount) external {
+        s_minimumSupplyAmount = amount;
+    }
+
+    function setUseDeployedDustError(bool useDeployedDustError) external {
+        s_useDeployedDustError = useDeployedDustError;
+    }
+
+    function setNormalizedIncome(uint256 normalizedIncome) external {
+        s_normalizedIncome = normalizedIncome;
+    }
+
+    function setNormalizedIncomeReverts(bool normalizedIncomeReverts) external {
+        s_normalizedIncomeReverts = normalizedIncomeReverts;
+    }
+
     function supply(address asset, uint256 amount, address onBehalfOf, uint16) external {
-        if (s_supplyReverts) revert MockAaveV3Pool__SupplyReverts();
+        ++s_supplyCallCount;
+        if (s_supplyReverts) revert MockAaveV3Pool__SupplyReverts(amount);
+        if (amount < s_minimumSupplyAmount) {
+            if (s_useDeployedDustError) revert InvalidAmount();
+            revert InvalidMintAmount();
+        }
         IERC20(asset).transferFrom(msg.sender, address(this), amount);
         if (s_supplyTVLDecreaseAmount != 0) {
             MockAToken(s_reserveData[asset].aTokenAddress).burn(onBehalfOf, s_supplyTVLDecreaseAmount);
@@ -99,5 +128,14 @@ contract MockAaveV3Pool {
 
     function getReserveData(address asset) external view returns (DataTypes.ReserveDataLegacy memory data) {
         data = s_reserveData[asset];
+    }
+
+    function getReserveNormalizedIncome(address) external view returns (uint256) {
+        if (s_normalizedIncomeReverts) revert MockAaveV3Pool__NormalizedIncomeReverts(42);
+        return s_normalizedIncome;
+    }
+
+    function getSupplyCallCount() external view returns (uint256) {
+        return s_supplyCallCount;
     }
 }
