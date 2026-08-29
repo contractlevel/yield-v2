@@ -217,14 +217,16 @@ abstract contract BaseCcipForkTest is BaseForkTest {
         );
     }
 
-    function _completeEpochDepositThroughWorkflow(bytes32 workflowId) internal {
+    function _completeEpochDepositThroughWorkflow(bytes32 workflowId, uint256 epochNonce, uint256 actualDepositAmount)
+        internal
+    {
         _selectArbitrumFork();
         _callWorkflowRouter(
             parent.workflowRouter,
             workflowId,
             CLOSE_EPOCH_WORKFLOW_NAME,
             i_owner,
-            abi.encodeWithSelector(ParentVault.completeEpochDeposit.selector, parent.vault.getEpochNonce() - 1)
+            abi.encodeWithSelector(ParentVault.completeEpochDeposit.selector, epochNonce, actualDepositAmount)
         );
     }
 
@@ -361,7 +363,7 @@ abstract contract BaseCcipForkTest is BaseForkTest {
         _selectArbitrumFork();
         _routeUsdcMessageTo(baseFork);
 
-        _completeEpochDepositThroughWorkflow(workflowId);
+        _completeEpochDepositThroughWorkflow(workflowId, 1, DEPOSIT_AMOUNT);
         _changePrank(i_depositor);
         parent.vault.claimShares(1);
 

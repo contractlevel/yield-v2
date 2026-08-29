@@ -425,18 +425,21 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
 
     /// @notice Completes the most recently closed remote net-deposit epoch
     /// @param expectedEpochNonce The completed epoch nonce the call is intended to finalize
+    /// @param actualDepositAmount The post-CCIP amount emitted by the destination deposit success event
     /// @dev Reverts if expectedEpochNonce does not match the most recently closed epoch nonce
     /// @dev Reverts if the vault is paused
     /// @dev Reverts if the caller does not have EPOCH_OPERATOR_ROLE
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the previous epoch is not an executing net-deposit epoch
-    function completeEpochDeposit(uint256 expectedEpochNonce)
+    /// @dev Reverts if actualDepositAmount is zero or exceeds the expected net deposit amount
+    /// @dev Reverts if reconciliation would reduce the epoch's pending share allocation to zero
+    function completeEpochDeposit(uint256 expectedEpochNonce, uint256 actualDepositAmount)
         external
         nonReentrant
         whenNotPaused
         onlyRole(Roles.EPOCH_OPERATOR_ROLE)
     {
-        ParentVaultEpochLib.completeEpochDeposit(_parentVaultStorage(), expectedEpochNonce);
+        ParentVaultEpochLib.completeEpochDeposit(_parentVaultStorage(), expectedEpochNonce, actualDepositAmount);
     }
 
     /*//////////////////////////////////////////////////////////////

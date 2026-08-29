@@ -69,10 +69,10 @@ Before temporarily unpausing a vault, pause the normal `WorkflowRouter` or revok
 
 ### Parent Paused Before Completion
 
-1. For `completeEpochDeposit(expectedEpochNonce)`, read `ParentVault.getEpochNonce()`, set `expectedEpochNonce` to that current nonce minus one, require that epoch to remain `EXECUTING` and net-positive, then verify the canonical destination ChildVault emitted `EpochDepositToStrategySuccess` for that epoch and that no relevant recovery remains outstanding.
-2. For `completeRebalance(expectedRebalanceNonce)`, read `ParentVault.getRebalance()`, set `expectedRebalanceNonce` to its current nonce, require the rebalance to remain `REBALANCING`, verify its pending strategy, and confirm the complete rebalance amount reached and was deposited into that strategy with no source withdrawal, CCIP delivery, target deposit, or relevant recovery outstanding.
+1. For `completeEpochDeposit(expectedEpochNonce, actualDepositAmount)`, use the epoch nonce and amount from the canonical destination ChildVault's `EpochDepositToStrategySuccess` event, require that Parent epoch to remain `EXECUTING` and net-positive, and confirm that no relevant recovery remains outstanding.
+2. For `completeRebalance(expectedRebalanceNonce)`, use the rebalance nonce from the corresponding destination `RebalanceDepositSuccess` event, require the Parent rebalance to remain `REBALANCING`, verify its pending strategy, and confirm the complete rebalance amount reached and was deposited into that strategy with no source withdrawal, CCIP delivery, target deposit, or relevant recovery outstanding.
 3. Keep the normal `WorkflowRouter` paused or unauthorized while performing reconciliation. Grant the appropriate completion role temporarily to an approved break-glass executor if the existing role assignment cannot be used safely.
-4. Unpause ParentVault, call only the reconciled `completeEpochDeposit(expectedEpochNonce)` or `completeRebalance(expectedRebalanceNonce)` function with the state-derived nonce, and verify the expected `EpochClaimable` or `RebalanceCompleted` event and resulting state.
+4. Unpause ParentVault, call only the reconciled `completeEpochDeposit(expectedEpochNonce, actualDepositAmount)` or `completeRebalance(expectedRebalanceNonce)` function with the verified arguments, and verify the expected `EpochDepositReconciled` and `EpochClaimable`, or `RebalanceCompleted`, events and resulting state.
 5. Re-pause ParentVault if containment remains necessary, revoke temporary authority, and restore automation only after the full cross-chain state is reconciled and approved.
 
 ### Child Paused Before Rebalance Execution

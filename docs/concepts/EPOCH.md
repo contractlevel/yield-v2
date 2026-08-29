@@ -12,7 +12,7 @@ After settlement:
 - withdrawers call `claimAsset(epochNonce)` to burn escrowed shares and receive the underlying asset;
 - users can cancel only current-epoch intents that have not yet settled.
 
-If the active strategy is local to the parent chain, settlement can complete synchronously. If the active strategy is on a child chain, a nonzero net flow enters an executing state. A remote net deposit remains executing until the ChildVault strategy deposit succeeds and CRE calls `completeEpochDeposit(expectedEpochNonce)` with the most recently closed parent epoch nonce; a remote net withdrawal remains executing until the child withdrawal and CCIP return to ParentVault complete.
+If the active strategy is local to the parent chain, settlement can complete synchronously. If the active strategy is on a child chain, a nonzero net flow enters an executing state. A remote net deposit remains executing until the ChildVault strategy deposit succeeds and CRE calls `completeEpochDeposit(expectedEpochNonce, actualDepositAmount)` with the epoch nonce and amount emitted by `EpochDepositToStrategySuccess`; a remote net withdrawal remains executing until the child withdrawal and CCIP return to ParentVault complete.
 
 ## Epoch Status
 

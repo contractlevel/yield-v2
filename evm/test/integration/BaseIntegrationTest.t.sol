@@ -344,14 +344,16 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
         WorkflowRouter router,
         bytes32 workflowId,
         bytes10 workflowName,
-        address workflowOwner
+        address workflowOwner,
+        uint256 epochNonce,
+        uint256 actualDepositAmount
     ) internal {
         _callWorkflowRouter(
             router,
             workflowId,
             workflowName,
             workflowOwner,
-            abi.encodeWithSelector(ParentVault.completeEpochDeposit.selector, parent.vault.getEpochNonce() - 1)
+            abi.encodeWithSelector(ParentVault.completeEpochDeposit.selector, epochNonce, actualDepositAmount)
         );
     }
 
@@ -473,7 +475,12 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
             parent.workflowRouter, keccak256("seed-child-local-tvl"), bytes10("closeEpoch"), i_owner, 0
         );
         _completeEpochDepositThroughWorkflow(
-            parent.workflowRouter, keccak256("seed-child-local-tvl"), bytes10("closeEpoch"), i_owner
+            parent.workflowRouter,
+            keccak256("seed-child-local-tvl"),
+            bytes10("closeEpoch"),
+            i_owner,
+            parent.vault.getEpochNonce() - 1,
+            depositAmount
         );
 
         _changePrank(i_depositor);

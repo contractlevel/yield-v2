@@ -55,7 +55,12 @@ contract ChildDeposit_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         assertEq(IERC20(parent.asset).balanceOf(childPool), childPoolBalanceBefore + DEPOSIT_AMOUNT);
 
         _completeEpochDepositThroughWorkflow(
-            parent.workflowRouter, CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner
+            parent.workflowRouter,
+            CLOSE_EPOCH_WORKFLOW_ID,
+            CLOSE_EPOCH_WORKFLOW_NAME,
+            i_owner,
+            uint256(successLog.topics[1]),
+            uint256(successLog.topics[2])
         );
 
         _changePrank(i_depositor);

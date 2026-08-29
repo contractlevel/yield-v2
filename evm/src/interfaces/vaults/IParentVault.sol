@@ -91,6 +91,10 @@ interface IParentVault is IBaseVault {
     /// @dev Thrown when attempting to remove support for the pending strategy protocol
     /// @param protocolId The pending protocol ID
     error ParentVault__CannotRemovePendingProtocol(bytes32 protocolId);
+    /// @dev Thrown when the reported destination deposit amount is zero or exceeds the amount sent
+    /// @param actualDepositAmount The post-CCIP amount reported by the destination deposit success event
+    /// @param expectedDepositAmount The net deposit amount sent by the ParentVault
+    error ParentVault__InvalidActualDepositAmount(uint256 actualDepositAmount, uint256 expectedDepositAmount);
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
@@ -130,6 +134,13 @@ interface IParentVault is IBaseVault {
     /// @notice Emitted when an epoch is claimable
     /// @param epochNonce The nonce of the claimable epoch
     event EpochClaimable(uint256 indexed epochNonce);
+    /// @notice Emitted when a remote epoch deposit is reconciled against the amount delivered by CCIP
+    /// @param epochNonce The nonce of the reconciled epoch
+    /// @param actualDepositAmount The post-CCIP amount accepted by the destination deposit path
+    /// @param shareReduction The nominal pending shares removed because of the delivery shortfall
+    event EpochDepositReconciled(
+        uint256 indexed epochNonce, uint256 indexed actualDepositAmount, uint256 indexed shareReduction
+    );
     /// @notice Emitted when a CCIP withdrawal message delivers less underlying asset than expected
     /// @param epochNonce The nonce of the epoch with the short withdrawal
     /// @param expectedAmount The amount of underlying asset expected from the remote strategy
@@ -367,12 +378,15 @@ interface IParentVault is IBaseVault {
 
     /// @notice Completes the most recently closed remote net-deposit epoch
     /// @param expectedEpochNonce The completed epoch nonce the call is intended to finalize
+    /// @param actualDepositAmount The post-CCIP amount emitted by the destination deposit success event
     /// @dev Reverts if expectedEpochNonce does not match the most recently closed epoch nonce
     /// @dev Reverts if the vault is paused
     /// @dev Reverts if the caller does not have EPOCH_OPERATOR_ROLE
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if the previous epoch is not an executing net-deposit epoch
-    function completeEpochDeposit(uint256 expectedEpochNonce) external;
+    /// @dev Reverts if actualDepositAmount is zero or exceeds the expected net deposit amount
+    /// @dev Reverts if reconciliation would reduce the epoch's pending share allocation to zero
+    function completeEpochDeposit(uint256 expectedEpochNonce, uint256 actualDepositAmount) external;
 
     /// @notice Initiates a rebalance from the current strategy to a new strategy
     /// @param expectedRebalanceNonce The current rebalance nonce the call is intended to initiate

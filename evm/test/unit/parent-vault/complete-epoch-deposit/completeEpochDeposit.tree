@@ -9,6 +9,22 @@ ParentVault_completeEpochDeposit
 │   └── it should revert with ParentVault__EpochNotNetDeposit
 ├── when the previous net-deposit epoch is not executing
 │   └── it should revert with ParentVault__EpochNotExecuting
+├── when the actual deposit amount is zero
+│   └── it should revert with ParentVault__InvalidActualDepositAmount
+├── when the actual deposit amount exceeds the expected net deposit
+│   └── it should revert with ParentVault__InvalidActualDepositAmount
+├── when reconciliation rounds the pending share allocation to zero
+│   └── it should revert with ParentVault__DepositWouldMintZeroShares
+├── when the actual deposit equals the expected net deposit
+│   └── it should preserve the epoch share allocation and total shares
+├── when the actual deposit is less than the expected net deposit
+│   ├── it should reduce the epoch share allocation
+│   ├── it should reduce authoritative total shares by the same amount
+│   ├── it should preserve gross deposit claim counters
+│   └── it should round adjusted shares down
+├── when the epoch contains deposits and withdrawal claims
+│   └── it should reconcile deposit shares using withdrawals plus the actual remote deposit
+├── it should emit EpochDepositReconciled before EpochClaimable
 ├── it should mark the previous epoch claimable
 ├── it should emit EpochClaimable
 └── when the vault is paused

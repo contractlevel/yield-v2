@@ -314,7 +314,7 @@ The failure mode is delayed settlement:
 - The next epoch is not opened, so later user intents continue to accrue into the same open epoch rather than a new scheduled epoch.
 - Settlement allocations use a TVL observation signed no more than 30 minutes before the eventual close, not a snapshot from an earlier missed close attempt. Once a report expires, settlement requires a fresh report.
 - For remote-strategy net-withdraw epochs, the second CRE step (`EpochWithdrawExecuting` log handling on the child chain) is required before the parent epoch can become claimable.
-- For remote-strategy net-deposit epochs, CRE must observe the destination ChildVault's `EpochDepositToStrategySuccess` event, read the current parent epoch nonce, and submit `completeEpochDeposit(currentEpochNonce - 1)` before the parent epoch can become claimable.
+- For remote-strategy net-deposit epochs, CRE observes the destination ChildVault's `EpochDepositToStrategySuccess` event and submits `completeEpochDeposit(event.epochNonce, event.amount)` before the parent epoch can become claimable.
 
 With the report freshness check, a missed workflow execution does not by itself create an accounting inconsistency or direct loss of funds: an old failed report cannot later settle changed epoch contents using its historical TVL observation. User deposits and withdraw-intent shares remain escrowed by the protocol. While the epoch is still open, users may cancel their current-epoch deposit or withdraw intent through the normal cancellation functions, subject to the usual pause and state checks. Once the epoch itself is no longer open — including the `EXECUTING` window described above — cancellation is not available either; see [KI-017](#ki-017--deposit-and-withdraw-cancellation-is-scoped-to-the-current-epoch-only).
 
@@ -333,8 +333,8 @@ The current design keeps the authority narrow: the router validates workflow met
 
 - Monitor missed CRE cron executions, failed workflow runs, Keystone Forwarder delivery failures, and `WorkflowRouter.onReport` reverts.
 - Alert when `ParentVault.getEpochNonce()` has not advanced after the expected close window and the open epoch has nonzero activity.
-- Alert when a remote net-deposit epoch remains `EXECUTING` after the destination ChildVault emits `EpochDepositToStrategySuccess`, or when the corresponding `completeEpochDeposit(expectedEpochNonce)` report fails.
-- Ensure the deployed workflow metadata and selector allowlists include both `closeEpoch(uint256,uint256)` and `completeEpochDeposit(uint256)` for the active epoch workflow ID.
+- Alert when a remote net-deposit epoch remains `EXECUTING` after the destination ChildVault emits `EpochDepositToStrategySuccess`, or when the corresponding `completeEpochDeposit(expectedEpochNonce, actualDepositAmount)` report fails.
+- Ensure the deployed workflow metadata and selector allowlists include both `closeEpoch(uint256,uint256)` and `completeEpochDeposit(uint256,uint256)` for the active epoch workflow ID.
 - Keep CRE configuration, Keystone Forwarder configuration, workflow ownership, gas limits, and chain selectors under deployment/runbook review.
 - In an emergency, the commercial operator can update workflow configuration or, if explicitly accepted through an operational runbook, grant temporary epoch authority to a replacement router/operator and revoke it after recovery. This is a privileged break-glass action and should be treated as an operational trust escalation.
 
@@ -1179,3 +1179,42 @@ Recovery retries the same amount. Because Aave's asset-per-share exchange rate i
 - A configured reserve's first share-minting amount approaches the 50-base-unit cap.
 - An over-cap `EPOCH_DEPOSIT` recovery occurs in production.
 - The protocol adds an authenticated cross-chain deposit-abort or terminal-recovery mechanism.
+
+---
+
+## KI-026 — Extreme remote-deposit reconciliation can remain executing when adjusted shares round to zero
+
+**Status:** Accepted — fail closed; mitigated by the permanent locked seed position.
+
+**Last reviewed:** 2026-08-28
+
+**Component:** `ParentVaultEpochLib._completeEpochDeposit`, remote net-deposit completion, and parent bootstrap.
+
+### Summary
+
+Remote deposit completion reduces the affected epoch's pending shares when CCIP delivers less than Parent sent. For gross deposits `D`, withdrawal claims `W`, actual destination deposit `A`, and nominal pending shares `R`, the reconciled allocation is `floor(R * (W + A) / D)`. Parent reverts with `ParentVault__DepositWouldMintZeroShares` if that result is zero, leaving the epoch `EXECUTING`.
+
+Before the aggregate allocation reaches zero, an extreme reconciliation can leave the epoch with a nonzero adjusted share allocation that is nevertheless too small to allocate one share wei to every minimum-size deposit. During `claimShares`, each non-final claim is calculated as `floor(depositAmount * remainingShareMintAmount / remainingDepositClaimAmount)`. That calculation can return zero for a small depositor, while the final claimant receives the remaining share wei through the last-claim remainder rule. This requires the same near-total delivery loss or pathologically coarse share supply described below.
+
+The current open-epoch `forceCancelDeposit` escape hatch cannot resolve this state: the affected epoch has already closed and its net assets have reached the remote strategy. Finalizing with zero shares would confiscate the deposit cohort's value, while forcing one share could socialize a material loss when supply is pathologically coarse. A generic post-close escape hatch is therefore not exposed.
+
+### Why this is accepted
+
+- The close-time zero-share guard guarantees `R * 1 USDC >= D`, so reconciliation cannot round to zero when `W + A >= 1 USDC`.
+- With the launch-required `100e18` locked-share floor, any positive six-decimal USDC delivery continues to represent at least one share wei until strategy TVL exceeds roughly $100 trillion. Triggering the guard under intended initialization additionally requires a near-total CCIP loss.
+- Without the locked seed, a tiny nonzero supply can make one share wei materially valuable and allow the guard to trigger at ordinary TVL. That is part of the coarse-supply condition already mitigated by [KI-024](#ki-024--unseeded-bootstrap-allows-adapter-donation-and-claim-ordering-to-redirect-depositor-principal).
+- Failing closed preserves the exact cross-chain state for investigation instead of silently choosing which cohort absorbs an unrepresentable allocation.
+
+### Operational mitigation
+
+- Complete and verify the permanent 100 USDC seed lock before enabling normal deposits.
+- Alert on `ParentVault__DepositWouldMintZeroShares` from remote deposit completion and keep the affected Parent and Child paths contained.
+- If the condition occurs, inspect the delivered amount, strategy balance, share supply, and epoch accounting, then deploy a purpose-built UUPS repair that defines the economic resolution explicitly.
+
+### Conditions that would warrant revisiting
+
+- A valid production completion reaches the zero-adjusted-share guard.
+- A valid production claim returns zero shares after remote-deposit reconciliation.
+- The minimum deposit, asset precision, share precision, or locked-seed amount changes.
+- Supported CCIP routes can apply near-total transfer losses in normal operation.
+- The protocol adds authenticated cross-chain epoch abort, refund, or recapitalization accounting.

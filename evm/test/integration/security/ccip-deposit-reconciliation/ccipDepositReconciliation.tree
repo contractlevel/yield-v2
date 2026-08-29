@@ -1,0 +1,9 @@
+CcipDepositReconciliation
+└── when CCIP delivers less than the Parent sent
+    ├── it should emit the post-CCIP amount from ChildVault
+    ├── it should forward that event amount to Parent completion
+    ├── it should reduce the epoch share allocation and total shares
+    ├── it should make the epoch claimable
+    ├── it should mint only the reconciled shares
+    └── when the vendored CCIP token pool charges a transfer fee
+        └── it should reconcile shares to the pool-released destination amount

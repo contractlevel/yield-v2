@@ -95,7 +95,7 @@ explicitly because each configured selector must route to exactly one intended o
 | `initiateRebalance(uint256,(bytes32,uint64))` | `0x3ba1b347` |
 | `completeRebalance(uint256)` | `0x58b275bc` |
 | `closeEpoch(uint256,uint256)` | `0xf5591e6e` |
-| `completeEpochDeposit(uint256)` | `0x37129c0b` |
+| `completeEpochDeposit(uint256,uint256)` | `0x9f2ba740` |
 | `executeRebalance(uint256,(bytes32,uint64))` | `0x1aa137ec` |
 | `executeEpochWithdraw(uint256,uint256)` | `0x1c12f962` |
 

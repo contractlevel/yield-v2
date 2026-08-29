@@ -275,7 +275,12 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             if (netWithdrawAmount == 0) {
                 if (!_recoveryModeExists()) {
                     _completeEpochDepositThroughWorkflow(
-                        parent.workflowRouter, CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner
+                        parent.workflowRouter,
+                        CLOSE_EPOCH_WORKFLOW_ID,
+                        CLOSE_EPOCH_WORKFLOW_NAME,
+                        i_owner,
+                        epochNonce,
+                        totalDepositAmount - totalWithdrawUsdc
                     );
                 }
             } else {
@@ -1613,7 +1618,13 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         vault.executeRecovery();
 
         _completeEpochDepositThroughWorkflow(
-            parent.workflowRouter, CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner
+            parent.workflowRouter,
+            CLOSE_EPOCH_WORKFLOW_ID,
+            CLOSE_EPOCH_WORKFLOW_NAME,
+            i_owner,
+            epochNonce,
+            parent.vault.getEpoch(epochNonce).totalDepositAmount
+                - parent.vault.getEpoch(epochNonce).totalWithdrawClaimAmount
         );
 
         _assertEpochDepositRecoveryCleared(vault);
