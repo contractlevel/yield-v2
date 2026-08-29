@@ -1218,3 +1218,30 @@ The current open-epoch `forceCancelDeposit` escape hatch cannot resolve this sta
 - The minimum deposit, asset precision, share precision, or locked-seed amount changes.
 - Supported CCIP routes can apply near-total transfer losses in normal operation.
 - The protocol adds authenticated cross-chain epoch abort, refund, or recapitalization accounting.
+
+---
+
+## KI-027 — Aave supply caps can leave rebalance deposits in recovery
+
+**Status:** Accepted — operational liveness risk.
+
+**Last reviewed:** 2026-08-29
+
+**Component:** `ChildVault` local rebalance recovery and `AaveV3Adapter`.
+
+### Summary
+
+A local rebalance into Aave requires enough reserve capacity for the full position. If the deposit exceeds the reserve supply cap, `ChildVault` stores `REBALANCE_DEPOSIT` recovery and retries the same deposit. The current recovery path cannot return to the previous strategy, choose another target, or abort the rebalance, so the vault can remain unavailable until sufficient capacity returns.
+
+Aave also allows anyone to supply on behalf of the inactive target adapter. A third party can use this to consume reserve capacity while transferring ownership of the supplied assets to the adapter. If that adapter balance and the pending rebalance amount exceed the supply cap on their own, unrelated Aave suppliers exiting will not restore liveness because the recovery path cannot withdraw the adapter balance.
+
+The principal remains held and accounted for by the vault. The impact is loss of availability, potentially indefinite, rather than theft or insolvency.
+
+### Why this is accepted
+
+The Aave pools being considered generally have eight-figure or greater supply caps and available headroom, while expected Yieldcoin TVL is extremely low by comparison. The third-party attack also requires the attacker to give up ownership of the supplied assets and receive no claim against the adapter. Under these conditions, the required capital is disproportionate to the value immobilized. The protocol accepts this liveness risk rather than adding further rebalance-recovery state transitions.
+
+### Operational considerations
+
+- Monitor Aave supply caps, live reserve headroom, and Yieldcoin position size for every candidate target.
+- Reassess acceptance if the position becomes material relative to a reserve's cap or available headroom.
