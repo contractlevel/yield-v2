@@ -48,7 +48,7 @@ contract ChildDeposit_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
         assertApproxEqAbs(baseChild.aaveV3Adapter.getTVL(), DEPOSIT_AMOUNT, PROTOCOL_FORK_TOLERANCE);
 
         _selectArbitrumFork();
-        _completeEpochDepositThroughWorkflow(CLOSE_WORKFLOW_ID);
+        _completeEpochDepositThroughWorkflow(CLOSE_WORKFLOW_ID, 1, DEPOSIT_AMOUNT);
         _changePrank(i_depositor);
         parent.vault.claimShares(1);
 

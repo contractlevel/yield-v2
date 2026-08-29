@@ -21,7 +21,7 @@ Some rebalances are synchronous, such as parent-chain strategy to parent-chain s
 
 Child vaults handle remote strategy withdraws and deposits. CCIP is used when funds must move between chains. Message-only coordination is handled by emitted events and CRE log-triggered writes to the relevant chain.
 
-When the new strategy deposit succeeds, a `RebalanceDepositSuccess` event is emitted. CRE observes that event, reads the current rebalance nonce from ParentVault, and calls `ParentVault.completeRebalance(expectedRebalanceNonce)`, unless the path finalizes directly through the parent chain CCIP receive flow. ParentVault requires the supplied nonce to match the persisted in-progress rebalance before finalization makes the pending strategy active and increments the nonce.
+When the new strategy deposit succeeds, a `RebalanceDepositSuccess` event is emitted. CRE calls `ParentVault.completeRebalance(expectedRebalanceNonce)` with that event's rebalance nonce, unless the path finalizes directly through the parent chain CCIP receive flow. ParentVault requires the supplied nonce to match the persisted in-progress rebalance before finalization makes the pending strategy active and increments the nonce.
 
 During an in-progress cross-chain rebalance, the protocol may temporarily have a pending strategy and no local active adapter.
 

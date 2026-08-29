@@ -4,6 +4,7 @@ pragma solidity 0.8.34;
 import {BaseIntegrationTest} from "../../../BaseIntegrationTest.t.sol";
 
 import {Types} from "../../../../../src/libraries/Types.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -38,10 +39,22 @@ contract ChildDeposit_EpochIntegrationTest is BaseIntegrationTest {
         parent.vault.deposit(DEPOSIT_AMOUNT);
 
         _warpPastMinEpoch();
+        vm.recordLogs();
         _closeEpochThroughWorkflow(parent.workflowRouter, WORKFLOW_ID, WORKFLOW_NAME, i_owner, TVL);
+        Vm.Log[] memory closeLogs = vm.getRecordedLogs();
+        Vm.Log memory successLog = _assertEmittedBy(
+            closeLogs, keccak256("EpochDepositToStrategySuccess(uint256,uint256)"), address(child.vault)
+        );
 
         assertEq(uint256(parent.vault.getEpoch(1).status), uint256(Types.EpochStatus.EXECUTING));
-        _completeEpochDepositThroughWorkflow(parent.workflowRouter, WORKFLOW_ID, WORKFLOW_NAME, i_owner);
+        _completeEpochDepositThroughWorkflow(
+            parent.workflowRouter,
+            WORKFLOW_ID,
+            WORKFLOW_NAME,
+            i_owner,
+            uint256(successLog.topics[1]),
+            uint256(successLog.topics[2])
+        );
 
         assertEq(uint256(parent.vault.getEpoch(1).status), uint256(Types.EpochStatus.CLAIMABLE));
         assertEq(parent.vault.getEpochNonce(), 2);

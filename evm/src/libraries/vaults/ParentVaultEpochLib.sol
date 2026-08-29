@@ -99,6 +99,13 @@ library ParentVaultEpochLib {
     /// @notice Emitted when an epoch is claimable
     /// @param epochNonce The nonce of the claimable epoch
     event EpochClaimable(uint256 indexed epochNonce);
+    /// @notice Emitted when a remote epoch deposit is reconciled against the amount delivered by CCIP
+    /// @param epochNonce The nonce of the reconciled epoch
+    /// @param actualDepositAmount The post-CCIP amount accepted by the destination deposit path
+    /// @param shareReduction The nominal pending shares removed because of the delivery shortfall
+    event EpochDepositReconciled(
+        uint256 indexed epochNonce, uint256 indexed actualDepositAmount, uint256 indexed shareReduction
+    );
 
     /*//////////////////////////////////////////////////////////////
                                 EPOCH
@@ -289,20 +296,30 @@ library ParentVaultEpochLib {
     /// @notice Completes the most recently closed remote net-deposit epoch
     /// @param $ ParentVault namespaced storage
     /// @param expectedEpochNonce The most recently closed epoch nonce expected by the caller
+    /// @param actualDepositAmount The post-CCIP amount emitted by the destination deposit success event
     /// @dev Reverts if expectedEpochNonce does not match the most recently closed epoch nonce
     /// @dev Reverts if no epoch has completed
     /// @dev Reverts if the preceding epoch is not an executing net-deposit epoch
-    function completeEpochDeposit(ParentVaultStore.ParentVaultStorage storage $, uint256 expectedEpochNonce) public {
-        _completeEpochDeposit($, expectedEpochNonce);
+    function completeEpochDeposit(
+        ParentVaultStore.ParentVaultStorage storage $,
+        uint256 expectedEpochNonce,
+        uint256 actualDepositAmount
+    ) public {
+        _completeEpochDeposit($, expectedEpochNonce, actualDepositAmount);
     }
 
     /// @notice Completes the most recently closed remote net-deposit epoch
     /// @param $ ParentVault namespaced storage
     /// @param expectedEpochNonce The most recently closed epoch nonce expected by the caller
+    /// @param actualDepositAmount The post-CCIP amount emitted by the destination deposit success event
     /// @dev Reverts if expectedEpochNonce does not match the most recently closed epoch nonce
     /// @dev Reverts if no epoch has completed
     /// @dev Reverts if the preceding epoch is not an executing net-deposit epoch
-    function _completeEpochDeposit(ParentVaultStore.ParentVaultStorage storage $, uint256 expectedEpochNonce) internal {
+    function _completeEpochDeposit(
+        ParentVaultStore.ParentVaultStorage storage $,
+        uint256 expectedEpochNonce,
+        uint256 actualDepositAmount
+    ) internal {
         uint256 currentEpochNonce = $.s_epochNonce;
         uint256 epochNonce = currentEpochNonce - 1;
         if (expectedEpochNonce != epochNonce) {
@@ -314,6 +331,27 @@ library ParentVaultEpochLib {
         if (s_epoch.totalDepositAmount <= s_epoch.totalWithdrawClaimAmount) {
             revert IParentVault.ParentVault__EpochNotNetDeposit(epochNonce);
         }
+
+        uint256 expectedDepositAmount = s_epoch.totalDepositAmount - s_epoch.totalWithdrawClaimAmount;
+        if (actualDepositAmount == 0 || actualDepositAmount > expectedDepositAmount) {
+            revert IParentVault.ParentVault__InvalidActualDepositAmount(actualDepositAmount, expectedDepositAmount);
+        }
+
+        uint256 shareReduction;
+        if (actualDepositAmount < expectedDepositAmount) {
+            uint256 assetShortfall = expectedDepositAmount - actualDepositAmount;
+            uint256 originalShareAmount = s_epoch.remainingShareMintAmount;
+            uint256 adjustedShareAmount = ParentVaultMathLib._mulDivDown(
+                originalShareAmount, s_epoch.totalDepositAmount - assetShortfall, s_epoch.totalDepositAmount
+            );
+            if (adjustedShareAmount == 0) revert IParentVault.ParentVault__DepositWouldMintZeroShares();
+
+            shareReduction = originalShareAmount - adjustedShareAmount;
+            s_epoch.remainingShareMintAmount = adjustedShareAmount;
+            $.s_totalShares -= shareReduction;
+        }
+
+        emit EpochDepositReconciled(epochNonce, actualDepositAmount, shareReduction);
 
         _finalizeEpoch(s_epoch, epochNonce);
     }

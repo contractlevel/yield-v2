@@ -15,10 +15,10 @@ The workflow has two flows:
 | --------------------------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Rebalance cron                                | `rebalance.OnCronTrigger`             | Select the best approved pool and, when the workflow guards and APY threshold permit, call `ParentVault.initiateRebalance` with the current parent rebalance nonce.                |
 | `ParentVault.RebalanceInitiated`              | `rebalance.OnRebalanceInitiated`      | If the current strategy is remote, call `ChildVault.executeRebalance` on its chain to withdraw and route the capital to the new strategy.                                          |
-| `RebalanceDepositSuccess` on each child vault | `rebalance.OnRebalanceDepositSuccess` | Read the current parent rebalance nonce and call `ParentVault.completeRebalance` after a child strategy receives and deposits the capital.                                         |
+| `RebalanceDepositSuccess` on each child vault | `rebalance.OnRebalanceDepositSuccess` | Call `ParentVault.completeRebalance` with the event's rebalance nonce after a child strategy receives and deposits the capital.                                               |
 | Epoch cron                                    | `epoch.OnEpochCronTrigger`            | Read the current parent epoch nonce and active strategy's TVL, then call `ParentVault.closeEpoch`.                                                                                 |
 | `ParentVault.EpochWithdrawExecuting`          | `epoch.OnEpochWithdrawExecuting`      | For a remote net withdrawal, call `ChildVault.executeEpochWithdraw` on the active strategy chain.                                                                                  |
-| `EpochDepositToStrategySuccess` on each child | `epoch.OnEpochDepositSuccess`         | Read the current parent epoch nonce and call `ParentVault.completeEpochDeposit` for the most recently closed epoch after the destination ChildVault deposits the net epoch assets. |
+| `EpochDepositToStrategySuccess` on each child | `epoch.OnEpochDepositSuccess`         | Call `ParentVault.completeEpochDeposit` with the event's epoch nonce and post-CCIP amount after the destination ChildVault deposits the net epoch assets.                         |
 
 All EVM log triggers wait for finalized logs. Separate `RebalanceDepositSuccess` and `EpochDepositToStrategySuccess` handlers are registered for every configured child chain, so the concrete handler count grows by two per child vault. Both filters monitor the same ChildVault address and therefore consume one log-trigger contract slot per child. The standard CRE service quota allows [EVM log triggers from up to five contracts](https://docs.chain.link/cre/service-quotas#evm-log-trigger), which limits the standard configuration to five monitored vaults and therefore five networks. Before adding another network, the commercial operator must arrange an appropriate limit increase with Chainlink Labs and update the workflow configuration. See [CRE Service Quotas](../operator/OPERATIONS.md#cre-service-quotas).
 
@@ -86,8 +86,7 @@ rebalance cron
   -> initiateRebalance(expectedRebalanceNonce, newStrategy) on ParentVault
   -> vaults and CCIP move the position
   -> RebalanceDepositSuccess on a child, when required
-  -> read the current ParentVault rebalance nonce
-  -> completeRebalance(expectedRebalanceNonce) on ParentVault
+  -> completeRebalance(event.rebalanceNonce) on ParentVault
 ```
 
 The cron handler does nothing unless all workflow-level checks pass:
@@ -111,8 +110,8 @@ epoch cron
   -> read TVL from the vault holding the active strategy
   -> closeEpoch(expectedEpochNonce, tvl) on ParentVault
   -> remote net deposit: CCIP deposit -> EpochDepositToStrategySuccess on ChildVault
-     -> read the current ParentVault epoch nonce
-     -> completeEpochDeposit(currentEpochNonce - 1) on ParentVault -> EpochClaimable
+     -> completeEpochDeposit(event.epochNonce, event.amount) on ParentVault
+        -> EpochDepositReconciled -> EpochClaimable
   -> remote net withdrawal: EpochWithdrawExecuting on ParentVault
      -> executeEpochWithdraw(epochNonce, amount) on ChildVault
      -> CCIP returns the withdrawn asset to ParentVault -> EpochClaimable
@@ -125,7 +124,7 @@ The cron handler closes an epoch only when:
 - the epoch contains deposits or withdrawal requests; and
 - it has been open for at least one hour.
 
-TVL is read from `ParentVault` for a local strategy or from the active `ChildVault` for a remote strategy. CRE uses its consensus-derived time for the age check and passes the parent epoch nonce read during the same run to `closeEpoch`. After `closeEpoch`, the vault contracts determine whether settlement is local, requires a CCIP deposit followed by a ChildVault success acknowledgement, or emits `EpochWithdrawExecuting` for a remote withdrawal. The deposit-success handler reads the then-current parent epoch nonce and passes one less than that value to `completeEpochDeposit`. The trigger is registered only for non-parent chain selectors and exact ChildVault addresses, so the identically signed ParentVault event cannot trigger completion. See [PATHS.md](PATHS.md#epoch-flows) for those settlement paths.
+TVL is read from `ParentVault` for a local strategy or from the active `ChildVault` for a remote strategy. CRE uses its consensus-derived time for the age check and passes the parent epoch nonce read during the same run to `closeEpoch`. After `closeEpoch`, the vault contracts determine whether settlement is local, requires a CCIP deposit followed by a ChildVault success acknowledgement, or emits `EpochWithdrawExecuting` for a remote withdrawal. The deposit-success handler passes the event's `epochNonce` and `amount` directly to `completeEpochDeposit`. The trigger is registered only for non-parent chain selectors and exact ChildVault addresses, so the identically signed ParentVault event cannot trigger completion. See [PATHS.md](PATHS.md#epoch-flows) for those settlement paths.
 
 ## How a CRE write reaches a vault
 
