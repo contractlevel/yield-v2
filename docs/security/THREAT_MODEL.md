@@ -57,7 +57,7 @@ If the underlying asset issuer blacklists protocol addresses, strategy addresses
 
 Cross-chain flows depend on CCIP message authenticity, token delivery, and liveness. Vaults reject unexpected source vaults and unsupported message types, and validate received token shape before handling CCIP state transitions.
 
-Child-side strategy and outbound CCIP failures store explicit recovery state where possible. Recovery execution is permissionless, consumes stored state, and does not let the caller choose arbitrary amounts, destinations, strategies, or recipients. Global CCIP liveness remains an external dependency.
+Child-side strategy and outbound CCIP failures store explicit recovery state where possible. A token-pool `TokenMaxCapacityExceeded` error instead reverts the Child operation atomically, since an unchanged recovery payload would exceed the same permanent ceiling. Recovery execution is permissionless, consumes stored state, and does not let the caller choose arbitrary amounts, destinations, strategies, or recipients. Global CCIP liveness, including eventual capacity for an atomically reverted operation, remains an external dependency.
 
 ### 3.6 Adapter correctness and registration
 

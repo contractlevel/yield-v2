@@ -151,6 +151,19 @@ contract ChildVault_ExecuteEpochWithdrawUnitTest is BaseUnitTest {
         assertEq(s_childVault.getLastHandledEpochNonce(), EPOCH_NONCE);
     }
 
+    function test_ChildVault_executeEpochWithdraw_RevertWhen_CcipSendExceedsTokenPoolCapacity() public {
+        uint256 capacity = WITHDRAW_AMOUNT - 1;
+        bytes memory err = _mockCcipSendTokenMaxCapacityExceeded(capacity, WITHDRAW_AMOUNT);
+
+        vm.expectRevert(err);
+        s_childVault.executeEpochWithdraw(EPOCH_NONCE, WITHDRAW_AMOUNT);
+
+        assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.NONE);
+        assertEq(s_childVault.getLastHandledEpochNonce(), 0);
+        assertEq(s_mockProtocolAdapter.getWithdrawCalls(), 0);
+        assertEq(s_mockUsdc.balanceOf(address(s_childVault)), WITHDRAW_AMOUNT);
+    }
+
     function test_ChildVault_executeEpochWithdraw_WhenAdapterReverts_EmitsFailureWithoutBridging() public {
         s_mockProtocolAdapter.setWithdrawReverts(true);
         uint256 routerBefore = s_mockUsdc.balanceOf(address(s_mockCcipRouter));

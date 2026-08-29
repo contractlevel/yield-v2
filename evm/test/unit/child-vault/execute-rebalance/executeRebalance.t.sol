@@ -184,6 +184,20 @@ contract ChildVault_ExecuteRebalanceUnitTest is BaseUnitTest {
         assertEq(s_childVault.getLastHandledRebalanceNonce(), REBALANCE_NONCE);
     }
 
+    function test_ChildVault_executeRebalance_RemoteChild_RevertWhen_CcipSendExceedsTokenPoolCapacity() public {
+        uint256 capacity = REBALANCE_AMOUNT - 1;
+        bytes memory err = _mockCcipSendTokenMaxCapacityExceeded(capacity, REBALANCE_AMOUNT);
+
+        vm.expectRevert(err);
+        _executeRemoteChildRebalance();
+
+        assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.NONE);
+        assertEq(s_childVault.getLastHandledRebalanceNonce(), 0);
+        assertEq(s_mockProtocolAdapter.getWithdrawCalls(), 0);
+        assertEq(s_childVault.getActiveProtocolAdapter(), address(s_mockProtocolAdapter));
+        assertEq(s_mockUsdc.balanceOf(address(s_childVault)), REBALANCE_AMOUNT);
+    }
+
     function test_ChildVault_executeRebalance_RemoteChild_ClearsActiveProtocolAdapter() public {
         _executeRemoteChildRebalance();
 

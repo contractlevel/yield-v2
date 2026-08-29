@@ -1,0 +1,5 @@
+CcipRateLimitCapacity_IntegrationTest
+├── when a ChildVault CCIP send exceeds the token-pool capacity
+│   └── it should revert atomically without storing recovery
+└── when a ChildVault CCIP send is temporarily rate limited below capacity
+    └── it should store CCIP send recovery

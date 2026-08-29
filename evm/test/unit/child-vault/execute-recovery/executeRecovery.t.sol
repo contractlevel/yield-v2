@@ -160,6 +160,21 @@ contract ChildVault_ExecuteRecovery_EpochWithdraw_UnitTest is BaseUnitTest {
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.EPOCH_WITHDRAW);
     }
 
+    function test_ChildVault_executeRecovery_EPOCH_WITHDRAW_RevertWhen_CcipSendExceedsTokenPoolCapacity() public {
+        uint256 capacity = WITHDRAW_AMOUNT - 1;
+        bytes memory err = _mockCcipSendTokenMaxCapacityExceeded(capacity, WITHDRAW_AMOUNT);
+
+        vm.expectRevert(err);
+        s_childVault.executeRecovery();
+
+        Types.EpochRecovery memory recovery = s_childVault.getEpochWithdrawRecovery();
+        assertEq(recovery.epochNonce, EPOCH_NONCE);
+        assertEq(recovery.amount, WITHDRAW_AMOUNT);
+        assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.EPOCH_WITHDRAW);
+        assertEq(s_mockProtocolAdapter.getWithdrawCalls(), 0);
+        assertEq(s_mockUsdc.balanceOf(address(s_childVault)), WITHDRAW_AMOUNT);
+    }
+
     function test_ChildVault_executeRecovery_EPOCH_WITHDRAW_WithdrawsFromActiveAdapter() public {
         s_childVault.executeRecovery();
 
@@ -354,6 +369,23 @@ contract ChildVault_ExecuteRecovery_RebalanceWithdraw_UnitTest is BaseUnitTest {
         vm.expectRevert(IBaseVault.BaseVault__ZeroRecoveryAmount.selector);
         s_childVault.executeRecovery();
         assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.REBALANCE_WITHDRAW);
+    }
+
+    function test_ChildVault_executeRecovery_REBALANCE_WITHDRAW_RevertWhen_CcipSendExceedsTokenPoolCapacity() public {
+        uint256 capacity = REBALANCE_AMOUNT - 1;
+        bytes memory err = _mockCcipSendTokenMaxCapacityExceeded(capacity, REBALANCE_AMOUNT);
+
+        vm.expectRevert(err);
+        s_childVault.executeRecovery();
+
+        Types.RebalanceWithdrawRecovery memory recovery = s_childVault.getRebalanceWithdrawRecovery();
+        assertEq(recovery.rebalanceNonce, REBALANCE_NONCE);
+        assertEq(recovery.strategy.protocolId, AAVE_V4_PROTOCOL_ID);
+        assertEq(recovery.strategy.chainSelector, REMOTE_CHILD_CHAIN_SELECTOR);
+        assertTrue(s_childVault.getRecoveryMode() == Types.RecoveryMode.REBALANCE_WITHDRAW);
+        assertEq(s_mockProtocolAdapter.getWithdrawCalls(), 0);
+        assertEq(s_childVault.getActiveProtocolAdapter(), address(s_mockProtocolAdapter));
+        assertEq(s_mockUsdc.balanceOf(address(s_childVault)), REBALANCE_AMOUNT);
     }
 
     function test_ChildVault_executeRecovery_REBALANCE_WITHDRAW_WithdrawsFromActiveAdapter() public {
