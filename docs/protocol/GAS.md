@@ -16,7 +16,7 @@ This is not a list of open findings to fix. Entries here are judged tradeoffs: r
 
 `_ccipSend` validates parameters directly, then invokes `tryCcipSend` (an external self-call for try/catch), which validates again internally inside `_send`.
 
-This is deliberate, not accidental. Validating before the try/catch boundary means a configuration error (bad destination chain, zero amount) reverts the whole transaction atomically. If validation only happened inside the try block, the catch clause would treat a configuration bug the same as a genuine CCIP send failure and store it as recovery state - silently masking the bug behind a retry flow instead of surfacing it immediately.
+This is deliberate, not accidental. Validating before the try/catch boundary means a configuration error (bad destination chain, zero amount) reverts the whole transaction atomically. If validation only happened inside the try block, the catch clause would treat a configuration bug the same as a genuine CCIP send failure and store it as recovery state - silently masking the bug behind a retry flow instead of surfacing it immediately. The catch also rethrows `TokenMaxCapacityExceeded`, because retrying an unchanged amount above the token-pool ceiling cannot succeed; other valid send-attempt failures continue to store recovery.
 
 ## GAS-003 - Duplicate crosschain-vault lookup in remote rebalance initiation
 

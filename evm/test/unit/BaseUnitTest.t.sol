@@ -18,7 +18,8 @@ import {MockCCIPRouter} from "../mocks/MockCCIPRouter.sol";
 import {Roles} from "../../src/libraries/Roles.sol";
 import {Types} from "../../src/libraries/Types.sol";
 
-import {Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
+import {IRouterClient, Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
+import {RateLimiter} from "@chainlink/contracts-ccip/contracts/libraries/RateLimiter.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 abstract contract BaseUnitTest is BaseTest {
@@ -154,6 +155,16 @@ abstract contract BaseUnitTest is BaseTest {
 
     function _setChildCrosschainVault(uint64 chainSelector, address vault) internal {
         _setCrosschainVault(s_childVault, chainSelector, vault);
+    }
+
+    function _mockCcipSendTokenMaxCapacityExceeded(uint256 capacity, uint256 requested)
+        internal
+        returns (bytes memory err)
+    {
+        err = abi.encodeWithSelector(
+            RateLimiter.TokenMaxCapacityExceeded.selector, capacity, requested, address(s_mockUsdc)
+        );
+        vm.mockCallRevert(address(s_mockCcipRouter), IRouterClient.ccipSend.selector, err);
     }
 
     function _setCrosschainVault(BaseVault vault, uint64 chainSelector, address crosschainVault) internal {

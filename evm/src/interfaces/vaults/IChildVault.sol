@@ -105,7 +105,8 @@ interface IChildVault is IBaseVault {
     /// @dev Reverts if a successful strategy withdrawal returns zero assets
     /// @dev Reverts if no parent vault is registered for the parent chain
     /// @dev Stores epoch-withdraw recovery if the strategy withdrawal fails
-    /// @dev Stores CCIP-send recovery if a valid CCIP send attempt fails
+    /// @dev Reverts atomically if the CCIP send exceeds the token-pool capacity
+    /// @dev Stores CCIP-send recovery for other valid CCIP send-attempt failures
     function executeEpochWithdraw(uint256 epochNonce, uint256 amount) external;
 
     /// @notice Attempts to withdraw the active strategy's entire position and continue the rebalance
@@ -123,7 +124,8 @@ interface IChildVault is IBaseVault {
     /// @dev If the initial strategy withdrawal succeeds, reverts if no crosschain vault is registered for a remote target chain
     /// @dev Stores rebalance-withdraw recovery if the old-strategy withdrawal fails
     /// @dev Stores rebalance-deposit recovery if a local new-strategy deposit fails
-    /// @dev Stores CCIP-send recovery if a valid CCIP send attempt fails
+    /// @dev Reverts atomically if a remote CCIP send exceeds the token-pool capacity
+    /// @dev Stores CCIP-send recovery for other valid remote CCIP send-attempt failures
     function executeRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy) external;
 
     /*//////////////////////////////////////////////////////////////

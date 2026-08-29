@@ -77,7 +77,7 @@ See [INVARIANTS - External Assumptions](../security/INVARIANTS.md#external-assum
 
 Local parent-chain strategy failures revert atomically. Remote child-chain failures store typed recovery state where possible.
 
-The parent can revert local adapter interactions and parent-originated CCIP sends in the same transaction because no cross-chain state has escaped. Child vault flows are asynchronous: once a message has arrived on a child chain or a child begins a remote operation, reverting the original parent transaction is no longer possible. In those cases, the child records the failed step for permissionless retry.
+The parent can revert local adapter interactions and parent-originated CCIP sends in the same transaction because no cross-chain state has escaped. Child vault flows are asynchronous: once a message has arrived on a child chain or a child begins a remote operation, reverting the original parent transaction is no longer possible. In those cases, the child records the failed step for permissionless retry where retrying the stored operation can make progress. The exception is CCIP's `TokenMaxCapacityExceeded`: the Child rethrows it atomically because the same amount can never succeed against that fixed ceiling, leaving the original workflow operation to be retried instead of storing an unreplayable recovery.
 
 This means a local Aave or Compound adapter revert during `closeEpoch` reverts the epoch close. The epoch remains open and CRE can retry after the underlying failure clears. No separate parent-side recovery state is stored for that local synchronous failure.
 

@@ -15,6 +15,7 @@ import {IProtocolAdapter} from "../interfaces/adapters/IProtocolAdapter.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {RateLimiter} from "@chainlink/contracts-ccip/contracts/libraries/RateLimiter.sol";
 
 import {Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
 
@@ -158,7 +159,8 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @dev Reverts if destinationChainSelector is zero
     /// @dev Reverts if destinationChainSelector identifies this chain
     /// @dev Reverts if no crosschain vault is registered for destinationChainSelector
-    /// @dev Stores CCIP-send recovery if fee calculation, token approval, or the router call fails
+    /// @dev Reverts atomically if the router reports that the amount exceeds the token-pool capacity
+    /// @dev Stores CCIP-send recovery for other fee-calculation, token-approval, or router-call failures
     function _ccipSend(
         uint256 bridgeAmount,
         uint64 destinationChainSelector,
@@ -173,7 +175,14 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
         BaseVaultCcipLib._validateCcipSend($_baseVault, bridgeAmount, destinationChainSelector, i_thisChainSelector);
 
         try this.tryCcipSend(bridgeAmount, destinationChainSelector, ccipTxType, nonce, protocolId) {}
-        catch {
+        catch (bytes memory err) {
+            if (bytes4(err) == RateLimiter.TokenMaxCapacityExceeded.selector) {
+                // Bubble the permanent capacity error instead of storing an identically replayable recovery.
+                //slither-disable-next-line assembly
+                assembly ("memory-safe") {
+                    revert(add(err, 0x20), mload(err))
+                }
+            }
             _storeCcipSendRecovery($_baseVault, bridgeAmount, destinationChainSelector, ccipTxType, nonce, protocolId);
         }
     }
@@ -229,7 +238,8 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @dev Reverts if a successful strategy withdrawal returns zero assets
     /// @dev Reverts if no parent vault is registered for the parent chain
     /// @dev Stores epoch-withdraw recovery if the strategy withdrawal fails
-    /// @dev Stores CCIP-send recovery if a valid CCIP send attempt fails
+    /// @dev Reverts atomically if the CCIP send exceeds the token-pool capacity
+    /// @dev Stores CCIP-send recovery for other valid CCIP send-attempt failures
     function executeEpochWithdraw(uint256 epochNonce, uint256 amount)
         external
         nonReentrant
@@ -268,7 +278,8 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @dev If the initial strategy withdrawal succeeds, reverts if no crosschain vault is registered for a remote target chain
     /// @dev Stores rebalance-withdraw recovery if the old-strategy withdrawal fails
     /// @dev Stores rebalance-deposit recovery if a local new-strategy deposit fails
-    /// @dev Stores CCIP-send recovery if a valid CCIP send attempt fails
+    /// @dev Reverts atomically if a remote CCIP send exceeds the token-pool capacity
+    /// @dev Stores CCIP-send recovery for other valid remote CCIP send-attempt failures
     function executeRebalance(uint256 rebalanceNonce, Types.Strategy memory newStrategy)
         external
         nonReentrant
@@ -317,7 +328,8 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @dev Reverts if the registered local adapter is bound to another vault
     /// @dev Stores rebalance-deposit recovery if a local adapter deposit fails
     /// @dev Reverts if a remote target chain has no registered crosschain vault
-    /// @dev Stores CCIP-send recovery if a valid remote send attempt fails
+    /// @dev Reverts atomically if a remote send exceeds the token-pool capacity
+    /// @dev Stores CCIP-send recovery for other valid remote send-attempt failures
     function _rebalanceToNewStrategy(
         uint256 rebalanceNonce,
         uint256 tvlToRebalance,
@@ -454,7 +466,8 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @dev Reverts if the strategy withdrawal fails
     /// @dev Reverts if the strategy withdrawal returns zero assets
     /// @dev Reverts if no parent vault is registered for the parent chain
-    /// @dev Stores CCIP-send recovery if a valid send attempt fails
+    /// @dev Reverts atomically if the send exceeds the token-pool capacity, preserving epoch-withdraw recovery
+    /// @dev Stores CCIP-send recovery for other valid send-attempt failures
     /// @dev The caller must ensure epoch withdraw recovery is active
     function _recoverFailedEpochWithdraw(ChildVaultStorage storage $, BaseVaultStorage storage $_baseVault) internal {
         Types.EpochRecovery memory recovery = $.s_epochWithdrawRecovery;
@@ -516,7 +529,8 @@ contract ChildVault is BaseVault, ChildVaultStore, IChildVault {
     /// @dev Reverts if the registered recovered local adapter is bound to another vault
     /// @dev Reverts if no crosschain vault is registered for a recovered remote target chain
     /// @dev Stores rebalance-deposit recovery if the recovered local strategy deposit fails
-    /// @dev Stores CCIP-send recovery if a valid recovered remote send attempt fails
+    /// @dev Reverts atomically if a recovered remote send exceeds the token-pool capacity, preserving withdrawal recovery
+    /// @dev Stores CCIP-send recovery for other valid recovered remote send-attempt failures
     /// @dev The caller must ensure rebalance withdraw recovery is active
     function _recoverFailedRebalanceWithdraw(ChildVaultStorage storage $, BaseVaultStorage storage $_baseVault)
         internal

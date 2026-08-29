@@ -10,7 +10,7 @@ determined by whether the active strategy is on Parent chain or on a Child chain
 net capital flow.
 
 In local Parent paths, strategy interaction and CCIP send failures revert atomically.
-In remote Child paths, strategy interaction and Child-originated CCIP send failures store explicit recovery state and emit failure/recovery events. Recovery functions retry the failed step.
+In remote Child paths, strategy interaction and most Child-originated CCIP send failures store explicit recovery state and emit failure/recovery events. Recovery functions retry the failed step. A CCIP token-pool capacity-ceiling failure reverts the Child operation atomically instead of storing an identically replayable send.
 
 # **Summary**
 
@@ -144,7 +144,7 @@ More withdrawals than deposits. Active strategy is on a Child chain.
 
 - On success: child **\_ccipSend**(amountOut, parentChain, WITHDRAW, epochNonce).
 
-- If the Child CCIP send fails, it stores CCIP send recovery; `executeRecovery()` retries the stored send.
+- If the Child CCIP send exceeds the token-pool capacity, the Child call reverts atomically so the original workflow operation can be retried. Other send-attempt failures store CCIP send recovery; `executeRecovery()` retries the stored send.
 
 - Parent receives EPOCH_NET_WITHDRAW, updates withdraw claim amount from actual received asset, emits EpochWithdrawAmountShort if under expected amount, then \_finalizeEpoch(epochNonce) → epoch → CLAIMABLE.
 
@@ -245,7 +245,7 @@ Old strategy on a Child chain, new strategy on Parent chain.
 
 - **\_ccipSend**(amountOut, parentChain, REBALANCE, rebalanceNonce, newStrategy.protocolId).
 
-- If the Child CCIP send fails, it stores CCIP send recovery; `executeRecovery()` retries the stored send.
+- If the Child CCIP send exceeds the token-pool capacity, the Child call reverts atomically so the original workflow operation can be retried. Other send-attempt failures store CCIP send recovery; `executeRecovery()` retries the stored send.
 
 - Parent \_handleCCIPRebalance() → \_setActiveAdapter(protocolId) → \_executeDeposit(amount, false). Emits RebalanceDepositSuccess on success. On failure, stores rebalance deposit recovery and emits RebalanceDepositFailure; `executeRecovery()` retries the stored deposit and finalizes the rebalance after success.
 
@@ -307,7 +307,7 @@ Old strategy on one Child A chain, new strategy on a different Child B chain.
 
 - s_activeProtocolAdapter = address(0) on old Child A.
 
-- **\_ccipSend**(amountOut, newStrategy.chainSelector, REBALANCE, rebalanceNonce, newStrategy.protocolId). Old Child A sends directly to new Child B. If the CCIP send fails, Child A stores CCIP send recovery; `executeRecovery()` retries the stored send.
+- **\_ccipSend**(amountOut, newStrategy.chainSelector, REBALANCE, rebalanceNonce, newStrategy.protocolId). Old Child A sends directly to new Child B. A token-pool capacity-ceiling failure reverts the Child A operation atomically; other send-attempt failures store CCIP send recovery for `executeRecovery()`.
 
 - New Child B \_handleCCIPRebalance() → \_setActiveAdapter(protocolId) → \_executeDeposit(amount, false). Emits RebalanceDepositSuccess on success. On failure, stores rebalance deposit recovery and emits RebalanceDepositFailure; `executeRecovery()` retries the stored deposit.
 
