@@ -58,6 +58,8 @@ interface IParentVault is IBaseVault {
     error ParentVault__RebalanceInProgress();
     /// @dev Thrown when no rebalance is in progress
     error ParentVault__NoRebalanceInProgress();
+    /// @dev Thrown when report-driven completion is attempted for a Parent-local rebalance target
+    error ParentVault__CannotCompleteLocalRebalance();
     /// @dev Thrown when a provided epoch nonce does not match the nonce required by the current operation
     /// @param epochNonce The invalid epoch nonce provided by the caller or decoded from a CCIP message
     error ParentVault__InvalidEpochNonce(uint256 epochNonce);

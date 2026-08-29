@@ -517,6 +517,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /// @dev Reverts if the call is reentered
     /// @dev Reverts if a recovery mode is active
     /// @dev Reverts if no rebalance is in progress
+    /// @dev Reverts if the pending strategy is local to the ParentVault
     function completeRebalance(uint256 expectedRebalanceNonce)
         external
         nonReentrant
@@ -525,6 +526,9 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     {
         _requireNoRecovery(_baseVaultStorage());
         Types.Rebalance storage s_rebalance = _parentVaultStorage().s_rebalance;
+        if (s_rebalance.pendingStrategy.chainSelector == i_thisChainSelector) {
+            revert ParentVault__CannotCompleteLocalRebalance();
+        }
         _finalizeRebalance(expectedRebalanceNonce, s_rebalance.pendingStrategy);
     }
 
