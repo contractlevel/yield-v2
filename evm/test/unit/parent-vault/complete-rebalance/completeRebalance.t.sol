@@ -58,6 +58,15 @@ contract ParentVault_CompleteRebalanceUnitTest is BaseUnitTest {
         s_parentVault.completeRebalance(rebalanceNonce);
     }
 
+    function test_ParentVault_completeRebalance_RevertWhen_PendingStrategyIsLocal() public {
+        _setParentPendingRebalance(AAVE_V4_PROTOCOL_ID, PARENT_CHAIN_SELECTOR);
+        assertEq(s_parentVault.getRebalance().pendingStrategy.chainSelector, PARENT_CHAIN_SELECTOR);
+        uint256 rebalanceNonce = s_parentVault.getRebalance().nonce;
+
+        vm.expectRevert(IParentVault.ParentVault__CannotCompleteLocalRebalance.selector);
+        s_parentVault.completeRebalance(rebalanceNonce);
+    }
+
     function test_ParentVault_completeRebalance_Success_SetsRebalanceStateToNone() public {
         s_parentVault.completeRebalance(s_parentVault.getRebalance().nonce);
         assertEq(uint256(s_parentVault.getRebalance().state), uint256(Types.RebalanceState.NONE));
@@ -95,7 +104,7 @@ contract ParentVault_CompleteRebalanceUnitTest is BaseUnitTest {
     }
 
     function test_ParentVault_completeRebalance_Success_Emits_RebalanceCompleted() public {
-        _setParentPendingRebalance(AAVE_V3_PROTOCOL_ID, PARENT_CHAIN_SELECTOR);
+        _setParentPendingRebalance(AAVE_V3_PROTOCOL_ID, CHILD_CHAIN_SELECTOR);
 
         vm.recordLogs();
         s_parentVault.completeRebalance(s_parentVault.getRebalance().nonce);
@@ -104,7 +113,7 @@ contract ParentVault_CompleteRebalanceUnitTest is BaseUnitTest {
             _assertEmittedBy(keccak256("RebalanceCompleted(uint256,bytes32,uint64)"), address(s_parentVault));
         assertEq(uint256(log.topics[1]), 1);
         assertEq(log.topics[2], AAVE_V3_PROTOCOL_ID);
-        assertEq(uint256(log.topics[3]), PARENT_CHAIN_SELECTOR);
+        assertEq(uint256(log.topics[3]), CHILD_CHAIN_SELECTOR);
     }
 
     function test_ParentVault_completeRebalance_Success_Emits_ManagementFeeCollected() public {
