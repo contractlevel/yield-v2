@@ -87,7 +87,7 @@ contract HelperHarness {
     }
 
     function encodeCcipExtraArgs(uint256 gasLimit) external pure returns (bytes memory encoded) {
-        encoded = Client._argsToBytes(Client.GenericExtraArgsV2({gasLimit: gasLimit, allowOutOfOrderExecution: false}));
+        encoded = Client._argsToBytes(Client.GenericExtraArgsV2({gasLimit: gasLimit, allowOutOfOrderExecution: true}));
     }
 
     function hashBytes(bytes memory value) external pure returns (bytes32 hash) {
