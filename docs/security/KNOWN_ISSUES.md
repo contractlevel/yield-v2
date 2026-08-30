@@ -500,7 +500,7 @@ if (accounting.totalShares == 0) {
 }
 ```
 
-`s_totalShares` can reach exactly zero through ordinary use: a full-supply exit, where the last holder's withdraw intent burns all outstanding shares in a `closeEpoch`. Nothing prevents this — `minDepositAmount` only floors new mints, not burns.
+`s_totalShares` can reach exactly zero through ordinary use: a full-supply exit, where the last holder's withdraw intent burns all outstanding shares in a `closeEpoch`. Nothing prevents this — `minAssetAmount` only floors new mints, not burns.
 
 At the epoch closing a full exit, the withdraw amount pulled from the strategy is the epoch's computed `netWithdrawAmount` (derived from the operator-supplied `tvl` snapshot), not a "withdraw everything" call. If the strategy's actual balance drifts even slightly above that snapshot by execution time (e.g. interest accrued between the CRE workflow's off-chain TVL read and the on-chain `closeEpoch` transaction), a small residual is left behind in the adapter after `s_totalShares` hits zero.
 
@@ -1223,6 +1223,8 @@ The current open-epoch `forceCancelDeposit` escape hatch cannot resolve this sta
 
 ## KI-027 — Aave supply caps can leave rebalance deposits in recovery
 
+<!-- @review can leave epoch deposits in recovery too? -->
+
 **Status:** Accepted — operational liveness risk.
 
 **Last reviewed:** 2026-08-29
@@ -1245,3 +1247,7 @@ The Aave pools being considered generally have eight-figure or greater supply ca
 
 - Monitor Aave supply caps, live reserve headroom, and Yieldcoin position size for every candidate target.
 - Reassess acceptance if the position becomes material relative to a reserve's cap or available headroom.
+
+---
+
+<!-- @review known issue regarding net withdraw settlement -->

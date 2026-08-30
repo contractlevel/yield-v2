@@ -19,6 +19,7 @@ interface IMessageTransmitterFork {
 }
 
 abstract contract BaseCcipForkTest is BaseForkTest {
+    uint256 internal constant REMOTE_WITHDRAW_AMOUNT = 100 * ASSET_PRECISION;
     using stdStorage for StdStorage;
 
     uint256 internal constant CCIP_LINK_AMOUNT = 1_000 ether;
@@ -352,10 +353,10 @@ abstract contract BaseCcipForkTest is BaseForkTest {
     function _depositAndClaimParentShares(bytes32 workflowId) internal returns (uint256 shareAmount) {
         _selectArbitrumFork();
 
-        _fundAndApproveParentUsdc(i_depositor, DEPOSIT_AMOUNT);
+        _fundAndApproveParentUsdc(i_depositor, REMOTE_WITHDRAW_AMOUNT);
 
         _changePrank(i_depositor);
-        parent.vault.deposit(DEPOSIT_AMOUNT);
+        parent.vault.deposit(REMOTE_WITHDRAW_AMOUNT);
 
         _warpPastMinEpoch();
         _closeEpochThroughWorkflow(workflowId, 0);
@@ -363,11 +364,11 @@ abstract contract BaseCcipForkTest is BaseForkTest {
         _selectArbitrumFork();
         _routeUsdcMessageTo(baseFork);
 
-        _completeEpochDepositThroughWorkflow(workflowId, 1, DEPOSIT_AMOUNT);
+        _completeEpochDepositThroughWorkflow(workflowId, 1, REMOTE_WITHDRAW_AMOUNT);
         _changePrank(i_depositor);
         parent.vault.claimShares(1);
 
-        shareAmount = DEPOSIT_AMOUNT * YIELD_PRECISION / ASSET_PRECISION;
+        shareAmount = REMOTE_WITHDRAW_AMOUNT * YIELD_PRECISION / ASSET_PRECISION;
     }
 
     function test_baseCcipForkTest() public virtual {}

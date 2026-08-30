@@ -6,6 +6,7 @@ import {BaseIntegrationTest} from "../BaseIntegrationTest.t.sol";
 import {Types} from "../../../src/libraries/Types.sol";
 
 abstract contract BaseRecoveryIntegrationTest is BaseIntegrationTest {
+    uint256 internal constant REMOTE_WITHDRAW_AMOUNT = 100 * ASSET_PRECISION;
     bytes32 internal constant CLOSE_EPOCH_WORKFLOW_ID = keccak256("recovery-close-epoch");
     bytes32 internal constant EXECUTE_EPOCH_WITHDRAW_WORKFLOW_ID = keccak256("recovery-execute-epoch-withdraw");
     bytes32 internal constant INITIATE_REBALANCE_WORKFLOW_ID = keccak256("recovery-initiate-rebalance");
@@ -37,10 +38,10 @@ abstract contract BaseRecoveryIntegrationTest is BaseIntegrationTest {
     }
 
     function _depositAndClaimParentLocalShares() internal returns (uint256 shareAmount) {
-        _fundAndApproveUsdc(i_depositor, DEPOSIT_AMOUNT);
+        _fundAndApproveUsdc(i_depositor, REMOTE_WITHDRAW_AMOUNT);
 
         _changePrank(i_depositor);
-        parent.vault.deposit(DEPOSIT_AMOUNT);
+        parent.vault.deposit(REMOTE_WITHDRAW_AMOUNT);
 
         _warpPastMinEpoch();
         _closeEpochThroughWorkflow(
@@ -50,7 +51,7 @@ abstract contract BaseRecoveryIntegrationTest is BaseIntegrationTest {
         _changePrank(i_depositor);
         parent.vault.claimShares(1);
 
-        shareAmount = DEPOSIT_AMOUNT * YIELD_PRECISION / ASSET_PRECISION;
+        shareAmount = REMOTE_WITHDRAW_AMOUNT * YIELD_PRECISION / ASSET_PRECISION;
     }
 
     function _assertEpochRecovery(Types.EpochRecovery memory recovery, uint256 epochNonce, uint256 amount)

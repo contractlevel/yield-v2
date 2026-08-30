@@ -24,15 +24,23 @@ ParentVault_ccipReceive
 │   │   └── it should revert with ParentVault__InvalidEpochNonce
 │   ├── when the epoch is not executing
 │   │   └── it should revert with ParentVault__EpochNotExecuting
+│   ├── when the epoch is not a net withdrawal
+│   │   └── it should revert with ParentVault__EpochNotNetWithdraw without changing state
 │   ├── when the received USDC amount is less than the epoch withdraw obligation
 │   │   ├── it should make the epoch claimable
 │   │   ├── it should emit EpochWithdrawAmountShort
 │   │   └── it should update the withdraw claim amount and remaining withdraw claim amount
 │   ├── when the received USDC amount matches the epoch withdraw obligation
 │   │   ├── it should make the epoch claimable
-│   │   ├── it should update the withdraw claim amount and remaining withdraw claim amount
+│   │   ├── it should deduct the settlement charge from both withdraw claim pools
+│   │   ├── it should transfer the settlement charge to the current treasury
+│   │   ├── it should emit RemoteWithdrawSettlementChargeCollected
 │   │   ├── it should emit EpochClaimable
 │   │   └── it should emit CCIPReceived
+│   ├── when the received USDC amount is at or below i_minAssetAmount
+│   │   └── it should transfer the complete received amount to treasury
+│   ├── when the treasury transfer reverts
+│   │   └── it should revert atomically and leave the epoch executing
 │   └── when the received USDC amount is greater than the epoch withdraw obligation
 │       ├── it should make the epoch claimable
 │       ├── it should update the withdraw claim amount and remaining withdraw claim amount

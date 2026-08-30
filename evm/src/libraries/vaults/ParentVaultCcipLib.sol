@@ -6,12 +6,15 @@ import {IBaseVault} from "../../interfaces/vaults/IBaseVault.sol";
 import {IParentVault} from "../../interfaces/vaults/IParentVault.sol";
 import {Types} from "../Types.sol";
 import {ParentVaultEpochLib} from "./ParentVaultEpochLib.sol";
+import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /// @title Yieldcoin v2 ParentVault CCIP receive logic library
 /// @author @contractlevel
 /// @notice Handles ParentVault-specific CCIP message decoding, validation, and epoch settlement
 /// @dev Public library functions are linked by Solidity and execute by DELEGATECALL in the ParentVault context
 library ParentVaultCcipLib {
+    using SafeERC20 for IERC20;
+
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
@@ -23,6 +26,10 @@ library ParentVaultCcipLib {
     event EpochWithdrawAmountShort(
         uint256 indexed epochNonce, uint256 indexed expectedAmount, uint256 indexed actualAmount
     );
+    /// @notice Emitted when a remote withdrawal settlement charge is transferred to the treasury
+    /// @param epochNonce The nonce of the settled epoch
+    /// @param amount The underlying asset amount transferred to the treasury
+    event RemoteWithdrawSettlementChargeCollected(uint256 indexed epochNonce, uint256 indexed amount);
 
     /*//////////////////////////////////////////////////////////////
                                   CCIP
@@ -32,18 +39,33 @@ library ParentVaultCcipLib {
     /// @param ccipTxType The decoded CCIP transaction type
     /// @param data The decoded CCIP payload data
     /// @param receivedAmount The amount of underlying asset delivered by CCIP
+    /// @param asset The underlying asset delivered by CCIP
+    /// @param minAssetAmount The fixed remote-withdraw settlement charge
     /// @return rebalanceNonce Nonzero rebalance nonce when ParentVault must handle a rebalance callback
     /// @return protocolId Pending strategy protocol ID for the rebalance callback
     /// @dev Reverts if ccipTxType is not EPOCH_NET_WITHDRAW or REBALANCE
     /// @dev Reverts if data is malformed or fails the selected transaction type's validation
+    function receiveCcip(
+        ParentVaultStore.ParentVaultStorage storage $,
+        Types.CcipTx ccipTxType,
+        bytes memory data,
+        uint256 receivedAmount,
+        address asset,
+        uint256 minAssetAmount
+    ) public returns (uint256 rebalanceNonce, bytes32 protocolId) {
+        (rebalanceNonce, protocolId) = _receiveCcip($, ccipTxType, data, receivedAmount, asset, minAssetAmount);
+    }
+
     function _receiveCcip(
         ParentVaultStore.ParentVaultStorage storage $,
         Types.CcipTx ccipTxType,
         bytes memory data,
-        uint256 receivedAmount
+        uint256 receivedAmount,
+        address asset,
+        uint256 minAssetAmount
     ) internal returns (uint256 rebalanceNonce, bytes32 protocolId) {
         if (ccipTxType == Types.CcipTx.EPOCH_NET_WITHDRAW) {
-            _handleEpochNetWithdraw($, data, receivedAmount);
+            _handleEpochNetWithdraw($, data, receivedAmount, asset, minAssetAmount);
         } else if (ccipTxType == Types.CcipTx.REBALANCE) {
             (rebalanceNonce, protocolId) = _validateRebalance($, data);
         } else {
@@ -55,22 +77,31 @@ library ParentVaultCcipLib {
     /// @param $ ParentVault namespaced storage
     /// @param data The decoded CCIP payload data, ABI-encoded as the settled epoch's nonce
     /// @param receivedAmount The amount of underlying asset delivered for the remote withdrawal
+    /// @param asset The underlying asset delivered by CCIP
+    /// @param minAssetAmount The fixed remote-withdraw settlement charge
     /// @dev Reverts if data is not an ABI-encoded uint256 epoch nonce
     /// @dev Reverts if the decoded epoch nonce does not identify the most recently closed epoch
-    /// @dev Assumes the identified epoch is a remote net withdrawal; this helper validates the nonce and EXECUTING
-    ///      status but does not independently validate the net-flow direction
+    /// @dev Validates the identified epoch's nonce, negative net flow, and EXECUTING status
     function _handleEpochNetWithdraw(
         ParentVaultStore.ParentVaultStorage storage $,
         bytes memory data,
-        uint256 receivedAmount
+        uint256 receivedAmount,
+        address asset,
+        uint256 minAssetAmount
     ) internal {
         uint256 epochNonce = abi.decode(data, (uint256));
         if (epochNonce != $.s_epochNonce - 1) revert IParentVault.ParentVault__InvalidEpochNonce(epochNonce);
         Types.Epoch storage s_epoch = $.s_epochs[epochNonce];
 
         uint256 totalDepositAmount = s_epoch.totalDepositAmount;
-        uint256 expectedWithdraw = s_epoch.totalWithdrawClaimAmount - totalDepositAmount;
-        uint256 totalWithdrawClaimAmount = totalDepositAmount + receivedAmount;
+        uint256 provisionalWithdrawClaimAmount = s_epoch.totalWithdrawClaimAmount;
+        if (totalDepositAmount >= provisionalWithdrawClaimAmount) {
+            revert IParentVault.ParentVault__EpochNotNetWithdraw(epochNonce);
+        }
+
+        uint256 expectedWithdraw = provisionalWithdrawClaimAmount - totalDepositAmount;
+        uint256 effectiveCharge = receivedAmount < minAssetAmount ? receivedAmount : minAssetAmount;
+        uint256 totalWithdrawClaimAmount = totalDepositAmount + receivedAmount - effectiveCharge;
         // Intentional overwrite. The amount could be higher than expected.
         s_epoch.totalWithdrawClaimAmount = totalWithdrawClaimAmount;
         s_epoch.remainingWithdrawClaimAmount = totalWithdrawClaimAmount;
@@ -80,6 +111,8 @@ library ParentVaultCcipLib {
         }
 
         ParentVaultEpochLib._finalizeEpoch(s_epoch, epochNonce);
+        IERC20(asset).safeTransfer($.s_treasury, effectiveCharge);
+        emit RemoteWithdrawSettlementChargeCollected(epochNonce, effectiveCharge);
     }
 
     /// @notice Validates a rebalance callback payload against the vault's stored pending rebalance

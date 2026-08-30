@@ -13,6 +13,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract ChildWithdraw_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
     function test_Recovery_childEpochWithdraw_FinalizesParentAfterFailedRemoteEpochWithdraw() external {
         uint256 shareAmount = _depositAndClaimParentLocalShares();
+        uint256 withdrawAmount = shareAmount * ASSET_PRECISION / YIELD_PRECISION;
         _setParentRemoteStrategyToChild(AAVE_V3_PROTOCOL_ID);
         _setChildActiveAdapter(AAVE_V3_PROTOCOL_ID);
 
@@ -24,7 +25,7 @@ contract ChildWithdraw_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
 
         _warpPastMinEpoch();
         _closeEpochThroughWorkflow(
-            parent.workflowRouter, CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner, DEPOSIT_AMOUNT
+            parent.workflowRouter, CLOSE_EPOCH_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner, withdrawAmount
         );
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.EXECUTING));
 
@@ -35,7 +36,7 @@ contract ChildWithdraw_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
             EXECUTE_EPOCH_WITHDRAW_WORKFLOW_NAME,
             i_owner,
             2,
-            DEPOSIT_AMOUNT
+            withdrawAmount
         );
         Vm.Log[] memory failureLogs = vm.getRecordedLogs();
 
@@ -43,15 +44,15 @@ contract ChildWithdraw_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
             failureLogs, keccak256("EpochWithdrawRecoveryStored(uint256,uint256)"), address(child.vault)
         );
         assertEq(uint256(storedLog.topics[1]), 2);
-        assertEq(uint256(storedLog.topics[2]), DEPOSIT_AMOUNT);
-        _assertEpochRecovery(child.vault.getEpochWithdrawRecovery(), 2, DEPOSIT_AMOUNT);
+        assertEq(uint256(storedLog.topics[2]), withdrawAmount);
+        _assertEpochRecovery(child.vault.getEpochWithdrawRecovery(), 2, withdrawAmount);
         assertTrue(child.vault.getRecoveryMode() == Types.RecoveryMode.EPOCH_WITHDRAW);
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.EXECUTING));
 
         MockAToken(MockAaveV3Pool(childPool).getReserveData(parent.asset).aTokenAddress)
-            .mint(address(child.aaveV3Adapter), DEPOSIT_AMOUNT);
-        deal(parent.asset, childPool, DEPOSIT_AMOUNT);
-        MockAaveV3Pool(childPool).setWithdrawReturn(DEPOSIT_AMOUNT);
+            .mint(address(child.aaveV3Adapter), withdrawAmount);
+        deal(parent.asset, childPool, withdrawAmount);
+        MockAaveV3Pool(childPool).setWithdrawReturn(withdrawAmount);
 
         vm.recordLogs();
         child.vault.executeRecovery();
@@ -70,7 +71,10 @@ contract ChildWithdraw_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         _changePrank(i_depositor);
         parent.vault.claimAsset(2);
 
-        assertEq(IERC20(parent.asset).balanceOf(i_depositor), depositorUsdcBeforeClaim + DEPOSIT_AMOUNT);
+        assertEq(
+            IERC20(parent.asset).balanceOf(i_depositor),
+            depositorUsdcBeforeClaim + withdrawAmount - parent.vault.getMinAssetAmount()
+        );
         assertEq(parent.share.balanceOf(i_depositor), 0);
         assertEq(parent.vault.getWithdrawShareBurnAmount(i_depositor, 2), 0);
     }

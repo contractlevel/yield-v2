@@ -34,8 +34,8 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     //////////////////////////////////////////////////////////////*/
     /// @dev Yieldcoin (YIELD) share token
     address internal immutable i_share;
-    /// @dev Minimum deposit amount: 1 * i_assetPrecision
-    uint256 internal immutable i_minDepositAmount;
+    /// @dev Minimum whole-asset amount used for deposits and remote-withdraw settlement: 1 * i_assetPrecision
+    uint256 internal immutable i_minAssetAmount;
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
@@ -50,7 +50,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
         _revertIfZeroAddress(share);
 
         i_share = share;
-        i_minDepositAmount = 1 * i_assetPrecision;
+        i_minAssetAmount = 1 * i_assetPrecision;
 
         _disableInitializers();
     }
@@ -131,7 +131,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /// @dev Requires the caller to have sufficient underlying-asset balance and allowance for amount
     function deposit(uint256 amount) external nonReentrant whenNotPaused returns (uint256 epochNonce) {
         epochNonce =
-            ParentVaultUserEpochLib.deposit(_parentVaultStorage(), i_asset, msg.sender, amount, i_minDepositAmount);
+            ParentVaultUserEpochLib.deposit(_parentVaultStorage(), i_asset, msg.sender, amount, i_minAssetAmount);
     }
 
     /// @notice Deposits the caller's underlying asset for a beneficiary
@@ -155,7 +155,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
         _revertIfZeroAddress(beneficiary);
         _revertIfInvalidBeneficiary(beneficiary);
         epochNonce = ParentVaultUserEpochLib.depositFor(
-            _parentVaultStorage(), i_asset, msg.sender, beneficiary, amount, i_minDepositAmount
+            _parentVaultStorage(), i_asset, msg.sender, beneficiary, amount, i_minAssetAmount
         );
     }
 
@@ -333,7 +333,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
         // (uint256 rebalanceNonce, bytes32 protocolId) for rebalances
         (Types.CcipTx ccipTxType, bytes memory data) = abi.decode(message.data, (Types.CcipTx, bytes));
         (uint256 rebalanceNonce, bytes32 protocolId) =
-            ParentVaultCcipLib._receiveCcip($, ccipTxType, data, receivedAmount);
+            ParentVaultCcipLib.receiveCcip($, ccipTxType, data, receivedAmount, i_asset, i_minAssetAmount);
         if (rebalanceNonce != 0) {
             bool success = _handleCCIPRebalance(rebalanceNonce, protocolId, receivedAmount);
             // A rebalance message is received on its pending strategy chain, which is this chain
@@ -397,7 +397,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
         address activeAdapter = $_baseVault.s_activeProtocolAdapter;
         bool isLocalStrategy = activeAdapter != address(0);
         ParentVaultEpochLib.CloseEpochExternalAction memory externalAction = ParentVaultEpochLib.closeEpoch(
-            $, expectedEpochNonce, tvl, SHARE_PRECISION, i_assetPrecision, i_minDepositAmount, isLocalStrategy
+            $, expectedEpochNonce, tvl, SHARE_PRECISION, i_assetPrecision, i_minAssetAmount, isLocalStrategy
         );
 
         if (externalAction.action == ParentVaultEpochLib.ExternalAction.DEPOSIT_TO_LOCAL_STRATEGY) {
@@ -700,10 +700,10 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
         sharePrecision = SHARE_PRECISION;
     }
 
-    /// @notice Returns the minimum deposit amount (1 * i_assetPrecision)
-    /// @return minDepositAmount The minimum deposit amount
-    function getMinDepositAmount() external view returns (uint256 minDepositAmount) {
-        minDepositAmount = i_minDepositAmount;
+    /// @notice Returns the minimum whole-asset amount used for deposits and remote-withdraw settlement
+    /// @return minAssetAmount The minimum asset amount, equal to 1 * i_assetPrecision
+    function getMinAssetAmount() external view returns (uint256 minAssetAmount) {
+        minAssetAmount = i_minAssetAmount;
     }
 
     /// @notice Returns whether a protocol ID is supported on any chain across the Yieldcoin v2 system
