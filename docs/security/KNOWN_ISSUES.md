@@ -1222,32 +1222,33 @@ The current open-epoch `forceCancelDeposit` escape hatch cannot resolve this sta
 
 ---
 
-## KI-027 — Aave supply caps can leave rebalance deposits in recovery
+## KI-027 — Aave supply caps can leave rebalance or epoch deposits in recovery
 
-<!-- @review can leave epoch deposits in recovery too? -->
-
-**Status:** Accepted — operational liveness risk.
+**Status:** Accepted — Low at launch scale, conditioned on maintaining substantial live reserve headroom.
 
 **Last reviewed:** 2026-08-29
 
-**Component:** `ChildVault` local rebalance recovery and `AaveV3Adapter`.
+**Component:** `ChildVault` `REBALANCE_DEPOSIT` / `EPOCH_DEPOSIT` recovery and `AaveV3Adapter`.
 
 ### Summary
 
-A local rebalance into Aave requires enough reserve capacity for the full position. If the deposit exceeds the reserve supply cap, `ChildVault` stores `REBALANCE_DEPOSIT` recovery and retries the same deposit. The current recovery path cannot return to the previous strategy, choose another target, or abort the rebalance, so the vault can remain unavailable until sufficient capacity returns.
+A Child deposit into Aave requires enough reserve capacity for the full amount. If a rebalance deposit exceeds the reserve supply cap, `ChildVault` stores `REBALANCE_DEPOSIT` recovery. If an inbound epoch deposit exceeds the cap, it stores `EPOCH_DEPOSIT` recovery. Both recovery paths retry the same deposit amount and cannot abort, reduce, or reroute it.
 
-Aave also allows anyone to supply on behalf of the inactive target adapter. A third party can use this to consume reserve capacity while transferring ownership of the supplied assets to the adapter. If that adapter balance and the pending rebalance amount exceed the supply cap on their own, unrelated Aave suppliers exiting will not restore liveness because the recovery path cannot withdraw the adapter balance.
+Aave also allows anyone to supply on behalf of an adapter. A third party can use this to consume reserve capacity while transferring ownership of the supplied assets to the adapter. If the adapter-owned balance and pending deposit exceed the supply cap on their own, unrelated Aave suppliers exiting will not restore liveness because the recovery path cannot withdraw the adapter balance.
 
-The principal remains held and accounted for by the vault. The impact is loss of availability, potentially indefinite, rather than theft or insolvency.
+While either recovery remains pending, normal Child operations are blocked and the corresponding Parent lifecycle cannot complete. The impact is potentially indefinite loss of availability rather than theft or insolvency. The pending deposit remains held by `ChildVault`, while unsolicited supply remains owned by the adapter; recovery requires an Aave cap increase or a purpose-built upgrade that reconciles and clears the blocked lifecycle.
 
 ### Why this is accepted
 
 The Aave pools being considered generally have eight-figure or greater supply caps and available headroom, while expected Yieldcoin TVL is extremely low by comparison. The third-party attack also requires the attacker to give up ownership of the supplied assets and receive no claim against the adapter. Under these conditions, the required capital is disproportionate to the value immobilized. The protocol accepts this liveness risk rather than adding further rebalance-recovery state transitions.
 
+This rating depends on the margin between the position and live headroom, not on a contract-enforced bound. The attacker cost falls below the value immobilized as the position approaches half the available headroom.
+
 ### Operational considerations
 
-- Monitor Aave supply caps, live reserve headroom, and Yieldcoin position size for every candidate target.
-- Reassess acceptance if the position becomes material relative to a reserve's cap or available headroom.
+- At every target-selection review, compare the position with current available headroom for every candidate reserve; configured supply caps alone are insufficient because ordinary supply consumes headroom.
+- Use a position reaching 10% of the smallest live headroom across candidate targets as an early review threshold.
+- Re-rate the issue if the position approaches 50% of the available headroom of any candidate target, if ordinary supply materially contracts that headroom, or if a target whose headroom is close to the position may be selected.
 
 ---
 
