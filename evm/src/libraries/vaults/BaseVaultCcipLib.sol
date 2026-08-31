@@ -192,7 +192,7 @@ library BaseVaultCcipLib {
             data: data,
             tokenAmounts: tokenAmounts,
             extraArgs: Client._argsToBytes(
-                Client.GenericExtraArgsV2({gasLimit: gasLimit, allowOutOfOrderExecution: false})
+                Client.GenericExtraArgsV2({gasLimit: gasLimit, allowOutOfOrderExecution: true})
             ),
             feeToken: params.link
         });

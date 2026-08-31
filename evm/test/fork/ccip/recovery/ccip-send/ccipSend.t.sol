@@ -33,6 +33,7 @@ contract CcipSend_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
 
     function test_CcipFork_Recovery_ChildVault_ccipSend_EpochWithdraw_RetryMakesParentEpochClaimable() external {
         uint256 shareAmount = _depositAndClaimParentShares(SEED_WORKFLOW_ID);
+        uint256 withdrawAmount = shareAmount * ASSET_PRECISION / YIELD_PRECISION;
 
         _selectArbitrumFork();
         _approveShares(i_depositor, shareAmount);
@@ -40,7 +41,7 @@ contract CcipSend_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
         parent.vault.withdraw(shareAmount);
 
         _warpPastMinEpoch();
-        _closeEpochThroughWorkflow(CLOSE_WORKFLOW_ID, DEPOSIT_AMOUNT);
+        _closeEpochThroughWorkflow(CLOSE_WORKFLOW_ID, withdrawAmount);
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.EXECUTING));
 
         _prepareBaseToParentRouting();
@@ -48,7 +49,7 @@ contract CcipSend_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
         vm.warp(block.timestamp + 1 days);
 
         vm.recordLogs();
-        _executeEpochWithdrawThroughWorkflow(baseChild.workflowRouter, WITHDRAW_WORKFLOW_ID, 2, DEPOSIT_AMOUNT);
+        _executeEpochWithdrawThroughWorkflow(baseChild.workflowRouter, WITHDRAW_WORKFLOW_ID, 2, withdrawAmount);
         Vm.Log[] memory failureLogs = vm.getRecordedLogs();
 
         Vm.Log memory storedLog = _assertEmittedBy(
@@ -56,12 +57,12 @@ contract CcipSend_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
         );
         assertEq(uint256(storedLog.topics[1]), uint256(Types.CcipTx.EPOCH_NET_WITHDRAW));
         assertEq(uint64(uint256(storedLog.topics[2])), arbitrumConfig.ccip.thisChainSelector);
-        assertEq(uint256(storedLog.topics[3]), DEPOSIT_AMOUNT);
+        assertEq(uint256(storedLog.topics[3]), withdrawAmount);
         _assertCcipSendRecovery(
             baseChild.vault.getCcipSendRecovery(),
             Types.CcipTx.EPOCH_NET_WITHDRAW,
             arbitrumConfig.ccip.thisChainSelector,
-            DEPOSIT_AMOUNT,
+            withdrawAmount,
             2,
             bytes32(0)
         );
@@ -84,7 +85,11 @@ contract CcipSend_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
         _changePrank(i_depositor);
         parent.vault.claimAsset(2);
 
-        assertApproxEqAbs(IERC20(parent.asset).balanceOf(i_depositor), depositorUsdcBefore + DEPOSIT_AMOUNT, 1);
+        assertApproxEqAbs(
+            IERC20(parent.asset).balanceOf(i_depositor),
+            depositorUsdcBefore + withdrawAmount - parent.vault.getMinAssetAmount(),
+            1
+        );
     }
 
     function test_CcipFork_Recovery_ChildVault_ccipSend_Rebalance_RetryCompletesParentRebalance() external {

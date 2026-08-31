@@ -90,6 +90,7 @@ abstract contract EpochGhosts is ActorGhosts {
         ghost_totalShareMintedByEpoch[epochNonce] = epoch.remainingShareMintAmount;
         ghost_claimableWithdrawObligation += epoch.remainingWithdrawClaimAmount;
         ghost_claimableEpochs.push(epochNonce);
+        _recordWithdrawSettlementBurden(epochNonce);
     }
 
     function _recordEpochSettlement(uint256 epochNonce, uint256 tvl, uint256 totalShares) internal {
@@ -236,6 +237,23 @@ abstract contract EpochGhosts is ActorGhosts {
 
             uint256 shareValue = _settledDepositShareValue(epochNonce, _claimableDepositShares(actor, epochNonce));
             if (depositAmount > shareValue) burden += depositAmount - shareValue;
+        }
+    }
+
+    function _recordWithdrawSettlementBurden(uint256 epochNonce) internal {
+        uint256 settlementTotalShares = ghost_epochSettlementTotalShares[epochNonce];
+        if (settlementTotalShares == 0) return;
+
+        for (uint256 i; i < s_actors.length; ++i) {
+            address actor = s_actors[i];
+            uint256 shareBurnAmount = ghost_shareBurnedByActorByEpoch[actor][epochNonce];
+            if (shareBurnAmount == 0) continue;
+
+            uint256 grossWithdrawAmount = shareBurnAmount * ghost_epochSettlementTvl[epochNonce] / settlementTotalShares;
+            uint256 claimableWithdrawAmount = _claimableWithdrawUsdc(actor, epochNonce);
+            if (grossWithdrawAmount > claimableWithdrawAmount) {
+                ghost_feeBurdenByActor[actor] += grossWithdrawAmount - claimableWithdrawAmount;
+            }
         }
     }
 

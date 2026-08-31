@@ -54,6 +54,9 @@ interface IParentVault is IBaseVault {
     /// @dev Thrown when epoch deposit completion is attempted for an epoch without positive net flow
     /// @param epochNonce The nonce for the epoch that is not a net-deposit epoch
     error ParentVault__EpochNotNetDeposit(uint256 epochNonce);
+    /// @dev Thrown when remote-withdraw settlement is attempted for an epoch without negative net flow
+    /// @param epochNonce The nonce for the epoch that is not a net-withdraw epoch
+    error ParentVault__EpochNotNetWithdraw(uint256 epochNonce);
     /// @dev Thrown when the rebalance is in progress
     error ParentVault__RebalanceInProgress();
     /// @dev Thrown when no rebalance is in progress
@@ -133,6 +136,14 @@ interface IParentVault is IBaseVault {
     /// @param epochNonce The nonce of the executing epoch
     /// @param amount The amount of underlying asset that needs to be withdrawn
     event EpochWithdrawExecuting(uint256 indexed epochNonce, uint256 indexed amount);
+    /// @notice Emitted when a remote withdrawal shortfall is forfeited instead of sent cross-chain
+    /// @param epochNonce The nonce of the settled epoch
+    /// @param amount The remote withdrawal shortfall retained in the remote strategy
+    event RemoteWithdrawDustForfeited(uint256 indexed epochNonce, uint256 indexed amount);
+    /// @notice Emitted when a remote withdrawal settlement charge is transferred to the treasury
+    /// @param epochNonce The nonce of the settled epoch
+    /// @param amount The underlying asset amount transferred to the treasury
+    event RemoteWithdrawSettlementChargeCollected(uint256 indexed epochNonce, uint256 indexed amount);
     /// @notice Emitted when an epoch is claimable
     /// @param epochNonce The nonce of the claimable epoch
     event EpochClaimable(uint256 indexed epochNonce);
@@ -432,9 +443,9 @@ interface IParentVault is IBaseVault {
     /// @return sharePrecision The share precision factor
     function getSharePrecision() external pure returns (uint256 sharePrecision);
 
-    /// @notice Returns the minimum deposit amount (1 * i_assetPrecision)
-    /// @return minDepositAmount The minimum deposit amount
-    function getMinDepositAmount() external view returns (uint256 minDepositAmount);
+    /// @notice Returns the minimum whole-asset amount used for deposits and remote-withdraw settlement
+    /// @return minAssetAmount The minimum asset amount, equal to 1 * i_assetPrecision
+    function getMinAssetAmount() external view returns (uint256 minAssetAmount);
 
     /// @notice Returns whether a protocol ID is supported on any chain across the Yieldcoin v2 system
     /// @param protocolId The protocol ID to query

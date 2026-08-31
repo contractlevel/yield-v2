@@ -500,7 +500,7 @@ if (accounting.totalShares == 0) {
 }
 ```
 
-`s_totalShares` can reach exactly zero through ordinary use: a full-supply exit, where the last holder's withdraw intent burns all outstanding shares in a `closeEpoch`. Nothing prevents this — `minDepositAmount` only floors new mints, not burns.
+`s_totalShares` can reach exactly zero through ordinary use: a full-supply exit, where the last holder's withdraw intent burns all outstanding shares in a `closeEpoch`. Nothing prevents this — `minAssetAmount` only floors new mints, not burns.
 
 At the epoch closing a full exit, the withdraw amount pulled from the strategy is the epoch's computed `netWithdrawAmount` (derived from the operator-supplied `tvl` snapshot), not a "withdraw everything" call. If the strategy's actual balance drifts even slightly above that snapshot by execution time (e.g. interest accrued between the CRE workflow's off-chain TVL read and the on-chain `closeEpoch` transaction), a small residual is left behind in the adapter after `s_totalShares` hits zero.
 
@@ -798,7 +798,7 @@ An incorrect or incomplete route change can leave an epoch or rebalance in progr
 
 **Status:** Accepted — atomic revert is the deliberate design for parent-chain-only failures; no cross-chain or partially-executed state exists to recover.
 
-**Last reviewed:** 2026-08-15
+**Last reviewed:** 2026-08-31
 
 **Component:** `ParentVault.closeEpoch` (`DEPOSIT_TO_LOCAL_STRATEGY` / `WITHDRAW_FROM_LOCAL_STRATEGY` / `SEND_DEPOSIT_TO_REMOTE_STRATEGY` branches), `ParentVault.initiateRebalance` (local-to-local, local-withdraw, and `WITHDRAW_LOCAL_TO_REMOTE` branches), `BaseVault._executeDeposit` / `_executeWithdraw` (`revertOnFailure == true` path), `BaseVault._ccipSend` (Parent's direct, non-try/catch call, as opposed to `ChildVault`'s overridden version), and whichever strategy adapter is locally active on the parent chain.
 
@@ -819,7 +819,7 @@ While no state is lost and no funds are misplaced, an actor can hold the local r
 - `closeEpoch` cannot settle the current epoch, so its depositors and withdrawers cannot claim (though they retain the ability to cancel their own current-epoch intent while it remains `OPEN`, the same escape hatch `KI-007` already documents).
 - `initiateRebalance`'s local-to-local and local-withdraw paths hit the same adapter and fail identically, so the protocol cannot rebalance away from the affected strategy either.
 
-The CCIP-send branches carry the same settlement-blocking shape, but no attacker-controlled trigger for a CCIP send failure has been identified — LINK balance and CCIP router/fee liveness are operational concerns, not something a permissionless actor can force on demand.
+The CCIP-send branches carry the same settlement-blocking shape. When the active strategy is remote, any positive net deposit causes ParentVault to send a CCIP message and pay the fee from its LINK balance. A permissionless user can therefore deposit the one-asset minimum in successive epochs, retain the resulting shares, and repeatedly consume a full Parent CCIP fee. Once ParentVault lacks enough LINK, `closeEpoch` reverts atomically and the epoch remains open until LINK is supplied or its deposits are cancelled.
 
 The failure mode is availability and settlement delay, not loss of funds or accounting corruption — consistent with the general shape already accepted in `KI-007` (CRE liveness dependency) and `KI-014` (child-side recovery requires full market liquidity), but this specific parent-side, cost-bounded griefing mechanic was not previously named by either entry.
 
@@ -832,6 +832,7 @@ Building a local recovery mode symmetric with `ChildVault`'s would mean storing 
 - Monitor for repeated `closeEpoch`/`initiateRebalance` reverts against the local active adapter (distinguishable from other revert reasons via the `BaseVault__DepositFailed`/`BaseVault__WithdrawFailed` selectors).
 - Monitor local active-reserve utilization and available supply-cap headroom ahead of each scheduled epoch close or rebalance attempt, alongside the existing `KI-007` monitoring for epochs that fail to advance past their expected close window.
 - Monitor `ParentVault`'s LINK balance and CCIP fee levels ahead of each scheduled epoch close or rebalance attempt targeting a remote strategy, so a `closeEpoch`/`initiateRebalance` revert on the CCIP-send branches is distinguishable from local-adapter griefing and resolved by top-up rather than mistaken for a market-liquidity issue.
+- Monitor repeated minimum-sized remote net deposits and the ratio between deposited value and the CCIP fee paid by ParentVault.
 - If sustained griefing is detected, operators can rebalance away from the affected local strategy once liquidity briefly recovers, or pause the vault while coordinating a response, consistent with the operator trust model in `KI-001`.
 
 ### Conditions that would warrant revisiting
@@ -840,7 +841,7 @@ Building a local recovery mode symmetric with `ChildVault`'s would mean storing 
 - Monitoring cannot reliably distinguish this condition from ordinary market illiquidity in time to respond operationally.
 - A low-cost, symmetry-preserving way to add local recovery (without duplicating `ChildVault`'s state machine) becomes available.
 - Supported lending markets are observed to have utilization or supply-cap dynamics that make sustained griefing meaningfully cheaper than assumed here.
-- A concrete, attacker-controlled trigger for a Parent-side CCIP send failure is identified, changing the CCIP-send branches from an operational-liveness concern to an adversarial one.
+- Parent-side CCIP fees become material relative to the minimum deposit, making repeated minimum-sized remote deposits economical as a fee-drain strategy.
 
 ---
 
@@ -1221,27 +1222,72 @@ The current open-epoch `forceCancelDeposit` escape hatch cannot resolve this sta
 
 ---
 
-## KI-027 — Aave supply caps can leave rebalance deposits in recovery
+## KI-027 — Aave supply caps can leave rebalance or epoch deposits in recovery
 
-**Status:** Accepted — operational liveness risk.
+**Status:** Accepted — Low at launch scale, conditioned on maintaining substantial live reserve headroom.
 
 **Last reviewed:** 2026-08-29
 
-**Component:** `ChildVault` local rebalance recovery and `AaveV3Adapter`.
+**Component:** `ChildVault` `REBALANCE_DEPOSIT` / `EPOCH_DEPOSIT` recovery and `AaveV3Adapter`.
 
 ### Summary
 
-A local rebalance into Aave requires enough reserve capacity for the full position. If the deposit exceeds the reserve supply cap, `ChildVault` stores `REBALANCE_DEPOSIT` recovery and retries the same deposit. The current recovery path cannot return to the previous strategy, choose another target, or abort the rebalance, so the vault can remain unavailable until sufficient capacity returns.
+A Child deposit into Aave requires enough reserve capacity for the full amount. If a rebalance deposit exceeds the reserve supply cap, `ChildVault` stores `REBALANCE_DEPOSIT` recovery. If an inbound epoch deposit exceeds the cap, it stores `EPOCH_DEPOSIT` recovery. Both recovery paths retry the same deposit amount and cannot abort, reduce, or reroute it.
 
-Aave also allows anyone to supply on behalf of the inactive target adapter. A third party can use this to consume reserve capacity while transferring ownership of the supplied assets to the adapter. If that adapter balance and the pending rebalance amount exceed the supply cap on their own, unrelated Aave suppliers exiting will not restore liveness because the recovery path cannot withdraw the adapter balance.
+Aave also allows anyone to supply on behalf of an adapter. A third party can use this to consume reserve capacity while transferring ownership of the supplied assets to the adapter. If the adapter-owned balance and pending deposit exceed the supply cap on their own, unrelated Aave suppliers exiting will not restore liveness because the recovery path cannot withdraw the adapter balance.
 
-The principal remains held and accounted for by the vault. The impact is loss of availability, potentially indefinite, rather than theft or insolvency.
+While either recovery remains pending, normal Child operations are blocked and the corresponding Parent lifecycle cannot complete. The impact is potentially indefinite loss of availability rather than theft or insolvency. The pending deposit remains held by `ChildVault`, while unsolicited supply remains owned by the adapter; recovery requires an Aave cap increase or a purpose-built upgrade that reconciles and clears the blocked lifecycle.
 
 ### Why this is accepted
 
 The Aave pools being considered generally have eight-figure or greater supply caps and available headroom, while expected Yieldcoin TVL is extremely low by comparison. The third-party attack also requires the attacker to give up ownership of the supplied assets and receive no claim against the adapter. Under these conditions, the required capital is disproportionate to the value immobilized. The protocol accepts this liveness risk rather than adding further rebalance-recovery state transitions.
 
+This rating depends on the margin between the position and live headroom, not on a contract-enforced bound. The attacker cost falls below the value immobilized as the position approaches half the available headroom.
+
 ### Operational considerations
 
-- Monitor Aave supply caps, live reserve headroom, and Yieldcoin position size for every candidate target.
-- Reassess acceptance if the position becomes material relative to a reserve's cap or available headroom.
+- At every target-selection review, compare the position with current available headroom for every candidate reserve; configured supply caps alone are insufficient because ordinary supply consumes headroom.
+- Use a position reaching 10% of the smallest live headroom across candidate targets as an early review threshold.
+- Re-rate the issue if the position approaches 50% of the available headroom of any candidate target, if ordinary supply materially contracts that headroom, or if a target whose headroom is close to the position may be selected.
+
+---
+
+## KI-028 — Remote withdraw dust can settle with a zero claim pool
+
+**Status:** Accepted — bounded withdrawal forfeiture avoids uneconomic Child CCIP sends.
+
+**Last reviewed:** 2026-08-31
+
+**Component:** `ParentVaultEpochLib._closeEpoch` remote net-withdraw path.
+
+### Summary
+
+When a remote epoch's net withdrawal is at most `getMinAssetAmount()`, ParentVault sends no Child request and makes the epoch immediately claimable using only that epoch's deposits. If the epoch has no deposits, its withdraw claim pool is zero. Claiming then burns the escrowed shares without transferring any asset.
+
+The forfeiture is bounded to one whole underlying-asset unit per affected epoch, but it can equal the withdrawing user's full expected payout. This is distinct from claim-time integer rounding documented in KI-003.
+
+### Operational considerations
+
+- User interfaces should warn on withdrawals expected to fall within the remote dust threshold.
+- Monitor `RemoteWithdrawDustForfeited`, including epochs whose withdraw claim pool is zero.
+
+---
+
+## KI-029 — Fixed remote-withdraw charge may underprice variable CCIP fees
+
+**Status:** Accepted — fixed economic deterrent with operational fee monitoring.
+
+**Last reviewed:** 2026-08-31
+
+**Component:** `ParentVaultCcipLib._handleEpochNetWithdraw` and ChildVault CCIP sends.
+
+### Summary
+
+For a serviced remote withdrawal, ParentVault deducts `min(receivedAmount, getMinAssetAmount())` from the epoch's claim pool and transfers it to the treasury. The charge is fixed in the underlying asset, while the Child's CCIP fee is variable and paid in LINK. If the fee's value exceeds the charge, a user can cause the protocol to consume more fee value than the user forfeits.
+
+The charge compensates the treasury in the underlying asset; it does not replenish the ChildVault's LINK balance. If the Child returns less than the charge, the full returned amount is transferred to the treasury and withdrawers receive only assets supplied by same-epoch deposits.
+
+### Operational considerations
+
+- Monitor live Child CCIP fees against `getMinAssetAmount()` and reassess the charge when fees approach or exceed it.
+- Monitor and replenish each ChildVault's LINK balance independently of treasury charge receipts.

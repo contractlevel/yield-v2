@@ -82,7 +82,7 @@ contract ReceiverDomainReplayTest is BaseIntegrationTest {
         uint256 withdrawBps
     ) external {
         principal = bound(principal, 10_000e6, 5_000_000e6);
-        withdrawBps = bound(withdrawBps, 1, 4_000);
+        withdrawBps = bound(withdrawBps, 2, 4_000);
         Replay memory replay = _reachReplayState(principal, withdrawBps);
         _replayToDestination(replay);
 

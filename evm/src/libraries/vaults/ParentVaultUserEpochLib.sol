@@ -67,9 +67,9 @@ library ParentVaultUserEpochLib {
     /// @param asset The underlying asset token
     /// @param user The user depositing the underlying asset
     /// @param amount The amount of underlying asset to deposit
-    /// @param minDepositAmount The minimum deposit amount
+    /// @param minAssetAmount The minimum whole-asset amount accepted for a deposit
     /// @return epochNonce The epoch nonce of the deposit
-    /// @dev Reverts if amount is less than minDepositAmount
+    /// @dev Reverts if amount is less than minAssetAmount
     /// @dev Reverts if the current epoch is not open
     /// @dev Requires user to have sufficient underlying-asset balance and allowance for amount
     function deposit(
@@ -77,9 +77,9 @@ library ParentVaultUserEpochLib {
         address asset,
         address user,
         uint256 amount,
-        uint256 minDepositAmount
+        uint256 minAssetAmount
     ) public returns (uint256 epochNonce) {
-        epochNonce = _deposit($, asset, user, user, amount, minDepositAmount);
+        epochNonce = _deposit($, asset, user, user, amount, minAssetAmount);
     }
 
     /// @notice Deposits a payer's underlying asset for a beneficiary
@@ -88,9 +88,9 @@ library ParentVaultUserEpochLib {
     /// @param payer The user supplying the underlying asset
     /// @param beneficiary The user that owns the resulting epoch deposit position
     /// @param amount The amount of underlying asset to deposit
-    /// @param minDepositAmount The minimum deposit amount
+    /// @param minAssetAmount The minimum whole-asset amount accepted for a deposit
     /// @return epochNonce The epoch nonce of the deposit
-    /// @dev Reverts if amount is less than minDepositAmount
+    /// @dev Reverts if amount is less than minAssetAmount
     /// @dev Reverts if the current epoch is not open
     /// @dev Requires payer to have sufficient underlying-asset balance and allowance for amount
     function depositFor(
@@ -99,9 +99,9 @@ library ParentVaultUserEpochLib {
         address payer,
         address beneficiary,
         uint256 amount,
-        uint256 minDepositAmount
+        uint256 minAssetAmount
     ) public returns (uint256 epochNonce) {
-        epochNonce = _deposit($, asset, payer, beneficiary, amount, minDepositAmount);
+        epochNonce = _deposit($, asset, payer, beneficiary, amount, minAssetAmount);
     }
 
     /// @notice Deposits the underlying asset into the vault
@@ -110,9 +110,9 @@ library ParentVaultUserEpochLib {
     /// @param payer The user supplying the underlying asset
     /// @param beneficiary The user that owns the resulting epoch deposit position
     /// @param amount The amount of underlying asset to deposit
-    /// @param minDepositAmount The minimum deposit amount
+    /// @param minAssetAmount The minimum whole-asset amount accepted for a deposit
     /// @return epochNonce The epoch nonce of the deposit
-    /// @dev Reverts if amount is less than minDepositAmount
+    /// @dev Reverts if amount is less than minAssetAmount
     /// @dev Reverts if the current epoch is not open
     /// @dev Requires payer to have sufficient underlying-asset balance and allowance for amount
     function _deposit(
@@ -121,9 +121,9 @@ library ParentVaultUserEpochLib {
         address payer,
         address beneficiary,
         uint256 amount,
-        uint256 minDepositAmount
+        uint256 minAssetAmount
     ) internal returns (uint256 epochNonce) {
-        if (amount < minDepositAmount) revert IParentVault.ParentVault__AmountTooSmall(amount);
+        if (amount < minAssetAmount) revert IParentVault.ParentVault__AmountTooSmall(amount);
         epochNonce = $.s_epochNonce;
         Types.Epoch storage s_epoch = $.s_epochs[epochNonce];
         // This condition should never be hit under normal operations because the epoch nonce is incremented by openNextEpoch
