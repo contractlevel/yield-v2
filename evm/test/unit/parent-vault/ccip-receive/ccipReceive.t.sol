@@ -250,10 +250,10 @@ contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
         assertEq(s_parentVault.getEpoch(EPOCH_NONCE).remainingWithdrawClaimAmount, TOTAL_WITHDRAW_USDC);
     }
 
-    function test_ParentVault_ccipReceive_Withdraw_WhenReceivedAmountIsBelowMinimum_AllocatesFullAmountToClaims()
+    function test_ParentVault_ccipReceive_Withdraw_WhenReceivedAmountIsBelowDustThreshold_AllocatesFullAmountToClaims()
         public
     {
-        uint256 receivedAmount = ASSET_PRECISION - 1;
+        uint256 receivedAmount = s_parentVault.getRemoteWithdrawDustThreshold() - 1;
         _setParentEpochStatus(EPOCH_NONCE, Types.EpochStatus.EXECUTING);
         _setParentEpochWithdrawAccounting(EPOCH_NONCE);
 

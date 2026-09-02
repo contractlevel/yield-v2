@@ -73,14 +73,14 @@ contract ChildWithdraw_EpochIntegrationTest is BaseIntegrationTest {
     }
 
     function test_Epoch_childWithdraw_RepeatedRemoteDustClosesWithoutChildExecution() external {
-        uint256 minAssetAmount = parent.vault.getMinAssetAmount();
+        uint256 dustThreshold = parent.vault.getRemoteWithdrawDustThreshold();
         uint256 childLinkBalance = local.link.balanceOf(address(child.vault));
         uint256 totalDustSharesBurned;
 
         _approveShares(i_depositor, address(parent.vault), s_shareAmount);
 
         for (uint256 epochNonce = 2; epochNonce < 5; ++epochNonce) {
-            uint256 dustShareAmount = (minAssetAmount - 1) * parent.vault.getTotalShares() / REMOTE_DEPOSIT_AMOUNT;
+            uint256 dustShareAmount = (dustThreshold - 1) * parent.vault.getTotalShares() / REMOTE_DEPOSIT_AMOUNT;
             totalDustSharesBurned += dustShareAmount;
             _changePrank(i_depositor);
             parent.vault.withdraw(dustShareAmount);

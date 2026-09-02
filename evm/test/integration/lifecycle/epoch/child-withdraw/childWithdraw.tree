@@ -12,7 +12,7 @@ Epoch_2b_childWithdraw
 
 Epoch_2b_childWithdraw_remoteDust
 ├── given the active strategy is remote on Child
-├── and consecutive epochs each have a remote net-withdraw shortfall below the minimum asset amount
+├── and consecutive epochs each have a remote net-withdraw shortfall below the remote withdraw dust threshold
 ├── when CRE closes each epoch through Parent WorkflowRouter
 ├── then ParentVault should make each epoch immediately claimable
 ├── and ParentVault should open each next epoch without requesting a Child withdrawal

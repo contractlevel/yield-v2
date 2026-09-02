@@ -1262,9 +1262,9 @@ This rating depends on the margin between the position and live headroom, not on
 
 ### Summary
 
-When a remote epoch's net withdrawal is below `getMinAssetAmount()`, ParentVault sends no Child request and makes the epoch immediately claimable using only that epoch's deposits. If the epoch has no deposits, its withdraw claim pool is zero. Claiming then burns the escrowed shares without transferring any asset.
+When a remote epoch's net withdrawal is below `getRemoteWithdrawDustThreshold()`, ParentVault sends no Child request and makes the epoch immediately claimable using only that epoch's deposits. If the epoch has no deposits, its withdraw claim pool is zero. Claiming then burns the escrowed shares without transferring any asset.
 
-The forfeiture is strictly less than one whole underlying-asset unit per affected epoch, but it can equal the withdrawing user's full expected payout. This is distinct from claim-time integer rounding documented in KI-003.
+The threshold is one hundredth of a whole underlying asset unit, or `0.01 USDC` for the USDC vault. The forfeiture is strictly less than that threshold per affected epoch, but it can equal the withdrawing user's full expected payout. This is distinct from claim-time integer rounding documented in KI-003.
 
 ### Operational considerations
 
@@ -1287,9 +1287,9 @@ Vaults pay CCIP fees from shared LINK reserves rather than charging the users wh
 
 For remote net deposits, a positive net flow causes ParentVault to send a CCIP message. If ParentVault lacks enough LINK, `closeEpoch` reverts atomically and the epoch remains open. Users retain the normal ability to cancel their current-epoch intents.
 
-For remote net withdrawals, shortfalls below `getMinAssetAmount()` are forfeited and cause no message. A shortfall at or above the threshold is serviced in full and causes ChildVault to pay for a CCIP message. If the strategy withdrawal succeeds but the send fails, ChildVault stores `CCIP_SEND` recovery and the Parent epoch remains `EXECUTING` until LINK is supplied and recovery succeeds.
+For remote net withdrawals, shortfalls below `getRemoteWithdrawDustThreshold()` are forfeited and cause no message. A shortfall at or above the threshold is serviced in full and causes ChildVault to pay for a CCIP message. If the strategy withdrawal succeeds but the send fails, ChildVault stores `CCIP_SEND` recovery and the Parent epoch remains `EXECUTING` until LINK is supplied and recovery succeeds.
 
-The dust rule prevents a small share position from being split into base-unit withdrawals that each consume a full fee. It does not make serviced messages user-funded: consecutive withdrawal messages require at least `getMinAssetAmount()` of share entitlement per epoch, while a small position can be recycled more slowly through alternating withdrawal and deposit epochs.
+The dust rule prevents a small share position from being split into base-unit withdrawals that each consume a full fee. It does not make serviced messages user-funded: consecutive withdrawal messages require at least `getRemoteWithdrawDustThreshold()` of share entitlement per epoch, while a small position can be recycled more slowly through alternating withdrawal and deposit epochs.
 
 Production workflow configuration settles eligible epochs once per day, limiting ordinary attack throughput to one epoch close per day. The contract-level minimum period remains one hour, so the daily cadence is an operational configuration rather than an on-chain invariant.
 

@@ -136,9 +136,9 @@ More withdrawals than deposits. Active strategy is on a Child chain.
 
 - Parent updates totalShares: += newShares, -= totalShareBurnAmount.
 
-- **netFlow < 0 and netWithdrawAmount < getMinAssetAmount()**: Parent sends no Child request, emits `RemoteWithdrawDustForfeited`, makes the epoch immediately `CLAIMABLE`, and opens the next epoch. The withdraw claim pool contains only that epoch's deposits already held on Parent.
+- **netFlow < 0 and netWithdrawAmount < getRemoteWithdrawDustThreshold()**: Parent sends no Child request, emits `RemoteWithdrawDustForfeited`, makes the epoch immediately `CLAIMABLE`, and opens the next epoch. The withdraw claim pool contains only that epoch's deposits already held on Parent.
 
-- **netFlow < 0 and netWithdrawAmount >= getMinAssetAmount()**: epoch → EXECUTING. Next epoch opens. Emits EpochWithdrawExecuting(epochNonce, netWithdrawAmount).
+- **netFlow < 0 and netWithdrawAmount >= getRemoteWithdrawDustThreshold()**: epoch → EXECUTING. Next epoch opens. Emits EpochWithdrawExecuting(epochNonce, netWithdrawAmount).
 
 - **CRE log trigger** (EpochWithdrawExecuting) → child.executeEpochWithdraw(epochNonce, netWithdrawAmount).
 
