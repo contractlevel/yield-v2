@@ -8,12 +8,11 @@ Epoch_2b_childWithdraw
 ├── when CRE executes the withdraw through Child WorkflowRouter
 ├── then ChildVault should bridge withdrawn USDC back to Parent
 ├── and ParentVault should become claimable after local CCIP delivery
-├── and ParentVault should transfer the fixed settlement charge to treasury
-└── and the withdrawer should claim the net USDC while shares are burned
+└── and the withdrawer should claim the full settled USDC while shares are burned
 
 Epoch_2b_childWithdraw_remoteDust
 ├── given the active strategy is remote on Child
-├── and consecutive epochs each have a remote net-withdraw shortfall at the minimum asset amount
+├── and consecutive epochs each have a remote net-withdraw shortfall below the minimum asset amount
 ├── when CRE closes each epoch through Parent WorkflowRouter
 ├── then ParentVault should make each epoch immediately claimable
 ├── and ParentVault should open each next epoch without requesting a Child withdrawal

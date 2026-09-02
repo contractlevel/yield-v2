@@ -7,7 +7,6 @@ import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
 import {IBaseVault} from "../../../../src/interfaces/vaults/IBaseVault.sol";
 import {IParentVault} from "../../../../src/interfaces/vaults/IParentVault.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {CCIPReceiver} from "@chainlink/contracts-ccip/contracts/applications/CCIPReceiver.sol";
 import {Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
@@ -224,12 +223,11 @@ contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
         s_parentVault.ccipReceive(_withdrawMessage(EPOCH_NONCE, receivedWithdrawUsdc));
 
         assertEq(
-            s_parentVault.getEpoch(EPOCH_NONCE).totalWithdrawClaimAmount,
-            TOTAL_DEPOSIT_AMOUNT + receivedWithdrawUsdc - ASSET_PRECISION
+            s_parentVault.getEpoch(EPOCH_NONCE).totalWithdrawClaimAmount, TOTAL_DEPOSIT_AMOUNT + receivedWithdrawUsdc
         );
         assertEq(
             s_parentVault.getEpoch(EPOCH_NONCE).remainingWithdrawClaimAmount,
-            TOTAL_DEPOSIT_AMOUNT + receivedWithdrawUsdc - ASSET_PRECISION
+            TOTAL_DEPOSIT_AMOUNT + receivedWithdrawUsdc
         );
     }
 
@@ -248,78 +246,22 @@ contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
 
         s_parentVault.ccipReceive(_withdrawMessage(EPOCH_NONCE, EXPECTED_WITHDRAW_USDC));
 
-        assertEq(s_parentVault.getEpoch(EPOCH_NONCE).totalWithdrawClaimAmount, TOTAL_WITHDRAW_USDC - ASSET_PRECISION);
-        assertEq(
-            s_parentVault.getEpoch(EPOCH_NONCE).remainingWithdrawClaimAmount, TOTAL_WITHDRAW_USDC - ASSET_PRECISION
-        );
+        assertEq(s_parentVault.getEpoch(EPOCH_NONCE).totalWithdrawClaimAmount, TOTAL_WITHDRAW_USDC);
+        assertEq(s_parentVault.getEpoch(EPOCH_NONCE).remainingWithdrawClaimAmount, TOTAL_WITHDRAW_USDC);
     }
 
-    function test_ParentVault_ccipReceive_Withdraw_Success_TransfersSettlementChargeToTreasury() public {
-        _setParentEpochStatus(EPOCH_NONCE, Types.EpochStatus.EXECUTING);
-        _setParentEpochWithdrawAccounting(EPOCH_NONCE);
-
-        uint256 treasuryBalanceBefore = s_mockUsdc.balanceOf(i_treasury);
-        s_parentVault.ccipReceive(_withdrawMessage(EPOCH_NONCE, EXPECTED_WITHDRAW_USDC));
-
-        assertEq(s_mockUsdc.balanceOf(i_treasury), treasuryBalanceBefore + ASSET_PRECISION);
-    }
-
-    function test_ParentVault_ccipReceive_Withdraw_WhenReceivedAmountIsBelowMinimum_TransfersAllToTreasury() public {
+    function test_ParentVault_ccipReceive_Withdraw_WhenReceivedAmountIsBelowMinimum_AllocatesFullAmountToClaims()
+        public
+    {
         uint256 receivedAmount = ASSET_PRECISION - 1;
         _setParentEpochStatus(EPOCH_NONCE, Types.EpochStatus.EXECUTING);
         _setParentEpochWithdrawAccounting(EPOCH_NONCE);
 
         s_parentVault.ccipReceive(_withdrawMessage(EPOCH_NONCE, receivedAmount));
 
-        assertEq(s_mockUsdc.balanceOf(i_treasury), receivedAmount);
-        assertEq(s_parentVault.getEpoch(EPOCH_NONCE).totalWithdrawClaimAmount, TOTAL_DEPOSIT_AMOUNT);
-    }
-
-    function test_ParentVault_ccipReceive_Withdraw_Success_UsesCurrentTreasury() public {
-        address newTreasury = makeAddr("new treasury");
-        _setParentEpochStatus(EPOCH_NONCE, Types.EpochStatus.EXECUTING);
-        _setParentEpochWithdrawAccounting(EPOCH_NONCE);
-        _changePrank(i_configOperator);
-        s_parentVault.setTreasury(newTreasury);
-        _changePrank(address(s_mockCcipRouter));
-
-        s_parentVault.ccipReceive(_withdrawMessage(EPOCH_NONCE, EXPECTED_WITHDRAW_USDC));
-
-        assertEq(s_mockUsdc.balanceOf(newTreasury), ASSET_PRECISION);
-        assertEq(s_mockUsdc.balanceOf(i_treasury), 0);
-    }
-
-    function test_ParentVault_ccipReceive_Withdraw_Success_EmitsSettlementChargeCollected() public {
-        _setParentEpochStatus(EPOCH_NONCE, Types.EpochStatus.EXECUTING);
-        _setParentEpochWithdrawAccounting(EPOCH_NONCE);
-
-        vm.recordLogs();
-        s_parentVault.ccipReceive(_withdrawMessage(EPOCH_NONCE, EXPECTED_WITHDRAW_USDC));
-
-        Vm.Log memory log = _assertEmittedBy(
-            keccak256("RemoteWithdrawSettlementChargeCollected(uint256,uint256)"), address(s_parentVault)
-        );
-        assertEq(uint256(log.topics[1]), EPOCH_NONCE);
-        assertEq(uint256(log.topics[2]), ASSET_PRECISION);
-    }
-
-    function test_ParentVault_ccipReceive_Withdraw_RevertWhen_TreasuryTransferReverts() public {
-        _setParentEpochStatus(EPOCH_NONCE, Types.EpochStatus.EXECUTING);
-        _setParentEpochWithdrawAccounting(EPOCH_NONCE);
-        vm.mockCallRevert(
-            address(s_mockUsdc),
-            abi.encodeCall(IERC20.transfer, (i_treasury, ASSET_PRECISION)),
-            abi.encodeWithSignature("TransferReverted()")
-        );
-
-        vm.expectRevert();
-        s_parentVault.ccipReceive(_withdrawMessage(EPOCH_NONCE, EXPECTED_WITHDRAW_USDC));
-
-        Types.Epoch memory epoch = s_parentVault.getEpoch(EPOCH_NONCE);
-        assertEq(uint256(epoch.status), uint256(Types.EpochStatus.EXECUTING));
-        assertEq(epoch.totalWithdrawClaimAmount, TOTAL_WITHDRAW_USDC);
-        assertEq(epoch.remainingWithdrawClaimAmount, 0);
-        assertEq(s_mockUsdc.balanceOf(i_treasury), 0);
+        uint256 expectedClaimAmount = TOTAL_DEPOSIT_AMOUNT + receivedAmount;
+        assertEq(s_parentVault.getEpoch(EPOCH_NONCE).totalWithdrawClaimAmount, expectedClaimAmount);
+        assertEq(s_parentVault.getEpoch(EPOCH_NONCE).remainingWithdrawClaimAmount, expectedClaimAmount);
     }
 
     function test_ParentVault_ccipReceive_Withdraw_WhenReceivedAmountIsGreaterThanExpected_MakesEpochClaimable()
@@ -343,12 +285,11 @@ contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
         s_parentVault.ccipReceive(_withdrawMessage(EPOCH_NONCE, receivedWithdrawUsdc));
 
         assertEq(
-            s_parentVault.getEpoch(EPOCH_NONCE).totalWithdrawClaimAmount,
-            TOTAL_DEPOSIT_AMOUNT + receivedWithdrawUsdc - ASSET_PRECISION
+            s_parentVault.getEpoch(EPOCH_NONCE).totalWithdrawClaimAmount, TOTAL_DEPOSIT_AMOUNT + receivedWithdrawUsdc
         );
         assertEq(
             s_parentVault.getEpoch(EPOCH_NONCE).remainingWithdrawClaimAmount,
-            TOTAL_DEPOSIT_AMOUNT + receivedWithdrawUsdc - ASSET_PRECISION
+            TOTAL_DEPOSIT_AMOUNT + receivedWithdrawUsdc
         );
     }
 

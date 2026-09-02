@@ -136,9 +136,9 @@ More withdrawals than deposits. Active strategy is on a Child chain.
 
 - Parent updates totalShares: += newShares, -= totalShareBurnAmount.
 
-- **netFlow < 0 and netWithdrawAmount <= getMinAssetAmount()**: Parent sends no Child request, emits `RemoteWithdrawDustForfeited`, makes the epoch immediately `CLAIMABLE`, and opens the next epoch. The withdraw claim pool contains only that epoch's deposits already held on Parent.
+- **netFlow < 0 and netWithdrawAmount < getMinAssetAmount()**: Parent sends no Child request, emits `RemoteWithdrawDustForfeited`, makes the epoch immediately `CLAIMABLE`, and opens the next epoch. The withdraw claim pool contains only that epoch's deposits already held on Parent.
 
-- **netFlow < 0 and netWithdrawAmount > getMinAssetAmount()**: epoch → EXECUTING. Next epoch opens. Emits EpochWithdrawExecuting(epochNonce, netWithdrawAmount).
+- **netFlow < 0 and netWithdrawAmount >= getMinAssetAmount()**: epoch → EXECUTING. Next epoch opens. Emits EpochWithdrawExecuting(epochNonce, netWithdrawAmount).
 
 - **CRE log trigger** (EpochWithdrawExecuting) → child.executeEpochWithdraw(epochNonce, netWithdrawAmount).
 
@@ -148,15 +148,15 @@ More withdrawals than deposits. Active strategy is on a Child chain.
 
 - If the Child CCIP send exceeds the token-pool capacity, the Child call reverts atomically so the original workflow operation can be retried. Other send-attempt failures store CCIP send recovery; `executeRecovery()` retries the stored send.
 
-- Parent receives EPOCH_NET_WITHDRAW, verifies that the provisional epoch accounting is a net withdrawal, and computes a settlement charge of `min(receivedAmount, getMinAssetAmount())`. It updates the withdraw claim pool to Parent-held deposits plus the actual received asset less that charge, emits EpochWithdrawAmountShort if the received amount is under the full requested shortfall, finalizes the epoch as `CLAIMABLE`, transfers the charge to the current treasury, and emits `RemoteWithdrawSettlementChargeCollected`.
+- Parent receives EPOCH_NET_WITHDRAW, verifies that the provisional epoch accounting is a net withdrawal, updates the withdraw claim pool to Parent-held deposits plus the complete amount delivered through CCIP, emits EpochWithdrawAmountShort if the received amount is under the full requested shortfall, and finalizes the epoch as `CLAIMABLE`.
 
 - Depositors call claimShares() on Parent. Yieldcoin minted.
 
 - Withdrawers call claimAsset() on Parent. Escrowed Yieldcoin burned, asset transferred.
 
-**CCIP sends: 0 for dust; 1 for a larger shortfall**
+**CCIP sends: 0 below the service threshold; 1 at or above it**
 
-**CRE executions: 1 for dust; 2 for a larger shortfall**
+**CRE executions: 1 below the service threshold; 2 at or above it**
 
 **_Dust is claimable at close; a larger shortfall is claimable after CCIP settles_**
 

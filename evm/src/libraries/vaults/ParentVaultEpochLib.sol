@@ -54,7 +54,7 @@ library ParentVaultEpochLib {
     /// @param tvl The underlying-asset value of the active strategy before settlement
     /// @param sharePrecision The precision factor of the Yieldcoin share token
     /// @param assetPrecision The precision factor of the underlying asset
-    /// @param minAssetAmount The minimum whole-asset amount used for deposits and remote-withdraw settlement
+    /// @param minAssetAmount The minimum deposit amount and remote-withdraw service threshold
     /// @param isLocalStrategy Whether the active strategy is on the ParentVault chain
     struct CloseEpochParams {
         uint256 expectedEpochNonce;
@@ -120,7 +120,7 @@ library ParentVaultEpochLib {
     /// @param tvl The underlying-asset value of the active strategy before settling the current epoch
     /// @param sharePrecision The share precision factor
     /// @param assetPrecision The underlying asset precision factor used for bootstrap share allocation
-    /// @param minAssetAmount The minimum whole-asset amount used for deposits and remote-withdraw settlement
+    /// @param minAssetAmount The minimum deposit amount and remote-withdraw service threshold
     /// @param isLocalStrategy Whether this chain currently has the active strategy adapter
     /// @return externalAction The external action, epoch nonce, net amount, and total deposit amount ParentVault
     ///         needs to execute the action and finalize the epoch after settlement
@@ -154,7 +154,7 @@ library ParentVaultEpochLib {
     /// @param tvl The underlying-asset value of the active strategy before settling the current epoch
     /// @param sharePrecision The share precision factor
     /// @param assetPrecision The underlying asset precision factor used for bootstrap share allocation
-    /// @param minAssetAmount The minimum whole-asset amount used for deposits and remote-withdraw settlement
+    /// @param minAssetAmount The minimum deposit amount and remote-withdraw service threshold
     /// @param isLocalStrategy Whether this chain currently has the active strategy adapter
     /// @return externalAction The external action, epoch nonce, net amount, and total deposit amount ParentVault
     ///         needs to execute the action and finalize the epoch after settlement
@@ -254,7 +254,7 @@ library ParentVaultEpochLib {
 
         bool isSynchronousLocalWithdraw = params.isLocalStrategy && accounting.netFlow < 0;
         bool isRemoteWithdrawDust =
-            !params.isLocalStrategy && accounting.netFlow < 0 && uint256(-accounting.netFlow) <= params.minAssetAmount;
+            !params.isLocalStrategy && accounting.netFlow < 0 && uint256(-accounting.netFlow) < params.minAssetAmount;
         if (!isSynchronousLocalWithdraw) {
             // WITHDRAW_FROM_LOCAL_STRATEGY resolves synchronously within the same
             // transaction via finalizeLocalNetWithdraw, which writes the actual (not

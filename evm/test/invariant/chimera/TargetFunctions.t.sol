@@ -1377,7 +1377,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         uint256 totalDepositAmount = parent.vault.getEpoch(epochNonce).totalDepositAmount;
         uint256 netWithdrawAmount = totalWithdrawUsdc - totalDepositAmount;
 
-        if (netWithdrawAmount <= parent.vault.getMinAssetAmount()) {
+        if (netWithdrawAmount < parent.vault.getMinAssetAmount()) {
             _bootstrapActorShares(actor);
             _ensureActiveStrategyOnChild(activeChild, protocolSeed, actorSeed, amountSeed);
             _closeCurrentEpochIfNotEmpty();
@@ -1397,8 +1397,8 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         }
 
         t(
-            netWithdrawAmount > parent.vault.getMinAssetAmount(),
-            "recovery setup: net withdraw does not exceed remote dust threshold"
+            netWithdrawAmount >= parent.vault.getMinAssetAmount(),
+            "recovery setup: net withdraw is below remote service threshold"
         );
 
         _setActiveStrategyWithdrawReturn(netWithdrawAmount);
@@ -1657,7 +1657,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         uint256 totalShares = parent.vault.getTotalShares();
         uint256 netWithdrawAmount = shareBurnAmount * tvl / totalShares;
 
-        if (netWithdrawAmount <= parent.vault.getMinAssetAmount()) {
+        if (netWithdrawAmount < parent.vault.getMinAssetAmount()) {
             _bootstrapActorShares(actor);
             _ensureActiveStrategyOnChild(activeChild, protocolSeed, actorSeed, amountSeed);
             _closeCurrentEpochIfNotEmpty();
@@ -1674,8 +1674,8 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         }
 
         t(
-            netWithdrawAmount > parent.vault.getMinAssetAmount(),
-            "recovery setup: net withdraw does not exceed remote dust threshold"
+            netWithdrawAmount >= parent.vault.getMinAssetAmount(),
+            "recovery setup: net withdraw is below remote service threshold"
         );
         _recordEpochSettlement(epochNonce, tvl, totalShares);
 

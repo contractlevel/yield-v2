@@ -55,8 +55,6 @@ contract ChildWithdraw_EpochIntegrationTest is BaseIntegrationTest {
         deal(parent.asset, s_childAaveV3Pool, REMOTE_DEPOSIT_AMOUNT);
         MockAaveV3Pool(s_childAaveV3Pool).setWithdrawReturn(REMOTE_DEPOSIT_AMOUNT);
 
-        uint256 treasuryUsdcBeforeSettlement = IERC20(parent.asset).balanceOf(networkConfig.treasury);
-
         _executeEpochWithdrawThroughWorkflow(
             child.workflowRouter, CHILD_WORKFLOW_ID, EXECUTE_WITHDRAW_WORKFLOW_NAME, i_owner, 2, REMOTE_DEPOSIT_AMOUNT
         );
@@ -68,14 +66,7 @@ contract ChildWithdraw_EpochIntegrationTest is BaseIntegrationTest {
         _changePrank(i_depositor);
         parent.vault.claimAsset(2);
 
-        assertEq(
-            IERC20(parent.asset).balanceOf(i_depositor),
-            depositorUsdcBeforeClaim + REMOTE_DEPOSIT_AMOUNT - parent.vault.getMinAssetAmount()
-        );
-        assertEq(
-            IERC20(parent.asset).balanceOf(networkConfig.treasury),
-            treasuryUsdcBeforeSettlement + parent.vault.getMinAssetAmount()
-        );
+        assertEq(IERC20(parent.asset).balanceOf(i_depositor), depositorUsdcBeforeClaim + REMOTE_DEPOSIT_AMOUNT);
         assertEq(parent.share.balanceOf(i_depositor), 0);
         assertEq(parent.vault.getWithdrawShareBurnAmount(i_depositor, 2), 0);
         assertEq(parent.vault.getTotalShares(), 0);
@@ -89,7 +80,7 @@ contract ChildWithdraw_EpochIntegrationTest is BaseIntegrationTest {
         _approveShares(i_depositor, address(parent.vault), s_shareAmount);
 
         for (uint256 epochNonce = 2; epochNonce < 5; ++epochNonce) {
-            uint256 dustShareAmount = minAssetAmount * parent.vault.getTotalShares() / REMOTE_DEPOSIT_AMOUNT;
+            uint256 dustShareAmount = (minAssetAmount - 1) * parent.vault.getTotalShares() / REMOTE_DEPOSIT_AMOUNT;
             totalDustSharesBurned += dustShareAmount;
             _changePrank(i_depositor);
             parent.vault.withdraw(dustShareAmount);

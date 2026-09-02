@@ -85,11 +85,7 @@ contract CcipSend_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
         _changePrank(i_depositor);
         parent.vault.claimAsset(2);
 
-        assertApproxEqAbs(
-            IERC20(parent.asset).balanceOf(i_depositor),
-            depositorUsdcBefore + withdrawAmount - parent.vault.getMinAssetAmount(),
-            1
-        );
+        assertApproxEqAbs(IERC20(parent.asset).balanceOf(i_depositor), depositorUsdcBefore + withdrawAmount, 1);
     }
 
     function test_CcipFork_Recovery_ChildVault_ccipSend_Rebalance_RetryCompletesParentRebalance() external {

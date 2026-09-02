@@ -34,7 +34,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     //////////////////////////////////////////////////////////////*/
     /// @dev Yieldcoin (YIELD) share token
     address internal immutable i_share;
-    /// @dev Minimum whole-asset amount used for deposits and remote-withdraw settlement: 1 * i_assetPrecision
+    /// @dev Minimum deposit amount and remote-withdraw service threshold: 1 * i_assetPrecision
     uint256 internal immutable i_minAssetAmount;
 
     /*//////////////////////////////////////////////////////////////
@@ -333,7 +333,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
         // (uint256 rebalanceNonce, bytes32 protocolId) for rebalances
         (Types.CcipTx ccipTxType, bytes memory data) = abi.decode(message.data, (Types.CcipTx, bytes));
         (uint256 rebalanceNonce, bytes32 protocolId) =
-            ParentVaultCcipLib.receiveCcip($, ccipTxType, data, receivedAmount, i_asset, i_minAssetAmount);
+            ParentVaultCcipLib.receiveCcip($, ccipTxType, data, receivedAmount);
         if (rebalanceNonce != 0) {
             bool success = _handleCCIPRebalance(rebalanceNonce, protocolId, receivedAmount);
             // A rebalance message is received on its pending strategy chain, which is this chain
@@ -700,7 +700,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
         sharePrecision = SHARE_PRECISION;
     }
 
-    /// @notice Returns the minimum whole-asset amount used for deposits and remote-withdraw settlement
+    /// @notice Returns the minimum deposit amount and remote-withdraw service threshold
     /// @return minAssetAmount The minimum asset amount, equal to 1 * i_assetPrecision
     function getMinAssetAmount() external view returns (uint256 minAssetAmount) {
         minAssetAmount = i_minAssetAmount;

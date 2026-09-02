@@ -85,10 +85,7 @@ contract CcipSend_RecoveryIntegrationTest is BaseRecoveryIntegrationTest {
         _changePrank(i_depositor);
         parent.vault.claimAsset(2);
 
-        assertEq(
-            IERC20(parent.asset).balanceOf(i_depositor),
-            depositorUsdcBeforeClaim + withdrawAmount - parent.vault.getMinAssetAmount()
-        );
+        assertEq(IERC20(parent.asset).balanceOf(i_depositor), depositorUsdcBeforeClaim + withdrawAmount);
     }
 
     function test_Recovery_ChildVault_ccipSend_EpochWithdraw_ExcludesRecoveryFromTvlAcrossNextEpochEligibility()
