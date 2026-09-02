@@ -28,14 +28,18 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     //////////////////////////////////////////////////////////////*/
     /// @dev Precision of the 18-decimal YIELD share token
     uint256 internal constant SHARE_PRECISION = 1e18;
+    /// @dev Number of equal parts in one whole asset unit used to derive the remote-withdraw dust threshold
+    uint256 internal constant REMOTE_WITHDRAW_DUST_DIVISOR = 100;
 
     /*//////////////////////////////////////////////////////////////
                                IMMUTABLE
     //////////////////////////////////////////////////////////////*/
     /// @dev Yieldcoin (YIELD) share token
     address internal immutable i_share;
-    /// @dev Minimum deposit amount and remote-withdraw service threshold: 1 * i_assetPrecision
+    /// @dev Minimum deposit amount: 1 * i_assetPrecision
     uint256 internal immutable i_minAssetAmount;
+    /// @dev Remote-withdraw dust threshold: one hundredth of i_assetPrecision
+    uint256 internal immutable i_remoteWithdrawDustThreshold;
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
@@ -45,12 +49,15 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /// @param share The address of the Yieldcoin (YIELD) share token
     /// @dev Reverts if BaseVault immutable configuration is invalid
     /// @dev Reverts if share is the zero address
+    /// @dev Reverts if the asset precision cannot represent one hundredth of a whole asset unit
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(BaseVault.ConstructorParams memory params, address share) BaseVault(params) {
         _revertIfZeroAddress(share);
 
         i_share = share;
         i_minAssetAmount = 1 * i_assetPrecision;
+        i_remoteWithdrawDustThreshold = i_assetPrecision / REMOTE_WITHDRAW_DUST_DIVISOR;
+        _revertIfZeroAmount(i_remoteWithdrawDustThreshold);
 
         _disableInitializers();
     }
@@ -397,7 +404,14 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
         address activeAdapter = $_baseVault.s_activeProtocolAdapter;
         bool isLocalStrategy = activeAdapter != address(0);
         ParentVaultEpochLib.CloseEpochExternalAction memory externalAction = ParentVaultEpochLib.closeEpoch(
-            $, expectedEpochNonce, tvl, SHARE_PRECISION, i_assetPrecision, i_minAssetAmount, isLocalStrategy
+            $,
+            expectedEpochNonce,
+            tvl,
+            SHARE_PRECISION,
+            i_assetPrecision,
+            i_minAssetAmount,
+            i_remoteWithdrawDustThreshold,
+            isLocalStrategy
         );
 
         if (externalAction.action == ParentVaultEpochLib.ExternalAction.DEPOSIT_TO_LOCAL_STRATEGY) {
@@ -700,10 +714,16 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
         sharePrecision = SHARE_PRECISION;
     }
 
-    /// @notice Returns the minimum deposit amount and remote-withdraw service threshold
+    /// @notice Returns the minimum deposit amount
     /// @return minAssetAmount The minimum asset amount, equal to 1 * i_assetPrecision
     function getMinAssetAmount() external view returns (uint256 minAssetAmount) {
         minAssetAmount = i_minAssetAmount;
+    }
+
+    /// @notice Returns the remote-withdraw dust threshold
+    /// @return threshold One hundredth of a whole underlying asset unit
+    function getRemoteWithdrawDustThreshold() external view returns (uint256 threshold) {
+        threshold = i_remoteWithdrawDustThreshold;
     }
 
     /// @notice Returns whether a protocol ID is supported on any chain across the Yieldcoin v2 system

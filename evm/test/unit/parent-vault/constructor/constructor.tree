@@ -4,8 +4,11 @@ ParentVault_constructor
   ├── it should set i_asset
   ├── it should set i_assetPrecision
   ├── it should set i_minAssetAmount
+  ├── it should set i_remoteWithdrawDustThreshold
   ├── it should set i_share
   ├── it should set the CCIP router
   ├── it should set the adapter registry
-  └── when share is the zero address
+  ├── when share is the zero address
       └── it should revert with BaseVault__NoZeroAddress
+  └── when the remote withdraw dust threshold is zero
+      └── it should revert with BaseVault__NoZeroAmount

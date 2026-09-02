@@ -439,9 +439,13 @@ interface IParentVault is IBaseVault {
     /// @return sharePrecision The share precision factor
     function getSharePrecision() external pure returns (uint256 sharePrecision);
 
-    /// @notice Returns the minimum deposit amount and remote-withdraw service threshold
+    /// @notice Returns the minimum deposit amount
     /// @return minAssetAmount The minimum asset amount, equal to 1 * i_assetPrecision
     function getMinAssetAmount() external view returns (uint256 minAssetAmount);
+
+    /// @notice Returns the remote-withdraw dust threshold
+    /// @return threshold One hundredth of a whole underlying asset unit
+    function getRemoteWithdrawDustThreshold() external view returns (uint256 threshold);
 
     /// @notice Returns whether a protocol ID is supported on any chain across the Yieldcoin v2 system
     /// @param protocolId The protocol ID to query
