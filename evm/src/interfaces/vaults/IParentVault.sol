@@ -140,10 +140,6 @@ interface IParentVault is IBaseVault {
     /// @param epochNonce The nonce of the settled epoch
     /// @param amount The remote withdrawal shortfall retained in the remote strategy
     event RemoteWithdrawDustForfeited(uint256 indexed epochNonce, uint256 indexed amount);
-    /// @notice Emitted when a remote withdrawal settlement charge is transferred to the treasury
-    /// @param epochNonce The nonce of the settled epoch
-    /// @param amount The underlying asset amount transferred to the treasury
-    event RemoteWithdrawSettlementChargeCollected(uint256 indexed epochNonce, uint256 indexed amount);
     /// @notice Emitted when an epoch is claimable
     /// @param epochNonce The nonce of the claimable epoch
     event EpochClaimable(uint256 indexed epochNonce);
@@ -443,7 +439,7 @@ interface IParentVault is IBaseVault {
     /// @return sharePrecision The share precision factor
     function getSharePrecision() external pure returns (uint256 sharePrecision);
 
-    /// @notice Returns the minimum whole-asset amount used for deposits and remote-withdraw settlement
+    /// @notice Returns the minimum deposit amount and remote-withdraw service threshold
     /// @return minAssetAmount The minimum asset amount, equal to 1 * i_assetPrecision
     function getMinAssetAmount() external view returns (uint256 minAssetAmount);
 

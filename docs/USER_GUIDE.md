@@ -41,7 +41,7 @@ Withdraw flow:
 
 The withdraw intent is recorded in the current open epoch and the shares are escrowed by the vault. The user does not receive the underlying asset at withdraw time. Escrowed shares are burned during `claimAsset`.
 
-When the active strategy is remote and an epoch's net withdrawal shortfall is at most `getMinAssetAmount()`, ParentVault does not request a Child withdrawal. The epoch becomes claimable using only assets already held by ParentVault, so the shortfall is forfeited by that epoch's withdrawers. For a larger remote shortfall, ParentVault requests the full amount from ChildVault. When CCIP delivers the withdrawal, ParentVault transfers `min(receivedAmount, getMinAssetAmount())` to the treasury as a fixed settlement charge and allocates the remainder to withdraw claims. The charge is shared pro rata across that epoch's withdrawers through the claim pool.
+When the active strategy is remote and an epoch's net withdrawal shortfall is below `getMinAssetAmount()`, ParentVault does not request a Child withdrawal. The epoch becomes claimable using only assets already held by ParentVault, so the shortfall is forfeited by that epoch's withdrawers. At or above the threshold, ParentVault requests the full amount from ChildVault and allocates the complete amount delivered through CCIP to withdraw claims.
 
 To fund a withdraw intent for another account, call `withdrawFor(beneficiary, shareAmount)`. The
 caller supplies the shares and allowance, but the beneficiary owns the resulting epoch position.
@@ -50,7 +50,7 @@ Only the beneficiary can cancel it and receive the escrowed shares.
 Useful reads:
 
 - `getWithdrawShareBurnAmount(user, epochNonce)` returns the user's submitted share burn amount for that epoch.
-- `getMinAssetAmount()` returns both the minimum deposit amount and the remote-withdraw dust threshold or maximum settlement charge.
+- `getMinAssetAmount()` returns both the minimum deposit amount and the remote-withdraw service threshold. Remote shortfalls below it are dust; amounts at or above it are serviced.
 - `getEpoch(epochNonce)` returns the epoch data, including its current status.
 
 ## Cancel

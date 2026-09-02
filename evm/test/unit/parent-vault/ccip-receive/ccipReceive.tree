@@ -32,15 +32,11 @@ ParentVault_ccipReceive
 │   │   └── it should update the withdraw claim amount and remaining withdraw claim amount
 │   ├── when the received USDC amount matches the epoch withdraw obligation
 │   │   ├── it should make the epoch claimable
-│   │   ├── it should deduct the settlement charge from both withdraw claim pools
-│   │   ├── it should transfer the settlement charge to the current treasury
-│   │   ├── it should emit RemoteWithdrawSettlementChargeCollected
+│   │   ├── it should update both withdraw claim pools with the full received amount
 │   │   ├── it should emit EpochClaimable
 │   │   └── it should emit CCIPReceived
-│   ├── when the received USDC amount is at or below i_minAssetAmount
-│   │   └── it should transfer the complete received amount to treasury
-│   ├── when the treasury transfer reverts
-│   │   └── it should revert atomically and leave the epoch executing
+│   ├── when the received USDC amount is below i_minAssetAmount
+│   │   └── it should allocate the complete received amount to withdraw claims
 │   └── when the received USDC amount is greater than the epoch withdraw obligation
 │       ├── it should make the epoch claimable
 │       ├── it should update the withdraw claim amount and remaining withdraw claim amount

@@ -1262,9 +1262,9 @@ This rating depends on the margin between the position and live headroom, not on
 
 ### Summary
 
-When a remote epoch's net withdrawal is at most `getMinAssetAmount()`, ParentVault sends no Child request and makes the epoch immediately claimable using only that epoch's deposits. If the epoch has no deposits, its withdraw claim pool is zero. Claiming then burns the escrowed shares without transferring any asset.
+When a remote epoch's net withdrawal is below `getMinAssetAmount()`, ParentVault sends no Child request and makes the epoch immediately claimable using only that epoch's deposits. If the epoch has no deposits, its withdraw claim pool is zero. Claiming then burns the escrowed shares without transferring any asset.
 
-The forfeiture is bounded to one whole underlying-asset unit per affected epoch, but it can equal the withdrawing user's full expected payout. This is distinct from claim-time integer rounding documented in KI-003.
+The forfeiture is strictly less than one whole underlying-asset unit per affected epoch, but it can equal the withdrawing user's full expected payout. This is distinct from claim-time integer rounding documented in KI-003.
 
 ### Operational considerations
 
@@ -1273,21 +1273,39 @@ The forfeiture is bounded to one whole underlying-asset unit per affected epoch,
 
 ---
 
-## KI-029 — Fixed remote-withdraw charge may underprice variable CCIP fees
+## KI-029 — Subsidized remote flows can exhaust LINK and delay epoch settlement
 
-**Status:** Accepted — fixed economic deterrent with operational fee monitoring.
+**Status:** Accepted — bounded by remote-withdraw dust forfeiture, configured daily settlement, and operational LINK monitoring.
 
-**Last reviewed:** 2026-08-31
+**Last reviewed:** 2026-09-02
 
-**Component:** `ParentVaultCcipLib._handleEpochNetWithdraw` and ChildVault CCIP sends.
+**Component:** `ParentVault.closeEpoch`, `ChildVault.executeEpochWithdraw`, and vault-funded CCIP sends.
 
 ### Summary
 
-For a serviced remote withdrawal, ParentVault deducts `min(receivedAmount, getMinAssetAmount())` from the epoch's claim pool and transfers it to the treasury. The charge is fixed in the underlying asset, while the Child's CCIP fee is variable and paid in LINK. If the fee's value exceeds the charge, a user can cause the protocol to consume more fee value than the user forfeits.
+Vaults pay CCIP fees from shared LINK reserves rather than charging the users whose epoch activity causes a message. A user can therefore submit repeated remote flows that consume LINK without permanently paying the corresponding fee.
 
-The charge compensates the treasury in the underlying asset; it does not replenish the ChildVault's LINK balance. If the Child returns less than the charge, the full returned amount is transferred to the treasury and withdrawers receive only assets supplied by same-epoch deposits.
+For remote net deposits, a positive net flow causes ParentVault to send a CCIP message. If ParentVault lacks enough LINK, `closeEpoch` reverts atomically and the epoch remains open. Users retain the normal ability to cancel their current-epoch intents.
+
+For remote net withdrawals, shortfalls below `getMinAssetAmount()` are forfeited and cause no message. A shortfall at or above the threshold is serviced in full and causes ChildVault to pay for a CCIP message. If the strategy withdrawal succeeds but the send fails, ChildVault stores `CCIP_SEND` recovery and the Parent epoch remains `EXECUTING` until LINK is supplied and recovery succeeds.
+
+The dust rule prevents a small share position from being split into base-unit withdrawals that each consume a full fee. It does not make serviced messages user-funded: consecutive withdrawal messages require at least `getMinAssetAmount()` of share entitlement per epoch, while a small position can be recycled more slowly through alternating withdrawal and deposit epochs.
+
+Production workflow configuration settles eligible epochs once per day, limiting ordinary attack throughput to one epoch close per day. The contract-level minimum period remains one hour, so the daily cadence is an operational configuration rather than an on-chain invariant.
+
+The impact is availability and settlement delay rather than loss of principal or accounting corruption. The protocol accepts this residual risk because amplification below the remote service threshold is removed, CCIP activity is rate-limited by epoch settlement, and LINK reserves can be monitored and replenished.
 
 ### Operational considerations
 
-- Monitor live Child CCIP fees against `getMinAssetAmount()` and reassess the charge when fees approach or exceed it.
-- Monitor and replenish each ChildVault's LINK balance independently of treasury charge receipts.
+- Configure production epoch settlement to run no more than once per day and review any cadence change as a security-relevant configuration change.
+- Monitor ParentVault and every ChildVault LINK balance against current route quotes and maintain sufficient forward runway.
+- Alert on repeated minimum-sized remote net deposits or serviced remote net withdrawals.
+- Alert when an epoch remains `OPEN` or `EXECUTING` beyond its expected daily settlement window, and distinguish insufficient LINK from adapter, router, or workflow failures.
+- Replenish ParentVault LINK and retry `closeEpoch`, or replenish ChildVault LINK and call permissionless `executeRecovery()`, according to the failure path.
+
+### Conditions that would warrant revisiting
+
+- Production epoch settlement is configured materially more frequently than once per day.
+- CCIP fees increase enough to shorten LINK runway materially.
+- Monitoring or replenishment cannot restore settlement within the protocol's availability objectives.
+- Repeated subsidized remote flows are observed in production.
