@@ -1,5 +1,5 @@
 ParentVault_getParentOperationalState
 ├── when an active adapter exists
-│   └── it should return the complete ParentVault operational state including canonical TVL
+│   └── it should return the complete ParentVault operational state including authoritative total shares and canonical TVL
 └── when no active adapter exists
     └── it should return zero TVL

@@ -1293,6 +1293,8 @@ The dust rule prevents a small share position from being split into base-unit wi
 
 Production workflow configuration settles eligible epochs once per day, limiting ordinary attack throughput to one epoch close per day. The contract-level minimum period remains one hour, so the daily cadence is an operational configuration rather than an on-chain invariant.
 
+`getParentOperationalState()` exposes authoritative `totalShares` alongside the current epoch so the workflow can estimate the net remote withdrawal before closing and gracefully take no action when it falls below the workflow's economic floor. This mitigation is operational and is not enforced onchain.
+
 The impact is availability and settlement delay rather than loss of principal or accounting corruption. The protocol accepts this residual risk because amplification below the remote service threshold is removed, CCIP activity is rate-limited by epoch settlement, and LINK reserves can be monitored and replenished.
 
 ### Operational considerations

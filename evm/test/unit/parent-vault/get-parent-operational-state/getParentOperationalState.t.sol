@@ -7,9 +7,11 @@ import {Types} from "../../../../src/libraries/Types.sol";
 
 contract ParentVault_GetParentOperationalStateUnitTest is BaseUnitTest {
     uint256 internal constant TVL = 1_000 * 1e6;
+    uint256 internal constant TOTAL_SHARES = 900 * 1e18;
 
     function test_ParentVault_getParentOperationalState_Success() external {
         s_mockProtocolAdapter.setTVL(TVL);
+        _setParentTotalShares(TOTAL_SHARES);
 
         _changePrank(i_pauser);
         s_parentVault.pause();
@@ -28,6 +30,8 @@ contract ParentVault_GetParentOperationalStateUnitTest is BaseUnitTest {
             keccak256(abi.encode(s_parentVault.getEpoch(currentEpochNonce - 1)))
         );
         assertEq(keccak256(abi.encode(state.rebalance)), keccak256(abi.encode(s_parentVault.getRebalance())));
+        assertEq(state.totalShares, TOTAL_SHARES);
+        assertEq(state.totalShares, s_parentVault.getTotalShares());
         assertEq(state.tvl, TVL);
         assertEq(state.tvl, s_parentVault.getTVL());
     }

@@ -171,6 +171,7 @@ library Types {
     /// @param currentEpoch The currently open epoch
     /// @param previousEpoch The epoch immediately preceding the current epoch
     /// @param rebalance The current rebalance state
+    /// @param totalShares The authoritative economic share count tracked by ParentVault
     /// @param tvl The vault's accounted underlying-asset value
     struct ParentOperationalState {
         bool paused;
@@ -179,6 +180,7 @@ library Types {
         Epoch currentEpoch;
         Epoch previousEpoch;
         Rebalance rebalance;
+        uint256 totalShares;
         uint256 tvl;
     }
 

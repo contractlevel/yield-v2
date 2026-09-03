@@ -456,7 +456,7 @@ interface IParentVault is IBaseVault {
     /// @return rebalance The current rebalance state
     function getRebalance() external view returns (Types.Rebalance memory rebalance);
 
-    /// @notice Returns the state and TVL required to determine the next ParentVault operation
+    /// @notice Returns the state, authoritative total shares, and TVL required to determine the next ParentVault operation
     /// @return state The current ParentVault operational state
     function getParentOperationalState() external view returns (Types.ParentOperationalState memory state);
 

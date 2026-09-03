@@ -624,7 +624,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
         rebalance = _parentVaultStorage().s_rebalance;
     }
 
-    /// @notice Returns the state required to determine the next ParentVault operation
+    /// @notice Returns the state, authoritative total shares, and TVL required to determine the next ParentVault operation
     /// @return state The current ParentVault operational state
     function getParentOperationalState() external view returns (Types.ParentOperationalState memory state) {
         BaseVaultStorage storage $_baseVault = _baseVaultStorage();
@@ -637,6 +637,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
         state.currentEpoch = $.s_epochs[currentEpochNonce];
         state.previousEpoch = $.s_epochs[currentEpochNonce - 1];
         state.rebalance = $.s_rebalance;
+        state.totalShares = $.s_totalShares;
         state.tvl = _getTVL();
     }
 
