@@ -51,14 +51,15 @@ ParentVault_closeEpoch
 │   │   └── it should revert
 │   └── it should emit EpochDepositExecuting
 ├── when remote strategy has net withdrawal
-│   ├── when the remote shortfall is below i_remoteWithdrawDustThreshold
-│   │   ├── it should make the epoch claimable without an external action
-│   │   ├── it should limit the claim pool to Parent-held deposits
-│   │   └── it should emit RemoteWithdrawDustForfeited
-│   └── when the remote shortfall is at or above i_remoteWithdrawDustThreshold
+│   ├── when the remote shortfall is below i_minAssetAmount
+│   │   ├── it should revert with ParentVault__RemoteWithdrawAmountTooSmall
+│   │   └── it should leave epoch and withdrawal accounting unchanged
+│   └── when the remote shortfall is at or above i_minAssetAmount
 │       ├── it should mark the epoch executing
 │       ├── it should request the full remote shortfall
 │       └── it should emit EpochWithdrawExecuting
+├── when local strategy has a net withdrawal below i_minAssetAmount
+│   └── it should settle synchronously
 └── when local adapter reverts
     ├── it should revert on net deposit
     └── it should revert on net withdrawal

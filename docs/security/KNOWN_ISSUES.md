@@ -1252,30 +1252,30 @@ This rating depends on the margin between the position and live headroom, not on
 
 ---
 
-## KI-028 — Remote withdraw dust can settle with a zero claim pool
+## KI-028 — Subminimum remote net withdrawals defer epoch settlement
 
-**Status:** Accepted — bounded withdrawal forfeiture avoids uneconomic Child CCIP sends.
+**Status:** Accepted — aggregation deferral avoids uneconomic Child CCIP sends.
 
-**Last reviewed:** 2026-08-31
+**Last reviewed:** 2026-09-05
 
 **Component:** `ParentVaultEpochLib._closeEpoch` remote net-withdraw path.
 
 ### Summary
 
-When a remote epoch's net withdrawal is below `getRemoteWithdrawDustThreshold()`, ParentVault sends no Child request and makes the epoch immediately claimable using only that epoch's deposits. If the epoch has no deposits, its withdraw claim pool is zero. Claiming then burns the escrowed shares without transferring any asset.
+When a remote epoch's aggregate net withdrawal is below `getMinAssetAmount()`, `closeEpoch` reverts atomically. The epoch remains open, no Child request is sent, and deposit and withdrawal intents remain unchanged. The minimum is one whole underlying asset unit, or `1 USDC` for the USDC vault.
 
-The threshold is one hundredth of a whole underlying asset unit, or `0.01 USDC` for the USDC vault. The forfeiture is strictly less than that threshold per affected epoch, but it can equal the withdrawing user's full expected payout. This is distinct from claim-time integer rounding documented in KI-003.
+Deferral applies to the entire epoch, even when individual requests are large. A participant can deliberately leave a subminimum net withdrawal pending; settlement waits until further activity or cancellation moves the net flow out of that range. This availability tradeoff is accepted in preference to forfeiting withdrawal value or paying a full CCIP fee for a subminimum flow.
 
 ### Operational considerations
 
-- User interfaces should warn on withdrawals expected to fall within the remote dust threshold.
-- Monitor `RemoteWithdrawDustForfeited`, including epochs whose withdraw claim pool is zero.
+- User interfaces should explain that small remote withdrawals may wait for aggregate epoch activity.
+- Monitor epochs that remain `OPEN` beyond the expected settlement window and surface the calculated aggregate net flow.
 
 ---
 
 ## KI-029 — Subsidized remote flows can exhaust LINK and delay epoch settlement
 
-**Status:** Accepted — bounded by remote-withdraw dust forfeiture, configured daily settlement, and operational LINK monitoring.
+**Status:** Accepted — bounded by the enforced remote-withdraw minimum, configured daily settlement, and operational LINK monitoring.
 
 **Last reviewed:** 2026-09-02
 
@@ -1287,15 +1287,15 @@ Vaults pay CCIP fees from shared LINK reserves rather than charging the users wh
 
 For remote net deposits, a positive net flow causes ParentVault to send a CCIP message. If ParentVault lacks enough LINK, `closeEpoch` reverts atomically and the epoch remains open. Users retain the normal ability to cancel their current-epoch intents.
 
-For remote net withdrawals, shortfalls below `getRemoteWithdrawDustThreshold()` are forfeited and cause no message. A shortfall at or above the threshold is serviced in full and causes ChildVault to pay for a CCIP message. If the strategy withdrawal succeeds but the send fails, ChildVault stores `CCIP_SEND` recovery and the Parent epoch remains `EXECUTING` until LINK is supplied and recovery succeeds.
+For remote net withdrawals, an aggregate amount below `getMinAssetAmount()` makes `closeEpoch` revert atomically and leaves the epoch open. An amount at or above the minimum is serviced in full and causes ChildVault to pay for a CCIP message. If the strategy withdrawal succeeds but the send fails, ChildVault stores `CCIP_SEND` recovery and the Parent epoch remains `EXECUTING` until LINK is supplied and recovery succeeds.
 
-The dust rule prevents a small share position from being split into base-unit withdrawals that each consume a full fee. It does not make serviced messages user-funded: consecutive withdrawal messages require at least `getRemoteWithdrawDustThreshold()` of share entitlement per epoch, while a small position can be recycled more slowly through alternating withdrawal and deposit epochs.
+The enforced minimum prevents a share position from being split into sub-unit withdrawals that each consume a full fee. It does not make serviced messages user-funded: consecutive withdrawal messages require at least `getMinAssetAmount()` of share entitlement per epoch, while a small position can be recycled more slowly through alternating withdrawal and deposit epochs.
 
 Production workflow configuration settles eligible epochs once per day, limiting ordinary attack throughput to one epoch close per day. The contract-level minimum period remains one hour, so the daily cadence is an operational configuration rather than an on-chain invariant.
 
-`getParentOperationalState()` exposes authoritative `totalShares` alongside the current epoch so the workflow can estimate the net remote withdrawal before closing and gracefully take no action when it falls below the workflow's economic floor. This mitigation is operational and is not enforced onchain.
+`getParentOperationalState()` exposes authoritative `totalShares` alongside the current epoch for preflight net-withdraw estimation. The minimum itself is enforced onchain.
 
-The impact is availability and settlement delay rather than loss of principal or accounting corruption. The protocol accepts this residual risk because amplification below the remote service threshold is removed, CCIP activity is rate-limited by epoch settlement, and LINK reserves can be monitored and replenished.
+The impact is availability and settlement delay rather than loss of principal or accounting corruption. The protocol accepts this residual risk because subminimum remote withdrawals defer instead of consuming LINK, serviced CCIP activity is rate-limited by epoch settlement, and LINK reserves can be monitored and replenished.
 
 ### Operational considerations
 

@@ -4,7 +4,6 @@ pragma solidity 0.8.34;
 import {BaseUnitTest} from "../../BaseUnitTest.t.sol";
 
 import {ParentVault} from "../../../../src/vaults/ParentVault.sol";
-import {BaseVault} from "../../../../src/vaults/BaseVault.sol";
 import {IBaseVault} from "../../../../src/interfaces/vaults/IBaseVault.sol";
 
 contract ParentVault_ConstructorUnitTest is BaseUnitTest {
@@ -16,7 +15,6 @@ contract ParentVault_ConstructorUnitTest is BaseUnitTest {
         assertEq(address(parentVault.getAsset()), address(s_mockUsdc));
         assertEq(parentVault.getAssetPrecision(), 10 ** uint256(s_mockUsdc.decimals()));
         assertEq(parentVault.getMinAssetAmount(), 1 * parentVault.getAssetPrecision());
-        assertEq(parentVault.getRemoteWithdrawDustThreshold(), parentVault.getAssetPrecision() / 100);
         assertEq(address(parentVault.getShare()), address(s_yieldcoin));
         assertEq(address(parentVault.getRouter()), address(s_mockCcipRouter));
         assertEq(address(parentVault.getAdapterRegistry()), address(s_adapterRegistry));
@@ -25,15 +23,5 @@ contract ParentVault_ConstructorUnitTest is BaseUnitTest {
     function test_ParentVault_constructor_RevertWhen_ShareIsZeroAddress() public {
         vm.expectRevert(IBaseVault.BaseVault__NoZeroAddress.selector);
         new ParentVault(_baseVaultParams(PARENT_CHAIN_SELECTOR), address(0));
-    }
-
-    function test_ParentVault_constructor_RevertWhen_RemoteWithdrawDustThresholdIsZero() public {
-        address lowDecimalAsset = makeAddr("low-decimal asset");
-        vm.mockCall(lowDecimalAsset, abi.encodeWithSignature("decimals()"), abi.encode(uint8(1)));
-        BaseVault.ConstructorParams memory params = _baseVaultParams(PARENT_CHAIN_SELECTOR);
-        params.asset = lowDecimalAsset;
-
-        vm.expectRevert(IBaseVault.BaseVault__NoZeroAmount.selector);
-        new ParentVault(params, address(s_yieldcoin));
     }
 }

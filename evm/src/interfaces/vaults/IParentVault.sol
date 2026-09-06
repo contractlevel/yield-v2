@@ -48,6 +48,9 @@ interface IParentVault is IBaseVault {
     error ParentVault__ShareBurnWithZeroTotalShares();
     /// @dev Thrown when closeEpoch would settle deposits into too few shares for minimum-size depositors
     error ParentVault__DepositWouldMintZeroShares();
+    /// @dev Thrown when a remote net withdrawal is below the minimum asset amount
+    /// @param amount The calculated remote net-withdraw amount
+    error ParentVault__RemoteWithdrawAmountTooSmall(uint256 amount);
     /// @dev Thrown when the epoch is not executing
     /// @param epochNonce The nonce for the epoch that is not executing
     error ParentVault__EpochNotExecuting(uint256 epochNonce);
@@ -136,10 +139,6 @@ interface IParentVault is IBaseVault {
     /// @param epochNonce The nonce of the executing epoch
     /// @param amount The amount of underlying asset that needs to be withdrawn
     event EpochWithdrawExecuting(uint256 indexed epochNonce, uint256 indexed amount);
-    /// @notice Emitted when a remote withdrawal shortfall is forfeited instead of sent cross-chain
-    /// @param epochNonce The nonce of the settled epoch
-    /// @param amount The remote withdrawal shortfall retained in the remote strategy
-    event RemoteWithdrawDustForfeited(uint256 indexed epochNonce, uint256 indexed amount);
     /// @notice Emitted when an epoch is claimable
     /// @param epochNonce The nonce of the claimable epoch
     event EpochClaimable(uint256 indexed epochNonce);
@@ -442,10 +441,6 @@ interface IParentVault is IBaseVault {
     /// @notice Returns the minimum deposit amount
     /// @return minAssetAmount The minimum asset amount, equal to 1 * i_assetPrecision
     function getMinAssetAmount() external view returns (uint256 minAssetAmount);
-
-    /// @notice Returns the remote-withdraw dust threshold
-    /// @return threshold One hundredth of a whole underlying asset unit
-    function getRemoteWithdrawDustThreshold() external view returns (uint256 threshold);
 
     /// @notice Returns whether a protocol ID is supported on any chain across the Yieldcoin v2 system
     /// @param protocolId The protocol ID to query

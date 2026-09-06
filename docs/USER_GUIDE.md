@@ -41,7 +41,7 @@ Withdraw flow:
 
 The withdraw intent is recorded in the current open epoch and the shares are escrowed by the vault. The user does not receive the underlying asset at withdraw time. Escrowed shares are burned during `claimAsset`.
 
-When the active strategy is remote and an epoch's net withdrawal shortfall is below `getRemoteWithdrawDustThreshold()`, ParentVault does not request a Child withdrawal. The epoch becomes claimable using only assets already held by ParentVault, so the shortfall is forfeited by that epoch's withdrawers. At or above the threshold, ParentVault requests the full amount from ChildVault and allocates the complete amount delivered through CCIP to withdraw claims. For the USDC vault, the threshold is `0.01 USDC`.
+When the active strategy is remote and an epoch's aggregate net withdrawal is below `getMinAssetAmount()`, `closeEpoch` reverts and the epoch remains open. Deposits, additional withdrawals, or cancellation can move the aggregate net flow out of that deferred range. At or above the minimum, ParentVault requests the full amount from ChildVault and allocates the complete amount delivered through CCIP to withdrawal claims. The minimum is one whole underlying asset unit, or `1 USDC` for the USDC vault.
 
 To fund a withdraw intent for another account, call `withdrawFor(beneficiary, shareAmount)`. The
 caller supplies the shares and allowance, but the beneficiary owns the resulting epoch position.
@@ -51,7 +51,6 @@ Useful reads:
 
 - `getWithdrawShareBurnAmount(user, epochNonce)` returns the user's submitted share burn amount for that epoch.
 - `getMinAssetAmount()` returns the minimum deposit amount.
-- `getRemoteWithdrawDustThreshold()` returns the remote-withdraw dust threshold. Remote shortfalls below it are dust; amounts at or above it are serviced.
 - `getEpoch(epochNonce)` returns the epoch data, including its current status.
 
 ## Cancel

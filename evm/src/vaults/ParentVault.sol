@@ -28,8 +28,6 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     //////////////////////////////////////////////////////////////*/
     /// @dev Precision of the 18-decimal YIELD share token
     uint256 internal constant SHARE_PRECISION = 1e18;
-    /// @dev Number of equal parts in one whole asset unit used to derive the remote-withdraw dust threshold
-    uint256 internal constant REMOTE_WITHDRAW_DUST_DIVISOR = 100;
 
     /*//////////////////////////////////////////////////////////////
                                IMMUTABLE
@@ -38,8 +36,6 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     address internal immutable i_share;
     /// @dev Minimum deposit amount: 1 * i_assetPrecision
     uint256 internal immutable i_minAssetAmount;
-    /// @dev Remote-withdraw dust threshold: one hundredth of i_assetPrecision
-    uint256 internal immutable i_remoteWithdrawDustThreshold;
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
@@ -49,15 +45,12 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /// @param share The address of the Yieldcoin (YIELD) share token
     /// @dev Reverts if BaseVault immutable configuration is invalid
     /// @dev Reverts if share is the zero address
-    /// @dev Reverts if the asset precision cannot represent one hundredth of a whole asset unit
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(BaseVault.ConstructorParams memory params, address share) BaseVault(params) {
         _revertIfZeroAddress(share);
 
         i_share = share;
         i_minAssetAmount = 1 * i_assetPrecision;
-        i_remoteWithdrawDustThreshold = i_assetPrecision / REMOTE_WITHDRAW_DUST_DIVISOR;
-        _revertIfZeroAmount(i_remoteWithdrawDustThreshold);
 
         _disableInitializers();
     }
@@ -383,6 +376,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /// @dev Reverts if the scaled TVL-to-share ratio rounds down to zero
     /// @dev Reverts if shares are submitted for withdrawal while the authoritative share supply is zero
     /// @dev Reverts if deposit settlement would allocate zero shares to a minimum-size deposit
+    /// @dev Reverts if a remote net withdrawal is below the minimum asset amount
     /// @dev Reverts if the epoch's total deposit or total withdraw amount cannot be safely cast to int256
     /// @dev Requires any local strategy or CCIP interaction selected by the net-flow branch to succeed
     /// @dev The preceding-epoch guard prevents claims and strategy changes while a remote epoch remains executing
@@ -404,14 +398,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
         address activeAdapter = $_baseVault.s_activeProtocolAdapter;
         bool isLocalStrategy = activeAdapter != address(0);
         ParentVaultEpochLib.CloseEpochExternalAction memory externalAction = ParentVaultEpochLib.closeEpoch(
-            $,
-            expectedEpochNonce,
-            tvl,
-            SHARE_PRECISION,
-            i_assetPrecision,
-            i_minAssetAmount,
-            i_remoteWithdrawDustThreshold,
-            isLocalStrategy
+            $, expectedEpochNonce, tvl, SHARE_PRECISION, i_assetPrecision, i_minAssetAmount, isLocalStrategy
         );
 
         if (externalAction.action == ParentVaultEpochLib.ExternalAction.DEPOSIT_TO_LOCAL_STRATEGY) {
@@ -719,12 +706,6 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /// @return minAssetAmount The minimum asset amount, equal to 1 * i_assetPrecision
     function getMinAssetAmount() external view returns (uint256 minAssetAmount) {
         minAssetAmount = i_minAssetAmount;
-    }
-
-    /// @notice Returns the remote-withdraw dust threshold
-    /// @return threshold One hundredth of a whole underlying asset unit
-    function getRemoteWithdrawDustThreshold() external view returns (uint256 threshold) {
-        threshold = i_remoteWithdrawDustThreshold;
     }
 
     /// @notice Returns whether a protocol ID is supported on any chain across the Yieldcoin v2 system

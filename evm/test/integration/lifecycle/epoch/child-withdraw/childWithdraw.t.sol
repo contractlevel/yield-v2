@@ -4,6 +4,9 @@ pragma solidity 0.8.34;
 import {BaseIntegrationTest} from "../../../BaseIntegrationTest.t.sol";
 
 import {Types} from "../../../../../src/libraries/Types.sol";
+import {IParentVault} from "../../../../../src/interfaces/vaults/IParentVault.sol";
+import {IWorkflowRouter} from "../../../../../src/interfaces/modules/IWorkflowRouter.sol";
+import {ParentVault} from "../../../../../src/vaults/ParentVault.sol";
 import {MockAToken} from "../../../../mocks/MockAToken.sol";
 import {MockAaveV3Pool} from "../../../../mocks/MockAaveV3Pool.sol";
 
@@ -72,38 +75,64 @@ contract ChildWithdraw_EpochIntegrationTest is BaseIntegrationTest {
         assertEq(parent.vault.getTotalShares(), 0);
     }
 
-    function test_Epoch_childWithdraw_RepeatedRemoteDustClosesWithoutChildExecution() external {
-        uint256 dustThreshold = parent.vault.getRemoteWithdrawDustThreshold();
+    function test_Epoch_childWithdraw_SubminimumRemoteWithdrawDefersUntilAggregateReachesMinimum() external {
+        uint256 minAssetAmount = parent.vault.getMinAssetAmount();
         uint256 childLinkBalance = local.link.balanceOf(address(child.vault));
-        uint256 totalDustSharesBurned;
+        uint256 firstShareAmount = (minAssetAmount - 1) * parent.vault.getTotalShares() / REMOTE_DEPOSIT_AMOUNT;
+        uint256 minimumShareAmount = minAssetAmount * parent.vault.getTotalShares() / REMOTE_DEPOSIT_AMOUNT;
 
-        _approveShares(i_depositor, address(parent.vault), s_shareAmount);
+        _approveShares(i_depositor, address(parent.vault), minimumShareAmount);
 
-        for (uint256 epochNonce = 2; epochNonce < 5; ++epochNonce) {
-            uint256 dustShareAmount = (dustThreshold - 1) * parent.vault.getTotalShares() / REMOTE_DEPOSIT_AMOUNT;
-            totalDustSharesBurned += dustShareAmount;
-            _changePrank(i_depositor);
-            parent.vault.withdraw(dustShareAmount);
+        _changePrank(i_depositor);
+        parent.vault.withdraw(firstShareAmount);
 
-            _warpPastMinEpoch();
-            _closeEpochThroughWorkflow(
-                parent.workflowRouter, PARENT_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner, REMOTE_DEPOSIT_AMOUNT
-            );
+        _warpPastMinEpoch();
+        bytes memory metadata = _buildMetadata(PARENT_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner);
+        bytes memory report = abi.encodePacked(
+            parent.workflowRouter.getThisChainSelector(),
+            address(parent.workflowRouter),
+            block.timestamp,
+            abi.encodeWithSelector(ParentVault.closeEpoch.selector, parent.vault.getEpochNonce(), REMOTE_DEPOSIT_AMOUNT)
+        );
+        _changePrank(networkConfig.cre.keystoneForwarder);
+        bytes memory vaultError =
+            abi.encodeWithSelector(IParentVault.ParentVault__RemoteWithdrawAmountTooSmall.selector, minAssetAmount - 1);
+        vm.expectRevert(abi.encodeWithSelector(IWorkflowRouter.WorkflowRouter__CallFailed.selector, vaultError));
+        parent.workflowRouter.onReport(metadata, report);
 
-            assertEq(uint256(parent.vault.getEpoch(epochNonce).status), uint256(Types.EpochStatus.CLAIMABLE));
-            assertEq(parent.vault.getEpoch(epochNonce).totalWithdrawClaimAmount, 0);
-            assertEq(parent.vault.getEpochNonce(), epochNonce + 1);
-            assertEq(local.link.balanceOf(address(child.vault)), childLinkBalance);
+        assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.OPEN));
+        assertEq(parent.vault.getEpochNonce(), 2);
+        assertEq(parent.vault.getWithdrawShareBurnAmount(i_depositor, 2), firstShareAmount);
+        assertEq(local.link.balanceOf(address(child.vault)), childLinkBalance);
 
-            uint256 depositorUsdcBeforeClaim = IERC20(parent.asset).balanceOf(i_depositor);
-            _changePrank(i_depositor);
-            parent.vault.claimAsset(epochNonce);
+        _changePrank(i_depositor);
+        parent.vault.withdraw(minimumShareAmount - firstShareAmount);
 
-            assertEq(IERC20(parent.asset).balanceOf(i_depositor), depositorUsdcBeforeClaim);
-            assertEq(parent.vault.getWithdrawShareBurnAmount(i_depositor, epochNonce), 0);
-        }
+        _closeEpochThroughWorkflow(
+            parent.workflowRouter, PARENT_WORKFLOW_ID, CLOSE_EPOCH_WORKFLOW_NAME, i_owner, REMOTE_DEPOSIT_AMOUNT
+        );
 
-        assertEq(parent.share.balanceOf(i_depositor), s_shareAmount - totalDustSharesBurned);
+        assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.EXECUTING));
+        assertEq(parent.vault.getEpochNonce(), 3);
+        assertEq(parent.vault.getEpoch(2).totalWithdrawClaimAmount, minAssetAmount);
+
+        MockAToken(MockAaveV3Pool(s_childAaveV3Pool).getReserveData(parent.asset).aTokenAddress)
+            .mint(address(child.aaveV3Adapter), minAssetAmount);
+        deal(parent.asset, s_childAaveV3Pool, minAssetAmount);
+        MockAaveV3Pool(s_childAaveV3Pool).setWithdrawReturn(minAssetAmount);
+
+        _executeEpochWithdrawThroughWorkflow(
+            child.workflowRouter, CHILD_WORKFLOW_ID, EXECUTE_WITHDRAW_WORKFLOW_NAME, i_owner, 2, minAssetAmount
+        );
+
+        assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.CLAIMABLE));
+
+        uint256 depositorUsdcBeforeClaim = IERC20(parent.asset).balanceOf(i_depositor);
+        _changePrank(i_depositor);
+        parent.vault.claimAsset(2);
+
+        assertEq(IERC20(parent.asset).balanceOf(i_depositor), depositorUsdcBeforeClaim + minAssetAmount);
+        assertEq(parent.vault.getWithdrawShareBurnAmount(i_depositor, 2), 0);
     }
 
     function _depositAndClaimShares() private returns (uint256 shareAmount) {

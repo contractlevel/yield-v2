@@ -55,7 +55,6 @@ library ParentVaultEpochLib {
     /// @param sharePrecision The precision factor of the Yieldcoin share token
     /// @param assetPrecision The precision factor of the underlying asset
     /// @param minAssetAmount The minimum deposit amount
-    /// @param remoteWithdrawDustThreshold Shortfalls below this amount settle without a remote withdrawal
     /// @param isLocalStrategy Whether the active strategy is on the ParentVault chain
     struct CloseEpochParams {
         uint256 expectedEpochNonce;
@@ -63,7 +62,6 @@ library ParentVaultEpochLib {
         uint256 sharePrecision;
         uint256 assetPrecision;
         uint256 minAssetAmount;
-        uint256 remoteWithdrawDustThreshold;
         bool isLocalStrategy;
     }
 
@@ -98,10 +96,6 @@ library ParentVaultEpochLib {
     /// @param epochNonce The nonce of the executing epoch
     /// @param amount The amount of underlying asset to withdraw
     event EpochWithdrawExecuting(uint256 indexed epochNonce, uint256 indexed amount);
-    /// @notice Emitted when a remote withdrawal shortfall is forfeited instead of sent cross-chain
-    /// @param epochNonce The nonce of the settled epoch
-    /// @param amount The remote withdrawal shortfall retained in the remote strategy
-    event RemoteWithdrawDustForfeited(uint256 indexed epochNonce, uint256 indexed amount);
     /// @notice Emitted when an epoch is claimable
     /// @param epochNonce The nonce of the claimable epoch
     event EpochClaimable(uint256 indexed epochNonce);
@@ -123,7 +117,6 @@ library ParentVaultEpochLib {
     /// @param sharePrecision The share precision factor
     /// @param assetPrecision The underlying asset precision factor used for bootstrap share allocation
     /// @param minAssetAmount The minimum deposit amount
-    /// @param remoteWithdrawDustThreshold Shortfalls below this amount settle without a remote withdrawal
     /// @param isLocalStrategy Whether this chain currently has the active strategy adapter
     /// @return externalAction The external action, epoch nonce, net amount, and total deposit amount ParentVault
     ///         needs to execute the action and finalize the epoch after settlement
@@ -136,6 +129,7 @@ library ParentVaultEpochLib {
     /// @dev Reverts if TVL is zero while shares are outstanding or the scaled TVL-to-share ratio is zero
     /// @dev Reverts if shares are submitted for withdrawal while the authoritative share supply is zero
     /// @dev Reverts if deposit settlement would allocate zero shares to a minimum-size deposit
+    /// @dev Reverts if a remote net withdrawal is below the minimum asset amount
     /// @dev Reverts if totalDepositAmount or totalWithdraw cannot be safely cast to int256
     function closeEpoch(
         ParentVaultStore.ParentVaultStorage storage $,
@@ -144,18 +138,10 @@ library ParentVaultEpochLib {
         uint256 sharePrecision,
         uint256 assetPrecision,
         uint256 minAssetAmount,
-        uint256 remoteWithdrawDustThreshold,
         bool isLocalStrategy
     ) public returns (CloseEpochExternalAction memory externalAction) {
         externalAction = _closeEpoch(
-            $,
-            expectedEpochNonce,
-            tvl,
-            sharePrecision,
-            assetPrecision,
-            minAssetAmount,
-            remoteWithdrawDustThreshold,
-            isLocalStrategy
+            $, expectedEpochNonce, tvl, sharePrecision, assetPrecision, minAssetAmount, isLocalStrategy
         );
     }
 
@@ -166,7 +152,6 @@ library ParentVaultEpochLib {
     /// @param sharePrecision The share precision factor
     /// @param assetPrecision The underlying asset precision factor used for bootstrap share allocation
     /// @param minAssetAmount The minimum deposit amount
-    /// @param remoteWithdrawDustThreshold Shortfalls below this amount settle without a remote withdrawal
     /// @param isLocalStrategy Whether this chain currently has the active strategy adapter
     /// @return externalAction The external action, epoch nonce, net amount, and total deposit amount ParentVault
     ///         needs to execute the action and finalize the epoch after settlement
@@ -179,6 +164,7 @@ library ParentVaultEpochLib {
     /// @dev Reverts if TVL is zero while shares are outstanding or the scaled TVL-to-share ratio is zero
     /// @dev Reverts if shares are submitted for withdrawal while the authoritative share supply is zero
     /// @dev Reverts if deposit settlement would allocate zero shares to a minimum-size deposit
+    /// @dev Reverts if a remote net withdrawal is below the minimum asset amount
     /// @dev Reverts if totalDepositAmount or totalWithdraw cannot be safely cast to int256
     function _closeEpoch(
         ParentVaultStore.ParentVaultStorage storage $,
@@ -187,7 +173,6 @@ library ParentVaultEpochLib {
         uint256 sharePrecision,
         uint256 assetPrecision,
         uint256 minAssetAmount,
-        uint256 remoteWithdrawDustThreshold,
         bool isLocalStrategy
     ) internal returns (CloseEpochExternalAction memory externalAction) {
         CloseEpochParams memory params = CloseEpochParams({
@@ -196,7 +181,6 @@ library ParentVaultEpochLib {
             sharePrecision: sharePrecision,
             assetPrecision: assetPrecision,
             minAssetAmount: minAssetAmount,
-            remoteWithdrawDustThreshold: remoteWithdrawDustThreshold,
             isLocalStrategy: isLocalStrategy
         });
         externalAction = _closeEpoch($, params);
@@ -258,6 +242,12 @@ library ParentVaultEpochLib {
         ) {
             revert IParentVault.ParentVault__DepositWouldMintZeroShares();
         }
+        if (!params.isLocalStrategy && accounting.netFlow < 0) {
+            uint256 netWithdrawAmount = uint256(-accounting.netFlow);
+            if (netWithdrawAmount < params.minAssetAmount) {
+                revert IParentVault.ParentVault__RemoteWithdrawAmountTooSmall(netWithdrawAmount);
+            }
+        }
         // This is the sole write to s_totalShares for the epoch and folds in the epoch's
         // deposit allocation and submitted withdrawals.
         $.s_totalShares = accounting.totalShares + accounting.newShares - accounting.totalShareBurnAmount;
@@ -267,21 +257,16 @@ library ParentVaultEpochLib {
         s_epoch.remainingShareBurnAmount = accounting.totalShareBurnAmount;
 
         bool isSynchronousLocalWithdraw = params.isLocalStrategy && accounting.netFlow < 0;
-        bool isRemoteWithdrawDust = !params.isLocalStrategy && accounting.netFlow < 0
-            && uint256(-accounting.netFlow) < params.remoteWithdrawDustThreshold;
         if (!isSynchronousLocalWithdraw) {
             // WITHDRAW_FROM_LOCAL_STRATEGY resolves synchronously within the same
             // transaction via finalizeLocalNetWithdraw, which writes the actual (not
             // theoretical) totalWithdrawClaimAmount/remainingWithdrawClaimAmount once the
             // real adapter withdraw amount is known - writing the theoretical `totalWithdraw`
             // here would just be overwritten moments later. Every other case (both deposit
-            // branches, and a serviced remote-withdraw path - which resolves in a later
-            // transaction, so the theoretical value must be observable in the meantime)
-            // still need it. Remote dust is terminal and can claim only Parent-held deposits.
-            uint256 withdrawClaimAmount =
-                isRemoteWithdrawDust ? accounting.totalDepositAmount : accounting.totalWithdraw;
-            s_epoch.totalWithdrawClaimAmount = withdrawClaimAmount;
-            s_epoch.remainingWithdrawClaimAmount = withdrawClaimAmount;
+            // branches, and the remote-withdraw path - which resolves in a later transaction,
+            // so the theoretical value must be observable in the meantime) still need it.
+            s_epoch.totalWithdrawClaimAmount = accounting.totalWithdraw;
+            s_epoch.remainingWithdrawClaimAmount = accounting.totalWithdraw;
         }
 
         externalAction.epochNonce = epochNonce;
@@ -308,10 +293,6 @@ library ParentVaultEpochLib {
             if (params.isLocalStrategy) {
                 externalAction.amount = netWithdrawAmount;
                 externalAction.action = ExternalAction.WITHDRAW_FROM_LOCAL_STRATEGY;
-            } else if (isRemoteWithdrawDust) {
-                s_epoch.status = Types.EpochStatus.CLAIMABLE;
-                emit RemoteWithdrawDustForfeited(epochNonce, netWithdrawAmount);
-                emit EpochClaimable(epochNonce);
             } else {
                 externalAction.amount = netWithdrawAmount;
                 externalAction.action = ExternalAction.WAIT_FOR_REMOTE_WITHDRAW;

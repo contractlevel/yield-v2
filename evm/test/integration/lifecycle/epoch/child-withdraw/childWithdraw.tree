@@ -10,11 +10,11 @@ Epoch_2b_childWithdraw
 ├── and ParentVault should become claimable after local CCIP delivery
 └── and the withdrawer should claim the full settled USDC while shares are burned
 
-Epoch_2b_childWithdraw_remoteDust
+Epoch_2b_childWithdraw_subminimumDeferral
 ├── given the active strategy is remote on Child
-├── and consecutive epochs each have a remote net-withdraw shortfall below the remote withdraw dust threshold
-├── when CRE closes each epoch through Parent WorkflowRouter
-├── then ParentVault should make each epoch immediately claimable
-├── and ParentVault should open each next epoch without requesting a Child withdrawal
-├── and each epoch's withdraw claim pool should contain only Parent-held deposits
-└── and the withdrawer should receive no USDC while the submitted shares are burned
+├── and the aggregate remote net withdrawal is below the minimum asset amount
+├── when CRE attempts to close the epoch through Parent WorkflowRouter
+├── then ParentVault should revert and leave the epoch open without spending Child LINK
+├── when another withdrawal raises the aggregate amount to the minimum
+├── then ParentVault should close the same epoch and request the full remote withdrawal
+└── and the withdrawer should receive the settled asset after Child execution

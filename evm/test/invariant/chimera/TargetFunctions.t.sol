@@ -259,6 +259,17 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         uint256 totalDepositAmount = parent.vault.getEpoch(epochNonce).totalDepositAmount;
         uint256 netWithdrawAmount = totalWithdrawUsdc > totalDepositAmount ? totalWithdrawUsdc - totalDepositAmount : 0;
 
+        if (
+            parent.vault.getActiveProtocolAdapter() == address(0) && netWithdrawAmount != 0
+                && netWithdrawAmount < MIN_DEPOSIT_AMOUNT
+        ) {
+            _warpPastEpoch(epochNonce);
+            _assertCloseRejectedAndUnchanged(
+                tvl, "EPOCH-022: subminimum remote net withdrawal did not defer epoch close"
+            );
+            return;
+        }
+
         if (netWithdrawAmount != 0) {
             _setActiveStrategyWithdrawReturn(netWithdrawAmount);
         }
@@ -664,7 +675,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         if (claimEpochNonce == 0) {
             handler_deposit(actorSeed, amountSeed);
-            handler_closeEpoch(0);
+            _closeCurrentEpochIfNotEmpty();
             claimEpochNonce = _claimableDepositEpoch(actor, epochSeed);
         }
 
@@ -722,7 +733,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             _changePrank(caller);
             parent.vault.depositFor(user, amount);
             _recordDepositFor(caller, user, amount);
-            handler_closeEpoch(0);
+            _closeCurrentEpochIfNotEmpty();
             claimEpochNonce = _claimableDepositEpoch(user, epochSeed);
         }
 
@@ -873,7 +884,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
 
         if (claimEpochNonce == 0) {
             handler_withdraw(actorSeed, shareSeed, amountSeed);
-            handler_closeEpoch(0);
+            _closeCurrentEpochIfNotEmpty();
             claimEpochNonce = _claimableWithdrawEpoch(actor, epochSeed);
         }
 
@@ -941,7 +952,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
             _changePrank(caller);
             parent.vault.withdrawFor(user, shareBurnAmount);
             _recordWithdrawFor(caller, user, shareBurnAmount);
-            handler_closeEpoch(0);
+            _closeCurrentEpochIfNotEmpty();
             claimEpochNonce = _claimableWithdrawEpoch(user, epochSeed);
         }
 
@@ -1377,7 +1388,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         uint256 totalDepositAmount = parent.vault.getEpoch(epochNonce).totalDepositAmount;
         uint256 netWithdrawAmount = totalWithdrawUsdc - totalDepositAmount;
 
-        if (netWithdrawAmount < parent.vault.getRemoteWithdrawDustThreshold()) {
+        if (netWithdrawAmount < parent.vault.getMinAssetAmount()) {
             _bootstrapActorShares(actor);
             _ensureActiveStrategyOnChild(activeChild, protocolSeed, actorSeed, amountSeed);
             _closeCurrentEpochIfNotEmpty();
@@ -1397,7 +1408,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         }
 
         t(
-            netWithdrawAmount >= parent.vault.getRemoteWithdrawDustThreshold(),
+            netWithdrawAmount >= parent.vault.getMinAssetAmount(),
             "recovery setup: net withdraw is below remote service threshold"
         );
 
@@ -1657,7 +1668,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         uint256 totalShares = parent.vault.getTotalShares();
         uint256 netWithdrawAmount = shareBurnAmount * tvl / totalShares;
 
-        if (netWithdrawAmount < parent.vault.getRemoteWithdrawDustThreshold()) {
+        if (netWithdrawAmount < parent.vault.getMinAssetAmount()) {
             _bootstrapActorShares(actor);
             _ensureActiveStrategyOnChild(activeChild, protocolSeed, actorSeed, amountSeed);
             _closeCurrentEpochIfNotEmpty();
@@ -1674,7 +1685,7 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
         }
 
         t(
-            netWithdrawAmount >= parent.vault.getRemoteWithdrawDustThreshold(),
+            netWithdrawAmount >= parent.vault.getMinAssetAmount(),
             "recovery setup: net withdraw is below remote service threshold"
         );
         _recordEpochSettlement(epochNonce, tvl, totalShares);
@@ -2221,10 +2232,24 @@ abstract contract TargetFunctions is BaseTargetFunctions, Properties {
     }
 
     function _closeCurrentEpochIfNotEmpty() internal {
+        // Recovery can change the active strategy, TVL, and share supply used below.
+        if (_recoveryModeExists()) {
+            _resolvePendingRecovery();
+        }
+
         uint256 epochNonce = parent.vault.getEpochNonce();
         Types.Epoch memory epoch = parent.vault.getEpoch(epochNonce);
 
         if (epoch.totalDepositAmount != 0 || epoch.totalShareBurnAmount != 0) {
+            uint256 totalShares = parent.vault.getTotalShares();
+            uint256 tvl = _activeStrategyTvl();
+            uint256 totalWithdrawAmount = totalShares == 0 ? 0 : epoch.totalShareBurnAmount * tvl / totalShares;
+            if (
+                parent.vault.getActiveProtocolAdapter() == address(0) && totalWithdrawAmount > epoch.totalDepositAmount
+                    && totalWithdrawAmount - epoch.totalDepositAmount < MIN_DEPOSIT_AMOUNT
+            ) {
+                handler_deposit(0, MIN_DEPOSIT_AMOUNT);
+            }
             handler_closeEpoch(0);
         }
     }

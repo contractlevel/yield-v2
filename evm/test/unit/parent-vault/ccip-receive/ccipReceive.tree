@@ -35,7 +35,7 @@ ParentVault_ccipReceive
 │   │   ├── it should update both withdraw claim pools with the full received amount
 │   │   ├── it should emit EpochClaimable
 │   │   └── it should emit CCIPReceived
-│   ├── when the received USDC amount is below i_remoteWithdrawDustThreshold
+│   ├── when the received USDC amount is below the expected withdrawal
 │   │   └── it should allocate the complete received amount to withdraw claims
 │   └── when the received USDC amount is greater than the epoch withdraw obligation
 │       ├── it should make the epoch claimable

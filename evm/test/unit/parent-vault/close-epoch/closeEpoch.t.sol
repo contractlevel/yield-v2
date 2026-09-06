@@ -256,66 +256,71 @@ contract ParentVault_CloseEpochUnitTest is BaseUnitTest {
         assertEq(uint256(log.topics[2]), TVL);
     }
 
-    function test_ParentVault_closeEpoch_RemoteNetWithdrawDust_MarksEpochClaimable() public {
+    function test_ParentVault_closeEpoch_RevertWhen_RemoteNetWithdrawIsBelowMinAssetAmount() public {
         _prepareRemoteStrategy();
         _prepareNetWithdraw();
+        uint256 amount = s_parentVault.getMinAssetAmount() - 1;
+        uint256 totalSharesBefore = s_parentVault.getTotalShares();
+        uint256 epochNonce = s_parentVault.getEpochNonce();
 
-        _closeEpoch(s_parentVault.getRemoteWithdrawDustThreshold() - 1);
+        _warpPastMinEpoch();
+        _changePrank(i_epochOperator);
+        vm.expectRevert(abi.encodeWithSelector(IParentVault.ParentVault__RemoteWithdrawAmountTooSmall.selector, amount));
+        s_parentVault.closeEpoch(epochNonce, amount);
 
-        assertEq(uint256(s_parentVault.getEpoch(1).status), uint256(Types.EpochStatus.CLAIMABLE));
+        assertEq(uint256(s_parentVault.getEpoch(1).status), uint256(Types.EpochStatus.OPEN));
+        assertEq(s_parentVault.getEpochNonce(), 1);
+        assertEq(s_parentVault.getTotalShares(), totalSharesBefore);
         assertEq(s_parentVault.getEpoch(1).totalWithdrawClaimAmount, 0);
         assertEq(s_parentVault.getEpoch(1).remainingWithdrawClaimAmount, 0);
-        _assertNextEpochOpen();
+        assertEq(s_parentVault.getEpoch(1).totalShareBurnAmount, WITHDRAW_SHARES);
     }
 
-    function test_ParentVault_closeEpoch_RemoteNetWithdrawDust_WhenMixed_SetsClaimPoolToDeposits() public {
+    function test_ParentVault_closeEpoch_RevertWhen_MixedRemoteNetWithdrawIsBelowMinAssetAmount() public {
         _prepareRemoteStrategy();
         _submitDeposit();
         _prepareNetWithdraw();
+        uint256 amount = s_parentVault.getMinAssetAmount() - 1;
+        uint256 epochNonce = s_parentVault.getEpochNonce();
 
-        _closeEpoch(DEPOSIT_AMOUNT + s_parentVault.getRemoteWithdrawDustThreshold() - 1);
-
-        assertEq(uint256(s_parentVault.getEpoch(1).status), uint256(Types.EpochStatus.CLAIMABLE));
-        assertEq(s_parentVault.getEpoch(1).totalWithdrawClaimAmount, DEPOSIT_AMOUNT);
-        assertEq(s_parentVault.getEpoch(1).remainingWithdrawClaimAmount, DEPOSIT_AMOUNT);
+        _warpPastMinEpoch();
+        _changePrank(i_epochOperator);
+        vm.expectRevert(abi.encodeWithSelector(IParentVault.ParentVault__RemoteWithdrawAmountTooSmall.selector, amount));
+        s_parentVault.closeEpoch(epochNonce, DEPOSIT_AMOUNT + amount);
     }
 
-    function test_ParentVault_closeEpoch_RemoteNetWithdrawDust_EmitsRemoteWithdrawDustForfeited() public {
+    function test_ParentVault_closeEpoch_RemoteNetWithdraw_WhenAtMinAssetAmount_MarksEpochExecuting() public {
         _prepareRemoteStrategy();
         _prepareNetWithdraw();
 
-        vm.recordLogs();
-        uint256 dustAmount = s_parentVault.getRemoteWithdrawDustThreshold() - 1;
-        _closeEpoch(dustAmount);
-
-        Vm.Log memory log =
-            _assertEmittedBy(keccak256("RemoteWithdrawDustForfeited(uint256,uint256)"), address(s_parentVault));
-        assertEq(uint256(log.topics[1]), 1);
-        assertEq(uint256(log.topics[2]), dustAmount);
-    }
-
-    function test_ParentVault_closeEpoch_RemoteNetWithdraw_WhenAtDustThreshold_MarksEpochExecuting() public {
-        _prepareRemoteStrategy();
-        _prepareNetWithdraw();
-
-        uint256 threshold = s_parentVault.getRemoteWithdrawDustThreshold();
+        uint256 threshold = s_parentVault.getMinAssetAmount();
         _closeEpoch(threshold);
 
         assertEq(uint256(s_parentVault.getEpoch(1).status), uint256(Types.EpochStatus.EXECUTING));
         assertEq(s_parentVault.getEpoch(1).totalWithdrawClaimAmount, threshold);
     }
 
-    function test_ParentVault_closeEpoch_RemoteNetWithdraw_WhenAtDustThreshold_RequestsFullShortfall() public {
+    function test_ParentVault_closeEpoch_RemoteNetWithdraw_WhenAtMinAssetAmount_RequestsFullShortfall() public {
         _prepareRemoteStrategy();
         _prepareNetWithdraw();
 
         vm.recordLogs();
-        uint256 threshold = s_parentVault.getRemoteWithdrawDustThreshold();
+        uint256 threshold = s_parentVault.getMinAssetAmount();
         _closeEpoch(threshold);
 
         Vm.Log memory log =
             _assertEmittedBy(keccak256("EpochWithdrawExecuting(uint256,uint256)"), address(s_parentVault));
         assertEq(uint256(log.topics[2]), threshold);
+    }
+
+    function test_ParentVault_closeEpoch_LocalNetWithdraw_WhenBelowMinAssetAmount_Settles() public {
+        _prepareNetWithdraw();
+        uint256 amount = s_parentVault.getMinAssetAmount() - 1;
+
+        _closeEpoch(amount);
+
+        assertEq(uint256(s_parentVault.getEpoch(1).status), uint256(Types.EpochStatus.CLAIMABLE));
+        assertEq(s_mockProtocolAdapter.getLastWithdrawAmount(), amount);
     }
 
     function test_ParentVault_closeEpoch_RevertWhen_PreviousEpochNotClaimable() public {
