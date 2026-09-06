@@ -16,4 +16,8 @@ contract Arbitrum_CompoundV3DepositForkTest is BaseCompoundV3ForkTest {
     function test_Arbitrum_compoundV3_deposit_Success() external {
         _assertCompoundV3DepositSucceeds(parent.compoundV3Adapter, address(parent.vault), parent.asset);
     }
+
+    function test_Arbitrum_compoundV3_deposit_OneBaseUnitSucceedsWhenCreditRoundsToZero() external {
+        _assertCompoundV3OneBaseUnitDepositRoundsToZero(parent.compoundV3Adapter, address(parent.vault), parent.asset);
+    }
 }

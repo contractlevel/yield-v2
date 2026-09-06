@@ -13,6 +13,12 @@ contract Optimism_CompoundV3DepositForkTest is BaseCompoundV3ForkTest {
         _assertCompoundV3DepositRevertsWhenCallerIsNotVault(optimismChild.compoundV3Adapter);
     }
 
+    function test_Optimism_compoundV3_deposit_OneBaseUnitSucceedsWhenCreditRoundsToZero() external {
+        _assertCompoundV3OneBaseUnitDepositRoundsToZero(
+            optimismChild.compoundV3Adapter, address(optimismChild.vault), optimismChild.asset
+        );
+    }
+
     function test_Optimism_compoundV3_deposit_Success() external {
         _assertCompoundV3DepositSucceeds(
             optimismChild.compoundV3Adapter, address(optimismChild.vault), optimismChild.asset

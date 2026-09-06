@@ -34,6 +34,24 @@ abstract contract BaseCompoundV3ForkTest is BaseForkTest {
         adapter.withdraw(WITHDRAW_AMOUNT);
     }
 
+    function _assertCompoundV3OneBaseUnitDepositRoundsToZero(CompoundV3Adapter adapter, address vault, address usdc)
+        internal
+    {
+        address comet = adapter.getProtocolPool();
+        assertEq(adapter.getTVL(), 0);
+        uint256 cometBalanceBefore = IERC20(usdc).balanceOf(comet);
+
+        _depositToCompoundV3(adapter, vault, usdc, 1);
+
+        assertEq(IERC20(usdc).balanceOf(comet), cometBalanceBefore + 1);
+        assertEq(IERC20(usdc).balanceOf(address(adapter)), 0);
+        assertEq(adapter.getBufferedAssets(), 0);
+        assertEq(adapter.getTVL(), 0, "one base unit should round to zero credited value");
+
+        // A zero-credit dust supply must not prevent subsequent deposits.
+        _assertCompoundV3DepositSucceeds(adapter, vault, usdc);
+    }
+
     function _assertCompoundV3EpochWithdrawRevertsWhenAmountExceedsTVL(CompoundV3Adapter adapter, address vault)
         internal
     {

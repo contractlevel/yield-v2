@@ -16,4 +16,10 @@ contract Base_CompoundV3DepositForkTest is BaseCompoundV3ForkTest {
     function test_Base_compoundV3_deposit_Success() external {
         _assertCompoundV3DepositSucceeds(baseChild.compoundV3Adapter, address(baseChild.vault), baseChild.asset);
     }
+
+    function test_Base_compoundV3_deposit_OneBaseUnitSucceedsWhenCreditRoundsToZero() external {
+        _assertCompoundV3OneBaseUnitDepositRoundsToZero(
+            baseChild.compoundV3Adapter, address(baseChild.vault), baseChild.asset
+        );
+    }
 }

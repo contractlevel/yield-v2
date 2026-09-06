@@ -5,3 +5,6 @@ GIVEN the Ethereum child Compound v3 adapter
     THEN it reverts
   WHEN the vault deposits USDC
     THEN the adapter supplies to live Compound v3 and TVL increases
+  WHEN the vault deposits one USDC base unit into an empty position
+    THEN supply succeeds even though the credited value rounds to zero
+    AND a subsequent normal deposit succeeds
