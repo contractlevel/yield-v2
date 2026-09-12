@@ -5,7 +5,7 @@ libs = ["lib"]
 solc = "0.8.34"
 optimizer = true
 # @review-deploy before production deployment
-optimizer_runs = 777
+optimizer_runs = 444
 via_ir = false
 no_match_contract = "CryticTester"
 

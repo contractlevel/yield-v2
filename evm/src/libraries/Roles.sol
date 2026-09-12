@@ -5,6 +5,8 @@ pragma solidity 0.8.34;
 /// @author @contractlevel
 /// @notice Roles for the Yieldcoin v2 protocol
 library Roles {
+    /// @notice Role authorized to configure allowlist enforcement and user membership
+    bytes32 internal constant ALLOWLIST_OPERATOR_ROLE = keccak256("ALLOWLIST_OPERATOR_ROLE");
     /// @notice Role that administers local roles; on ParentVault, also authorizes the one-time initial adapter setup
     bytes32 internal constant DEFAULT_ADMIN_ROLE = 0x00;
     /// @notice Role authorized to upgrade vault proxy contracts

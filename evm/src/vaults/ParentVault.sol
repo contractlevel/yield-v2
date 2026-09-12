@@ -2,6 +2,10 @@
 pragma solidity 0.8.34;
 
 import {BaseVault} from "./BaseVault.sol";
+import {Allowlist} from "../modules/Allowlist.sol";
+import {
+    AccessControlDefaultAdminRulesUpgradeable
+} from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
 import {ParentVaultStore} from "./ParentVaultStore.sol";
 import {IBaseVault} from "../interfaces/vaults/IBaseVault.sol";
 import {IParentVault} from "../interfaces/vaults/IParentVault.sol";
@@ -22,7 +26,7 @@ import {Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClie
 /// @notice The user entry and exit point for deposits and withdraw intents in Yieldcoin v2
 /// @dev Coordinates user accounting, epoch settlement, fees, and crosschain strategy allocation
 /// @dev The Yieldcoin v2 system has one ParentVault
-contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
+contract ParentVault is BaseVault, ParentVaultStore, Allowlist, IParentVault {
     /*//////////////////////////////////////////////////////////////
                                CONSTANTS
     //////////////////////////////////////////////////////////////*/
@@ -59,6 +63,8 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /// @param params BaseVault initializer parameters for roles and mutable vault configuration
     /// @param treasury The address of the operator multisig for protocol fees
     /// @param cancelDepositOperator The address authorized to force-cancel stuck deposits
+    /// @param allowlistOperator The nonzero address authorized to manage the allowlist
+    /// @param allowlistEnabled Whether to enforce the initially empty allowlist
     /// @dev Reverts if any BaseVault initializer parameter is invalid
     /// @dev Reverts if treasury is the zero address
     /// @dev Reverts if cancelDepositOperator is the zero address
@@ -67,13 +73,16 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /// @dev Grants CANCEL_DEPOSIT_OPERATOR_ROLE to cancelDepositOperator
     /// @dev Opens epoch one and initializes rebalance nonce one
     /// @dev The initial active protocol adapter must be configured separately after its deployment and registration
-    function initialize(BaseVault.InitParams memory params, address treasury, address cancelDepositOperator)
-        external
-        nonReentrant
-        initializer
-    {
+    function initialize(
+        BaseVault.InitParams memory params,
+        address treasury,
+        address cancelDepositOperator,
+        address allowlistOperator,
+        bool allowlistEnabled
+    ) external nonReentrant initializer {
         _revertIfZeroAddress(treasury);
         _revertIfZeroAddress(cancelDepositOperator);
+        _revertIfZeroAddress(allowlistOperator);
 
         __BaseVault_init(params);
 
@@ -85,6 +94,8 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
         $.s_rebalance.lastRebalanceCompletedTimestamp = block.timestamp;
         $.s_treasury = treasury;
         _grantRole(Roles.CANCEL_DEPOSIT_OPERATOR_ROLE, cancelDepositOperator);
+        _grantRole(Roles.ALLOWLIST_OPERATOR_ROLE, allowlistOperator);
+        _setAllowlistEnabled(allowlistEnabled);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -130,6 +141,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /// @dev Reverts if the current epoch is not open
     /// @dev Requires the caller to have sufficient underlying-asset balance and allowance for amount
     function deposit(uint256 amount) external nonReentrant whenNotPaused returns (uint256 epochNonce) {
+        _validateAllowlist(msg.sender);
         epochNonce =
             ParentVaultUserEpochLib.deposit(_parentVaultStorage(), i_asset, msg.sender, amount, i_minAssetAmount);
     }
@@ -154,6 +166,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     {
         _revertIfZeroAddress(beneficiary);
         _revertIfInvalidBeneficiary(beneficiary);
+        _validateAllowlist(msg.sender, beneficiary);
         epochNonce = ParentVaultUserEpochLib.depositFor(
             _parentVaultStorage(), i_asset, msg.sender, beneficiary, amount, i_minAssetAmount
         );
@@ -168,6 +181,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /// @dev Reverts if the current epoch is not open
     /// @dev Requires the caller to have sufficient share balance and allowance for shareBurnAmount
     function withdraw(uint256 shareBurnAmount) external nonReentrant whenNotPaused returns (uint256 epochNonce) {
+        _validateAllowlist(msg.sender);
         epochNonce = ParentVaultUserEpochLib.withdraw(_parentVaultStorage(), i_share, msg.sender, shareBurnAmount);
     }
 
@@ -191,6 +205,7 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     {
         _revertIfZeroAddress(beneficiary);
         _revertIfInvalidBeneficiary(beneficiary);
+        _validateAllowlist(msg.sender, beneficiary);
         epochNonce = ParentVaultUserEpochLib.withdrawFor(
             _parentVaultStorage(), i_share, msg.sender, beneficiary, shareBurnAmount
         );
@@ -713,6 +728,16 @@ contract ParentVault is BaseVault, ParentVaultStore, IParentVault {
     /// @return isSupported Whether the protocol ID is supported
     function getSupportedProtocol(bytes32 protocolId) external view returns (bool isSupported) {
         isSupported = _parentVaultStorage().s_supportedProtocol[protocolId];
+    }
+
+    /// @inheritdoc BaseVault
+    function supportsInterface(bytes4 interfaceId)
+        public
+        pure
+        override(BaseVault, AccessControlDefaultAdminRulesUpgradeable)
+        returns (bool isSupported)
+    {
+        isSupported = BaseVault.supportsInterface(interfaceId);
     }
 
     /// @notice Returns this vault's accounted underlying-asset value
