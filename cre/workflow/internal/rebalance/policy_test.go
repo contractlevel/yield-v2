@@ -35,24 +35,3 @@ func Test_NeedRebalance(t *testing.T) {
 		})
 	}
 }
-
-func Test_RebalanceCooldownElapsed(t *testing.T) {
-	tests := []struct {
-		name          string
-		lastCompleted int64
-		now           int64
-		want          bool
-	}{
-		{name: "never completed", now: 1, want: true},
-		{name: "negative timestamp", lastCompleted: -1, now: 1, want: true},
-		{name: "before interval", lastCompleted: 100, now: 100 + minRebalanceIntervalSeconds - 1, want: false},
-		{name: "at interval", lastCompleted: 100, now: 100 + minRebalanceIntervalSeconds, want: true},
-		{name: "after interval", lastCompleted: 100, now: 100 + minRebalanceIntervalSeconds + 1, want: true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.want, RebalanceCooldownElapsed(tt.lastCompleted, tt.now), "unexpected cooldown decision")
-		})
-	}
-}

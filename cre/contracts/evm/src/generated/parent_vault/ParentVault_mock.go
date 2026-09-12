@@ -40,7 +40,8 @@ type ParentVaultMock struct {
 	GetEpochNonce                      func() (*big.Int, error)
 	GetInitialActiveProtocolAdapterSet func() (bool, error)
 	GetLink                            func() (common.Address, error)
-	GetMinDepositAmount                func() (*big.Int, error)
+	GetMinAssetAmount                  func() (*big.Int, error)
+	GetParentOperationalState          func() (TypesParentOperationalState, error)
 	GetRebalance                       func() (TypesRebalance, error)
 	GetRebalanceDepositRecovery        func() (TypesRebalanceDepositRecovery, error)
 	GetRecoveryMode                    func() (uint8, error)
@@ -331,15 +332,25 @@ func NewParentVaultMock(address common.Address, clientMock *evmmock.ClientCapabi
 			}
 			return abi.Methods["getLink"].Outputs.Pack(result)
 		},
-		string(abi.Methods["getMinDepositAmount"].ID[:4]): func(payload []byte) ([]byte, error) {
-			if mock.GetMinDepositAmount == nil {
-				return nil, errors.New("getMinDepositAmount method not mocked")
+		string(abi.Methods["getMinAssetAmount"].ID[:4]): func(payload []byte) ([]byte, error) {
+			if mock.GetMinAssetAmount == nil {
+				return nil, errors.New("getMinAssetAmount method not mocked")
 			}
-			result, err := mock.GetMinDepositAmount()
+			result, err := mock.GetMinAssetAmount()
 			if err != nil {
 				return nil, err
 			}
-			return abi.Methods["getMinDepositAmount"].Outputs.Pack(result)
+			return abi.Methods["getMinAssetAmount"].Outputs.Pack(result)
+		},
+		string(abi.Methods["getParentOperationalState"].ID[:4]): func(payload []byte) ([]byte, error) {
+			if mock.GetParentOperationalState == nil {
+				return nil, errors.New("getParentOperationalState method not mocked")
+			}
+			result, err := mock.GetParentOperationalState()
+			if err != nil {
+				return nil, err
+			}
+			return abi.Methods["getParentOperationalState"].Outputs.Pack(result)
 		},
 		string(abi.Methods["getRebalance"].ID[:4]): func(payload []byte) ([]byte, error) {
 			if mock.GetRebalance == nil {

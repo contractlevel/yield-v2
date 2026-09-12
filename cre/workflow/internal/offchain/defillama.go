@@ -158,24 +158,11 @@ func fetchAndParseWithRequester(params fetchParams, requester defiLlamaRequester
 		return fetchResult{}, fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}
 
-	body, err := readLimited(bytes.NewReader(resp.Body), defiLlamaMaxResponseBytes, "relay response body")
-	if err != nil {
-		return fetchResult{}, err
+	if len(resp.Body) > defiLlamaMaxResponseBytes {
+		return fetchResult{}, fmt.Errorf("relay response body exceeds %d bytes", defiLlamaMaxResponseBytes)
 	}
 
-	return parsePools(bytes.NewReader(body), params.Config, params.ActiveProtocolId, params.ActiveChainName)
-}
-
-func readLimited(r io.Reader, limit int64, label string) ([]byte, error) {
-	limited := io.LimitReader(r, limit+1)
-	body, err := io.ReadAll(limited)
-	if err != nil {
-		return nil, fmt.Errorf("read %s: %w", label, err)
-	}
-	if int64(len(body)) > limit {
-		return nil, fmt.Errorf("%s exceeds %d bytes", label, limit)
-	}
-	return body, nil
+	return parsePools(bytes.NewReader(resp.Body), params.Config, params.ActiveProtocolId, params.ActiveChainName)
 }
 
 // parsePools streams the DefiLlama JSON response, filtering and selecting pools.
@@ -196,10 +183,8 @@ func parsePools(r io.Reader, cfg Config, activeProtocolId [32]byte, activeChainN
 		if err != nil {
 			return fetchResult{}, fmt.Errorf("read top-level key: %w", err)
 		}
-		key, ok := t.(string)
-		if !ok {
-			return fetchResult{}, fmt.Errorf("expected top-level object key")
-		}
+		// encoding/json guarantees string keys inside an object.
+		key := t.(string)
 
 		if !strings.EqualFold(key, "data") {
 			if err := skipJSONValue(decoder); err != nil {

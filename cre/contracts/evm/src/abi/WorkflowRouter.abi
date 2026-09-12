@@ -184,6 +184,19 @@
   },
   {
     "type": "function",
+    "name": "getThisChainSelector",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "chainSelector",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getVault",
     "inputs": [],
     "outputs": [
@@ -788,6 +801,22 @@
   },
   {
     "type": "error",
+    "name": "WorkflowRouter__InvalidReportDomain",
+    "inputs": [
+      {
+        "name": "targetChainSelector",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "targetRouter",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "WorkflowRouter__MetadataMismatch",
     "inputs": [
       {
@@ -861,8 +890,45 @@
   },
   {
     "type": "error",
+    "name": "WorkflowRouter__NoZeroChainSelector",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "WorkflowRouter__NoZeroWorkflowId",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "WorkflowRouter__ReportExpired",
+    "inputs": [
+      {
+        "name": "observedAt",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "timestamp",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "WorkflowRouter__ReportFromFuture",
+    "inputs": [
+      {
+        "name": "observedAt",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "timestamp",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
   },
   {
     "type": "error",

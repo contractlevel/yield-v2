@@ -28,6 +28,7 @@ type WorkflowRouterMock struct {
 	DefaultAdminDelayIncreaseWait  func() (*big.Int, error)
 	GetAllowlistedWorkflowSelector func(GetAllowlistedWorkflowSelectorInput) (bool, error)
 	GetRoleAdmin                   func(GetRoleAdminInput) ([32]byte, error)
+	GetThisChainSelector           func() (uint64, error)
 	GetVault                       func() (common.Address, error)
 	GetWorkflowGeneration          func(GetWorkflowGenerationInput) (*big.Int, error)
 	GetWorkflowMetadata            func(GetWorkflowMetadataInput) (IWorkflowRouterWorkflowMetadata, error)
@@ -140,6 +141,16 @@ func NewWorkflowRouterMock(address common.Address, clientMock *evmmock.ClientCap
 				return nil, err
 			}
 			return abi.Methods["getRoleAdmin"].Outputs.Pack(result)
+		},
+		string(abi.Methods["getThisChainSelector"].ID[:4]): func(payload []byte) ([]byte, error) {
+			if mock.GetThisChainSelector == nil {
+				return nil, errors.New("getThisChainSelector method not mocked")
+			}
+			result, err := mock.GetThisChainSelector()
+			if err != nil {
+				return nil, err
+			}
+			return abi.Methods["getThisChainSelector"].Outputs.Pack(result)
 		},
 		string(abi.Methods["getVault"].ID[:4]): func(payload []byte) ([]byte, error) {
 			if mock.GetVault == nil {

@@ -338,6 +338,8 @@ write_local_cre_config() {
     '
       .rebalanceSchedule = "* * * * * *"
       | .epochSchedule = "* * * * * *"
+      | .blockNumber = -2
+      | .assetDecimals = 6
       | .evms |= map(select(.chainName != "polygon-mainnet"))
       | .evms |= map(
           if .chainName == "ethereum-mainnet-arbitrum-1" then

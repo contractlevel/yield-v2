@@ -195,8 +195,56 @@
   },
   {
     "type": "function",
+    "name": "claimAssetFor",
+    "inputs": [
+      {
+        "name": "user",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "epochNonce",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "withdrawAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "claimShares",
     "inputs": [
+      {
+        "name": "epochNonce",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "shareMintAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "claimSharesFor",
+    "inputs": [
+      {
+        "name": "user",
+        "type": "address",
+        "internalType": "address"
+      },
       {
         "name": "epochNonce",
         "type": "uint256",
@@ -217,6 +265,11 @@
     "name": "closeEpoch",
     "inputs": [
       {
+        "name": "expectedEpochNonce",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
         "name": "tvl",
         "type": "uint256",
         "internalType": "uint256"
@@ -228,14 +281,31 @@
   {
     "type": "function",
     "name": "completeEpochDeposit",
-    "inputs": [],
+    "inputs": [
+      {
+        "name": "expectedEpochNonce",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "actualDepositAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
     "outputs": [],
     "stateMutability": "nonpayable"
   },
   {
     "type": "function",
     "name": "completeRebalance",
-    "inputs": [],
+    "inputs": [
+      {
+        "name": "expectedRebalanceNonce",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
     "outputs": [],
     "stateMutability": "nonpayable"
   },
@@ -282,6 +352,30 @@
     "type": "function",
     "name": "deposit",
     "inputs": [
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "epochNonce",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "depositFor",
+    "inputs": [
+      {
+        "name": "beneficiary",
+        "type": "address",
+        "internalType": "address"
+      },
       {
         "name": "amount",
         "type": "uint256",
@@ -515,11 +609,6 @@
             "internalType": "uint256"
           },
           {
-            "name": "pricePerShare",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
             "name": "remainingDepositClaimAmount",
             "type": "uint256",
             "internalType": "uint256"
@@ -595,13 +684,213 @@
   },
   {
     "type": "function",
-    "name": "getMinDepositAmount",
+    "name": "getMinAssetAmount",
     "inputs": [],
     "outputs": [
       {
-        "name": "minDepositAmount",
+        "name": "minAssetAmount",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getParentOperationalState",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "state",
+        "type": "tuple",
+        "internalType": "struct Types.ParentOperationalState",
+        "components": [
+          {
+            "name": "paused",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "recoveryMode",
+            "type": "uint8",
+            "internalType": "enum Types.RecoveryMode"
+          },
+          {
+            "name": "currentEpochNonce",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "currentEpoch",
+            "type": "tuple",
+            "internalType": "struct Types.Epoch",
+            "components": [
+              {
+                "name": "totalDepositAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "totalShareBurnAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "totalWithdrawClaimAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "remainingDepositClaimAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "remainingShareMintAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "remainingShareBurnAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "remainingWithdrawClaimAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "openedAtTimestamp",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "status",
+                "type": "uint8",
+                "internalType": "enum Types.EpochStatus"
+              }
+            ]
+          },
+          {
+            "name": "previousEpoch",
+            "type": "tuple",
+            "internalType": "struct Types.Epoch",
+            "components": [
+              {
+                "name": "totalDepositAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "totalShareBurnAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "totalWithdrawClaimAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "remainingDepositClaimAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "remainingShareMintAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "remainingShareBurnAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "remainingWithdrawClaimAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "openedAtTimestamp",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "status",
+                "type": "uint8",
+                "internalType": "enum Types.EpochStatus"
+              }
+            ]
+          },
+          {
+            "name": "rebalance",
+            "type": "tuple",
+            "internalType": "struct Types.Rebalance",
+            "components": [
+              {
+                "name": "nonce",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "state",
+                "type": "uint8",
+                "internalType": "enum Types.RebalanceState"
+              },
+              {
+                "name": "activeStrategy",
+                "type": "tuple",
+                "internalType": "struct Types.Strategy",
+                "components": [
+                  {
+                    "name": "protocolId",
+                    "type": "bytes32",
+                    "internalType": "bytes32"
+                  },
+                  {
+                    "name": "chainSelector",
+                    "type": "uint64",
+                    "internalType": "uint64"
+                  }
+                ]
+              },
+              {
+                "name": "pendingStrategy",
+                "type": "tuple",
+                "internalType": "struct Types.Strategy",
+                "components": [
+                  {
+                    "name": "protocolId",
+                    "type": "bytes32",
+                    "internalType": "bytes32"
+                  },
+                  {
+                    "name": "chainSelector",
+                    "type": "uint64",
+                    "internalType": "uint64"
+                  }
+                ]
+              },
+              {
+                "name": "lastRebalanceCompletedTimestamp",
+                "type": "uint256",
+                "internalType": "uint256"
+              }
+            ]
+          },
+          {
+            "name": "totalShares",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "tvl",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
       }
     ],
     "stateMutability": "view"
@@ -963,6 +1252,11 @@
     "name": "initiateRebalance",
     "inputs": [
       {
+        "name": "expectedRebalanceNonce",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
         "name": "newStrategy",
         "type": "tuple",
         "internalType": "struct Types.Strategy",
@@ -1267,6 +1561,30 @@
     "type": "function",
     "name": "withdraw",
     "inputs": [
+      {
+        "name": "shareBurnAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "epochNonce",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "withdrawFor",
+    "inputs": [
+      {
+        "name": "beneficiary",
+        "type": "address",
+        "internalType": "address"
+      },
       {
         "name": "shareBurnAmount",
         "type": "uint256",
@@ -1593,19 +1911,6 @@
   },
   {
     "type": "event",
-    "name": "EpochClaimable",
-    "inputs": [
-      {
-        "name": "epochNonce",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
     "name": "EpochDepositExecuting",
     "inputs": [
       {
@@ -1616,6 +1921,31 @@
       },
       {
         "name": "amount",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "EpochDepositReconciled",
+    "inputs": [
+      {
+        "name": "epochNonce",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "actualDepositAmount",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "shareReduction",
         "type": "uint256",
         "indexed": true,
         "internalType": "uint256"
@@ -1648,31 +1978,6 @@
     "inputs": [
       {
         "name": "epochNonce",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "EpochWithdrawAmountShort",
-    "inputs": [
-      {
-        "name": "epochNonce",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "expectedAmount",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "actualAmount",
         "type": "uint256",
         "indexed": true,
         "internalType": "uint256"
@@ -1815,25 +2120,6 @@
   },
   {
     "type": "event",
-    "name": "ManagementFeeCollected",
-    "inputs": [
-      {
-        "name": "rebalanceNonce",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "feeShares",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
     "name": "Paused",
     "inputs": [
       {
@@ -1841,31 +2127,6 @@
         "type": "address",
         "indexed": false,
         "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "RebalanceCompleted",
-    "inputs": [
-      {
-        "name": "rebalanceNonce",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "newProtocolId",
-        "type": "bytes32",
-        "indexed": true,
-        "internalType": "bytes32"
-      },
-      {
-        "name": "newChainSelector",
-        "type": "uint64",
-        "indexed": true,
-        "internalType": "uint64"
       }
     ],
     "anonymous": false
@@ -2542,6 +2803,11 @@
   },
   {
     "type": "error",
+    "name": "ParentVault__CannotCompleteLocalRebalance",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "ParentVault__CannotRemoveActiveProtocol",
     "inputs": [
       {
@@ -2624,6 +2890,17 @@
   },
   {
     "type": "error",
+    "name": "ParentVault__EpochNotNetWithdraw",
+    "inputs": [
+      {
+        "name": "epochNonce",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "ParentVault__EpochNotOpen",
     "inputs": [
       {
@@ -2647,6 +2924,27 @@
   {
     "type": "error",
     "name": "ParentVault__InitialActiveProtocolAdapterAlreadySet",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ParentVault__InvalidActualDepositAmount",
+    "inputs": [
+      {
+        "name": "actualDepositAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "expectedDepositAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "ParentVault__InvalidBeneficiary",
     "inputs": []
   },
   {
@@ -2774,7 +3072,23 @@
   },
   {
     "type": "error",
+    "name": "ParentVault__RemoteWithdrawAmountTooSmall",
+    "inputs": [
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "ParentVault__SameStrategy",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ParentVault__ShareBurnWithZeroTotalShares",
     "inputs": []
   },
   {

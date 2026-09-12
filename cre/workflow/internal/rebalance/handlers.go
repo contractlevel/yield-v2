@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/smartcontractkit/cre-sdk-go/capabilities/blockchain/evm"
 	"github.com/smartcontractkit/cre-sdk-go/capabilities/scheduler/cron"
 	"github.com/smartcontractkit/cre-sdk-go/cre"
@@ -18,13 +17,11 @@ import (
 	"cre/workflow/internal/workflowtypes"
 )
 
-const epochStatusExecuting uint8 = 2
-
 type parentCodec interface {
 	EncodeInitiateRebalanceMethodCall(parent_vault.InitiateRebalanceInput) ([]byte, error)
 	DecodeRebalanceInitiated(*evm.Log) (*parent_vault.RebalanceInitiatedDecoded, error)
 	DecodeRebalanceDepositSuccess(*evm.Log) (*parent_vault.RebalanceDepositSuccessDecoded, error)
-	EncodeCompleteRebalanceMethodCall() ([]byte, error)
+	EncodeCompleteRebalanceMethodCall(parent_vault.CompleteRebalanceInput) ([]byte, error)
 }
 
 type childCodec interface {
@@ -38,51 +35,24 @@ var (
 	newChildCodec = func() (childCodec, error) {
 		return child_vault.NewCodec()
 	}
-	newParentVaultBinding = onchain.NewParentVaultBinding
 )
 
 // CronDeps holds the injectable dependencies for the RebalanceInitiator handler.
 type CronDeps struct {
 	FetchAndSelectPools func(runtime cre.Runtime, cfg offchain.Config, activeProtocolId [32]byte, activeChainSelector uint64) (*offchain.Pool, *offchain.Pool, error)
-	GetRebalance        func(runtime cre.Runtime, vault onchain.ParentVaultInterface, blockNumber *big.Int) (parent_vault.TypesRebalance, error)
-	GetEpochNonce       func(runtime cre.Runtime, vault onchain.ParentVaultInterface, blockNumber *big.Int) (*big.Int, error)
-	GetEpoch            func(runtime cre.Runtime, vault onchain.ParentVaultInterface, epochNonce *big.Int, blockNumber *big.Int) (parent_vault.TypesEpoch, error)
-	SubmitReport        func(runtime cre.Runtime, client *evm.Client, router common.Address, calldata []byte, gasLimit uint64) error
-}
-
-// ExecutorDeps holds the injectable dependencies for the RebalanceExecutor handler.
-type ExecutorDeps struct {
-	GetRebalance func(runtime cre.Runtime, vault onchain.ParentVaultInterface, blockNumber *big.Int) (parent_vault.TypesRebalance, error)
-	SubmitReport func(runtime cre.Runtime, client *evm.Client, router common.Address, calldata []byte, gasLimit uint64) error
-}
-
-// CompleterDeps holds the injectable dependencies for the RebalanceCompleter handler.
-type CompleterDeps struct {
-	SubmitReport func(runtime cre.Runtime, client *evm.Client, router common.Address, calldata []byte, gasLimit uint64) error
+	SubmitReport        onchain.Submitter
 }
 
 var defaultCronDeps = CronDeps{
 	FetchAndSelectPools: offchain.FetchAndSelectPools,
-	GetRebalance:        onchain.GetRebalance,
-	GetEpochNonce:       onchain.GetEpochNonce,
-	GetEpoch:            onchain.GetEpoch,
 	SubmitReport:        onchain.SubmitReport,
 }
 
-var defaultExecutorDeps = ExecutorDeps{
-	GetRebalance: onchain.GetRebalance,
-	SubmitReport: onchain.SubmitReport,
+func OnRebalanceCronTrigger(config *helper.Config, runtime cre.Runtime, trigger *cron.Payload, snapshot *onchain.Snapshot) (*workflowtypes.ExecutionResult, error) {
+	return onRebalanceCronTriggerWithDeps(config, runtime, trigger, snapshot, defaultCronDeps)
 }
 
-var defaultCompleterDeps = CompleterDeps{
-	SubmitReport: onchain.SubmitReport,
-}
-
-func OnCronTrigger(config *helper.Config, runtime cre.Runtime, trigger *cron.Payload) (*workflowtypes.ExecutionResult, error) {
-	return onCronTriggerWithDeps(config, runtime, trigger, defaultCronDeps)
-}
-
-func onCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, _ *cron.Payload, deps CronDeps) (*workflowtypes.ExecutionResult, error) {
+func onRebalanceCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, _ *cron.Payload, snapshot *onchain.Snapshot, deps CronDeps) (*workflowtypes.ExecutionResult, error) {
 	logger := runtime.Logger()
 
 	pvCodec, err := newParentCodec()
@@ -95,55 +65,22 @@ func onCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, _ *cron.P
 		return nil, err
 	}
 
-	// Read the active rebalance state from ParentVault.
-	parentVault, err := newParentVaultBinding(
-		&evm.Client{ChainSelector: parentCfg.ChainSelector},
-		parentCfg.VaultAddress,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("bind parent vault: %w", err)
+	parent := snapshot.Parent
+	rebalance := parent.Rebalance
+	if rebalance.State != onchain.RebalanceNone {
+		return workflowtypes.Noop(runtime, "rebalance in progress")
 	}
-
-	blockNumber := big.NewInt(config.BlockNumber)
-	rebalance, err := deps.GetRebalance(runtime, parentVault, blockNumber)
-	if err != nil {
-		return nil, fmt.Errorf("get rebalance: %w", err)
+	if parent.CurrentEpochNonce.Cmp(big.NewInt(1)) <= 0 {
+		return workflowtypes.Noop(runtime, "no completed epoch")
 	}
-
-	// Guard: skip if a rebalance is already in progress.
-	if rebalance.State != 0 {
-		logger.Info("Rebalance already in progress; skipping")
-		return &workflowtypes.ExecutionResult{Result: "no-op: rebalance in progress"}, nil
+	if parent.PreviousEpoch.Status == onchain.EpochExecuting {
+		return workflowtypes.Noop(runtime, "epoch executing")
 	}
-
-	epochNonce, err := deps.GetEpochNonce(runtime, parentVault, blockNumber)
-	if err != nil {
-		return nil, fmt.Errorf("get epoch nonce: %w", err)
+	if !onchain.PeriodElapsed(rebalance.LastRebalanceCompletedTimestamp, snapshot.ObservedAt, minRebalanceIntervalSeconds) {
+		return workflowtypes.Noop(runtime, "rebalance cooldown active")
 	}
-	if epochNonce == nil {
-		return nil, fmt.Errorf("get epoch nonce: nil epoch nonce")
-	}
-	if epochNonce.Cmp(big.NewInt(1)) <= 0 {
-		logger.Info("No completed epoch; skipping rebalance")
-		return &workflowtypes.ExecutionResult{Result: "no-op: no completed epoch"}, nil
-	}
-
-	previousEpochNonce := new(big.Int).Sub(epochNonce, big.NewInt(1))
-	previousEpoch, err := deps.GetEpoch(runtime, parentVault, previousEpochNonce, blockNumber)
-	if err != nil {
-		return nil, fmt.Errorf("get previous epoch: %w", err)
-	}
-	if previousEpoch.Status == epochStatusExecuting {
-		logger.Info("Epoch executing; skipping rebalance", slog.Any("epochNonce", previousEpochNonce))
-		return &workflowtypes.ExecutionResult{Result: "no-op: epoch executing"}, nil
-	}
-
-	if rebalance.LastRebalanceCompletedTimestamp != nil && !RebalanceCooldownElapsed(rebalance.LastRebalanceCompletedTimestamp.Int64(), runtime.Now().Unix()) {
-		logger.Info("Rebalance cooldown active; skipping",
-			slog.Int64("lastCompletedAt", rebalance.LastRebalanceCompletedTimestamp.Int64()),
-			slog.Int64("minNextRebalanceAt", rebalance.LastRebalanceCompletedTimestamp.Int64()+minRebalanceIntervalSeconds),
-		)
-		return &workflowtypes.ExecutionResult{Result: "no-op: rebalance cooldown active"}, nil
+	if rebalance.ActiveStrategy.ChainSelector == parentCfg.ChainSelector && parent.Tvl.Sign() == 0 {
+		return workflowtypes.Noop(runtime, "zero local strategy TVL")
 	}
 
 	activeStrategy := rebalance.ActiveStrategy
@@ -152,12 +89,12 @@ func onCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, _ *cron.P
 	// Query DefiLlama for the best and current approved pools.
 	bestPool, currentPool, err := deps.FetchAndSelectPools(runtime, defiLlamaConfig, activeStrategy.ProtocolId, activeStrategy.ChainSelector)
 	if err != nil {
+		// Surface fetch failures to CRE monitoring; the next cron run can try again.
 		return nil, fmt.Errorf("fetch pools: %w", err)
 	}
 
 	if bestPool == nil {
-		logger.Info("No approved pool found; skipping rebalance")
-		return &workflowtypes.ExecutionResult{Result: "no-op: no approved pool"}, nil
+		return workflowtypes.Noop(runtime, "no approved pool")
 	}
 
 	// If the best pool matches the active strategy exactly, nothing to do.
@@ -175,17 +112,13 @@ func onCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, _ *cron.P
 		return &workflowtypes.ExecutionResult{Result: "no-op: already optimal"}, nil
 	}
 
-	// @review this is where we would read the TVL of the active strategy and pass it to onchain helper to calculate APY impact
-
 	if currentPool == nil {
-		logger.Info("Current pool missing from DefiLlama response; skipping rebalance")
-		return &workflowtypes.ExecutionResult{Result: "no-op: current pool missing"}, nil
+		return workflowtypes.Noop(runtime, "current pool missing")
 	}
 
 	// Check that the APY improvement exceeds the differential threshold.
 	if !NeedRebalance(bestPool, currentPool) {
-		delta := bestPool.Apy
-		delta -= currentPool.Apy
+		delta := bestPool.Apy - currentPool.Apy
 		logger.Info("APY delta below threshold; skipping rebalance",
 			slog.Float64("delta", delta),
 			slog.Float64("threshold", DifferentialThreshold),
@@ -196,6 +129,7 @@ func onCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, _ *cron.P
 	// Encode and submit initiateRebalance to ParentVault.
 	calldata, err := pvCodec.EncodeInitiateRebalanceMethodCall(
 		parent_vault.InitiateRebalanceInput{
+			ExpectedRebalanceNonce: rebalance.Nonce,
 			NewStrategy: parent_vault.TypesStrategy{
 				ProtocolId:    bestProtocolId,
 				ChainSelector: bestChainSelector,
@@ -206,13 +140,7 @@ func onCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, _ *cron.P
 		return nil, fmt.Errorf("encode initiateRebalance: %w", err)
 	}
 
-	if err := deps.SubmitReport(
-		runtime,
-		&evm.Client{ChainSelector: parentCfg.ChainSelector},
-		common.HexToAddress(parentCfg.WorkflowRouterAddress),
-		calldata,
-		parentCfg.GasLimit,
-	); err != nil {
+	if err := deps.SubmitReport(runtime, parentCfg, snapshot.ObservedAt, calldata); err != nil {
 		return nil, fmt.Errorf("submit initiateRebalance: %w", err)
 	}
 
@@ -241,11 +169,11 @@ func newDefiLlamaConfig(config *helper.Config) offchain.Config {
 	}
 }
 
-func OnRebalanceInitiated(config *helper.Config, runtime cre.Runtime, log *evm.Log) (*workflowtypes.ExecutionResult, error) {
-	return onRebalanceInitiatedWithDeps(config, runtime, log, defaultExecutorDeps)
+func OnRebalanceInitiated(config *helper.Config, runtime cre.Runtime, log *evm.Log, snapshot *onchain.Snapshot, sourceChain uint64) (*workflowtypes.ExecutionResult, error) {
+	return onRebalanceInitiatedWithDeps(config, runtime, log, snapshot, sourceChain, onchain.SubmitReport)
 }
 
-func onRebalanceInitiatedWithDeps(config *helper.Config, runtime cre.Runtime, log *evm.Log, deps ExecutorDeps) (*workflowtypes.ExecutionResult, error) {
+func onRebalanceInitiatedWithDeps(config *helper.Config, runtime cre.Runtime, log *evm.Log, snapshot *onchain.Snapshot, sourceChain uint64, submit onchain.Submitter) (*workflowtypes.ExecutionResult, error) {
 	logger := runtime.Logger()
 
 	pvCodec, err := newParentCodec()
@@ -267,21 +195,16 @@ func onRebalanceInitiatedWithDeps(config *helper.Config, runtime cre.Runtime, lo
 		return nil, fmt.Errorf("decode RebalanceInitiated: %w", err)
 	}
 
-	// Read current rebalance to find the PREVIOUS (active) strategy chain.
-	// At this point ActiveStrategy is still the old strategy; PendingStrategy is the new one.
-	parentVaultBinding, err := newParentVaultBinding(
-		&evm.Client{ChainSelector: parentCfg.ChainSelector},
-		parentCfg.VaultAddress,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("bind parent vault: %w", err)
+	if !onchain.MatchSource(config, log, sourceChain, parentCfg.ChainSelector) {
+		return workflowtypes.Noop(runtime, "wrong rebalance event source")
 	}
-
-	rebalance, err := deps.GetRebalance(runtime, parentVaultBinding, big.NewInt(config.BlockNumber))
-	if err != nil {
-		return nil, fmt.Errorf("get rebalance: %w", err)
+	rebalance := snapshot.Parent.Rebalance
+	if rebalance.State != onchain.Rebalancing || rebalance.Nonce.Cmp(evt.RebalanceNonce) != 0 {
+		return workflowtypes.Noop(runtime, "stale rebalance event")
 	}
-
+	if rebalance.PendingStrategy.ProtocolId != evt.ProtocolId || rebalance.PendingStrategy.ChainSelector != evt.ChainSelector {
+		return workflowtypes.Noop(runtime, "rebalance destination mismatch")
+	}
 	// Guard: active strategy on parent chain - no remote ChildVault to drive for this step.
 	if rebalance.ActiveStrategy.ChainSelector == parentCfg.ChainSelector {
 		logger.Info("RebalanceInitiated: active strategy on parent; no action required",
@@ -293,6 +216,14 @@ func onRebalanceInitiatedWithDeps(config *helper.Config, runtime cre.Runtime, lo
 	prevChainCfg, err := helper.FindEvmConfigByChainSelector(config.Evms, rebalance.ActiveStrategy.ChainSelector)
 	if err != nil {
 		return nil, fmt.Errorf("find prev strategy chain: %w", err)
+	}
+
+	child := snapshot.Children[prevChainCfg.ChainSelector]
+	if evt.RebalanceNonce.Cmp(child.LastHandledRebalanceNonce) <= 0 {
+		return workflowtypes.Noop(runtime, "rebalance already handled")
+	}
+	if _, err := helper.FindEvmConfigByChainSelector(config.Evms, evt.ChainSelector); err != nil {
+		return nil, err
 	}
 
 	// Encode executeRebalance for the previous strategy's ChildVault.
@@ -309,13 +240,7 @@ func onRebalanceInitiatedWithDeps(config *helper.Config, runtime cre.Runtime, lo
 		return nil, fmt.Errorf("encode executeRebalance: %w", err)
 	}
 
-	if err := deps.SubmitReport(
-		runtime,
-		&evm.Client{ChainSelector: prevChainCfg.ChainSelector},
-		common.HexToAddress(prevChainCfg.WorkflowRouterAddress),
-		calldata,
-		prevChainCfg.GasLimit,
-	); err != nil {
+	if err := submit(runtime, *prevChainCfg, snapshot.ObservedAt, calldata); err != nil {
 		return nil, fmt.Errorf("submit executeRebalance: %w", err)
 	}
 
@@ -326,11 +251,11 @@ func onRebalanceInitiatedWithDeps(config *helper.Config, runtime cre.Runtime, lo
 	return &workflowtypes.ExecutionResult{Result: "submitted executeRebalance"}, nil
 }
 
-func OnRebalanceDepositSuccess(config *helper.Config, runtime cre.Runtime, log *evm.Log) (*workflowtypes.ExecutionResult, error) {
-	return onRebalanceDepositSuccessWithDeps(config, runtime, log, defaultCompleterDeps)
+func OnRebalanceDepositSuccess(config *helper.Config, runtime cre.Runtime, log *evm.Log, snapshot *onchain.Snapshot, sourceChain uint64) (*workflowtypes.ExecutionResult, error) {
+	return onRebalanceDepositSuccessWithDeps(config, runtime, log, snapshot, sourceChain, onchain.SubmitReport)
 }
 
-func onRebalanceDepositSuccessWithDeps(config *helper.Config, runtime cre.Runtime, log *evm.Log, deps CompleterDeps) (*workflowtypes.ExecutionResult, error) {
+func onRebalanceDepositSuccessWithDeps(config *helper.Config, runtime cre.Runtime, log *evm.Log, snapshot *onchain.Snapshot, sourceChain uint64, submit onchain.Submitter) (*workflowtypes.ExecutionResult, error) {
 	logger := runtime.Logger()
 
 	pvCodec, err := newParentCodec()
@@ -348,19 +273,22 @@ func onRebalanceDepositSuccessWithDeps(config *helper.Config, runtime cre.Runtim
 		return nil, fmt.Errorf("decode RebalanceDepositSuccess: %w", err)
 	}
 
+	rebalance := snapshot.Parent.Rebalance
+	if rebalance.State != onchain.Rebalancing || rebalance.Nonce.Cmp(evt.RebalanceNonce) != 0 {
+		return workflowtypes.Noop(runtime, "stale rebalance event")
+	}
+	if rebalance.PendingStrategy.ChainSelector == parentCfg.ChainSelector ||
+		!onchain.MatchSource(config, log, sourceChain, rebalance.PendingStrategy.ChainSelector) {
+		return workflowtypes.Noop(runtime, "wrong rebalance destination")
+	}
+
 	// Encode and submit completeRebalance to ParentVault.
-	calldata, err := pvCodec.EncodeCompleteRebalanceMethodCall()
+	calldata, err := pvCodec.EncodeCompleteRebalanceMethodCall(parent_vault.CompleteRebalanceInput{ExpectedRebalanceNonce: evt.RebalanceNonce})
 	if err != nil {
 		return nil, fmt.Errorf("encode completeRebalance: %w", err)
 	}
 
-	if err := deps.SubmitReport(
-		runtime,
-		&evm.Client{ChainSelector: parentCfg.ChainSelector},
-		common.HexToAddress(parentCfg.WorkflowRouterAddress),
-		calldata,
-		parentCfg.GasLimit,
-	); err != nil {
+	if err := submit(runtime, parentCfg, snapshot.ObservedAt, calldata); err != nil {
 		return nil, fmt.Errorf("submit completeRebalance: %w", err)
 	}
 

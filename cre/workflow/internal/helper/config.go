@@ -11,7 +11,8 @@ import (
 type Config struct {
 	RebalanceSchedule string      `json:"rebalanceSchedule"`
 	EpochSchedule     string      `json:"epochSchedule"`
-	BlockNumber       int64       `json:"blockNumber"`
+	AssetDecimals     *uint8      `json:"assetDecimals"`
+	BlockNumber       *int64      `json:"blockNumber"` // Required: -3 finalized; -2 pending for local forks.
 	DefiLlama         DefiLlama   `json:"defiLlama"`
 	Evms              []EvmConfig `json:"evms"`
 }
@@ -28,16 +29,13 @@ type DefiLlama struct {
 //   - activeStrategy.ChainSelector tells us which chain the active strategy
 //     adapter lives on.
 type EvmConfig struct {
-	IsParent                           bool   `json:"isParent"`
-	ChainName                          string `json:"chainName"`
-	DefiLlamaChainName                 string `json:"defiLlamaChainName,omitempty"`
-	ChainSelector                      uint64 `json:"chainSelector"`
-	VaultAddress                       string `json:"vaultAddress"`
-	WorkflowRouterAddress              string `json:"workflowRouterAddress"`
-	GasLimit                           uint64 `json:"gasLimit"`
-	USDCAddress                        string `json:"usdcAddress"`
-	AaveV3PoolAddressesProviderAddress string `json:"aaveV3PoolAddressesProviderAddress"`
-	CompoundV3CometUSDCAddress         string `json:"compoundV3CometUSDCAddress"`
+	IsParent              bool   `json:"isParent"`
+	ChainName             string `json:"chainName"`
+	DefiLlamaChainName    string `json:"defiLlamaChainName,omitempty"`
+	ChainSelector         uint64 `json:"chainSelector"`
+	VaultAddress          string `json:"vaultAddress"`
+	WorkflowRouterAddress string `json:"workflowRouterAddress"`
+	GasLimit              uint64 `json:"gasLimit"`
 }
 
 func FindEvmConfigByChainSelector(evms []EvmConfig, target uint64) (*EvmConfig, error) {
@@ -50,7 +48,7 @@ func FindEvmConfigByChainSelector(evms []EvmConfig, target uint64) (*EvmConfig, 
 }
 
 func ValidateConfig(cfg *Config) error {
-	if len(cfg.Evms) == 0 {
+	if cfg == nil || len(cfg.Evms) == 0 {
 		return fmt.Errorf("no EVM configs provided")
 	}
 	if err := validateDefiLlamaConfig(cfg.DefiLlama); err != nil {
@@ -60,7 +58,6 @@ func ValidateConfig(cfg *Config) error {
 	seenSelectors := make(map[uint64]struct{}, len(cfg.Evms))
 	seenDefiLlamaChains := make(map[string]struct{}, len(cfg.Evms))
 	parentCount := 0
-	var parentSelector uint64
 
 	for i, e := range cfg.Evms {
 		if e.ChainSelector == 0 {
@@ -80,6 +77,9 @@ func ValidateConfig(cfg *Config) error {
 		if e.GasLimit == 0 {
 			return fmt.Errorf("evms[%d] (chain %d): gasLimit must be non-zero", i, e.ChainSelector)
 		}
+		if e.GasLimit > 5_000_000 {
+			return fmt.Errorf("evms[%d]: gasLimit exceeds CRE's 5,000,000 quota", i)
+		}
 		if e.DefiLlamaChainName != "" {
 			canonicalName := canonicalDefiLlamaValue(e.DefiLlamaChainName)
 			if _, dup := seenDefiLlamaChains[canonicalName]; dup {
@@ -90,16 +90,29 @@ func ValidateConfig(cfg *Config) error {
 
 		if e.IsParent {
 			parentCount++
-			parentSelector = e.ChainSelector
 		}
 	}
 
 	if parentCount != 1 {
 		return fmt.Errorf("expected exactly one parent chain (IsParent=true), got %d", parentCount)
 	}
-	_ = parentSelector // reserved for any future cross-field checks
+	if TriggerCount(len(cfg.Evms)) > 10 {
+		return fmt.Errorf("%d chains require %d triggers; CRE permits 10", len(cfg.Evms), TriggerCount(len(cfg.Evms)))
+	}
+	if cfg.AssetDecimals == nil || *cfg.AssetDecimals > 77 {
+		return fmt.Errorf("assetDecimals must be specified and between 0 and 77")
+	}
+	if cfg.BlockNumber == nil {
+		return fmt.Errorf("blockNumber must be specified")
+	}
+	if strings.TrimSpace(cfg.EpochSchedule) == "" || strings.TrimSpace(cfg.RebalanceSchedule) == "" {
+		return fmt.Errorf("epochSchedule and rebalanceSchedule must be specified")
+	}
 	return nil
 }
+
+// Each vault has one combined log subscription, plus the two cron triggers.
+func TriggerCount(chains int) int { return chains + 2 }
 
 func isRequiredAddress(value string) bool {
 	if value == "" || !common.IsHexAddress(value) {

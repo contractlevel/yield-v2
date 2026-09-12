@@ -1,6 +1,7 @@
 package offchain
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"testing"
 
 	crehttp "github.com/smartcontractkit/cre-sdk-go/capabilities/networking/http"
+	httpmock "github.com/smartcontractkit/cre-sdk-go/capabilities/networking/http/mock"
 	"github.com/smartcontractkit/cre-sdk-go/cre"
 	"github.com/smartcontractkit/cre-sdk-go/cre/testutils"
 	"github.com/stretchr/testify/require"
@@ -58,7 +60,7 @@ func testRelayJSON() string {
 func testRuntimeWithRelayToken(t *testing.T, token string) cre.Runtime {
 	t.Helper()
 	return testutils.NewRuntime(t, testutils.Secrets{
-		"": {defiLlamaRelayBearerTokenSecret: token},
+		cre.DefaultSecretNamespace: {defiLlamaRelayBearerTokenSecret: token},
 	})
 }
 
@@ -304,7 +306,7 @@ func Test_FetchAndSelectPools_secretErrors(t *testing.T) {
 		wantErr string
 	}{
 		{name: "missing secret", secrets: testutils.Secrets{}, wantErr: "get relay bearer token"},
-		{name: "empty secret", secrets: testutils.Secrets{"": {defiLlamaRelayBearerTokenSecret: ""}}, wantErr: "empty secret"},
+		{name: "empty secret", secrets: testutils.Secrets{"main": {defiLlamaRelayBearerTokenSecret: ""}}, wantErr: "empty secret"},
 	}
 
 	for _, tt := range tests {
@@ -317,6 +319,19 @@ func Test_FetchAndSelectPools_secretErrors(t *testing.T) {
 			require.ErrorContains(t, err, tt.wantErr)
 		})
 	}
+}
+
+func TestFetchAndSelectPoolsHTTPIntegration(t *testing.T) {
+	capability, err := httpmock.NewClientCapability(t)
+	require.NoError(t, err)
+	capability.SendRequest = func(_ context.Context, request *crehttp.Request) (*crehttp.Response, error) {
+		require.Equal(t, "Bearer test-token", request.Headers["Authorization"])
+		return &crehttp.Response{StatusCode: 200, Body: []byte(testRelayJSON())}, nil
+	}
+	best, current, err := FetchAndSelectPools(testRuntimeWithRelayToken(t, "test-token"), testConfig(), PoolToProtocolId("aave-v3"), 1)
+	require.NoError(t, err)
+	require.Equal(t, arbitrumCompoundV3PoolID, best.Pool)
+	require.Equal(t, ethereumAaveV3PoolID, current.Pool)
 }
 
 func Test_FetchResultToPools(t *testing.T) {
@@ -443,15 +458,4 @@ func (zeroReader) Read(p []byte) (int, error) {
 		p[i] = 0
 	}
 	return len(p), nil
-}
-
-type errReader struct{ err error }
-
-func (r errReader) Read([]byte) (int, error) {
-	return 0, r.err
-}
-
-func Test_ReadLimited_readError(t *testing.T) {
-	_, err := readLimited(errReader{err: errors.New("disk failed")}, defiLlamaMaxResponseBytes, "relay response body")
-	require.ErrorContains(t, err, "read relay response body: disk failed")
 }

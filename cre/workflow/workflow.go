@@ -1,14 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"log/slog"
-	"math/big"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/smartcontractkit/cre-sdk-go/capabilities/blockchain/evm"
-	"github.com/smartcontractkit/cre-sdk-go/capabilities/scheduler/cron"
-	"github.com/smartcontractkit/cre-sdk-go/cre"
 
 	"cre/contracts/evm/src/generated/child_vault"
 	"cre/contracts/evm/src/generated/parent_vault"
@@ -17,133 +12,143 @@ import (
 	"cre/workflow/internal/onchain"
 	"cre/workflow/internal/rebalance"
 	"cre/workflow/internal/workflowtypes"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/smartcontractkit/cre-sdk-go/capabilities/blockchain/evm"
+	"github.com/smartcontractkit/cre-sdk-go/capabilities/scheduler/cron"
+	"github.com/smartcontractkit/cre-sdk-go/cre"
 )
+
+type Config = helper.Config
+type ExecutionResult = workflowtypes.ExecutionResult
 
 var (
 	newWorkflowParentCodec = parent_vault.NewCodec
 	newWorkflowChildCodec  = child_vault.NewCodec
 )
 
-// Config and ExecutionResult are the top-level types used by all handlers.
-type Config = helper.Config
-
-type ExecutionResult = workflowtypes.ExecutionResult
-
-type recoveryFinder func(cre.Runtime, []helper.EvmConfig, *big.Int) (*onchain.ActiveRecovery, error)
-
-// ---- INIT WORKFLOW ----
-
-// InitWorkflow registers six handler types:
-//  1. Cron → RebalanceInitiator
-//  2. ParentVault.RebalanceInitiated log → RebalanceExecutor
-//  3. Per-child vault RebalanceDepositSuccess log → RebalanceCompleter
-//  4. Cron → EpochInitiator
-//  5. ParentVault.EpochWithdrawExecuting log → EpochWithdrawExecutor
-//  6. Per-child vault EpochDepositToStrategySuccess log → EpochDepositCompleter
+// InitWorkflow registers two cron triggers and one log subscription per vault.
+// Each log subscription accepts two event signatures and dispatches by topic 0.
+//
+// The six logical handlers are:
+//  1. Cron → EpochInitiator // @review replace these descriptive labels with the actual handler names?
+//  2. Cron → RebalanceInitiator
+//  3. ParentVault.RebalanceInitiated → RebalanceExecutor
+//  4. ParentVault.EpochWithdrawExecuting → EpochWithdrawExecutor
+//  5. ChildVault.RebalanceDepositSuccess → RebalanceCompleter
+//  6. ChildVault.EpochDepositToStrategySuccess → EpochDepositCompleter
+//
+// Handlers 3 and 4 share the Parent subscription. Handlers 5 and 6 share one
+// subscription per child. Six chains therefore use eight subscriptions. // @review Strictly, there are six log subscriptions and eight total triggers. The last comment uses “subscriptions” somewhat broadly.
 func InitWorkflow(config *Config, logger *slog.Logger, _ cre.SecretsProvider) (cre.Workflow[*Config], error) {
-	return initWorkflow(config, logger, onchain.FindActiveRecovery)
+	return initWorkflow(config, logger, onchain.ReadSnapshot)
 }
 
-func initWorkflow(config *Config, logger *slog.Logger, findRecovery recoveryFinder) (cre.Workflow[*Config], error) {
+func initWorkflow(config *Config, _ *slog.Logger, readSnapshot onchain.SnapshotReader) (cre.Workflow[*Config], error) {
 	if err := helper.ValidateConfig(config); err != nil {
 		return nil, err
 	}
-
-	// ValidateConfig has already guaranteed exactly one parent chain.
-	parentCfg, _ := helper.FindParent(config.Evms)
-
-	var handlers []cre.ExecutionHandler[*Config, cre.Runtime]
-
-	pvCodec, err := newWorkflowParentCodec()
+	parentCodec, err := newWorkflowParentCodec()
 	if err != nil {
 		return nil, fmt.Errorf("init parent vault codec: %w", err)
 	}
-	cvCodec, err := newWorkflowChildCodec()
+	childCodec, err := newWorkflowChildCodec()
 	if err != nil {
 		return nil, fmt.Errorf("init child vault codec: %w", err)
 	}
 
-	parentVaultAddr := common.HexToAddress(parentCfg.VaultAddress)
-
-	// Handler 1: cron → RebalanceInitiator
-	handlers = append(handlers, cre.Handler(
-		cron.Trigger(&cron.Config{Schedule: config.RebalanceSchedule}),
-		withRecoveryGuard(findRecovery, rebalance.OnCronTrigger),
-	))
-
-	// Handler 2: ParentVault.RebalanceInitiated → RebalanceExecutor
-	handlers = append(handlers, cre.Handler(
-		evm.LogTrigger(parentCfg.ChainSelector, &evm.FilterLogTriggerRequest{
-			Addresses:  [][]byte{parentVaultAddr.Bytes()},
-			Topics:     []*evm.TopicValues{{Values: [][]byte{pvCodec.RebalanceInitiatedLogHash()}}},
-			Confidence: evm.ConfidenceLevel_CONFIDENCE_LEVEL_FINALIZED,
-		}),
-		withRecoveryGuard(findRecovery, rebalance.OnRebalanceInitiated),
-	))
-
-	// Handler 3: per-chain vault RebalanceDepositSuccess → RebalanceCompleter
-	for _, evmCfg := range config.Evms {
-		if evmCfg.IsParent {
-			continue // skip parent chain
-		}
-		vaultAddr := common.HexToAddress(evmCfg.VaultAddress)
-		handlers = append(handlers, cre.Handler(
-			evm.LogTrigger(evmCfg.ChainSelector, &evm.FilterLogTriggerRequest{
-				Addresses:  [][]byte{vaultAddr.Bytes()},
-				Topics:     []*evm.TopicValues{{Values: [][]byte{pvCodec.RebalanceDepositSuccessLogHash()}}},
-				Confidence: evm.ConfidenceLevel_CONFIDENCE_LEVEL_FINALIZED,
-			}),
-			withRecoveryGuard(findRecovery, rebalance.OnRebalanceDepositSuccess),
-		))
-
-		// The chain selector and address restrict this trigger to ChildVault logs;
-		// an identically signed ParentVault event cannot match it.
-		handlers = append(handlers, cre.Handler(
-			evm.LogTrigger(evmCfg.ChainSelector, &evm.FilterLogTriggerRequest{
-				Addresses:  [][]byte{vaultAddr.Bytes()},
-				Topics:     []*evm.TopicValues{{Values: [][]byte{cvCodec.EpochDepositToStrategySuccessLogHash()}}},
-				Confidence: evm.ConfidenceLevel_CONFIDENCE_LEVEL_FINALIZED,
-			}),
-			epoch.OnEpochDepositSuccess,
-		))
+	handlers := cre.Workflow[*Config]{
+		// Handler 1: scheduled cron → close the current epoch on Parent.
+		cre.Handler(
+			cron.Trigger(&cron.Config{Schedule: config.EpochSchedule}),
+			withOperationalGuard(readSnapshot, epoch.OnEpochCronTrigger),
+		),
+		// Handler 2: scheduled cron → initiate a rebalance on Parent.
+		cre.Handler(
+			cron.Trigger(&cron.Config{Schedule: config.RebalanceSchedule}),
+			withOperationalGuard(readSnapshot, rebalance.OnRebalanceCronTrigger),
+		),
 	}
 
-	// Handler 4: cron → EpochInitiator
-	handlers = append(handlers, cre.Handler(
-		cron.Trigger(&cron.Config{Schedule: config.EpochSchedule}),
-		withRecoveryGuard(findRecovery, epoch.OnEpochCronTrigger),
-	))
+	for _, chainConfig := range config.Evms {
+		sourceChain := chainConfig.ChainSelector
+		isParent := chainConfig.IsParent
+		// Child trigger: topic 0 matches either event, with OR semantics.
+		// Both handlers use this child's chain and vault address as their source.
+		signatures := [][]byte{
+			// Trigger for handler 5: ChildVault.RebalanceDepositSuccess.
+			childCodec.RebalanceDepositSuccessLogHash(),
+			// Trigger for handler 6: ChildVault.EpochDepositToStrategySuccess.
+			childCodec.EpochDepositToStrategySuccessLogHash(),
+		}
+		// @review This default-then-override structure is simple, although it constructs the child signature list even for the parent iteration.
+		if isParent {
+			// One Parent subscription matches the events for handlers 3 and 4.
+			signatures = [][]byte{
+				// Trigger for handler 3: ParentVault.RebalanceInitiated. // @review we should be no-oping if the parent was the previous strategy
+				parentCodec.RebalanceInitiatedLogHash(),
+				// Trigger for handler 4: ParentVault.EpochWithdrawExecuting.
+				parentCodec.EpochWithdrawExecutingLogHash(),
+			}
+		}
 
-	// Handler 5: ParentVault.EpochWithdrawExecuting → EpochWithdrawExecutor
-	handlers = append(handlers, cre.Handler(
-		evm.LogTrigger(parentCfg.ChainSelector, &evm.FilterLogTriggerRequest{
-			Addresses:  [][]byte{parentVaultAddr.Bytes()},
-			Topics:     []*evm.TopicValues{{Values: [][]byte{pvCodec.EpochWithdrawExecutingLogHash()}}},
-			Confidence: evm.ConfidenceLevel_CONFIDENCE_LEVEL_FINALIZED,
-		}),
-		withRecoveryGuard(findRecovery, epoch.OnEpochWithdrawExecuting),
-	))
+		onLog := func(config *Config, runtime cre.Runtime, log *evm.Log, snapshot *onchain.Snapshot) (*ExecutionResult, error) {
+			if log == nil || len(log.Topics) == 0 {
+				return nil, fmt.Errorf("event has no signature topic")
+			}
+			if isParent {
+				switch {
+				case bytes.Equal(log.Topics[0], parentCodec.RebalanceInitiatedLogHash()):
+					// Handler 3: execute the rebalance on the source child.
+					return rebalance.OnRebalanceInitiated(config, runtime, log, snapshot, sourceChain)
+				case bytes.Equal(log.Topics[0], parentCodec.EpochWithdrawExecutingLogHash()):
+					// Handler 4: withdraw the epoch's fixed amount on the active child.
+					return epoch.OnEpochWithdrawExecuting(config, runtime, log, snapshot, sourceChain)
+				}
+			} else {
+				switch {
+				case bytes.Equal(log.Topics[0], childCodec.RebalanceDepositSuccessLogHash()):
+					// Handler 5: complete the rebalance on Parent after child deposit success.
+					return rebalance.OnRebalanceDepositSuccess(config, runtime, log, snapshot, sourceChain)
+				case bytes.Equal(log.Topics[0], childCodec.EpochDepositToStrategySuccessLogHash()):
+					// Handler 6: reconcile and complete the remote deposit epoch on Parent.
+					return epoch.OnEpochDepositToStrategySuccess(config, runtime, log, snapshot, sourceChain)
+				}
+			}
+			return nil, fmt.Errorf("unexpected event signature on chain %d", sourceChain)
+		}
 
-	return cre.Workflow[*Config](handlers), nil
+		// Register one finalized log trigger for this vault: handlers 3/4 on
+		// Parent, or handlers 5/6 on a child, selected by the signatures above.
+		handlers = append(handlers, cre.Handler(
+			evm.LogTrigger(sourceChain, &evm.FilterLogTriggerRequest{
+				Addresses:  [][]byte{common.HexToAddress(chainConfig.VaultAddress).Bytes()},
+				Topics:     []*evm.TopicValues{{Values: signatures}},
+				Confidence: evm.ConfidenceLevel_CONFIDENCE_LEVEL_FINALIZED,
+			}),
+			withOperationalGuard(readSnapshot, onLog),
+		))
+	}
+	return handlers, nil
 }
 
-func withRecoveryGuard[T any](
-	findRecovery recoveryFinder,
-	handler func(*Config, cre.Runtime, *T) (*ExecutionResult, error),
+// withOperationalGuard reads once and shares that snapshot with the handler.
+// It applies to every entrypoint, including epoch deposit completion.
+func withOperationalGuard[T any](
+	readSnapshot onchain.SnapshotReader,
+	handler func(*Config, cre.Runtime, *T, *onchain.Snapshot) (*ExecutionResult, error),
 ) func(*Config, cre.Runtime, *T) (*ExecutionResult, error) {
 	return func(config *Config, runtime cre.Runtime, payload *T) (*ExecutionResult, error) {
-		recovery, err := findRecovery(runtime, config.Evms, big.NewInt(config.BlockNumber))
+		snapshot, err := readSnapshot(config, runtime)
 		if err != nil {
-			return nil, fmt.Errorf("check recovery mode: %w", err)
+			return nil, fmt.Errorf("read operational state: %w", err)
 		}
-		if recovery != nil {
-			runtime.Logger().Info("Recovery active; skipping workflow handler",
-				slog.String("chain", recovery.ChainName),
-				slog.Uint64("mode", uint64(recovery.Mode)),
-			)
-			return &ExecutionResult{Result: "no-op: recovery active"}, nil
+		if snapshot == nil {
+			return nil, fmt.Errorf("read operational state: nil snapshot")
 		}
-
-		return handler(config, runtime, payload)
+		if reason := snapshot.BlockedReason(config); reason != "" {
+			return workflowtypes.Noop(runtime, reason)
+		}
+		return handler(config, runtime, payload, snapshot)
 	}
 }

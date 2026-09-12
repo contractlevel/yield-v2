@@ -34,6 +34,7 @@ type ChildVaultMock struct {
 	GetCCVsAndFinalityConfig      func(GetCCVsAndFinalityConfigInput) (GetCCVsAndFinalityConfigOutput, error)
 	GetCcipGasLimit               func(GetCcipGasLimitInput) (*big.Int, error)
 	GetCcipSendRecovery           func() (TypesCcipSendRecovery, error)
+	GetChildOperationalState      func() (TypesChildOperationalState, error)
 	GetCrosschainVault            func(GetCrosschainVaultInput) (common.Address, error)
 	GetDefaultCcipGasLimit        func() (*big.Int, error)
 	GetEpochDepositRecovery       func() (TypesEpochRecovery, error)
@@ -223,6 +224,16 @@ func NewChildVaultMock(address common.Address, clientMock *evmmock.ClientCapabil
 				return nil, err
 			}
 			return abi.Methods["getCcipSendRecovery"].Outputs.Pack(result)
+		},
+		string(abi.Methods["getChildOperationalState"].ID[:4]): func(payload []byte) ([]byte, error) {
+			if mock.GetChildOperationalState == nil {
+				return nil, errors.New("getChildOperationalState method not mocked")
+			}
+			result, err := mock.GetChildOperationalState()
+			if err != nil {
+				return nil, err
+			}
+			return abi.Methods["getChildOperationalState"].Outputs.Pack(result)
 		},
 		string(abi.Methods["getCrosschainVault"].ID[:4]): func(payload []byte) ([]byte, error) {
 			if mock.GetCrosschainVault == nil {

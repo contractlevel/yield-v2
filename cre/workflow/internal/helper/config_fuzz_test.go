@@ -50,7 +50,11 @@ func Fuzz_ValidateConfig_parentCount(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, parentA, parentB, parentC bool) {
 		cfg := &Config{
-			DefiLlama: validDefiLlamaConfig(),
+			BlockNumber:       new(int64),
+			AssetDecimals:     testAssetDecimals(),
+			EpochSchedule:     "0 0 0 * * *",
+			RebalanceSchedule: "0 0 12 * * *",
+			DefiLlama:         validDefiLlamaConfig(),
 			Evms: []EvmConfig{
 				validEvmConfig(func(e *EvmConfig) {
 					e.IsParent = parentA
@@ -102,8 +106,12 @@ func Fuzz_ValidateConfig_defiLlamaProjectCanonicalDuplicates(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, projectA, projectB string) {
 		cfg := &Config{
-			DefiLlama: DefiLlama{PoolIDs: []string{"pool-a"}, Projects: []string{projectA, projectB}, Symbols: []string{"USDC"}},
-			Evms:      []EvmConfig{validEvmConfig()},
+			BlockNumber:       new(int64),
+			AssetDecimals:     testAssetDecimals(),
+			EpochSchedule:     "0 0 0 * * *",
+			RebalanceSchedule: "0 0 12 * * *",
+			DefiLlama:         DefiLlama{PoolIDs: []string{"pool-a"}, Projects: []string{projectA, projectB}, Symbols: []string{"USDC"}},
+			Evms:              []EvmConfig{validEvmConfig()},
 		}
 
 		err := ValidateConfig(cfg)
@@ -126,8 +134,12 @@ func Fuzz_ValidateConfig_defiLlamaSymbolCanonicalDuplicates(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, symbolA, symbolB string) {
 		cfg := &Config{
-			DefiLlama: DefiLlama{PoolIDs: []string{"pool-a"}, Projects: []string{"aave-v3"}, Symbols: []string{symbolA, symbolB}},
-			Evms:      []EvmConfig{validEvmConfig()},
+			BlockNumber:       new(int64),
+			AssetDecimals:     testAssetDecimals(),
+			EpochSchedule:     "0 0 0 * * *",
+			RebalanceSchedule: "0 0 12 * * *",
+			DefiLlama:         DefiLlama{PoolIDs: []string{"pool-a"}, Projects: []string{"aave-v3"}, Symbols: []string{symbolA, symbolB}},
+			Evms:              []EvmConfig{validEvmConfig()},
 		}
 
 		err := ValidateConfig(cfg)

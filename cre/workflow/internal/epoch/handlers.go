@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/smartcontractkit/cre-sdk-go/capabilities/blockchain/evm"
 	"github.com/smartcontractkit/cre-sdk-go/capabilities/scheduler/cron"
 	"github.com/smartcontractkit/cre-sdk-go/cre"
@@ -21,7 +20,7 @@ const minEpochPeriod = int64(3600) // matches MIN_EPOCH_PERIOD in ParentVault.so
 
 type parentCodec interface {
 	EncodeCloseEpochMethodCall(parent_vault.CloseEpochInput) ([]byte, error)
-	EncodeCompleteEpochDepositMethodCall() ([]byte, error)
+	EncodeCompleteEpochDepositMethodCall(parent_vault.CompleteEpochDepositInput) ([]byte, error)
 	DecodeEpochWithdrawExecuting(*evm.Log) (*parent_vault.EpochWithdrawExecutingDecoded, error)
 }
 
@@ -37,43 +36,13 @@ var (
 	newChildCodec = func() (childCodec, error) {
 		return child_vault.NewCodec()
 	}
-	newParentVaultBinding = onchain.NewParentVaultBinding
-	newChildVaultBinding  = onchain.NewChildVaultBinding
 )
 
-// InitiatorDeps holds the injectable dependencies for the EpochInitiator handler.
-type InitiatorDeps struct {
-	GetRebalance  func(runtime cre.Runtime, vault onchain.ParentVaultInterface, blockNumber *big.Int) (parent_vault.TypesRebalance, error)
-	GetEpochNonce func(runtime cre.Runtime, vault onchain.ParentVaultInterface, blockNumber *big.Int) (*big.Int, error)
-	GetEpoch      func(runtime cre.Runtime, vault onchain.ParentVaultInterface, epochNonce *big.Int, blockNumber *big.Int) (parent_vault.TypesEpoch, error)
-	ReadTVL       func(runtime cre.Runtime, vault onchain.BaseVaultInterface, blockNumber *big.Int) (*big.Int, error)
-	SubmitReport  func(runtime cre.Runtime, client *evm.Client, router common.Address, calldata []byte, gasLimit uint64) error
+func OnEpochCronTrigger(config *helper.Config, runtime cre.Runtime, trigger *cron.Payload, snapshot *onchain.Snapshot) (*workflowtypes.ExecutionResult, error) {
+	return onEpochCronTriggerWithDeps(config, runtime, trigger, snapshot, onchain.SubmitReport)
 }
 
-// ExecutorDeps holds the injectable dependencies for the EpochExecutor handler.
-type ExecutorDeps struct {
-	GetRebalance func(runtime cre.Runtime, vault onchain.ParentVaultInterface, blockNumber *big.Int) (parent_vault.TypesRebalance, error)
-	SubmitReport func(runtime cre.Runtime, client *evm.Client, router common.Address, calldata []byte, gasLimit uint64) error
-}
-
-var defaultInitiatorDeps = InitiatorDeps{
-	GetRebalance:  onchain.GetRebalance,
-	GetEpochNonce: onchain.GetEpochNonce,
-	GetEpoch:      onchain.GetEpoch,
-	ReadTVL:       onchain.ReadTVL,
-	SubmitReport:  onchain.SubmitReport,
-}
-
-var defaultExecutorDeps = ExecutorDeps{
-	GetRebalance: onchain.GetRebalance,
-	SubmitReport: onchain.SubmitReport,
-}
-
-func OnEpochCronTrigger(config *helper.Config, runtime cre.Runtime, trigger *cron.Payload) (*workflowtypes.ExecutionResult, error) {
-	return onEpochCronTriggerWithDeps(config, runtime, trigger, defaultInitiatorDeps)
-}
-
-func onEpochCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, _ *cron.Payload, deps InitiatorDeps) (*workflowtypes.ExecutionResult, error) {
+func onEpochCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, _ *cron.Payload, snapshot *onchain.Snapshot, submit onchain.Submitter) (*workflowtypes.ExecutionResult, error) {
 	logger := runtime.Logger()
 
 	pvCodec, err := newParentCodec()
@@ -86,104 +55,38 @@ func onEpochCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, _ *c
 		return nil, err
 	}
 
-	parentVaultBinding, err := newParentVaultBinding(
-		&evm.Client{ChainSelector: parentCfg.ChainSelector},
-		parentCfg.VaultAddress,
-	)
+	parent := snapshot.Parent
+	epoch := parent.CurrentEpoch
+	epochNonce := parent.CurrentEpochNonce
+	if parent.Rebalance.State != onchain.RebalanceNone {
+		return workflowtypes.Noop(runtime, "rebalance in progress")
+	}
+	if epochNonce.Cmp(big.NewInt(1)) > 0 && parent.PreviousEpoch.Status != onchain.EpochClaimable {
+		return workflowtypes.Noop(runtime, "previous epoch not claimable")
+	}
+	if epoch.Status != onchain.EpochOpen {
+		return workflowtypes.Noop(runtime, "epoch not open")
+	}
+	if !onchain.PeriodElapsed(epoch.OpenedAtTimestamp, snapshot.ObservedAt, minEpochPeriod) {
+		return workflowtypes.Noop(runtime, "epoch too young")
+	}
+	tvl, err := snapshot.ActiveTVL(parentCfg.ChainSelector)
 	if err != nil {
-		return nil, fmt.Errorf("bind parent vault: %w", err)
+		return nil, err
 	}
-
-	blockNumber := big.NewInt(config.BlockNumber)
-
-	// Guard 1: skip if a rebalance is in progress (avoids conflicting state).
-	rebalance, err := deps.GetRebalance(runtime, parentVaultBinding, blockNumber)
-	if err != nil {
-		return nil, fmt.Errorf("get rebalance: %w", err)
-	}
-	if rebalance.State != 0 {
-		logger.Info("Rebalance in progress; skipping epoch close")
-		return &workflowtypes.ExecutionResult{Result: "no-op: rebalance in progress"}, nil
-	}
-
-	// Guard 2: read the current epoch.
-	epochNonce, err := deps.GetEpochNonce(runtime, parentVaultBinding, blockNumber)
-	if err != nil {
-		return nil, fmt.Errorf("get epoch nonce: %w", err)
-	}
-	if epochNonce == nil {
-		return nil, fmt.Errorf("get epoch nonce: nil epoch nonce")
-	}
-	epoch, err := deps.GetEpoch(runtime, parentVaultBinding, epochNonce, blockNumber)
-	if err != nil {
-		return nil, fmt.Errorf("get epoch: %w", err)
-	}
-
-	// Guard 3: epoch must be OPEN (status 1).
-	if epoch.Status != 1 {
-		logger.Info("Epoch not open; skipping", slog.Uint64("status", uint64(epoch.Status)))
-		return &workflowtypes.ExecutionResult{Result: "no-op: epoch not open"}, nil
-	}
-	if err := validateEpochCloseFields(epoch); err != nil {
-		return nil, fmt.Errorf("get epoch: %w", err)
-	}
-
-	// Guard 4: skip if there is no activity to settle.
-	zero := big.NewInt(0)
-	if epoch.TotalDepositAmount.Cmp(zero) == 0 && epoch.TotalShareBurnAmount.Cmp(zero) == 0 {
-		logger.Info("No epoch activity; skipping")
-		return &workflowtypes.ExecutionResult{Result: "no-op: no activity"}, nil
-	}
-
-	// Guard 5: skip if the epoch hasn't been open long enough.
-	if runtime.Now().Unix() < epoch.OpenedAtTimestamp.Int64()+minEpochPeriod {
-		logger.Info("Epoch too young; skipping",
-			slog.Int64("openedAt", epoch.OpenedAtTimestamp.Int64()),
-			slog.Int64("minCloseAt", epoch.OpenedAtTimestamp.Int64()+minEpochPeriod),
-		)
-		return &workflowtypes.ExecutionResult{Result: "no-op: epoch too young"}, nil
-	}
-
-	// Read TVL from whichever vault holds the active strategy.
-	var tvlVault onchain.BaseVaultInterface
-	if rebalance.ActiveStrategy.ChainSelector == parentCfg.ChainSelector {
-		tvlVault = parentVaultBinding
-	} else {
-		stratCfg, err := helper.FindEvmConfigByChainSelector(config.Evms, rebalance.ActiveStrategy.ChainSelector)
-		if err != nil {
-			return nil, fmt.Errorf("find strategy chain: %w", err)
-		}
-		tvlVault, err = newChildVaultBinding(
-			&evm.Client{ChainSelector: stratCfg.ChainSelector},
-			stratCfg.VaultAddress,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("bind child vault: %w", err)
-		}
-	}
-
-	tvl, err := deps.ReadTVL(runtime, tvlVault, blockNumber)
-	if err != nil {
-		return nil, fmt.Errorf("read tvl: %w", err)
-	}
-	if tvl == nil {
-		return nil, fmt.Errorf("read tvl: nil tvl")
+	isLocal := parent.Rebalance.ActiveStrategy.ChainSelector == parentCfg.ChainSelector
+	if _, err := calculateEpochClose(epoch, parent.TotalShares, tvl, *config.AssetDecimals, isLocal); err != nil {
+		return workflowtypes.Noop(runtime, err.Error())
 	}
 
 	calldata, err := pvCodec.EncodeCloseEpochMethodCall(
-		parent_vault.CloseEpochInput{Tvl: tvl},
+		parent_vault.CloseEpochInput{ExpectedEpochNonce: epochNonce, Tvl: tvl},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("encode closeEpoch: %w", err)
 	}
 
-	if err := deps.SubmitReport(
-		runtime,
-		&evm.Client{ChainSelector: parentCfg.ChainSelector},
-		common.HexToAddress(parentCfg.WorkflowRouterAddress),
-		calldata,
-		parentCfg.GasLimit,
-	); err != nil {
+	if err := submit(runtime, parentCfg, snapshot.ObservedAt, calldata); err != nil {
 		return nil, fmt.Errorf("submit closeEpoch: %w", err)
 	}
 
@@ -191,24 +94,11 @@ func onEpochCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, _ *c
 	return &workflowtypes.ExecutionResult{Result: "closed epoch"}, nil
 }
 
-func validateEpochCloseFields(epoch parent_vault.TypesEpoch) error {
-	if epoch.TotalDepositAmount == nil {
-		return fmt.Errorf("nil total deposit amount")
-	}
-	if epoch.TotalShareBurnAmount == nil {
-		return fmt.Errorf("nil total share burn amount")
-	}
-	if epoch.OpenedAtTimestamp == nil {
-		return fmt.Errorf("nil opened at timestamp")
-	}
-	return nil
+func OnEpochWithdrawExecuting(config *helper.Config, runtime cre.Runtime, log *evm.Log, snapshot *onchain.Snapshot, sourceChain uint64) (*workflowtypes.ExecutionResult, error) {
+	return onEpochWithdrawExecutingWithDeps(config, runtime, log, snapshot, sourceChain, onchain.SubmitReport)
 }
 
-func OnEpochWithdrawExecuting(config *helper.Config, runtime cre.Runtime, log *evm.Log) (*workflowtypes.ExecutionResult, error) {
-	return onEpochWithdrawExecutingWithDeps(config, runtime, log, defaultExecutorDeps)
-}
-
-func onEpochWithdrawExecutingWithDeps(config *helper.Config, runtime cre.Runtime, log *evm.Log, deps ExecutorDeps) (*workflowtypes.ExecutionResult, error) {
+func onEpochWithdrawExecutingWithDeps(config *helper.Config, runtime cre.Runtime, log *evm.Log, snapshot *onchain.Snapshot, sourceChain uint64, submit onchain.Submitter) (*workflowtypes.ExecutionResult, error) {
 	logger := runtime.Logger()
 
 	pvCodec, err := newParentCodec()
@@ -230,18 +120,20 @@ func onEpochWithdrawExecutingWithDeps(config *helper.Config, runtime cre.Runtime
 		return nil, err
 	}
 
-	parentVaultBinding, err := newParentVaultBinding(
-		&evm.Client{ChainSelector: parentCfg.ChainSelector},
-		parentCfg.VaultAddress,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("bind parent vault: %w", err)
+	if !onchain.MatchSource(config, log, sourceChain, parentCfg.ChainSelector) {
+		return workflowtypes.Noop(runtime, "wrong epoch event source")
 	}
-
-	// Read the active strategy to find which child chain to call.
-	rebalance, err := deps.GetRebalance(runtime, parentVaultBinding, big.NewInt(config.BlockNumber))
-	if err != nil {
-		return nil, fmt.Errorf("get rebalance: %w", err)
+	parent := snapshot.Parent
+	rebalance := parent.Rebalance
+	if rebalance.State != onchain.RebalanceNone {
+		return workflowtypes.Noop(runtime, "rebalance in progress")
+	}
+	if !matchesExecutingEpoch(parent, evt.EpochNonce) {
+		return workflowtypes.Noop(runtime, "stale epoch event")
+	}
+	expectedAmount := new(big.Int).Sub(parent.PreviousEpoch.TotalWithdrawClaimAmount, parent.PreviousEpoch.TotalDepositAmount)
+	if expectedAmount.Sign() <= 0 || evt.Amount.Sign() <= 0 || expectedAmount.Cmp(evt.Amount) != 0 {
+		return workflowtypes.Noop(runtime, "epoch withdrawal amount mismatch")
 	}
 
 	if rebalance.ActiveStrategy.ChainSelector == parentCfg.ChainSelector {
@@ -256,6 +148,13 @@ func onEpochWithdrawExecutingWithDeps(config *helper.Config, runtime cre.Runtime
 		return nil, fmt.Errorf("find strategy chain: %w", err)
 	}
 
+	child := snapshot.Children[stratCfg.ChainSelector]
+	if evt.EpochNonce.Cmp(child.LastHandledEpochNonce) <= 0 {
+		return workflowtypes.Noop(runtime, "epoch already handled")
+	}
+	// Submit the original amount even if observed TVL is insufficient.
+	// ChildVault catches adapter failure and records epoch-withdraw recovery.
+
 	calldata, err := cvCodec.EncodeExecuteEpochWithdrawMethodCall(
 		child_vault.ExecuteEpochWithdrawInput{EpochNonce: evt.EpochNonce, Amount: evt.Amount},
 	)
@@ -263,13 +162,7 @@ func onEpochWithdrawExecutingWithDeps(config *helper.Config, runtime cre.Runtime
 		return nil, fmt.Errorf("encode executeEpochWithdraw: %w", err)
 	}
 
-	if err := deps.SubmitReport(
-		runtime,
-		&evm.Client{ChainSelector: stratCfg.ChainSelector},
-		common.HexToAddress(stratCfg.WorkflowRouterAddress),
-		calldata,
-		stratCfg.GasLimit,
-	); err != nil {
+	if err := submit(runtime, *stratCfg, snapshot.ObservedAt, calldata); err != nil {
 		return nil, fmt.Errorf("submit executeEpochWithdraw: %w", err)
 	}
 
@@ -281,11 +174,11 @@ func onEpochWithdrawExecutingWithDeps(config *helper.Config, runtime cre.Runtime
 	return &workflowtypes.ExecutionResult{Result: "submitted executeEpochWithdraw"}, nil
 }
 
-func OnEpochDepositSuccess(config *helper.Config, runtime cre.Runtime, log *evm.Log) (*workflowtypes.ExecutionResult, error) {
-	return onEpochDepositSuccessWithDeps(config, runtime, log, defaultExecutorDeps)
+func OnEpochDepositToStrategySuccess(config *helper.Config, runtime cre.Runtime, log *evm.Log, snapshot *onchain.Snapshot, sourceChain uint64) (*workflowtypes.ExecutionResult, error) {
+	return onEpochDepositToStrategySuccessWithDeps(config, runtime, log, snapshot, sourceChain, onchain.SubmitReport)
 }
 
-func onEpochDepositSuccessWithDeps(config *helper.Config, runtime cre.Runtime, log *evm.Log, deps ExecutorDeps) (*workflowtypes.ExecutionResult, error) {
+func onEpochDepositToStrategySuccessWithDeps(config *helper.Config, runtime cre.Runtime, log *evm.Log, snapshot *onchain.Snapshot, sourceChain uint64, submit onchain.Submitter) (*workflowtypes.ExecutionResult, error) {
 	logger := runtime.Logger()
 
 	cvCodec, err := newChildCodec()
@@ -297,26 +190,32 @@ func onEpochDepositSuccessWithDeps(config *helper.Config, runtime cre.Runtime, l
 		return nil, fmt.Errorf("decode EpochDepositToStrategySuccess: %w", err)
 	}
 
-	pvCodec, err := newParentCodec()
-	if err != nil {
-		return nil, fmt.Errorf("init parent vault codec: %w", err)
-	}
-	calldata, err := pvCodec.EncodeCompleteEpochDepositMethodCall()
-	if err != nil {
-		return nil, fmt.Errorf("encode completeEpochDeposit: %w", err)
-	}
-
 	parentCfg, err := helper.FindParent(config.Evms)
 	if err != nil {
 		return nil, err
 	}
-	if err := deps.SubmitReport(
-		runtime,
-		&evm.Client{ChainSelector: parentCfg.ChainSelector},
-		common.HexToAddress(parentCfg.WorkflowRouterAddress),
-		calldata,
-		parentCfg.GasLimit,
-	); err != nil {
+	parent := snapshot.Parent
+	if parent.Rebalance.ActiveStrategy.ChainSelector == parentCfg.ChainSelector ||
+		!onchain.MatchSource(config, log, sourceChain, parent.Rebalance.ActiveStrategy.ChainSelector) {
+		return workflowtypes.Noop(runtime, "wrong epoch deposit destination")
+	}
+	if !matchesExecutingEpoch(parent, evt.EpochNonce) {
+		return workflowtypes.Noop(runtime, "stale epoch event")
+	}
+	if _, err := reconcileEpochDeposit(parent.PreviousEpoch, parent.TotalShares, evt.Amount); err != nil {
+		return workflowtypes.Noop(runtime, err.Error())
+	}
+
+	pvCodec, err := newParentCodec()
+	if err != nil {
+		return nil, fmt.Errorf("init parent vault codec: %w", err)
+	}
+	calldata, err := pvCodec.EncodeCompleteEpochDepositMethodCall(parent_vault.CompleteEpochDepositInput{ExpectedEpochNonce: evt.EpochNonce, ActualDepositAmount: evt.Amount})
+	if err != nil {
+		return nil, fmt.Errorf("encode completeEpochDeposit: %w", err)
+	}
+
+	if err := submit(runtime, parentCfg, snapshot.ObservedAt, calldata); err != nil {
 		return nil, fmt.Errorf("submit completeEpochDeposit: %w", err)
 	}
 
@@ -325,4 +224,11 @@ func onEpochDepositSuccessWithDeps(config *helper.Config, runtime cre.Runtime, l
 		slog.Any("amount", evt.Amount),
 	)
 	return &workflowtypes.ExecutionResult{Result: "completed epoch deposit"}, nil
+}
+
+func matchesExecutingEpoch(parent parent_vault.TypesParentOperationalState, eventNonce *big.Int) bool {
+	previousNonce := new(big.Int).Sub(parent.CurrentEpochNonce, big.NewInt(1))
+	return parent.CurrentEpochNonce.Cmp(big.NewInt(1)) > 0 &&
+		previousNonce.Cmp(eventNonce) == 0 &&
+		parent.PreviousEpoch.Status == onchain.EpochExecuting
 }

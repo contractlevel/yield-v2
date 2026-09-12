@@ -1311,3 +1311,7 @@ The impact is availability and settlement delay rather than loss of principal or
 - CCIP fees increase enough to shorten LINK runway materially.
 - Monitoring or replenishment cannot restore settlement within the protocol's availability objectives.
 - Repeated subsidized remote flows are observed in production.
+
+---
+
+<!-- 1. workflow doesnt calculate tvl impact on APY 2. chosen strategy could be based on spiked data 3. workflow has no onchain read check for supported chain or protocol before submitting initiateRebalance-->
