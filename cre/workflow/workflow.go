@@ -73,22 +73,23 @@ func initWorkflow(config *Config, _ *slog.Logger, readSnapshot onchain.SnapshotR
 	for _, chainConfig := range config.Evms {
 		sourceChain := chainConfig.ChainSelector
 		isParent := chainConfig.IsParent
-		// Child trigger: topic 0 matches either event, with OR semantics.
-		// Both handlers use this child's chain and vault address as their source.
-		signatures := [][]byte{
-			// Trigger for handler 5: ChildVault.RebalanceDepositSuccess.
-			childCodec.RebalanceDepositSuccessLogHash(),
-			// Trigger for handler 6: ChildVault.EpochDepositToStrategySuccess.
-			childCodec.EpochDepositToStrategySuccessLogHash(),
-		}
-		// @review This default-then-override structure is simple, although it constructs the child signature list even for the parent iteration.
+		var signatures [][]byte
 		if isParent {
 			// One Parent subscription matches the events for handlers 3 and 4.
 			signatures = [][]byte{
-				// Trigger for handler 3: ParentVault.RebalanceInitiated. // @review we should be no-oping if the parent was the previous strategy
+				// Trigger for handler 3: ParentVault.RebalanceInitiated.
 				parentCodec.RebalanceInitiatedLogHash(),
 				// Trigger for handler 4: ParentVault.EpochWithdrawExecuting.
 				parentCodec.EpochWithdrawExecutingLogHash(),
+			}
+		} else {
+			// Child trigger: topic 0 matches either event, with OR semantics.
+			// Both handlers use this child's chain and vault address as their source.
+			signatures = [][]byte{
+				// Trigger for handler 5: ChildVault.RebalanceDepositSuccess.
+				childCodec.RebalanceDepositSuccessLogHash(),
+				// Trigger for handler 6: ChildVault.EpochDepositToStrategySuccess.
+				childCodec.EpochDepositToStrategySuccessLogHash(),
 			}
 		}
 
