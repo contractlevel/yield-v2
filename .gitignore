@@ -9,6 +9,7 @@ evm/broadcast/
 .claude/
 CLAUDE.md
 AGENT.md
+AGENTS.md
 .notes.md
 lcov.info
 evm/out/
