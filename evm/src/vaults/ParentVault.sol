@@ -181,7 +181,6 @@ contract ParentVault is BaseVault, ParentVaultStore, Allowlist, IParentVault {
     /// @dev Reverts if the current epoch is not open
     /// @dev Requires the caller to have sufficient share balance and allowance for shareBurnAmount
     function withdraw(uint256 shareBurnAmount) external nonReentrant whenNotPaused returns (uint256 epochNonce) {
-        _validateAllowlist(msg.sender);
         epochNonce = ParentVaultUserEpochLib.withdraw(_parentVaultStorage(), i_share, msg.sender, shareBurnAmount);
     }
 
@@ -205,7 +204,6 @@ contract ParentVault is BaseVault, ParentVaultStore, Allowlist, IParentVault {
     {
         _revertIfZeroAddress(beneficiary);
         _revertIfInvalidBeneficiary(beneficiary);
-        _validateAllowlist(msg.sender, beneficiary);
         epochNonce = ParentVaultUserEpochLib.withdrawFor(
             _parentVaultStorage(), i_share, msg.sender, beneficiary, shareBurnAmount
         );
