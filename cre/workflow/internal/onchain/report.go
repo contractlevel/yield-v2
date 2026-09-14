@@ -79,7 +79,7 @@ func submitReport(runtime cre.Runtime, evmClient reportWriter, target helper.Evm
 	}
 	if resp == nil {
 		return fmt.Errorf("write report: nil response")
-	}
+	} // @review is this the submit==nil?
 
 	if resp.TxStatus != evm.TxStatus_TX_STATUS_SUCCESS {
 		msg := "unknown error"

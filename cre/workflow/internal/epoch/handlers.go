@@ -61,6 +61,7 @@ func onEpochCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, _ *c
 	if parent.Rebalance.State != onchain.RebalanceNone {
 		return workflowtypes.Noop(runtime, "rebalance in progress")
 	}
+	// @review what is epochNonce.Cmp(big.NewInt(1)) > 0 ?
 	if epochNonce.Cmp(big.NewInt(1)) > 0 && parent.PreviousEpoch.Status != onchain.EpochClaimable {
 		return workflowtypes.Noop(runtime, "previous epoch not claimable")
 	}
@@ -70,6 +71,7 @@ func onEpochCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, _ *c
 	if !onchain.PeriodElapsed(epoch.OpenedAtTimestamp, snapshot.ObservedAt, minEpochPeriod) {
 		return workflowtypes.Noop(runtime, "epoch too young")
 	}
+	// @review is this tvl fetched from the active strategy?
 	tvl, err := snapshot.ActiveTVL(parentCfg.ChainSelector)
 	if err != nil {
 		return nil, err
@@ -86,6 +88,7 @@ func onEpochCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, _ *c
 		return nil, fmt.Errorf("encode closeEpoch: %w", err)
 	}
 
+	// @review if submit result == nil, do we want to fail?
 	if err := submit(runtime, parentCfg, snapshot.ObservedAt, calldata); err != nil {
 		return nil, fmt.Errorf("submit closeEpoch: %w", err)
 	}
@@ -120,6 +123,7 @@ func onEpochWithdrawExecutingWithDeps(config *helper.Config, runtime cre.Runtime
 		return nil, err
 	}
 
+	// @review what is this?
 	if !onchain.MatchSource(config, log, sourceChain, parentCfg.ChainSelector) {
 		return workflowtypes.Noop(runtime, "wrong epoch event source")
 	}
@@ -136,6 +140,7 @@ func onEpochWithdrawExecutingWithDeps(config *helper.Config, runtime cre.Runtime
 		return workflowtypes.Noop(runtime, "epoch withdrawal amount mismatch")
 	}
 
+	// @review should this be higher up?
 	if rebalance.ActiveStrategy.ChainSelector == parentCfg.ChainSelector {
 		logger.Info("EpochWithdrawExecuting: active strategy on parent; no action required",
 			slog.Any("nonce", evt.EpochNonce),
@@ -162,6 +167,7 @@ func onEpochWithdrawExecutingWithDeps(config *helper.Config, runtime cre.Runtime
 		return nil, fmt.Errorf("encode executeEpochWithdraw: %w", err)
 	}
 
+	// @review submit ==nil?
 	if err := submit(runtime, *stratCfg, snapshot.ObservedAt, calldata); err != nil {
 		return nil, fmt.Errorf("submit executeEpochWithdraw: %w", err)
 	}
@@ -214,6 +220,7 @@ func onEpochDepositToStrategySuccessWithDeps(config *helper.Config, runtime cre.
 	if err != nil {
 		return nil, fmt.Errorf("encode completeEpochDeposit: %w", err)
 	}
+	// if calldata == nil? if submit result == nil?
 
 	if err := submit(runtime, parentCfg, snapshot.ObservedAt, calldata); err != nil {
 		return nil, fmt.Errorf("submit completeEpochDeposit: %w", err)

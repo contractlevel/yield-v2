@@ -119,6 +119,7 @@ func (s *Snapshot) Validate(config *helper.Config) error {
 
 func (s *Snapshot) BlockedReason(config *helper.Config) string {
 	for _, cfg := range config.Evms {
+		// @review is this parent/child overwrite the most efficient?
 		paused, recovery := s.Parent.Paused, s.Parent.RecoveryMode
 		if !cfg.IsParent {
 			c := s.Children[cfg.ChainSelector]

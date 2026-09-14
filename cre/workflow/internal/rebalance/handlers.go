@@ -79,6 +79,7 @@ func onRebalanceCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, 
 	if !onchain.PeriodElapsed(rebalance.LastRebalanceCompletedTimestamp, snapshot.ObservedAt, minRebalanceIntervalSeconds) {
 		return workflowtypes.Noop(runtime, "rebalance cooldown active")
 	}
+	// @review will this block the first rebalance? an epoch should happen first, and that would deposit so tvl would be > 0. confirm this
 	if rebalance.ActiveStrategy.ChainSelector == parentCfg.ChainSelector && parent.Tvl.Sign() == 0 {
 		return workflowtypes.Noop(runtime, "zero local strategy TVL")
 	}
@@ -109,6 +110,7 @@ func onRebalanceCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, 
 			slog.String("project", bestPool.Project),
 			slog.String("chain", bestPool.Chain),
 		)
+		// @review should this be noop?
 		return &workflowtypes.ExecutionResult{Result: "no-op: already optimal"}, nil
 	}
 
