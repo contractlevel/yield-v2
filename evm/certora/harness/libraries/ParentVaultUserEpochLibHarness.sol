@@ -16,17 +16,17 @@ contract ParentVaultUserEpochLibHarness is ParentVaultStore, HelperHarness {
         i_share = share;
     }
 
-    function deposit(address user, uint256 amount, uint256 minDepositAmount) external returns (uint256 epochNonce) {
+    function deposit(address user, uint256 amount, uint256 minAssetAmount) external returns (uint256 epochNonce) {
         epochNonce =
-            ParentVaultUserEpochLib._deposit(_parentVaultStorage(), i_asset, user, user, amount, minDepositAmount);
+            ParentVaultUserEpochLib._deposit(_parentVaultStorage(), i_asset, user, user, amount, minAssetAmount);
     }
 
-    function depositFor(address payer, address beneficiary, uint256 amount, uint256 minDepositAmount)
+    function depositFor(address payer, address beneficiary, uint256 amount, uint256 minAssetAmount)
         external
         returns (uint256 epochNonce)
     {
         epochNonce = ParentVaultUserEpochLib._deposit(
-            _parentVaultStorage(), i_asset, payer, beneficiary, amount, minDepositAmount
+            _parentVaultStorage(), i_asset, payer, beneficiary, amount, minAssetAmount
         );
     }
 
@@ -38,8 +38,9 @@ contract ParentVaultUserEpochLibHarness is ParentVaultStore, HelperHarness {
         external
         returns (uint256 epochNonce)
     {
-        epochNonce =
-            ParentVaultUserEpochLib._withdraw(_parentVaultStorage(), i_share, payer, beneficiary, shareBurnAmount);
+        epochNonce = ParentVaultUserEpochLib._withdraw(
+            _parentVaultStorage(), i_share, payer, beneficiary, shareBurnAmount
+        );
     }
 
     function claimShares(address user, uint256 epochNonce) external returns (uint256 shareMintAmount) {

@@ -18,7 +18,9 @@ AaveV4Adapter_deposit
       │   ├── it should buffer only that exact error and clear the allowance
       │   └── it should revert if the resulting buffer exceeds the cap
       ├── when Aave reverts with any other payload
-      │   └── it should bubble the exact revert
+      │   ├── it should bubble the exact revert for arbitrary bytes, trailing data, and short data
+      │   ├── it should preserve the existing buffer, TVL, balances, and allowance
+      │   └── it should allow a later successful deposit
       ├── when the Hub preview reverts
       │   └── it should bubble the exact revert without buffering or approving
       ├── when clearing the allowance fails after a dust revert

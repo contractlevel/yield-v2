@@ -352,7 +352,7 @@ rule EPOCH_015_deposit_RevertWhen_AmountTooSmall() {
     env e;
     address user;
     uint256 amount;
-    uint256 minDepositAmount;
+    uint256 minAssetAmount;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "deposit is nonpayable";
@@ -366,14 +366,14 @@ rule EPOCH_015_deposit_RevertWhen_AmountTooSmall() {
     require asset.allowance(user, currentContract) >= amount, "vault is approved to transfer asset";
 
     /// @dev revert condition being verified
-    require amount < minDepositAmount, "amount is below minimum";
+    require amount < minAssetAmount, "amount is below minimum";
 
     /// @dev ghost starting values
     require ghost_DepositSubmitted_EventCount == 0, "DepositSubmitted event count starts at zero";
 
     storage before = lastStorage;
 
-    deposit@withrevert(e, user, amount, minDepositAmount);
+    deposit@withrevert(e, user, amount, minAssetAmount);
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
@@ -386,11 +386,11 @@ rule EPOCH_005_deposit_RevertWhen_EpochNotOpen() {
     env e;
     address user;
     uint256 amount;
-    uint256 minDepositAmount;
+    uint256 minAssetAmount;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "deposit is nonpayable";
-    require amount >= minDepositAmount, "amount meets minimum";
+    require amount >= minAssetAmount, "amount meets minimum";
 
     uint256 epochNonce = getEpochNonce();
 
@@ -410,7 +410,7 @@ rule EPOCH_005_deposit_RevertWhen_EpochNotOpen() {
 
     storage before = lastStorage;
 
-    deposit@withrevert(e, user, amount, minDepositAmount);
+    deposit@withrevert(e, user, amount, minAssetAmount);
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
@@ -423,11 +423,11 @@ rule deposit_RevertWhen_UserDepositAdditionOverflows() {
     env e;
     address user;
     uint256 amount;
-    uint256 minDepositAmount;
+    uint256 minAssetAmount;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "deposit is nonpayable";
-    require amount >= minDepositAmount, "amount meets minimum";
+    require amount >= minAssetAmount, "amount meets minimum";
 
     uint256 epochNonce = getEpochNonce();
 
@@ -447,7 +447,7 @@ rule deposit_RevertWhen_UserDepositAdditionOverflows() {
 
     storage before = lastStorage;
 
-    deposit@withrevert(e, user, amount, minDepositAmount);
+    deposit@withrevert(e, user, amount, minAssetAmount);
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
@@ -460,11 +460,11 @@ rule deposit_RevertWhen_EpochTotalDepositAdditionOverflows() {
     env e;
     address user;
     uint256 amount;
-    uint256 minDepositAmount;
+    uint256 minAssetAmount;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "deposit is nonpayable";
-    require amount >= minDepositAmount, "amount meets minimum";
+    require amount >= minAssetAmount, "amount meets minimum";
 
     uint256 epochNonce = getEpochNonce();
 
@@ -484,7 +484,7 @@ rule deposit_RevertWhen_EpochTotalDepositAdditionOverflows() {
 
     storage before = lastStorage;
 
-    deposit@withrevert(e, user, amount, minDepositAmount);
+    deposit@withrevert(e, user, amount, minAssetAmount);
 
     assert lastReverted;
     assert before[currentContract] == lastStorage[currentContract];
@@ -497,11 +497,11 @@ rule EPOCH_005_deposit_Success() {
     env e;
     address user;
     uint256 amount;
-    uint256 minDepositAmount;
+    uint256 minAssetAmount;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "deposit is nonpayable";
-    require amount >= minDepositAmount, "amount meets minimum";
+    require amount >= minAssetAmount, "amount meets minimum";
 
     uint256 epochNonce = getEpochNonce();
     uint256 depositBefore = getDeposit(user, epochNonce);
@@ -521,7 +521,7 @@ rule EPOCH_005_deposit_Success() {
     /// @dev ghost starting values
     require ghost_DepositSubmitted_EventCount == 0, "DepositSubmitted event count starts at zero";
 
-    uint256 returnedEpochNonce = deposit@withrevert(e, user, amount, minDepositAmount);
+    uint256 returnedEpochNonce = deposit@withrevert(e, user, amount, minAssetAmount);
 
     assert !lastReverted;
     assert returnedEpochNonce == epochNonce;
@@ -542,11 +542,11 @@ rule EPOCH_005_depositFor_Success_DebitsPayerAndCreditsBeneficiary() {
     address payer;
     address beneficiary;
     uint256 amount;
-    uint256 minDepositAmount;
+    uint256 minAssetAmount;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "depositFor is nonpayable";
-    require amount >= minDepositAmount, "amount meets minimum";
+    require amount >= minAssetAmount, "amount meets minimum";
 
     uint256 epochNonce = getEpochNonce();
     uint256 beneficiaryDepositBefore = getDeposit(beneficiary, epochNonce);
@@ -570,7 +570,7 @@ rule EPOCH_005_depositFor_Success_DebitsPayerAndCreditsBeneficiary() {
     /// @dev ghost starting values
     require ghost_DepositSubmitted_EventCount == 0, "DepositSubmitted event count starts at zero";
 
-    uint256 returnedEpochNonce = depositFor@withrevert(e, payer, beneficiary, amount, minDepositAmount);
+    uint256 returnedEpochNonce = depositFor@withrevert(e, payer, beneficiary, amount, minAssetAmount);
 
     assert !lastReverted;
     assert returnedEpochNonce == epochNonce;
