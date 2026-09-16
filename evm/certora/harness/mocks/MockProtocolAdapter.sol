@@ -39,6 +39,10 @@ contract MockProtocolAdapter is IProtocolAdapter {
         tvl = s_tvl;
     }
 
+    function getBufferedAssets() external pure returns (uint256 bufferedAssets) {
+        bufferedAssets = 0;
+    }
+
     function getProtocolPool() external view returns (address pool) {
         pool = address(0);
     }

@@ -24,6 +24,10 @@ ParentVault_completeEpochDeposit
 │   └── it should round adjusted shares down
 ├── when the epoch contains deposits and withdrawal claims
 │   └── it should reconcile deposit shares using withdrawals plus the actual remote deposit
+├── when the share adjustment product exceeds uint256
+│   └── it should use full precision and reconcile the maximum allocation without minting shares
+├── when a full-precision settlement includes the permanently locked seed
+│   └── it should complete the closed mixed epoch without changing the seed shares
 ├── it should emit EpochDepositReconciled before EpochClaimable
 ├── it should mark the previous epoch claimable
 ├── it should emit EpochClaimable

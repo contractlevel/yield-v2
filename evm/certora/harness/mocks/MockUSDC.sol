@@ -13,7 +13,7 @@ contract MockUSDC {
         balanceOf[to] += amount;
     }
 
-    function approve(address spender, uint256 amount) external returns (bool) {
+    function approve(address spender, uint256 amount) external virtual returns (bool) {
         allowance[msg.sender][spender] = amount;
         return true;
     }

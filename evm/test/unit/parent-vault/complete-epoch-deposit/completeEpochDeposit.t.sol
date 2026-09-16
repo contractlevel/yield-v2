@@ -2,11 +2,15 @@
 pragma solidity 0.8.34;
 
 import {BaseUnitTest, Vm} from "../../BaseUnitTest.t.sol";
+import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
 
 import {IParentVault} from "../../../../src/interfaces/vaults/IParentVault.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
+import {YieldcoinShareSeedLock} from "../../../../script/deploy/contracts/YieldcoinShareSeedLock.sol";
 
 contract ParentVault_CompleteEpochDepositUnitTest is BaseUnitTest {
+    using stdStorage for StdStorage;
+
     uint256 internal constant TVL = 1_000 * ASSET_PRECISION;
 
     function setUp() public {
@@ -158,6 +162,73 @@ contract ParentVault_CompleteEpochDepositUnitTest is BaseUnitTest {
         assertEq(epochAfter.remainingDepositClaimAmount, DEPOSIT_AMOUNT);
         assertEq(epochAfter.totalWithdrawClaimAmount, withdrawClaimAmount);
         assertEq(s_parentVault.getTotalShares(), authoritativeSharesBefore - expectedShareReduction);
+    }
+
+    function test_ParentVault_completeEpochDeposit_Success_UsesFullPrecisionForShareAdjustment() public {
+        uint256 epochNonce = 1;
+        uint256 maximumAmount = type(uint256).max;
+        _setParentEpochNonce(epochNonce + 1);
+        _setParentEpochStatus(epochNonce, Types.EpochStatus.EXECUTING);
+        _setParentTotalShares(maximumAmount);
+        stdstore.target(address(s_parentVault)).sig("getEpoch(uint256)").with_key(epochNonce).depth(0)
+            .checked_write(maximumAmount);
+        stdstore.target(address(s_parentVault)).sig("getEpoch(uint256)").with_key(epochNonce).depth(2)
+            .checked_write(maximumAmount - 2);
+        stdstore.target(address(s_parentVault)).sig("getEpoch(uint256)").with_key(epochNonce).depth(4)
+            .checked_write(maximumAmount);
+        uint256 shareSupplyBefore = s_yieldcoin.totalSupply();
+
+        vm.recordLogs();
+        _changePrank(i_epochOperator);
+        s_parentVault.completeEpochDeposit(epochNonce, 1);
+
+        Types.Epoch memory epoch = s_parentVault.getEpoch(epochNonce);
+        assertEq(epoch.remainingShareMintAmount, maximumAmount - 1);
+        assertEq(s_parentVault.getTotalShares(), maximumAmount - 1);
+        assertEq(epoch.totalDepositAmount, maximumAmount);
+        assertEq(epoch.totalWithdrawClaimAmount, maximumAmount - 2);
+        assertEq(uint256(epoch.status), uint256(Types.EpochStatus.CLAIMABLE));
+        assertEq(s_yieldcoin.totalSupply(), shareSupplyBefore);
+        Vm.Log memory reconciliationLog =
+            _assertEmittedBy(keccak256("EpochDepositReconciled(uint256,uint256,uint256)"), address(s_parentVault));
+        assertEq(uint256(reconciliationLog.topics[1]), epochNonce);
+        assertEq(uint256(reconciliationLog.topics[2]), 1);
+        assertEq(uint256(reconciliationLog.topics[3]), 1);
+    }
+
+    function test_ParentVault_completeEpochDeposit_Success_UsesFullPrecisionWithLockedSeed() public {
+        uint256 depositAmount = uint256(1) << 120;
+        uint256 originalShareAmount = uint256(1) << 160;
+        uint256 seedShares = 100 * YIELD_PRECISION;
+        YieldcoinShareSeedLock seedLock = new YieldcoinShareSeedLock();
+
+        _prepareRemoteStrategy();
+        _setParentTotalShares(originalShareAmount);
+        _changePrank(address(s_parentVault));
+        s_yieldcoin.mint(address(seedLock), seedShares);
+        s_yieldcoin.mint(i_depositor, originalShareAmount / 2 - seedShares);
+        deal(address(s_mockUsdc), i_depositor, depositAmount);
+        _changePrank(i_depositor);
+        s_parentVault.deposit(depositAmount);
+        _submitParentWithdraw(originalShareAmount / 2);
+        _warpPastMinEpoch();
+        _changePrank(i_epochOperator);
+        s_parentVault.closeEpoch(1, depositAmount);
+
+        Types.Epoch memory epochBefore = s_parentVault.getEpoch(1);
+        uint256 totalSharesBefore = s_parentVault.getTotalShares();
+        uint256 shareSupplyBefore = s_yieldcoin.totalSupply();
+        assertEq(epochBefore.remainingShareMintAmount, originalShareAmount);
+        assertEq(epochBefore.totalWithdrawClaimAmount, depositAmount / 2);
+        assertEq(totalSharesBefore, originalShareAmount * 3 / 2);
+
+        s_parentVault.completeEpochDeposit(1, depositAmount / 4);
+
+        assertEq(s_parentVault.getEpoch(1).remainingShareMintAmount, originalShareAmount * 3 / 4);
+        assertEq(s_parentVault.getTotalShares(), totalSharesBefore - originalShareAmount / 4);
+        assertEq(uint256(s_parentVault.getEpoch(1).status), uint256(Types.EpochStatus.CLAIMABLE));
+        assertEq(s_yieldcoin.balanceOf(address(seedLock)), seedShares);
+        assertEq(s_yieldcoin.totalSupply(), shareSupplyBefore);
     }
 
     function test_ParentVault_completeEpochDeposit_EmitsEpochDepositReconciledBeforeEpochClaimable() public {

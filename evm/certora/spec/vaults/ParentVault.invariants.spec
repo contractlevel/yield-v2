@@ -752,7 +752,7 @@ invariant SOLV_001_parentCoversReservedLiquidObligations()
             requireInvariant ghostEpochStatusMatchesStorage(epochNonce);
             requireInvariant ghostEpochRemainingWithdrawMatchesStorage(epochNonce);
         }
-        preserved completeEpochDeposit(uint256 expectedEpochNonce) with (env e) {
+        preserved completeEpochDeposit(uint256 expectedEpochNonce, uint256 actualDepositAmount) with (env e) {
             require getEpochNonce() > 1;
             requireInvariant ghostEpochStatusMatchesStorage(assert_uint256(getEpochNonce() - 1));
             requireInvariant ghostEpochRemainingWithdrawMatchesStorage(assert_uint256(getEpochNonce() - 1));
