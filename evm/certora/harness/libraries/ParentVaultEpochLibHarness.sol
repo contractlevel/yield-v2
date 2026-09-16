@@ -7,25 +7,21 @@ import {ParentVaultEpochLib} from "../../../src/libraries/vaults/ParentVaultEpoc
 import {Types} from "../../../src/libraries/Types.sol";
 
 contract ParentVaultEpochLibHarness is ParentVaultStore, HelperHarness {
-
     function closeEpoch(
         uint256 expectedEpochNonce,
         uint256 tvl,
         uint256 sharePrecision,
         uint256 assetPrecision,
-        uint256 minDepositAmount,
+        uint256 minAssetAmount,
         bool isLocalStrategy
-    )
-        external
-        returns (uint256 epochNonce, uint8 action, uint256 amount, uint256 totalDepositAmount)
-    {
+    ) external returns (uint256 epochNonce, uint8 action, uint256 amount, uint256 totalDepositAmount) {
         ParentVaultEpochLib.CloseEpochExternalAction memory externalAction = ParentVaultEpochLib.closeEpoch(
             _parentVaultStorage(),
             expectedEpochNonce,
             tvl,
             sharePrecision,
             assetPrecision,
-            minDepositAmount,
+            minAssetAmount,
             isLocalStrategy
         );
         epochNonce = externalAction.epochNonce;
@@ -34,14 +30,12 @@ contract ParentVaultEpochLibHarness is ParentVaultStore, HelperHarness {
         totalDepositAmount = externalAction.totalDepositAmount;
     }
 
-    function completeEpochDeposit(uint256 expectedEpochNonce) external {
-        ParentVaultEpochLib.completeEpochDeposit(_parentVaultStorage(), expectedEpochNonce);
+    function completeEpochDeposit(uint256 expectedEpochNonce, uint256 actualDepositAmount) external {
+        ParentVaultEpochLib.completeEpochDeposit(_parentVaultStorage(), expectedEpochNonce, actualDepositAmount);
     }
 
     function finalizeLocalNetWithdraw(uint256 epochNonce, uint256 totalDepositAmount, uint256 amountOut) external {
-        ParentVaultEpochLib.finalizeLocalNetWithdraw(
-            _parentVaultStorage(), epochNonce, totalDepositAmount, amountOut
-        );
+        ParentVaultEpochLib.finalizeLocalNetWithdraw(_parentVaultStorage(), epochNonce, totalDepositAmount, amountOut);
     }
 
     function openNextEpoch(uint256 epochNonce) external {

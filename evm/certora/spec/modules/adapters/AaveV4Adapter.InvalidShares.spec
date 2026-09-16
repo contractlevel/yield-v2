@@ -1,6 +1,6 @@
 import "AaveV4AdapterCommon.spec";
 
-using MockAaveV4Spoke as aaveV4Spoke;
+using MockAaveV4InvalidSharesSpoke as aaveV4Spoke;
 
 methods {
     function aaveV4Spoke.getUserSuppliedAssets(uint256, address) external returns (uint256) envfree;
@@ -18,12 +18,6 @@ methods {
 
 use invariant ADAPTER_006_hubConfigurationMatchesAssetReserve;
 
-use rule CFG_001_getProtocolPool_EqualsSpoke;
-use rule ADAPTER_006_getReserveId_ResolvesAssetReserve;
-use rule getTVL_EqualsSpokeSuppliedAssetsPlusBufferedAssets;
-use rule ADAPTER_007_deposit_BuffersWhenPreviewIsZero;
-use rule ADAPTER_007_deposit_SuppliesWhenPreviewIsPositive;
 use rule ADAPTER_007_deposit_BuffersWhenSupplyReturnsExactInvalidShares;
 use rule ADAPTER_007_deposit_RevertWhen_InvalidSharesBufferExceedsLimit;
 use rule ADAPTER_007_deposit_RevertWhen_InvalidSharesAllowanceClearFails;
-use rule ADAPTER_007_deposit_RevertWhen_HubPreviewFails;

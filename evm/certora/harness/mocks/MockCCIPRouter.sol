@@ -3,6 +3,7 @@ pragma solidity 0.8.34;
 
 import {IRouterClient, Client} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {RateLimiter} from "@chainlink/contracts-ccip/contracts/libraries/RateLimiter.sol";
 
 /// @notice Minimal CCIP router mock for Certora verification.
 contract MockCCIPRouter is IRouterClient {
@@ -10,6 +11,7 @@ contract MockCCIPRouter is IRouterClient {
 
     bool internal s_getFeeReverts;
     bool internal s_ccipSendReverts;
+    bool internal s_capacityError;
     uint64 internal s_lastDestinationChainSelector;
     bytes32 internal s_lastReceiverHash;
     bytes32 internal s_lastMessageDataHash;
@@ -35,7 +37,7 @@ contract MockCCIPRouter is IRouterClient {
         payable
         returns (bytes32)
     {
-        if (s_ccipSendReverts) revert();
+        if (s_ccipSendReverts) _revertRouterError();
         s_lastDestinationChainSelector = destinationChainSelector;
         s_lastReceiverHash = keccak256(message.receiver);
         s_lastMessageDataHash = keccak256(message.data);
@@ -55,6 +57,15 @@ contract MockCCIPRouter is IRouterClient {
 
     function getFeeReverts() external view returns (bool) {
         return s_getFeeReverts;
+    }
+
+    function capacityError() external view returns (bool) {
+        return s_capacityError;
+    }
+
+    function _revertRouterError() internal view {
+        if (s_capacityError) revert RateLimiter.TokenMaxCapacityExceeded(0, 1, address(0));
+        revert();
     }
 
     function ccipSendReverts() external view returns (bool) {

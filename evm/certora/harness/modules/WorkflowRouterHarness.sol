@@ -33,12 +33,16 @@ contract WorkflowRouterHarness is WorkflowRouter, HelperHarness {
         return abi.encodePacked(workflowId, workflowName, workflowOwner, bytes3(0));
     }
 
-    function buildReport(bytes4 selector) external pure returns (bytes memory) {
-        return abi.encodePacked(selector);
+    function buildReport(uint64 targetChainSelector, address targetRouter, uint256 observedAt, bytes4 selector)
+        external
+        pure
+        returns (bytes memory)
+    {
+        return abi.encodePacked(targetChainSelector, targetRouter, observedAt, selector);
     }
 
-    function buildShortReport(bytes3 report) external pure returns (bytes memory) {
-        return abi.encodePacked(report);
+    function buildShortReport(uint8 reportLength) external pure returns (bytes memory) {
+        return new bytes(reportLength);
     }
 
     function certoraVaultCallSucceedsSelector() external pure returns (bytes4) {

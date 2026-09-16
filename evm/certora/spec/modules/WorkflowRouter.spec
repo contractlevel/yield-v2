@@ -14,14 +14,15 @@ methods {
     function getWorkflowMetadata(bytes32) external returns (IWorkflowRouter.WorkflowMetadata) envfree;
     function getWorkflowGeneration(bytes32) external returns (uint256) envfree;
     function getVault() external returns (address) envfree;
+    function getThisChainSelector() external returns (uint64) envfree;
     function supportsInterface(bytes4) external returns (bool) envfree;
 
     // Harness helper methods
     function buildMetadata(bytes32, bytes10, address) external returns (bytes) envfree;
     function buildShortMetadata(bytes32, bytes10, address) external returns (bytes) envfree;
     function buildLongMetadata(bytes32, bytes10, address) external returns (bytes) envfree;
-    function buildReport(bytes4) external returns (bytes) envfree;
-    function buildShortReport(bytes3) external returns (bytes) envfree;
+    function buildReport(uint64, address, uint256, bytes4) external returns (bytes) envfree;
+    function buildShortReport(uint8) external returns (bytes) envfree;
     function certoraVaultCallSucceedsSelector() external returns (bytes4) envfree;
     function getWorkflowSelectorAtGeneration(bytes32, uint256, bytes4) external returns (bool) envfree;
     function getWorkflowSelectorAtNextGeneration(bytes32, bytes4) external returns (bool) envfree;
@@ -231,6 +232,9 @@ hook Sstore s_workflowGenerations[KEY bytes32 workflowId] uint256 newValue (uint
 //////////////////////////////////////////////////////////////*/
 invariant noZeroVault()
     currentContract.i_vault != 0;
+
+invariant noZeroChainSelector()
+    currentContract.i_thisChainSelector != 0;
 
 /*//////////////////////////////////////////////////////////////
                              RULES
@@ -669,9 +673,12 @@ rule PAUSE_005_ROUTER_002_onReport_RevertWhen_Paused() {
     bytes32 workflowId;
     bytes10 workflowName;
     address workflowOwner;
+    uint64 targetChainSelector;
+    address targetRouter;
+    uint256 observedAt;
     bytes4 selector = certoraVaultCallSucceedsSelector();
     bytes metadata = buildMetadata(workflowId, workflowName, workflowOwner);
-    bytes report = buildReport(selector);
+    bytes report = buildReport(targetChainSelector, targetRouter, observedAt, selector);
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -682,7 +689,11 @@ rule PAUSE_005_ROUTER_002_onReport_RevertWhen_Paused() {
     require workflowOwner != 0, "workflowOwner should not be zero";
     IWorkflowRouter.WorkflowMetadata registered = getWorkflowMetadata(workflowId);
     require registered.name == workflowName && registered.owner == workflowOwner, "metadata should match";
-    require report.length >= 4, "report should not be too short";
+    require report.length >= 64, "report should not be too short";
+    require targetChainSelector == getThisChainSelector(), "target chain selector should match";
+    require targetRouter == currentContract, "target router should match";
+    require observedAt <= e.block.timestamp, "report should not be from the future";
+    require e.block.timestamp - observedAt <= 1800, "report should not be expired";
     require getAllowlistedWorkflowSelector(workflowId, selector), "selector should be allowlisted";
 
     /// @dev revert condition being verified
@@ -697,9 +708,12 @@ rule ROUTER_001_onReport_RevertWhen_CallerDoesNotHaveKEYSTONE_FORWARDER_ROLE() {
     bytes32 workflowId;
     bytes10 workflowName;
     address workflowOwner;
+    uint64 targetChainSelector;
+    address targetRouter;
+    uint256 observedAt;
     bytes4 selector = certoraVaultCallSucceedsSelector();
     bytes metadata = buildMetadata(workflowId, workflowName, workflowOwner);
-    bytes report = buildReport(selector);
+    bytes report = buildReport(targetChainSelector, targetRouter, observedAt, selector);
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -710,7 +724,11 @@ rule ROUTER_001_onReport_RevertWhen_CallerDoesNotHaveKEYSTONE_FORWARDER_ROLE() {
     require workflowOwner != 0, "workflowOwner should not be zero";
     IWorkflowRouter.WorkflowMetadata registered = getWorkflowMetadata(workflowId);
     require registered.name == workflowName && registered.owner == workflowOwner, "metadata should match";
-    require report.length >= 4, "report should not be too short";
+    require report.length >= 64, "report should not be too short";
+    require targetChainSelector == getThisChainSelector(), "target chain selector should match";
+    require targetRouter == currentContract, "target router should match";
+    require observedAt <= e.block.timestamp, "report should not be from the future";
+    require e.block.timestamp - observedAt <= 1800, "report should not be expired";
     require getAllowlistedWorkflowSelector(workflowId, selector), "selector should be allowlisted";
 
     /// @dev revert condition being verified
@@ -725,9 +743,12 @@ rule ROUTER_010_onReport_RevertWhen_MetadataIsTooShort() {
     bytes32 workflowId;
     bytes10 workflowName;
     address workflowOwner;
+    uint64 targetChainSelector;
+    address targetRouter;
+    uint256 observedAt;
     bytes4 selector = certoraVaultCallSucceedsSelector();
     bytes metadata = buildShortMetadata(workflowId, workflowName, workflowOwner);
-    bytes report = buildReport(selector);
+    bytes report = buildReport(targetChainSelector, targetRouter, observedAt, selector);
     IWorkflowRouter.WorkflowMetadata registered = getWorkflowMetadata(workflowId);
 
     /// @dev revert conditions NOT being verified
@@ -738,7 +759,11 @@ rule ROUTER_010_onReport_RevertWhen_MetadataIsTooShort() {
     require workflowName != to_bytes10(0), "workflowName should not be zero";
     require workflowOwner != 0, "workflowOwner should not be zero";
     require registered.name == workflowName && registered.owner == workflowOwner, "metadata should match";
-    require report.length >= 4, "report should not be too short";
+    require report.length >= 64, "report should not be too short";
+    require targetChainSelector == getThisChainSelector(), "target chain selector should match";
+    require targetRouter == currentContract, "target router should match";
+    require observedAt <= e.block.timestamp, "report should not be from the future";
+    require e.block.timestamp - observedAt <= 1800, "report should not be expired";
     require getAllowlistedWorkflowSelector(workflowId, selector), "selector should be allowlisted";
 
     /// @dev revert condition being verified
@@ -753,9 +778,12 @@ rule ROUTER_010_onReport_RevertWhen_MetadataIsTooLong() {
     bytes32 workflowId;
     bytes10 workflowName;
     address workflowOwner;
+    uint64 targetChainSelector;
+    address targetRouter;
+    uint256 observedAt;
     bytes4 selector = certoraVaultCallSucceedsSelector();
     bytes metadata = buildLongMetadata(workflowId, workflowName, workflowOwner);
-    bytes report = buildReport(selector);
+    bytes report = buildReport(targetChainSelector, targetRouter, observedAt, selector);
     IWorkflowRouter.WorkflowMetadata registered = getWorkflowMetadata(workflowId);
 
     /// @dev revert conditions NOT being verified
@@ -766,7 +794,11 @@ rule ROUTER_010_onReport_RevertWhen_MetadataIsTooLong() {
     require workflowName != to_bytes10(0), "workflowName should not be zero";
     require workflowOwner != 0, "workflowOwner should not be zero";
     require registered.name == workflowName && registered.owner == workflowOwner, "metadata should match";
-    require report.length >= 4, "report should not be too short";
+    require report.length >= 64, "report should not be too short";
+    require targetChainSelector == getThisChainSelector(), "target chain selector should match";
+    require targetRouter == currentContract, "target router should match";
+    require observedAt <= e.block.timestamp, "report should not be from the future";
+    require e.block.timestamp - observedAt <= 1800, "report should not be expired";
     require getAllowlistedWorkflowSelector(workflowId, selector), "selector should be allowlisted";
 
     /// @dev revert condition being verified
@@ -781,9 +813,12 @@ rule ROUTER_003_onReport_RevertWhen_WorkflowIdIsZero() {
     bytes32 workflowId;
     bytes10 workflowName;
     address workflowOwner;
+    uint64 targetChainSelector;
+    address targetRouter;
+    uint256 observedAt;
     bytes4 selector = certoraVaultCallSucceedsSelector();
     bytes metadata = buildMetadata(workflowId, workflowName, workflowOwner);
-    bytes report = buildReport(selector);
+    bytes report = buildReport(targetChainSelector, targetRouter, observedAt, selector);
     IWorkflowRouter.WorkflowMetadata registered = getWorkflowMetadata(workflowId);
 
     /// @dev revert conditions NOT being verified
@@ -794,7 +829,11 @@ rule ROUTER_003_onReport_RevertWhen_WorkflowIdIsZero() {
     require workflowName != to_bytes10(0), "workflowName should not be zero";
     require workflowOwner != 0, "workflowOwner should not be zero";
     require registered.name == workflowName && registered.owner == workflowOwner, "metadata should match";
-    require report.length >= 4, "report should not be too short";
+    require report.length >= 64, "report should not be too short";
+    require targetChainSelector == getThisChainSelector(), "target chain selector should match";
+    require targetRouter == currentContract, "target router should match";
+    require observedAt <= e.block.timestamp, "report should not be from the future";
+    require e.block.timestamp - observedAt <= 1800, "report should not be expired";
     require getAllowlistedWorkflowSelector(workflowId, selector), "selector should be allowlisted";
 
     /// @dev revert condition being verified
@@ -809,9 +848,12 @@ rule ROUTER_003_onReport_RevertWhen_WorkflowNameIsZero() {
     bytes32 workflowId;
     bytes10 workflowName;
     address workflowOwner;
+    uint64 targetChainSelector;
+    address targetRouter;
+    uint256 observedAt;
     bytes4 selector = certoraVaultCallSucceedsSelector();
     bytes metadata = buildMetadata(workflowId, workflowName, workflowOwner);
-    bytes report = buildReport(selector);
+    bytes report = buildReport(targetChainSelector, targetRouter, observedAt, selector);
     IWorkflowRouter.WorkflowMetadata registered = getWorkflowMetadata(workflowId);
 
     /// @dev revert conditions NOT being verified
@@ -822,7 +864,11 @@ rule ROUTER_003_onReport_RevertWhen_WorkflowNameIsZero() {
     require workflowId != to_bytes32(0), "workflowId should not be zero";
     require workflowOwner != 0, "workflowOwner should not be zero";
     require registered.name == workflowName && registered.owner == workflowOwner, "metadata should match";
-    require report.length >= 4, "report should not be too short";
+    require report.length >= 64, "report should not be too short";
+    require targetChainSelector == getThisChainSelector(), "target chain selector should match";
+    require targetRouter == currentContract, "target router should match";
+    require observedAt <= e.block.timestamp, "report should not be from the future";
+    require e.block.timestamp - observedAt <= 1800, "report should not be expired";
     require getAllowlistedWorkflowSelector(workflowId, selector), "selector should be allowlisted";
 
     /// @dev revert condition being verified
@@ -837,9 +883,12 @@ rule ROUTER_003_onReport_RevertWhen_WorkflowOwnerIsZero() {
     bytes32 workflowId;
     bytes10 workflowName;
     address workflowOwner;
+    uint64 targetChainSelector;
+    address targetRouter;
+    uint256 observedAt;
     bytes4 selector = certoraVaultCallSucceedsSelector();
     bytes metadata = buildMetadata(workflowId, workflowName, workflowOwner);
-    bytes report = buildReport(selector);
+    bytes report = buildReport(targetChainSelector, targetRouter, observedAt, selector);
     IWorkflowRouter.WorkflowMetadata registered = getWorkflowMetadata(workflowId);
 
     /// @dev revert conditions NOT being verified
@@ -850,7 +899,11 @@ rule ROUTER_003_onReport_RevertWhen_WorkflowOwnerIsZero() {
     require workflowId != to_bytes32(0), "workflowId should not be zero";
     require workflowName != to_bytes10(0), "workflowName should not be zero";
     require registered.name == workflowName && registered.owner == workflowOwner, "metadata should match";
-    require report.length >= 4, "report should not be too short";
+    require report.length >= 64, "report should not be too short";
+    require targetChainSelector == getThisChainSelector(), "target chain selector should match";
+    require targetRouter == currentContract, "target router should match";
+    require observedAt <= e.block.timestamp, "report should not be from the future";
+    require e.block.timestamp - observedAt <= 1800, "report should not be expired";
     require getAllowlistedWorkflowSelector(workflowId, selector), "selector should be allowlisted";
 
     /// @dev revert condition being verified
@@ -865,9 +918,12 @@ rule ROUTER_003_onReport_RevertWhen_WorkflowMetadataDoesNotMatch() {
     bytes32 workflowId;
     bytes10 workflowName;
     address workflowOwner;
+    uint64 targetChainSelector;
+    address targetRouter;
+    uint256 observedAt;
     bytes4 selector = certoraVaultCallSucceedsSelector();
     bytes metadata = buildMetadata(workflowId, workflowName, workflowOwner);
-    bytes report = buildReport(selector);
+    bytes report = buildReport(targetChainSelector, targetRouter, observedAt, selector);
     IWorkflowRouter.WorkflowMetadata registered = getWorkflowMetadata(workflowId);
 
     /// @dev revert conditions NOT being verified
@@ -878,7 +934,11 @@ rule ROUTER_003_onReport_RevertWhen_WorkflowMetadataDoesNotMatch() {
     require workflowId != to_bytes32(0), "workflowId should not be zero";
     require workflowName != to_bytes10(0), "workflowName should not be zero";
     require workflowOwner != 0, "workflowOwner should not be zero";
-    require report.length >= 4, "report should not be too short";
+    require report.length >= 64, "report should not be too short";
+    require targetChainSelector == getThisChainSelector(), "target chain selector should match";
+    require targetRouter == currentContract, "target router should match";
+    require observedAt <= e.block.timestamp, "report should not be from the future";
+    require e.block.timestamp - observedAt <= 1800, "report should not be expired";
     require getAllowlistedWorkflowSelector(workflowId, selector), "selector should be allowlisted";
 
     /// @dev revert condition being verified
@@ -893,9 +953,9 @@ rule ROUTER_009_onReport_RevertWhen_ReportIsTooShort() {
     bytes32 workflowId;
     bytes10 workflowName;
     address workflowOwner;
-    bytes3 shortReport;
+    uint8 reportLength;
     bytes metadata = buildMetadata(workflowId, workflowName, workflowOwner);
-    bytes report = buildShortReport(shortReport);
+    bytes report = buildShortReport(reportLength);
     IWorkflowRouter.WorkflowMetadata registered = getWorkflowMetadata(workflowId);
 
     /// @dev revert conditions NOT being verified
@@ -910,7 +970,7 @@ rule ROUTER_009_onReport_RevertWhen_ReportIsTooShort() {
     require registered.owner == workflowOwner, "metadata owner should match";
 
     /// @dev revert condition being verified
-    require report.length < 4, "report should be too short";
+    require report.length < 64, "report should be too short";
 
     onReport@withrevert(e, metadata, report);
     assert lastReverted;
@@ -921,9 +981,12 @@ rule ROUTER_004_onReport_RevertWhen_SelectorIsNotAllowlisted() {
     bytes32 workflowId;
     bytes10 workflowName;
     address workflowOwner;
+    uint64 targetChainSelector;
+    address targetRouter;
+    uint256 observedAt;
     bytes4 selector = certoraVaultCallSucceedsSelector();
     bytes metadata = buildMetadata(workflowId, workflowName, workflowOwner);
-    bytes report = buildReport(selector);
+    bytes report = buildReport(targetChainSelector, targetRouter, observedAt, selector);
     IWorkflowRouter.WorkflowMetadata registered = getWorkflowMetadata(workflowId);
 
     /// @dev revert conditions NOT being verified
@@ -936,10 +999,153 @@ rule ROUTER_004_onReport_RevertWhen_SelectorIsNotAllowlisted() {
     require workflowOwner != 0, "workflowOwner should not be zero";
     require registered.name == workflowName, "metadata name should match";
     require registered.owner == workflowOwner, "metadata owner should match";
-    require report.length >= 4, "report should not be too short";
+    require report.length >= 64, "report should not be too short";
+    require targetChainSelector == getThisChainSelector(), "target chain selector should match";
+    require targetRouter == currentContract, "target router should match";
+    require observedAt <= e.block.timestamp, "report should not be from the future";
+    require e.block.timestamp - observedAt <= 1800, "report should not be expired";
 
     /// @dev revert condition being verified
     require !getAllowlistedWorkflowSelector(workflowId, selector), "selector should not be allowlisted";
+
+    onReport@withrevert(e, metadata, report);
+    assert lastReverted;
+}
+
+rule ROUTER_011_onReport_RevertWhen_TargetChainSelectorDoesNotMatch() {
+    env e;
+    bytes32 workflowId;
+    bytes10 workflowName;
+    address workflowOwner;
+    uint64 targetChainSelector;
+    address targetRouter;
+    uint256 observedAt;
+    bytes4 selector = certoraVaultCallSucceedsSelector();
+    bytes metadata = buildMetadata(workflowId, workflowName, workflowOwner);
+    bytes report = buildReport(targetChainSelector, targetRouter, observedAt, selector);
+    IWorkflowRouter.WorkflowMetadata registered = getWorkflowMetadata(workflowId);
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !currentContract._paused, "should not be paused";
+    require hasRole(KEYSTONE_FORWARDER_ROLE(), e.msg.sender), "only KEYSTONE_FORWARDER_ROLE can call";
+    require metadata.length == 64, "metadata length should be valid";
+    require workflowId != to_bytes32(0), "workflowId should not be zero";
+    require workflowName != to_bytes10(0), "workflowName should not be zero";
+    require workflowOwner != 0, "workflowOwner should not be zero";
+    require registered.name == workflowName && registered.owner == workflowOwner, "metadata should match";
+    require report.length >= 64, "report should not be too short";
+    require targetRouter == currentContract, "target router should match";
+    require getAllowlistedWorkflowSelector(workflowId, selector), "selector should be allowlisted";
+    require observedAt <= e.block.timestamp, "report should not be from the future";
+    require e.block.timestamp - observedAt <= 1800, "report should not be expired";
+
+    /// @dev revert condition being verified
+    require targetChainSelector != getThisChainSelector(), "target chain selector should not match";
+
+    onReport@withrevert(e, metadata, report);
+    assert lastReverted;
+}
+
+rule ROUTER_011_onReport_RevertWhen_TargetRouterDoesNotMatch() {
+    env e;
+    bytes32 workflowId;
+    bytes10 workflowName;
+    address workflowOwner;
+    uint64 targetChainSelector;
+    address targetRouter;
+    uint256 observedAt;
+    bytes4 selector = certoraVaultCallSucceedsSelector();
+    bytes metadata = buildMetadata(workflowId, workflowName, workflowOwner);
+    bytes report = buildReport(targetChainSelector, targetRouter, observedAt, selector);
+    IWorkflowRouter.WorkflowMetadata registered = getWorkflowMetadata(workflowId);
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !currentContract._paused, "should not be paused";
+    require hasRole(KEYSTONE_FORWARDER_ROLE(), e.msg.sender), "only KEYSTONE_FORWARDER_ROLE can call";
+    require metadata.length == 64, "metadata length should be valid";
+    require workflowId != to_bytes32(0), "workflowId should not be zero";
+    require workflowName != to_bytes10(0), "workflowName should not be zero";
+    require workflowOwner != 0, "workflowOwner should not be zero";
+    require registered.name == workflowName && registered.owner == workflowOwner, "metadata should match";
+    require report.length >= 64, "report should not be too short";
+    require targetChainSelector == getThisChainSelector(), "target chain selector should match";
+    require getAllowlistedWorkflowSelector(workflowId, selector), "selector should be allowlisted";
+    require observedAt <= e.block.timestamp, "report should not be from the future";
+    require e.block.timestamp - observedAt <= 1800, "report should not be expired";
+
+    /// @dev revert condition being verified
+    require targetRouter != currentContract, "target router should not match";
+
+    onReport@withrevert(e, metadata, report);
+    assert lastReverted;
+}
+
+rule ROUTER_012_onReport_RevertWhen_ReportIsFromFuture() {
+    env e;
+    bytes32 workflowId;
+    bytes10 workflowName;
+    address workflowOwner;
+    uint64 targetChainSelector;
+    address targetRouter;
+    uint256 observedAt;
+    bytes4 selector = certoraVaultCallSucceedsSelector();
+    bytes metadata = buildMetadata(workflowId, workflowName, workflowOwner);
+    bytes report = buildReport(targetChainSelector, targetRouter, observedAt, selector);
+    IWorkflowRouter.WorkflowMetadata registered = getWorkflowMetadata(workflowId);
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !currentContract._paused, "should not be paused";
+    require hasRole(KEYSTONE_FORWARDER_ROLE(), e.msg.sender), "only KEYSTONE_FORWARDER_ROLE can call";
+    require metadata.length == 64, "metadata length should be valid";
+    require workflowId != to_bytes32(0), "workflowId should not be zero";
+    require workflowName != to_bytes10(0), "workflowName should not be zero";
+    require workflowOwner != 0, "workflowOwner should not be zero";
+    require registered.name == workflowName && registered.owner == workflowOwner, "metadata should match";
+    require report.length >= 64, "report should not be too short";
+    require targetChainSelector == getThisChainSelector(), "target chain selector should match";
+    require targetRouter == currentContract, "target router should match";
+    require getAllowlistedWorkflowSelector(workflowId, selector), "selector should be allowlisted";
+
+    /// @dev revert condition being verified
+    require observedAt > e.block.timestamp, "report should be from the future";
+
+    onReport@withrevert(e, metadata, report);
+    assert lastReverted;
+}
+
+rule ROUTER_012_onReport_RevertWhen_ReportIsExpired() {
+    env e;
+    bytes32 workflowId;
+    bytes10 workflowName;
+    address workflowOwner;
+    uint64 targetChainSelector;
+    address targetRouter;
+    uint256 observedAt;
+    bytes4 selector = certoraVaultCallSucceedsSelector();
+    bytes metadata = buildMetadata(workflowId, workflowName, workflowOwner);
+    bytes report = buildReport(targetChainSelector, targetRouter, observedAt, selector);
+    IWorkflowRouter.WorkflowMetadata registered = getWorkflowMetadata(workflowId);
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !currentContract._paused, "should not be paused";
+    require hasRole(KEYSTONE_FORWARDER_ROLE(), e.msg.sender), "only KEYSTONE_FORWARDER_ROLE can call";
+    require metadata.length == 64, "metadata length should be valid";
+    require workflowId != to_bytes32(0), "workflowId should not be zero";
+    require workflowName != to_bytes10(0), "workflowName should not be zero";
+    require workflowOwner != 0, "workflowOwner should not be zero";
+    require registered.name == workflowName && registered.owner == workflowOwner, "metadata should match";
+    require report.length >= 64, "report should not be too short";
+    require targetChainSelector == getThisChainSelector(), "target chain selector should match";
+    require targetRouter == currentContract, "target router should match";
+    require getAllowlistedWorkflowSelector(workflowId, selector), "selector should be allowlisted";
+    require observedAt <= e.block.timestamp, "report should not be from the future";
+
+    /// @dev revert condition being verified
+    require e.block.timestamp - observedAt > 1800, "report should be expired";
 
     onReport@withrevert(e, metadata, report);
     assert lastReverted;

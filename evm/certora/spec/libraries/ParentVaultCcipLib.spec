@@ -201,8 +201,8 @@ rule CCIP_004_NONCE_012_receiveCcip_EpochNetWithdraw_RevertWhen_EpochNonceInvali
     require e.msg.value == 0, "receiveCcip is nonpayable";
     require getEpochNonce() != 0, "current epoch nonce is nonzero";
     require getEpochStatus(epochNonce) == Types.EpochStatus.EXECUTING, "epoch is executing";
-    require getEpochTotalWithdrawClaimAmount(epochNonce) >= getEpochTotalDepositAmount(epochNonce),
-        "expected withdraw does not underflow";
+    require getEpochTotalWithdrawClaimAmount(epochNonce) > getEpochTotalDepositAmount(epochNonce),
+        "epoch is a net withdrawal";
     require getEpochTotalDepositAmount(epochNonce) <= max_uint256 - receivedAmount,
         "settled withdraw claim amount does not overflow";
 
@@ -240,8 +240,8 @@ rule NONCE_012_receiveCcip_EpochNetWithdraw_RevertWhen_CurrentEpochNonceIsZero()
 
     /// @dev later revert conditions NOT being verified
     require getEpochStatus(epochNonce) == Types.EpochStatus.EXECUTING, "epoch is executing";
-    require getEpochTotalWithdrawClaimAmount(epochNonce) >= getEpochTotalDepositAmount(epochNonce),
-        "expected withdraw does not underflow";
+    require getEpochTotalWithdrawClaimAmount(epochNonce) > getEpochTotalDepositAmount(epochNonce),
+        "epoch is a net withdrawal";
     require getEpochTotalDepositAmount(epochNonce) <= max_uint256 - receivedAmount,
         "settled withdraw claim amount does not overflow";
 
@@ -270,6 +270,14 @@ rule CCIP_003_receiveCcip_EpochNetWithdraw_RevertWhen_DataIsMalformed() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "receiveCcip is nonpayable";
+    require getEpochNonce() != 0, "current epoch nonce is nonzero";
+    uint256 epochNonce;
+    require getEpochNonce() == epochNonce + 1, "target epoch is the previous epoch";
+    require getEpochStatus(epochNonce) == Types.EpochStatus.EXECUTING, "epoch is executing";
+    require getEpochTotalWithdrawClaimAmount(epochNonce) > getEpochTotalDepositAmount(epochNonce),
+        "epoch is a net withdrawal";
+    require getEpochTotalDepositAmount(epochNonce) <= max_uint256 - receivedAmount,
+        "settled withdraw claim amount does not overflow";
 
     /// @dev revert condition being verified
     require data.length < 32, "payload is too short to decode uint256";
@@ -303,8 +311,8 @@ rule CCIP_004_NONCE_012_receiveCcip_EpochNetWithdraw_RevertWhen_EpochNotExecutin
     require getEpochStatus(epochNonce) != Types.EpochStatus.EXECUTING, "epoch is not executing";
 
     /// @dev arithmetic conditions NOT being verified
-    require getEpochTotalWithdrawClaimAmount(epochNonce) >= getEpochTotalDepositAmount(epochNonce),
-        "expected withdraw does not underflow";
+    require getEpochTotalWithdrawClaimAmount(epochNonce) > getEpochTotalDepositAmount(epochNonce),
+        "epoch is a net withdrawal";
     require getEpochTotalDepositAmount(epochNonce) <= max_uint256 - receivedAmount,
         "settled withdraw claim amount does not overflow";
 
@@ -324,9 +332,9 @@ rule CCIP_004_NONCE_012_receiveCcip_EpochNetWithdraw_RevertWhen_EpochNotExecutin
     assert ghost_EpochClaimable_EventCount == 0;
 }
 
-/// @notice Epoch net-withdraw handling reverts when expected withdraw arithmetic underflows.
-/// @dev Verifies that invalid epoch accounting leaves ParentVault storage unchanged.
-rule receiveCcip_EpochNetWithdraw_RevertWhen_ExpectedWithdrawUnderflows() {
+/// @notice Epoch net-withdraw handling reverts when the target epoch is a net deposit.
+/// @dev Verifies that the net-flow guard leaves ParentVault storage and events unchanged.
+rule receiveCcip_EpochNetWithdraw_RevertWhen_EpochIsNetDeposit() {
     env e;
     uint256 epochNonce;
     uint256 receivedAmount;
@@ -335,10 +343,46 @@ rule receiveCcip_EpochNetWithdraw_RevertWhen_ExpectedWithdrawUnderflows() {
     require e.msg.value == 0, "receiveCcip is nonpayable";
     require getEpochNonce() == epochNonce + 1, "payload epoch nonce is the previous epoch";
     require getEpochStatus(epochNonce) == Types.EpochStatus.EXECUTING, "epoch is executing";
+    require getEpochTotalDepositAmount(epochNonce) <= max_uint256 - receivedAmount,
+        "settled withdraw claim amount does not overflow";
 
     /// @dev revert condition being verified
     require getEpochTotalWithdrawClaimAmount(epochNonce) < getEpochTotalDepositAmount(epochNonce),
-        "expected withdraw underflows";
+        "epoch is a net deposit";
+
+    bytes data = encodeEpochNonce(epochNonce);
+
+    /// @dev ghost starting values
+    require ghost_EpochWithdrawAmountShort_EventCount == 0, "EpochWithdrawAmountShort event count starts at zero";
+    require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
+
+    storage before = lastStorage;
+
+    receiveCcip@withrevert(e, Types.CcipTx.EPOCH_NET_WITHDRAW, data, receivedAmount);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_EpochWithdrawAmountShort_EventCount == 0;
+    assert ghost_EpochClaimable_EventCount == 0;
+}
+
+/// @notice Epoch net-withdraw handling reverts when the target epoch has zero net flow.
+/// @dev Verifies that equal deposit and withdrawal totals cannot settle a remote withdrawal.
+rule receiveCcip_EpochNetWithdraw_RevertWhen_EpochHasZeroNetFlow() {
+    env e;
+    uint256 epochNonce;
+    uint256 receivedAmount;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "receiveCcip is nonpayable";
+    require getEpochNonce() == epochNonce + 1, "payload epoch nonce is the previous epoch";
+    require getEpochStatus(epochNonce) == Types.EpochStatus.EXECUTING, "epoch is executing";
+    require getEpochTotalDepositAmount(epochNonce) <= max_uint256 - receivedAmount,
+        "settled withdraw claim amount does not overflow";
+
+    /// @dev revert condition being verified
+    require getEpochTotalWithdrawClaimAmount(epochNonce) == getEpochTotalDepositAmount(epochNonce),
+        "epoch has zero net flow";
 
     bytes data = encodeEpochNonce(epochNonce);
 
@@ -367,8 +411,8 @@ rule receiveCcip_EpochNetWithdraw_RevertWhen_SettledAmountOverflows() {
     require e.msg.value == 0, "receiveCcip is nonpayable";
     require getEpochNonce() == epochNonce + 1, "payload epoch nonce is the previous epoch";
     require getEpochStatus(epochNonce) == Types.EpochStatus.EXECUTING, "epoch is executing";
-    require getEpochTotalWithdrawClaimAmount(epochNonce) >= getEpochTotalDepositAmount(epochNonce),
-        "expected withdraw does not underflow";
+    require getEpochTotalWithdrawClaimAmount(epochNonce) > getEpochTotalDepositAmount(epochNonce),
+        "epoch is a net withdrawal";
 
     /// @dev revert condition being verified
     require getEpochTotalDepositAmount(epochNonce) > max_uint256 - receivedAmount,
@@ -406,7 +450,7 @@ rule CCIP_003_CCIP_004_NONCE_012_receiveCcip_EpochNetWithdraw_Success_WhenReceiv
 
     /// @dev success conditions being verified
     require getEpochStatus(epochNonce) == Types.EpochStatus.EXECUTING, "epoch is executing";
-    require totalWithdrawClaimAmount >= totalDepositAmount, "expected withdraw does not underflow";
+    require totalWithdrawClaimAmount > totalDepositAmount, "epoch is a net withdrawal";
     mathint expectedWithdraw = totalWithdrawClaimAmount - totalDepositAmount;
     require receivedAmount < expectedWithdraw, "received amount is short";
     require totalDepositAmount <= max_uint256 - receivedAmount, "settled withdraw claim amount does not overflow";
@@ -467,7 +511,7 @@ rule CCIP_003_CCIP_004_NONCE_012_receiveCcip_EpochNetWithdraw_Success_WhenReceiv
 
     /// @dev success conditions being verified
     require getEpochStatus(epochNonce) == Types.EpochStatus.EXECUTING, "epoch is executing";
-    require totalWithdrawClaimAmount >= totalDepositAmount, "expected withdraw does not underflow";
+    require totalWithdrawClaimAmount > totalDepositAmount, "epoch is a net withdrawal";
     mathint expectedWithdraw = totalWithdrawClaimAmount - totalDepositAmount;
     require receivedAmount >= expectedWithdraw, "received amount covers expected";
     require totalDepositAmount <= max_uint256 - receivedAmount, "settled withdraw claim amount does not overflow";
