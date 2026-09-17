@@ -49,6 +49,7 @@ Use these ID prefixes:
 | `SOLV-*`    | Solvency and asset backing.                                     |
 | `CFG-*`     | Configuration safety.                                           |
 | `AC-*`      | Access control.                                                 |
+| `ALLOWLIST-*` | Deposit allowlist authorization and membership.               |
 | `PAUSE-*`   | Pause behavior.                                                 |
 | `REENT-*`   | Reentrancy safety.                                              |
 | `EPOCH-*`   | Epoch lifecycle and accounting.                                 |
@@ -139,6 +140,20 @@ it is not enforced by `CFG-003`.
 | `AC-007` | LINK withdrawal, vault and token pausing or unpausing, token minting or burning, token configuration, proxy upgrades, and ChildVault external self-call helpers each require their distinct configured authority.                                                                     | `unit`          | implemented: Foundry; Certora: direct rules                                                                                                                             |
 | `AC-008` | `CompoundV3Adapter.claimRewards` requires `REWARDS_OPERATOR_ROLE` on the bound vault, rejects a zero recipient, and permits an authorized operator to direct rewards to any nonzero recipient.                                                                                        | `unit`          | implemented: Foundry; Certora: direct rules                                                                                                                             |
 | `AC-009` | A method without an explicit target-user parameter cannot alter another user's per-epoch deposit or withdrawal-intent entry. The four `For` methods and `forceCancelDeposit` explicitly target a supplied user and are verified separately for correct target binding and asset flow. | `fv + unit`     | Certora: `AC_009_nonTargetedMethodsCannotChangeAnotherUsersEscrow`; targeted methods covered by function-specific rules; force-cancel authorization covered by `AC-006` |
+
+## Allowlist
+
+| ID             | Statement                                                                                              | Type                    | Coverage                              |
+| -------------- | ------------------------------------------------------------------------------------------------------ | ----------------------- | ------------------------------------- |
+| `ALLOWLIST-001` | Only `ALLOWLIST_OPERATOR_ROLE` can change enforcement or membership.                                   | `unit`                  | Foundry; Certora: direct rules         |
+| `ALLOWLIST-002` | Enabled enforcement requires membership for the deposit caller and any deposit-for beneficiary.        | `unit + integration`    | Foundry; Certora: direct rules         |
+| `ALLOWLIST-003` | Disabling enforcement skips membership checks without clearing membership.                             | `postcondition + unit`  | Foundry; Certora: direct rules         |
+| `ALLOWLIST-004` | Batch updates affect only supplied users, preserve enforcement, and emit one membership event per entry. | `postcondition`         | Foundry; Certora: bounded batch rule   |
+| `ALLOWLIST-005` | Removing membership does not prevent cancellation, share or asset claims, or withdrawals.               | `integration`           | Foundry integration                   |
+
+Certora batch rules cover up to three entries, including empty arrays, duplicates, and `address(0)`.
+The module and touched ParentVault rules passed; existing parent invariants were type-checked,
+without a full prover rerun.
 
 ## Pause Behavior
 

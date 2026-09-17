@@ -23,6 +23,7 @@ contract BaseTest is Constants, Test {
     address internal immutable i_treasury = makeAddr("treasury");
     address internal immutable i_upgrader = makeAddr("upgrader");
     address internal immutable i_cancelDepositOperator = makeAddr("cancelDepositOperator");
+    address internal immutable i_allowlistOperator = makeAddr("allowlistOperator");
 
     modifier givenContractIsPaused(address contractAddress) {
         (, address msgSender,) = vm.readCallers();
@@ -62,6 +63,7 @@ contract BaseTest is Constants, Test {
         vm.label(i_treasury, "Treasury");
         vm.label(i_upgrader, "Upgrader");
         vm.label(i_cancelDepositOperator, "CancelDepositOperator");
+        vm.label(i_allowlistOperator, "AllowlistOperator");
     }
 
     /// @notice Finds the first log matching both the event signature and emitting contract.

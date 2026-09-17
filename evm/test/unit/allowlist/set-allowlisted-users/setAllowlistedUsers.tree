@@ -1,0 +1,17 @@
+setAllowlistedUsers
+├── when the caller does not have ALLOWLIST_OPERATOR_ROLE
+│   └── it should revert
+└── when the caller has ALLOWLIST_OPERATOR_ROLE
+    ├── it should add multiple users
+    ├── it should remove multiple users
+    ├── it should preserve other users
+    ├── it should not enable enforcement
+    ├── it should update membership while enforcement is enabled
+    ├── it should accept an empty batch without emitting events
+    ├── it should accept the zero address
+    ├── it should emit AllowlistedUserSet for each user in input order
+    ├── it should emit when removing a user
+    ├── it should emit for each duplicate user
+    ├── it should emit when already allowed
+    ├── it should emit when already disallowed
+    └── it should set membership for arbitrary users

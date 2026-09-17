@@ -67,7 +67,7 @@ abstract contract BaseDeploymentTest is BaseTest {
         networkConfig = helperConfig.getActiveNetworkConfig();
     }
 
-    function _deployParent() internal {
+    function _deployParent() internal virtual {
         DeployParent.Deployment memory parentDeployment = new DeployParent().run();
         parent = _parentFromDeployment(parentDeployment);
         _labelParentIntegrationContracts();

@@ -43,6 +43,12 @@ abstract contract BaseCcipForkTest is BaseForkTest {
 
     function setUp() public virtual override {
         super.setUp();
+        _selectArbitrumFork();
+        _changePrank(arbitrumConfig.roles.allowlistOperator);
+        address[] memory users = new address[](1);
+        users[0] = i_depositor;
+        parent.vault.setAllowlistedUsers(users, true);
+
         _setCctpAttesters();
         _fundCcipLink();
         _setForkCcipGasLimits();

@@ -102,11 +102,25 @@ contract DeployParent is Script {
                     new ERC1967Proxy(
                         address(deploy.parentVaultImpl),
                         abi.encodeCall(
-                            ParentVault.initialize, (initParams, config.treasury, config.roles.cancelDepositOperator)
+                            ParentVault.initialize,
+                            (
+                                initParams,
+                                config.treasury,
+                                config.roles.cancelDepositOperator,
+                                config.roles.allowlistOperator,
+                                config.allowlist.enabled
+                            )
                         )
                     )
                 ))
         );
+
+        if (config.allowlist.initialUsers.length != 0) {
+            bool temporaryOperator = deployer != config.roles.allowlistOperator;
+            if (temporaryOperator) deploy.parentVaultProxy.grantRole(Roles.ALLOWLIST_OPERATOR_ROLE, deployer);
+            deploy.parentVaultProxy.setAllowlistedUsers(config.allowlist.initialUsers, true);
+            if (temporaryOperator) deploy.parentVaultProxy.revokeRole(Roles.ALLOWLIST_OPERATOR_ROLE, deployer);
+        }
 
         bytes32 initialProtocolId = _deployAdapters(deploy, config);
         if (initialProtocolId != bytes32(0)) {

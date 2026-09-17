@@ -1,0 +1,17 @@
+Epoch_allowlist
+├── given enforcement is enabled with seeded depositors
+│   ├── when a seeded depositor supplies capital
+│   │   └── it should settle the epoch and allow the depositor to claim shares
+│   ├── when a seeded sponsor deposits for a seeded beneficiary
+│   │   └── it should settle the epoch and mint shares only to the beneficiary
+│   ├── when the depositor or sponsor is not allowlisted
+│   │   └── it should revert without transferring assets or changing accounting
+│   └── when the beneficiary is not allowlisted
+│       └── it should revert without transferring assets or changing accounting
+└── given a deposit was accepted before membership removal
+    ├── when the depositor is removed
+    │   └── it should block new deposits while allowing cancellation and refund
+    ├── when the beneficiary is removed
+    │   └── it should block new sponsored deposits while refunding the beneficiary on cancellation
+    └── when both the sponsor and beneficiary are removed
+        └── it should allow the beneficiary to claim shares, withdraw, and claim assets

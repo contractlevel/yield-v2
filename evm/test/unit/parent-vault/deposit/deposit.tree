@@ -1,4 +1,9 @@
 ParentVault_deposit
+├── when enforcement is enabled
+│   ├── when the caller is not allowlisted
+│   │   └── it should revert with Allowlist__UserNotAllowlisted
+│   └── when the caller is allowlisted
+│       └── it should accept the deposit
 ├── when the contract is paused
 │   └── it should revert with EnforcedPause
 ├── when the amount is less than MIN_DEPOSIT_AMOUNT

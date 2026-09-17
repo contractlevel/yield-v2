@@ -39,6 +39,8 @@ contract ParentVault_DeploymentIntegrationTest is BaseIntegrationTest {
     }
 
     function test_ParentVault_deployment_ConfiguresCoreAddresses() external view {
+        assertTrue(parent.vault.getAllowlistEnabled());
+        assertTrue(parent.vault.getAllowlistedUser(networkConfig.allowlist.initialUsers[0]));
         assertEq(parent.vault.getAdapterRegistry(), address(parent.adapterRegistry));
         assertEq(parent.vault.getShare(), address(parent.share));
         assertEq(parent.vault.getTreasury(), networkConfig.treasury);
