@@ -1,6 +1,6 @@
 Base Compound V3 Fork Withdraw
 
-GIVEN the Base child Compound v3 adapter
+GIVEN the Base parent Compound v3 adapter
   WHEN a caller other than the vault withdraws
     THEN it reverts
   WHEN the epoch withdraw amount exceeds TVL

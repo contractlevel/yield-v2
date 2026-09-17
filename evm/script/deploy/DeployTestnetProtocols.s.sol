@@ -60,6 +60,9 @@ contract DeployTestnetProtocols is Script {
             // Avalanche Fuji
             deployAaveV3 = true;
             deployAaveV4 = true;
+        } else if (chainId == 80002) {
+            // Polygon Amoy: native USDC supports Aave V3 only.
+            deployAaveV3 = true;
         } else {
             revert DeployTestnetProtocols__UnsupportedChain(chainId);
         }

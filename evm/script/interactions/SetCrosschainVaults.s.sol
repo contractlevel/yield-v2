@@ -12,15 +12,16 @@ contract SetCrosschainVaults is Script {
         HelperConfig.NetworkConfig memory activeConfig = helperConfig.getActiveNetworkConfig();
         require(activeConfig.deployed.vaultProxy != address(0), "Vault proxy not configured");
 
-        HelperConfig.NetworkConfig[5] memory configs;
+        HelperConfig.NetworkConfig[6] memory configs;
         configs[0] = helperConfig.getArbitrumSepoliaConfig();
         configs[1] = helperConfig.getEthereumSepoliaConfig();
         configs[2] = helperConfig.getBaseSepoliaConfig();
         configs[3] = helperConfig.getOptimismSepoliaConfig();
         configs[4] = helperConfig.getAvalancheFujiConfig();
+        configs[5] = helperConfig.getPolygonAmoyConfig();
 
-        uint64[] memory chainSelectors = new uint64[](4);
-        address[] memory vaults = new address[](4);
+        uint64[] memory chainSelectors = new uint64[](5);
+        address[] memory vaults = new address[](5);
         uint256 index;
 
         for (uint256 i; i < configs.length; ++i) {

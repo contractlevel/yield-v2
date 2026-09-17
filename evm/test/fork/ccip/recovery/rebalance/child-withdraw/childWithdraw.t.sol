@@ -12,57 +12,59 @@ contract ChildWithdraw_RebalanceRecoveryCcipForkTest is BaseCcipRecoveryForkTest
 
     function setUp() public override {
         super.setUp();
-        _selectArbitrumFork();
+        _selectBaseFork();
         _configureInitiateRebalanceWorkflow(INITIATE_WORKFLOW_ID);
 
-        _selectBaseFork();
-        _configureExecuteRebalanceWorkflow(baseChild.workflowRouter, EXECUTE_WORKFLOW_ID);
+        _selectArbitrumFork();
+        _configureExecuteRebalanceWorkflow(arbitrumChild.workflowRouter, EXECUTE_WORKFLOW_ID);
 
-        _setParentRemoteStrategyToBase();
-        _setBaseChildActiveAdapterToAaveV3();
+        _setParentRemoteStrategyToArbitrum();
+        _setArbitrumChildActiveAdapterToAaveV3();
     }
 
-    function test_CcipFork_recoveryChildRebalanceWithdraw_FinalizesParentAfterFailedBaseWithdraw() external {
-        _seedBaseChildAaveV3Tvl(DEPOSIT_AMOUNT);
+    function test_CcipFork_recoveryChildRebalanceWithdraw_FinalizesParentAfterFailedArbitrumWithdraw() external {
+        _seedArbitrumChildAaveV3Tvl(DEPOSIT_AMOUNT);
 
         _initiateRebalanceThroughWorkflow(INITIATE_WORKFLOW_ID, _parentAaveV3Strategy());
 
-        _selectBaseFork();
-        _setBaseChildActiveAdapterToFailingAdapter();
+        _selectArbitrumFork();
+        _setArbitrumChildActiveAdapterToFailingAdapter();
         vm.recordLogs();
-        _executeRebalanceThroughWorkflow(baseChild.workflowRouter, EXECUTE_WORKFLOW_ID, 1, _parentAaveV3Strategy());
+        _executeRebalanceThroughWorkflow(arbitrumChild.workflowRouter, EXECUTE_WORKFLOW_ID, 1, _parentAaveV3Strategy());
         Vm.Log[] memory failureLogs = vm.getRecordedLogs();
 
         Vm.Log memory storedLog = _assertEmittedBy(
-            failureLogs, keccak256("RebalanceWithdrawRecoveryStored(uint256,bytes32,uint64)"), address(baseChild.vault)
+            failureLogs,
+            keccak256("RebalanceWithdrawRecoveryStored(uint256,bytes32,uint64)"),
+            address(arbitrumChild.vault)
         );
         assertEq(uint256(storedLog.topics[1]), 1);
         assertEq(bytes32(storedLog.topics[2]), AAVE_V3_PROTOCOL_ID);
-        assertEq(uint64(uint256(storedLog.topics[3])), arbitrumConfig.ccip.thisChainSelector);
+        assertEq(uint64(uint256(storedLog.topics[3])), baseConfig.ccip.thisChainSelector);
         _assertRebalanceWithdrawRecovery(
-            baseChild.vault.getRebalanceWithdrawRecovery(),
+            arbitrumChild.vault.getRebalanceWithdrawRecovery(),
             1,
             AAVE_V3_PROTOCOL_ID,
-            arbitrumConfig.ccip.thisChainSelector
+            baseConfig.ccip.thisChainSelector
         );
-        assertTrue(baseChild.vault.getRecoveryMode() == Types.RecoveryMode.REBALANCE_WITHDRAW);
+        assertTrue(arbitrumChild.vault.getRecoveryMode() == Types.RecoveryMode.REBALANCE_WITHDRAW);
 
-        _restoreBaseAaveV3Adapter();
-        _prepareBaseToParentRouting();
+        _restoreArbitrumAaveV3Adapter();
+        _prepareArbitrumToParentRouting();
         vm.warp(block.timestamp + 5 minutes);
-        baseChild.vault.executeRecovery();
-
-        _selectBaseFork();
-        _routeUsdcMessageTo(arbitrumFork);
-
-        _selectBaseFork();
-        _assertRebalanceWithdrawRecoveryCleared(baseChild.vault.getRebalanceWithdrawRecovery());
-        assertTrue(baseChild.vault.getRecoveryMode() == Types.RecoveryMode.NONE);
-        assertEq(baseChild.vault.getActiveProtocolAdapter(), address(0));
+        arbitrumChild.vault.executeRecovery();
 
         _selectArbitrumFork();
+        _routeUsdcMessageTo(baseFork);
+
+        _selectArbitrumFork();
+        _assertRebalanceWithdrawRecoveryCleared(arbitrumChild.vault.getRebalanceWithdrawRecovery());
+        assertTrue(arbitrumChild.vault.getRecoveryMode() == Types.RecoveryMode.NONE);
+        assertEq(arbitrumChild.vault.getActiveProtocolAdapter(), address(0));
+
+        _selectBaseFork();
         assertApproxEqAbs(parent.aaveV3Adapter.getTVL(), DEPOSIT_AMOUNT, PROTOCOL_FORK_TOLERANCE);
         assertEq(parent.vault.getActiveProtocolAdapter(), address(parent.aaveV3Adapter));
-        _assertCompletedRebalance(AAVE_V3_PROTOCOL_ID, arbitrumConfig.ccip.thisChainSelector);
+        _assertCompletedRebalance(AAVE_V3_PROTOCOL_ID, baseConfig.ccip.thisChainSelector);
     }
 }

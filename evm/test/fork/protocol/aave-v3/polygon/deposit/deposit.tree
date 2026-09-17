@@ -1,6 +1,6 @@
-Base Aave V3 Fork Deposit
+Polygon Aave V3 Fork Deposit
 
-GIVEN the Base parent Aave v3 adapter
+GIVEN the Polygon child Aave v3 adapter
   WHEN a caller other than the vault deposits
     THEN it reverts
   WHEN the vault deposits USDC

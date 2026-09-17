@@ -10,18 +10,24 @@ contract Arbitrum_CompoundV3WithdrawForkTest is BaseCompoundV3ForkTest {
     }
 
     function test_Arbitrum_compoundV3_withdraw_RevertWhen_CallerIsNotVault() external {
-        _assertCompoundV3WithdrawRevertsWhenCallerIsNotVault(parent.compoundV3Adapter);
+        _assertCompoundV3WithdrawRevertsWhenCallerIsNotVault(arbitrumChild.compoundV3Adapter);
     }
 
     function test_Arbitrum_compoundV3_withdraw_RevertWhen_EpochWithdrawAmountExceedsTVL() external {
-        _assertCompoundV3EpochWithdrawRevertsWhenAmountExceedsTVL(parent.compoundV3Adapter, address(parent.vault));
+        _assertCompoundV3EpochWithdrawRevertsWhenAmountExceedsTVL(
+            arbitrumChild.compoundV3Adapter, address(arbitrumChild.vault)
+        );
     }
 
     function test_Arbitrum_compoundV3_withdraw_Success_EpochWithdraw() external {
-        _assertCompoundV3EpochWithdrawSucceeds(parent.compoundV3Adapter, address(parent.vault), parent.asset);
+        _assertCompoundV3EpochWithdrawSucceeds(
+            arbitrumChild.compoundV3Adapter, address(arbitrumChild.vault), arbitrumChild.asset
+        );
     }
 
     function test_Arbitrum_compoundV3_withdraw_Success_RebalanceWithdraw() external {
-        _assertCompoundV3RebalanceWithdrawSucceeds(parent.compoundV3Adapter, address(parent.vault), parent.asset);
+        _assertCompoundV3RebalanceWithdrawSucceeds(
+            arbitrumChild.compoundV3Adapter, address(arbitrumChild.vault), arbitrumChild.asset
+        );
     }
 }

@@ -17,9 +17,10 @@ contract HelperConfig is Script {
                                CONSTANTS
     //////////////////////////////////////////////////////////////*/
     address internal constant BURNER_EOA = 0x7664C538C80870824738A8ADCcd92AcA244D7e69;
-    uint64 internal constant ARBITRUM_CHAIN_SELECTOR = 4949039107694359620;
-    uint64 internal constant ARBITRUM_SEPOLIA_CHAIN_SELECTOR = 3478487238524512106;
+    uint64 internal constant BASE_CHAIN_SELECTOR = 15971525489660198786;
+    uint64 internal constant BASE_SEPOLIA_CHAIN_SELECTOR = 10344971235874465080;
     uint256 internal constant INITIAL_DEFAULT_CCIP_GAS_LIMIT = 500_000;
+
     bytes32 internal constant STAGING_WORKFLOW_ID = 0x008ed53617a116cbfa73849a3eb22ab73099b7c30e14a54c6a34116c19a1e4da;
     bytes10 internal constant STAGING_WORKFLOW_NAME = bytes10("67d6954c97");
 
@@ -98,12 +99,14 @@ contract HelperConfig is Script {
         else if (block.chainid == 1) activeNetworkConfig = getEthereumConfig();
         else if (block.chainid == 43114) activeNetworkConfig = getAvalancheConfig();
         else if (block.chainid == 10) activeNetworkConfig = getOptimismConfig();
+        else if (block.chainid == 137) activeNetworkConfig = getPolygonConfig();
         // Testnets
         else if (block.chainid == 421614) activeNetworkConfig = getArbitrumSepoliaConfig();
         else if (block.chainid == 11155111) activeNetworkConfig = getEthereumSepoliaConfig();
         else if (block.chainid == 84532) activeNetworkConfig = getBaseSepoliaConfig();
         else if (block.chainid == 11155420) activeNetworkConfig = getOptimismSepoliaConfig();
         else if (block.chainid == 43113) activeNetworkConfig = getAvalancheFujiConfig();
+        else if (block.chainid == 80002) activeNetworkConfig = getPolygonAmoyConfig();
         // Local
         else activeNetworkConfig = getOrCreateAnvilEthConfig();
     }
@@ -147,7 +150,7 @@ contract HelperConfig is Script {
             ccip: CCIPConfig({
                 router: 0x141fa059441E0ca23ce184B6A78bafD2A517DdE8,
                 thisChainSelector: 4949039107694359620,
-                parentChainSelector: ARBITRUM_CHAIN_SELECTOR,
+                parentChainSelector: BASE_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
             cre: _getUndeployedCreConfig(0xF8344CFd5c43616a4366C34E3EEE75af79a74482),
@@ -184,10 +187,48 @@ contract HelperConfig is Script {
             ccip: CCIPConfig({
                 router: 0x881e3A65B4d4a04dD529061dd0071cf975F58bCD,
                 thisChainSelector: 15971525489660198786,
-                parentChainSelector: ARBITRUM_CHAIN_SELECTOR,
+                parentChainSelector: BASE_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
             cre: _getUndeployedCreConfig(0xF8344CFd5c43616a4366C34E3EEE75af79a74482),
+            deployed: DeployedConfig({vaultProxy: address(0), workflowRouter: address(0)})
+        });
+    }
+
+    function getPolygonConfig() public pure returns (NetworkConfig memory networkConfig) {
+        networkConfig = NetworkConfig({
+            initialOwner: BURNER_EOA,
+            treasury: BURNER_EOA,
+            allowlist: _getInitialAllowlistConfig(),
+            roles: RolesConfig({
+                defaultAdmin: BURNER_EOA,
+                pauser: BURNER_EOA,
+                unpauser: BURNER_EOA,
+                configOperator: BURNER_EOA,
+                linkOperator: BURNER_EOA,
+                rewardsOperator: BURNER_EOA,
+                upgrader: BURNER_EOA,
+                cancelDepositOperator: BURNER_EOA,
+                allowlistOperator: BURNER_EOA
+            }),
+            tokens: TokensConfig({
+                link: 0xb0897686c545045aFc77CF20eC7A532E3120E0F1, usdc: 0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359
+            }),
+            protocols: ProtocolsConfig({
+                aaveV3PoolAddressesProvider: 0xa97684ead0e402dC232d5A977953DF7ECBaB3CDb,
+                // @review-deploy update when aave v4 is deployed
+                aaveV4Spoke: address(0),
+                // Compound's Polygon USDC market uses bridged USDC, not this vault's native USDC.
+                compoundV3Comet: address(0),
+                compoundV3CometRewards: address(0)
+            }),
+            ccip: CCIPConfig({
+                router: 0x849c5ED5a80F5B408Dd4969b78c2C8fdf0565Bfe,
+                thisChainSelector: 4051577828743386545,
+                parentChainSelector: BASE_CHAIN_SELECTOR,
+                initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
+            }),
+            cre: _getUndeployedCreConfig(0x76c9cf548b4179F8901cda1f8623568b58215E62),
             deployed: DeployedConfig({vaultProxy: address(0), workflowRouter: address(0)})
         });
     }
@@ -220,7 +261,7 @@ contract HelperConfig is Script {
             ccip: CCIPConfig({
                 router: 0x80226fc0Ee2b096224EeAc085Bb9a8cba1146f7D,
                 thisChainSelector: 5009297550715157269,
-                parentChainSelector: ARBITRUM_CHAIN_SELECTOR,
+                parentChainSelector: BASE_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
             cre: _getUndeployedCreConfig(0x0b93082D9b3C7C97fAcd250082899BAcf3af3885),
@@ -256,7 +297,7 @@ contract HelperConfig is Script {
             ccip: CCIPConfig({
                 router: 0x27F39D0af3303703750D4001fCc1844c6491563c,
                 thisChainSelector: 6433500567565415381,
-                parentChainSelector: ARBITRUM_CHAIN_SELECTOR,
+                parentChainSelector: BASE_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
             cre: _getUndeployedCreConfig(0x76c9cf548b4179F8901cda1f8623568b58215E62),
@@ -292,7 +333,7 @@ contract HelperConfig is Script {
             ccip: CCIPConfig({
                 router: 0x3206695CaE29952f4b0c22a169725a865bc8Ce0f,
                 thisChainSelector: 3734403246176062136,
-                parentChainSelector: ARBITRUM_CHAIN_SELECTOR,
+                parentChainSelector: BASE_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
             cre: _getUndeployedCreConfig(0xF8344CFd5c43616a4366C34E3EEE75af79a74482),
@@ -331,14 +372,11 @@ contract HelperConfig is Script {
             ccip: CCIPConfig({
                 router: 0x2a9C5afB0d0e4BAb2BCdaE109EC4b0c4Be15a165,
                 thisChainSelector: 3478487238524512106,
-                parentChainSelector: ARBITRUM_SEPOLIA_CHAIN_SELECTOR,
+                parentChainSelector: BASE_SEPOLIA_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
             cre: _getStagingCreConfig(0x76c9cf548b4179F8901cda1f8623568b58215E62),
-            deployed: DeployedConfig({
-                vaultProxy: 0x0c4eD72777e832e2dAe6d59875e956aBD9ad91D9,
-                workflowRouter: 0x7Fd005F9552f600e8231BA821a9e7Da42A94fE83
-            })
+            deployed: DeployedConfig({vaultProxy: address(0), workflowRouter: address(0)})
         });
     }
 
@@ -370,14 +408,11 @@ contract HelperConfig is Script {
             ccip: CCIPConfig({
                 router: 0x0BF3dE8c5D3e8A2B34D2BEeB17ABfCeBaf363A59,
                 thisChainSelector: 16015286601757825753,
-                parentChainSelector: ARBITRUM_SEPOLIA_CHAIN_SELECTOR,
+                parentChainSelector: BASE_SEPOLIA_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
             cre: _getStagingCreConfig(0xF8344CFd5c43616a4366C34E3EEE75af79a74482),
-            deployed: DeployedConfig({
-                vaultProxy: 0x809a7Bf022841e3bCDa0d3cf64B780Aabf898C64,
-                workflowRouter: 0xE7a5A96775f75baAaf49E5Dc009e3264779E2F9C
-            })
+            deployed: DeployedConfig({vaultProxy: address(0), workflowRouter: address(0)})
         });
     }
 
@@ -409,14 +444,11 @@ contract HelperConfig is Script {
             ccip: CCIPConfig({
                 router: 0xD3b06cEbF099CE7DA4AcCf578aaebFDBd6e88a93,
                 thisChainSelector: 10344971235874465080,
-                parentChainSelector: ARBITRUM_SEPOLIA_CHAIN_SELECTOR,
+                parentChainSelector: BASE_SEPOLIA_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
             cre: _getStagingCreConfig(0xF8344CFd5c43616a4366C34E3EEE75af79a74482),
-            deployed: DeployedConfig({
-                vaultProxy: 0x221736594f42A10CE61A0f66Dc4e6B04786ff8a3,
-                workflowRouter: 0x971e7D69e039CC013145CeAA6AacC9Dbe55DeBa6
-            })
+            deployed: DeployedConfig({vaultProxy: address(0), workflowRouter: address(0)})
         });
     }
 
@@ -448,14 +480,11 @@ contract HelperConfig is Script {
             ccip: CCIPConfig({
                 router: 0x114A20A10b43D4115e5aeef7345a1A71d2a60C57,
                 thisChainSelector: 5224473277236331295,
-                parentChainSelector: ARBITRUM_SEPOLIA_CHAIN_SELECTOR,
+                parentChainSelector: BASE_SEPOLIA_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
             cre: _getStagingCreConfig(0x76c9cf548b4179F8901cda1f8623568b58215E62),
-            deployed: DeployedConfig({
-                vaultProxy: 0x221736594f42A10CE61A0f66Dc4e6B04786ff8a3,
-                workflowRouter: 0x971e7D69e039CC013145CeAA6AacC9Dbe55DeBa6
-            })
+            deployed: DeployedConfig({vaultProxy: address(0), workflowRouter: address(0)})
         });
     }
 
@@ -487,14 +516,49 @@ contract HelperConfig is Script {
             ccip: CCIPConfig({
                 router: 0xF694E193200268f9a4868e4Aa017A0118C9a8177,
                 thisChainSelector: 14767482510784806043,
-                parentChainSelector: ARBITRUM_SEPOLIA_CHAIN_SELECTOR,
+                parentChainSelector: BASE_SEPOLIA_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
             cre: _getStagingCreConfig(0x76c9cf548b4179F8901cda1f8623568b58215E62),
-            deployed: DeployedConfig({
-                vaultProxy: 0x781d5338EB60Ed6C0129F28cE56872Cc239aC3c2,
-                workflowRouter: 0x412749BE129B2B6Ba778F732adb6B69617bd7A13
-            })
+            deployed: DeployedConfig({vaultProxy: address(0), workflowRouter: address(0)})
+        });
+    }
+
+    function getPolygonAmoyConfig() public pure returns (NetworkConfig memory networkConfig) {
+        networkConfig = NetworkConfig({
+            initialOwner: BURNER_EOA,
+            treasury: BURNER_EOA,
+            allowlist: _getInitialAllowlistConfig(),
+            roles: RolesConfig({
+                defaultAdmin: BURNER_EOA,
+                pauser: BURNER_EOA,
+                unpauser: BURNER_EOA,
+                configOperator: BURNER_EOA,
+                linkOperator: BURNER_EOA,
+                rewardsOperator: BURNER_EOA,
+                upgrader: BURNER_EOA,
+                cancelDepositOperator: BURNER_EOA,
+                allowlistOperator: BURNER_EOA
+            }),
+            tokens: TokensConfig({
+                link: 0x0Fd9e8d3aF1aaee056EB9e802c3A762a667b1904, usdc: 0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582
+            }),
+            protocols: ProtocolsConfig({
+                // @review-deploy populate after deploying the Amoy Aave V3 mocks.
+                aaveV3PoolAddressesProvider: address(0),
+                // @review-deploy update when aave v4 is deployed
+                aaveV4Spoke: address(0),
+                compoundV3Comet: address(0),
+                compoundV3CometRewards: address(0)
+            }),
+            ccip: CCIPConfig({
+                router: 0x9C32fCB86BF0f4a1A8921a9Fe46de3198bb884B2,
+                thisChainSelector: 16281711391670634445,
+                parentChainSelector: BASE_SEPOLIA_CHAIN_SELECTOR,
+                initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
+            }),
+            cre: _getUndeployedCreConfig(0x76c9cf548b4179F8901cda1f8623568b58215E62),
+            deployed: DeployedConfig({vaultProxy: address(0), workflowRouter: address(0)})
         });
     }
 
