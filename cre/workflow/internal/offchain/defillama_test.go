@@ -8,6 +8,7 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"time"
 
 	crehttp "github.com/smartcontractkit/cre-sdk-go/capabilities/networking/http"
 	httpmock "github.com/smartcontractkit/cre-sdk-go/capabilities/networking/http/mock"
@@ -47,6 +48,7 @@ func testConfig() Config {
 
 func testRelayJSON() string {
 	return `{
+		"refreshedAt": 0,
 		"data": [
 			{"pool":"aa70268e-4b52-42bf-a116-608b370f9501","chain":"Ethereum","project":"aave-v3","symbol":"USDC","apyBase":4.5},
 			{"pool":"d9c395b9-00d0-4426-a6b3-572a6dd68e54","chain":"Arbitrum","project":"compound-v3","symbol":"USDC","apyBase":6.25},
@@ -59,9 +61,11 @@ func testRelayJSON() string {
 
 func testRuntimeWithRelayToken(t *testing.T, token string) cre.Runtime {
 	t.Helper()
-	return testutils.NewRuntime(t, testutils.Secrets{
+	runtime := testutils.NewRuntime(t, testutils.Secrets{
 		cre.DefaultSecretNamespace: {defiLlamaRelayBearerTokenSecret: token},
 	})
+	runtime.SetTimeProvider(func() time.Time { return time.Unix(0, 0) })
+	return runtime
 }
 
 func Test_ParsePools_selectsBestAndCurrent(t *testing.T) {

@@ -3,12 +3,7 @@ use futures_util::{
     pin_mut, StreamExt,
 };
 use serde::{Deserialize, Serialize};
-use std::{
-    cmp::Ordering,
-    collections::BTreeMap,
-    sync::atomic::{AtomicUsize, Ordering as AtomicOrdering},
-    time::Duration,
-};
+use std::{cmp::Ordering, collections::BTreeMap, time::Duration};
 use worker::{
     event, AbortController, Delay, Env, Fetch, Headers, Method, Request, Response, Result,
 };
@@ -44,21 +39,19 @@ const MAX_UPSTREAM_BYTES: usize = 12 * 1024 * 1024;
 /// from slowly streaming bytes forever.
 const UPSTREAM_READ_TIMEOUT_SECS: u64 = 30;
 
-/// Maximum number of upstream fetch+read operations allowed in flight at once
-/// per isolate.
-///
-/// Bounds aggregate buffered memory to roughly
-/// `MAX_CONCURRENT_UPSTREAM_FETCHES * MAX_UPSTREAM_BYTES`, so concurrent
-/// requests cannot multiply the per-request byte cap unboundedly.
-///
-/// CRE currently fans each HTTP consensus request out across nine DON nodes.
-/// Allowing six requests leaves at most three nodes rate-limited, remaining
-/// below the four-node error threshold that fails consensus while bounding
-/// worst-case upstream response buffering to 72 MiB per isolate.
-const MAX_CONCURRENT_UPSTREAM_FETCHES: usize = 6;
+/// Refresh timestamps are Unix seconds. Stale snapshots are never served.
+const MAX_SNAPSHOT_AGE_SECS: u64 = 15 * 60;
+/// KV namespace binding declared in wrangler.toml.
+const SNAPSHOT_KV_BINDING: &str = "POOL_SNAPSHOTS";
+/// Single compact snapshot replaced only after a successful refresh.
+const SNAPSHOT_KEY: &str = "pools";
 
-/// Maximum number of compact pool entries returned to CRE.
+/// Maximum number of unique configured pool IDs; all matching pools are retained.
 const MAX_RELAY_POOLS: usize = 32;
+
+/// Inclusive base APY bounds matching the Go workflow's pool selection policy.
+const MIN_POOL_APY: f64 = 0.0;
+const MAX_POOL_APY: f64 = 1000.0;
 
 /// Maximum accepted byte length for an upstream DefiLlama pool ID.
 const MAX_POOL_ID_BYTES: usize = 128;
@@ -103,7 +96,7 @@ fn is_valid_configured_token(token: &str) -> bool {
     !token.trim().is_empty()
 }
 
-/// Pool shape read from DefiLlama's `/pools` response.
+/// Pool fields read from upstream responses and stored snapshots.
 #[derive(Debug, Deserialize)]
 struct Pool {
     pool: String,
@@ -139,49 +132,89 @@ struct RelayResponse {
 
 /// Canonicalized pool IDs used to filter DefiLlama pools.
 #[derive(Debug)]
-struct Allowlists {
+struct PoolAllowlist {
     pools: Vec<String>,
 }
 
-/// Count of upstream fetch+read operations currently in flight for this isolate.
-static IN_FLIGHT_UPSTREAM_FETCHES: AtomicUsize = AtomicUsize::new(0);
+/// Compact cached response, compatible with the existing data envelope.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CachedSnapshot<'a> {
+    refreshed_at: u64,
+    #[serde(flatten)]
+    payload: &'a RelayResponse,
+}
 
-/// RAII guard reserving one upstream-fetch slot for the lifetime of `handle_pools`.
-///
-/// Releases its slot on drop, covering every return path (success, upstream
-/// error, parse error, timeout) without manual bookkeeping at each site.
-///
-/// Ordering is `Relaxed` throughout: this counter only needs to stay
-/// internally correct, it does not need to establish a happens-before
-/// relationship with any other memory, since nothing else is read or written
-/// under its cap.
-struct UpstreamFetchSlot;
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StoredSnapshot {
+    refreshed_at: u64,
+    data: Vec<Pool>,
+}
 
-impl UpstreamFetchSlot {
-    fn try_acquire() -> Option<Self> {
-        let mut current = IN_FLIGHT_UPSTREAM_FETCHES.load(AtomicOrdering::Relaxed);
-        loop {
-            if current >= MAX_CONCURRENT_UPSTREAM_FETCHES {
-                return None;
-            }
-            match IN_FLIGHT_UPSTREAM_FETCHES.compare_exchange_weak(
-                current,
-                current + 1,
-                AtomicOrdering::Relaxed,
-                AtomicOrdering::Relaxed,
-            ) {
-                Ok(_) => return Some(Self),
-                Err(observed) => current = observed,
-            }
-        }
+fn snapshot_is_fresh(refreshed_at: u64, now: u64) -> bool {
+    refreshed_at <= now && now - refreshed_at <= MAX_SNAPSHOT_AGE_SECS
+}
+
+fn validate_cached_snapshot(
+    encoded: &str,
+    now: u64,
+    allowlists: &PoolAllowlist,
+) -> std::result::Result<(), &'static str> {
+    if relay_response_too_large(encoded.as_bytes()) {
+        return Err("invalid cached snapshot");
+    }
+    let snapshot: StoredSnapshot =
+        serde_json::from_str(encoded).map_err(|_| "invalid cached snapshot")?;
+    if !snapshot_is_fresh(snapshot.refreshed_at, now) {
+        return Err("snapshot stale");
+    }
+    if snapshot
+        .data
+        .iter()
+        .any(|pool| !allowlists.pools.contains(&pool.pool))
+    {
+        return Err("snapshot contains disallowed pools");
+    }
+    Ok(())
+}
+
+fn encode_snapshot(payload: &RelayResponse, refreshed_at: u64) -> Result<String> {
+    if payload.data.is_empty() {
+        return Err(worker::Error::RustError(
+            "no approved pools in upstream response".into(),
+        ));
+    }
+    let encoded = serde_json::to_string(&CachedSnapshot {
+        refreshed_at,
+        payload,
+    })?;
+    if relay_response_too_large(encoded.as_bytes()) {
+        return Err(worker::Error::RustError(
+            "filtered response too large".into(),
+        ));
+    }
+    Ok(encoded)
+}
+
+/// Only scheduled refreshes fetch the upstream dataset. Failed refreshes leave KV unchanged.
+#[event(scheduled)]
+pub async fn scheduled(_event: worker::ScheduledEvent, env: Env, _ctx: worker::ScheduleContext) {
+    if let Err(error) = refresh_snapshot(&env).await {
+        worker::console_error!("DefiLlama snapshot refresh failed: {}", error);
     }
 }
 
-impl Drop for UpstreamFetchSlot {
-    fn drop(&mut self) {
-        let previous = IN_FLIGHT_UPSTREAM_FETCHES.fetch_sub(1, AtomicOrdering::Relaxed);
-        debug_assert!(previous > 0);
-    }
+async fn refresh_snapshot(env: &Env) -> Result<()> {
+    // Use the fetch start time; successful publication must not disguise a slow fetch's age.
+    let refreshed_at = worker::Date::now().as_millis() / 1000;
+    let payload = fetch_pools(env).await?;
+    let encoded = encode_snapshot(&payload, refreshed_at)?;
+    env.kv(SNAPSHOT_KV_BINDING)?
+        .put(SNAPSHOT_KEY, encoded)?
+        .execute()
+        .await?;
+    Ok(())
 }
 
 /// Cloudflare Worker entrypoint.
@@ -195,15 +228,7 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
     }
 }
 
-/// Handles the DefiLlama relay endpoint.
-///
-/// The request must include the configured bearer token. On success, the worker
-/// fetches DefiLlama's full pool response, filters it to approved pools, and
-/// returns a compact JSON payload that fits within CRE's HTTP response quota.
-///
-/// Concurrent upstream fetches are capped at `MAX_CONCURRENT_UPSTREAM_FETCHES`
-/// per isolate, so many simultaneous authenticated requests cannot multiply
-/// buffered memory unboundedly.
+/// Authenticated reads only serve the saved snapshot; they never fetch upstream.
 async fn handle_pools(req: Request, env: Env) -> Result<Response> {
     let token = env.secret("RELAY_BEARER_TOKEN")?.to_string();
     if !is_valid_configured_token(&token) {
@@ -212,13 +237,29 @@ async fn handle_pools(req: Request, env: Env) -> Result<Response> {
     if !is_authorized(&req, &token) {
         return response_with_status("unauthorized", 401);
     }
-
-    let Some(_upstream_slot) = UpstreamFetchSlot::try_acquire() else {
-        return response_with_status("too many concurrent requests", 429);
+    let Some(encoded) = env
+        .kv(SNAPSHOT_KV_BINDING)?
+        .get(SNAPSHOT_KEY)
+        .text()
+        .await?
+    else {
+        return response_with_status("snapshot unavailable", 503);
     };
-
-    let upstream_url = upstream_url(optional_var(&env, "DEFILLAMA_UPSTREAM_URL")?.as_deref());
     let allowlists = allowlists_from_env(&env)?;
+    if let Err(message) = validate_cached_snapshot(
+        &encoded,
+        worker::Date::now().as_millis() / 1000,
+        &allowlists,
+    ) {
+        return response_with_status(message, 503);
+    }
+    json_response(encoded.into_bytes())
+}
+
+/// Fetches and filters upstream pools with a timeout, status check, and bounded body read.
+async fn fetch_pools(env: &Env) -> Result<RelayResponse> {
+    let upstream_url = upstream_url(optional_var(env, "DEFILLAMA_UPSTREAM_URL").as_deref());
+    let allowlists = allowlists_from_env(env)?;
 
     let mut upstream_req = Request::new(&upstream_url, Method::Get)?;
     upstream_req
@@ -235,7 +276,7 @@ async fn handle_pools(req: Request, env: Env) -> Result<Response> {
         if upstream_resp.status_code() != 200 {
             return Err(upstream_error());
         }
-        if upstream_success_too_large(upstream_content_length(&upstream_resp)?) {
+        if upstream_success_too_large(upstream_content_length(&upstream_resp)) {
             return Err(upstream_too_large_error());
         }
 
@@ -249,20 +290,13 @@ async fn handle_pools(req: Request, env: Env) -> Result<Response> {
     // body is cancelled rather than only dropping the Rust future.
     let upstream = match select(fetch, timeout).await {
         Either::Left((Ok(upstream), _)) => upstream,
-        Either::Left((Err(_), _)) => return response_with_status("upstream error", 502),
+        Either::Left((Err(error), _)) => return Err(error),
         Either::Right(((), _)) => {
             abort.abort();
-            return response_with_status("upstream timeout", 504);
+            return Err(worker::Error::RustError("upstream timeout".into()));
         }
     };
-    let payload = filter_payload(upstream, &allowlists);
-
-    let encoded = encode_payload(&payload)?;
-    if relay_response_too_large(&encoded) {
-        return response_with_status("filtered response too large", 502);
-    }
-
-    json_response(encoded)
+    Ok(filter_payload(upstream, &allowlists))
 }
 
 /// Checks the Worker request `Authorization` header against the expected token.
@@ -305,9 +339,8 @@ fn constant_time_eq(left: &str, right: &str) -> bool {
     let right = right.as_bytes();
     let mut diff = left.len() ^ right.len();
 
-    for index in 0..right.len() {
+    for (index, &right_byte) in right.iter().enumerate() {
         let left_byte = left.get(index).copied().unwrap_or(0);
-        let right_byte = right[index];
         diff |= usize::from(left_byte ^ right_byte);
     }
 
@@ -315,21 +348,16 @@ fn constant_time_eq(left: &str, right: &str) -> bool {
 }
 
 /// Builds allowlists from Worker environment variables, falling back to defaults.
-fn allowlists_from_env(env: &Env) -> Result<Allowlists> {
-    Ok(build_allowlists(
-        optional_var(env, "ALLOWED_POOLS")?.as_deref(),
-    ))
+fn allowlists_from_env(env: &Env) -> Result<PoolAllowlist> {
+    build_allowlists(optional_var(env, "ALLOWED_POOLS").as_deref())
 }
 
 /// Reads an optional Worker variable.
 ///
 /// Missing variables are treated as `None` so defaults can be applied by the
 /// caller.
-fn optional_var(env: &Env, name: &str) -> Result<Option<String>> {
-    match env.var(name) {
-        Ok(value) => Ok(Some(value.to_string())),
-        Err(_) => Ok(None),
-    }
+fn optional_var(env: &Env, name: &str) -> Option<String> {
+    env.var(name).ok().map(|value| value.to_string())
 }
 
 /// Parses a comma-separated allowlist into canonical values.
@@ -353,10 +381,9 @@ fn parse_csv(input: &str) -> Vec<String> {
 /// prevents padded IDs from amplifying the serialized response size.
 ///
 /// Selection is intentionally independent of upstream ordering: the relay keeps
-/// the best candidate per pool ID, sorts all candidates, then applies the
-/// CRE-facing response count cap.
-fn filter_payload(upstream: DefiLlamaResponse, allowlists: &Allowlists) -> RelayResponse {
-    let max_pools = allowlists.pools.len().min(MAX_RELAY_POOLS);
+/// the best candidate per pool ID and sorts all candidates. Configuration validation
+/// bounds the allowlist so filtering never needs to truncate matching pools.
+fn filter_payload(upstream: DefiLlamaResponse, allowlists: &PoolAllowlist) -> RelayResponse {
     let mut by_pool = BTreeMap::new();
 
     for pool in upstream.data {
@@ -370,7 +397,7 @@ fn filter_payload(upstream: DefiLlamaResponse, allowlists: &Allowlists) -> Relay
         let Some(apy_base) = pool.apy_base else {
             continue;
         };
-        if !apy_base.is_finite() {
+        if !apy_base.is_finite() || !(MIN_POOL_APY..=MAX_POOL_APY).contains(&apy_base) {
             continue;
         }
 
@@ -406,7 +433,6 @@ fn filter_payload(upstream: DefiLlamaResponse, allowlists: &Allowlists) -> Relay
 
     let mut data: Vec<_> = by_pool.into_values().collect();
     sort_relay_pools(&mut data);
-    data.truncate(max_pools);
 
     RelayResponse { data }
 }
@@ -431,15 +457,16 @@ fn compare_relay_pools(left: &RelayPool, right: &RelayPool) -> Ordering {
 }
 
 /// Builds canonical allowlists from optional configured values.
-fn build_allowlists(pools: Option<&str>) -> Allowlists {
-    Allowlists {
-        pools: parse_csv(pools.unwrap_or(DEFAULT_ALLOWED_POOLS)),
+fn build_allowlists(pools: Option<&str>) -> Result<PoolAllowlist> {
+    let mut pools = parse_csv(pools.unwrap_or(DEFAULT_ALLOWED_POOLS));
+    pools.sort();
+    pools.dedup();
+    if pools.len() > MAX_RELAY_POOLS {
+        return Err(worker::Error::RustError(
+            "allowlist exceeds 32 unique pools".into(),
+        ));
     }
-}
-
-/// Encodes the compact relay payload as JSON bytes.
-fn encode_payload(payload: &RelayResponse) -> Result<Vec<u8>> {
-    serde_json::to_vec(payload).map_err(|err| worker::Error::RustError(err.to_string()))
+    Ok(PoolAllowlist { pools })
 }
 
 /// Reads and parses upstream JSON while enforcing the relay's hard byte cap.
@@ -476,8 +503,7 @@ async fn read_upstream_body(resp: &mut Response, limit: usize) -> Result<Vec<u8>
 
 /// Parses the bounded upstream body into the subset of DefiLlama data we use.
 ///
-/// Parser details are intentionally hidden from the caller. Malformed upstream
-/// JSON is an upstream failure, not a client-facing diagnostic surface.
+/// Malformed JSON produces a generic parse error recorded in scheduled-refresh logs.
 fn parse_upstream_json(body: &[u8]) -> Result<DefiLlamaResponse> {
     serde_json::from_slice(body).map_err(|_| upstream_parse_error())
 }
@@ -564,11 +590,12 @@ fn response_with_status(message: &str, status: u16) -> Result<Response> {
 }
 
 /// Reads and parses a response `Content-Length` header when present.
-fn upstream_content_length(resp: &Response) -> Result<Option<usize>> {
-    match resp.headers().get("Content-Length") {
-        Ok(Some(value)) => Ok(parse_content_length(&value)),
-        Ok(None) | Err(_) => Ok(None),
-    }
+fn upstream_content_length(resp: &Response) -> Option<usize> {
+    resp.headers()
+        .get("Content-Length")
+        .ok()
+        .flatten()
+        .and_then(|value| parse_content_length(&value))
 }
 
 /// Parses a `Content-Length` header value.
@@ -580,8 +607,8 @@ fn parse_content_length(value: &str) -> Option<usize> {
 mod tests {
     use super::*;
 
-    fn test_allowlists() -> Allowlists {
-        Allowlists {
+    fn test_allowlists() -> PoolAllowlist {
+        PoolAllowlist {
             pools: parse_csv(
                 "aa70268e-4b52-42bf-a116-608b370f9501,\
                  d9c395b9-00d0-4426-a6b3-572a6dd68e54",
@@ -860,6 +887,60 @@ mod tests {
     }
 
     #[test]
+    fn filter_payload_enforces_inclusive_workflow_apy_bounds() {
+        let allowlists = build_allowlists(Some("pool-a")).unwrap();
+        for (apy, accepted) in [
+            (-0.001, false),
+            (0.0, true),
+            (5.0, true),
+            (1000.0, true),
+            (1000.001, false),
+            (2000.0, false),
+        ] {
+            let filtered = filter_payload(
+                DefiLlamaResponse {
+                    data: vec![pool("pool-a", "Polygon", "aave-v3", "USDC", Some(apy))],
+                },
+                &allowlists,
+            );
+            assert_eq!(!filtered.data.is_empty(), accepted, "APY {apy}");
+        }
+    }
+
+    #[test]
+    fn filter_payload_discards_invalid_apy_before_deduplication() {
+        let allowlists = build_allowlists(Some("pool-a")).unwrap();
+        for apys in [[5.0, 2000.0], [2000.0, 5.0], [-1.0, 5.0], [5.0, -1.0]] {
+            let filtered = filter_payload(
+                DefiLlamaResponse {
+                    data: apys
+                        .into_iter()
+                        .map(|apy| pool("pool-a", "Polygon", "aave-v3", "USDC", Some(apy)))
+                        .collect(),
+                },
+                &allowlists,
+            );
+            assert_eq!(filtered.data.len(), 1);
+            assert_eq!(filtered.data[0].apy_base, 5.0);
+        }
+    }
+
+    #[test]
+    fn invalid_apys_cannot_produce_a_publishable_snapshot() {
+        let filtered = filter_payload(
+            DefiLlamaResponse {
+                data: vec![
+                    pool("pool-a", "Polygon", "aave-v3", "USDC", Some(-1.0)),
+                    pool("pool-a", "Polygon", "aave-v3", "USDC", Some(2000.0)),
+                ],
+            },
+            &build_allowlists(Some("pool-a")).unwrap(),
+        );
+        assert!(filtered.data.is_empty());
+        assert!(encode_snapshot(&filtered, 1000).is_err());
+    }
+
+    #[test]
     fn constant_time_eq_requires_same_bytes() {
         assert!(constant_time_eq("Bearer secret", "Bearer secret"));
         assert!(!constant_time_eq("Bearer secret", "Bearer other"));
@@ -975,51 +1056,36 @@ mod tests {
     }
 
     #[test]
-    fn filter_payload_caps_relay_pool_count() {
-        let allowed_pools: Vec<_> = (0..MAX_RELAY_POOLS + 1)
+    fn filter_payload_retains_every_pool_at_allowlist_limit() {
+        let ids: Vec<_> = (0..MAX_RELAY_POOLS)
             .map(|index| format!("pool-{index}"))
             .collect();
-        let upstream = DefiLlamaResponse {
-            data: allowed_pools
-                .iter()
-                .map(|pool_id| pool(pool_id, "Ethereum", "aave-v3", "USDC", Some(4.5)))
-                .collect(),
-        };
-        let allowlists = Allowlists {
-            pools: allowed_pools,
-        };
-
-        let filtered = filter_payload(upstream, &allowlists);
-
+        let allowlists = build_allowlists(Some(&ids.join(","))).unwrap();
+        let filtered = filter_payload(
+            DefiLlamaResponse {
+                data: ids
+                    .iter()
+                    .enumerate()
+                    .map(|(index, id)| pool(id, "Ethereum", "aave-v3", "USDC", Some(index as f64)))
+                    .collect(),
+            },
+            &allowlists,
+        );
         assert_eq!(filtered.data.len(), MAX_RELAY_POOLS);
+        assert!(filtered.data.iter().any(|pool| pool.pool == "pool-0"));
     }
 
     #[test]
-    fn filter_payload_applies_pool_count_cap_after_sorting_all_candidates() {
-        let allowed_pools: Vec<_> = (0..MAX_RELAY_POOLS + 1)
+    fn build_allowlists_rejects_more_than_32_unique_pools() {
+        let ids: Vec<_> = (0..MAX_RELAY_POOLS + 1)
             .map(|index| format!("pool-{index}"))
             .collect();
-        let upstream = DefiLlamaResponse {
-            data: allowed_pools
-                .iter()
-                .enumerate()
-                .map(|(index, pool_id)| {
-                    let apy_base = if index == MAX_RELAY_POOLS { 10.0 } else { 1.0 };
-                    pool(pool_id, "Ethereum", "aave-v3", "USDC", Some(apy_base))
-                })
-                .collect(),
-        };
-        let allowlists = Allowlists {
-            pools: allowed_pools,
-        };
-
-        let filtered = filter_payload(upstream, &allowlists);
-
-        assert_eq!(filtered.data.len(), MAX_RELAY_POOLS);
-        assert!(filtered
-            .data
-            .iter()
-            .any(|pool| pool.pool == format!("pool-{MAX_RELAY_POOLS}")));
+        assert!(build_allowlists(Some(&ids.join(","))).is_err());
+        let mut duplicates = ids[..MAX_RELAY_POOLS].to_vec();
+        duplicates.extend([" POOL-0 ".into(), "pool-0".into(), "".into()]);
+        let allowlists = build_allowlists(Some(&duplicates.join(","))).unwrap();
+        assert_eq!(allowlists.pools.len(), MAX_RELAY_POOLS);
+        assert!(build_allowlists(Some("")).unwrap().pools.is_empty());
     }
 
     #[test]
@@ -1034,9 +1100,9 @@ mod tests {
             }],
         };
 
-        let encoded = encode_payload(&response).expect("response encodes");
+        let encoded = encode_snapshot(&response, 1000).expect("snapshot encodes");
 
-        assert!(!relay_response_too_large(&encoded));
+        assert!(!relay_response_too_large(encoded.as_bytes()));
     }
 
     #[test]
@@ -1055,12 +1121,12 @@ mod tests {
 
     #[test]
     fn build_allowlists_uses_defaults_and_overrides() {
-        let defaults = build_allowlists(None);
+        let defaults = build_allowlists(None).unwrap();
         assert!(defaults
             .pools
             .contains(&"aa70268e-4b52-42bf-a116-608b370f9501".to_string()));
 
-        let custom = build_allowlists(Some(" pool-a, POOL-B "));
+        let custom = build_allowlists(Some(" pool-a, POOL-B ")).unwrap();
         assert_eq!(custom.pools, vec!["pool-a", "pool-b"]);
     }
 
@@ -1128,21 +1194,127 @@ mod tests {
     }
 
     #[test]
-    fn upstream_fetch_slot_bounds_concurrent_acquisitions() {
-        let mut held: Vec<_> = (0..MAX_CONCURRENT_UPSTREAM_FETCHES)
-            .map(|_| UpstreamFetchSlot::try_acquire().expect("slot available under cap"))
-            .collect();
+    fn snapshot_freshness_accepts_boundary_and_rejects_stale_or_future_data() {
+        assert!(snapshot_is_fresh(1000, 1000));
+        assert!(snapshot_is_fresh(1000, 1900));
+        assert!(!snapshot_is_fresh(1000, 1901));
+        assert!(!snapshot_is_fresh(1001, 1000));
+        assert!(snapshot_is_fresh(u64::MAX, u64::MAX));
+        assert!(!snapshot_is_fresh(u64::MAX, 0));
+        assert!(!snapshot_is_fresh(0, u64::MAX));
+    }
 
-        assert!(
-            UpstreamFetchSlot::try_acquire().is_none(),
-            "acquisition past the cap must fail"
+    #[test]
+    fn cached_snapshot_validation_rejects_invalid_metadata_and_size() {
+        let allowlists = test_allowlists();
+        for encoded in [
+            "{",
+            "{}",
+            "null",
+            r#"{"refreshedAt":null}"#,
+            r#"{"refreshedAt":-1}"#,
+            r#"{"refreshedAt":"1000"}"#,
+            r#"{"refreshedAt":1000.5}"#,
+            r#"{"refreshedAt":18446744073709551616}"#,
+        ] {
+            assert_eq!(
+                validate_cached_snapshot(encoded, 1000, &allowlists),
+                Err("invalid cached snapshot")
+            );
+        }
+        assert_eq!(
+            validate_cached_snapshot(&" ".repeat(MAX_RESPONSE_BYTES + 1), 1000, &allowlists),
+            Err("invalid cached snapshot")
         );
+        assert_eq!(
+            validate_cached_snapshot(r#"{"refreshedAt":1000,"data":[]}"#, 1900, &allowlists),
+            Ok(())
+        );
+        assert_eq!(
+            validate_cached_snapshot(r#"{"refreshedAt":1000,"data":[]}"#, 1901, &allowlists),
+            Err("snapshot stale")
+        );
+        assert_eq!(
+            validate_cached_snapshot(r#"{"refreshedAt":1001,"data":[]}"#, 1000, &allowlists),
+            Err("snapshot stale")
+        );
+    }
 
-        held.pop(); // drop exactly one held slot
-        assert!(
-            UpstreamFetchSlot::try_acquire().is_some(),
-            "dropping a slot must free exactly one acquisition"
+    #[test]
+    fn snapshot_encoding_preserves_data_and_adds_refresh_timestamp() {
+        let payload = filter_payload(
+            DefiLlamaResponse {
+                data: vec![Pool {
+                    pool: "pool-a".into(),
+                    chain: "Polygon".into(),
+                    project: "aave-v3".into(),
+                    symbol: "USDC".into(),
+                    apy_base: Some(4.5),
+                }],
+            },
+            &build_allowlists(Some("pool-a")).unwrap(),
         );
+        let encoded = encode_snapshot(&payload, 1000).expect("valid snapshot");
+        let decoded: serde_json::Value = serde_json::from_str(&encoded).unwrap();
+        assert_eq!(decoded["refreshedAt"], 1000);
+        assert_eq!(decoded["data"][0]["pool"], "pool-a");
+        assert_eq!(decoded["data"][0]["apyBase"], 4.5);
+        assert!(encode_snapshot(&RelayResponse { data: vec![] }, 1000).is_err());
+    }
+
+    #[test]
+    fn cached_snapshot_obeys_current_allowlist() {
+        let original = build_allowlists(Some("pool-a,pool-b")).unwrap();
+        let payload = filter_payload(
+            DefiLlamaResponse {
+                data: vec![
+                    pool("pool-a", "Polygon", "aave-v3", "USDC", Some(5.0)),
+                    pool("pool-b", "Base", "aave-v3", "USDC", Some(4.0)),
+                ],
+            },
+            &original,
+        );
+        let encoded = encode_snapshot(&payload, 1000).unwrap();
+        assert_eq!(validate_cached_snapshot(&encoded, 1000, &original), Ok(()));
+        assert_eq!(
+            validate_cached_snapshot(
+                &encoded,
+                1000,
+                &build_allowlists(Some(" POOL-B , pool-a , pool-c ")).unwrap()
+            ),
+            Ok(())
+        );
+        for policy in ["pool-a", "pool-b", "", "pool-c"] {
+            assert_eq!(
+                validate_cached_snapshot(&encoded, 1000, &build_allowlists(Some(policy)).unwrap()),
+                Err("snapshot contains disallowed pools")
+            );
+        }
+        let reduced = build_allowlists(Some("pool-a")).unwrap();
+        let refreshed = filter_payload(
+            DefiLlamaResponse {
+                data: vec![pool("pool-a", "Polygon", "aave-v3", "USDC", Some(5.0))],
+            },
+            &reduced,
+        );
+        assert_eq!(
+            validate_cached_snapshot(&encode_snapshot(&refreshed, 1100).unwrap(), 1100, &reduced),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn snapshot_encoding_rejects_oversized_publication() {
+        let payload = RelayResponse {
+            data: vec![RelayPool {
+                pool: "x".repeat(MAX_RESPONSE_BYTES),
+                chain: "Polygon".into(),
+                project: "aave-v3".into(),
+                symbol: "USDC".into(),
+                apy_base: 4.5,
+            }],
+        };
+        assert!(encode_snapshot(&payload, 1000).is_err());
     }
 
     #[test]
@@ -1159,8 +1331,6 @@ mod tests {
                 .collect(),
         };
 
-        let encoded = encode_payload(&response).expect("response encodes");
-
-        assert!(relay_response_too_large(&encoded));
+        assert!(encode_snapshot(&response, 1000).is_err());
     }
 }
