@@ -68,6 +68,40 @@ func validDefiLlamaConfig() DefiLlama {
 	}
 }
 
+func Test_ValidateConfig_supportedDefiLlamaProjects(t *testing.T) {
+	for _, project := range []string{"aave-v3", "aave-v4", "compound-v3"} {
+		t.Run(project, func(t *testing.T) {
+			cfg := &Config{
+				BlockNumber: new(int64), AssetDecimals: testAssetDecimals(),
+				EpochSchedule: "0 0 0 * * *", RebalanceSchedule: "0 0 12 * * *",
+				DefiLlama: validDefiLlamaConfig(), Evms: []EvmConfig{validEvmConfig()},
+			}
+			cfg.DefiLlama.Projects = []string{project}
+			require.NoError(t, ValidateConfig(cfg))
+		})
+	}
+}
+
+func Test_ValidateConfig_rejectsNoncanonicalDefiLlamaProjects(t *testing.T) {
+	for _, project := range []string{
+		"AAVE-V3", "AAVE-V4", "COMPOUND-V3", "Aave-v3",
+		" aave-v3", "aave-v4 ", "\tcompound-v3\n", "unsupported",
+	} {
+		t.Run(project, func(t *testing.T) {
+			cfg := &Config{
+				BlockNumber: new(int64), AssetDecimals: testAssetDecimals(),
+				EpochSchedule: "0 0 0 * * *", RebalanceSchedule: "0 0 12 * * *",
+				DefiLlama: validDefiLlamaConfig(), Evms: []EvmConfig{validEvmConfig()},
+			}
+			cfg.DefiLlama.Projects = []string{"aave-v3", project}
+			// Canonical duplicates are rejected by the existing uniqueness check.
+			require.Error(t, ValidateConfig(cfg))
+			cfg.DefiLlama.Projects = []string{project}
+			require.ErrorContains(t, ValidateConfig(cfg), "unsupported defiLlama project")
+		})
+	}
+}
+
 func Test_FindEvmConfigByChainSelector_found(t *testing.T) {
 	evms := []EvmConfig{
 		{ChainName: "chain-a", ChainSelector: 1},

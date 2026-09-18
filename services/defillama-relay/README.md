@@ -72,6 +72,10 @@ Allowed DefiLlama pool IDs should map to the exact canonical native USDC markets
 | Optimism  | OP Mainnet      | Aave v3     | `0758c3b8-4ffb-4176-b0a9-f446e367db46` | `0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85` | DefiLlama labels Optimism as `OP Mainnet`                                                                                                                                                                                                |
 | Optimism  | OP Mainnet      | Compound v3 | `b828f0cb-853d-4b32-aebb-2e20d7fd70a8` | `0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85` | DefiLlama labels Optimism as `OP Mainnet`                                                                                                                                                                                                |
 
+Polygon Aave v3 uses pool `1b8b4cdb-0728-42a8-bf13-2c8fea7427ee`, with DefiLlama chain `Polygon`, `poolMeta: null`, and native USDC `0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359`. The bridged USDC pool (`37b04faa-95bb-4ccb-9c4e-c70fa167342b`) is excluded.
+
+The workflow and relay allowlists contain 12 strategies: six Aave v3 markets, four Compound v3 markets (Ethereum, Arbitrum, Base, Optimism), and two Aave v4 Core markets (Ethereum, Avalanche).
+
 Set the bearer token as a Worker secret:
 
 ```bash

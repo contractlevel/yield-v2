@@ -28,7 +28,8 @@ const DEFAULT_ALLOWED_POOLS: &str = concat!(
     "c4b05318-88af-4536-a834-f5fc8940d2d3,",
     "22323e90-bde5-54a1-8686-53b4205b61b7,",
     "0758c3b8-4ffb-4176-b0a9-f446e367db46,",
-    "b828f0cb-853d-4b32-aebb-2e20d7fd70a8",
+    "b828f0cb-853d-4b32-aebb-2e20d7fd70a8,",
+    "1b8b4cdb-0728-42a8-bf13-2c8fea7427ee",
 );
 
 /// Maximum response size returned to CRE, leaving margin below its 100 KB HTTP limit.

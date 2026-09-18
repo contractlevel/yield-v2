@@ -121,7 +121,12 @@ func Fuzz_ValidateConfig_defiLlamaProjectCanonicalDuplicates(f *testing.F) {
 			require.Error(t, err, "expected empty or duplicate canonical project values to fail")
 			return
 		}
-		require.NoError(t, err, "expected distinct canonical project values to pass")
+		supported := map[string]bool{"aave-v3": true, "aave-v4": true, "compound-v3": true}
+		if supported[projectA] && supported[projectB] {
+			require.NoError(t, err, "expected distinct supported project names to pass")
+		} else {
+			require.ErrorContains(t, err, "unsupported defiLlama project")
+		}
 	})
 }
 

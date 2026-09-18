@@ -128,6 +128,14 @@ func validateDefiLlamaConfig(cfg DefiLlama) error {
 	if err := validateUniqueNonEmptyStrings("defiLlama.projects", cfg.Projects); err != nil {
 		return err
 	}
+	for _, project := range cfg.Projects {
+		switch project {
+		case "aave-v3", "aave-v4", "compound-v3":
+			// Exact names match the registered protocol IDs.
+		default:
+			return fmt.Errorf("unsupported defiLlama project %q: expected aave-v3, aave-v4, or compound-v3", project)
+		}
+	}
 	if err := validateUniqueNonEmptyStrings("defiLlama.symbols", cfg.Symbols); err != nil {
 		return err
 	}
