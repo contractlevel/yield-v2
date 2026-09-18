@@ -29,6 +29,8 @@ type ParentVaultMock struct {
 	DefaultAdminDelayIncreaseWait      func() (*big.Int, error)
 	GetActiveProtocolAdapter           func() (common.Address, error)
 	GetAdapterRegistry                 func() (common.Address, error)
+	GetAllowlistEnabled                func() (bool, error)
+	GetAllowlistedUser                 func(GetAllowlistedUserInput) (bool, error)
 	GetAsset                           func() (common.Address, error)
 	GetAssetPrecision                  func() (*big.Int, error)
 	GetCCVsAndFinalityConfig           func(GetCCVsAndFinalityConfigInput) (GetCCVsAndFinalityConfigOutput, error)
@@ -144,6 +146,40 @@ func NewParentVaultMock(address common.Address, clientMock *evmmock.ClientCapabi
 				return nil, err
 			}
 			return abi.Methods["getAdapterRegistry"].Outputs.Pack(result)
+		},
+		string(abi.Methods["getAllowlistEnabled"].ID[:4]): func(payload []byte) ([]byte, error) {
+			if mock.GetAllowlistEnabled == nil {
+				return nil, errors.New("getAllowlistEnabled method not mocked")
+			}
+			result, err := mock.GetAllowlistEnabled()
+			if err != nil {
+				return nil, err
+			}
+			return abi.Methods["getAllowlistEnabled"].Outputs.Pack(result)
+		},
+		string(abi.Methods["getAllowlistedUser"].ID[:4]): func(payload []byte) ([]byte, error) {
+			if mock.GetAllowlistedUser == nil {
+				return nil, errors.New("getAllowlistedUser method not mocked")
+			}
+			inputs := abi.Methods["getAllowlistedUser"].Inputs
+
+			values, err := inputs.Unpack(payload)
+			if err != nil {
+				return nil, errors.New("Failed to unpack payload")
+			}
+			if len(values) != 1 {
+				return nil, errors.New("expected 1 input value")
+			}
+
+			args := GetAllowlistedUserInput{
+				User: values[0].(common.Address),
+			}
+
+			result, err := mock.GetAllowlistedUser(args)
+			if err != nil {
+				return nil, err
+			}
+			return abi.Methods["getAllowlistedUser"].Outputs.Pack(result)
 		},
 		string(abi.Methods["getAsset"].ID[:4]): func(payload []byte) ([]byte, error) {
 			if mock.GetAsset == nil {
