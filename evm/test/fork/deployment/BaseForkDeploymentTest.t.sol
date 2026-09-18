@@ -9,7 +9,7 @@ abstract contract BaseForkDeploymentTest is BaseForkTest {
     function _assertParentForkDeployment() internal view {
         assertEq(parent.vault.defaultAdmin(), parentForkDeployer);
         assertTrue(parent.vault.hasRole(Roles.CONFIG_OPERATOR_ROLE, baseConfig.roles.configOperator));
-        assertFalse(parent.vault.hasRole(Roles.CONFIG_OPERATOR_ROLE, parentForkDeployer));
+        assertTrue(parent.vault.hasRole(Roles.CONFIG_OPERATOR_ROLE, parentForkDeployer));
         assertTrue(parent.vault.hasRole(Roles.EPOCH_OPERATOR_ROLE, address(parent.workflowRouter)));
         assertTrue(parent.vault.hasRole(Roles.REBALANCE_OPERATOR_ROLE, address(parent.workflowRouter)));
         assertTrue(parent.vault.hasRole(Roles.LINK_OPERATOR_ROLE, baseConfig.roles.linkOperator));
@@ -36,6 +36,9 @@ abstract contract BaseForkDeploymentTest is BaseForkTest {
         assertEq(parent.vault.getDefaultCcipGasLimit(), baseConfig.ccip.initialDefaultCcipGasLimit);
         assertEq(parent.vault.getCrosschainVault(baseConfig.ccip.parentChainSelector), address(0));
         assertEq(parent.workflowRouter.getVault(), address(parent.vault));
+        assertTrue(parent.workflowRouter.hasRole(Roles.CONFIG_OPERATOR_ROLE, parentForkDeployer));
+        assertTrue(parent.workflowRouter.hasRole(Roles.CONFIG_OPERATOR_ROLE, baseConfig.roles.configOperator));
+        assertEq(parent.workflowRouter.defaultAdminDelay(), 0);
         assertTrue(parent.vault.getSupportedProtocol(AAVE_V3_PROTOCOL_ID));
         assertTrue(parent.vault.getSupportedProtocol(AAVE_V4_PROTOCOL_ID));
         assertTrue(parent.vault.getSupportedProtocol(COMPOUND_V3_PROTOCOL_ID));
@@ -79,7 +82,7 @@ abstract contract BaseForkDeploymentTest is BaseForkTest {
     ) internal view {
         assertEq(forkChild.vault.defaultAdmin(), forkDeployer);
         assertTrue(forkChild.vault.hasRole(Roles.CONFIG_OPERATOR_ROLE, config.roles.configOperator));
-        assertFalse(forkChild.vault.hasRole(Roles.CONFIG_OPERATOR_ROLE, forkDeployer));
+        assertTrue(forkChild.vault.hasRole(Roles.CONFIG_OPERATOR_ROLE, forkDeployer));
         assertTrue(forkChild.vault.hasRole(Roles.EPOCH_OPERATOR_ROLE, address(forkChild.workflowRouter)));
         assertTrue(forkChild.vault.hasRole(Roles.REBALANCE_OPERATOR_ROLE, address(forkChild.workflowRouter)));
         assertTrue(forkChild.vault.hasRole(Roles.LINK_OPERATOR_ROLE, config.roles.linkOperator));
@@ -99,6 +102,9 @@ abstract contract BaseForkDeploymentTest is BaseForkTest {
         assertEq(forkChild.vault.getDefaultCcipGasLimit(), config.ccip.initialDefaultCcipGasLimit);
         assertEq(forkChild.vault.getCrosschainVault(baseConfig.ccip.thisChainSelector), address(parent.vault));
         assertEq(forkChild.workflowRouter.getVault(), address(forkChild.vault));
+        assertTrue(forkChild.workflowRouter.hasRole(Roles.CONFIG_OPERATOR_ROLE, forkDeployer));
+        assertTrue(forkChild.workflowRouter.hasRole(Roles.CONFIG_OPERATOR_ROLE, config.roles.configOperator));
+        assertEq(forkChild.workflowRouter.defaultAdminDelay(), 0);
 
         _assertOptionalAaveV3Adapter(
             forkChild.adapterRegistry,

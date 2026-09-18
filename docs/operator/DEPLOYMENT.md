@@ -10,6 +10,10 @@ This runbook covers testnet and production deployments. Run EVM commands from `e
 - Review the network values in `script/HelperConfig.s.sol`.
 - Confirm the intended parent chain, child chains, underlying asset, protocols, role holders, and treasury.
 
+The shared actor section in `script/HelperConfig.s.sol` defines `DEFAULT_ADMIN`, `UPGRADER`, `OPERATOR`, and `INITIAL_USER` for mainnet and testnet. Treasury fees go to `OPERATOR`. The parent allowlist is enabled with `INITIAL_USER` as its sole initial member.
+
+Base hosts the parent; Ethereum, Avalanche, Arbitrum, Optimism, and Polygon host children. Testnets use the corresponding testnet configurations. The deployer is a separate keystore address. Pass `--sender <deployer_address>` with `--account` so the script's `msg.sender` matches the signer.
+
 ## Deploy
 
 Deploy the parent-chain vault, share token, seed lock, adapters, registry, and workflow router:
@@ -36,6 +40,10 @@ For current testnet commands and deployment records, see [`TESTNET`](../test/TES
 
 ## Configure
 
+Both the operator and deployer retain `CONFIG_OPERATOR_ROLE` on every vault and WorkflowRouter. The deployer can run `SetCrosschainVaults.s.sol` and `ConfigureWorkflowRouter.s.sol` with the same keystore and `--sender`, without another role grant. Registry and share-token configuration belong to the operator; the separate deployer's temporary registry config access is removed during deployment.
+
+The interaction scripts read `deployed.vaultProxy` and `deployed.workflowRouter` from each network's `HelperConfig` entry. `SetCrosschainVaults.s.sol` covers all six testnets and runs once per chain. Its network list is testnet-specific.
+
 After all vaults are deployed:
 
 1. Register the trusted cross-chain vaults with `SetCrosschainVaults.s.sol` on every chain.
@@ -47,6 +55,17 @@ After all vaults are deployed:
 7. Assign production roles to their approved holders and remove temporary deployer access.
 
 Use [`CONFIG`](./CONFIG.md) for configuration functions and [`ACCESS_CONTROL_MATRIX`](../security/ACCESS_CONTROL_MATRIX.md) for required authorities.
+
+## Accept the admin handoff
+
+The scripts start admin transfers but do not complete them. The configured `DEFAULT_ADMIN` must call `acceptDefaultAdminTransfer()` on:
+
+- Parent chain: ParentVault proxy, YieldcoinShare proxy, AdapterRegistry, and WorkflowRouter.
+- Each child chain: ChildVault proxy, AdapterRegistry, and WorkflowRouter.
+
+All these contracts have a zero initial admin-transfer delay. Accept in a later transaction once the acceptance timestamp returned by `pendingDefaultAdmin()` has passed. Until acceptance, the deployer remains default admin on that contract. No transfer is started if the deployer is already the configured default admin.
+
+Admin acceptance does not remove deployer config access. After configuration, manually remove the deployer's `CONFIG_OPERATOR_ROLE` from every vault and WorkflowRouter: the deployer can call `renounceRole(role, deployer)`, or the current default admin can call `revokeRole(role, deployer)`. Keep the operator's config role.
 
 ## Bootstrap the parent vault
 

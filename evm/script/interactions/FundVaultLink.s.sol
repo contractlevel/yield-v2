@@ -15,6 +15,6 @@ contract FundVaultLink is Script {
         HelperConfig.NetworkConfig memory config = new HelperConfig().getActiveNetworkConfig();
 
         vm.broadcast(msg.sender);
-        IERC20(config.tokens.link).safeTransfer(config.deployed.vaultProxy, 5 ether);
+        IERC20(config.tokens.link).safeTransfer(config.deployed.vaultProxy, 10 ether);
     }
 }

@@ -120,10 +120,9 @@ contract DeployChild is Script {
         );
 
         /// @dev Deploy the WorkflowRouter
-        uint48 initialDelay = 259200; // 3 days
         WorkflowRouter.ConstructorParams memory workflowRouterParams = WorkflowRouter.ConstructorParams({
-            initialDelay: initialDelay,
-            defaultAdmin: networkConfig.roles.defaultAdmin,
+            initialDelay: 0,
+            defaultAdmin: deployer,
             pauser: networkConfig.roles.pauser,
             unpauser: networkConfig.roles.unpauser,
             configOperator: networkConfig.roles.configOperator,
@@ -131,6 +130,7 @@ contract DeployChild is Script {
             vault: address(deploy.childVaultProxy)
         });
         deploy.workflowRouter = new WorkflowRouter(workflowRouterParams);
+        deploy.workflowRouter.grantRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
 
         deploy.childVaultProxy.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
         deploy.adapterRegistry.grantRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator);
@@ -139,8 +139,9 @@ contract DeployChild is Script {
         deploy.childVaultProxy.grantRole(Roles.LINK_OPERATOR_ROLE, networkConfig.roles.linkOperator);
         deploy.childVaultProxy.grantRole(Roles.REWARDS_OPERATOR_ROLE, networkConfig.roles.rewardsOperator);
 
-        deploy.childVaultProxy.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
-        deploy.adapterRegistry.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
+        if (deployer != networkConfig.roles.configOperator) {
+            deploy.adapterRegistry.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
+        }
 
         /// @dev The deployer remains default admin until the configured default admin accepts this transfer.
         ///      networkConfig.roles.defaultAdmin should call acceptDefaultAdminTransfer() ASAP.
@@ -152,6 +153,11 @@ contract DeployChild is Script {
         ///      networkConfig.roles.defaultAdmin should call acceptDefaultAdminTransfer() ASAP.
         if (deployer != networkConfig.roles.defaultAdmin) {
             deploy.adapterRegistry.beginDefaultAdminTransfer(networkConfig.roles.defaultAdmin);
+            deploy.workflowRouter.beginDefaultAdminTransfer(networkConfig.roles.defaultAdmin);
         }
+        // The configured default admin must call acceptDefaultAdminTransfer() on the vault
+        // proxy, registry, and WorkflowRouter. All transfer delays are zero.
+        // Until accepted, the deployer remains admin on each contract.
+        // Operator and deployer keep vault/router config access; revoke deployer manually.
     }
 }

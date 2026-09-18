@@ -29,6 +29,7 @@ aaveV3:
 - base
 - op
 - avax
+- polygon
 
 compoundV3:
 
@@ -43,6 +44,16 @@ aaveV4:
 - avax
 
 ### Deploy Mock Protocols:
+
+#### Polygon Amoy
+
+| Contract | Address |
+| --- | --- |
+| `TestnetAaveV3Pool` | [0x90eD505030703c504FB162DE0A892705b4812D0f](https://amoy.polygonscan.com/address/0x90eD505030703c504FB162DE0A892705b4812D0f#code) |
+| `TestnetAToken` | [0x67798aC5b8B3C2Aefc939825d2eaA958f4eCe367](https://amoy.polygonscan.com/address/0x67798aC5b8B3C2Aefc939825d2eaA958f4eCe367#code) |
+| `TestnetAaveV3PoolAddressesProvider` | [0x90e10d38F75ce1A871A1fDeA9bab39e8ddA4531f](https://amoy.polygonscan.com/address/0x90e10d38F75ce1A871A1fDeA9bab39e8ddA4531f#code) |
+
+All three contracts are verified. The pool uses native Amoy USDC (`0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582`) and is owned by `0x7664C538C80870824738A8ADCcd92AcA244D7e69`. Deployment cost: 0.046433952091416843 POL.
 
 ```
 forge script script/deploy/DeployTestnetProtocols.s.sol:DeployTestnetProtocols \
@@ -185,97 +196,92 @@ forge script script/interactions/FundVaultLink.s.sol:FundVaultLink \
     -vvvv
 ```
 
-## Parent Deployments (Arbitrum Sepolia)
+## Parent Deployments (Base Sepolia)
 
-| Contract                                                      | Address                                                                                                                             |
-| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `BaseVaultCcipLib`                                            | [`0x81b55294f3d3af167e9f1e622149648f42859be6`](https://sepolia.arbiscan.io/address/0x81b55294f3d3af167e9f1e622149648f42859be6#code) |
-| `ParentVaultUserEpochLib`                                     | [`0xf00e3fe45530aa4308b8172ecdd23114d96b2326`](https://sepolia.arbiscan.io/address/0xf00e3fe45530aa4308b8172ecdd23114d96b2326#code) |
-| `ParentVaultRebalanceLib`                                     | [`0x3292407edbcd027d587ae2818d6f1c9ef630c41a`](https://sepolia.arbiscan.io/address/0x3292407edbcd027d587ae2818d6f1c9ef630c41a#code) |
-| `ParentVaultEpochLib`                                         | [`0xb3b24e9fc31062817fb29c7133462990e531588a`](https://sepolia.arbiscan.io/address/0xb3b24e9fc31062817fb29c7133462990e531588a#code) |
-| `ParentVaultConfigLib`                                        | [`0x363afb12607a53e3f8d2fc663946d229d83a93f5`](https://sepolia.arbiscan.io/address/0x363afb12607a53e3f8d2fc663946d229d83a93f5#code) |
-| `ParentVaultCcipLib`                                          | [`0xc64e578152bae99174f597d16eed660ab6e250a8`](https://sepolia.arbiscan.io/address/0xc64e578152bae99174f597d16eed660ab6e250a8#code) |
-| `BaseVaultStrategyLib`                                        | [`0xa7205e3bb7ecf1537f7ef2641bd9108fecd28bc5`](https://sepolia.arbiscan.io/address/0xa7205e3bb7ecf1537f7ef2641bd9108fecd28bc5#code) |
-| `BaseVaultConfigLib`                                          | [`0x287eacd24f969910914f87eb6b936dde5d0626ac`](https://sepolia.arbiscan.io/address/0x287eacd24f969910914f87eb6b936dde5d0626ac#code) |
-| `PolicyEngine` implementation                                 | [`0x0dbbb22e5a633f0cdd3e512b9427d11f7fe9ca92`](https://sepolia.arbiscan.io/address/0x0dbbb22e5a633f0cdd3e512b9427d11f7fe9ca92#code) |
-| `PolicyEngine` proxy                                          | [`0x40585f81080282e0eee11f9d459f6e0005cfb9bb`](https://sepolia.arbiscan.io/address/0x40585f81080282e0eee11f9d459f6e0005cfb9bb#code) |
-| `IdentityRegistry` implementation                             | [`0x6395c9f680cda7ca391509a04f8c35895ad89bf8`](https://sepolia.arbiscan.io/address/0x6395c9f680cda7ca391509a04f8c35895ad89bf8#code) |
-| `IdentityRegistry` proxy                                      | [`0x49a62fa0c40e1c511736abbf2e23cb11e8deb7cb`](https://sepolia.arbiscan.io/address/0x49a62fa0c40e1c511736abbf2e23cb11e8deb7cb#code) |
-| `CredentialRegistry` implementation                           | [`0x31b0d818cb4c356b5a2145a08cc5c0f70d261962`](https://sepolia.arbiscan.io/address/0x31b0d818cb4c356b5a2145a08cc5c0f70d261962#code) |
-| `CredentialRegistry` proxy                                    | [`0x5b4162118af51df69ab875e66d927ccc6e893296`](https://sepolia.arbiscan.io/address/0x5b4162118af51df69ab875e66d927ccc6e893296#code) |
-| `AdapterRegistry`                                             | [`0x10cf67db20d37930a7874843f227faca6daaf8ec`](https://sepolia.arbiscan.io/address/0x10cf67db20d37930a7874843f227faca6daaf8ec#code) |
-| `YieldcoinShare` implementation                               | [`0x2aa278dbdb32135554cb61409ae1f0720d73812c`](https://sepolia.arbiscan.io/address/0x2aa278dbdb32135554cb61409ae1f0720d73812c#code) |
-| `YieldcoinShare` proxy                                        | [`0x37672a053a258202ad2f1d0afadabf7e0db93399`](https://sepolia.arbiscan.io/address/0x37672a053a258202ad2f1d0afadabf7e0db93399#code) |
-| `ParentVault` implementation                                  | [`0x80a1c5d6859d51dce3373e8e117c059177141056`](https://sepolia.arbiscan.io/address/0x80a1c5d6859d51dce3373e8e117c059177141056#code) |
-| `ParentVault` proxy                                           | [`0x0c4ed72777e832e2dae6d59875e956abd9ad91d9`](https://sepolia.arbiscan.io/address/0x0c4ed72777e832e2dae6d59875e956abd9ad91d9#code) |
-| `AaveV3Adapter`                                               | [`0x3aa20269fe42a89debcfb1370d6b7df74e64d414`](https://sepolia.arbiscan.io/address/0x3aa20269fe42a89debcfb1370d6b7df74e64d414#code) |
-| `CompoundV3Adapter`                                           | [`0xcce8adc9df419707a5b538c6d80106b4927b2311`](https://sepolia.arbiscan.io/address/0xcce8adc9df419707a5b538c6d80106b4927b2311#code) |
-| `WorkflowRouter`                                              | [`0x7fd005f9552f600e8231ba821a9e7da42a94fe83`](https://sepolia.arbiscan.io/address/0x7fd005f9552f600e8231ba821a9e7da42a94fe83#code) |
-| `TerminalAllowPolicy` implementation                          | [`0x7f2427eefe90c3c368fd552dc05ed45fdef745ae`](https://sepolia.arbiscan.io/address/0x7f2427eefe90c3c368fd552dc05ed45fdef745ae#code) |
-| `TerminalAllowPolicy` proxy                                   | [`0xaf56279900dea0a93608deb206d9e6ec466245f2`](https://sepolia.arbiscan.io/address/0xaf56279900dea0a93608deb206d9e6ec466245f2#code) |
-| `YieldcoinShareFrozenAccountPolicy` implementation            | [`0xdcca262c9d046580271276156deadd372e5178fe`](https://sepolia.arbiscan.io/address/0xdcca262c9d046580271276156deadd372e5178fe#code) |
-| `YieldcoinShareFrozenAccountPolicy` proxy                     | [`0xe4592d35615da8cd1414aec213318e5ee6653d94`](https://sepolia.arbiscan.io/address/0xe4592d35615da8cd1414aec213318e5ee6653d94#code) |
-| `CredentialRegistryIdentityValidatorPolicy` implementation    | [`0x477d5809309e01aee380acb397fe8707e52c569e`](https://sepolia.arbiscan.io/address/0x477d5809309e01aee380acb397fe8707e52c569e#code) |
-| `CredentialRegistryIdentityValidatorPolicy` proxy             | [`0x56e7925638645685016b71f7e6d832b3f7d01c0f`](https://sepolia.arbiscan.io/address/0x56e7925638645685016b71f7e6d832b3f7d01c0f#code) |
-| `SenderExtractor`                                             | [`0x98d299159950030b7dfcb34b457f3ebda84cc733`](https://sepolia.arbiscan.io/address/0x98d299159950030b7dfcb34b457f3ebda84cc733#code) |
-| `OnlyAuthorizedSenderPolicy` implementation                   | [`0x4ab6e929e45f846a4b3431e9633c8a3422f586c3`](https://sepolia.arbiscan.io/address/0x4ab6e929e45f846a4b3431e9633c8a3422f586c3#code) |
-| `OnlyAuthorizedSenderPolicy` proxy                            | [`0x604c05048c37239d4b0dbade9c95c6114bf4c50c`](https://sepolia.arbiscan.io/address/0x604c05048c37239d4b0dbade9c95c6114bf4c50c#code) |
-| `CredentialRegistryAccountListValidatorPolicy` implementation | [`0x6d8b6f78ce622bd4418ca1bca961830a43c145ba`](https://sepolia.arbiscan.io/address/0x6d8b6f78ce622bd4418ca1bca961830a43c145ba#code) |
-| `CredentialRegistryAccountListValidatorPolicy` proxy          | [`0x004af5cefbf481798f6dd54e26c51dcb0687c903`](https://sepolia.arbiscan.io/address/0x004af5cefbf481798f6dd54e26c51dcb0687c903#code) |
-| `YieldcoinShareKycExtractor`                                  | [`0x3fbc8e2386248a217c4c364323c1c0b21d63bc43`](https://sepolia.arbiscan.io/address/0x3fbc8e2386248a217c4c364323c1c0b21d63bc43#code) |
-| `RoleBasedAccessControlPolicy` implementation                 | [`0x69ed779fd52b41a753ae90b9e828b8c448aa774a`](https://sepolia.arbiscan.io/address/0x69ed779fd52b41a753ae90b9e828b8c448aa774a#code) |
-| `RoleBasedAccessControlPolicy` proxy                          | [`0x4123be5ee9fe84a8546d2703b5e478dcee0e1adc`](https://sepolia.arbiscan.io/address/0x4123be5ee9fe84a8546d2703b5e478dcee0e1adc#code) |
+| Contract | Address |
+| --- | --- |
+| `BaseVaultCcipLib` | [`0x9451451c7d6616c2e47b44a257b76769e4afad1f`](https://sepolia.basescan.org/address/0x9451451c7d6616c2e47b44a257b76769e4afad1f#code) |
+| `ParentVaultUserEpochLib` | [`0xc46c2fe15b06e2d0e24a07edce3d490100966ed8`](https://sepolia.basescan.org/address/0xc46c2fe15b06e2d0e24a07edce3d490100966ed8#code) |
+| `ParentVaultRebalanceLib` | [`0xc044640d1ee350ccfe8d20ee05dadf58274284f9`](https://sepolia.basescan.org/address/0xc044640d1ee350ccfe8d20ee05dadf58274284f9#code) |
+| `ParentVaultEpochLib` | [`0x583a6e90cb2be26004c4912219e21cdb00975aed`](https://sepolia.basescan.org/address/0x583a6e90cb2be26004c4912219e21cdb00975aed#code) |
+| `ParentVaultConfigLib` | [`0x40a144820e23fee92ca7eef7095bed9a15d0dacc`](https://sepolia.basescan.org/address/0x40a144820e23fee92ca7eef7095bed9a15d0dacc#code) |
+| `ParentVaultCcipLib` | [`0x10ac9823a72eec19fb90d99721c4fece3edad1c0`](https://sepolia.basescan.org/address/0x10ac9823a72eec19fb90d99721c4fece3edad1c0#code) |
+| `BaseVaultStrategyLib` | [`0x1cbd0bf1001c9a7357f04f4ba51ba21df2608d89`](https://sepolia.basescan.org/address/0x1cbd0bf1001c9a7357f04f4ba51ba21df2608d89#code) |
+| `BaseVaultConfigLib` | [`0xaf21f72bcd48714a985378a908d2daf871802a22`](https://sepolia.basescan.org/address/0xaf21f72bcd48714a985378a908d2daf871802a22#code) |
+| `AdapterRegistry` | [`0x0527dd5103eb59974cb882446780fe190caf4777`](https://sepolia.basescan.org/address/0x0527dd5103eb59974cb882446780fe190caf4777#code) |
+| `YieldcoinShare implementation` | [`0xee4d89b06fe9082fe9a737de2a5a061e07bef781`](https://sepolia.basescan.org/address/0xee4d89b06fe9082fe9a737de2a5a061e07bef781#code) |
+| `YieldcoinShare proxy` | [`0x3bb4f976c6881ef8cda6d2a94f774381dd80c742`](https://sepolia.basescan.org/address/0x3bb4f976c6881ef8cda6d2a94f774381dd80c742#code) |
+| `YieldcoinShareSeedLock` | [`0xd4f567e1cb628a1a0af1b1481d45bd0eae64f243`](https://sepolia.basescan.org/address/0xd4f567e1cb628a1a0af1b1481d45bd0eae64f243#code) |
+| `ParentVault implementation` | [`0xbdf3367fbcefd2f4b6ff9a2fd6b31e587c569139`](https://sepolia.basescan.org/address/0xbdf3367fbcefd2f4b6ff9a2fd6b31e587c569139#code) |
+| `ParentVault proxy` | [`0xa5e7a54867abc3c1c871aed5d11320fcc56ad8b7`](https://sepolia.basescan.org/address/0xa5e7a54867abc3c1c871aed5d11320fcc56ad8b7#code) |
+| `AaveV3Adapter` | [`0xd2c6088555ad7eadfa602138f75afbabebc433b9`](https://sepolia.basescan.org/address/0xd2c6088555ad7eadfa602138f75afbabebc433b9#code) |
+| `CompoundV3Adapter` | [`0x109171d2833d302ad6300488f2f2fd21671c3d85`](https://sepolia.basescan.org/address/0x109171d2833d302ad6300488f2f2fd21671c3d85#code) |
+| `WorkflowRouter` | [`0x5f8191e9fe6b4164930cdf92f6fe824ae35602e0`](https://sepolia.basescan.org/address/0x5f8191e9fe6b4164930cdf92f6fe824ae35602e0#code) |
 
 ## Child Deployments
 
+### Polygon Amoy
+
+| Contract | Address |
+| --- | --- |
+| `AdapterRegistry` | [0x26254c3c69b63e490c7dd88662549b12f8884e08](https://amoy.polygonscan.com/address/0x26254c3c69b63e490c7dd88662549b12f8884e08#code) |
+| `ChildVault` implementation | [0x221736594f42a10ce61a0f66dc4e6b04786ff8a3](https://amoy.polygonscan.com/address/0x221736594f42a10ce61a0f66dc4e6b04786ff8a3#code) |
+| `ChildVault` proxy | [0xdc0239d860dc5b3356e9ab260b56cf69e9cfb92a](https://amoy.polygonscan.com/address/0xdc0239d860dc5b3356e9ab260b56cf69e9cfb92a#code) |
+| `AaveV3Adapter` | [0x09addfa88e49bdf33021971e38b0bfae8715af7a](https://amoy.polygonscan.com/address/0x09addfa88e49bdf33021971e38b0bfae8715af7a#code) |
+| `WorkflowRouter` | [0x079a90b7761ff10f455bc2188392b2ae765f8dad](https://amoy.polygonscan.com/address/0x079a90b7761ff10f455bc2188392b2ae765f8dad#code) |
+
+The deployment stopped at a redundant config-role grant. Epoch, rebalance, LINK, and rewards roles were completed with separate transactions using a 200,000 gas limit:
+
+- Epoch: `0x7d6e0284da17c86d7adceff34c2fab433c47b3f901fc31369cb7d11d56c6d9cd`.
+- Rebalance: `0xf7ad3961ae8fb1eea68e9c2a9f46ce929d3468775d56727e2a3b21e6d9454222`.
+- LINK: `0x90a418ddcc1ce57b076eb40019a70b4aeea8935e06e96950d5e64e81a79a430f`.
+- Rewards: `0x531e6dc831cca4e4daf834b503fe3792739da74ac72b886b63a2cb755eb9dde2`.
+
+### Arbitrum Sepolia
+
+| Contract | Address |
+| --- | --- |
+| `AdapterRegistry` | [`0xa659d0e7baf83532ae903ddcb0eb5f8c561e0d04`](https://sepolia.arbiscan.io/address/0xa659d0e7baf83532ae903ddcb0eb5f8c561e0d04#code) |
+| `ChildVault implementation` | [`0x05392c3d1ac7bdbfd02d06e24b070062ddac2df0`](https://sepolia.arbiscan.io/address/0x05392c3d1ac7bdbfd02d06e24b070062ddac2df0#code) |
+| `ChildVault proxy` | [`0xe995ddfe2df6fce2e3caf4028e94e771ebe0e34b`](https://sepolia.arbiscan.io/address/0xe995ddfe2df6fce2e3caf4028e94e771ebe0e34b#code) |
+| `AaveV3Adapter` | [`0x65dfde686a0686788c5c600bed1f6564060bd303`](https://sepolia.arbiscan.io/address/0x65dfde686a0686788c5c600bed1f6564060bd303#code) |
+| `CompoundV3Adapter` | [`0xa4b43e11ef0222de7587895af77effe35c006ab2`](https://sepolia.arbiscan.io/address/0xa4b43e11ef0222de7587895af77effe35c006ab2#code) |
+| `WorkflowRouter` | [`0x117d5fec39c7209a618d71b52b834eb44c5aff7f`](https://sepolia.arbiscan.io/address/0x117d5fec39c7209a618d71b52b834eb44c5aff7f#code) |
+
 ### Ethereum Sepolia
 
-| Contract                    | Address                                                                                                                              |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `BaseVaultStrategyLib`      | [`0x4ab7794139fb422813b97e1e4a33a7947666a323`](https://sepolia.etherscan.io/address/0x4ab7794139fb422813b97e1e4a33a7947666a323#code) |
-| `AdapterRegistry`           | [`0x971e7d69e039cc013145ceaa6aacc9dbe55deba6`](https://sepolia.etherscan.io/address/0x971e7d69e039cc013145ceaa6aacc9dbe55deba6#code) |
-| `ChildVault` implementation | [`0xb2ac18061d6996202227b211a0c7915b010413c2`](https://sepolia.etherscan.io/address/0xb2ac18061d6996202227b211a0c7915b010413c2#code) |
-| `ChildVault` proxy          | [`0x809a7bf022841e3bcda0d3cf64b780aabf898c64`](https://sepolia.etherscan.io/address/0x809a7bf022841e3bcda0d3cf64b780aabf898c64#code) |
-| `AaveV3Adapter`             | [`0xf02c4a15eeffc6fbbde26a2dddb52b57861e2e38`](https://sepolia.etherscan.io/address/0xf02c4a15eeffc6fbbde26a2dddb52b57861e2e38#code) |
-| `AaveV4Adapter`             | [`0x811356c12f222c246fca7ac73f740d8accf03e0a`](https://sepolia.etherscan.io/address/0x811356c12f222c246fca7ac73f740d8accf03e0a#code) |
-| `CompoundV3Adapter`         | [`0x584099c5200b8a63536230017f718797026e5915`](https://sepolia.etherscan.io/address/0x584099c5200b8a63536230017f718797026e5915#code) |
-| `WorkflowRouter`            | [`0xe7a5a96775f75baaaf49e5dc009e3264779e2f9c`](https://sepolia.etherscan.io/address/0xe7a5a96775f75baaaf49e5dc009e3264779e2f9c#code) |
+| Contract | Address |
+| --- | --- |
+| `AdapterRegistry` | [`0xbdf3367fbcefd2f4b6ff9a2fd6b31e587c569139`](https://sepolia.etherscan.io/address/0xbdf3367fbcefd2f4b6ff9a2fd6b31e587c569139#code) |
+| `ChildVault implementation` | [`0xc8bf8893f4322d511a982d0748eb362f6eb3e0eb`](https://sepolia.etherscan.io/address/0xc8bf8893f4322d511a982d0748eb362f6eb3e0eb#code) |
+| `ChildVault proxy` | [`0xd2c6088555ad7eadfa602138f75afbabebc433b9`](https://sepolia.etherscan.io/address/0xd2c6088555ad7eadfa602138f75afbabebc433b9#code) |
+| `AaveV3Adapter` | [`0x5e1493ec552e758c2491a4e2fc22800bd9bc5d0d`](https://sepolia.etherscan.io/address/0x5e1493ec552e758c2491a4e2fc22800bd9bc5d0d#code) |
+| `AaveV4Adapter` | [`0x5736580f680cbccee38a2221922c5cabe480bcbc`](https://sepolia.etherscan.io/address/0x5736580f680cbccee38a2221922c5cabe480bcbc#code) |
+| `CompoundV3Adapter` | [`0xf39f629acf22650ea6d472fa7b6546e486177f19`](https://sepolia.etherscan.io/address/0xf39f629acf22650ea6d472fa7b6546e486177f19#code) |
+| `WorkflowRouter` | [`0x5f8191e9fe6b4164930cdf92f6fe824ae35602e0`](https://sepolia.etherscan.io/address/0x5f8191e9fe6b4164930cdf92f6fe824ae35602e0#code) |
 
-### Base Sepolia
-
-| Contract                    | Address                                                                                                                              |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `BaseVaultStrategyLib`      | [`0x4ab7794139fb422813b97e1e4a33a7947666a323`](https://sepolia.basescan.org/address/0x4ab7794139fb422813b97e1e4a33a7947666a323#code) |
-| `AdapterRegistry`           | [`0x4f162bc4acc9e5847fcbef84cebaf45087430c36`](https://sepolia.basescan.org/address/0x4f162bc4acc9e5847fcbef84cebaf45087430c36#code) |
-| `ChildVault` implementation | [`0x781d5338eb60ed6c0129f28ce56872cc239ac3c2`](https://sepolia.basescan.org/address/0x781d5338eb60ed6c0129f28ce56872cc239ac3c2#code) |
-| `ChildVault` proxy          | [`0x221736594f42a10ce61a0f66dc4e6b04786ff8a3`](https://sepolia.basescan.org/address/0x221736594f42a10ce61a0f66dc4e6b04786ff8a3#code) |
-| `AaveV3Adapter`             | [`0xdc0239d860dc5b3356e9ab260b56cf69e9cfb92a`](https://sepolia.basescan.org/address/0xdc0239d860dc5b3356e9ab260b56cf69e9cfb92a#code) |
-| `CompoundV3Adapter`         | [`0x5d1079dae90f23bbe64faf3adc08554669d9f938`](https://sepolia.basescan.org/address/0x5d1079dae90f23bbe64faf3adc08554669d9f938#code) |
-| `WorkflowRouter`            | [`0x971e7d69e039cc013145ceaa6aacc9dbe55deba6`](https://sepolia.basescan.org/address/0x971e7d69e039cc013145ceaa6aacc9dbe55deba6#code) |
 
 ### Optimism Sepolia
 
-| Contract                    | Address                                                                                                                                       |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `BaseVaultStrategyLib`      | [`0x4ab7794139fb422813b97e1e4a33a7947666a323`](https://sepolia-optimism.etherscan.io/address/0x4ab7794139fb422813b97e1e4a33a7947666a323#code) |
-| `AdapterRegistry`           | [`0x4f162bc4acc9e5847fcbef84cebaf45087430c36`](https://sepolia-optimism.etherscan.io/address/0x4f162bc4acc9e5847fcbef84cebaf45087430c36#code) |
-| `ChildVault` implementation | [`0x781d5338eb60ed6c0129f28ce56872cc239ac3c2`](https://sepolia-optimism.etherscan.io/address/0x781d5338eb60ed6c0129f28ce56872cc239ac3c2#code) |
-| `ChildVault` proxy          | [`0x221736594f42a10ce61a0f66dc4e6b04786ff8a3`](https://sepolia-optimism.etherscan.io/address/0x221736594f42a10ce61a0f66dc4e6b04786ff8a3#code) |
-| `AaveV3Adapter`             | [`0xdc0239d860dc5b3356e9ab260b56cf69e9cfb92a`](https://sepolia-optimism.etherscan.io/address/0xdc0239d860dc5b3356e9ab260b56cf69e9cfb92a#code) |
-| `CompoundV3Adapter`         | [`0x5d1079dae90f23bbe64faf3adc08554669d9f938`](https://sepolia-optimism.etherscan.io/address/0x5d1079dae90f23bbe64faf3adc08554669d9f938#code) |
-| `WorkflowRouter`            | [`0x971e7d69e039cc013145ceaa6aacc9dbe55deba6`](https://sepolia-optimism.etherscan.io/address/0x971e7d69e039cc013145ceaa6aacc9dbe55deba6#code) |
+| Contract | Address |
+| --- | --- |
+| `AdapterRegistry` | [`0x96b4c7e3419f07bc2baa0b5a4151d220984028a9`](https://sepolia-optimism.etherscan.io/address/0x96b4c7e3419f07bc2baa0b5a4151d220984028a9#code) |
+| `ChildVault implementation` | [`0xcd6f007979bfb9f1ea9a9df432a298d0469861d3`](https://sepolia-optimism.etherscan.io/address/0xcd6f007979bfb9f1ea9a9df432a298d0469861d3#code) |
+| `ChildVault proxy` | [`0x66738d30269f1e88a762f421995feebe8e617d52`](https://sepolia-optimism.etherscan.io/address/0x66738d30269f1e88a762f421995feebe8e617d52#code) |
+| `AaveV3Adapter` | [`0x07c4e5242206de2da117635c31b84884522f46fb`](https://sepolia-optimism.etherscan.io/address/0x07c4e5242206de2da117635c31b84884522f46fb#code) |
+| `CompoundV3Adapter` | [`0x7049a76a036137c9d63a3a8c32aa9ce0cfa4192d`](https://sepolia-optimism.etherscan.io/address/0x7049a76a036137c9d63a3a8c32aa9ce0cfa4192d#code) |
+| `WorkflowRouter` | [`0xee4d89b06fe9082fe9a737de2a5a061e07bef781`](https://sepolia-optimism.etherscan.io/address/0xee4d89b06fe9082fe9a737de2a5a061e07bef781#code) |
 
 ### Avalanche Fuji
 
-| Contract                    | Address                                                                                                                              |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `BaseVaultStrategyLib`      | [`0x4ab7794139fb422813b97e1e4a33a7947666a323`](https://testnet.snowtrace.io/address/0x4ab7794139fb422813b97e1e4a33a7947666a323#code) |
-| `AdapterRegistry`           | [`0xd9e76077c65fe2ca25ced7432bf206c19507c553`](https://testnet.snowtrace.io/address/0xd9e76077c65fe2ca25ced7432bf206c19507c553#code) |
-| `ChildVault` implementation | [`0x26254c3c69b63e490c7dd88662549b12f8884e08`](https://testnet.snowtrace.io/address/0x26254c3c69b63e490c7dd88662549b12f8884e08#code) |
-| `ChildVault` proxy          | [`0x781d5338eb60ed6c0129f28ce56872cc239ac3c2`](https://testnet.snowtrace.io/address/0x781d5338eb60ed6c0129f28ce56872cc239ac3c2#code) |
-| `AaveV3Adapter`             | [`0x221736594f42a10ce61a0f66dc4e6b04786ff8a3`](https://testnet.snowtrace.io/address/0x221736594f42a10ce61a0f66dc4e6b04786ff8a3#code) |
-| `AaveV4Adapter`             | [`0x09addfa88e49bdf33021971e38b0bfae8715af7a`](https://testnet.snowtrace.io/address/0x09addfa88e49bdf33021971e38b0bfae8715af7a#code) |
-| `WorkflowRouter`            | [`0x412749be129b2b6ba778f732adb6b69617bd7a13`](https://testnet.snowtrace.io/address/0x412749be129b2b6ba778f732adb6b69617bd7a13#code) |
+| Contract | Address |
+| --- | --- |
+| `AdapterRegistry` | [`0xc0e11e92188743e37fed15f0c998ed1b9533fe01`](https://testnet.snowtrace.io/address/0xc0e11e92188743e37fed15f0c998ed1b9533fe01#code) |
+| `ChildVault implementation` | [`0x512efe701404a637ccaca933028d0afe647cc0c4`](https://testnet.snowtrace.io/address/0x512efe701404a637ccaca933028d0afe647cc0c4#code) |
+| `ChildVault proxy` | [`0xcd6f007979bfb9f1ea9a9df432a298d0469861d3`](https://testnet.snowtrace.io/address/0xcd6f007979bfb9f1ea9a9df432a298d0469861d3#code) |
+| `AaveV3Adapter` | [`0x66738d30269f1e88a762f421995feebe8e617d52`](https://testnet.snowtrace.io/address/0x66738d30269f1e88a762f421995feebe8e617d52#code) |
+| `AaveV4Adapter` | [`0x921fe4ed6a98f800199b11569673a5230b522f9c`](https://testnet.snowtrace.io/address/0x921fe4ed6a98f800199b11569673a5230b522f9c#code) |
+| `WorkflowRouter` | [`0xdad87492a140283dc2c8b4a5a217a832bb31fbfe`](https://testnet.snowtrace.io/address/0xdad87492a140283dc2c8b4a5a217a832bb31fbfe#code) |
 
 ---
 
