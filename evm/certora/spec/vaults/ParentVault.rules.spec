@@ -22,7 +22,7 @@ methods {
     /*//////////////////////////////////////////////////////////////
                        PARENTVAULT ENTRY POINTS
     //////////////////////////////////////////////////////////////*/
-    function initialize(BaseVault.InitParams, address, address) external;
+    function initialize(BaseVault.InitParams, address, address, address, bool) external;
     function setInitialActiveProtocolAdapter(bytes32) external;
     function setTreasury(address) external;
     function deposit(uint256) external returns (uint256);
@@ -59,6 +59,8 @@ methods {
     function getShare() external returns (address) envfree;
     function getSharePrecision() external returns (uint256) envfree;
     function getMinAssetAmount() external returns (uint256) envfree;
+    function getAllowlistEnabled() external returns (bool) envfree;
+    function getAllowlistedUser(address) external returns (bool) envfree;
     function getSupportedProtocol(bytes32) external returns (bool) envfree;
     /// BaseVault getters this spec's rules read directly
     function getActiveProtocolAdapter() external returns (address) envfree;
@@ -104,6 +106,7 @@ methods {
     function EPOCH_OPERATOR_ROLE() external returns (bytes32) envfree;
     function REBALANCE_OPERATOR_ROLE() external returns (bytes32) envfree;
     function CANCEL_DEPOSIT_OPERATOR_ROLE() external returns (bytes32) envfree;
+    function ALLOWLIST_OPERATOR_ROLE() external returns (bytes32) envfree;
 
     /*//////////////////////////////////////////////////////////////
                          HARNESS HELPERS
@@ -1196,6 +1199,8 @@ rule REENT_001_initialize_RevertWhen_ReentrantCall() {
     BaseVault.InitParams params;
     address treasury;
     address cancelDepositOperator;
+    address allowlistOperator;
+    bool allowlistEnabled;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -1210,11 +1215,12 @@ rule REENT_001_initialize_RevertWhen_ReentrantCall() {
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
+    require allowlistOperator != 0, "allowlist operator should not be zero";
 
     /// @dev revert condition being verified
     require reentrancyGuardEntered(), "reentrancy guard should be entered";
 
-    initialize@withrevert(e, params, treasury, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator, allowlistOperator, allowlistEnabled);
 
     assert lastReverted;
 }
@@ -1225,6 +1231,8 @@ rule initialize_RevertWhen_AlreadyInitializing() {
     BaseVault.InitParams params;
     address treasury;
     address cancelDepositOperator;
+    address allowlistOperator;
+    bool allowlistEnabled;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -1239,11 +1247,12 @@ rule initialize_RevertWhen_AlreadyInitializing() {
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
+    require allowlistOperator != 0, "allowlist operator should not be zero";
 
     /// @dev revert condition being verified
     require isInitializing(), "contract should already be initializing";
 
-    initialize@withrevert(e, params, treasury, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator, allowlistOperator, allowlistEnabled);
 
     assert lastReverted;
 }
@@ -1254,6 +1263,8 @@ rule initialize_RevertWhen_DefaultAdminAlreadySet() {
     BaseVault.InitParams params;
     address treasury;
     address cancelDepositOperator;
+    address allowlistOperator;
+    bool allowlistEnabled;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -1268,11 +1279,12 @@ rule initialize_RevertWhen_DefaultAdminAlreadySet() {
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
+    require allowlistOperator != 0, "allowlist operator should not be zero";
 
     /// @dev revert condition being verified
     require defaultAdmin() != 0, "default admin should already be set";
 
-    initialize@withrevert(e, params, treasury, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator, allowlistOperator, allowlistEnabled);
 
     assert lastReverted;
 }
@@ -1284,6 +1296,8 @@ rule CFG_001_initialize_RevertWhen_DefaultAdminIsZeroAddress() {
     BaseVault.InitParams params;
     address treasury;
     address cancelDepositOperator;
+    address allowlistOperator;
+    bool allowlistEnabled;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -1298,11 +1312,12 @@ rule CFG_001_initialize_RevertWhen_DefaultAdminIsZeroAddress() {
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
+    require allowlistOperator != 0, "allowlist operator should not be zero";
 
     /// @dev revert condition being verified
     require params.defaultAdmin == 0, "default admin should be zero";
 
-    initialize@withrevert(e, params, treasury, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator, allowlistOperator, allowlistEnabled);
 
     assert lastReverted;
 }
@@ -1313,6 +1328,8 @@ rule CFG_001_initialize_RevertWhen_PauserIsZeroAddress() {
     BaseVault.InitParams params;
     address treasury;
     address cancelDepositOperator;
+    address allowlistOperator;
+    bool allowlistEnabled;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -1327,11 +1344,12 @@ rule CFG_001_initialize_RevertWhen_PauserIsZeroAddress() {
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
+    require allowlistOperator != 0, "allowlist operator should not be zero";
 
     /// @dev revert condition being verified
     require params.pauser == 0, "pauser should be zero";
 
-    initialize@withrevert(e, params, treasury, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator, allowlistOperator, allowlistEnabled);
 
     assert lastReverted;
 }
@@ -1342,6 +1360,8 @@ rule CFG_001_initialize_RevertWhen_UnpauserIsZeroAddress() {
     BaseVault.InitParams params;
     address treasury;
     address cancelDepositOperator;
+    address allowlistOperator;
+    bool allowlistEnabled;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -1356,11 +1376,12 @@ rule CFG_001_initialize_RevertWhen_UnpauserIsZeroAddress() {
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
+    require allowlistOperator != 0, "allowlist operator should not be zero";
 
     /// @dev revert condition being verified
     require params.unpauser == 0, "unpauser should be zero";
 
-    initialize@withrevert(e, params, treasury, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator, allowlistOperator, allowlistEnabled);
 
     assert lastReverted;
 }
@@ -1371,6 +1392,8 @@ rule CFG_001_initialize_RevertWhen_ConfigOperatorIsZeroAddress() {
     BaseVault.InitParams params;
     address treasury;
     address cancelDepositOperator;
+    address allowlistOperator;
+    bool allowlistEnabled;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -1385,11 +1408,12 @@ rule CFG_001_initialize_RevertWhen_ConfigOperatorIsZeroAddress() {
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
+    require allowlistOperator != 0, "allowlist operator should not be zero";
 
     /// @dev revert condition being verified
     require params.configOperator == 0, "config operator should be zero";
 
-    initialize@withrevert(e, params, treasury, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator, allowlistOperator, allowlistEnabled);
 
     assert lastReverted;
 }
@@ -1400,6 +1424,8 @@ rule CFG_001_initialize_RevertWhen_UpgraderIsZeroAddress() {
     BaseVault.InitParams params;
     address treasury;
     address cancelDepositOperator;
+    address allowlistOperator;
+    bool allowlistEnabled;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -1414,11 +1440,12 @@ rule CFG_001_initialize_RevertWhen_UpgraderIsZeroAddress() {
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
+    require allowlistOperator != 0, "allowlist operator should not be zero";
 
     /// @dev revert condition being verified
     require params.upgrader == 0, "upgrader should be zero";
 
-    initialize@withrevert(e, params, treasury, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator, allowlistOperator, allowlistEnabled);
 
     assert lastReverted;
 }
@@ -1429,6 +1456,8 @@ rule CFG_004_initialize_RevertWhen_InitialDefaultCcipGasLimitIsZero() {
     BaseVault.InitParams params;
     address treasury;
     address cancelDepositOperator;
+    address allowlistOperator;
+    bool allowlistEnabled;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -1443,11 +1472,12 @@ rule CFG_004_initialize_RevertWhen_InitialDefaultCcipGasLimitIsZero() {
     require params.upgrader != 0, "upgrader should not be zero";
     require treasury != 0, "treasury should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
+    require allowlistOperator != 0, "allowlist operator should not be zero";
 
     /// @dev revert condition being verified
     require params.initialDefaultCcipGasLimit == 0, "default CCIP gas limit should be zero";
 
-    initialize@withrevert(e, params, treasury, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator, allowlistOperator, allowlistEnabled);
 
     assert lastReverted;
 }
@@ -1459,6 +1489,8 @@ rule UPGRADE_002_initialize_RevertWhen_AlreadyInitialized() {
     BaseVault.InitParams params;
     address treasury;
     address cancelDepositOperator;
+    address allowlistOperator;
+    bool allowlistEnabled;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -1472,11 +1504,12 @@ rule UPGRADE_002_initialize_RevertWhen_AlreadyInitialized() {
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
+    require allowlistOperator != 0, "allowlist operator should not be zero";
 
     /// @dev revert condition being verified
     require isInitialized(), "contract should already be initialized";
 
-    initialize@withrevert(e, params, treasury, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator, allowlistOperator, allowlistEnabled);
 
     assert lastReverted;
 }
@@ -1488,6 +1521,8 @@ rule CFG_001_initialize_RevertWhen_TreasuryIsZeroAddress() {
     BaseVault.InitParams params;
     address treasury;
     address cancelDepositOperator;
+    address allowlistOperator;
+    bool allowlistEnabled;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -1502,11 +1537,12 @@ rule CFG_001_initialize_RevertWhen_TreasuryIsZeroAddress() {
     require params.upgrader != 0, "upgrader should not be zero";
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
+    require allowlistOperator != 0, "allowlist operator should not be zero";
 
     /// @dev revert condition being verified
     require treasury == 0, "treasury should be zero";
 
-    initialize@withrevert(e, params, treasury, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator, allowlistOperator, allowlistEnabled);
 
     assert lastReverted;
 }
@@ -1517,6 +1553,8 @@ rule CFG_001_initialize_RevertWhen_CancelDepositOperatorIsZeroAddress() {
     BaseVault.InitParams params;
     address treasury;
     address cancelDepositOperator;
+    address allowlistOperator;
+    bool allowlistEnabled;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -1531,22 +1569,24 @@ rule CFG_001_initialize_RevertWhen_CancelDepositOperatorIsZeroAddress() {
     require params.upgrader != 0, "upgrader should not be zero";
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
+    require allowlistOperator != 0, "allowlist operator should not be zero";
 
     /// @dev revert condition being verified
     require cancelDepositOperator == 0, "cancel deposit operator should be zero";
 
-    initialize@withrevert(e, params, treasury, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator, allowlistOperator, allowlistEnabled);
 
     assert lastReverted;
 }
 
-/// @notice ParentVault initialization sets up epoch 1, rebalance nonce 1, treasury, and the
-///         cancel-deposit operator role.
-rule NONCE_008_UPGRADE_003_initialize_Success() {
+/// @notice ParentVault initialization rejects the zero allowlist operator
+rule ALLOWLIST_001_CFG_001_initialize_RevertWhen_AllowlistOperatorIsZeroAddress() {
     env e;
     BaseVault.InitParams params;
     address treasury;
     address cancelDepositOperator;
+    address allowlistOperator;
+    bool allowlistEnabled;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -1563,6 +1603,40 @@ rule NONCE_008_UPGRADE_003_initialize_Success() {
     require treasury != 0, "treasury should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
 
+    /// @dev revert condition being verified
+    require allowlistOperator == 0, "allowlist operator should be zero";
+
+    initialize@withrevert(e, params, treasury, cancelDepositOperator, allowlistOperator, allowlistEnabled);
+
+    assert lastReverted;
+}
+
+/// @notice ParentVault initialization sets up epoch 1, rebalance nonce 1, treasury, and the
+///         cancel-deposit and allowlist operator roles, and allowlist enforcement.
+rule ALLOWLIST_001_NONCE_008_UPGRADE_003_initialize_Success() {
+    env e;
+    BaseVault.InitParams params;
+    address treasury;
+    address cancelDepositOperator;
+    address allowlistOperator;
+    bool allowlistEnabled;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !isInitialized(), "contract should not be initialized";
+    require !isInitializing(), "contract should not be initializing";
+    require defaultAdmin() == 0, "default admin should not be initialized";
+    require params.defaultAdmin != 0, "default admin should not be zero";
+    require params.pauser != 0, "pauser should not be zero";
+    require params.unpauser != 0, "unpauser should not be zero";
+    require params.configOperator != 0, "config operator should not be zero";
+    require params.upgrader != 0, "upgrader should not be zero";
+    require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
+    require treasury != 0, "treasury should not be zero";
+    require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
+    require allowlistOperator != 0, "allowlist operator should not be zero";
+
     /// @dev set ghost starting values
     require ghost_treasury_StoreCount == 0;
     require ghost_epochNonce_StoreCount == 0;
@@ -1571,7 +1645,7 @@ rule NONCE_008_UPGRADE_003_initialize_Success() {
     require ghost_rebalance_nonce_StoreCount == 0;
     require ghost_rebalance_lastRebalanceCompletedTimestamp_StoreCount == 0;
 
-    initialize@withrevert(e, params, treasury, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator, allowlistOperator, allowlistEnabled);
 
     assert !lastReverted;
     assert isInitialized();
@@ -1582,6 +1656,8 @@ rule NONCE_008_UPGRADE_003_initialize_Success() {
     assert getRebalance().lastRebalanceCompletedTimestamp == e.block.timestamp;
     assert getTreasury() == treasury;
     assert hasRole(CANCEL_DEPOSIT_OPERATOR_ROLE(), cancelDepositOperator);
+    assert hasRole(ALLOWLIST_OPERATOR_ROLE(), allowlistOperator);
+    assert getAllowlistEnabled() == allowlistEnabled;
 }
 
 /// ─────────────── SET INITIAL ACTIVE PROTOCOL ADAPTER ──────────
@@ -2037,9 +2113,19 @@ rule REENT_001_deposit_RevertWhen_ReentrantCall() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !getAllowlistEnabled() || getAllowlistedUser(e.msg.sender), "caller should pass allowlist validation";
     require !paused(), "vault should not be paused";
     require amount >= getMinAssetAmount(), "amount should meet the minimum deposit requirement";
     require getEpoch(getEpochNonce()).status == Types.EpochStatus.OPEN, "current epoch should be open";
+
+    require e.msg.sender != currentContract, "payer should not be the vault";
+    require asset.balanceOf(e.msg.sender) >= amount, "payer should have sufficient asset balance";
+    require asset.allowance(e.msg.sender, currentContract) >= amount, "payer should have sufficient asset allowance";
+    require asset.balanceOf(currentContract) <= max_uint256 - amount, "vault asset balance should not overflow";
+    require getDepositAmount(e.msg.sender, getEpochNonce()) <= max_uint256 - amount,
+        "deposit accumulator should not overflow";
+    require getEpoch(getEpochNonce()).totalDepositAmount <= max_uint256 - amount,
+        "epoch total deposit accumulator should not overflow";
 
     /// @dev revert condition being verified
     require reentrancyGuardEntered(), "reentrancy guard should be entered";
@@ -2057,9 +2143,19 @@ rule PAUSE_003_deposit_RevertWhen_Paused() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !getAllowlistEnabled() || getAllowlistedUser(e.msg.sender), "caller should pass allowlist validation";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
     require amount >= getMinAssetAmount(), "amount should meet the minimum deposit requirement";
     require getEpoch(getEpochNonce()).status == Types.EpochStatus.OPEN, "current epoch should be open";
+
+    require e.msg.sender != currentContract, "payer should not be the vault";
+    require asset.balanceOf(e.msg.sender) >= amount, "payer should have sufficient asset balance";
+    require asset.allowance(e.msg.sender, currentContract) >= amount, "payer should have sufficient asset allowance";
+    require asset.balanceOf(currentContract) <= max_uint256 - amount, "vault asset balance should not overflow";
+    require getDepositAmount(e.msg.sender, getEpochNonce()) <= max_uint256 - amount,
+        "deposit accumulator should not overflow";
+    require getEpoch(getEpochNonce()).totalDepositAmount <= max_uint256 - amount,
+        "epoch total deposit accumulator should not overflow";
 
     /// @dev revert condition being verified
     require paused(), "vault should be paused";
@@ -2079,9 +2175,19 @@ rule EPOCH_015_deposit_RevertWhen_AmountBelowMinimum() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !getAllowlistEnabled() || getAllowlistedUser(e.msg.sender), "caller should pass allowlist validation";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
     require !paused(), "vault should not be paused";
     require getEpoch(getEpochNonce()).status == Types.EpochStatus.OPEN, "current epoch should be open";
+
+    require e.msg.sender != currentContract, "payer should not be the vault";
+    require asset.balanceOf(e.msg.sender) >= amount, "payer should have sufficient asset balance";
+    require asset.allowance(e.msg.sender, currentContract) >= amount, "payer should have sufficient asset allowance";
+    require asset.balanceOf(currentContract) <= max_uint256 - amount, "vault asset balance should not overflow";
+    require getDepositAmount(e.msg.sender, getEpochNonce()) <= max_uint256 - amount,
+        "deposit accumulator should not overflow";
+    require getEpoch(getEpochNonce()).totalDepositAmount <= max_uint256 - amount,
+        "epoch total deposit accumulator should not overflow";
 
     /// @dev revert condition being verified
     require amount < getMinAssetAmount(), "amount should be below the minimum deposit requirement";
@@ -2097,9 +2203,19 @@ rule EPOCH_005_deposit_RevertWhen_EpochNotOpen() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !getAllowlistEnabled() || getAllowlistedUser(e.msg.sender), "caller should pass allowlist validation";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
     require !paused(), "vault should not be paused";
     require amount >= getMinAssetAmount(), "amount should meet the minimum deposit requirement";
+
+    require e.msg.sender != currentContract, "payer should not be the vault";
+    require asset.balanceOf(e.msg.sender) >= amount, "payer should have sufficient asset balance";
+    require asset.allowance(e.msg.sender, currentContract) >= amount, "payer should have sufficient asset allowance";
+    require asset.balanceOf(currentContract) <= max_uint256 - amount, "vault asset balance should not overflow";
+    require getDepositAmount(e.msg.sender, getEpochNonce()) <= max_uint256 - amount,
+        "deposit accumulator should not overflow";
+    require getEpoch(getEpochNonce()).totalDepositAmount <= max_uint256 - amount,
+        "epoch total deposit accumulator should not overflow";
 
     /// @dev revert condition being verified
     require getEpoch(getEpochNonce()).status != Types.EpochStatus.OPEN, "current epoch should not be open";
@@ -2109,18 +2225,52 @@ rule EPOCH_005_deposit_RevertWhen_EpochNotOpen() {
     assert lastReverted;
 }
 
+/// @notice Deposit rejects an unallowlisted caller
+rule ALLOWLIST_002_deposit_RevertWhen_CallerNotAllowlisted() {
+    env e;
+    uint256 amount;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
+    require e.msg.sender != currentContract, "payer should not be the vault";
+    require amount >= getMinAssetAmount(), "amount should meet the minimum deposit requirement";
+    require getEpoch(getEpochNonce()).status == Types.EpochStatus.OPEN, "current epoch should be open";
+    require asset.balanceOf(e.msg.sender) >= amount, "payer should have sufficient asset balance";
+    require asset.allowance(e.msg.sender, currentContract) >= amount, "payer should have sufficient asset allowance";
+    require getDepositAmount(e.msg.sender, getEpochNonce()) <= max_uint256 - amount,
+        "deposit accumulator should not overflow";
+    require getEpoch(getEpochNonce()).totalDepositAmount <= max_uint256 - amount,
+        "epoch total deposit accumulator should not overflow";
+    require asset.balanceOf(currentContract) <= max_uint256 - amount, "vault asset balance should not overflow";
+
+    /// @dev revert condition being verified
+    require getAllowlistEnabled(), "allowlist should be enabled";
+    require !getAllowlistedUser(e.msg.sender), "caller should not be allowlisted";
+
+    /// @dev ghost starting values
+    require ghost_DepositSubmitted_EventCount == 0;
+
+    deposit@withrevert(e, amount);
+
+    assert lastReverted;
+    assert ghost_DepositSubmitted_EventCount == 0;
+}
+
 /// @notice Deposit pulls the deposited amount from the depositor, accumulates the deposit and epoch
 ///         totals, and emits DepositSubmitted
 /// @dev Delegates to ParentVaultUserEpochLib.deposit (DELEGATECALL). This is the same shape as
 ///      _setActiveAdapter (a public library function making a nested external call - here,
 ///      IERC20(asset).safeTransferFrom) - included to observe whether the same unresolved-callee
 ///      havoc reproduces for this call site.
-rule EPOCH_005_deposit_Success() {
+rule ALLOWLIST_002_EPOCH_005_deposit_Success() {
     env e;
     uint256 amount;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !getAllowlistEnabled() || getAllowlistedUser(e.msg.sender), "caller should pass allowlist validation";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
     require !paused(), "vault should not be paused";
     require amount >= getMinAssetAmount(), "amount should meet the minimum deposit requirement";
@@ -6786,11 +6936,23 @@ rule REENT_001_depositFor_RevertWhen_ReentrantCall() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !getAllowlistEnabled()
+        || (getAllowlistedUser(e.msg.sender) && getAllowlistedUser(beneficiary)),
+        "caller and beneficiary should pass allowlist validation";
     require !paused(), "vault should not be paused";
     require beneficiary != currentContract, "beneficiary should not be this vault";
     require beneficiary != 0, "beneficiary should not be zero";
     require amount >= getMinAssetAmount(), "amount should meet the minimum deposit requirement";
     require getEpoch(getEpochNonce()).status == Types.EpochStatus.OPEN, "current epoch should be open";
+
+    require e.msg.sender != currentContract, "payer should not be the vault";
+    require asset.balanceOf(e.msg.sender) >= amount, "payer should have sufficient asset balance";
+    require asset.allowance(e.msg.sender, currentContract) >= amount, "payer should have sufficient asset allowance";
+    require asset.balanceOf(currentContract) <= max_uint256 - amount, "vault asset balance should not overflow";
+    require getDepositAmount(beneficiary, getEpochNonce()) <= max_uint256 - amount,
+        "deposit accumulator should not overflow";
+    require getEpoch(getEpochNonce()).totalDepositAmount <= max_uint256 - amount,
+        "epoch total deposit accumulator should not overflow";
 
     /// @dev revert condition being verified
     require reentrancyGuardEntered(), "reentrancy guard should be entered";
@@ -6809,11 +6971,23 @@ rule PAUSE_003_depositFor_RevertWhen_Paused() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !getAllowlistEnabled()
+        || (getAllowlistedUser(e.msg.sender) && getAllowlistedUser(beneficiary)),
+        "caller and beneficiary should pass allowlist validation";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
     require beneficiary != currentContract, "beneficiary should not be this vault";
     require beneficiary != 0, "beneficiary should not be zero";
     require amount >= getMinAssetAmount(), "amount should meet the minimum deposit requirement";
     require getEpoch(getEpochNonce()).status == Types.EpochStatus.OPEN, "current epoch should be open";
+
+    require e.msg.sender != currentContract, "payer should not be the vault";
+    require asset.balanceOf(e.msg.sender) >= amount, "payer should have sufficient asset balance";
+    require asset.allowance(e.msg.sender, currentContract) >= amount, "payer should have sufficient asset allowance";
+    require asset.balanceOf(currentContract) <= max_uint256 - amount, "vault asset balance should not overflow";
+    require getDepositAmount(beneficiary, getEpochNonce()) <= max_uint256 - amount,
+        "deposit accumulator should not overflow";
+    require getEpoch(getEpochNonce()).totalDepositAmount <= max_uint256 - amount,
+        "epoch total deposit accumulator should not overflow";
 
     /// @dev revert condition being verified
     require paused(), "vault should be paused";
@@ -6832,6 +7006,9 @@ rule FOR_001_depositFor_RevertWhen_BeneficiaryIsVault() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !getAllowlistEnabled()
+        || (getAllowlistedUser(e.msg.sender) && getAllowlistedUser(beneficiary)),
+        "caller and beneficiary should pass allowlist validation";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
     require !paused(), "vault should not be paused";
     require beneficiary != 0, "beneficiary is nonzero";
@@ -6867,10 +7044,23 @@ rule FOR_001_depositFor_RevertWhen_BeneficiaryIsZeroAddress() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !getAllowlistEnabled()
+        || (getAllowlistedUser(e.msg.sender) && getAllowlistedUser(0)),
+        "caller and beneficiary should pass allowlist validation";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
     require !paused(), "vault should not be paused";
     require amount >= getMinAssetAmount(), "amount should meet the minimum deposit requirement";
     require getEpoch(getEpochNonce()).status == Types.EpochStatus.OPEN, "current epoch should be open";
+
+    require e.msg.sender != currentContract, "payer should not be the vault";
+    require currentContract != 0, "zero beneficiary should not be the vault";
+    require asset.balanceOf(e.msg.sender) >= amount, "payer should have sufficient asset balance";
+    require asset.allowance(e.msg.sender, currentContract) >= amount, "payer should have sufficient asset allowance";
+    require asset.balanceOf(currentContract) <= max_uint256 - amount, "vault asset balance should not overflow";
+    require getDepositAmount(0, getEpochNonce()) <= max_uint256 - amount,
+        "deposit accumulator should not overflow";
+    require getEpoch(getEpochNonce()).totalDepositAmount <= max_uint256 - amount,
+        "epoch total deposit accumulator should not overflow";
 
     /// @dev revert condition being verified
     address beneficiary = 0;
@@ -6889,11 +7079,23 @@ rule EPOCH_015_depositFor_RevertWhen_AmountBelowMinimum() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !getAllowlistEnabled()
+        || (getAllowlistedUser(e.msg.sender) && getAllowlistedUser(beneficiary)),
+        "caller and beneficiary should pass allowlist validation";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
     require !paused(), "vault should not be paused";
     require beneficiary != currentContract, "beneficiary should not be this vault";
     require beneficiary != 0, "beneficiary should not be zero";
     require getEpoch(getEpochNonce()).status == Types.EpochStatus.OPEN, "current epoch should be open";
+
+    require e.msg.sender != currentContract, "payer should not be the vault";
+    require asset.balanceOf(e.msg.sender) >= amount, "payer should have sufficient asset balance";
+    require asset.allowance(e.msg.sender, currentContract) >= amount, "payer should have sufficient asset allowance";
+    require asset.balanceOf(currentContract) <= max_uint256 - amount, "vault asset balance should not overflow";
+    require getDepositAmount(beneficiary, getEpochNonce()) <= max_uint256 - amount,
+        "deposit accumulator should not overflow";
+    require getEpoch(getEpochNonce()).totalDepositAmount <= max_uint256 - amount,
+        "epoch total deposit accumulator should not overflow";
 
     /// @dev revert condition being verified
     require amount < getMinAssetAmount(), "amount should be below the minimum deposit requirement";
@@ -6912,11 +7114,23 @@ rule EPOCH_005_depositFor_RevertWhen_EpochNotOpen() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !getAllowlistEnabled()
+        || (getAllowlistedUser(e.msg.sender) && getAllowlistedUser(beneficiary)),
+        "caller and beneficiary should pass allowlist validation";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
     require !paused(), "vault should not be paused";
     require beneficiary != currentContract, "beneficiary should not be this vault";
     require beneficiary != 0, "beneficiary should not be zero";
     require amount >= getMinAssetAmount(), "amount should meet the minimum deposit requirement";
+
+    require e.msg.sender != currentContract, "payer should not be the vault";
+    require asset.balanceOf(e.msg.sender) >= amount, "payer should have sufficient asset balance";
+    require asset.allowance(e.msg.sender, currentContract) >= amount, "payer should have sufficient asset allowance";
+    require asset.balanceOf(currentContract) <= max_uint256 - amount, "vault asset balance should not overflow";
+    require getDepositAmount(beneficiary, getEpochNonce()) <= max_uint256 - amount,
+        "deposit accumulator should not overflow";
+    require getEpoch(getEpochNonce()).totalDepositAmount <= max_uint256 - amount,
+        "epoch total deposit accumulator should not overflow";
 
     /// @dev revert condition being verified
     require getEpoch(getEpochNonce()).status != Types.EpochStatus.OPEN, "current epoch should not be open";
@@ -6926,15 +7140,94 @@ rule EPOCH_005_depositFor_RevertWhen_EpochNotOpen() {
     assert lastReverted;
 }
 
-/// @notice Deposit-for pulls assets only from the payer and records the position for the beneficiary
-/// @dev Verifies distinct payer/beneficiary balances, storage, aggregate accounting, return value, and event routing
-rule FOR_001_FOR_003_depositFor_Success() {
+/// @notice Deposit-for rejects an unallowlisted caller
+rule ALLOWLIST_002_depositFor_RevertWhen_CallerNotAllowlisted() {
     env e;
     address beneficiary;
     uint256 amount;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
+    require beneficiary != 0, "beneficiary should not be zero";
+    require beneficiary != currentContract, "beneficiary should not be the vault";
+    require beneficiary != e.msg.sender, "beneficiary should differ from caller";
+    require e.msg.sender != currentContract, "payer should not be the vault";
+    require getAllowlistedUser(beneficiary), "beneficiary should be allowlisted";
+    require amount >= getMinAssetAmount(), "amount should meet the minimum deposit requirement";
+    require getEpoch(getEpochNonce()).status == Types.EpochStatus.OPEN, "current epoch should be open";
+    require asset.balanceOf(e.msg.sender) >= amount, "payer should have sufficient asset balance";
+    require asset.allowance(e.msg.sender, currentContract) >= amount, "payer should have sufficient asset allowance";
+    require getDepositAmount(beneficiary, getEpochNonce()) <= max_uint256 - amount,
+        "beneficiary deposit should not overflow";
+    require getEpoch(getEpochNonce()).totalDepositAmount <= max_uint256 - amount,
+        "epoch total deposit should not overflow";
+    require asset.balanceOf(currentContract) <= max_uint256 - amount, "vault asset balance should not overflow";
+
+    /// @dev revert condition being verified
+    require getAllowlistEnabled(), "allowlist should be enabled";
+    require !getAllowlistedUser(e.msg.sender), "caller should not be allowlisted";
+
+    /// @dev ghost starting values
+    require ghost_DepositSubmitted_EventCount == 0;
+
+    depositFor@withrevert(e, beneficiary, amount);
+
+    assert lastReverted;
+    assert ghost_DepositSubmitted_EventCount == 0;
+}
+
+/// @notice Deposit-for rejects an unallowlisted beneficiary
+rule ALLOWLIST_002_depositFor_RevertWhen_BeneficiaryNotAllowlisted() {
+    env e;
+    address beneficiary;
+    uint256 amount;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
+    require beneficiary != 0, "beneficiary should not be zero";
+    require beneficiary != currentContract, "beneficiary should not be the vault";
+    require beneficiary != e.msg.sender, "beneficiary should differ from caller";
+    require e.msg.sender != currentContract, "payer should not be the vault";
+    require getAllowlistedUser(e.msg.sender), "caller should be allowlisted";
+    require amount >= getMinAssetAmount(), "amount should meet the minimum deposit requirement";
+    require getEpoch(getEpochNonce()).status == Types.EpochStatus.OPEN, "current epoch should be open";
+    require asset.balanceOf(e.msg.sender) >= amount, "payer should have sufficient asset balance";
+    require asset.allowance(e.msg.sender, currentContract) >= amount, "payer should have sufficient asset allowance";
+    require getDepositAmount(beneficiary, getEpochNonce()) <= max_uint256 - amount,
+        "beneficiary deposit should not overflow";
+    require getEpoch(getEpochNonce()).totalDepositAmount <= max_uint256 - amount,
+        "epoch total deposit should not overflow";
+    require asset.balanceOf(currentContract) <= max_uint256 - amount, "vault asset balance should not overflow";
+
+    /// @dev revert condition being verified
+    require getAllowlistEnabled(), "allowlist should be enabled";
+    require !getAllowlistedUser(beneficiary), "beneficiary should not be allowlisted";
+
+    /// @dev ghost starting values
+    require ghost_DepositSubmitted_EventCount == 0;
+
+    depositFor@withrevert(e, beneficiary, amount);
+
+    assert lastReverted;
+    assert ghost_DepositSubmitted_EventCount == 0;
+}
+
+/// @notice Deposit-for pulls assets only from the payer and records the position for the beneficiary
+/// @dev Verifies distinct payer/beneficiary balances, storage, aggregate accounting, return value, and event routing
+rule ALLOWLIST_002_FOR_001_FOR_003_depositFor_Success() {
+    env e;
+    address beneficiary;
+    uint256 amount;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !getAllowlistEnabled()
+        || (getAllowlistedUser(e.msg.sender) && getAllowlistedUser(beneficiary)),
+        "caller and beneficiary should pass allowlist validation";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
     require !paused(), "vault should not be paused";
     require beneficiary != 0, "beneficiary should not be zero";

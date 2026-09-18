@@ -31,4 +31,6 @@ library Roles {
     bytes32 internal constant REWARDS_OPERATOR_ROLE = keccak256("REWARDS_OPERATOR_ROLE");
     /// @notice Role authorized to force-cancel stuck deposits to unblock epoch settlement
     bytes32 internal constant CANCEL_DEPOSIT_OPERATOR_ROLE = keccak256("CANCEL_DEPOSIT_OPERATOR_ROLE");
+    /// @notice Role authorized to configure allowlist enforcement and user membership
+    bytes32 internal constant ALLOWLIST_OPERATOR_ROLE = keccak256("ALLOWLIST_OPERATOR_ROLE");
 }

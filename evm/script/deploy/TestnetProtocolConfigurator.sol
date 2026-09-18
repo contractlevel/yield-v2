@@ -29,6 +29,7 @@ library TestnetProtocolConfigurator {
     }
 
     function _isTestnet(uint256 chainId) private pure returns (bool) {
-        return chainId == 421614 || chainId == 11155111 || chainId == 84532 || chainId == 11155420 || chainId == 43113;
+        return chainId == 421614 || chainId == 11155111 || chainId == 84532 || chainId == 11155420 || chainId == 43113
+            || chainId == 80002;
     }
 }

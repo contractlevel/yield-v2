@@ -14,22 +14,22 @@ contract ChildWithdraw_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
 
     function setUp() public override {
         super.setUp();
-        _selectArbitrumFork();
+        _selectBaseFork();
         _configureCloseEpochWorkflow(SEED_WORKFLOW_ID);
         _configureCloseEpochWorkflow(CLOSE_WORKFLOW_ID);
 
-        _selectBaseFork();
-        _configureExecuteEpochWithdrawWorkflow(baseChild.workflowRouter, WITHDRAW_WORKFLOW_ID);
+        _selectArbitrumFork();
+        _configureExecuteEpochWithdrawWorkflow(arbitrumChild.workflowRouter, WITHDRAW_WORKFLOW_ID);
 
-        _setParentRemoteStrategyToBase();
-        _setBaseChildActiveAdapterToAaveV3();
+        _setParentRemoteStrategyToArbitrum();
+        _setArbitrumChildActiveAdapterToAaveV3();
     }
 
-    function test_CcipFork_recoveryChildEpochWithdraw_FinalizesParentAfterFailedBaseWithdraw() external {
+    function test_CcipFork_recoveryChildEpochWithdraw_FinalizesParentAfterFailedArbitrumWithdraw() external {
         uint256 shareAmount = _depositAndClaimParentShares(SEED_WORKFLOW_ID);
         uint256 withdrawAmount = shareAmount * ASSET_PRECISION / YIELD_PRECISION;
 
-        _selectArbitrumFork();
+        _selectBaseFork();
         _approveShares(i_depositor, shareAmount);
         _changePrank(i_depositor);
         parent.vault.withdraw(shareAmount);
@@ -38,33 +38,33 @@ contract ChildWithdraw_RecoveryCcipForkTest is BaseCcipRecoveryForkTest {
         _closeEpochThroughWorkflow(CLOSE_WORKFLOW_ID, withdrawAmount);
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.EXECUTING));
 
-        _selectBaseFork();
-        _setBaseChildActiveAdapterToFailingAdapter();
+        _selectArbitrumFork();
+        _setArbitrumChildActiveAdapterToFailingAdapter();
         vm.recordLogs();
-        _executeEpochWithdrawThroughWorkflow(baseChild.workflowRouter, WITHDRAW_WORKFLOW_ID, 2, withdrawAmount);
+        _executeEpochWithdrawThroughWorkflow(arbitrumChild.workflowRouter, WITHDRAW_WORKFLOW_ID, 2, withdrawAmount);
         Vm.Log[] memory failureLogs = vm.getRecordedLogs();
 
         Vm.Log memory storedLog = _assertEmittedBy(
-            failureLogs, keccak256("EpochWithdrawRecoveryStored(uint256,uint256)"), address(baseChild.vault)
+            failureLogs, keccak256("EpochWithdrawRecoveryStored(uint256,uint256)"), address(arbitrumChild.vault)
         );
         assertEq(uint256(storedLog.topics[1]), 2);
         assertEq(uint256(storedLog.topics[2]), withdrawAmount);
-        _assertEpochRecovery(baseChild.vault.getEpochWithdrawRecovery(), 2, withdrawAmount);
-        assertTrue(baseChild.vault.getRecoveryMode() == Types.RecoveryMode.EPOCH_WITHDRAW);
+        _assertEpochRecovery(arbitrumChild.vault.getEpochWithdrawRecovery(), 2, withdrawAmount);
+        assertTrue(arbitrumChild.vault.getRecoveryMode() == Types.RecoveryMode.EPOCH_WITHDRAW);
 
-        _restoreBaseAaveV3Adapter();
-        _prepareBaseToParentRouting();
-        vm.warp(block.timestamp + 1 days);
-        baseChild.vault.executeRecovery();
-
-        _selectBaseFork();
-        _routeUsdcMessageTo(arbitrumFork);
-
-        _selectBaseFork();
-        _assertEpochRecoveryCleared(baseChild.vault.getEpochWithdrawRecovery());
-        assertTrue(baseChild.vault.getRecoveryMode() == Types.RecoveryMode.NONE);
+        _restoreArbitrumAaveV3Adapter();
+        _prepareArbitrumToParentRouting();
+        vm.warp(block.timestamp + 12 hours); // Avoid Aave rounding while keeping forked CCIP prices fresh.
+        arbitrumChild.vault.executeRecovery();
 
         _selectArbitrumFork();
+        _routeUsdcMessageTo(baseFork);
+
+        _selectArbitrumFork();
+        _assertEpochRecoveryCleared(arbitrumChild.vault.getEpochWithdrawRecovery());
+        assertTrue(arbitrumChild.vault.getRecoveryMode() == Types.RecoveryMode.NONE);
+
+        _selectBaseFork();
         assertEq(uint256(parent.vault.getEpoch(2).status), uint256(Types.EpochStatus.CLAIMABLE));
 
         uint256 depositorUsdcBefore = IERC20(parent.asset).balanceOf(i_depositor);

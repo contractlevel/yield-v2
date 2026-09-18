@@ -141,6 +141,7 @@ _Note: Some of the ParentVault rules require ParentVault::\_finalizeRebalance an
 ```
 
 certoraRun ./certora/conf/modules/AdapterRegistry.conf
+certoraRun ./certora/conf/modules/Allowlist.conf
 
 certoraRun ./certora/conf/modules/adapters/AaveV3Adapter.ProtocolAdapter.conf
 certoraRun ./certora/conf/modules/adapters/AaveV4Adapter.ProtocolAdapter.conf
@@ -227,3 +228,7 @@ forge test \
 ## Note
 
 The Foundry test suite uses the [Contract Level fork](https://github.com/contractlevel/chainlink-local/tree/main) of Chainlink's CCIP local simulator for added USDC/CCTP support.
+
+Polygon's Compound USDC market uses bridged USDC (`0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174`),
+while the vault uses native USDC (`0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359`). The Polygon
+Compound adapter is therefore disabled.

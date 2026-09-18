@@ -62,7 +62,9 @@ abstract contract BaseUnitTest is BaseTest {
         ParentVault parentVaultImpl = new ParentVault(params, address(s_yieldcoin));
         ERC1967Proxy parentVaultProxy = new ERC1967Proxy(
             address(parentVaultImpl),
-            abi.encodeCall(ParentVault.initialize, (initParams, i_treasury, i_cancelDepositOperator))
+            abi.encodeCall(
+                ParentVault.initialize, (initParams, i_treasury, i_cancelDepositOperator, i_allowlistOperator, false)
+            )
         );
         s_parentVault = ParentVault(address(parentVaultProxy));
         s_mockProtocolAdapter.setVault(address(s_parentVault));
@@ -142,7 +144,10 @@ abstract contract BaseUnitTest is BaseTest {
         ParentVault parentVaultImpl = new ParentVault(constructorParams, address(s_yieldcoin));
         ERC1967Proxy parentVaultProxy = new ERC1967Proxy(
             address(parentVaultImpl),
-            abi.encodeCall(ParentVault.initialize, (_baseVaultInitParams(), i_treasury, i_cancelDepositOperator))
+            abi.encodeCall(
+                ParentVault.initialize,
+                (_baseVaultInitParams(), i_treasury, i_cancelDepositOperator, i_allowlistOperator, false)
+            )
         );
         parentVault = ParentVault(address(parentVaultProxy));
         s_yieldcoin.grantRole(Roles.MINTER_ROLE, address(parentVault));
@@ -213,6 +218,22 @@ abstract contract BaseUnitTest is BaseTest {
 
     function _setParentTotalShares(uint256 totalShares) internal {
         stdstore.target(address(s_parentVault)).sig("getTotalShares()").checked_write(totalShares);
+    }
+
+    function _setParentAllowlistedUser(address user, bool allowed) internal {
+        (, address caller,) = vm.readCallers();
+        _changePrank(i_allowlistOperator);
+        address[] memory users = new address[](1);
+        users[0] = user;
+        s_parentVault.setAllowlistedUsers(users, allowed);
+        _changePrank(caller);
+    }
+
+    function _setParentAllowlistEnabled(bool enabled) internal {
+        (, address caller,) = vm.readCallers();
+        _changePrank(i_allowlistOperator);
+        s_parentVault.setAllowlistEnabled(enabled);
+        _changePrank(caller);
     }
 
     function _setParentEpochNonce(uint256 epochNonce) internal {

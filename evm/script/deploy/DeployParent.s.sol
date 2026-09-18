@@ -102,11 +102,25 @@ contract DeployParent is Script {
                     new ERC1967Proxy(
                         address(deploy.parentVaultImpl),
                         abi.encodeCall(
-                            ParentVault.initialize, (initParams, config.treasury, config.roles.cancelDepositOperator)
+                            ParentVault.initialize,
+                            (
+                                initParams,
+                                config.treasury,
+                                config.roles.cancelDepositOperator,
+                                config.roles.allowlistOperator,
+                                config.allowlist.enabled
+                            )
                         )
                     )
                 ))
         );
+
+        if (config.allowlist.initialUsers.length != 0) {
+            bool temporaryOperator = deployer != config.roles.allowlistOperator;
+            if (temporaryOperator) deploy.parentVaultProxy.grantRole(Roles.ALLOWLIST_OPERATOR_ROLE, deployer);
+            deploy.parentVaultProxy.setAllowlistedUsers(config.allowlist.initialUsers, true);
+            if (temporaryOperator) deploy.parentVaultProxy.revokeRole(Roles.ALLOWLIST_OPERATOR_ROLE, deployer);
+        }
 
         bytes32 initialProtocolId = _deployAdapters(deploy, config);
         if (initialProtocolId != bytes32(0)) {
@@ -119,8 +133,8 @@ contract DeployParent is Script {
 
         deploy.workflowRouter = new WorkflowRouter(
             WorkflowRouter.ConstructorParams({
-                initialDelay: 3 days,
-                defaultAdmin: config.roles.defaultAdmin,
+                initialDelay: 0,
+                defaultAdmin: deployer,
                 pauser: config.roles.pauser,
                 unpauser: config.roles.unpauser,
                 configOperator: config.roles.configOperator,
@@ -129,6 +143,7 @@ contract DeployParent is Script {
             })
         );
 
+        deploy.workflowRouter.grantRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
         deploy.yieldcoinProxy.grantRole(Roles.MINTER_ROLE, address(deploy.parentVaultProxy));
         deploy.yieldcoinProxy.grantRole(Roles.BURNER_ROLE, address(deploy.parentVaultProxy));
         deploy.parentVaultProxy.grantRole(Roles.CONFIG_OPERATOR_ROLE, config.roles.configOperator);
@@ -137,14 +152,20 @@ contract DeployParent is Script {
         deploy.parentVaultProxy.grantRole(Roles.REBALANCE_OPERATOR_ROLE, address(deploy.workflowRouter));
         deploy.parentVaultProxy.grantRole(Roles.LINK_OPERATOR_ROLE, config.roles.linkOperator);
         deploy.parentVaultProxy.grantRole(Roles.REWARDS_OPERATOR_ROLE, config.roles.rewardsOperator);
-        deploy.parentVaultProxy.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
-        deploy.adapterRegistry.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
+        if (deployer != config.roles.configOperator) {
+            deploy.adapterRegistry.revokeRole(Roles.CONFIG_OPERATOR_ROLE, deployer);
+        }
 
         if (deployer != config.roles.defaultAdmin) {
             deploy.yieldcoinProxy.beginDefaultAdminTransfer(config.roles.defaultAdmin);
             deploy.parentVaultProxy.beginDefaultAdminTransfer(config.roles.defaultAdmin);
             deploy.adapterRegistry.beginDefaultAdminTransfer(config.roles.defaultAdmin);
+            deploy.workflowRouter.beginDefaultAdminTransfer(config.roles.defaultAdmin);
         }
+        // The configured default admin must call acceptDefaultAdminTransfer() on the vault
+        // proxy, share token proxy, registry, and WorkflowRouter. All transfer delays are zero.
+        // Until accepted, the deployer remains admin on each contract.
+        // Operator and deployer keep vault/router config access; revoke deployer manually.
     }
 
     function _deployAdapters(Deployment memory deploy, HelperConfig.NetworkConfig memory config)

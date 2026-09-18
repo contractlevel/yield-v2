@@ -1,0 +1,10 @@
+setAllowlistEnabled
+├── when the caller does not have ALLOWLIST_OPERATOR_ROLE
+│   └── it should revert
+└── when the caller has ALLOWLIST_OPERATOR_ROLE
+    ├── it should enable enforcement
+    ├── it should disable enforcement
+    ├── it should preserve membership through disabling and re-enabling
+    ├── it should emit AllowlistEnabledSet
+    ├── it should emit when already enabled
+    └── it should emit when already disabled

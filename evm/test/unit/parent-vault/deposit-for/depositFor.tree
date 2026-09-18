@@ -1,4 +1,11 @@
 ParentVault_depositFor
+├── when enforcement is enabled
+│   ├── when the caller is not allowlisted
+│   │   └── it should revert with Allowlist__UserNotAllowlisted
+│   ├── when the beneficiary is not allowlisted
+│   │   └── it should revert with Allowlist__UserNotAllowlisted
+│   └── when both addresses are allowlisted
+│       └── it should accept the deposit, including identical addresses
 ├── when the contract is paused
 │   └── it should revert with EnforcedPause
 ├── when the beneficiary is the zero address

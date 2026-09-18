@@ -149,6 +149,10 @@ contract HelperHarness {
         return keccak256("CONFIG_OPERATOR_ROLE");
     }
 
+    function ALLOWLIST_OPERATOR_ROLE() public returns (bytes32) {
+        return keccak256("ALLOWLIST_OPERATOR_ROLE");
+    }
+
     function REBALANCE_OPERATOR_ROLE() public returns (bytes32) {
         return keccak256("REBALANCE_OPERATOR_ROLE");
     }

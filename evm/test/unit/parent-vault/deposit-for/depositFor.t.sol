@@ -4,6 +4,7 @@ pragma solidity 0.8.34;
 import {BaseUnitTest, Vm} from "../../BaseUnitTest.t.sol";
 import {IBaseVault} from "../../../../src/interfaces/vaults/IBaseVault.sol";
 import {IParentVault} from "../../../../src/interfaces/vaults/IParentVault.sol";
+import {IAllowlist} from "../../../../src/interfaces/modules/IAllowlist.sol";
 import {Types} from "../../../../src/libraries/Types.sol";
 
 contract ParentVault_DepositForUnitTest is BaseUnitTest {
@@ -37,6 +38,56 @@ contract ParentVault_DepositForUnitTest is BaseUnitTest {
         _setParentEpochStatus(1, Types.EpochStatus.CLAIMABLE);
         vm.expectRevert(abi.encodeWithSelector(IParentVault.ParentVault__EpochNotOpen.selector, 1));
         s_parentVault.depositFor(i_recipient1, DEPOSIT_AMOUNT);
+    }
+
+    function test_ParentVault_depositFor_RevertWhen_CallerNotAllowlisted() external {
+        _setParentAllowlistEnabled(true);
+        _setParentAllowlistedUser(i_recipient1, true);
+
+        vm.expectRevert(abi.encodeWithSelector(IAllowlist.Allowlist__UserNotAllowlisted.selector, i_depositor));
+        s_parentVault.depositFor(i_recipient1, DEPOSIT_AMOUNT);
+
+        assertEq(s_mockUsdc.balanceOf(i_depositor), DEPOSIT_AMOUNT * 2);
+        assertEq(s_mockUsdc.balanceOf(address(s_parentVault)), 0);
+        assertEq(s_parentVault.getDepositAmount(i_recipient1, 1), 0);
+        assertEq(s_parentVault.getEpoch(1).totalDepositAmount, 0);
+    }
+
+    function test_ParentVault_depositFor_RevertWhen_BeneficiaryNotAllowlisted() external {
+        _setParentAllowlistEnabled(true);
+        _setParentAllowlistedUser(i_depositor, true);
+
+        vm.expectRevert(abi.encodeWithSelector(IAllowlist.Allowlist__UserNotAllowlisted.selector, i_recipient1));
+        s_parentVault.depositFor(i_recipient1, DEPOSIT_AMOUNT);
+
+        assertEq(s_mockUsdc.balanceOf(i_depositor), DEPOSIT_AMOUNT * 2);
+        assertEq(s_mockUsdc.balanceOf(address(s_parentVault)), 0);
+        assertEq(s_parentVault.getDepositAmount(i_recipient1, 1), 0);
+        assertEq(s_parentVault.getEpoch(1).totalDepositAmount, 0);
+    }
+
+    function test_ParentVault_depositFor_Success_CallerAndBeneficiaryAllowlisted() external {
+        _setParentAllowlistEnabled(true);
+        _setParentAllowlistedUser(i_depositor, true);
+        _setParentAllowlistedUser(i_recipient1, true);
+
+        s_parentVault.depositFor(i_recipient1, DEPOSIT_AMOUNT);
+
+        assertEq(s_parentVault.getDepositAmount(i_depositor, 1), 0);
+        assertEq(s_parentVault.getDepositAmount(i_recipient1, 1), DEPOSIT_AMOUNT);
+        assertEq(s_mockUsdc.balanceOf(i_depositor), DEPOSIT_AMOUNT);
+        assertEq(s_mockUsdc.balanceOf(address(s_parentVault)), DEPOSIT_AMOUNT);
+    }
+
+    function test_ParentVault_depositFor_Success_IdenticalAddressesAllowlisted() external {
+        _setParentAllowlistEnabled(true);
+        _setParentAllowlistedUser(i_depositor, true);
+
+        s_parentVault.depositFor(i_depositor, DEPOSIT_AMOUNT);
+
+        assertEq(s_parentVault.getDepositAmount(i_depositor, 1), DEPOSIT_AMOUNT);
+        assertEq(s_mockUsdc.balanceOf(i_depositor), DEPOSIT_AMOUNT);
+        assertEq(s_mockUsdc.balanceOf(address(s_parentVault)), DEPOSIT_AMOUNT);
     }
 
     function test_ParentVault_depositFor_Success_SeparatesPayerAndBeneficiary() public {

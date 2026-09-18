@@ -35,6 +35,7 @@ For the full authority model, use [`ACCESS_CONTROL_MATRIX`](../security/ACCESS_C
 | `LINK_OPERATOR_ROLE`              | Withdraw unused LINK from vault contracts.                                                                                                             |
 | `REWARDS_OPERATOR_ROLE`           | Claim protocol rewards from supported adapters, currently Compound V3.                                                                                 |
 | `CANCEL_DEPOSIT_OPERATOR_ROLE`    | Force-cancel a stuck current-epoch deposit to preserve liveness.                                                                                       |
+| `ALLOWLIST_OPERATOR_ROLE`        | Enable or disable the ParentVault allowlist and update membership.                                                                                     |
 | `UPGRADER_ROLE`                   | Upgrade UUPS implementations. See [`UPGRADES`](./UPGRADES.md).                                                                                         |
 | `EPOCH_OPERATOR_ROLE`             | Execute epoch settlement. This role is intended for [`WorkflowRouter`](../../evm/src/modules/WorkflowRouter.sol), not a routine human operator wallet. |
 | `REBALANCE_OPERATOR_ROLE`         | Execute strategy rebalances. This role is intended for `WorkflowRouter`, not a routine human operator wallet.                                          |
@@ -52,12 +53,21 @@ Vault configuration exists on both [`ParentVault`](../../evm/src/vaults/ParentVa
 | `setCcipGasLimit(chainSelector, gasLimit)`      | `CONFIG_OPERATOR_ROLE` | Parent and child vaults | Sets or clears a per-chain CCIP gas limit override. Use `0` to fall back to the default gas limit.          |
 | `setDefaultCcipGasLimit(gasLimit)`              | `CONFIG_OPERATOR_ROLE` | Parent and child vaults | Sets the default CCIP gas limit used when no per-chain override exists.                                     |
 | `setTreasury(treasury)`                         | `CONFIG_OPERATOR_ROLE` | Parent only             | Sets the treasury address for protocol fees.                                                                |
+| `setAllowlistEnabled(enabled)`                 | `ALLOWLIST_OPERATOR_ROLE` | Parent only          | Enables or disables deposit gating without clearing membership.                                             |
+| `setAllowlistedUsers(users, allowed)`           | `ALLOWLIST_OPERATOR_ROLE` | Parent only          | Adds or removes membership for the supplied addresses.                                                      |
 | `setSupportedProtocol(protocolId, isSupported)` | `CONFIG_OPERATOR_ROLE` | Parent only             | Marks whether a strategy protocol is supported anywhere in the system.                                      |
 | `setInitialActiveProtocolAdapter(protocolId)`   | `DEFAULT_ADMIN_ROLE`   | Parent only             | One-time deployment action that sets the first active adapter after deployment and adapter registration.    |
 
 Before changing cross-chain vaults or gas limits, confirm there is no active rebalance, no epoch waiting on cross-chain execution, and no stored recovery that depends on the old route. Removing a cross-chain vault can orphan in-flight CCIP messages.
 
 Before changing the treasury, verify the address is controlled by the intended custody process.
+
+`HelperConfig` currently defaults to enforcement enabled and `initialUsers = [BURNER_EOA]` on all
+networks, including local. `DeployParent` grants `roles.allowlistOperator` and seeds those users;
+holding the operator role does not itself grant membership.
+
+When enabled, `deposit` checks the caller and `depositFor` checks both caller and beneficiary.
+Removing membership blocks new deposits but preserves cancellations, claims, and withdrawals.
 
 ## Workflow Router Configuration
 

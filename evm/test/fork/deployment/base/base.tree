@@ -1,7 +1,10 @@
 Base Deployment Fork
 
-GIVEN the five-chain fork topology is deployed
+GIVEN the six-chain fork topology is deployed
   WHEN the active fork is Base
-    THEN the child deployment is configured with Base mainnet addresses
-    AND the child vault is deployed as a UUPS proxy with the upgrader role granted
-    AND the child vault trusts the Arbitrum parent vault
+    THEN the parent deployment is configured with Base mainnet addresses
+    AND the parent vault is deployed as a UUPS proxy with the upgrader role granted
+    AND the share owner is initialized to the upgrader address
+    AND the parent vault supports the known Yieldcoin protocol IDs
+    AND the parent vault leaves its own chain selector unregistered
+    AND the parent vault trusts each child vault by chain selector

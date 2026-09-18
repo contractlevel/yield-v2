@@ -1,8 +1,13 @@
 ParentVault_initialize
   ├── when initialization succeeds
   │   ├── it should set parent vault state
-  │   └── it should grant CANCEL_DEPOSIT_OPERATOR_ROLE
+  │   ├── it should grant CANCEL_DEPOSIT_OPERATOR_ROLE
+  │   ├── it should grant ALLOWLIST_OPERATOR_ROLE
+  │   ├── it should initialize empty membership with enforcement enabled or disabled
+  │   └── it should emit AllowlistEnabledSet
   ├── when treasury is the zero address
   │   └── it should revert with BaseVault__NoZeroAddress
-  └── when cancel deposit operator is the zero address
+  ├── when cancel deposit operator is the zero address
+  │   └── it should revert with BaseVault__NoZeroAddress
+  └── when allowlist operator is the zero address
       └── it should revert with BaseVault__NoZeroAddress

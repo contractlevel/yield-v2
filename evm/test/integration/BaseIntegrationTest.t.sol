@@ -43,6 +43,23 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
 
     LocalTopology internal local;
 
+    function _deployParent() internal override {
+        super._deployParent();
+        _allowlistTestUsers();
+    }
+
+    function _allowlistTestUsers() private {
+        (, address caller,) = vm.readCallers();
+        _changePrank(networkConfig.roles.allowlistOperator);
+        address[] memory users = new address[](4);
+        users[0] = i_depositor;
+        users[1] = i_withdrawer;
+        users[2] = i_recipient1;
+        users[3] = i_recipient2;
+        parent.vault.setAllowlistedUsers(users, true);
+        _changePrank(caller);
+    }
+
     function _deployLocalParentChildTopology() internal {
         local.ccipLocalSimulator = new CCIPLocalSimulator();
         (, IRouterClient sourceRouter,,, LinkToken linkToken,,) = local.ccipLocalSimulator.configuration();
@@ -79,6 +96,7 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
         DeployParent.Deployment memory parentDeployment =
             parentDeployer.deployWithConfig(parentConfig, address(parentDeployer));
         parent = _parentFromDeployment(parentDeployment);
+        _allowlistTestUsers();
 
         DeployChild childDeployer = new DeployChild();
         DeployChild.Deployment memory childDeployment =
@@ -141,6 +159,7 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
         DeployParent.Deployment memory parentDeployment =
             parentDeployer.deployWithConfig(parentConfig, address(parentDeployer));
         parent = _parentFromDeployment(parentDeployment);
+        _allowlistTestUsers();
 
         DeployChild childDeployer = new DeployChild();
         DeployChild.Deployment memory childDeployment =

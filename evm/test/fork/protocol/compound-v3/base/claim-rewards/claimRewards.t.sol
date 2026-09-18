@@ -10,10 +10,10 @@ contract Base_CompoundV3ClaimRewardsForkTest is BaseCompoundV3ForkTest {
     }
 
     function test_Base_compoundV3_claimRewards_RevertWhen_CallerDoesNotHaveRewardsOperatorRoleOnVault() external {
-        _assertCompoundV3ClaimRewardsRevertsWhenCallerIsNotRewardsOperator(baseChild.compoundV3Adapter);
+        _assertCompoundV3ClaimRewardsRevertsWhenCallerIsNotRewardsOperator(parent.compoundV3Adapter);
     }
 
     function test_Base_compoundV3_claimRewards_Success() external {
-        _assertCompoundV3ClaimRewardsSucceeds(baseChild.compoundV3Adapter, address(baseChild.vault), baseForkDeployer);
+        _assertCompoundV3ClaimRewardsSucceeds(parent.compoundV3Adapter, address(parent.vault), parentForkDeployer);
     }
 }
