@@ -50,7 +50,11 @@ func Fuzz_ValidateConfig_parentCount(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, parentA, parentB, parentC bool) {
 		cfg := &Config{
-			DefiLlama: validDefiLlamaConfig(),
+			BlockNumber:       new(int64),
+			AssetDecimals:     testAssetDecimals(),
+			EpochSchedule:     "0 0 0 * * *",
+			RebalanceSchedule: "0 0 12 * * *",
+			DefiLlama:         validDefiLlamaConfig(),
 			Evms: []EvmConfig{
 				validEvmConfig(func(e *EvmConfig) {
 					e.IsParent = parentA
@@ -102,8 +106,12 @@ func Fuzz_ValidateConfig_defiLlamaProjectCanonicalDuplicates(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, projectA, projectB string) {
 		cfg := &Config{
-			DefiLlama: DefiLlama{PoolIDs: []string{"pool-a"}, Projects: []string{projectA, projectB}, Symbols: []string{"USDC"}},
-			Evms:      []EvmConfig{validEvmConfig()},
+			BlockNumber:       new(int64),
+			AssetDecimals:     testAssetDecimals(),
+			EpochSchedule:     "0 0 0 * * *",
+			RebalanceSchedule: "0 0 12 * * *",
+			DefiLlama:         DefiLlama{PoolIDs: []string{"pool-a"}, Projects: []string{projectA, projectB}, Symbols: []string{"USDC"}},
+			Evms:              []EvmConfig{validEvmConfig()},
 		}
 
 		err := ValidateConfig(cfg)
@@ -113,7 +121,12 @@ func Fuzz_ValidateConfig_defiLlamaProjectCanonicalDuplicates(f *testing.F) {
 			require.Error(t, err, "expected empty or duplicate canonical project values to fail")
 			return
 		}
-		require.NoError(t, err, "expected distinct canonical project values to pass")
+		supported := map[string]bool{"aave-v3": true, "aave-v4": true, "compound-v3": true}
+		if supported[projectA] && supported[projectB] {
+			require.NoError(t, err, "expected distinct supported project names to pass")
+		} else {
+			require.ErrorContains(t, err, "unsupported defiLlama project")
+		}
 	})
 }
 
@@ -126,8 +139,12 @@ func Fuzz_ValidateConfig_defiLlamaSymbolCanonicalDuplicates(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, symbolA, symbolB string) {
 		cfg := &Config{
-			DefiLlama: DefiLlama{PoolIDs: []string{"pool-a"}, Projects: []string{"aave-v3"}, Symbols: []string{symbolA, symbolB}},
-			Evms:      []EvmConfig{validEvmConfig()},
+			BlockNumber:       new(int64),
+			AssetDecimals:     testAssetDecimals(),
+			EpochSchedule:     "0 0 0 * * *",
+			RebalanceSchedule: "0 0 12 * * *",
+			DefiLlama:         DefiLlama{PoolIDs: []string{"pool-a"}, Projects: []string{"aave-v3"}, Symbols: []string{symbolA, symbolB}},
+			Evms:              []EvmConfig{validEvmConfig()},
 		}
 
 		err := ValidateConfig(cfg)

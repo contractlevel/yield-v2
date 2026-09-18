@@ -3,6 +3,8 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"math/big"
 	"testing"
 
@@ -36,9 +38,10 @@ func workflowTestEvmConfig(chainSelector uint64, isParent bool) helper.EvmConfig
 
 func workflowTestConfig(evms ...helper.EvmConfig) *Config {
 	return &Config{
+		BlockNumber:       new(int64),
 		RebalanceSchedule: "0 0 */6 * * *",
 		EpochSchedule:     "0 30 * * * *",
-		BlockNumber:       -2,
+		AssetDecimals:     newTestAssetDecimals(),
 		DefiLlama: helper.DefiLlama{
 			PoolIDs:  []string{"aa70268e-4b52-42bf-a116-608b370f9501", "d9c395b9-00d0-4426-a6b3-572a6dd68e54"},
 			Projects: []string{"aave-v3", "compound-v3"},
@@ -75,7 +78,7 @@ func withWorkflowChildCodecError(t *testing.T, err error) {
 func TestInitWorkflow_PropagatesValidationError(t *testing.T) {
 	runtime := testutils.NewRuntime(t, testutils.Secrets{})
 
-	workflow, err := InitWorkflow(&Config{}, runtime.Logger(), nil)
+	workflow, err := InitWorkflow(&Config{BlockNumber: new(int64)}, runtime.Logger(), nil)
 	require.Error(t, err, "expected invalid config to fail")
 	require.Nil(t, workflow, "expected no workflow when config validation fails")
 	require.ErrorContains(t, err, "no EVM configs provided")
@@ -103,197 +106,165 @@ func TestInitWorkflow_ChildCodecError(t *testing.T) {
 	require.ErrorContains(t, err, "init child vault codec: codec failed")
 }
 
-func TestInitWorkflow_ParentOnly(t *testing.T) {
-	runtime := testutils.NewRuntime(t, testutils.Secrets{})
-	config := workflowTestConfig(workflowTestEvmConfig(1, true))
-
-	workflow, err := InitWorkflow(config, runtime.Logger(), nil)
-	require.NoError(t, err, "expected parent-only config to initialize")
-	require.Len(t, workflow, 4, "expected two cron handlers and two parent log handlers")
-	require.Equal(t, cron.Trigger(&cron.Config{}).CapabilityID(), workflow[0].CapabilityID())
-	require.Equal(t, cron.Trigger(&cron.Config{}).CapabilityID(), workflow[2].CapabilityID())
+func newTestAssetDecimals() *uint8 {
+	value := uint8(6)
+	return &value
 }
 
-func TestInitWorkflow_MultipleChildren(t *testing.T) {
-	runtime := testutils.NewRuntime(t, testutils.Secrets{})
-	config := workflowTestConfig(
-		workflowTestEvmConfig(1, true),
-		workflowTestEvmConfig(2, false),
-		workflowTestEvmConfig(3, false),
-		workflowTestEvmConfig(4, false),
-	)
-
-	workflow, err := InitWorkflow(config, runtime.Logger(), nil)
-	require.NoError(t, err, "expected multi-child config to initialize")
-	require.Len(t, workflow, 10, "expected base handlers plus two completion handlers per child")
-	require.Equal(t, cron.Trigger(&cron.Config{}).CapabilityID(), workflow[0].CapabilityID())
-	require.Equal(t, cron.Trigger(&cron.Config{}).CapabilityID(), workflow[8].CapabilityID())
-}
-
-func TestInitWorkflow_ParentDoesNotNeedToBeFirst(t *testing.T) {
-	runtime := testutils.NewRuntime(t, testutils.Secrets{})
-	config := workflowTestConfig(
-		workflowTestEvmConfig(10, false),
-		workflowTestEvmConfig(20, true),
-		workflowTestEvmConfig(30, false),
-	)
-
-	workflow, err := InitWorkflow(config, runtime.Logger(), nil)
-	require.NoError(t, err, "expected parent lookup to use IsParent, not slice position")
-	require.Len(t, workflow, 8, "expected four child handlers when parent is in the middle")
-	require.Equal(t, cron.Trigger(&cron.Config{}).CapabilityID(), workflow[0].CapabilityID())
-	require.Equal(t, cron.Trigger(&cron.Config{}).CapabilityID(), workflow[6].CapabilityID())
-}
-
-func TestInitWorkflow_ChildHandlerClosure(t *testing.T) {
-	runtime := testutils.NewRuntime(t, testutils.Secrets{})
-	config := workflowTestConfig(
-		workflowTestEvmConfig(1, true),
-		workflowTestEvmConfig(2, false),
-	)
-
-	workflow, err := initWorkflow(config, runtime.Logger(), func(cre.Runtime, []helper.EvmConfig, *big.Int) (*onchain.ActiveRecovery, error) {
-		return nil, nil
-	})
-	require.NoError(t, err, "expected workflow to initialize")
-
-	codec, err := parent_vault.NewCodec()
-	require.NoError(t, err, "expected parent codec")
-
-	nonceTopic := make([]byte, 32)
-	big.NewInt(1).FillBytes(nonceTopic)
-	amountTopic := make([]byte, 32)
-	big.NewInt(100).FillBytes(amountTopic)
-	payload, err := anypb.New(&evm.Log{
-		Topics: [][]byte{
-			codec.RebalanceDepositSuccessLogHash(),
-			nonceTopic,
-			amountTopic,
-		},
-	})
-	require.NoError(t, err, "expected log payload to marshal")
-
-	result, err := workflow[2].Callback()(config, runtime, payload)
-	require.Error(t, err, "expected child completion handler to run and fail on empty log")
-	require.Nil(t, result, "expected nil result on handler error")
-	require.ErrorContains(t, err, "submit completeRebalance")
-}
-
-func TestWithRecoveryGuard_noRecovery(t *testing.T) {
-	runtime := testutils.NewRuntime(t, testutils.Secrets{})
-	config := workflowTestConfig(workflowTestEvmConfig(1, true))
-	payload := &cron.Payload{}
-	called := false
-	want := &ExecutionResult{Result: "handled"}
-
-	guarded := withRecoveryGuard(
-		func(_ cre.Runtime, evms []helper.EvmConfig, blockNumber *big.Int) (*onchain.ActiveRecovery, error) {
-			require.Equal(t, config.Evms, evms)
-			require.Equal(t, int64(-2), blockNumber.Int64())
-			return nil, nil
-		},
-		func(gotConfig *Config, gotRuntime cre.Runtime, gotPayload *cron.Payload) (*ExecutionResult, error) {
-			called = true
-			require.Same(t, config, gotConfig)
-			require.Equal(t, runtime, gotRuntime)
-			require.Same(t, payload, gotPayload)
-			return want, nil
-		},
-	)
-
-	got, err := guarded(config, runtime, payload)
-	require.NoError(t, err)
-	require.Same(t, want, got)
-	require.True(t, called)
-}
-
-func TestWithRecoveryGuard_activeRecovery(t *testing.T) {
-	runtime := testutils.NewRuntime(t, testutils.Secrets{})
-	config := workflowTestConfig(workflowTestEvmConfig(1, true))
-	called := false
-	guarded := withRecoveryGuard(
-		func(cre.Runtime, []helper.EvmConfig, *big.Int) (*onchain.ActiveRecovery, error) {
-			return &onchain.ActiveRecovery{ChainName: "chain-1", Mode: 4}, nil
-		},
-		func(*Config, cre.Runtime, *cron.Payload) (*ExecutionResult, error) {
-			called = true
-			return nil, nil
-		},
-	)
-
-	got, err := guarded(config, runtime, &cron.Payload{})
-	require.NoError(t, err)
-	require.Equal(t, &ExecutionResult{Result: "no-op: recovery active"}, got)
-	require.False(t, called)
-}
-
-func TestWithRecoveryGuard_checkError(t *testing.T) {
-	runtime := testutils.NewRuntime(t, testutils.Secrets{})
-	config := workflowTestConfig(workflowTestEvmConfig(1, true))
-	called := false
-	guarded := withRecoveryGuard(
-		func(cre.Runtime, []helper.EvmConfig, *big.Int) (*onchain.ActiveRecovery, error) {
-			return nil, errors.New("read failed")
-		},
-		func(*Config, cre.Runtime, *cron.Payload) (*ExecutionResult, error) {
-			called = true
-			return nil, nil
-		},
-	)
-
-	got, err := guarded(config, runtime, &cron.Payload{})
-	require.Nil(t, got)
-	require.ErrorContains(t, err, "check recovery mode: read failed")
-	require.False(t, called)
-}
-
-func TestInitWorkflow_DepositCompletionBypassesRecoveryGuard(t *testing.T) {
-	runtime := testutils.NewRuntime(t, testutils.Secrets{})
-	config := workflowTestConfig(
-		workflowTestEvmConfig(1, true),
-		workflowTestEvmConfig(2, false),
-		workflowTestEvmConfig(3, false),
-		workflowTestEvmConfig(4, false),
-		workflowTestEvmConfig(5, false),
-	)
-	checks := 0
-	workflow, err := initWorkflow(config, runtime.Logger(), func(cre.Runtime, []helper.EvmConfig, *big.Int) (*onchain.ActiveRecovery, error) {
-		checks++
-		return &onchain.ActiveRecovery{ChainName: "chain-5", Mode: 5}, nil
-	})
-	require.NoError(t, err)
-	require.Len(t, workflow, 12)
-	childCodec, err := child_vault.NewCodec()
-	require.NoError(t, err)
-	nonceTopic := make([]byte, 32)
-	big.NewInt(1).FillBytes(nonceTopic)
-	amountTopic := make([]byte, 32)
-	big.NewInt(100).FillBytes(amountTopic)
-
-	cronCapabilityID := cron.Trigger(&cron.Config{}).CapabilityID()
-	for i, handler := range workflow {
-		isDepositCompletion := i >= 3 && i <= 9 && i%2 == 1
-		var payload *anypb.Any
-		if isDepositCompletion {
-			payload, err = anypb.New(&evm.Log{Topics: [][]byte{
-				childCodec.EpochDepositToStrategySuccessLogHash(), nonceTopic, amountTopic,
-			}})
-		} else if handler.CapabilityID() == cronCapabilityID {
-			payload, err = anypb.New(&cron.Payload{})
-		} else {
-			payload, err = anypb.New(&evm.Log{})
-		}
-		require.NoError(t, err)
-
-		got, callbackErr := handler.Callback()(config, runtime, payload)
-		if isDepositCompletion {
-			require.Error(t, callbackErr, "completion should reach unconfigured report submission")
-			require.NotContains(t, callbackErr.Error(), "check recovery mode")
-			require.Nil(t, got)
-			continue
-		}
-		require.NoError(t, callbackErr)
-		require.Equal(t, &ExecutionResult{Result: "no-op: recovery active"}, got)
+func TestInitWorkflowCombinedSubscriptions(t *testing.T) {
+	for _, chains := range []int{1, 5, 6, 8, 9} {
+		t.Run(fmt.Sprint(chains), func(t *testing.T) {
+			configs := make([]helper.EvmConfig, chains)
+			for i := range configs {
+				configs[i] = workflowTestEvmConfig(uint64(i+1), i == 0)
+			}
+			config := workflowTestConfig(configs...)
+			runtime := testutils.NewRuntime(t, testutils.Secrets{})
+			workflow, err := InitWorkflow(config, runtime.Logger(), nil)
+			if chains == 9 {
+				require.ErrorContains(t, err, "11 triggers")
+				return
+			}
+			require.NoError(t, err)
+			require.Len(t, workflow, chains+2)
+			for i := 0; i < 2; i++ {
+				require.Equal(t, cron.Trigger(&cron.Config{}).CapabilityID(), workflow[i].CapabilityID())
+			}
+			parentCodec, err := parent_vault.NewCodec()
+			require.NoError(t, err)
+			childCodec, err := child_vault.NewCodec()
+			require.NoError(t, err)
+			for i, cfg := range configs {
+				filter := &evm.FilterLogTriggerRequest{}
+				require.NoError(t, workflow[i+2].TriggerCfg().UnmarshalTo(filter))
+				require.Equal(t, [][]byte{common.HexToAddress(cfg.VaultAddress).Bytes()}, filter.Addresses)
+				require.Equal(t, evm.ConfidenceLevel_CONFIDENCE_LEVEL_FINALIZED, filter.Confidence)
+				expected := [][]byte{childCodec.RebalanceDepositSuccessLogHash(), childCodec.EpochDepositToStrategySuccessLogHash()}
+				if cfg.IsParent {
+					expected = [][]byte{parentCodec.RebalanceInitiatedLogHash(), parentCodec.EpochWithdrawExecutingLogHash()}
+				}
+				require.Equal(t, expected, filter.Topics[0].Values)
+			}
+		})
 	}
-	require.Equal(t, 8, checks, "only fund-moving and state-creating handlers should check recovery")
+}
+
+func TestOperationalGuardUsesOneSnapshot(t *testing.T) {
+	runtime := testutils.NewRuntime(t, testutils.Secrets{})
+	config := workflowTestConfig(workflowTestEvmConfig(1, true))
+	snapshot := &onchain.Snapshot{}
+	calls := 0
+	handler := withOperationalGuard(
+		func(*Config, cre.Runtime) (*onchain.Snapshot, error) {
+			calls++
+			return snapshot, nil
+		},
+		func(_ *Config, _ cre.Runtime, _ *cron.Payload, got *onchain.Snapshot) (*ExecutionResult, error) {
+			require.Same(t, snapshot, got)
+			return &ExecutionResult{Result: "handled"}, nil
+		},
+	)
+	result, err := handler(config, runtime, &cron.Payload{})
+	require.NoError(t, err)
+	require.Equal(t, "handled", result.Result)
+	require.Equal(t, 1, calls)
+}
+
+func TestOperationalGuardErrors(t *testing.T) {
+	runtime := testutils.NewRuntime(t, testutils.Secrets{})
+	config := workflowTestConfig(workflowTestEvmConfig(1, true))
+	for _, readErr := range []error{nil, errors.New("RPC failed")} {
+		handler := withOperationalGuard(
+			func(*Config, cre.Runtime) (*onchain.Snapshot, error) { return nil, readErr },
+			func(*Config, cre.Runtime, *cron.Payload, *onchain.Snapshot) (*ExecutionResult, error) {
+				t.Fatal("must not reach handler")
+				return nil, nil
+			},
+		)
+		_, err := handler(config, runtime, &cron.Payload{})
+		require.Error(t, err)
+	}
+}
+
+func TestEverySubscriptionAppliesOperationalGuard(t *testing.T) {
+	runtime := testutils.NewRuntime(t, testutils.Secrets{})
+	config := workflowTestConfig(workflowTestEvmConfig(1, true), workflowTestEvmConfig(2, false))
+	for _, paused := range []bool{true, false} {
+		snapshot := &onchain.Snapshot{}
+		snapshot.Parent.Paused = paused
+		if !paused {
+			snapshot.Parent.RecoveryMode = 1
+		}
+		reads := 0
+		workflow, err := initWorkflow(config, runtime.Logger(), func(*Config, cre.Runtime) (*onchain.Snapshot, error) {
+			reads++
+			return snapshot, nil
+		})
+		require.NoError(t, err)
+		for i, handler := range workflow {
+			payload, err := anypb.New(&cron.Payload{})
+			if i >= 2 {
+				payload, err = anypb.New(&evm.Log{})
+			}
+			require.NoError(t, err)
+			result, err := handler.Callback()(config, runtime, payload)
+			require.NoError(t, err)
+			require.Contains(t, result.(*ExecutionResult).Result, "no-op:")
+		}
+		require.Equal(t, len(workflow), reads)
+	}
+}
+
+func TestCombinedLogSubscriptionsDispatchAllFourEvents(t *testing.T) {
+	runtime := testutils.NewRuntime(t, testutils.Secrets{})
+	config := workflowTestConfig(workflowTestEvmConfig(1, true), workflowTestEvmConfig(2, false), workflowTestEvmConfig(3, false))
+	// Equal addresses on different chains must still be distinguished.
+	config.Evms[2].VaultAddress = config.Evms[1].VaultAddress
+	snapshot := &onchain.Snapshot{Parent: parent_vault.TypesParentOperationalState{
+		CurrentEpochNonce: big.NewInt(2),
+		Rebalance: parent_vault.TypesRebalance{
+			Nonce:          big.NewInt(7),
+			ActiveStrategy: parent_vault.TypesStrategy{ChainSelector: 3},
+		},
+	}}
+	workflow, err := initWorkflow(config, runtime.Logger(), func(*Config, cre.Runtime) (*onchain.Snapshot, error) { return snapshot, nil })
+	require.NoError(t, err)
+	for _, test := range []struct {
+		subscription int
+		signature    string
+		topics       [][]byte
+		reason       string
+	}{
+		{2, "RebalanceInitiated(uint256,bytes32,uint64)", [][]byte{big.NewInt(6).Bytes(), make([]byte, 32), big.NewInt(3).Bytes()}, "stale rebalance"},
+		{2, "EpochWithdrawExecuting(uint256,uint256)", [][]byte{big.NewInt(1).Bytes(), big.NewInt(100).Bytes()}, "stale epoch"},
+		{3, "RebalanceDepositSuccess(uint256,uint256)", [][]byte{big.NewInt(6).Bytes(), big.NewInt(100).Bytes()}, "stale rebalance"},
+		{3, "EpochDepositToStrategySuccess(uint256,uint256)", [][]byte{big.NewInt(1).Bytes(), big.NewInt(100).Bytes()}, "wrong epoch deposit destination"},
+		{4, "EpochDepositToStrategySuccess(uint256,uint256)", [][]byte{big.NewInt(1).Bytes(), big.NewInt(100).Bytes()}, "stale epoch"},
+	} {
+		log := &evm.Log{Address: common.HexToAddress(config.Evms[test.subscription-2].VaultAddress).Bytes(), Topics: [][]byte{crypto.Keccak256([]byte(test.signature))}}
+		for _, topic := range test.topics {
+			log.Topics = append(log.Topics, common.LeftPadBytes(topic, 32))
+		}
+		payload, err := anypb.New(log)
+		require.NoError(t, err)
+		result, err := workflow[test.subscription].Callback()(config, runtime, payload)
+		require.NoError(t, err)
+		require.Contains(t, result.(*ExecutionResult).Result, test.reason)
+	}
+}
+
+func TestLogSubscriptionsRejectUnknownEvents(t *testing.T) {
+	runtime := testutils.NewRuntime(t, testutils.Secrets{})
+	config := workflowTestConfig(workflowTestEvmConfig(1, true), workflowTestEvmConfig(2, false))
+	workflow, err := initWorkflow(config, runtime.Logger(), func(*Config, cre.Runtime) (*onchain.Snapshot, error) { return &onchain.Snapshot{}, nil })
+	require.NoError(t, err)
+	for _, handler := range workflow[2:] {
+		for _, log := range []*evm.Log{{}, {Topics: [][]byte{make([]byte, 32)}}} {
+			payload, err := anypb.New(log)
+			require.NoError(t, err)
+			result, err := handler.Callback()(config, runtime, payload)
+			require.Error(t, err)
+			require.Nil(t, result)
+		}
+	}
 }

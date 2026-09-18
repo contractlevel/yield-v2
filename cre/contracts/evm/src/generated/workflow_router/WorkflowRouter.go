@@ -51,7 +51,7 @@ var (
 )
 
 var WorkflowRouterMetaData = &bind.MetaData{
-	ABI: "[{\"type\":\"constructor\",\"inputs\":[{\"name\":\"params\",\"type\":\"tuple\",\"internalType\":\"structWorkflowRouter.ConstructorParams\",\"components\":[{\"name\":\"initialDelay\",\"type\":\"uint48\",\"internalType\":\"uint48\"},{\"name\":\"defaultAdmin\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"pauser\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"unpauser\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"configOperator\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"keystoneForwarder\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"vault\",\"type\":\"address\",\"internalType\":\"address\"}]}],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"DEFAULT_ADMIN_ROLE\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"acceptDefaultAdminTransfer\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"beginDefaultAdminTransfer\",\"inputs\":[{\"name\":\"newAdmin\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"cancelDefaultAdminTransfer\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"changeDefaultAdminDelay\",\"inputs\":[{\"name\":\"newDelay\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"defaultAdmin\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"defaultAdminDelay\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"defaultAdminDelayIncreaseWait\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getAllowlistedWorkflowSelector\",\"inputs\":[{\"name\":\"workflowId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"selector\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"}],\"outputs\":[{\"name\":\"isAllowlisted\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRoleAdmin\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getVault\",\"inputs\":[],\"outputs\":[{\"name\":\"vault\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getWorkflowGeneration\",\"inputs\":[{\"name\":\"workflowId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"generation\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getWorkflowMetadata\",\"inputs\":[{\"name\":\"workflowId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"metadata\",\"type\":\"tuple\",\"internalType\":\"structIWorkflowRouter.WorkflowMetadata\",\"components\":[{\"name\":\"owner\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"name\",\"type\":\"bytes10\",\"internalType\":\"bytes10\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"grantRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"hasRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"onReport\",\"inputs\":[{\"name\":\"metadata\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"report\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"owner\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"pause\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"paused\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"pendingDefaultAdmin\",\"inputs\":[],\"outputs\":[{\"name\":\"newAdmin\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"schedule\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"pendingDefaultAdminDelay\",\"inputs\":[],\"outputs\":[{\"name\":\"newDelay\",\"type\":\"uint48\",\"internalType\":\"uint48\"},{\"name\":\"schedule\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"renounceRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"revokeRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"rollbackDefaultAdminDelay\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setWorkflowMetadata\",\"inputs\":[{\"name\":\"workflowId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"name\",\"type\":\"bytes10\",\"internalType\":\"bytes10\"},{\"name\":\"owner\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setWorkflowSelectors\",\"inputs\":[{\"name\":\"workflowId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"selectors\",\"type\":\"bytes4[]\",\"internalType\":\"bytes4[]\"},{\"name\":\"isAllowlisted\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"supportsInterface\",\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"unpause\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"DefaultAdminDelayChangeCanceled\",\"inputs\":[],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminDelayChangeScheduled\",\"inputs\":[{\"name\":\"newDelay\",\"type\":\"uint48\",\"indexed\":false,\"internalType\":\"uint48\"},{\"name\":\"effectSchedule\",\"type\":\"uint48\",\"indexed\":false,\"internalType\":\"uint48\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminTransferCanceled\",\"inputs\":[],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminTransferScheduled\",\"inputs\":[{\"name\":\"newAdmin\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"acceptSchedule\",\"type\":\"uint48\",\"indexed\":false,\"internalType\":\"uint48\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Paused\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleAdminChanged\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"previousAdminRole\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"newAdminRole\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleGranted\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleRevoked\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Unpaused\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"WorkflowMetadataSet\",\"inputs\":[{\"name\":\"workflowId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"name\",\"type\":\"bytes10\",\"indexed\":true,\"internalType\":\"bytes10\"},{\"name\":\"owner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"WorkflowSelectorSet\",\"inputs\":[{\"name\":\"workflowId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"selector\",\"type\":\"bytes4\",\"indexed\":true,\"internalType\":\"bytes4\"},{\"name\":\"isAllowlisted\",\"type\":\"bool\",\"indexed\":true,\"internalType\":\"bool\"}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"AccessControlBadConfirmation\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"AccessControlEnforcedDefaultAdminDelay\",\"inputs\":[{\"name\":\"schedule\",\"type\":\"uint48\",\"internalType\":\"uint48\"}]},{\"type\":\"error\",\"name\":\"AccessControlEnforcedDefaultAdminRules\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"AccessControlInvalidDefaultAdmin\",\"inputs\":[{\"name\":\"defaultAdmin\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"AccessControlUnauthorizedAccount\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"neededRole\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"type\":\"error\",\"name\":\"EnforcedPause\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ExpectedPause\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"SafeCastOverflowedUintDowncast\",\"inputs\":[{\"name\":\"bits\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"value\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"WorkflowRouter__CallFailed\",\"inputs\":[{\"name\":\"returnData\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]},{\"type\":\"error\",\"name\":\"WorkflowRouter__InvalidMetadataLength\",\"inputs\":[{\"name\":\"metadataLength\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"WorkflowRouter__MetadataMismatch\",\"inputs\":[{\"name\":\"workflowId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"workflowName\",\"type\":\"bytes10\",\"internalType\":\"bytes10\"},{\"name\":\"workflowOwner\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"WorkflowRouter__MetadataUnchanged\",\"inputs\":[{\"name\":\"workflowId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"name\",\"type\":\"bytes10\",\"internalType\":\"bytes10\"},{\"name\":\"owner\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"WorkflowRouter__MetadataZero\",\"inputs\":[{\"name\":\"workflowId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"workflowName\",\"type\":\"bytes10\",\"internalType\":\"bytes10\"},{\"name\":\"workflowOwner\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"WorkflowRouter__NoSelectors\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"WorkflowRouter__NoZeroAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"WorkflowRouter__NoZeroWorkflowId\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"WorkflowRouter__ReportTooShort\",\"inputs\":[{\"name\":\"reportLength\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"WorkflowRouter__SelectorNotAllowlisted\",\"inputs\":[{\"name\":\"workflowId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"selector\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"}]},{\"type\":\"error\",\"name\":\"WorkflowRouter__WorkflowNotRegistered\",\"inputs\":[{\"name\":\"workflowId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]}]",
+	ABI: "[{\"type\":\"constructor\",\"inputs\":[{\"name\":\"params\",\"type\":\"tuple\",\"internalType\":\"structWorkflowRouter.ConstructorParams\",\"components\":[{\"name\":\"initialDelay\",\"type\":\"uint48\",\"internalType\":\"uint48\"},{\"name\":\"defaultAdmin\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"pauser\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"unpauser\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"configOperator\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"keystoneForwarder\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"vault\",\"type\":\"address\",\"internalType\":\"address\"}]}],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"DEFAULT_ADMIN_ROLE\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"acceptDefaultAdminTransfer\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"beginDefaultAdminTransfer\",\"inputs\":[{\"name\":\"newAdmin\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"cancelDefaultAdminTransfer\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"changeDefaultAdminDelay\",\"inputs\":[{\"name\":\"newDelay\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"defaultAdmin\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"defaultAdminDelay\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"defaultAdminDelayIncreaseWait\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getAllowlistedWorkflowSelector\",\"inputs\":[{\"name\":\"workflowId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"selector\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"}],\"outputs\":[{\"name\":\"isAllowlisted\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRoleAdmin\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getThisChainSelector\",\"inputs\":[],\"outputs\":[{\"name\":\"chainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getVault\",\"inputs\":[],\"outputs\":[{\"name\":\"vault\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getWorkflowGeneration\",\"inputs\":[{\"name\":\"workflowId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"generation\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getWorkflowMetadata\",\"inputs\":[{\"name\":\"workflowId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"metadata\",\"type\":\"tuple\",\"internalType\":\"structIWorkflowRouter.WorkflowMetadata\",\"components\":[{\"name\":\"owner\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"name\",\"type\":\"bytes10\",\"internalType\":\"bytes10\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"grantRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"hasRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"onReport\",\"inputs\":[{\"name\":\"metadata\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"report\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"owner\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"pause\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"paused\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"pendingDefaultAdmin\",\"inputs\":[],\"outputs\":[{\"name\":\"newAdmin\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"schedule\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"pendingDefaultAdminDelay\",\"inputs\":[],\"outputs\":[{\"name\":\"newDelay\",\"type\":\"uint48\",\"internalType\":\"uint48\"},{\"name\":\"schedule\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"renounceRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"revokeRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"rollbackDefaultAdminDelay\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setWorkflowMetadata\",\"inputs\":[{\"name\":\"workflowId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"name\",\"type\":\"bytes10\",\"internalType\":\"bytes10\"},{\"name\":\"owner\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setWorkflowSelectors\",\"inputs\":[{\"name\":\"workflowId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"selectors\",\"type\":\"bytes4[]\",\"internalType\":\"bytes4[]\"},{\"name\":\"isAllowlisted\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"supportsInterface\",\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"unpause\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"DefaultAdminDelayChangeCanceled\",\"inputs\":[],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminDelayChangeScheduled\",\"inputs\":[{\"name\":\"newDelay\",\"type\":\"uint48\",\"indexed\":false,\"internalType\":\"uint48\"},{\"name\":\"effectSchedule\",\"type\":\"uint48\",\"indexed\":false,\"internalType\":\"uint48\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminTransferCanceled\",\"inputs\":[],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminTransferScheduled\",\"inputs\":[{\"name\":\"newAdmin\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"acceptSchedule\",\"type\":\"uint48\",\"indexed\":false,\"internalType\":\"uint48\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Paused\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleAdminChanged\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"previousAdminRole\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"newAdminRole\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleGranted\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleRevoked\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Unpaused\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"WorkflowMetadataSet\",\"inputs\":[{\"name\":\"workflowId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"name\",\"type\":\"bytes10\",\"indexed\":true,\"internalType\":\"bytes10\"},{\"name\":\"owner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"WorkflowSelectorSet\",\"inputs\":[{\"name\":\"workflowId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"selector\",\"type\":\"bytes4\",\"indexed\":true,\"internalType\":\"bytes4\"},{\"name\":\"isAllowlisted\",\"type\":\"bool\",\"indexed\":true,\"internalType\":\"bool\"}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"AccessControlBadConfirmation\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"AccessControlEnforcedDefaultAdminDelay\",\"inputs\":[{\"name\":\"schedule\",\"type\":\"uint48\",\"internalType\":\"uint48\"}]},{\"type\":\"error\",\"name\":\"AccessControlEnforcedDefaultAdminRules\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"AccessControlInvalidDefaultAdmin\",\"inputs\":[{\"name\":\"defaultAdmin\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"AccessControlUnauthorizedAccount\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"neededRole\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"type\":\"error\",\"name\":\"EnforcedPause\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ExpectedPause\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"SafeCastOverflowedUintDowncast\",\"inputs\":[{\"name\":\"bits\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"value\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"WorkflowRouter__CallFailed\",\"inputs\":[{\"name\":\"returnData\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]},{\"type\":\"error\",\"name\":\"WorkflowRouter__InvalidMetadataLength\",\"inputs\":[{\"name\":\"metadataLength\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"WorkflowRouter__InvalidReportDomain\",\"inputs\":[{\"name\":\"targetChainSelector\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"targetRouter\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"WorkflowRouter__MetadataMismatch\",\"inputs\":[{\"name\":\"workflowId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"workflowName\",\"type\":\"bytes10\",\"internalType\":\"bytes10\"},{\"name\":\"workflowOwner\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"WorkflowRouter__MetadataUnchanged\",\"inputs\":[{\"name\":\"workflowId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"name\",\"type\":\"bytes10\",\"internalType\":\"bytes10\"},{\"name\":\"owner\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"WorkflowRouter__MetadataZero\",\"inputs\":[{\"name\":\"workflowId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"workflowName\",\"type\":\"bytes10\",\"internalType\":\"bytes10\"},{\"name\":\"workflowOwner\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"WorkflowRouter__NoSelectors\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"WorkflowRouter__NoZeroAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"WorkflowRouter__NoZeroChainSelector\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"WorkflowRouter__NoZeroWorkflowId\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"WorkflowRouter__ReportExpired\",\"inputs\":[{\"name\":\"observedAt\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"timestamp\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"WorkflowRouter__ReportFromFuture\",\"inputs\":[{\"name\":\"observedAt\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"timestamp\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"WorkflowRouter__ReportTooShort\",\"inputs\":[{\"name\":\"reportLength\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"WorkflowRouter__SelectorNotAllowlisted\",\"inputs\":[{\"name\":\"workflowId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"selector\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"}]},{\"type\":\"error\",\"name\":\"WorkflowRouter__WorkflowNotRegistered\",\"inputs\":[{\"name\":\"workflowId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]}]",
 }
 
 // Structs
@@ -187,6 +187,11 @@ type WorkflowRouterInvalidMetadataLength struct {
 	MetadataLength *big.Int
 }
 
+type WorkflowRouterInvalidReportDomain struct {
+	TargetChainSelector uint64
+	TargetRouter        common.Address
+}
+
 type WorkflowRouterMetadataMismatch struct {
 	WorkflowId    [32]byte
 	WorkflowName  [10]byte
@@ -211,7 +216,20 @@ type WorkflowRouterNoSelectors struct {
 type WorkflowRouterNoZeroAddress struct {
 }
 
+type WorkflowRouterNoZeroChainSelector struct {
+}
+
 type WorkflowRouterNoZeroWorkflowId struct {
+}
+
+type WorkflowRouterReportExpired struct {
+	ObservedAt *big.Int
+	Timestamp  *big.Int
+}
+
+type WorkflowRouterReportFromFuture struct {
+	ObservedAt *big.Int
+	Timestamp  *big.Int
 }
 
 type WorkflowRouterReportTooShort struct {
@@ -366,6 +384,8 @@ type WorkflowRouterCodec interface {
 	DecodeGetAllowlistedWorkflowSelectorMethodOutput(data []byte) (bool, error)
 	EncodeGetRoleAdminMethodCall(in GetRoleAdminInput) ([]byte, error)
 	DecodeGetRoleAdminMethodOutput(data []byte) ([32]byte, error)
+	EncodeGetThisChainSelectorMethodCall() ([]byte, error)
+	DecodeGetThisChainSelectorMethodOutput(data []byte) (uint64, error)
 	EncodeGetVaultMethodCall() ([]byte, error)
 	DecodeGetVaultMethodOutput(data []byte) (common.Address, error)
 	EncodeGetWorkflowGenerationMethodCall(in GetWorkflowGenerationInput) ([]byte, error)
@@ -607,6 +627,28 @@ func (c *Codec) DecodeGetRoleAdminMethodOutput(data []byte) ([32]byte, error) {
 	var result [32]byte
 	if err := json.Unmarshal(jsonData, &result); err != nil {
 		return *new([32]byte), fmt.Errorf("failed to unmarshal to [32]byte: %w", err)
+	}
+
+	return result, nil
+}
+
+func (c *Codec) EncodeGetThisChainSelectorMethodCall() ([]byte, error) {
+	return c.abi.Pack("getThisChainSelector")
+}
+
+func (c *Codec) DecodeGetThisChainSelectorMethodOutput(data []byte) (uint64, error) {
+	vals, err := c.abi.Methods["getThisChainSelector"].Outputs.Unpack(data)
+	if err != nil {
+		return *new(uint64), err
+	}
+	jsonData, err := json.Marshal(vals[0])
+	if err != nil {
+		return *new(uint64), fmt.Errorf("failed to marshal ABI result: %w", err)
+	}
+
+	var result uint64
+	if err := json.Unmarshal(jsonData, &result); err != nil {
+		return *new(uint64), fmt.Errorf("failed to unmarshal to uint64: %w", err)
 	}
 
 	return result, nil
@@ -1794,6 +1836,32 @@ func (c WorkflowRouter) GetRoleAdmin(
 
 }
 
+func (c WorkflowRouter) GetThisChainSelector(
+	runtime cre.Runtime,
+	blockNumber *big.Int,
+) cre.Promise[uint64] {
+	calldata, err := c.Codec.EncodeGetThisChainSelectorMethodCall()
+	if err != nil {
+		return cre.PromiseFromResult[uint64](*new(uint64), err)
+	}
+
+	bn := bindings.FinalizedBlockNumber
+	if blockNumber != nil {
+		bn = pb.NewBigIntFromInt(blockNumber)
+	}
+
+	promise := cre.ThenPromise(cre.PromiseFromResult(bn, nil), func(bn *pb.BigInt) cre.Promise[*evm.CallContractReply] {
+		return c.client.CallContract(runtime, &evm.CallContractRequest{
+			Call:        &evm.CallMsg{To: c.Address.Bytes(), Data: calldata},
+			BlockNumber: bn,
+		})
+	})
+	return cre.Then(promise, func(response *evm.CallContractReply) (uint64, error) {
+		return c.Codec.DecodeGetThisChainSelectorMethodOutput(response.Data)
+	})
+
+}
+
 func (c WorkflowRouter) GetVault(
 	runtime cre.Runtime,
 	blockNumber *big.Int,
@@ -2338,6 +2406,38 @@ func (e *WorkflowRouterInvalidMetadataLength) Error() string {
 	return fmt.Sprintf("WorkflowRouterInvalidMetadataLength error: metadataLength=%v;", e.MetadataLength)
 }
 
+// DecodeWorkflowRouterInvalidReportDomainError decodes a WorkflowRouter__InvalidReportDomain error from revert data.
+func (c *WorkflowRouter) DecodeWorkflowRouterInvalidReportDomainError(data []byte) (*WorkflowRouterInvalidReportDomain, error) {
+	args := c.ABI.Errors["WorkflowRouter__InvalidReportDomain"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 2 {
+		return nil, fmt.Errorf("expected 2 values, got %d", len(values))
+	}
+
+	targetChainSelector, ok0 := values[0].(uint64)
+	if !ok0 {
+		return nil, fmt.Errorf("unexpected type for targetChainSelector in WorkflowRouterInvalidReportDomain error")
+	}
+
+	targetRouter, ok1 := values[1].(common.Address)
+	if !ok1 {
+		return nil, fmt.Errorf("unexpected type for targetRouter in WorkflowRouterInvalidReportDomain error")
+	}
+
+	return &WorkflowRouterInvalidReportDomain{
+		TargetChainSelector: targetChainSelector,
+		TargetRouter:        targetRouter,
+	}, nil
+}
+
+// Error implements the error interface for WorkflowRouterInvalidReportDomain.
+func (e *WorkflowRouterInvalidReportDomain) Error() string {
+	return fmt.Sprintf("WorkflowRouterInvalidReportDomain error: targetChainSelector=%v; targetRouter=%v;", e.TargetChainSelector, e.TargetRouter)
+}
+
 // DecodeWorkflowRouterMetadataMismatchError decodes a WorkflowRouter__MetadataMismatch error from revert data.
 func (c *WorkflowRouter) DecodeWorkflowRouterMetadataMismatchError(data []byte) (*WorkflowRouterMetadataMismatch, error) {
 	args := c.ABI.Errors["WorkflowRouter__MetadataMismatch"].Inputs
@@ -2490,6 +2590,25 @@ func (e *WorkflowRouterNoZeroAddress) Error() string {
 	return fmt.Sprintf("WorkflowRouterNoZeroAddress error:")
 }
 
+// DecodeWorkflowRouterNoZeroChainSelectorError decodes a WorkflowRouter__NoZeroChainSelector error from revert data.
+func (c *WorkflowRouter) DecodeWorkflowRouterNoZeroChainSelectorError(data []byte) (*WorkflowRouterNoZeroChainSelector, error) {
+	args := c.ABI.Errors["WorkflowRouter__NoZeroChainSelector"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 0 {
+		return nil, fmt.Errorf("expected 0 values, got %d", len(values))
+	}
+
+	return &WorkflowRouterNoZeroChainSelector{}, nil
+}
+
+// Error implements the error interface for WorkflowRouterNoZeroChainSelector.
+func (e *WorkflowRouterNoZeroChainSelector) Error() string {
+	return fmt.Sprintf("WorkflowRouterNoZeroChainSelector error:")
+}
+
 // DecodeWorkflowRouterNoZeroWorkflowIdError decodes a WorkflowRouter__NoZeroWorkflowId error from revert data.
 func (c *WorkflowRouter) DecodeWorkflowRouterNoZeroWorkflowIdError(data []byte) (*WorkflowRouterNoZeroWorkflowId, error) {
 	args := c.ABI.Errors["WorkflowRouter__NoZeroWorkflowId"].Inputs
@@ -2507,6 +2626,70 @@ func (c *WorkflowRouter) DecodeWorkflowRouterNoZeroWorkflowIdError(data []byte) 
 // Error implements the error interface for WorkflowRouterNoZeroWorkflowId.
 func (e *WorkflowRouterNoZeroWorkflowId) Error() string {
 	return fmt.Sprintf("WorkflowRouterNoZeroWorkflowId error:")
+}
+
+// DecodeWorkflowRouterReportExpiredError decodes a WorkflowRouter__ReportExpired error from revert data.
+func (c *WorkflowRouter) DecodeWorkflowRouterReportExpiredError(data []byte) (*WorkflowRouterReportExpired, error) {
+	args := c.ABI.Errors["WorkflowRouter__ReportExpired"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 2 {
+		return nil, fmt.Errorf("expected 2 values, got %d", len(values))
+	}
+
+	observedAt, ok0 := values[0].(*big.Int)
+	if !ok0 {
+		return nil, fmt.Errorf("unexpected type for observedAt in WorkflowRouterReportExpired error")
+	}
+
+	timestamp, ok1 := values[1].(*big.Int)
+	if !ok1 {
+		return nil, fmt.Errorf("unexpected type for timestamp in WorkflowRouterReportExpired error")
+	}
+
+	return &WorkflowRouterReportExpired{
+		ObservedAt: observedAt,
+		Timestamp:  timestamp,
+	}, nil
+}
+
+// Error implements the error interface for WorkflowRouterReportExpired.
+func (e *WorkflowRouterReportExpired) Error() string {
+	return fmt.Sprintf("WorkflowRouterReportExpired error: observedAt=%v; timestamp=%v;", e.ObservedAt, e.Timestamp)
+}
+
+// DecodeWorkflowRouterReportFromFutureError decodes a WorkflowRouter__ReportFromFuture error from revert data.
+func (c *WorkflowRouter) DecodeWorkflowRouterReportFromFutureError(data []byte) (*WorkflowRouterReportFromFuture, error) {
+	args := c.ABI.Errors["WorkflowRouter__ReportFromFuture"].Inputs
+	values, err := args.Unpack(data[4:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack error: %w", err)
+	}
+	if len(values) != 2 {
+		return nil, fmt.Errorf("expected 2 values, got %d", len(values))
+	}
+
+	observedAt, ok0 := values[0].(*big.Int)
+	if !ok0 {
+		return nil, fmt.Errorf("unexpected type for observedAt in WorkflowRouterReportFromFuture error")
+	}
+
+	timestamp, ok1 := values[1].(*big.Int)
+	if !ok1 {
+		return nil, fmt.Errorf("unexpected type for timestamp in WorkflowRouterReportFromFuture error")
+	}
+
+	return &WorkflowRouterReportFromFuture{
+		ObservedAt: observedAt,
+		Timestamp:  timestamp,
+	}, nil
+}
+
+// Error implements the error interface for WorkflowRouterReportFromFuture.
+func (e *WorkflowRouterReportFromFuture) Error() string {
+	return fmt.Sprintf("WorkflowRouterReportFromFuture error: observedAt=%v; timestamp=%v;", e.ObservedAt, e.Timestamp)
 }
 
 // DecodeWorkflowRouterReportTooShortError decodes a WorkflowRouter__ReportTooShort error from revert data.
@@ -2615,6 +2798,8 @@ func (c *WorkflowRouter) UnpackError(data []byte) (any, error) {
 		return c.DecodeWorkflowRouterCallFailedError(data)
 	case common.Bytes2Hex(c.ABI.Errors["WorkflowRouter__InvalidMetadataLength"].ID.Bytes()[:4]):
 		return c.DecodeWorkflowRouterInvalidMetadataLengthError(data)
+	case common.Bytes2Hex(c.ABI.Errors["WorkflowRouter__InvalidReportDomain"].ID.Bytes()[:4]):
+		return c.DecodeWorkflowRouterInvalidReportDomainError(data)
 	case common.Bytes2Hex(c.ABI.Errors["WorkflowRouter__MetadataMismatch"].ID.Bytes()[:4]):
 		return c.DecodeWorkflowRouterMetadataMismatchError(data)
 	case common.Bytes2Hex(c.ABI.Errors["WorkflowRouter__MetadataUnchanged"].ID.Bytes()[:4]):
@@ -2625,8 +2810,14 @@ func (c *WorkflowRouter) UnpackError(data []byte) (any, error) {
 		return c.DecodeWorkflowRouterNoSelectorsError(data)
 	case common.Bytes2Hex(c.ABI.Errors["WorkflowRouter__NoZeroAddress"].ID.Bytes()[:4]):
 		return c.DecodeWorkflowRouterNoZeroAddressError(data)
+	case common.Bytes2Hex(c.ABI.Errors["WorkflowRouter__NoZeroChainSelector"].ID.Bytes()[:4]):
+		return c.DecodeWorkflowRouterNoZeroChainSelectorError(data)
 	case common.Bytes2Hex(c.ABI.Errors["WorkflowRouter__NoZeroWorkflowId"].ID.Bytes()[:4]):
 		return c.DecodeWorkflowRouterNoZeroWorkflowIdError(data)
+	case common.Bytes2Hex(c.ABI.Errors["WorkflowRouter__ReportExpired"].ID.Bytes()[:4]):
+		return c.DecodeWorkflowRouterReportExpiredError(data)
+	case common.Bytes2Hex(c.ABI.Errors["WorkflowRouter__ReportFromFuture"].ID.Bytes()[:4]):
+		return c.DecodeWorkflowRouterReportFromFutureError(data)
 	case common.Bytes2Hex(c.ABI.Errors["WorkflowRouter__ReportTooShort"].ID.Bytes()[:4]):
 		return c.DecodeWorkflowRouterReportTooShortError(data)
 	case common.Bytes2Hex(c.ABI.Errors["WorkflowRouter__SelectorNotAllowlisted"].ID.Bytes()[:4]):

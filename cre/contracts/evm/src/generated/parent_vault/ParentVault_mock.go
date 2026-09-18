@@ -29,6 +29,8 @@ type ParentVaultMock struct {
 	DefaultAdminDelayIncreaseWait      func() (*big.Int, error)
 	GetActiveProtocolAdapter           func() (common.Address, error)
 	GetAdapterRegistry                 func() (common.Address, error)
+	GetAllowlistEnabled                func() (bool, error)
+	GetAllowlistedUser                 func(GetAllowlistedUserInput) (bool, error)
 	GetAsset                           func() (common.Address, error)
 	GetAssetPrecision                  func() (*big.Int, error)
 	GetCCVsAndFinalityConfig           func(GetCCVsAndFinalityConfigInput) (GetCCVsAndFinalityConfigOutput, error)
@@ -40,7 +42,8 @@ type ParentVaultMock struct {
 	GetEpochNonce                      func() (*big.Int, error)
 	GetInitialActiveProtocolAdapterSet func() (bool, error)
 	GetLink                            func() (common.Address, error)
-	GetMinDepositAmount                func() (*big.Int, error)
+	GetMinAssetAmount                  func() (*big.Int, error)
+	GetParentOperationalState          func() (TypesParentOperationalState, error)
 	GetRebalance                       func() (TypesRebalance, error)
 	GetRebalanceDepositRecovery        func() (TypesRebalanceDepositRecovery, error)
 	GetRecoveryMode                    func() (uint8, error)
@@ -143,6 +146,40 @@ func NewParentVaultMock(address common.Address, clientMock *evmmock.ClientCapabi
 				return nil, err
 			}
 			return abi.Methods["getAdapterRegistry"].Outputs.Pack(result)
+		},
+		string(abi.Methods["getAllowlistEnabled"].ID[:4]): func(payload []byte) ([]byte, error) {
+			if mock.GetAllowlistEnabled == nil {
+				return nil, errors.New("getAllowlistEnabled method not mocked")
+			}
+			result, err := mock.GetAllowlistEnabled()
+			if err != nil {
+				return nil, err
+			}
+			return abi.Methods["getAllowlistEnabled"].Outputs.Pack(result)
+		},
+		string(abi.Methods["getAllowlistedUser"].ID[:4]): func(payload []byte) ([]byte, error) {
+			if mock.GetAllowlistedUser == nil {
+				return nil, errors.New("getAllowlistedUser method not mocked")
+			}
+			inputs := abi.Methods["getAllowlistedUser"].Inputs
+
+			values, err := inputs.Unpack(payload)
+			if err != nil {
+				return nil, errors.New("Failed to unpack payload")
+			}
+			if len(values) != 1 {
+				return nil, errors.New("expected 1 input value")
+			}
+
+			args := GetAllowlistedUserInput{
+				User: values[0].(common.Address),
+			}
+
+			result, err := mock.GetAllowlistedUser(args)
+			if err != nil {
+				return nil, err
+			}
+			return abi.Methods["getAllowlistedUser"].Outputs.Pack(result)
 		},
 		string(abi.Methods["getAsset"].ID[:4]): func(payload []byte) ([]byte, error) {
 			if mock.GetAsset == nil {
@@ -331,15 +368,25 @@ func NewParentVaultMock(address common.Address, clientMock *evmmock.ClientCapabi
 			}
 			return abi.Methods["getLink"].Outputs.Pack(result)
 		},
-		string(abi.Methods["getMinDepositAmount"].ID[:4]): func(payload []byte) ([]byte, error) {
-			if mock.GetMinDepositAmount == nil {
-				return nil, errors.New("getMinDepositAmount method not mocked")
+		string(abi.Methods["getMinAssetAmount"].ID[:4]): func(payload []byte) ([]byte, error) {
+			if mock.GetMinAssetAmount == nil {
+				return nil, errors.New("getMinAssetAmount method not mocked")
 			}
-			result, err := mock.GetMinDepositAmount()
+			result, err := mock.GetMinAssetAmount()
 			if err != nil {
 				return nil, err
 			}
-			return abi.Methods["getMinDepositAmount"].Outputs.Pack(result)
+			return abi.Methods["getMinAssetAmount"].Outputs.Pack(result)
+		},
+		string(abi.Methods["getParentOperationalState"].ID[:4]): func(payload []byte) ([]byte, error) {
+			if mock.GetParentOperationalState == nil {
+				return nil, errors.New("getParentOperationalState method not mocked")
+			}
+			result, err := mock.GetParentOperationalState()
+			if err != nil {
+				return nil, err
+			}
+			return abi.Methods["getParentOperationalState"].Outputs.Pack(result)
 		},
 		string(abi.Methods["getRebalance"].ID[:4]): func(payload []byte) ([]byte, error) {
 			if mock.GetRebalance == nil {

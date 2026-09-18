@@ -27,7 +27,7 @@ contract HelperConfig is Script {
     uint64 internal constant BASE_SEPOLIA_CHAIN_SELECTOR = 10344971235874465080;
     uint256 internal constant INITIAL_DEFAULT_CCIP_GAS_LIMIT = 500_000;
 
-    bytes32 internal constant STAGING_WORKFLOW_ID = 0x008ed53617a116cbfa73849a3eb22ab73099b7c30e14a54c6a34116c19a1e4da;
+    bytes32 internal constant STAGING_WORKFLOW_ID = 0x00595be0d47f64eefceafc17f326e58805914c379e89d2a1684c3a3f786233fa;
     bytes10 internal constant STAGING_WORKFLOW_NAME = bytes10("67d6954c97");
 
     /*//////////////////////////////////////////////////////////////
@@ -457,7 +457,7 @@ contract HelperConfig is Script {
                 parentChainSelector: BASE_SEPOLIA_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
             }),
-            cre: _getUndeployedCreConfig(0x76c9cf548b4179F8901cda1f8623568b58215E62),
+            cre: _getStagingCreConfig(0x76c9cf548b4179F8901cda1f8623568b58215E62),
             deployed: DeployedConfig({
                 vaultProxy: 0xDc0239d860DC5b3356e9Ab260B56cF69e9Cfb92a,
                 workflowRouter: 0x079A90B7761FF10F455BC2188392b2ae765F8DAd

@@ -43,6 +43,8 @@ staging-settings:
       url: ${CRE_SECRET_RPC_OPTIMISM_SEPOLIA}
     - chain-name: avalanche-testnet-fuji
       url: ${CRE_SECRET_RPC_AVALANCHE_FUJI}
+    - chain-name: polygon-testnet-amoy
+      url: ${CRE_SECRET_RPC_POLYGON_AMOY}
     - chain-name: ethereum-mainnet
       url: ${CRE_SECRET_RPC_MAINNET}
 

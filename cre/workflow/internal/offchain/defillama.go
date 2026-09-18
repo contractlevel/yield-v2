@@ -27,6 +27,7 @@ const (
 	defiLlamaRelayBearerTokenSecret = "DEFILLAMA_RELAY_BEARER_TOKEN"
 	defiLlamaRequestTimeout         = 10 * time.Second
 	defiLlamaMaxResponseBytes       = 100 << 10
+	defiLlamaMaxSnapshotAgeSeconds  = int64(15 * 60)
 	maxJSONNestingDepth             = 256
 	minPoolAPY                      = 0.0
 	maxPoolAPY                      = 1000.0
@@ -70,6 +71,7 @@ type fetchParams struct {
 	ActiveProtocolId [32]byte
 	ActiveChainName  string
 	BearerToken      string
+	ObservedAt       int64
 }
 
 // fetchResult holds the output of the node-mode fetch function.
@@ -106,6 +108,7 @@ func FetchAndSelectPools(runtime cre.Runtime, cfg Config, activeProtocolId [32]b
 		ActiveProtocolId: activeProtocolId,
 		ActiveChainName:  activeChainName,
 		BearerToken:      secret.Value,
+		ObservedAt:       runtime.Now().Unix(),
 	}
 
 	raw, err := crehttp.SendRequest(params, runtime, defiLlamaHTTPClient, fetchAndParse, cre.ConsensusIdenticalAggregation[fetchResult]()).Await()
@@ -158,24 +161,35 @@ func fetchAndParseWithRequester(params fetchParams, requester defiLlamaRequester
 		return fetchResult{}, fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}
 
-	body, err := readLimited(bytes.NewReader(resp.Body), defiLlamaMaxResponseBytes, "relay response body")
-	if err != nil {
+	if len(resp.Body) > defiLlamaMaxResponseBytes {
+		return fetchResult{}, fmt.Errorf("relay response body exceeds %d bytes", defiLlamaMaxResponseBytes)
+	}
+
+	if err := validateSnapshotFreshness(resp.Body, params.ObservedAt); err != nil {
 		return fetchResult{}, err
 	}
-
-	return parsePools(bytes.NewReader(body), params.Config, params.ActiveProtocolId, params.ActiveChainName)
+	return parsePools(bytes.NewReader(resp.Body), params.Config, params.ActiveProtocolId, params.ActiveChainName)
 }
 
-func readLimited(r io.Reader, limit int64, label string) ([]byte, error) {
-	limited := io.LimitReader(r, limit+1)
-	body, err := io.ReadAll(limited)
-	if err != nil {
-		return nil, fmt.Errorf("read %s: %w", label, err)
+// The DON timestamp is passed into node mode so every node applies the same age limit.
+// refreshedAt measures relay fetch time, not when DefiLlama calculated its APYs.
+func validateSnapshotFreshness(body []byte, observedAt int64) error {
+	var metadata struct {
+		RefreshedAt *int64 `json:"refreshedAt"`
 	}
-	if int64(len(body)) > limit {
-		return nil, fmt.Errorf("%s exceeds %d bytes", label, limit)
+	if err := json.Unmarshal(body, &metadata); err != nil {
+		return fmt.Errorf("decode snapshot metadata: %w", err)
 	}
-	return body, nil
+	if observedAt < 0 || metadata.RefreshedAt == nil || *metadata.RefreshedAt < 0 {
+		return fmt.Errorf("invalid snapshot refresh timestamp")
+	}
+	if *metadata.RefreshedAt > observedAt {
+		return fmt.Errorf("snapshot refresh timestamp is in the future")
+	}
+	if observedAt-*metadata.RefreshedAt > defiLlamaMaxSnapshotAgeSeconds {
+		return fmt.Errorf("snapshot is older than 15 minutes")
+	}
+	return nil
 }
 
 // parsePools streams the DefiLlama JSON response, filtering and selecting pools.
@@ -196,10 +210,8 @@ func parsePools(r io.Reader, cfg Config, activeProtocolId [32]byte, activeChainN
 		if err != nil {
 			return fetchResult{}, fmt.Errorf("read top-level key: %w", err)
 		}
-		key, ok := t.(string)
-		if !ok {
-			return fetchResult{}, fmt.Errorf("expected top-level object key")
-		}
+		// encoding/json guarantees string keys inside an object.
+		key := t.(string)
 
 		if !strings.EqualFold(key, "data") {
 			if err := skipJSONValue(decoder); err != nil {

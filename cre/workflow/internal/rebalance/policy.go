@@ -21,10 +21,3 @@ func NeedRebalance(optimal, current *offchain.Pool) bool {
 	}
 	return optimal.Apy-current.Apy >= DifferentialThreshold
 }
-
-func RebalanceCooldownElapsed(lastCompletedTimestamp, now int64) bool {
-	if lastCompletedTimestamp <= 0 {
-		return true
-	}
-	return now >= lastCompletedTimestamp+minRebalanceIntervalSeconds
-}

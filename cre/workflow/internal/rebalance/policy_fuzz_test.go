@@ -15,28 +15,11 @@ func Fuzz_NeedRebalance_threshold(f *testing.F) {
 	f.Add(0.0, 0.0)
 
 	f.Fuzz(func(t *testing.T, optimalApy, currentApy float64) {
-		if math.IsNaN(optimalApy) || math.IsNaN(currentApy) {
-			t.Skip("NaN comparisons are not useful for threshold assertions")
-		}
-
 		got := NeedRebalance(&offchain.Pool{Apy: optimalApy}, &offchain.Pool{Apy: currentApy})
-		require.Equal(t, optimalApy-currentApy >= DifferentialThreshold, got, "unexpected rebalance decision")
-	})
-}
-
-func Fuzz_RebalanceCooldownElapsed(f *testing.F) {
-	f.Add(int64(0), int64(1))
-	f.Add(int64(-1), int64(1))
-	f.Add(int64(100), int64(100+minRebalanceIntervalSeconds-1))
-	f.Add(int64(100), int64(100+minRebalanceIntervalSeconds))
-
-	f.Fuzz(func(t *testing.T, lastCompletedTimestamp, now int64) {
-		got := RebalanceCooldownElapsed(lastCompletedTimestamp, now)
-		if lastCompletedTimestamp <= 0 {
-			require.True(t, got, "expected unset cooldown timestamp to pass")
+		if math.IsNaN(optimalApy) || math.IsNaN(currentApy) || optimalApy < 0 || currentApy < 0 || optimalApy > 1000 || currentApy > 1000 {
+			require.False(t, got, "invalid APY must not trigger a rebalance")
 			return
 		}
-
-		require.Equal(t, now >= lastCompletedTimestamp+minRebalanceIntervalSeconds, got, "unexpected cooldown decision")
+		require.Equal(t, optimalApy-currentApy >= DifferentialThreshold, got, "unexpected rebalance decision")
 	})
 }

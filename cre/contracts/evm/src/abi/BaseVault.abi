@@ -642,7 +642,7 @@
     ],
     "outputs": [
       {
-        "name": "",
+        "name": "isSupported",
         "type": "bool",
         "internalType": "bool"
       }

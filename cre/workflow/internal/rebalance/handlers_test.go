@@ -5,732 +5,226 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/smartcontractkit/cre-sdk-go/capabilities/blockchain/evm"
-	"github.com/smartcontractkit/cre-sdk-go/cre"
-	"github.com/smartcontractkit/cre-sdk-go/cre/testutils"
-	"github.com/stretchr/testify/require"
-
 	"cre/contracts/evm/src/generated/child_vault"
 	"cre/contracts/evm/src/generated/parent_vault"
 	"cre/workflow/internal/helper"
 	"cre/workflow/internal/offchain"
 	"cre/workflow/internal/onchain"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/smartcontractkit/cre-sdk-go/capabilities/blockchain/evm"
+	"github.com/smartcontractkit/cre-sdk-go/cre"
+	"github.com/smartcontractkit/cre-sdk-go/cre/testutils"
+	"github.com/stretchr/testify/require"
 )
 
-const (
-	parentChainSelector uint64 = 1
-	childChainSelector  uint64 = 2
-)
-
-var (
-	aaveProtocolID     = offchain.PoolToProtocolId("aave-v3")
-	compoundProtocolID = offchain.PoolToProtocolId("compound-v3")
-
-	aaveParentPool = &offchain.Pool{Chain: "Arbitrum", Project: "aave-v3", Symbol: "USDC", Apy: 5.0}
-	compChildPool  = &offchain.Pool{Chain: "Ethereum", Project: "compound-v3", Symbol: "USDC", Apy: 7.0}
-)
-
-type fakeParentCodec struct {
-	initiateErr        error
-	initiateCalldata   []byte
-	initiateInput      parent_vault.InitiateRebalanceInput
-	rebalanceInitiated *parent_vault.RebalanceInitiatedDecoded
-	decodeInitiatedErr error
-	depositSuccess     *parent_vault.RebalanceDepositSuccessDecoded
-	decodeDepositErr   error
-	completeErr        error
-	completeCalldata   []byte
-}
-
-func (f *fakeParentCodec) EncodeInitiateRebalanceMethodCall(in parent_vault.InitiateRebalanceInput) ([]byte, error) {
-	f.initiateInput = in
-	if f.initiateErr != nil {
-		return nil, f.initiateErr
-	}
-	return f.initiateCalldata, nil
-}
-
-func (f *fakeParentCodec) DecodeRebalanceInitiated(*evm.Log) (*parent_vault.RebalanceInitiatedDecoded, error) {
-	if f.decodeInitiatedErr != nil {
-		return nil, f.decodeInitiatedErr
-	}
-	return f.rebalanceInitiated, nil
-}
-
-func (f *fakeParentCodec) DecodeRebalanceDepositSuccess(*evm.Log) (*parent_vault.RebalanceDepositSuccessDecoded, error) {
-	if f.decodeDepositErr != nil {
-		return nil, f.decodeDepositErr
-	}
-	return f.depositSuccess, nil
-}
-
-func (f *fakeParentCodec) EncodeCompleteRebalanceMethodCall() ([]byte, error) {
-	if f.completeErr != nil {
-		return nil, f.completeErr
-	}
-	return f.completeCalldata, nil
-}
-
-type fakeChildCodec struct {
-	executeErr      error
-	executeCalldata []byte
-	executeInput    child_vault.ExecuteRebalanceInput
-}
-
-func (f *fakeChildCodec) EncodeExecuteRebalanceMethodCall(in child_vault.ExecuteRebalanceInput) ([]byte, error) {
-	f.executeInput = in
-	if f.executeErr != nil {
-		return nil, f.executeErr
-	}
-	return f.executeCalldata, nil
-}
-
-type fakeParentVault struct{}
-
-func (fakeParentVault) GetTVL(cre.Runtime, *big.Int) cre.Promise[*big.Int] {
-	return cre.PromiseFromResult(big.NewInt(0), nil)
-}
-
-func (fakeParentVault) GetRecoveryMode(cre.Runtime, *big.Int) cre.Promise[uint8] {
-	return cre.PromiseFromResult(uint8(0), nil)
-}
-
-func (fakeParentVault) GetRebalance(cre.Runtime, *big.Int) cre.Promise[parent_vault.TypesRebalance] {
-	return cre.PromiseFromResult(parent_vault.TypesRebalance{}, nil)
-}
-
-func (fakeParentVault) GetEpochNonce(cre.Runtime, *big.Int) cre.Promise[*big.Int] {
-	return cre.PromiseFromResult(big.NewInt(0), nil)
-}
-
-func (fakeParentVault) GetEpoch(cre.Runtime, parent_vault.GetEpochInput, *big.Int) cre.Promise[parent_vault.TypesEpoch] {
-	return cre.PromiseFromResult(parent_vault.TypesEpoch{}, nil)
-}
-
-func testConfig() *helper.Config {
+func newTestConfig() *helper.Config {
+	decimals := uint8(6)
 	return &helper.Config{
-		BlockNumber: -2,
-		DefiLlama: helper.DefiLlama{
-			PoolIDs:  []string{"aa70268e-4b52-42bf-a116-608b370f9501", "d9c395b9-00d0-4426-a6b3-572a6dd68e54"},
-			Projects: []string{"aave-v3", "compound-v3"},
-			Symbols:  []string{"USDC"},
-		},
+		AssetDecimals: &decimals,
+		DefiLlama:     helper.DefiLlama{PoolIDs: []string{"a", "b"}, Projects: []string{"aave-v3", "compound-v3"}, Symbols: []string{"USDC"}},
 		Evms: []helper.EvmConfig{
-			{
-				IsParent:              true,
-				ChainName:             "ethereum-mainnet-arbitrum-1",
-				DefiLlamaChainName:    "Arbitrum",
-				ChainSelector:         parentChainSelector,
-				VaultAddress:          "0x0000000000000000000000000000000000000003",
-				WorkflowRouterAddress: "0x0000000000000000000000000000000000000004",
-				GasLimit:              600_000,
+			{IsParent: true, ChainSelector: 1, VaultAddress: "0x0000000000000000000000000000000000000001", DefiLlamaChainName: "Base"},
+			{ChainSelector: 2, VaultAddress: "0x0000000000000000000000000000000000000002", DefiLlamaChainName: "Ethereum"},
+			{ChainSelector: 3, VaultAddress: "0x0000000000000000000000000000000000000003", DefiLlamaChainName: "Arbitrum"},
+		},
+	}
+}
+
+func newTestSnapshot() *onchain.Snapshot {
+	return &onchain.Snapshot{
+		ObservedAt: 10_000,
+		Parent: parent_vault.TypesParentOperationalState{
+			CurrentEpochNonce: big.NewInt(2),
+			PreviousEpoch:     parent_vault.TypesEpoch{Status: onchain.EpochClaimable},
+			Tvl:               big.NewInt(100),
+			Rebalance: parent_vault.TypesRebalance{
+				Nonce:                           big.NewInt(7),
+				LastRebalanceCompletedTimestamp: big.NewInt(1),
+				ActiveStrategy:                  parent_vault.TypesStrategy{ProtocolId: offchain.PoolToProtocolId("aave-v3"), ChainSelector: 2},
+				PendingStrategy:                 parent_vault.TypesStrategy{ProtocolId: offchain.PoolToProtocolId("compound-v3"), ChainSelector: 3},
 			},
-			{
-				ChainName:             "ethereum-mainnet",
-				DefiLlamaChainName:    "Ethereum",
-				ChainSelector:         childChainSelector,
-				VaultAddress:          "0x0000000000000000000000000000000000000001",
-				WorkflowRouterAddress: "0x0000000000000000000000000000000000000002",
-				GasLimit:              500_000,
-			},
+		},
+		Children: map[uint64]child_vault.TypesChildOperationalState{
+			2: {LastHandledRebalanceNonce: big.NewInt(2)},
+			3: {LastHandledRebalanceNonce: big.NewInt(0)},
 		},
 	}
 }
 
-func resetSeams(t *testing.T) {
-	t.Helper()
-
-	origParentCodec := newParentCodec
-	origChildCodec := newChildCodec
-	origParentBinding := newParentVaultBinding
-	origCronDeps := defaultCronDeps
-	origExecutorDeps := defaultExecutorDeps
-	origCompleterDeps := defaultCompleterDeps
-	t.Cleanup(func() {
-		newParentCodec = origParentCodec
-		newChildCodec = origChildCodec
-		newParentVaultBinding = origParentBinding
-		defaultCronDeps = origCronDeps
-		defaultExecutorDeps = origExecutorDeps
-		defaultCompleterDeps = origCompleterDeps
-	})
+type testReportRecorder struct {
+	calls      int
+	target     helper.EvmConfig
+	observedAt int64
+	calldata   []byte
+	err        error
 }
 
-func installParentCodec(t *testing.T, codec parentCodec) {
-	t.Helper()
-	newParentCodec = func() (parentCodec, error) { return codec, nil }
+func (r *testReportRecorder) submit(_ cre.Runtime, target helper.EvmConfig, observedAt int64, calldata []byte) error {
+	r.calls++
+	r.target, r.observedAt, r.calldata = target, observedAt, calldata
+	return r.err
 }
 
-func installChildCodec(t *testing.T, codec childCodec) {
-	t.Helper()
-	newChildCodec = func() (childCodec, error) { return codec, nil }
-}
-
-func installParentBinding(t *testing.T) {
-	t.Helper()
-	newParentVaultBinding = func(*evm.Client, string) (onchain.ParentVaultInterface, error) {
-		return fakeParentVault{}, nil
+func newTestRebalanceLog(config helper.EvmConfig, signature string, topics ...[]byte) *evm.Log {
+	log := &evm.Log{Address: common.HexToAddress(config.VaultAddress).Bytes(), Topics: [][]byte{crypto.Keccak256([]byte(signature))}}
+	for _, topic := range topics {
+		log.Topics = append(log.Topics, common.LeftPadBytes(topic, 32))
 	}
+	return log
 }
 
-func rebalanceState(protocolID [32]byte, chainSelector uint64) parent_vault.TypesRebalance {
-	return parent_vault.TypesRebalance{
-		ActiveStrategy: parent_vault.TypesStrategy{
-			ProtocolId:    protocolID,
-			ChainSelector: chainSelector,
-		},
-	}
-}
-
-func baseCronDeps() CronDeps {
-	return CronDeps{
-		FetchAndSelectPools: func(cre.Runtime, offchain.Config, [32]byte, uint64) (*offchain.Pool, *offchain.Pool, error) {
-			return compChildPool, aaveParentPool, nil
-		},
-		GetRebalance: func(cre.Runtime, onchain.ParentVaultInterface, *big.Int) (parent_vault.TypesRebalance, error) {
-			return rebalanceState(aaveProtocolID, parentChainSelector), nil
-		},
-		GetEpochNonce: func(cre.Runtime, onchain.ParentVaultInterface, *big.Int) (*big.Int, error) {
-			return big.NewInt(2), nil
-		},
-		GetEpoch: func(cre.Runtime, onchain.ParentVaultInterface, *big.Int, *big.Int) (parent_vault.TypesEpoch, error) {
-			return parent_vault.TypesEpoch{Status: 3}, nil
-		},
-		SubmitReport: func(cre.Runtime, *evm.Client, common.Address, []byte, uint64) error {
-			return nil
-		},
-	}
-}
-
-func Test_OnCronTrigger_wrapper(t *testing.T) {
-	resetSeams(t)
-	parentCodec := &fakeParentCodec{initiateCalldata: []byte{1}}
-	installParentCodec(t, parentCodec)
-	installParentBinding(t)
-	defaultCronDeps = baseCronDeps()
-
-	result, err := OnCronTrigger(testConfig(), testutils.NewRuntime(t, nil), nil)
-	require.NoError(t, err, "expected wrapper to use default deps")
-	require.Equal(t, "initiated rebalance", result.Result)
-}
-
-func Test_DefaultSeams(t *testing.T) {
-	resetSeams(t)
-
-	parentCodec, err := newParentCodec()
-	require.NoError(t, err, "expected default parent codec constructor to succeed")
-	require.NotNil(t, parentCodec, "expected parent codec")
-
-	childCodec, err := newChildCodec()
-	require.NoError(t, err, "expected default child codec constructor to succeed")
-	require.NotNil(t, childCodec, "expected child codec")
-
-	binding, err := newParentVaultBinding(nil, "0x0000000000000000000000000000000000000001")
-	require.NoError(t, err, "expected default parent binding constructor to succeed")
-	require.NotNil(t, binding, "expected parent binding")
-}
-
-func Test_OnCronTrigger_withDeps(t *testing.T) {
-	tests := []struct {
-		name       string
-		config     *helper.Config
-		codec      *fakeParentCodec
-		codecErr   error
-		bindingErr error
-		deps       CronDeps
-		wantResult string
-		wantErr    string
+func TestRebalanceCronChecksAndCalldata(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		change func(*onchain.Snapshot)
+		reason string
 	}{
-		{
-			name:     "parent codec error",
-			codecErr: errors.New("codec failed"),
-			deps:     baseCronDeps(),
-			wantErr:  "init parent vault codec: codec failed",
-		},
-		{
-			name:    "no parent",
-			config:  &helper.Config{Evms: []helper.EvmConfig{{ChainSelector: childChainSelector}}},
-			codec:   &fakeParentCodec{},
-			deps:    baseCronDeps(),
-			wantErr: "no parent chain configured",
-		},
-		{
-			name:       "bind parent error",
-			codec:      &fakeParentCodec{},
-			bindingErr: errors.New("bind failed"),
-			deps:       baseCronDeps(),
-			wantErr:    "bind parent vault: bind failed",
-		},
-		{
-			name:  "get rebalance error",
-			codec: &fakeParentCodec{},
-			deps: func() CronDeps {
-				deps := baseCronDeps()
-				deps.GetRebalance = func(cre.Runtime, onchain.ParentVaultInterface, *big.Int) (parent_vault.TypesRebalance, error) {
-					return parent_vault.TypesRebalance{}, errors.New("read failed")
-				}
-				return deps
-			}(),
-			wantErr: "get rebalance: read failed",
-		},
-		{
-			name:  "rebalance in progress",
-			codec: &fakeParentCodec{},
-			deps: func() CronDeps {
-				deps := baseCronDeps()
-				deps.GetRebalance = func(cre.Runtime, onchain.ParentVaultInterface, *big.Int) (parent_vault.TypesRebalance, error) {
-					return parent_vault.TypesRebalance{State: 1}, nil
-				}
-				deps.FetchAndSelectPools = func(cre.Runtime, offchain.Config, [32]byte, uint64) (*offchain.Pool, *offchain.Pool, error) {
-					t.Fatal("FetchAndSelectPools must not be called")
-					return nil, nil, nil
-				}
-				return deps
-			}(),
-			wantResult: "no-op: rebalance in progress",
-		},
-		{
-			name:  "get epoch nonce error",
-			codec: &fakeParentCodec{},
-			deps: func() CronDeps {
-				deps := baseCronDeps()
-				deps.GetEpochNonce = func(cre.Runtime, onchain.ParentVaultInterface, *big.Int) (*big.Int, error) {
-					return nil, errors.New("read failed")
-				}
-				return deps
-			}(),
-			wantErr: "get epoch nonce: read failed",
-		},
-		{
-			name:  "nil epoch nonce",
-			codec: &fakeParentCodec{},
-			deps: func() CronDeps {
-				deps := baseCronDeps()
-				deps.GetEpochNonce = func(cre.Runtime, onchain.ParentVaultInterface, *big.Int) (*big.Int, error) {
-					return nil, nil
-				}
-				return deps
-			}(),
-			wantErr: "get epoch nonce: nil epoch nonce",
-		},
-		{
-			name:  "no completed epoch",
-			codec: &fakeParentCodec{},
-			deps: func() CronDeps {
-				deps := baseCronDeps()
-				deps.GetEpochNonce = func(cre.Runtime, onchain.ParentVaultInterface, *big.Int) (*big.Int, error) {
-					return big.NewInt(1), nil
-				}
-				return deps
-			}(),
-			wantResult: "no-op: no completed epoch",
-		},
-		{
-			name:  "get previous epoch error",
-			codec: &fakeParentCodec{},
-			deps: func() CronDeps {
-				deps := baseCronDeps()
-				deps.GetEpoch = func(cre.Runtime, onchain.ParentVaultInterface, *big.Int, *big.Int) (parent_vault.TypesEpoch, error) {
-					return parent_vault.TypesEpoch{}, errors.New("read failed")
-				}
-				return deps
-			}(),
-			wantErr: "get previous epoch: read failed",
-		},
-		{
-			name:  "epoch executing",
-			codec: &fakeParentCodec{},
-			deps: func() CronDeps {
-				deps := baseCronDeps()
-				deps.GetEpoch = func(_ cre.Runtime, _ onchain.ParentVaultInterface, epochNonce *big.Int, _ *big.Int) (parent_vault.TypesEpoch, error) {
-					require.Equal(t, big.NewInt(1), epochNonce)
-					return parent_vault.TypesEpoch{Status: epochStatusExecuting}, nil
-				}
-				deps.FetchAndSelectPools = func(cre.Runtime, offchain.Config, [32]byte, uint64) (*offchain.Pool, *offchain.Pool, error) {
-					t.Fatal("FetchAndSelectPools must not be called while an epoch is executing")
-					return nil, nil, nil
-				}
-				return deps
-			}(),
-			wantResult: "no-op: epoch executing",
-		},
-		{
-			name:  "fetch error",
-			codec: &fakeParentCodec{},
-			deps: func() CronDeps {
-				deps := baseCronDeps()
-				deps.FetchAndSelectPools = func(cre.Runtime, offchain.Config, [32]byte, uint64) (*offchain.Pool, *offchain.Pool, error) {
-					return nil, nil, errors.New("fetch failed")
-				}
-				return deps
-			}(),
-			wantErr: "fetch pools: fetch failed",
-		},
-		{
-			name:  "rebalance cooldown active",
-			codec: &fakeParentCodec{},
-			deps: func() CronDeps {
-				deps := baseCronDeps()
-				deps.GetRebalance = func(cre.Runtime, onchain.ParentVaultInterface, *big.Int) (parent_vault.TypesRebalance, error) {
-					rebalance := rebalanceState(aaveProtocolID, parentChainSelector)
-					rebalance.LastRebalanceCompletedTimestamp = big.NewInt(1<<62 - minRebalanceIntervalSeconds)
-					return rebalance, nil
-				}
-				deps.FetchAndSelectPools = func(cre.Runtime, offchain.Config, [32]byte, uint64) (*offchain.Pool, *offchain.Pool, error) {
-					t.Fatal("FetchAndSelectPools must not be called during cooldown")
-					return nil, nil, nil
-				}
-				return deps
-			}(),
-			wantResult: "no-op: rebalance cooldown active",
-		},
-		{
-			name:  "no approved pool",
-			codec: &fakeParentCodec{},
-			deps: func() CronDeps {
-				deps := baseCronDeps()
-				deps.FetchAndSelectPools = func(cre.Runtime, offchain.Config, [32]byte, uint64) (*offchain.Pool, *offchain.Pool, error) {
-					return nil, nil, nil
-				}
-				return deps
-			}(),
-			wantResult: "no-op: no approved pool",
-		},
-		{
-			name:  "unknown best chain",
-			codec: &fakeParentCodec{},
-			deps: func() CronDeps {
-				deps := baseCronDeps()
-				deps.FetchAndSelectPools = func(cre.Runtime, offchain.Config, [32]byte, uint64) (*offchain.Pool, *offchain.Pool, error) {
-					return &offchain.Pool{Chain: "Base", Project: "aave-v3", Symbol: "USDC", Apy: 9}, nil, nil
-				}
-				return deps
-			}(),
-			wantErr: `map best pool chain: no chain selector for DefiLlama chain "Base"`,
-		},
-		{
-			name:  "already optimal",
-			codec: &fakeParentCodec{},
-			deps: func() CronDeps {
-				deps := baseCronDeps()
-				deps.FetchAndSelectPools = func(cre.Runtime, offchain.Config, [32]byte, uint64) (*offchain.Pool, *offchain.Pool, error) {
-					return aaveParentPool, aaveParentPool, nil
-				}
-				return deps
-			}(),
-			wantResult: "no-op: already optimal",
-		},
-		{
-			name:  "below threshold",
-			codec: &fakeParentCodec{},
-			deps: func() CronDeps {
-				deps := baseCronDeps()
-				deps.FetchAndSelectPools = func(cre.Runtime, offchain.Config, [32]byte, uint64) (*offchain.Pool, *offchain.Pool, error) {
-					return &offchain.Pool{Chain: "Ethereum", Project: "compound-v3", Symbol: "USDC", Apy: 5.99}, aaveParentPool, nil
-				}
-				return deps
-			}(),
-			wantResult: "no-op: below threshold",
-		},
-		{
-			name:  "missing current pool",
-			codec: &fakeParentCodec{},
-			deps: func() CronDeps {
-				deps := baseCronDeps()
-				deps.FetchAndSelectPools = func(cre.Runtime, offchain.Config, [32]byte, uint64) (*offchain.Pool, *offchain.Pool, error) {
-					return compChildPool, nil, nil
-				}
-				return deps
-			}(),
-			wantResult: "no-op: current pool missing",
-		},
-		{
-			name:    "encode initiate error",
-			codec:   &fakeParentCodec{initiateErr: errors.New("encode failed")},
-			deps:    baseCronDeps(),
-			wantErr: "encode initiateRebalance: encode failed",
-		},
-		{
-			name:  "submit error",
-			codec: &fakeParentCodec{initiateCalldata: []byte{1}},
-			deps: func() CronDeps {
-				deps := baseCronDeps()
-				deps.SubmitReport = func(cre.Runtime, *evm.Client, common.Address, []byte, uint64) error {
-					return errors.New("submit failed")
-				}
-				return deps
-			}(),
-			wantErr: "submit initiateRebalance: submit failed",
-		},
-		{
-			name:       "success",
-			codec:      &fakeParentCodec{initiateCalldata: []byte{1}},
-			deps:       baseCronDeps(),
-			wantResult: "initiated rebalance",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			resetSeams(t)
-			cfg := tt.config
-			if cfg == nil {
-				cfg = testConfig()
-			}
-			if tt.codecErr != nil {
-				newParentCodec = func() (parentCodec, error) { return nil, tt.codecErr }
-			} else {
-				installParentCodec(t, tt.codec)
-			}
-			newParentVaultBinding = func(*evm.Client, string) (onchain.ParentVaultInterface, error) {
-				if tt.bindingErr != nil {
-					return nil, tt.bindingErr
-				}
-				return fakeParentVault{}, nil
-			}
-
-			result, err := onCronTriggerWithDeps(cfg, testutils.NewRuntime(t, nil), nil, tt.deps)
-			if tt.wantErr != "" {
-				require.Error(t, err, "expected error")
-				require.Nil(t, result, "expected nil result on error")
-				require.ErrorContains(t, err, tt.wantErr)
+		{"success", func(*onchain.Snapshot) {}, ""},
+		{"rebalance", func(s *onchain.Snapshot) { s.Parent.Rebalance.State = onchain.Rebalancing }, "rebalance in progress"},
+		{"no completed epoch", func(s *onchain.Snapshot) { s.Parent.CurrentEpochNonce = big.NewInt(1) }, "no completed epoch"},
+		{"executing epoch", func(s *onchain.Snapshot) { s.Parent.PreviousEpoch.Status = onchain.EpochExecuting }, "epoch executing"},
+		{"cooldown", func(s *onchain.Snapshot) { s.Parent.Rebalance.LastRebalanceCompletedTimestamp = big.NewInt(9999) }, "cooldown"},
+		{"empty local position", func(s *onchain.Snapshot) {
+			s.Parent.Rebalance.ActiveStrategy.ChainSelector = 1
+			s.Parent.Tvl = big.NewInt(0)
+		}, "zero local"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			config, snapshot := newTestConfig(), newTestSnapshot()
+			test.change(snapshot)
+			recorder := &testReportRecorder{}
+			fetches := 0
+			deps := CronDeps{SubmitReport: recorder.submit, FetchAndSelectPools: func(cre.Runtime, offchain.Config, [32]byte, uint64) (*offchain.Pool, *offchain.Pool, error) {
+				fetches++
+				return &offchain.Pool{Project: "compound-v3", Chain: "Arbitrum", Apy: 6}, &offchain.Pool{Project: "aave-v3", Chain: "Ethereum", Apy: 4}, nil
+			}}
+			result, err := onRebalanceCronTriggerWithDeps(config, testutils.NewRuntime(t, testutils.Secrets{}), nil, snapshot, deps)
+			require.NoError(t, err)
+			if test.reason != "" {
+				require.Contains(t, result.Result, test.reason)
+				require.Zero(t, recorder.calls)
+				require.Zero(t, fetches)
 				return
 			}
-			require.NoError(t, err, "expected no error")
-			require.Equal(t, tt.wantResult, result.Result)
+			require.Equal(t, 1, recorder.calls)
+			require.Equal(t, uint64(1), recorder.target.ChainSelector)
+			require.Equal(t, snapshot.ObservedAt, recorder.observedAt)
+			codec, err := parent_vault.NewCodec()
+			require.NoError(t, err)
+			expected, err := codec.EncodeInitiateRebalanceMethodCall(parent_vault.InitiateRebalanceInput{
+				ExpectedRebalanceNonce: big.NewInt(7), NewStrategy: snapshot.Parent.Rebalance.PendingStrategy,
+			})
+			require.NoError(t, err)
+			require.Equal(t, expected, recorder.calldata)
 		})
 	}
 }
 
-func Test_NewDefiLlamaConfig(t *testing.T) {
-	cfg := newDefiLlamaConfig(testConfig())
-	require.Equal(t, []offchain.ChainConfig{
-		{ChainSelector: parentChainSelector, DefiLlamaChainName: "Arbitrum"},
-		{ChainSelector: childChainSelector, DefiLlamaChainName: "Ethereum"},
-	}, cfg.Chains)
-	require.Equal(t, []string{"aa70268e-4b52-42bf-a116-608b370f9501", "d9c395b9-00d0-4426-a6b3-572a6dd68e54"}, cfg.PoolIDs)
-	require.Equal(t, []string{"aave-v3", "compound-v3"}, cfg.Projects)
-	require.Equal(t, []string{"USDC"}, cfg.Symbols)
-}
-
-func baseExecutorDeps() ExecutorDeps {
-	return ExecutorDeps{
-		GetRebalance: func(cre.Runtime, onchain.ParentVaultInterface, *big.Int) (parent_vault.TypesRebalance, error) {
-			return rebalanceState(aaveProtocolID, childChainSelector), nil
-		},
-		SubmitReport: func(cre.Runtime, *evm.Client, common.Address, []byte, uint64) error {
-			return nil
-		},
+func TestRebalancePoolSelectionNoopsAndErrors(t *testing.T) {
+	for _, test := range []struct {
+		name          string
+		best, current *offchain.Pool
+		fetchErr      error
+		reason        string
+	}{
+		{"no best", nil, nil, nil, "no approved pool"},
+		{"missing current", &offchain.Pool{Project: "compound-v3", Chain: "Arbitrum", Apy: 6}, nil, nil, "current pool missing"},
+		{"already optimal", &offchain.Pool{Project: "aave-v3", Chain: "Ethereum", Apy: 6}, nil, nil, "already optimal"},
+		{"below threshold", &offchain.Pool{Project: "compound-v3", Chain: "Arbitrum", Apy: 4.5}, &offchain.Pool{Apy: 4}, nil, "below threshold"},
+		{"fetch failure", nil, nil, errors.New("relay failed"), ""},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			recorder := &testReportRecorder{}
+			deps := CronDeps{SubmitReport: recorder.submit, FetchAndSelectPools: func(cre.Runtime, offchain.Config, [32]byte, uint64) (*offchain.Pool, *offchain.Pool, error) {
+				return test.best, test.current, test.fetchErr
+			}}
+			result, err := onRebalanceCronTriggerWithDeps(newTestConfig(), testutils.NewRuntime(t, testutils.Secrets{}), nil, newTestSnapshot(), deps)
+			if test.fetchErr != nil {
+				require.ErrorIs(t, err, test.fetchErr)
+			} else {
+				require.NoError(t, err)
+				require.Contains(t, result.Result, test.reason)
+			}
+			require.Zero(t, recorder.calls)
+		})
 	}
 }
 
-func Test_OnRebalanceInitiated_wrapper(t *testing.T) {
-	resetSeams(t)
-	parentCodec := &fakeParentCodec{
-		rebalanceInitiated: &parent_vault.RebalanceInitiatedDecoded{
-			RebalanceNonce: big.NewInt(1),
-			ChainSelector:  parentChainSelector,
-			ProtocolId:     compoundProtocolID,
-		},
-	}
-	installParentCodec(t, parentCodec)
-	installChildCodec(t, &fakeChildCodec{executeCalldata: []byte{1}})
-	installParentBinding(t)
-	defaultExecutorDeps = baseExecutorDeps()
-
-	result, err := OnRebalanceInitiated(testConfig(), testutils.NewRuntime(t, nil), &evm.Log{})
-	require.NoError(t, err, "expected wrapper to use default deps")
-	require.Equal(t, "submitted executeRebalance", result.Result)
-}
-
-func Test_OnRebalanceInitiated_withDeps(t *testing.T) {
-	tests := []struct {
+func TestRebalanceInitiatedUsesEventAndSourceChild(t *testing.T) {
+	for _, test := range []struct {
 		name        string
-		config      *helper.Config
-		parentCodec *fakeParentCodec
-		childCodec  *fakeChildCodec
-		parentErr   error
-		childErr    error
-		bindingErr  error
-		deps        ExecutorDeps
-		wantResult  string
-		wantErr     string
+		nonce       int64
+		lastHandled int64
+		activeChain uint64
+		state       uint8
+		reason      string
 	}{
-		{name: "parent codec error", parentErr: errors.New("codec failed"), deps: baseExecutorDeps(), wantErr: "init parent vault codec: codec failed"},
-		{name: "child codec error", parentCodec: &fakeParentCodec{}, childErr: errors.New("child failed"), deps: baseExecutorDeps(), wantErr: "init child vault codec: child failed"},
-		{name: "no parent", config: &helper.Config{Evms: []helper.EvmConfig{{ChainSelector: childChainSelector}}}, parentCodec: &fakeParentCodec{}, childCodec: &fakeChildCodec{}, deps: baseExecutorDeps(), wantErr: "no parent chain configured"},
-		{name: "decode error", parentCodec: &fakeParentCodec{decodeInitiatedErr: errors.New("decode failed")}, childCodec: &fakeChildCodec{}, deps: baseExecutorDeps(), wantErr: "decode RebalanceInitiated: decode failed"},
-		{name: "bind error", parentCodec: &fakeParentCodec{rebalanceInitiated: &parent_vault.RebalanceInitiatedDecoded{}}, childCodec: &fakeChildCodec{}, bindingErr: errors.New("bind failed"), deps: baseExecutorDeps(), wantErr: "bind parent vault: bind failed"},
-		{
-			name:        "get rebalance error",
-			parentCodec: &fakeParentCodec{rebalanceInitiated: &parent_vault.RebalanceInitiatedDecoded{}},
-			childCodec:  &fakeChildCodec{},
-			deps: ExecutorDeps{
-				GetRebalance: func(cre.Runtime, onchain.ParentVaultInterface, *big.Int) (parent_vault.TypesRebalance, error) {
-					return parent_vault.TypesRebalance{}, errors.New("read failed")
-				},
-				SubmitReport: baseExecutorDeps().SubmitReport,
-			},
-			wantErr: "get rebalance: read failed",
-		},
-		{
-			name:        "active strategy on parent",
-			parentCodec: &fakeParentCodec{rebalanceInitiated: &parent_vault.RebalanceInitiatedDecoded{RebalanceNonce: big.NewInt(1)}},
-			childCodec:  &fakeChildCodec{},
-			deps: ExecutorDeps{
-				GetRebalance: func(cre.Runtime, onchain.ParentVaultInterface, *big.Int) (parent_vault.TypesRebalance, error) {
-					return rebalanceState(aaveProtocolID, parentChainSelector), nil
-				},
-				SubmitReport: baseExecutorDeps().SubmitReport,
-			},
-			wantResult: "no-op: active strategy on parent",
-		},
-		{
-			name:        "previous chain missing",
-			parentCodec: &fakeParentCodec{rebalanceInitiated: &parent_vault.RebalanceInitiatedDecoded{}},
-			childCodec:  &fakeChildCodec{},
-			deps: ExecutorDeps{
-				GetRebalance: func(cre.Runtime, onchain.ParentVaultInterface, *big.Int) (parent_vault.TypesRebalance, error) {
-					return rebalanceState(aaveProtocolID, 999), nil
-				},
-				SubmitReport: baseExecutorDeps().SubmitReport,
-			},
-			wantErr: "find prev strategy chain: no evm config found for chainSelector 999",
-		},
-		{
-			name:        "encode error",
-			parentCodec: &fakeParentCodec{rebalanceInitiated: &parent_vault.RebalanceInitiatedDecoded{}},
-			childCodec:  &fakeChildCodec{executeErr: errors.New("encode failed")},
-			deps:        baseExecutorDeps(),
-			wantErr:     "encode executeRebalance: encode failed",
-		},
-		{
-			name:        "submit error",
-			parentCodec: &fakeParentCodec{rebalanceInitiated: &parent_vault.RebalanceInitiatedDecoded{}},
-			childCodec:  &fakeChildCodec{executeCalldata: []byte{1}},
-			deps: ExecutorDeps{
-				GetRebalance: baseExecutorDeps().GetRebalance,
-				SubmitReport: func(cre.Runtime, *evm.Client, common.Address, []byte, uint64) error {
-					return errors.New("submit failed")
-				},
-			},
-			wantErr: "submit executeRebalance: submit failed",
-		},
-		{
-			name:        "success",
-			parentCodec: &fakeParentCodec{rebalanceInitiated: &parent_vault.RebalanceInitiatedDecoded{RebalanceNonce: big.NewInt(2), ChainSelector: parentChainSelector, ProtocolId: compoundProtocolID}},
-			childCodec:  &fakeChildCodec{executeCalldata: []byte{1}},
-			deps:        baseExecutorDeps(),
-			wantResult:  "submitted executeRebalance",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			resetSeams(t)
-			cfg := tt.config
-			if cfg == nil {
-				cfg = testConfig()
-			}
-			if tt.parentErr != nil {
-				newParentCodec = func() (parentCodec, error) { return nil, tt.parentErr }
-			} else {
-				installParentCodec(t, tt.parentCodec)
-			}
-			if tt.childErr != nil {
-				newChildCodec = func() (childCodec, error) { return nil, tt.childErr }
-			} else {
-				installChildCodec(t, tt.childCodec)
-			}
-			newParentVaultBinding = func(*evm.Client, string) (onchain.ParentVaultInterface, error) {
-				if tt.bindingErr != nil {
-					return nil, tt.bindingErr
-				}
-				return fakeParentVault{}, nil
-			}
-
-			result, err := onRebalanceInitiatedWithDeps(cfg, testutils.NewRuntime(t, nil), &evm.Log{}, tt.deps)
-			if tt.wantErr != "" {
-				require.Error(t, err, "expected error")
-				require.Nil(t, result, "expected nil result on error")
-				require.ErrorContains(t, err, tt.wantErr)
+		{"success with skipped child nonces", 7, 2, 2, onchain.Rebalancing, ""},
+		{"stale event", 6, 2, 2, onchain.Rebalancing, "stale"},
+		{"duplicate", 7, 7, 2, onchain.Rebalancing, "already handled"},
+		{"newer handled", 7, 8, 2, onchain.Rebalancing, "already handled"},
+		{"parent active", 7, 2, 1, onchain.Rebalancing, "active strategy on parent"},
+		{"completed", 7, 2, 2, onchain.RebalanceNone, "stale"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			config, snapshot := newTestConfig(), newTestSnapshot()
+			snapshot.Parent.Rebalance.State = test.state
+			snapshot.Parent.Rebalance.ActiveStrategy.ChainSelector = test.activeChain
+			snapshot.Children[2] = child_vault.TypesChildOperationalState{LastHandledRebalanceNonce: big.NewInt(test.lastHandled)}
+			pending := snapshot.Parent.Rebalance.PendingStrategy
+			log := newTestRebalanceLog(config.Evms[0], "RebalanceInitiated(uint256,bytes32,uint64)", big.NewInt(test.nonce).Bytes(), pending.ProtocolId[:], big.NewInt(3).Bytes())
+			recorder := &testReportRecorder{}
+			result, err := onRebalanceInitiatedWithDeps(config, testutils.NewRuntime(t, testutils.Secrets{}), log, snapshot, 1, recorder.submit)
+			require.NoError(t, err)
+			if test.reason != "" {
+				require.Contains(t, result.Result, test.reason)
+				require.Zero(t, recorder.calls)
 				return
 			}
-			require.NoError(t, err, "expected no error")
-			require.Equal(t, tt.wantResult, result.Result)
+			require.Equal(t, uint64(2), recorder.target.ChainSelector)
+			codec, err := child_vault.NewCodec()
+			require.NoError(t, err)
+			expected, err := codec.EncodeExecuteRebalanceMethodCall(child_vault.ExecuteRebalanceInput{
+				RebalanceNonce: big.NewInt(7), NewStrategy: child_vault.TypesStrategy{ProtocolId: pending.ProtocolId, ChainSelector: 3},
+			})
+			require.NoError(t, err)
+			require.Equal(t, expected, recorder.calldata)
 		})
 	}
 }
 
-func baseCompleterDeps() CompleterDeps {
-	return CompleterDeps{
-		SubmitReport: func(cre.Runtime, *evm.Client, common.Address, []byte, uint64) error {
-			return nil
-		},
-	}
-}
-
-func Test_OnRebalanceDepositSuccess_wrapper(t *testing.T) {
-	resetSeams(t)
-	installParentCodec(t, &fakeParentCodec{
-		depositSuccess:   &parent_vault.RebalanceDepositSuccessDecoded{RebalanceNonce: big.NewInt(1)},
-		completeCalldata: []byte{1},
-	})
-	defaultCompleterDeps = baseCompleterDeps()
-
-	result, err := OnRebalanceDepositSuccess(testConfig(), testutils.NewRuntime(t, nil), &evm.Log{})
-	require.NoError(t, err, "expected wrapper to use default deps")
-	require.Equal(t, "submitted completeRebalance", result.Result)
-}
-
-func Test_OnRebalanceDepositSuccess_withDeps(t *testing.T) {
-	tests := []struct {
-		name       string
-		config     *helper.Config
-		codec      *fakeParentCodec
-		codecErr   error
-		deps       CompleterDeps
-		wantResult string
-		wantErr    string
+func TestRebalanceCompletionChecksSourceAndNonce(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		source uint64
+		nonce  int64
+		reason string
 	}{
-		{name: "codec error", codecErr: errors.New("codec failed"), deps: baseCompleterDeps(), wantErr: "init parent vault codec: codec failed"},
-		{name: "no parent", config: &helper.Config{Evms: []helper.EvmConfig{{ChainSelector: childChainSelector}}}, codec: &fakeParentCodec{}, deps: baseCompleterDeps(), wantErr: "no parent chain configured"},
-		{name: "decode error", codec: &fakeParentCodec{decodeDepositErr: errors.New("decode failed")}, deps: baseCompleterDeps(), wantErr: "decode RebalanceDepositSuccess: decode failed"},
-		{name: "encode error", codec: &fakeParentCodec{depositSuccess: &parent_vault.RebalanceDepositSuccessDecoded{}, completeErr: errors.New("encode failed")}, deps: baseCompleterDeps(), wantErr: "encode completeRebalance: encode failed"},
-		{
-			name:  "submit error",
-			codec: &fakeParentCodec{depositSuccess: &parent_vault.RebalanceDepositSuccessDecoded{}, completeCalldata: []byte{1}},
-			deps: CompleterDeps{SubmitReport: func(cre.Runtime, *evm.Client, common.Address, []byte, uint64) error {
-				return errors.New("submit failed")
-			}},
-			wantErr: "submit completeRebalance: submit failed",
-		},
-		{name: "success", codec: &fakeParentCodec{depositSuccess: &parent_vault.RebalanceDepositSuccessDecoded{RebalanceNonce: big.NewInt(1)}, completeCalldata: []byte{1}}, deps: baseCompleterDeps(), wantResult: "submitted completeRebalance"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			resetSeams(t)
-			cfg := tt.config
-			if cfg == nil {
-				cfg = testConfig()
-			}
-			if tt.codecErr != nil {
-				newParentCodec = func() (parentCodec, error) { return nil, tt.codecErr }
-			} else {
-				installParentCodec(t, tt.codec)
-			}
-
-			result, err := onRebalanceDepositSuccessWithDeps(cfg, testutils.NewRuntime(t, nil), &evm.Log{}, tt.deps)
-			if tt.wantErr != "" {
-				require.Error(t, err, "expected error")
-				require.Nil(t, result, "expected nil result on error")
-				require.ErrorContains(t, err, tt.wantErr)
+		{"success", 3, 7, ""},
+		{"stale", 3, 6, "stale"},
+		{"wrong child", 2, 7, "wrong rebalance destination"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			config, snapshot := newTestConfig(), newTestSnapshot()
+			config.Evms[1].VaultAddress = config.Evms[2].VaultAddress
+			snapshot.Parent.Rebalance.State = onchain.Rebalancing
+			log := newTestRebalanceLog(config.Evms[2], "RebalanceDepositSuccess(uint256,uint256)", big.NewInt(test.nonce).Bytes(), big.NewInt(100).Bytes())
+			recorder := &testReportRecorder{}
+			result, err := onRebalanceDepositSuccessWithDeps(config, testutils.NewRuntime(t, testutils.Secrets{}), log, snapshot, test.source, recorder.submit)
+			require.NoError(t, err)
+			if test.reason != "" {
+				require.Contains(t, result.Result, test.reason)
+				require.Zero(t, recorder.calls)
 				return
 			}
-			require.NoError(t, err, "expected no error")
-			require.Equal(t, tt.wantResult, result.Result)
+			require.Equal(t, uint64(1), recorder.target.ChainSelector)
+			codec, err := parent_vault.NewCodec()
+			require.NoError(t, err)
+			expected, err := codec.EncodeCompleteRebalanceMethodCall(parent_vault.CompleteRebalanceInput{ExpectedRebalanceNonce: big.NewInt(7)})
+			require.NoError(t, err)
+			require.Equal(t, expected, recorder.calldata)
 		})
 	}
 }

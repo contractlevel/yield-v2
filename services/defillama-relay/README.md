@@ -1,15 +1,14 @@
 # DefiLlama Relay
 
-Cloudflare Worker that filters live DefiLlama pool data into the compact shape consumed by the Yield v2 CRE workflow.
-
-<!-- @review redeploy cloudflare worker! -->
+Cloudflare Worker that caches filtered DefiLlama pool data for the Yield v2 CRE workflow.
 
 ## Purpose
 
-CRE's production HTTP response quota is `100 KB`. DefiLlama's full `/pools` response is larger than that, so the workflow calls this relay instead. The relay fetches the live DefiLlama response, filters to approved pools, and returns only:
+CRE's production HTTP response quota is `100 KB`. DefiLlama's full `/pools` response is larger than that, so scheduled refreshes fetch and filter it into a compact KV snapshot. Authenticated requests return that snapshot without fetching DefiLlama:
 
 ```json
 {
+  "refreshedAt": 1770000000,
   "data": [
     {
       "pool": "d9c395b9-00d0-4426-a6b3-572a6dd68e54",
@@ -27,6 +26,7 @@ CRE's production HTTP response quota is `100 KB`. DefiLlama's full `/pools` resp
 Runtime dependencies are intentionally limited to:
 
 - `worker`
+- `futures-util`
 - `serde`
 - `serde_json`
 
@@ -47,7 +47,9 @@ Do not use `wrangler@latest` or `npx wrangler`.
 
 ## Configuration
 
-`wrangler.toml` contains the non-secret Worker config and is safe to commit while it only contains the Worker name, build command, compatibility date, and public relay vars.
+`wrangler.toml` contains the Worker name, offline build command, compatibility date,
+public relay vars, KV namespace binding, UTC refresh schedule, and logging settings.
+The namespace ID is public; bearer tokens belong in Worker secrets.
 
 Current vars:
 
@@ -71,6 +73,10 @@ Allowed DefiLlama pool IDs should map to the exact canonical native USDC markets
 | Avalanche | Avalanche       | Aave v4     | `22323e90-bde5-54a1-8686-53b4205b61b7` | `0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E` | `poolMeta: "Core"`, only Avalanche aave-v4 USDC market listed today; confirmed via `getReserve` that our deployed Spoke's Hub is `0xd07369fAE4A5BB13c9Ce446B052c7867B1AbDf6e`                                                            |
 | Optimism  | OP Mainnet      | Aave v3     | `0758c3b8-4ffb-4176-b0a9-f446e367db46` | `0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85` | DefiLlama labels Optimism as `OP Mainnet`                                                                                                                                                                                                |
 | Optimism  | OP Mainnet      | Compound v3 | `b828f0cb-853d-4b32-aebb-2e20d7fd70a8` | `0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85` | DefiLlama labels Optimism as `OP Mainnet`                                                                                                                                                                                                |
+
+Polygon Aave v3 uses pool `1b8b4cdb-0728-42a8-bf13-2c8fea7427ee`, with DefiLlama chain `Polygon`, `poolMeta: null`, and native USDC `0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359`. The bridged USDC pool (`37b04faa-95bb-4ccb-9c4e-c70fa167342b`) is excluded.
+
+The workflow and relay allowlists contain 12 strategies: six Aave v3 markets, four Compound v3 markets (Ethereum, Arbitrum, Base, Optimism), and two Aave v4 Core markets (Ethereum, Avalanche).
 
 Set the bearer token as a Worker secret:
 
@@ -115,19 +121,36 @@ Expected:
 4.84.1
 ```
 
-Log in to Cloudflare:
+Log in to Cloudflare using either command:
 
 ```bash
 npm exec wrangler -- login
 ```
 
-## Local Development
+The following alternative refuses to install a missing Wrangler package:
 
 ```bash
-npm run dev
+npm exec --no -- wrangler login
 ```
 
-Call the relay:
+## Local Development
+
+Configure a development-only `RELAY_BEARER_TOKEN` in the ignored `.dev.vars` file.
+Use the same token in the shell variable for curl. Start the local Worker with
+scheduled-event testing enabled:
+
+```bash
+npm exec --no -- wrangler dev --test-scheduled
+```
+
+In another terminal, invoke a scheduled refresh to populate local KV:
+
+```bash
+curl -i 'http://127.0.0.1:8787/__scheduled'
+```
+
+This fetches the configured upstream. Local KV is separate from the deployed
+namespace. After a successful refresh, call the relay:
 
 ```bash
 curl \
@@ -145,11 +168,7 @@ cargo deny check
 cargo vet
 ```
 
-Live DefiLlama tests should be opt-in only:
-
-```bash
-RUN_LIVE_DEFILLAMA_TESTS=1 cargo test
-```
+The Rust unit tests do not fetch DefiLlama. Local scheduled refreshes do.
 
 ## Deploy
 
@@ -165,18 +184,21 @@ Deploy:
 npm run deploy
 ```
 
-After deployment, call the Worker URL with the bearer token:
+After a successful scheduled refresh, call the Worker URL with the bearer token.
+An empty namespace returns `503 snapshot unavailable`; an expired snapshot returns
+`503 snapshot stale`. Refresh failures are recorded in Worker logs.
 
 ```bash
-curl \
-  -H "Authorization: Bearer $RELAY_BEARER_TOKEN" \
-  https://<worker-url>/v1/defillama/pools
+curl -i \
+    -H "Authorization: Bearer $RELAY_BEARER_TOKEN" \
+    https://yield-v2-defillama-relay.contractlevel.workers.dev/v1/defillama/pools
 ```
 
 Expected response:
 
 ```json
 {
+  "refreshedAt": 1770000000,
   "data": [
     {
       "pool": "d9c395b9-00d0-4426-a6b3-572a6dd68e54",
@@ -193,12 +215,10 @@ Also verify an unauthenticated request returns `401`.
 
 ## CRE Integration
 
-The CRE workflow should call the deployed Worker URL instead of `https://yields.llama.fi/pools`.
-
-Use CRE secrets/config for:
-
-- `defiLlama.relayUrl` in the workflow config
-- `DEFILLAMA_RELAY_BEARER_TOKEN` in CRE secrets
+The Go workflow uses the fixed `defiLlamaRelayURL` in
+`cre/workflow/internal/offchain/defillama.go`. There is no relay URL field in the
+workflow JSON config. Authentication uses the CRE secret
+`DEFILLAMA_RELAY_BEARER_TOKEN`.
 
 The deployed Worker URL is public. The bearer token is secret. The production token must be uploaded to CRE secrets, not placed in `.env` or committed config.
 
@@ -208,11 +228,39 @@ The workflow should include:
 Authorization: Bearer <token>
 ```
 
-The relay returns all matching pools. The CRE workflow remains responsible for selecting the best pool.
+The relay rejects missing, non-finite, or out-of-range base APYs before
+deduplication. Accepted base APYs are 0–1000 inclusive, matching the Go workflow.
+Configuration rejects more than 32 unique allowed pool IDs. It deduplicates matching
+pools, sorts by base APY, and retains every matching pool. The current allowlist has
+12 pools. The CRE workflow selects the best pool
+and identifies the current pool using its own policy checks.
 
-### CRE request concurrency
+### Scheduled snapshots
 
-A CRE HTTP consensus request is executed independently by each DON node. The relay therefore permits up
-to six upstream fetches per Worker isolate. With the current nine-node DON, at most three requests receive
-`429`, which remains below CRE's four-node consensus failure threshold. The limit also bounds worst-case
-upstream response buffering to `6 * 12 MiB = 72 MiB` per isolate.
+The KV namespace is bound as `POOL_SNAPSHOTS` in `wrangler.toml` and stores one key, `pools`.
+Responses include `refreshedAt`, the Unix timestamp in seconds when the upstream fetch started.
+Both the relay and workflow reject snapshots older than 15 minutes or dated in the future.
+Missing snapshots return `503`. Failed refreshes leave the stored snapshot unchanged.
+Reads also check cached pool IDs against the current relay allowlist. A snapshot
+containing a removed pool returns `503 snapshot contains disallowed pools` until
+a successful refresh replaces it.
+
+The testnet schedule refreshes at `:20`, `:25`, and `:28` before each three-hourly
+`:30` rebalance, using UTC. This makes 24 refresh attempts and at most 24 KV writes
+per day. Nine DON nodes reading for eight daily rebalances make about 72 KV reads.
+Each request reads the saved snapshot independently; identical consensus still applies
+to the selected pools. KV propagation can temporarily expose different versions, so
+scheduled refreshes finish ahead of rebalance rather than running during it.
+
+Verify scheduled refreshes, failed-refresh retention, and CPU usage in the Cloudflare
+runtime before enabling the workflow. The endpoint returns `503` until the
+first successful refresh.
+
+### Refresh failures
+
+Worker logs are enabled without sampling. In the Cloudflare dashboard, open this
+Worker's logs and look for `DefiLlama snapshot refresh failed`. A failed refresh
+keeps the previous snapshot; reads return `503` once that snapshot is too old.
+The installed Rust SDK resolves scheduled events successfully even after a logged
+refresh error, so scheduled-event success counts do not prove that data refreshed.
+This configuration stores logs; it does not send automatic alerts.
