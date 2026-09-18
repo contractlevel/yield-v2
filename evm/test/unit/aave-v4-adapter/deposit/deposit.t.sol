@@ -100,6 +100,60 @@ contract AaveV4Adapter_DepositUnitTest is BaseAaveV4AdapterUnitTest {
         s_aaveV4Adapter.deposit(1);
     }
 
+    function testFuzz_AaveV4Adapter_deposit_BubblesNonExactSupplyError(bytes calldata reason) external {
+        vm.assume(reason.length != 4 || bytes4(reason) != IAaveV4Adapter.InvalidShares.selector);
+
+        _assertSupplyErrorBubbled(reason);
+    }
+
+    function testFuzz_AaveV4Adapter_deposit_BubblesInvalidSharesWithTrailingData(bytes calldata suffix) external {
+        vm.assume(suffix.length != 0);
+
+        _assertSupplyErrorBubbled(abi.encodePacked(IAaveV4Adapter.InvalidShares.selector, suffix));
+    }
+
+    function testFuzz_AaveV4Adapter_deposit_BubblesShortSupplyError(bytes3 prefix, uint8 length) external {
+        length = uint8(bound(length, 0, 3));
+        bytes memory reason = new bytes(length);
+        for (uint256 i; i < length; ++i) {
+            reason[i] = prefix[i];
+        }
+
+        _assertSupplyErrorBubbled(reason);
+    }
+
+    function _assertSupplyErrorBubbled(bytes memory reason) internal {
+        s_mockAaveV4Spoke.setMinimumPreviewAmount(2);
+        s_aaveV4Adapter.deposit(1);
+        s_mockAaveV4Spoke.setMinimumPreviewAmount(0);
+
+        uint256 adapterBalanceBefore = s_mockUsdc.balanceOf(address(s_aaveV4Adapter));
+        uint256 poolBalanceBefore = s_mockUsdc.balanceOf(address(s_mockAaveV4Spoke));
+        uint256 tvlBefore = s_aaveV4Adapter.getTVL();
+        uint256 allowanceBefore =
+            IERC20(address(s_mockUsdc)).allowance(address(s_aaveV4Adapter), address(s_mockAaveV4Spoke));
+
+        vm.mockCallRevert(address(s_mockAaveV4Spoke), abi.encodeWithSelector(MockAaveV4Spoke.supply.selector), reason);
+        (bool success, bytes memory actualReason) =
+            address(s_aaveV4Adapter).call(abi.encodeCall(s_aaveV4Adapter.deposit, (1)));
+
+        assertFalse(success);
+        assertEq(actualReason, reason);
+        assertEq(s_aaveV4Adapter.getBufferedAssets(), 1);
+        assertEq(s_aaveV4Adapter.getTVL(), tvlBefore);
+        assertEq(s_mockUsdc.balanceOf(address(s_aaveV4Adapter)), adapterBalanceBefore);
+        assertEq(s_mockUsdc.balanceOf(address(s_mockAaveV4Spoke)), poolBalanceBefore);
+        assertEq(
+            IERC20(address(s_mockUsdc)).allowance(address(s_aaveV4Adapter), address(s_mockAaveV4Spoke)), allowanceBefore
+        );
+        assertEq(s_mockAaveV4Spoke.getSupplyCallCount(), 0);
+
+        // A later successful deposit also verifies the reentrancy guard was restored.
+        vm.clearMockedCalls();
+        s_aaveV4Adapter.deposit(1);
+        assertEq(s_aaveV4Adapter.getBufferedAssets(), 0);
+    }
+
     function test_AaveV4Adapter_deposit_BubblesPreviewErrorWithoutBuffering() external {
         s_mockAaveV4Spoke.setPreviewReverts(true);
 

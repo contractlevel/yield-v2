@@ -1,5 +1,5 @@
-recover child rebalance deposit on Base fork
-└── when the parent-to-Base rebalance deposit fails
+recover child rebalance deposit on Arbitrum or Polygon fork
+└── when the parent-to-Arbitrum or Polygon rebalance deposit fails
     ├── it should emit RebalanceDepositRecoveryStored
-    ├── it should recover into Base Aave V3 and clear recovery
-    └── it should let the parent complete the rebalance to Base
+    ├── it should recover into Arbitrum or Polygon Aave V3 and clear recovery
+    └── it should let the parent complete the rebalance to Arbitrum or Polygon

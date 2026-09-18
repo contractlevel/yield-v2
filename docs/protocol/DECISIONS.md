@@ -244,3 +244,23 @@ see
 for the residual risk while it remains unset.
 
 See [ACCESS_CONTROL_MATRIX - Launch Configuration](../security/ACCESS_CONTROL_MATRIX.md#launch-configuration).
+
+## DD-019 - `setAllowlistedUsers` Accepts The Zero Address
+
+`Allowlist.setAllowlistedUsers(users, allowed)` intentionally accepts `address(0)`, alongside empty
+arrays and duplicate entries. Only `ALLOWLIST_OPERATOR_ROLE` can update membership. The setter
+records the supplied status and emits `AllowlistedUserSet` for each entry; it does not validate
+whether an address can participate in a particular vault operation.
+
+Allowlisting `address(0)` grants no usable deposit access. `ParentVault.deposit` validates
+`msg.sender`, and the zero address cannot originate an ordinary transaction.
+`ParentVault.depositFor` independently rejects a zero beneficiary regardless of allowlist
+membership or whether enforcement is enabled. A zero-address membership entry does not disable
+enforcement or affect another user's membership.
+
+Keeping address validity checks at the vault entry points avoids duplicating BaseVault's existing
+zero-address validation or coupling the Allowlist module to BaseVault. Revisit this decision if a
+future entry point uses allowlist membership to authorize a zero-address recipient.
+
+See [Allowlist](../../evm/src/modules/Allowlist.sol) and
+[ParentVault](../../evm/src/vaults/ParentVault.sol).

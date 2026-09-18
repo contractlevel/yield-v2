@@ -122,19 +122,36 @@ halmos --contract ClaimSolvency --forge-build-out out-halmos --function check_ \
 
 ## Certora
 
+ChildVault rules run in `ChildVault.rules.conf` for ordinary behavior and
+`ChildVault.Capacity.rules.conf` for token-pool capacity errors. The capacity
+configuration checks exact error bytes and atomic rollback through the real
+vault entry points using a standalone router and a revert-capture caller.
+
+The Aave V4 adapter rules are split across three configurations: `AaveV4Adapter.conf`
+for configuration, preview, and successful supply behavior; `AaveV4Adapter.InvalidShares.conf`
+for exact-error buffering and its failure paths; and `AaveV4Adapter.SupplyErrors.conf`
+for other selectors, trailing data, and short revert data. Run all three for V4-specific coverage.
+
+The nonexact-error configuration uses branch fixtures and symbolic error-matcher rules.
+Its rollback rules do not assert exact revert-byte preservation; the V4 deposit Foundry
+fuzz tests check that property for arbitrary nonexact errors, trailing data, and short data.
+
 _Note: Some of the ParentVault rules require ParentVault::\_finalizeRebalance and \_finalizeLocalToLocalRebalance to be **virtual**. This is because these functions use a public library function, which Certora havocs and struggles to resolve. To get around this, the harness overrides the functions with the internal lib equivalent. Virtual should be removed after running the specs._
 
 ```
 
 certoraRun ./certora/conf/modules/AdapterRegistry.conf
+certoraRun ./certora/conf/modules/Allowlist.conf
 
 certoraRun ./certora/conf/modules/adapters/AaveV3Adapter.ProtocolAdapter.conf
 certoraRun ./certora/conf/modules/adapters/AaveV4Adapter.ProtocolAdapter.conf
 certoraRun ./certora/conf/modules/adapters/CompoundV3Adapter.ProtocolAdapter.conf
 
 certoraRun ./certora/conf/modules/adapters/AaveV3Adapter.conf
-certoraRun ./certora/conf/modules/adapters/AaveV4Adapter.conf
 certoraRun ./certora/conf/modules/adapters/CompoundV3Adapter.conf
+certoraRun ./certora/conf/modules/adapters/AaveV4Adapter.conf
+certoraRun ./certora/conf/modules/adapters/AaveV4Adapter.InvalidShares.conf
+certoraRun ./certora/conf/modules/adapters/AaveV4Adapter.SupplyErrors.conf
 
 certoraRun ./certora/conf/modules/WorkflowRouter.conf
 
@@ -157,13 +174,17 @@ certoraRun certora/conf/vaults/ChildVault.BaseVault.conf
 certoraRun certora/conf/vaults/ParentVault.BaseVault.conf
 
 certoraRun certora/conf/vaults/ChildVault.rules.conf
+certoraRun certora/conf/vaults/ChildVault.Capacity.rules.conf
 certoraRun certora/conf/vaults/ChildVault.invariants.conf
 
 // Some of the ParentVault rules require ParentVault::\_finalizeRebalance and \_finalizeLocalToLocalRebalance to be virtual
 
 certoraRun certora/conf/vaults/ParentVault.rules.conf
 certoraRun certora/conf/vaults/ParentVault.localAdapter.conf
+certoraRun certora/conf/vaults/ParentVault.EpochDeposit.rules.conf
 certoraRun certora/conf/vaults/ParentVault.invariants.conf
+
+```
 
 `ParentVault.localAdapter.conf` runs rules that require a concrete local active adapter. It links the
 `s_activeProtocolAdapter` storage path to `MockProtocolAdapter` so Certora can resolve local strategy
@@ -171,7 +192,12 @@ deposit and withdrawal calls. Keep this mutable-storage link out of the shared P
 configurations. The shared rules conf excludes these rules so they are verified only by the
 dedicated target.
 
-```
+`ParentVault.EpochDeposit.rules.conf` runs the two short-delivery reconciliation success rules excluded
+from `ParentVault.rules.conf`. It models `_mulDivDown` as mathematical multiplication followed by floor
+division, asserting a positive denominator and a quotient that fits `uint256`. These proofs assume the
+helper's arithmetic contract; they do not verify its assembly implementation. `ParentVaultEpochLib.spec`
+and the Foundry reconciliation tests exercise the native implementation separately, including a
+full-precision lifecycle case with permanently locked seed shares.
 
 ## Security Regression Fuzzing
 
@@ -202,3 +228,7 @@ forge test \
 ## Note
 
 The Foundry test suite uses the [Contract Level fork](https://github.com/contractlevel/chainlink-local/tree/main) of Chainlink's CCIP local simulator for added USDC/CCTP support.
+
+Polygon's Compound USDC market uses bridged USDC (`0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174`),
+while the vault uses native USDC (`0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359`). The Polygon
+Compound adapter is therefore disabled.

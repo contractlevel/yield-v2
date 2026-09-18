@@ -10,16 +10,14 @@ contract Base_CompoundV3DepositForkTest is BaseCompoundV3ForkTest {
     }
 
     function test_Base_compoundV3_deposit_RevertWhen_CallerIsNotVault() external {
-        _assertCompoundV3DepositRevertsWhenCallerIsNotVault(baseChild.compoundV3Adapter);
+        _assertCompoundV3DepositRevertsWhenCallerIsNotVault(parent.compoundV3Adapter);
     }
 
     function test_Base_compoundV3_deposit_Success() external {
-        _assertCompoundV3DepositSucceeds(baseChild.compoundV3Adapter, address(baseChild.vault), baseChild.asset);
+        _assertCompoundV3DepositSucceeds(parent.compoundV3Adapter, address(parent.vault), parent.asset);
     }
 
     function test_Base_compoundV3_deposit_OneBaseUnitSucceedsWhenCreditRoundsToZero() external {
-        _assertCompoundV3OneBaseUnitDepositRoundsToZero(
-            baseChild.compoundV3Adapter, address(baseChild.vault), baseChild.asset
-        );
+        _assertCompoundV3OneBaseUnitDepositRoundsToZero(parent.compoundV3Adapter, address(parent.vault), parent.asset);
     }
 }

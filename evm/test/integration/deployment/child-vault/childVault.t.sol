@@ -14,7 +14,7 @@ contract ChildVault_DeploymentIntegrationTest is BaseIntegrationTest {
     function test_ChildVault_deployment_GrantsExpectedVaultRoles() external view {
         assertEq(child.vault.defaultAdmin(), address(this));
         assertTrue(child.vault.hasRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator));
-        assertFalse(child.vault.hasRole(Roles.CONFIG_OPERATOR_ROLE, address(this)));
+        assertTrue(child.vault.hasRole(Roles.CONFIG_OPERATOR_ROLE, address(this)));
         assertTrue(child.vault.hasRole(Roles.EPOCH_OPERATOR_ROLE, address(child.workflowRouter)));
         assertTrue(child.vault.hasRole(Roles.REBALANCE_OPERATOR_ROLE, address(child.workflowRouter)));
         assertTrue(child.vault.hasRole(Roles.LINK_OPERATOR_ROLE, networkConfig.roles.linkOperator));
@@ -105,9 +105,13 @@ contract ChildVault_DeploymentIntegrationTest is BaseIntegrationTest {
 
     function test_ChildVault_deployment_ConfiguresWorkflowRouter() external view {
         assertEq(child.workflowRouter.getVault(), address(child.vault));
-        assertEq(child.workflowRouter.defaultAdmin(), networkConfig.roles.defaultAdmin);
-        assertEq(child.workflowRouter.defaultAdminDelay(), INITIAL_DEFAULT_ADMIN_DELAY);
-        assertTrue(child.workflowRouter.hasRole(Roles.DEFAULT_ADMIN_ROLE, networkConfig.roles.defaultAdmin));
+        assertEq(child.workflowRouter.defaultAdmin(), address(this));
+        assertEq(child.workflowRouter.defaultAdminDelay(), 0);
+        (address pendingAdmin, uint48 schedule) = child.workflowRouter.pendingDefaultAdmin();
+        assertEq(pendingAdmin, networkConfig.roles.defaultAdmin);
+        assertEq(schedule, block.timestamp);
+        assertTrue(child.workflowRouter.hasRole(Roles.DEFAULT_ADMIN_ROLE, address(this)));
+        assertTrue(child.workflowRouter.hasRole(Roles.CONFIG_OPERATOR_ROLE, address(this)));
         assertTrue(child.workflowRouter.hasRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator));
         assertTrue(child.workflowRouter.hasRole(Roles.PAUSER_ROLE, networkConfig.roles.pauser));
         assertTrue(child.workflowRouter.hasRole(Roles.UNPAUSER_ROLE, networkConfig.roles.unpauser));

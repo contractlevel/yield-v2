@@ -9,8 +9,28 @@ import {MockComet} from "./mocks/MockComet.sol";
 contract CompoundV3AdapterHarness is CompoundV3Adapter, HelperHarness {
     constructor(address vault, address comet, address cometRewards) CompoundV3Adapter(vault, comet, cometRewards) {}
 
+    function mockUsesBufferedAssets() external pure returns (bool) {
+        return false;
+    }
+
+    function mockDepositCanSupply(uint256) external pure returns (bool) {
+        return true;
+    }
+
+    function mockDepositCanBuffer(uint256) external pure returns (bool) {
+        return false;
+    }
+
     function mockDepositDecreasesTVL() external view returns (bool) {
         return MockComet(i_comet).s_decreaseTVLOnSupply();
+    }
+
+    function mockDepositReverts() external pure returns (bool) {
+        return false;
+    }
+
+    function mockWithdrawReverts() external pure returns (bool) {
+        return false;
     }
 
     function mockDepositTVLChange() external view returns (uint256) {

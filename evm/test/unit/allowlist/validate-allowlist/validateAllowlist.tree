@@ -1,0 +1,20 @@
+validateAllowlist
+├── when enforcement is disabled
+│   ├── it should accept a single non-allowlisted user
+│   ├── it should accept a non-allowlisted caller and beneficiary
+│   └── it should accept identical non-allowlisted addresses
+└── when enforcement is enabled
+    ├── when a single user is not allowlisted
+    │   └── it should revert with that user
+    ├── when a single user is allowlisted
+    │   └── it should succeed, including arbitrary and zero addresses
+    ├── when the caller is not allowlisted
+    │   └── it should revert with the caller, even if the beneficiary is also not allowlisted
+    ├── when only the beneficiary is not allowlisted
+    │   └── it should revert with the beneficiary, including the zero address
+    ├── when both addresses are allowlisted
+    │   └── it should succeed, including a zero beneficiary
+    ├── when both addresses are identical
+    │   ├── it should succeed if allowlisted
+    │   └── it should revert if not allowlisted
+    └── it should not change enforcement or membership

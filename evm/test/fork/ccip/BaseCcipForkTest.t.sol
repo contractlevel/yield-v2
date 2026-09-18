@@ -24,7 +24,6 @@ abstract contract BaseCcipForkTest is BaseForkTest {
 
     uint256 internal constant CCIP_LINK_AMOUNT = 1_000 ether;
     uint256 internal constant CCTP_ATTESTER_COUNT = 4;
-    uint256 internal constant FORK_CCIP_GAS_LIMIT = 5_000_000;
 
     bytes10 internal constant CLOSE_EPOCH_WORKFLOW_NAME = bytes10("closeEpoch");
     bytes10 internal constant EXECUTE_WITHDRAW_WORKFLOW_NAME = bytes10("epochDraw");
@@ -37,15 +36,21 @@ abstract contract BaseCcipForkTest is BaseForkTest {
     address internal constant ETHEREUM_CCTP_MESSAGE_TRANSMITTER = 0x0a992d191DEeC32aFe36203Ad87D7d289a738F81;
     address internal constant AVALANCHE_CCTP_MESSAGE_TRANSMITTER = 0x8186359aF5F57FbB40c6b14A588d2A59C0C29880;
     address internal constant OPTIMISM_CCTP_MESSAGE_TRANSMITTER = 0x4D41f22c5a0e5c74090899E5a8Fb597a8842b3e8;
+    address internal constant POLYGON_CCTP_MESSAGE_TRANSMITTER = 0xF3be9355363857F3e001be68856A2f96b4C39Ba9;
 
     address[] internal attesters;
     uint256[] internal attesterPks;
 
     function setUp() public virtual override {
         super.setUp();
+        _selectBaseFork();
+        _changePrank(baseConfig.roles.allowlistOperator);
+        address[] memory users = new address[](1);
+        users[0] = i_depositor;
+        parent.vault.setAllowlistedUsers(users, true);
+
         _setCctpAttesters();
         _fundCcipLink();
-        _setForkCcipGasLimits();
         _configureChildToChildVaults();
     }
 
@@ -57,11 +62,12 @@ abstract contract BaseCcipForkTest is BaseForkTest {
             (attesters[i], attesterPks[i]) = makeAddrAndKey(string.concat("attester", vm.toString(i)));
         }
 
-        _configureCctpAttesters(arbitrumFork, ARBITRUM_CCTP_MESSAGE_TRANSMITTER);
         _configureCctpAttesters(baseFork, BASE_CCTP_MESSAGE_TRANSMITTER);
+        _configureCctpAttesters(arbitrumFork, ARBITRUM_CCTP_MESSAGE_TRANSMITTER);
         _configureCctpAttesters(ethereumFork, ETHEREUM_CCTP_MESSAGE_TRANSMITTER);
         _configureCctpAttesters(avalancheFork, AVALANCHE_CCTP_MESSAGE_TRANSMITTER);
         _configureCctpAttesters(optimismFork, OPTIMISM_CCTP_MESSAGE_TRANSMITTER);
+        _configureCctpAttesters(polygonFork, POLYGON_CCTP_MESSAGE_TRANSMITTER);
 
         vm.stopPrank();
     }
@@ -81,10 +87,10 @@ abstract contract BaseCcipForkTest is BaseForkTest {
     }
 
     function _fundCcipLink() internal {
-        _selectArbitrumFork();
+        _selectBaseFork();
         deal(parent.link, address(parent.vault), CCIP_LINK_AMOUNT);
 
-        _selectBaseFork();
+        _selectArbitrumFork();
         deal(child.link, address(child.vault), CCIP_LINK_AMOUNT);
 
         _selectEthereumFork();
@@ -95,38 +101,21 @@ abstract contract BaseCcipForkTest is BaseForkTest {
 
         _selectOptimismFork();
         deal(child.link, address(child.vault), CCIP_LINK_AMOUNT);
-    }
 
-    function _setForkCcipGasLimits() internal {
-        _selectArbitrumFork();
-        _setCcipGasLimit(parent.vault, baseConfig.ccip.thisChainSelector, FORK_CCIP_GAS_LIMIT);
-        _setCcipGasLimit(parent.vault, ethereumConfig.ccip.thisChainSelector, FORK_CCIP_GAS_LIMIT);
-
-        _selectBaseFork();
-        _setCcipGasLimit(baseChild.vault, arbitrumConfig.ccip.thisChainSelector, FORK_CCIP_GAS_LIMIT);
-        _setCcipGasLimit(baseChild.vault, ethereumConfig.ccip.thisChainSelector, FORK_CCIP_GAS_LIMIT);
-
-        _selectEthereumFork();
-        _setCcipGasLimit(ethereumChild.vault, arbitrumConfig.ccip.thisChainSelector, FORK_CCIP_GAS_LIMIT);
-        _setCcipGasLimit(ethereumChild.vault, baseConfig.ccip.thisChainSelector, FORK_CCIP_GAS_LIMIT);
-    }
-
-    function _setCcipGasLimit(ChildVault vault, uint64 chainSelector, uint256 gasLimit) internal {
-        _changePrank(networkConfig.roles.configOperator);
-        vault.setCcipGasLimit(chainSelector, gasLimit);
-    }
-
-    function _setCcipGasLimit(ParentVault vault, uint64 chainSelector, uint256 gasLimit) internal {
-        _changePrank(networkConfig.roles.configOperator);
-        vault.setCcipGasLimit(chainSelector, gasLimit);
+        _selectPolygonFork();
+        deal(child.link, address(child.vault), CCIP_LINK_AMOUNT);
     }
 
     function _configureChildToChildVaults() internal {
-        _selectBaseFork();
-        _setCrosschainVault(baseChild.vault, ethereumConfig.ccip.thisChainSelector, address(ethereumChild.vault));
+        _selectArbitrumFork();
+        _setCrosschainVault(arbitrumChild.vault, ethereumConfig.ccip.thisChainSelector, address(ethereumChild.vault));
+        _setCrosschainVault(arbitrumChild.vault, polygonConfig.ccip.thisChainSelector, address(polygonChild.vault));
 
         _selectEthereumFork();
-        _setCrosschainVault(ethereumChild.vault, baseConfig.ccip.thisChainSelector, address(baseChild.vault));
+        _setCrosschainVault(ethereumChild.vault, arbitrumConfig.ccip.thisChainSelector, address(arbitrumChild.vault));
+
+        _selectPolygonFork();
+        _setCrosschainVault(polygonChild.vault, arbitrumConfig.ccip.thisChainSelector, address(arbitrumChild.vault));
     }
 
     function _routeUsdcMessageTo(uint256 forkId) internal {
@@ -134,14 +123,14 @@ abstract contract BaseCcipForkTest is BaseForkTest {
     }
 
     function _fundAndApproveParentUsdc(address account, uint256 amount) internal {
-        _selectArbitrumFork();
+        _selectBaseFork();
         deal(parent.asset, account, amount);
         _changePrank(account);
         IERC20(parent.asset).approve(address(parent.vault), amount);
     }
 
     function _approveShares(address owner, uint256 amount) internal {
-        _selectArbitrumFork();
+        _selectBaseFork();
         _changePrank(owner);
         parent.share.approve(address(parent.vault), amount);
     }
@@ -208,7 +197,7 @@ abstract contract BaseCcipForkTest is BaseForkTest {
     }
 
     function _closeEpochThroughWorkflow(bytes32 workflowId, uint256 tvl) internal {
-        _selectArbitrumFork();
+        _selectBaseFork();
         _callWorkflowRouter(
             parent.workflowRouter,
             workflowId,
@@ -221,7 +210,7 @@ abstract contract BaseCcipForkTest is BaseForkTest {
     function _completeEpochDepositThroughWorkflow(bytes32 workflowId, uint256 epochNonce, uint256 actualDepositAmount)
         internal
     {
-        _selectArbitrumFork();
+        _selectBaseFork();
         _callWorkflowRouter(
             parent.workflowRouter,
             workflowId,
@@ -247,7 +236,7 @@ abstract contract BaseCcipForkTest is BaseForkTest {
     }
 
     function _initiateRebalanceThroughWorkflow(bytes32 workflowId, Types.Strategy memory newStrategy) internal {
-        _selectArbitrumFork();
+        _selectBaseFork();
         _markParentFirstEpochCompleted();
         _markParentRebalanceCooldownElapsed();
         _callWorkflowRouter(
@@ -274,7 +263,7 @@ abstract contract BaseCcipForkTest is BaseForkTest {
     }
 
     function _completeRebalanceThroughWorkflow(bytes32 workflowId) internal {
-        _selectArbitrumFork();
+        _selectBaseFork();
         _callWorkflowRouter(
             parent.workflowRouter,
             workflowId,
@@ -300,12 +289,12 @@ abstract contract BaseCcipForkTest is BaseForkTest {
     }
 
     function _parentAaveV3Strategy() internal view returns (Types.Strategy memory strategy) {
-        strategy =
-            Types.Strategy({protocolId: AAVE_V3_PROTOCOL_ID, chainSelector: arbitrumConfig.ccip.thisChainSelector});
+        strategy = Types.Strategy({protocolId: AAVE_V3_PROTOCOL_ID, chainSelector: baseConfig.ccip.thisChainSelector});
     }
 
-    function _baseAaveV3Strategy() internal view returns (Types.Strategy memory strategy) {
-        strategy = Types.Strategy({protocolId: AAVE_V3_PROTOCOL_ID, chainSelector: baseConfig.ccip.thisChainSelector});
+    function _arbitrumAaveV3Strategy() internal view returns (Types.Strategy memory strategy) {
+        strategy =
+            Types.Strategy({protocolId: AAVE_V3_PROTOCOL_ID, chainSelector: arbitrumConfig.ccip.thisChainSelector});
     }
 
     function _ethereumAaveV3Strategy() internal view returns (Types.Strategy memory strategy) {
@@ -313,20 +302,34 @@ abstract contract BaseCcipForkTest is BaseForkTest {
             Types.Strategy({protocolId: AAVE_V3_PROTOCOL_ID, chainSelector: ethereumConfig.ccip.thisChainSelector});
     }
 
-    function _setParentRemoteStrategyToBase() internal {
-        _selectArbitrumFork();
+    function _polygonAaveV3Strategy() internal view returns (Types.Strategy memory strategy) {
+        strategy =
+            Types.Strategy({protocolId: AAVE_V3_PROTOCOL_ID, chainSelector: polygonConfig.ccip.thisChainSelector});
+    }
+
+    function _setParentRemoteStrategyToArbitrum() internal {
+        _selectBaseFork();
         stdstore.enable_packed_slots().target(address(parent.vault)).sig("getActiveProtocolAdapter()")
             .checked_write(address(0));
         stdstore.target(address(parent.vault)).sig("getRebalance()").depth(2).checked_write(AAVE_V3_PROTOCOL_ID);
         stdstore.target(address(parent.vault)).sig("getRebalance()").depth(3)
-            .checked_write(baseConfig.ccip.thisChainSelector);
+            .checked_write(arbitrumConfig.ccip.thisChainSelector);
     }
 
-    function _setBaseChildActiveAdapterToAaveV3() internal {
+    function _setParentRemoteStrategyToPolygon() internal {
         _selectBaseFork();
-        stdstore.enable_packed_slots().target(address(baseChild.vault)).sig("getActiveProtocolAdapter()")
-            .checked_write(address(baseChild.aaveV3Adapter));
-        assertEq(baseChild.vault.getActiveProtocolAdapter(), address(baseChild.aaveV3Adapter));
+        stdstore.enable_packed_slots().target(address(parent.vault)).sig("getActiveProtocolAdapter()")
+            .checked_write(address(0));
+        stdstore.target(address(parent.vault)).sig("getRebalance()").depth(2).checked_write(AAVE_V3_PROTOCOL_ID);
+        stdstore.target(address(parent.vault)).sig("getRebalance()").depth(3)
+            .checked_write(polygonConfig.ccip.thisChainSelector);
+    }
+
+    function _setArbitrumChildActiveAdapterToAaveV3() internal {
+        _selectArbitrumFork();
+        stdstore.enable_packed_slots().target(address(arbitrumChild.vault)).sig("getActiveProtocolAdapter()")
+            .checked_write(address(arbitrumChild.aaveV3Adapter));
+        assertEq(arbitrumChild.vault.getActiveProtocolAdapter(), address(arbitrumChild.aaveV3Adapter));
     }
 
     function _setEthereumChildActiveAdapterToAaveV3() internal {
@@ -336,22 +339,36 @@ abstract contract BaseCcipForkTest is BaseForkTest {
         assertEq(ethereumChild.vault.getActiveProtocolAdapter(), address(ethereumChild.aaveV3Adapter));
     }
 
+    function _setPolygonChildActiveAdapterToAaveV3() internal {
+        _selectPolygonFork();
+        stdstore.enable_packed_slots().target(address(polygonChild.vault)).sig("getActiveProtocolAdapter()")
+            .checked_write(address(polygonChild.aaveV3Adapter));
+        assertEq(polygonChild.vault.getActiveProtocolAdapter(), address(polygonChild.aaveV3Adapter));
+    }
+
     function _seedParentAaveV3Tvl(uint256 amount) internal {
-        _selectArbitrumFork();
+        _selectBaseFork();
         deal(parent.asset, address(parent.aaveV3Adapter), amount);
         _changePrank(address(parent.vault));
         parent.aaveV3Adapter.deposit(amount);
     }
 
-    function _seedBaseChildAaveV3Tvl(uint256 amount) internal {
-        _selectBaseFork();
-        deal(baseChild.asset, address(baseChild.aaveV3Adapter), amount);
-        _changePrank(address(baseChild.vault));
-        baseChild.aaveV3Adapter.deposit(amount);
+    function _seedArbitrumChildAaveV3Tvl(uint256 amount) internal {
+        _selectArbitrumFork();
+        deal(arbitrumChild.asset, address(arbitrumChild.aaveV3Adapter), amount);
+        _changePrank(address(arbitrumChild.vault));
+        arbitrumChild.aaveV3Adapter.deposit(amount);
+    }
+
+    function _seedPolygonChildAaveV3Tvl(uint256 amount) internal {
+        _selectPolygonFork();
+        deal(polygonChild.asset, address(polygonChild.aaveV3Adapter), amount);
+        _changePrank(address(polygonChild.vault));
+        polygonChild.aaveV3Adapter.deposit(amount);
     }
 
     function _depositAndClaimParentShares(bytes32 workflowId) internal returns (uint256 shareAmount) {
-        _selectArbitrumFork();
+        _selectBaseFork();
 
         _fundAndApproveParentUsdc(i_depositor, REMOTE_WITHDRAW_AMOUNT);
 
@@ -360,9 +377,9 @@ abstract contract BaseCcipForkTest is BaseForkTest {
 
         _warpPastMinEpoch();
         _closeEpochThroughWorkflow(workflowId, 0);
-        _setBaseChildActiveAdapterToAaveV3();
-        _selectArbitrumFork();
-        _routeUsdcMessageTo(baseFork);
+        _setArbitrumChildActiveAdapterToAaveV3();
+        _selectBaseFork();
+        _routeUsdcMessageTo(arbitrumFork);
 
         _completeEpochDepositThroughWorkflow(workflowId, 1, REMOTE_WITHDRAW_AMOUNT);
         _changePrank(i_depositor);

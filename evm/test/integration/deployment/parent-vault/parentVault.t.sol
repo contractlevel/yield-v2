@@ -14,7 +14,7 @@ contract ParentVault_DeploymentIntegrationTest is BaseIntegrationTest {
     function test_ParentVault_deployment_GrantsExpectedVaultRoles() external view {
         assertEq(parent.vault.defaultAdmin(), address(this));
         assertTrue(parent.vault.hasRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator));
-        assertFalse(parent.vault.hasRole(Roles.CONFIG_OPERATOR_ROLE, address(this)));
+        assertTrue(parent.vault.hasRole(Roles.CONFIG_OPERATOR_ROLE, address(this)));
         assertTrue(parent.vault.hasRole(Roles.EPOCH_OPERATOR_ROLE, address(parent.workflowRouter)));
         assertTrue(parent.vault.hasRole(Roles.REBALANCE_OPERATOR_ROLE, address(parent.workflowRouter)));
         assertTrue(parent.vault.hasRole(Roles.LINK_OPERATOR_ROLE, networkConfig.roles.linkOperator));
@@ -39,6 +39,8 @@ contract ParentVault_DeploymentIntegrationTest is BaseIntegrationTest {
     }
 
     function test_ParentVault_deployment_ConfiguresCoreAddresses() external view {
+        assertTrue(parent.vault.getAllowlistEnabled());
+        assertTrue(parent.vault.getAllowlistedUser(networkConfig.allowlist.initialUsers[0]));
         assertEq(parent.vault.getAdapterRegistry(), address(parent.adapterRegistry));
         assertEq(parent.vault.getShare(), address(parent.share));
         assertEq(parent.vault.getTreasury(), networkConfig.treasury);
@@ -141,9 +143,13 @@ contract ParentVault_DeploymentIntegrationTest is BaseIntegrationTest {
 
     function test_ParentVault_deployment_ConfiguresWorkflowRouter() external view {
         assertEq(parent.workflowRouter.getVault(), address(parent.vault));
-        assertEq(parent.workflowRouter.defaultAdmin(), networkConfig.roles.defaultAdmin);
-        assertEq(parent.workflowRouter.defaultAdminDelay(), INITIAL_DEFAULT_ADMIN_DELAY);
-        assertTrue(parent.workflowRouter.hasRole(Roles.DEFAULT_ADMIN_ROLE, networkConfig.roles.defaultAdmin));
+        assertEq(parent.workflowRouter.defaultAdmin(), address(this));
+        assertEq(parent.workflowRouter.defaultAdminDelay(), 0);
+        (address pendingAdmin, uint48 schedule) = parent.workflowRouter.pendingDefaultAdmin();
+        assertEq(pendingAdmin, networkConfig.roles.defaultAdmin);
+        assertEq(schedule, block.timestamp);
+        assertTrue(parent.workflowRouter.hasRole(Roles.DEFAULT_ADMIN_ROLE, address(this)));
+        assertTrue(parent.workflowRouter.hasRole(Roles.CONFIG_OPERATOR_ROLE, address(this)));
         assertTrue(parent.workflowRouter.hasRole(Roles.CONFIG_OPERATOR_ROLE, networkConfig.roles.configOperator));
         assertTrue(parent.workflowRouter.hasRole(Roles.PAUSER_ROLE, networkConfig.roles.pauser));
         assertTrue(parent.workflowRouter.hasRole(Roles.UNPAUSER_ROLE, networkConfig.roles.unpauser));

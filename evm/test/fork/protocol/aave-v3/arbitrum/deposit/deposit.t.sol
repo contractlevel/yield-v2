@@ -10,10 +10,10 @@ contract Arbitrum_AaveV3DepositForkTest is BaseAaveV3ForkTest {
     }
 
     function test_Arbitrum_aaveV3_deposit_RevertWhen_CallerIsNotVault() external {
-        _assertAaveV3DepositRevertsWhenCallerIsNotVault(parent.aaveV3Adapter);
+        _assertAaveV3DepositRevertsWhenCallerIsNotVault(arbitrumChild.aaveV3Adapter);
     }
 
     function test_Arbitrum_aaveV3_deposit_Success() external {
-        _assertAaveV3DepositSucceeds(parent.aaveV3Adapter, address(parent.vault), parent.asset);
+        _assertAaveV3DepositSucceeds(arbitrumChild.aaveV3Adapter, address(arbitrumChild.vault), arbitrumChild.asset);
     }
 }

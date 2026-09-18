@@ -1,5 +1,5 @@
-recover child epoch withdraw on Base fork
-└── when the Base strategy withdraw fails
+recover child epoch withdraw on Arbitrum fork
+└── when the Arbitrum strategy withdraw fails
     ├── it should emit EpochWithdrawRecoveryStored
-    ├── it should recover from Base Aave V3 and route USDC to Arbitrum
+    ├── it should recover from Arbitrum Aave V3 and route USDC to Base
     └── it should make the parent epoch claimable for USDC

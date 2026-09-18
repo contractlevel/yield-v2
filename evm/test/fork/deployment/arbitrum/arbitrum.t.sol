@@ -9,11 +9,7 @@ contract Arbitrum_DeploymentForkTest is BaseForkDeploymentTest {
         _selectArbitrumFork();
     }
 
-    function test_Arbitrum_deployment_ConfiguresParent() external view {
-        _assertParentForkDeployment();
-    }
-
-    function test_Arbitrum_deployment_ConfiguresCrosschainVaults() external view {
-        _assertParentForkCrosschainVaults();
+    function test_Arbitrum_deployment_ConfiguresChild() external view {
+        _assertChildForkDeployment(arbitrumChild, arbitrumConfig, arbitrumForkDeployer);
     }
 }

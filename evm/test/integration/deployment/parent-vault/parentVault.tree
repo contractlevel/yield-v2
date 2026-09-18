@@ -5,7 +5,8 @@ ParentVault_deployment
 │   ├── it should deploy vault as separate implementation and proxy contracts
 │   └── it should hand off vault default admin
 ├── core addresses
-│   └── it should configure vault addresses from deployment config
+│   ├── it should configure vault addresses from deployment config
+│   └── it should enable enforcement and allowlist the configured initial user
 ├── share
 │   └── it should configure share initial state
 ├── adapters

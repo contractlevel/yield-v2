@@ -7,7 +7,7 @@ authorization layer.
 
 - `DEFAULT_ADMIN_ROLE` grants and revokes roles. It does not implicitly bypass other role checks.
 - Pause and unpause authority are separate.
-- User vault actions are permissionless while the ParentVault is unpaused.
+- User vault actions are public while ParentVault is unpaused; new deposits also require membership when the allowlist is enabled.
 - UUPS upgrades require `UPGRADER_ROLE`.
 - Recovery execution is permissionless and uses previously stored recovery data.
 - `DEFAULT_ADMIN_ROLE` and `UPGRADER_ROLE` are each intended to be held directly by their own
@@ -33,6 +33,7 @@ authorization layer.
 | `BURNER_ROLE`                  | ParentVault                    | Burn YieldcoinShare tokens.                                                                                                   |
 | `REWARDS_OPERATOR_ROLE`        | Multisig C                     | Claim Compound v3 rewards through an adapter.                                                                                 |
 | `CANCEL_DEPOSIT_OPERATOR_ROLE` | Multisig C                     | Force-cancel a ParentVault deposit.                                                                                           |
+| `ALLOWLIST_OPERATOR_ROLE`     | Configured allowlist operator  | Enable or disable the ParentVault allowlist and update membership.                                                            |
 
 Roles use `DEFAULT_ADMIN_ROLE` as their administrator unless the contract explicitly says
 otherwise.
@@ -61,14 +62,19 @@ Pausing YieldcoinShare disables transfers, minting, and burning.
 | `setInitialActiveProtocolAdapter`                     | `DEFAULT_ADMIN_ROLE`; callable successfully once       |
 | `setTreasury`                                         | `CONFIG_OPERATOR_ROLE`                                 |
 | `setSupportedProtocol`                                | `CONFIG_OPERATOR_ROLE`                                 |
+| `setAllowlistEnabled`, `setAllowlistedUsers`           | `ALLOWLIST_OPERATOR_ROLE`; available while paused       |
 | Cross-chain vault and CCIP gas setters                | `CONFIG_OPERATOR_ROLE`                                 |
-| `deposit`, `withdraw`, claims, and user cancellations | Public; disabled while paused                          |
+| `deposit`, `depositFor`                               | Public; disabled while paused; allowlist when enabled   |
+| Withdrawals, claims, and user cancellations           | Public; disabled while paused                          |
 | `forceCancelDeposit`                                  | `CANCEL_DEPOSIT_OPERATOR_ROLE`; available while paused |
 | `closeEpoch`, `completeEpochDeposit`                  | `EPOCH_OPERATOR_ROLE`                                  |
 | `initiateRebalance`, `completeRebalance`              | `REBALANCE_OPERATOR_ROLE`                              |
 | `executeRecovery`                                     | Public; disabled while paused                          |
 | `withdrawLink`                                        | `LINK_OPERATOR_ROLE`                                   |
 | UUPS upgrade                                          | `UPGRADER_ROLE`                                        |
+
+When enforcement is enabled, `deposit` requires an allowlisted caller and `depositFor` requires
+both caller and beneficiary. Removing membership does not block cancellations, claims, or withdrawals.
 
 `closeEpoch`, `completeEpochDeposit`, `initiateRebalance`, and `completeRebalance` are all disabled
 while ParentVault is paused. An in-progress operation can be finalized only after ParentVault is

@@ -234,7 +234,9 @@ invariant CFG_zeroProtocolIsNeverSupported()
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address cancelDepositOperator
+            address cancelDepositOperator,
+            address allowlistOperator,
+            bool allowlistEnabled
         ) with (env e) {
             require !getSupportedProtocol(to_bytes32(0));
         }
@@ -286,7 +288,9 @@ invariant REBAL_004_rebalancingStateHasPendingStrategy()
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address cancelDepositOperator
+            address cancelDepositOperator,
+            address allowlistOperator,
+            bool allowlistEnabled
         ) with (env e) {
             require getRebalance().state == Types.RebalanceState.NONE;
             require getRebalance().pendingStrategy.protocolId == to_bytes32(0);
@@ -311,7 +315,9 @@ invariant REBAL_004_noneStateHasNoPendingStrategy()
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address cancelDepositOperator
+            address cancelDepositOperator,
+            address allowlistOperator,
+            bool allowlistEnabled
         ) with (env e) {
             require getRebalance().state == Types.RebalanceState.NONE;
             require getRebalance().pendingStrategy.protocolId == to_bytes32(0);
@@ -339,7 +345,9 @@ invariant ADAPTER_002_REBAL_006_activeAdapterIsBoundToParentVault()
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address cancelDepositOperator
+            address cancelDepositOperator,
+            address allowlistOperator,
+            bool allowlistEnabled
         ) with (env e) {
             require getActiveProtocolAdapter() == 0;
         }
@@ -365,7 +373,9 @@ invariant REBAL_009_rebalanceExcludesExecutingPreviousEpoch()
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address cancelDepositOperator
+            address cancelDepositOperator,
+            address allowlistOperator,
+            bool allowlistEnabled
         ) with (env e) {
             require getRebalance().state == Types.RebalanceState.NONE;
             require getEpochNonce() <= 1;
@@ -416,7 +426,9 @@ invariant NONCE_009_parentLifecycleNoncesArePositive()
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address cancelDepositOperator
+            address cancelDepositOperator,
+            address allowlistOperator,
+            bool allowlistEnabled
         ) with (env e) {
         }
     }
@@ -444,7 +456,9 @@ invariant EPOCH_001_EPOCH_020_exactlyCurrentEpochIsOpen(uint256 epochNonce)
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address cancelDepositOperator
+            address cancelDepositOperator,
+            address allowlistOperator,
+            bool allowlistEnabled
         ) with (env e) {
             require getEpoch(epochNonce).status == Types.EpochStatus.NONE;
         }
@@ -466,7 +480,9 @@ invariant EPOCH_001_EPOCH_020_epochsBeyondCurrentHaveNoneStatus(uint256 otherEpo
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address cancelDepositOperator
+            address cancelDepositOperator,
+            address allowlistOperator,
+            bool allowlistEnabled
         ) with (env e) {
             /// @dev genesis fact, not provable as an invariant: if initialize() is about to succeed,
             ///      the one-shot initializer modifier guarantees this is the first-ever call, so every
@@ -513,7 +529,9 @@ invariant EPOCH_020_historicalEpochsHaveCanonicalStatus(uint256 epochNonce)
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address cancelDepositOperator
+            address cancelDepositOperator,
+            address allowlistOperator,
+            bool allowlistEnabled
         ) with (env e) {
         }
     }
@@ -556,7 +574,9 @@ invariant EPOCH_008_EPOCH_011_EPOCH_013_epochRemainingCountersAreZeroBeforeClose
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address cancelDepositOperator
+            address cancelDepositOperator,
+            address allowlistOperator,
+            bool allowlistEnabled
         ) with (env e) {
             /// @dev genesis fact, not provable as an invariant - see
             ///      EPOCH_001_EPOCH_020_epochsBeyondCurrentHaveNoneStatus's initialize() preserved block above
@@ -607,7 +627,9 @@ invariant EPOCH_005_futureEpochDepositTotalsAreZero(uint256 epochNonce)
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address cancelDepositOperator
+            address cancelDepositOperator,
+            address allowlistOperator,
+            bool allowlistEnabled
         ) with (env e) {
             require getEpochNonce() == 0;
             require getEpoch(epochNonce).totalDepositAmount == 0;
@@ -626,7 +648,9 @@ invariant EPOCH_005_futureEpochShareBurnTotalsAreZero(uint256 epochNonce)
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address cancelDepositOperator
+            address cancelDepositOperator,
+            address allowlistOperator,
+            bool allowlistEnabled
         ) with (env e) {
             require getEpochNonce() == 0;
             require getEpoch(epochNonce).totalShareBurnAmount == 0;
@@ -752,7 +776,7 @@ invariant SOLV_001_parentCoversReservedLiquidObligations()
             requireInvariant ghostEpochStatusMatchesStorage(epochNonce);
             requireInvariant ghostEpochRemainingWithdrawMatchesStorage(epochNonce);
         }
-        preserved completeEpochDeposit(uint256 expectedEpochNonce) with (env e) {
+        preserved completeEpochDeposit(uint256 expectedEpochNonce, uint256 actualDepositAmount) with (env e) {
             require getEpochNonce() > 1;
             requireInvariant ghostEpochStatusMatchesStorage(assert_uint256(getEpochNonce() - 1));
             requireInvariant ghostEpochRemainingWithdrawMatchesStorage(assert_uint256(getEpochNonce() - 1));
@@ -775,7 +799,9 @@ invariant SOLV_001_parentCoversReservedLiquidObligations()
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address cancelDepositOperator
+            address cancelDepositOperator,
+            address allowlistOperator,
+            bool allowlistEnabled
         ) with (env e) {
             /// @dev A successful proxy initialization is the genesis transition, before any epoch,
             ///      recovery, or claimable-withdraw accounting has been created.
@@ -829,7 +855,9 @@ invariant SOLV_003_withdrawEscrowReconcilesWithEpochAccounting()
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address cancelDepositOperator
+            address cancelDepositOperator,
+            address allowlistOperator,
+            bool allowlistEnabled
         ) with (env e) {
             /// @dev A successful proxy initialization opens untouched epoch 1.
             require getEpochNonce() == 0;
@@ -858,7 +886,9 @@ invariant SOLV_006_depositEscrowReconcilesWithEpochAccounting()
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address cancelDepositOperator
+            address cancelDepositOperator,
+            address allowlistOperator,
+            bool allowlistEnabled
         ) with (env e) {
             require getEpochNonce() == 0;
             require getEpoch(1).totalDepositAmount == 0;
@@ -898,7 +928,9 @@ invariant SHARE_001_SHARE_003_totalSupplyReconcilesWithTotalShares()
         preserved initialize(
             BaseVault.InitParams params,
             address treasury,
-            address cancelDepositOperator
+            address cancelDepositOperator,
+            address allowlistOperator,
+            bool allowlistEnabled
         ) with (env e) {
             /// @dev genesis fact, not provable as an invariant - see
             ///      EPOCH_001_EPOCH_020_epochsBeyondCurrentHaveNoneStatus's initialize() preserved block above. If
@@ -976,7 +1008,7 @@ rule storageBehaviorMatchesMutability(env e, method f, calldataarg args) filtere
     storage after = lastStorage;
     bool isReadOnly = f.isView || f.isPure;
     bool isImplementationInitializer =
-        f.selector == sig:initialize(BaseVault.InitParams,address,address).selector;
+        f.selector == sig:initialize(BaseVault.InitParams,address,address,address,bool).selector;
     bool changesExpectedExternalStorage =
         f.selector == sig:withdrawLink(uint256).selector && before[link] != after[link];
 
@@ -994,7 +1026,7 @@ rule storageBehaviorMatchesMutability(env e, method f, calldataarg args) filtere
 rule NONCE_009_parentLifecycleNoncesNeverDecrease(method f) filtered {
         f -> isInvariantPreservationMethod(f)
 } {
-    require f.selector == sig:initialize(BaseVault.InitParams,address,address).selector
+    require f.selector == sig:initialize(BaseVault.InitParams,address,address,address,bool).selector
         => (getEpochNonce() == 0 && getRebalance().nonce == 0);
 
     uint256 epochNonceBefore = getEpochNonce();
@@ -1023,12 +1055,12 @@ rule NONCE_010_NONCE_011_onlyLifecycleTransitionsChangeNonces(method f) filtered
     f(e, args);
 
     assert (
-        f.selector != sig:initialize(BaseVault.InitParams,address,address).selector
+        f.selector != sig:initialize(BaseVault.InitParams,address,address,address,bool).selector
             && f.selector != sig:closeEpoch(uint256,uint256).selector
     ) => getEpochNonce() == epochNonceBefore;
 
     assert (
-        f.selector != sig:initialize(BaseVault.InitParams,address,address).selector
+        f.selector != sig:initialize(BaseVault.InitParams,address,address,address,bool).selector
             && f.selector != sig:ccipReceive(Client.Any2EVMMessage).selector
             && f.selector != sig:initiateRebalance(uint256,Types.Strategy).selector
             && f.selector != sig:completeRebalance(uint256).selector
@@ -1100,7 +1132,7 @@ rule EPOCH_002_epochTransitionsAreValid(method f, uint256 epochNonce) filtered {
         f -> isInvariantPreservationMethod(f)
 } {
     requireInvariant EPOCH_001_EPOCH_020_epochsBeyondCurrentHaveNoneStatus(epochNonce);
-    require f.selector == sig:initialize(BaseVault.InitParams,address,address).selector
+    require f.selector == sig:initialize(BaseVault.InitParams,address,address,address,bool).selector
         => getEpoch(1).status == Types.EpochStatus.NONE;
 
     Types.EpochStatus statusBefore = getEpoch(epochNonce).status;

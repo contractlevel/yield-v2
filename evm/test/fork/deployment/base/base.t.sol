@@ -9,7 +9,11 @@ contract Base_DeploymentForkTest is BaseForkDeploymentTest {
         _selectBaseFork();
     }
 
-    function test_Base_deployment_ConfiguresChild() external view {
-        _assertChildForkDeployment(baseChild, baseConfig, baseForkDeployer);
+    function test_Base_deployment_ConfiguresParent() external view {
+        _assertParentForkDeployment();
+    }
+
+    function test_Base_deployment_ConfiguresCrosschainVaults() external view {
+        _assertParentForkCrosschainVaults();
     }
 }

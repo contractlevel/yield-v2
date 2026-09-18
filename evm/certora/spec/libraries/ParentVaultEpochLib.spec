@@ -1,6 +1,6 @@
 /// Verification of ParentVaultEpochLib
 /// @author @contractlevel
-/// @notice ParentVaultEpochLib handles ParentVault epoch closing, local net-withdraw finalization, and opening the next epoch.
+/// @notice ParentVaultEpochLib handles epoch closing, remote deposit reconciliation, local net-withdraw finalization, and opening the next epoch.
 
 /*//////////////////////////////////////////////////////////////
                             METHODS
@@ -26,7 +26,7 @@ methods {
     // Library public wrappers
     function closeEpoch(uint256, uint256, uint256, uint256, uint256, bool)
         external returns (uint256, uint8, uint256, uint256);
-    function completeEpochDeposit(uint256) external;
+    function completeEpochDeposit(uint256, uint256) external;
     function finalizeLocalNetWithdraw(uint256, uint256, uint256) external;
     function openNextEpoch(uint256) external;
 
@@ -44,6 +44,14 @@ definition ACTION_SEND_DEPOSIT_TO_REMOTE_STRATEGY() returns uint8 = 2;
 definition ACTION_WITHDRAW_FROM_LOCAL_STRATEGY() returns uint8 = 3;
 definition ACTION_WAIT_FOR_REMOTE_WITHDRAW() returns uint8 = 4;
 
+// Full-precision withdrawal arithmetic; no uint256 intermediate-product restriction.
+definition RemoteWithdrawMeetsMinimum(uint256 tvl, uint256 minAssetAmount, bool isLocalStrategy) returns bool =
+    isLocalStrategy || getTotalShares() == 0
+        || getEpochTotalShareBurnAmount(getEpochNonce()) * tvl / getTotalShares()
+            <= getEpochTotalDepositAmount(getEpochNonce())
+        || getEpochTotalShareBurnAmount(getEpochNonce()) * tvl / getTotalShares()
+            - getEpochTotalDepositAmount(getEpochNonce()) >= minAssetAmount;
+
 definition EpochOpenEvent() returns bytes32 =
 // keccak256("EpochOpen(uint256)")
     to_bytes32(0x581f6669baee8fbb7926034742085996de6e2c904da8849660716d60148f9f3b);
@@ -59,6 +67,10 @@ definition EpochWithdrawExecutingEvent() returns bytes32 =
 definition EpochClaimableEvent() returns bytes32 =
 // keccak256("EpochClaimable(uint256)")
     to_bytes32(0x45d9681f238e455170e797872754deaef148c9e7836f9949104764a4f4cfae8a);
+
+definition EpochDepositReconciledEvent() returns bytes32 =
+// keccak256("EpochDepositReconciled(uint256,uint256,uint256)")
+    to_bytes32(0x64ff6a5ff731bc0db49a1c3c8cc6ef04e04a5d8e43403f881f8f89eb7e597156);
 
 /*//////////////////////////////////////////////////////////////
                              GHOSTS
@@ -163,10 +175,46 @@ ghost uint256 ghost_EpochClaimable_Param_epochNonce {
     init_state axiom ghost_EpochClaimable_Param_epochNonce == 0;
 }
 
+/// @notice StoreCount: track writes to epoch.remainingShareMintAmount
+ghost mathint ghost_epoch_remainingShareMintAmount_StoreCount {
+    init_state axiom ghost_epoch_remainingShareMintAmount_StoreCount == 0;
+}
+
+/// @notice StoredKey: track latest epoch key written for remainingShareMintAmount
+ghost uint256 ghost_epoch_remainingShareMintAmount_StoredKey {
+    init_state axiom ghost_epoch_remainingShareMintAmount_StoredKey == 0;
+}
+
+/// @notice StoredValue: track latest value written to epoch.remainingShareMintAmount
+ghost uint256 ghost_epoch_remainingShareMintAmount_StoredValue {
+    init_state axiom ghost_epoch_remainingShareMintAmount_StoredValue == 0;
+}
+
+/// @notice EventCount: track amount EpochDepositReconciled event is emitted
+ghost mathint ghost_EpochDepositReconciled_EventCount {
+    init_state axiom ghost_EpochDepositReconciled_EventCount == 0;
+}
+
+/// @notice EmittedValue: track epochNonce param emitted in EpochDepositReconciled event
+ghost uint256 ghost_EpochDepositReconciled_Param_epochNonce {
+    init_state axiom ghost_EpochDepositReconciled_Param_epochNonce == 0;
+}
+
+/// @notice EmittedValue: track actualDepositAmount param emitted in EpochDepositReconciled event
+ghost uint256 ghost_EpochDepositReconciled_Param_actualDepositAmount {
+    init_state axiom ghost_EpochDepositReconciled_Param_actualDepositAmount == 0;
+}
+
+/// @notice EmittedValue: track shareReduction param emitted in EpochDepositReconciled event
+ghost uint256 ghost_EpochDepositReconciled_Param_shareReduction {
+    init_state axiom ghost_EpochDepositReconciled_Param_shareReduction == 0;
+}
+
 definition EpochLifecycleEventCountsAreZero() returns bool =
     ghost_EpochClaimable_EventCount == 0
         && ghost_EpochDepositExecuting_EventCount == 0
-        && ghost_EpochWithdrawExecuting_EventCount == 0;
+        && ghost_EpochWithdrawExecuting_EventCount == 0
+        && ghost_EpochDepositReconciled_EventCount == 0;
 
 /*//////////////////////////////////////////////////////////////
                              HOOKS
@@ -188,6 +236,13 @@ hook Sstore currentContract.ext_yieldcoin_storage_ParentVault.s_epochs[KEY uint2
     ghost_epoch_totalWithdrawClaimAmount_StoreCount = ghost_epoch_totalWithdrawClaimAmount_StoreCount + 1;
     ghost_epoch_totalWithdrawClaimAmount_StoredKey = epochNonce;
     ghost_epoch_totalWithdrawClaimAmount_StoredValue = newValue;
+}
+
+/// @notice hook onto ParentVault epoch remainingShareMintAmount storage writes
+hook Sstore currentContract.ext_yieldcoin_storage_ParentVault.s_epochs[KEY uint256 epochNonce].remainingShareMintAmount uint256 newValue {
+    ghost_epoch_remainingShareMintAmount_StoreCount = ghost_epoch_remainingShareMintAmount_StoreCount + 1;
+    ghost_epoch_remainingShareMintAmount_StoredKey = epochNonce;
+    ghost_epoch_remainingShareMintAmount_StoredValue = newValue;
 }
 
 /// @notice hook onto ParentVault epoch status storage writes
@@ -218,6 +273,16 @@ hook LOG3(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2) {
         ghost_EpochWithdrawExecuting_EventCount = ghost_EpochWithdrawExecuting_EventCount + 1;
         ghost_EpochWithdrawExecuting_Param_epochNonce = bytes32ToUint256(t1);
         ghost_EpochWithdrawExecuting_Param_amount = bytes32ToUint256(t2);
+    }
+}
+
+/// @notice hook onto emitted reconciliation events and increment relevant ghosts
+hook LOG4(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2, bytes32 t3) {
+    if (t0 == EpochDepositReconciledEvent()) {
+        ghost_EpochDepositReconciled_EventCount = ghost_EpochDepositReconciled_EventCount + 1;
+        ghost_EpochDepositReconciled_Param_epochNonce = bytes32ToUint256(t1);
+        ghost_EpochDepositReconciled_Param_actualDepositAmount = bytes32ToUint256(t2);
+        ghost_EpochDepositReconciled_Param_shareReduction = bytes32ToUint256(t3);
     }
 }
 
@@ -274,7 +339,7 @@ rule EPOCH_003_closeEpoch_RevertWhen_RebalanceInProgress() {
     uint256 expectedEpochNonce;
     uint256 tvl;
     uint256 sharePrecision;
-    uint256 minDepositAmount;
+    uint256 minAssetAmount;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
@@ -291,7 +356,7 @@ rule EPOCH_003_closeEpoch_RevertWhen_RebalanceInProgress() {
     require getTotalShares() == 0, "bootstrap share-allocation path";
     require tvl == 0, "bootstrap tvl is zero";
     require sharePrecision == 1, "share precision is one";
-    require minDepositAmount == 1, "minimum deposit amount is one";
+    require minAssetAmount == 1, "minimum deposit amount is one";
 
     /// @dev revert condition being verified
     require getRebalanceState() != Types.RebalanceState.NONE, "rebalance is in progress";
@@ -299,7 +364,11 @@ rule EPOCH_003_closeEpoch_RevertWhen_RebalanceInProgress() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    /// @dev Exclude the remote-withdraw minimum independently of other guards.
+    require RemoteWithdrawMeetsMinimum(tvl, minAssetAmount, isLocalStrategy),
+        "remote net withdrawal meets the minimum";
+
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minAssetAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -312,7 +381,7 @@ rule closeEpoch_RevertWhen_CurrentEpochNonceIsZero() {
     uint256 expectedEpochNonce;
     uint256 tvl;
     uint256 sharePrecision;
-    uint256 minDepositAmount;
+    uint256 minAssetAmount;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
@@ -329,7 +398,7 @@ rule closeEpoch_RevertWhen_CurrentEpochNonceIsZero() {
     require getTotalShares() == 0, "bootstrap share-allocation path";
     require tvl == 0, "bootstrap tvl is zero";
     require sharePrecision == 1, "share precision is one";
-    require minDepositAmount == 1, "minimum deposit amount is one";
+    require minAssetAmount == 1, "minimum deposit amount is one";
 
     /// @dev revert condition being verified
     require getEpochNonce() == 0, "current epoch nonce is zero";
@@ -337,7 +406,11 @@ rule closeEpoch_RevertWhen_CurrentEpochNonceIsZero() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    /// @dev Exclude the remote-withdraw minimum independently of other guards.
+    require RemoteWithdrawMeetsMinimum(tvl, minAssetAmount, isLocalStrategy),
+        "remote net withdrawal meets the minimum";
+
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minAssetAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -350,7 +423,7 @@ rule EPOCH_003_closeEpoch_RevertWhen_PreviousEpochNotClaimable() {
     uint256 expectedEpochNonce;
     uint256 tvl;
     uint256 sharePrecision;
-    uint256 minDepositAmount;
+    uint256 minAssetAmount;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
@@ -372,7 +445,7 @@ rule EPOCH_003_closeEpoch_RevertWhen_PreviousEpochNotClaimable() {
     require getTotalShares() == 0, "bootstrap share-allocation path";
     require tvl == 0, "bootstrap tvl is zero";
     require sharePrecision == 1, "share precision is one";
-    require minDepositAmount == 1, "minimum deposit amount is one";
+    require minAssetAmount == 1, "minimum deposit amount is one";
 
     /// @dev revert condition being verified
     require getEpochStatus(previousEpochNonce) != Types.EpochStatus.CLAIMABLE, "previous epoch is not claimable";
@@ -380,7 +453,11 @@ rule EPOCH_003_closeEpoch_RevertWhen_PreviousEpochNotClaimable() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    /// @dev Exclude the remote-withdraw minimum independently of other guards.
+    require RemoteWithdrawMeetsMinimum(tvl, minAssetAmount, isLocalStrategy),
+        "remote net withdrawal meets the minimum";
+
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minAssetAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -393,7 +470,7 @@ rule closeEpoch_RevertWhen_EpochNotOpen() {
     uint256 expectedEpochNonce;
     uint256 tvl;
     uint256 sharePrecision;
-    uint256 minDepositAmount;
+    uint256 minAssetAmount;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
@@ -415,7 +492,7 @@ rule closeEpoch_RevertWhen_EpochNotOpen() {
     require getTotalShares() == 0, "bootstrap share-allocation path";
     require tvl == 0, "bootstrap tvl is zero";
     require sharePrecision == 1, "share precision is one";
-    require minDepositAmount == 1, "minimum deposit amount is one";
+    require minAssetAmount == 1, "minimum deposit amount is one";
 
     /// @dev revert condition being verified
     require getEpochStatus(epochNonce) != Types.EpochStatus.OPEN, "epoch is not open";
@@ -423,7 +500,11 @@ rule closeEpoch_RevertWhen_EpochNotOpen() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    /// @dev Exclude the remote-withdraw minimum independently of other guards.
+    require RemoteWithdrawMeetsMinimum(tvl, minAssetAmount, isLocalStrategy),
+        "remote net withdrawal meets the minimum";
+
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minAssetAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -436,7 +517,7 @@ rule closeEpoch_RevertWhen_EpochOpenTimestampOverflows() {
     uint256 expectedEpochNonce;
     uint256 tvl;
     uint256 sharePrecision;
-    uint256 minDepositAmount;
+    uint256 minAssetAmount;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
@@ -458,12 +539,16 @@ rule closeEpoch_RevertWhen_EpochOpenTimestampOverflows() {
     require getTotalShares() == 0, "bootstrap share-allocation path";
     require tvl == 0, "bootstrap tvl is zero";
     require sharePrecision == 1, "share precision is one";
-    require minDepositAmount == 1, "minimum deposit amount is one";
+    require minAssetAmount == 1, "minimum deposit amount is one";
 
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    /// @dev Exclude the remote-withdraw minimum independently of other guards.
+    require RemoteWithdrawMeetsMinimum(tvl, minAssetAmount, isLocalStrategy),
+        "remote net withdrawal meets the minimum";
+
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minAssetAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -476,7 +561,7 @@ rule EPOCH_016_closeEpoch_RevertWhen_EpochTooShort() {
     uint256 expectedEpochNonce;
     uint256 tvl;
     uint256 sharePrecision;
-    uint256 minDepositAmount;
+    uint256 minAssetAmount;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
@@ -501,12 +586,16 @@ rule EPOCH_016_closeEpoch_RevertWhen_EpochTooShort() {
     require getTotalShares() == 0, "bootstrap share-allocation path";
     require tvl == 0, "bootstrap tvl is zero";
     require sharePrecision == 1, "share precision is one";
-    require minDepositAmount == 1, "minimum deposit amount is one";
+    require minAssetAmount == 1, "minimum deposit amount is one";
 
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    /// @dev Exclude the remote-withdraw minimum independently of other guards.
+    require RemoteWithdrawMeetsMinimum(tvl, minAssetAmount, isLocalStrategy),
+        "remote net withdrawal meets the minimum";
+
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minAssetAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -519,7 +608,7 @@ rule EPOCH_016_closeEpoch_RevertWhen_EmptyEpoch() {
     uint256 expectedEpochNonce;
     uint256 tvl;
     uint256 sharePrecision;
-    uint256 minDepositAmount;
+    uint256 minAssetAmount;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
@@ -544,12 +633,16 @@ rule EPOCH_016_closeEpoch_RevertWhen_EmptyEpoch() {
     require getTotalShares() == 0, "bootstrap share-allocation path";
     require tvl == 0, "bootstrap tvl is zero";
     require sharePrecision == 1, "share precision is one";
-    require minDepositAmount == 1, "minimum deposit amount is one";
+    require minAssetAmount == 1, "minimum deposit amount is one";
 
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    /// @dev Exclude the remote-withdraw minimum independently of other guards.
+    require RemoteWithdrawMeetsMinimum(tvl, minAssetAmount, isLocalStrategy),
+        "remote net withdrawal meets the minimum";
+
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minAssetAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -561,7 +654,7 @@ rule EPOCH_017_closeEpoch_RevertWhen_ZeroTvlWithOutstandingShares() {
     env e;
     uint256 expectedEpochNonce;
     uint256 sharePrecision;
-    uint256 minDepositAmount;
+    uint256 minAssetAmount;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
@@ -585,13 +678,17 @@ rule EPOCH_017_closeEpoch_RevertWhen_ZeroTvlWithOutstandingShares() {
     require getEpochTotalShareBurnAmount(epochNonce) == 0, "no shares are burned";
     require getTotalShares() != 0, "shares are outstanding";
     require sharePrecision == 1, "share precision is one";
-    require minDepositAmount == 1, "minimum deposit amount is one";
+    require minAssetAmount == 1, "minimum deposit amount is one";
     uint256 tvl = 0;
 
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    /// @dev Exclude the remote-withdraw minimum independently of other guards.
+    require RemoteWithdrawMeetsMinimum(tvl, minAssetAmount, isLocalStrategy),
+        "remote net withdrawal meets the minimum";
+
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minAssetAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -631,6 +728,10 @@ rule EPOCH_017_closeEpoch_RevertWhen_ShareBurnExistsWithZeroTotalShares() {
     require ghost_epoch_totalWithdrawClaimAmount_StoreCount == 0,
         "totalWithdrawClaimAmount store count starts at zero";
     require ghost_epoch_status_StoreCount == 0, "epoch status store count starts at zero";
+
+    /// @dev Exclude the remote-withdraw minimum independently of other guards.
+    require RemoteWithdrawMeetsMinimum(0, 1, isLocalStrategy),
+        "remote net withdrawal meets the minimum";
 
     closeEpoch@withrevert(e, expectedEpochNonce, 0, 1, 1, 1, isLocalStrategy);
 
@@ -681,15 +782,19 @@ rule EPOCH_018_closeEpoch_RevertWhen_DepositWouldMintZeroShares() {
         "new share calculation does not overflow";
     mathint newShares = getEpochTotalDepositAmount(epochNonce) * totalShares / tvl;
 
-    uint256 minDepositAmount = 1000000;
-    require newShares <= max_uint256 / minDepositAmount, "zero-share guard multiplication does not overflow";
+    uint256 minAssetAmount = 1000000;
+    require newShares <= max_uint256 / minAssetAmount, "zero-share guard multiplication does not overflow";
     require totalShares <= max_uint256 - newShares, "total shares addition does not overflow";
-    require newShares * minDepositAmount < getEpochTotalDepositAmount(epochNonce), "deposits mint zero shares";
+    require newShares * minAssetAmount < getEpochTotalDepositAmount(epochNonce), "deposits mint zero shares";
 
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    /// @dev Exclude the remote-withdraw minimum independently of other guards.
+    require RemoteWithdrawMeetsMinimum(tvl, minAssetAmount, isLocalStrategy),
+        "remote net withdrawal meets the minimum";
+
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minAssetAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -700,7 +805,7 @@ rule EPOCH_018_closeEpoch_RevertWhen_DepositWouldMintZeroShares() {
 rule closeEpoch_RevertWhen_SharePrecisionIsZero() {
     env e;
     uint256 expectedEpochNonce;
-    uint256 minDepositAmount;
+    uint256 minAssetAmount;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
@@ -731,7 +836,11 @@ rule closeEpoch_RevertWhen_SharePrecisionIsZero() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, assetPrecision, minDepositAmount, isLocalStrategy);
+    /// @dev Exclude the remote-withdraw minimum independently of other guards.
+    require RemoteWithdrawMeetsMinimum(tvl, minAssetAmount, isLocalStrategy),
+        "remote net withdrawal meets the minimum";
+
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, assetPrecision, minAssetAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -742,7 +851,7 @@ rule closeEpoch_RevertWhen_SharePrecisionIsZero() {
 rule closeEpoch_RevertWhen_AssetPrecisionIsZero() {
     env e;
     uint256 expectedEpochNonce;
-    uint256 minDepositAmount;
+    uint256 minAssetAmount;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
@@ -773,7 +882,11 @@ rule closeEpoch_RevertWhen_AssetPrecisionIsZero() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, assetPrecision, minDepositAmount, isLocalStrategy);
+    /// @dev Exclude the remote-withdraw minimum independently of other guards.
+    require RemoteWithdrawMeetsMinimum(tvl, minAssetAmount, isLocalStrategy),
+        "remote net withdrawal meets the minimum";
+
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, assetPrecision, minAssetAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -786,7 +899,7 @@ rule closeEpoch_RevertWhen_ScaledTvlToShareRatioOverflows() {
     uint256 expectedEpochNonce;
     uint256 tvl = max_uint256;
     uint256 sharePrecision = max_uint256;
-    uint256 minDepositAmount;
+    uint256 minAssetAmount;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
@@ -813,7 +926,11 @@ rule closeEpoch_RevertWhen_ScaledTvlToShareRatioOverflows() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    /// @dev Exclude the remote-withdraw minimum independently of other guards.
+    require RemoteWithdrawMeetsMinimum(tvl, minAssetAmount, isLocalStrategy),
+        "remote net withdrawal meets the minimum";
+
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minAssetAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -826,7 +943,7 @@ rule closeEpoch_RevertWhen_TotalWithdrawOverflows() {
     uint256 expectedEpochNonce;
     uint256 tvl = max_uint256;
     uint256 sharePrecision = 1;
-    uint256 minDepositAmount;
+    uint256 minAssetAmount;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
@@ -855,7 +972,11 @@ rule closeEpoch_RevertWhen_TotalWithdrawOverflows() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    /// @dev Exclude the remote-withdraw minimum independently of other guards.
+    require RemoteWithdrawMeetsMinimum(tvl, minAssetAmount, isLocalStrategy),
+        "remote net withdrawal meets the minimum";
+
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minAssetAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -868,7 +989,7 @@ rule closeEpoch_RevertWhen_BootstrapNewSharesOverflows() {
     uint256 expectedEpochNonce;
     uint256 sharePrecision = max_uint256;
     uint256 assetPrecision = 1;
-    uint256 minDepositAmount;
+    uint256 minAssetAmount;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
@@ -897,7 +1018,11 @@ rule closeEpoch_RevertWhen_BootstrapNewSharesOverflows() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, assetPrecision, minDepositAmount, isLocalStrategy);
+    /// @dev Exclude the remote-withdraw minimum independently of other guards.
+    require RemoteWithdrawMeetsMinimum(tvl, minAssetAmount, isLocalStrategy),
+        "remote net withdrawal meets the minimum";
+
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, assetPrecision, minAssetAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -910,7 +1035,7 @@ rule closeEpoch_RevertWhen_ExistingSupplyNewSharesOverflows() {
     uint256 expectedEpochNonce;
     uint256 tvl = 1;
     uint256 sharePrecision = max_uint256;
-    uint256 minDepositAmount;
+    uint256 minAssetAmount;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
@@ -937,7 +1062,11 @@ rule closeEpoch_RevertWhen_ExistingSupplyNewSharesOverflows() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    /// @dev Exclude the remote-withdraw minimum independently of other guards.
+    require RemoteWithdrawMeetsMinimum(tvl, minAssetAmount, isLocalStrategy),
+        "remote net withdrawal meets the minimum";
+
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minAssetAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -950,7 +1079,7 @@ rule EPOCH_017_closeEpoch_RevertWhen_ScaledTvlToShareRatioIsZero() {
     uint256 expectedEpochNonce;
     uint256 tvl;
     uint256 sharePrecision;
-    uint256 minDepositAmount;
+    uint256 minAssetAmount;
     bool isLocalStrategy;
 
     /// @dev revert conditions NOT being verified
@@ -984,7 +1113,11 @@ rule EPOCH_017_closeEpoch_RevertWhen_ScaledTvlToShareRatioIsZero() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    /// @dev Exclude the remote-withdraw minimum independently of other guards.
+    require RemoteWithdrawMeetsMinimum(tvl, minAssetAmount, isLocalStrategy),
+        "remote net withdrawal meets the minimum";
+
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minAssetAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -1021,6 +1154,10 @@ rule closeEpoch_RevertWhen_TotalDepositAmountDoesNotFitInt256() {
 
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
+
+    /// @dev Exclude the remote-withdraw minimum independently of other guards.
+    require RemoteWithdrawMeetsMinimum(0, 1, isLocalStrategy),
+        "remote net withdrawal meets the minimum";
 
     closeEpoch@withrevert(e, expectedEpochNonce, 0, 1, 1, 1, isLocalStrategy);
 
@@ -1061,6 +1198,10 @@ rule closeEpoch_RevertWhen_TotalWithdrawDoesNotFitInt256() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
+    /// @dev Exclude the remote-withdraw minimum independently of other guards.
+    require RemoteWithdrawMeetsMinimum(tvl, 1, isLocalStrategy),
+        "remote net withdrawal meets the minimum";
+
     closeEpoch@withrevert(e, expectedEpochNonce, tvl, 1, 1, 1, isLocalStrategy);
 
     assert lastReverted;
@@ -1086,7 +1227,7 @@ rule closeEpoch_RevertWhen_ZeroShareGuardMultiplicationOverflows() {
     uint256 minEpochPeriod = getMinEpochPeriod();
     uint256 depositAmount = getEpochTotalDepositAmount(epochNonce);
     uint256 sharePrecision = 1;
-    uint256 minDepositAmount = 1000000;
+    uint256 minAssetAmount = 1000000;
 
     /// @dev revert condition being verified
     require getEpochStatus(epochNonce) == Types.EpochStatus.OPEN, "epoch is open";
@@ -1096,7 +1237,7 @@ rule closeEpoch_RevertWhen_ZeroShareGuardMultiplicationOverflows() {
         "minimum epoch period has elapsed";
     require depositAmount != 0, "total deposit amount is nonzero";
     require depositAmount <= max_uint256 / 2, "deposit amount fits int256";
-    require depositAmount > max_uint256 / minDepositAmount, "zero-share guard multiplication overflows";
+    require depositAmount > max_uint256 / minAssetAmount, "zero-share guard multiplication overflows";
     require getEpochTotalShareBurnAmount(epochNonce) == 0, "no shares are burned";
     require getTotalShares() == 0, "bootstrap share-allocation path";
 
@@ -1104,7 +1245,11 @@ rule closeEpoch_RevertWhen_ZeroShareGuardMultiplicationOverflows() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    /// @dev Exclude the remote-withdraw minimum independently of other guards.
+    require RemoteWithdrawMeetsMinimum(tvl, minAssetAmount, isLocalStrategy),
+        "remote net withdrawal meets the minimum";
+
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minAssetAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
@@ -1131,7 +1276,7 @@ rule closeEpoch_RevertWhen_TotalSharesSubtractionUnderflows() {
     uint256 depositAmount = getEpochTotalDepositAmount(epochNonce);
     uint256 shareBurnAmount = getEpochTotalShareBurnAmount(epochNonce);
     uint256 sharePrecision = 1;
-    uint256 minDepositAmount = 1000000;
+    uint256 minAssetAmount = 1000000;
 
     /// @dev revert condition being verified
     require getEpochStatus(epochNonce) == Types.EpochStatus.OPEN, "epoch is open";
@@ -1149,14 +1294,53 @@ rule closeEpoch_RevertWhen_TotalSharesSubtractionUnderflows() {
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
 
-    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    /// @dev Exclude the remote-withdraw minimum independently of other guards.
+    require RemoteWithdrawMeetsMinimum(tvl, minAssetAmount, isLocalStrategy),
+        "remote net withdrawal meets the minimum";
+
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minAssetAmount, isLocalStrategy);
 
     assert lastReverted;
     assert EpochLifecycleEventCountsAreZero();
 }
 
-/// ─────────────────── CLOSE EPOCH SUCCESS ────────────────────
+/// @notice Closing a remote net-withdraw epoch reverts below the minimum asset amount.
+/// @dev Verifies the minimum guard with all other close conditions satisfied.
+rule EPOCH_014_closeEpoch_RevertWhen_RemoteWithdrawAmountTooSmall() {
+    env e;
+    uint256 expectedEpochNonce = getEpochNonce();
+    uint256 minAssetAmount;
 
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "closeEpoch is nonpayable";
+    require getRebalanceState() == Types.RebalanceState.NONE, "rebalance is not in progress";
+    require expectedEpochNonce != 0, "current epoch nonce is nonzero";
+    require expectedEpochNonce == 1 || getPreviousEpochStatus() == Types.EpochStatus.CLAIMABLE,
+        "previous epoch is claimable when required";
+    require getEpochStatus(expectedEpochNonce) == Types.EpochStatus.OPEN, "epoch is open";
+    require getEpochOpenedAtTimestamp(expectedEpochNonce) <= max_uint256 - getMinEpochPeriod(),
+        "minimum epoch period addition does not overflow";
+    require e.block.timestamp >= getEpochOpenedAtTimestamp(expectedEpochNonce) + getMinEpochPeriod(),
+        "minimum epoch period has elapsed";
+    require getTotalShares() == 2, "two shares are outstanding";
+    require getEpochTotalDepositAmount(expectedEpochNonce) == 0, "no deposits were made";
+    require getEpochTotalShareBurnAmount(expectedEpochNonce) == 1, "one share is burned";
+
+    /// @dev revert condition being verified
+    require minAssetAmount > 1, "remote net withdrawal is below the minimum";
+
+    require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
+    storage before = lastStorage;
+
+    closeEpoch@withrevert(e, expectedEpochNonce, 2, 1, 1, minAssetAmount, false);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+    assert EpochLifecycleEventCountsAreZero();
+}
+
+
+/// ─────────────────── CLOSE EPOCH SUCCESS ────────────────────
 /// @notice A zero-supply epoch bootstraps shares from the asset and share precisions.
 /// @dev Verifies the successful side of the zero-supply branch with no artificial TVL requirement.
 rule EPOCH_017_closeEpoch_Success_BootstrapsZeroSupply() {
@@ -1165,7 +1349,7 @@ rule EPOCH_017_closeEpoch_Success_BootstrapsZeroSupply() {
     uint256 sharePrecision = 1000000000000000000;
     uint256 assetPrecision = 1000000;
     uint256 depositAmount = assetPrecision;
-    uint256 minDepositAmount = assetPrecision;
+    uint256 minAssetAmount = assetPrecision;
     uint256 tvl = 0;
 
     require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
@@ -1191,7 +1375,7 @@ rule EPOCH_017_closeEpoch_Success_BootstrapsZeroSupply() {
 
     uint256 returnedEpochNonce; uint8 returnedAction; uint256 returnedAmount; uint256 returnedTotalDepositAmount;
     (returnedEpochNonce, returnedAction, returnedAmount, returnedTotalDepositAmount) =
-        closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, assetPrecision, minDepositAmount, true);
+        closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, assetPrecision, minAssetAmount, true);
 
     assert !lastReverted;
     assert returnedEpochNonce == epochNonce;
@@ -1253,6 +1437,10 @@ rule EPOCH_004_SHARE_002_closeEpoch_Success_UsesDirectFullPrecisionRatios() {
     require ghost_epoch_totalWithdrawClaimAmount_StoreCount == 0,
         "totalWithdrawClaimAmount store count starts at zero";
     require ghost_epoch_status_StoreCount == 0, "epoch status store count starts at zero";
+
+    /// @dev Exclude the remote-withdraw minimum independently of other guards.
+    require RemoteWithdrawMeetsMinimum(tvl, assetPrecision, false),
+        "remote net withdrawal meets the minimum";
 
     uint256 returnedEpochNonce; uint8 returnedAction; uint256 returnedAmount; uint256 returnedTotalDepositAmount;
     (returnedEpochNonce, returnedAction, returnedAmount, returnedTotalDepositAmount) =
@@ -1320,8 +1508,8 @@ rule EPOCH_004_NONCE_010_SHARE_002_closeEpoch_Success_WhenNetFlowIsZero() {
     require depositAmount <= max_uint256 / 2, "deposit amount fits int256";
     require shareBurnAmount <= max_uint256 / 2, "calculated total withdrawal fits int256";
     require totalShares <= max_uint256 - depositAmount, "total shares addition does not overflow";
-    uint256 minDepositAmount = 1;
-    require depositAmount <= max_uint256 / minDepositAmount, "zero-share guard multiplication does not overflow";
+    uint256 minAssetAmount = 1;
+    require depositAmount <= max_uint256 / minAssetAmount, "zero-share guard multiplication does not overflow";
 
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
@@ -1331,9 +1519,13 @@ rule EPOCH_004_NONCE_010_SHARE_002_closeEpoch_Success_WhenNetFlowIsZero() {
         "totalWithdrawClaimAmount store count starts at zero";
     require ghost_epoch_status_StoreCount == 0, "epoch status store count starts at zero";
 
+    /// @dev Exclude the remote-withdraw minimum independently of other guards.
+    require RemoteWithdrawMeetsMinimum(tvl, minAssetAmount, isLocalStrategy),
+        "remote net withdrawal meets the minimum";
+
     uint256 returnedEpochNonce; uint8 returnedAction; uint256 returnedAmount; uint256 returnedTotalDepositAmount;
     (returnedEpochNonce, returnedAction, returnedAmount, returnedTotalDepositAmount) =
-    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minAssetAmount, isLocalStrategy);
 
     assert !lastReverted;
     assert returnedEpochNonce == epochNonce;
@@ -1371,7 +1563,7 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenTvlToShareRa
     uint256 expectedEpochNonce;
     uint256 sharePrecision = 100;
     uint256 assetPrecision = 1;
-    uint256 minDepositAmount = 2;
+    uint256 minAssetAmount = 2;
     uint256 tvl = 200;
     bool isLocalStrategy = true;
 
@@ -1405,9 +1597,13 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenTvlToShareRa
         "totalWithdrawClaimAmount store count starts at zero";
     require ghost_epoch_status_StoreCount == 0, "epoch status store count starts at zero";
 
+    /// @dev Exclude the remote-withdraw minimum independently of other guards.
+    require RemoteWithdrawMeetsMinimum(tvl, minAssetAmount, isLocalStrategy),
+        "remote net withdrawal meets the minimum";
+
     uint256 returnedEpochNonce; uint8 returnedAction; uint256 returnedAmount; uint256 returnedTotalDepositAmount;
     (returnedEpochNonce, returnedAction, returnedAmount, returnedTotalDepositAmount) =
-        closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, assetPrecision, minDepositAmount, isLocalStrategy);
+        closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, assetPrecision, minAssetAmount, isLocalStrategy);
 
     assert !lastReverted;
     assert returnedEpochNonce == epochNonce;
@@ -1443,7 +1639,7 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenLocalNetDepo
     uint256 expectedEpochNonce;
     uint256 sharePrecision = 1000000000000000000;
     uint256 assetPrecision = 1000000;
-    uint256 minDepositAmount = 1000000;
+    uint256 minAssetAmount = 1000000;
 
     /// @dev revert conditions NOT being verified
     require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
@@ -1477,9 +1673,13 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenLocalNetDepo
     require ghost_epoch_status_StoreCount == 0, "epoch status store count starts at zero";
 
     bool isLocalStrategy = true;
+    /// @dev Exclude the remote-withdraw minimum independently of other guards.
+    require RemoteWithdrawMeetsMinimum(0, minAssetAmount, isLocalStrategy),
+        "remote net withdrawal meets the minimum";
+
     uint256 returnedEpochNonce; uint8 returnedAction; uint256 returnedAmount; uint256 returnedTotalDepositAmount;
     (returnedEpochNonce, returnedAction, returnedAmount, returnedTotalDepositAmount) =
-        closeEpoch@withrevert(e, expectedEpochNonce, 0, sharePrecision, assetPrecision, minDepositAmount, isLocalStrategy);
+        closeEpoch@withrevert(e, expectedEpochNonce, 0, sharePrecision, assetPrecision, minAssetAmount, isLocalStrategy);
 
     assert !lastReverted;
     assert returnedEpochNonce == epochNonce;
@@ -1516,7 +1716,7 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenRemoteNetDep
     env e;
     uint256 expectedEpochNonce;
     uint256 sharePrecision;
-    uint256 minDepositAmount;
+    uint256 minAssetAmount;
 
     /// @dev revert conditions NOT being verified
     require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
@@ -1542,8 +1742,8 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenRemoteNetDep
     require depositAmount <= max_uint256 / sharePrecision, "share calculation does not overflow";
     require depositAmount <= max_uint256 / 2, "deposit amount fits int256";
     require getEpochTotalShareBurnAmount(epochNonce) == 0, "no shares are burned";
-    require minDepositAmount == 1000000, "minimum deposit amount matches production";
-    require depositAmount <= max_uint256 / minDepositAmount, "zero-share guard multiplication does not overflow";
+    require minAssetAmount == 1000000, "minimum deposit amount matches production";
+    require depositAmount <= max_uint256 / minAssetAmount, "zero-share guard multiplication does not overflow";
 
     /// @dev ghost starting values
     require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
@@ -1556,9 +1756,13 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenRemoteNetDep
     require ghost_epoch_status_StoreCount == 0, "epoch status store count starts at zero";
 
     bool isLocalStrategy = false;
+    /// @dev Exclude the remote-withdraw minimum independently of other guards.
+    require RemoteWithdrawMeetsMinimum(0, minAssetAmount, isLocalStrategy),
+        "remote net withdrawal meets the minimum";
+
     uint256 returnedEpochNonce; uint8 returnedAction; uint256 returnedAmount; uint256 returnedTotalDepositAmount;
     (returnedEpochNonce, returnedAction, returnedAmount, returnedTotalDepositAmount) =
-        closeEpoch@withrevert(e, expectedEpochNonce, 0, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+        closeEpoch@withrevert(e, expectedEpochNonce, 0, sharePrecision, sharePrecision, minAssetAmount, isLocalStrategy);
 
     assert !lastReverted;
     assert returnedEpochNonce == epochNonce;
@@ -1630,8 +1834,8 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenLocalNetWith
     require totalShares <= max_uint256 - depositAmount, "total shares addition does not overflow";
     require totalShares + depositAmount >= shareBurnAmount, "total shares subtraction does not underflow";
     mathint netWithdrawAmount = shareBurnAmount - depositAmount;
-    uint256 minDepositAmount = 1;
-    require depositAmount <= max_uint256 / minDepositAmount,
+    uint256 minAssetAmount = 1;
+    require depositAmount <= max_uint256 / minAssetAmount,
         "zero-share guard multiplication does not overflow";
 
     /// @dev ghost starting values
@@ -1647,9 +1851,13 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenLocalNetWith
     require ghost_epoch_status_StoreCount == 0, "epoch status store count starts at zero";
 
     bool isLocalStrategy = true;
+    /// @dev Exclude the remote-withdraw minimum independently of other guards.
+    require RemoteWithdrawMeetsMinimum(tvl, minAssetAmount, isLocalStrategy),
+        "remote net withdrawal meets the minimum";
+
     uint256 returnedEpochNonce; uint8 returnedAction; uint256 returnedAmount; uint256 returnedTotalDepositAmount;
     (returnedEpochNonce, returnedAction, returnedAmount, returnedTotalDepositAmount) =
-        closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+        closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minAssetAmount, isLocalStrategy);
 
     assert !lastReverted;
     assert returnedEpochNonce == epochNonce;
@@ -1721,10 +1929,14 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenRemoteNetWit
     require ghost_epoch_status_StoreCount == 0, "epoch status store count starts at zero";
 
     bool isLocalStrategy = false;
-    uint256 minDepositAmount = 1;
+    uint256 minAssetAmount = 1;
+    /// @dev Exclude the remote-withdraw minimum independently of other guards.
+    require RemoteWithdrawMeetsMinimum(tvl, minAssetAmount, isLocalStrategy),
+        "remote net withdrawal meets the minimum";
+
     uint256 returnedEpochNonce; uint8 returnedAction; uint256 returnedAmount; uint256 returnedTotalDepositAmount;
     (returnedEpochNonce, returnedAction, returnedAmount, returnedTotalDepositAmount) =
-        closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minDepositAmount, isLocalStrategy);
+        closeEpoch@withrevert(e, expectedEpochNonce, tvl, sharePrecision, sharePrecision, minAssetAmount, isLocalStrategy);
 
     assert !lastReverted;
     assert returnedEpochNonce == epochNonce;
@@ -1762,6 +1974,7 @@ rule EPOCH_004_EPOCH_014_NONCE_010_SHARE_002_closeEpoch_Success_WhenRemoteNetWit
 /// @dev Verifies the nonce guard independently of the epoch type and status guards.
 rule EPOCH_014_completeEpochDeposit_RevertWhen_InvalidEpochNonce() {
     env e;
+    uint256 actualDepositAmount;
     uint256 expectedEpochNonce;
     uint256 currentEpochNonce = getEpochNonce();
 
@@ -1777,13 +1990,21 @@ rule EPOCH_014_completeEpochDeposit_RevertWhen_InvalidEpochNonce() {
     require expectedEpochNonce != previousEpochNonce,
         "expected epoch nonce does not match most recently closed epoch nonce";
 
+    require actualDepositAmount == getEpochTotalDepositAmount(previousEpochNonce)
+        - getEpochTotalWithdrawClaimAmount(previousEpochNonce), "actual deposit equals the expected amount";
+
     /// @dev ghost starting values
+    require ghost_EpochDepositReconciled_EventCount == 0, "EpochDepositReconciled event count starts at zero";
     require ghost_epoch_status_StoreCount == 0, "epoch status store count starts at zero";
     require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
 
-    completeEpochDeposit@withrevert(e, expectedEpochNonce);
+    storage before = lastStorage;
+
+    completeEpochDeposit@withrevert(e, expectedEpochNonce, actualDepositAmount);
 
     assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_EpochDepositReconciled_EventCount == 0;
     assert getEpochNonce() == currentEpochNonce;
     assert getEpochStatus(previousEpochNonce) == Types.EpochStatus.EXECUTING;
     assert ghost_epoch_status_StoreCount == 0;
@@ -1794,6 +2015,7 @@ rule EPOCH_014_completeEpochDeposit_RevertWhen_InvalidEpochNonce() {
 /// @dev Verifies the checked subtraction used to access the previous epoch.
 rule EPOCH_014_completeEpochDeposit_RevertWhen_CurrentEpochNonceIsZero() {
     env e;
+    uint256 actualDepositAmount;
     uint256 expectedEpochNonce;
 
     /// @dev revert conditions NOT being verified
@@ -1803,12 +2025,19 @@ rule EPOCH_014_completeEpochDeposit_RevertWhen_CurrentEpochNonceIsZero() {
     /// @dev revert condition being verified
     require getEpochNonce() == 0, "current epoch nonce is zero";
 
+    require actualDepositAmount == 1, "actual deposit is nonzero";
+
     /// @dev ghost starting values
+    require ghost_EpochDepositReconciled_EventCount == 0, "EpochDepositReconciled event count starts at zero";
     require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
 
-    completeEpochDeposit@withrevert(e, expectedEpochNonce);
+    storage before = lastStorage;
+
+    completeEpochDeposit@withrevert(e, expectedEpochNonce, actualDepositAmount);
 
     assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_EpochDepositReconciled_EventCount == 0;
     assert ghost_EpochClaimable_EventCount == 0;
 }
 
@@ -1816,6 +2045,7 @@ rule EPOCH_014_completeEpochDeposit_RevertWhen_CurrentEpochNonceIsZero() {
 /// @dev Verifies the no-completed-epoch guard independently of later conditions.
 rule EPOCH_014_completeEpochDeposit_RevertWhen_NoCompletedEpoch() {
     env e;
+    uint256 actualDepositAmount;
     uint256 expectedEpochNonce;
 
     /// @dev revert conditions NOT being verified
@@ -1826,12 +2056,22 @@ rule EPOCH_014_completeEpochDeposit_RevertWhen_NoCompletedEpoch() {
     /// @dev revert condition being verified
     require getEpochNonce() == 1, "current epoch nonce is one";
 
+    require getEpochTotalDepositAmount(0) == 1, "epoch zero is a net deposit if reached";
+    require getEpochTotalWithdrawClaimAmount(0) == 0, "epoch zero has no withdrawals";
+    require getEpochStatus(0) == Types.EpochStatus.EXECUTING, "epoch zero is executing if reached";
+    require actualDepositAmount == 1, "actual deposit equals the expected amount";
+
     /// @dev ghost starting values
+    require ghost_EpochDepositReconciled_EventCount == 0, "EpochDepositReconciled event count starts at zero";
     require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
 
-    completeEpochDeposit@withrevert(e, expectedEpochNonce);
+    storage before = lastStorage;
+
+    completeEpochDeposit@withrevert(e, expectedEpochNonce, actualDepositAmount);
 
     assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_EpochDepositReconciled_EventCount == 0;
     assert ghost_EpochClaimable_EventCount == 0;
 }
 
@@ -1839,6 +2079,7 @@ rule EPOCH_014_completeEpochDeposit_RevertWhen_NoCompletedEpoch() {
 /// @dev Verifies the net-deposit guard independently of the executing-status guard.
 rule EPOCH_014_completeEpochDeposit_RevertWhen_PreviousEpochIsNotNetDeposit() {
     env e;
+    uint256 actualDepositAmount;
     uint256 expectedEpochNonce;
 
     /// @dev revert conditions NOT being verified
@@ -1854,12 +2095,19 @@ rule EPOCH_014_completeEpochDeposit_RevertWhen_PreviousEpochIsNotNetDeposit() {
     require getEpochTotalDepositAmount(epochNonce) <= getEpochTotalWithdrawClaimAmount(epochNonce),
         "previous epoch is not a net deposit";
 
+    require actualDepositAmount == 1, "actual deposit is nonzero";
+
     /// @dev ghost starting values
+    require ghost_EpochDepositReconciled_EventCount == 0, "EpochDepositReconciled event count starts at zero";
     require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
 
-    completeEpochDeposit@withrevert(e, expectedEpochNonce);
+    storage before = lastStorage;
+
+    completeEpochDeposit@withrevert(e, expectedEpochNonce, actualDepositAmount);
 
     assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_EpochDepositReconciled_EventCount == 0;
     assert ghost_EpochClaimable_EventCount == 0;
 }
 
@@ -1867,6 +2115,7 @@ rule EPOCH_014_completeEpochDeposit_RevertWhen_PreviousEpochIsNotNetDeposit() {
 /// @dev Verifies the shared epoch-finalization status guard.
 rule EPOCH_014_completeEpochDeposit_RevertWhen_PreviousEpochIsNotExecuting() {
     env e;
+    uint256 actualDepositAmount;
     uint256 expectedEpochNonce;
 
     /// @dev revert conditions NOT being verified
@@ -1882,12 +2131,20 @@ rule EPOCH_014_completeEpochDeposit_RevertWhen_PreviousEpochIsNotExecuting() {
     /// @dev revert condition being verified
     require getPreviousEpochStatus() != Types.EpochStatus.EXECUTING, "previous epoch is not executing";
 
+    require actualDepositAmount == getEpochTotalDepositAmount(epochNonce)
+        - getEpochTotalWithdrawClaimAmount(epochNonce), "actual deposit equals the expected amount";
+
     /// @dev ghost starting values
+    require ghost_EpochDepositReconciled_EventCount == 0, "EpochDepositReconciled event count starts at zero";
     require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
 
-    completeEpochDeposit@withrevert(e, expectedEpochNonce);
+    storage before = lastStorage;
+
+    completeEpochDeposit@withrevert(e, expectedEpochNonce, actualDepositAmount);
 
     assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+    assert ghost_EpochDepositReconciled_EventCount == 0;
     assert ghost_EpochClaimable_EventCount == 0;
 }
 
@@ -1895,6 +2152,7 @@ rule EPOCH_014_completeEpochDeposit_RevertWhen_PreviousEpochIsNotExecuting() {
 /// @dev Verifies status transition and EpochClaimable event parameters.
 rule EPOCH_014_completeEpochDeposit_Success() {
     env e;
+    uint256 actualDepositAmount;
     uint256 expectedEpochNonce;
 
     /// @dev revert conditions NOT being verified
@@ -1908,23 +2166,39 @@ rule EPOCH_014_completeEpochDeposit_Success() {
     uint256 depositAmountBefore = getEpochTotalDepositAmount(epochNonce);
     uint256 withdrawClaimAmountBefore = getEpochTotalWithdrawClaimAmount(epochNonce);
     uint256 totalSharesBefore = getTotalShares();
+    uint256 remainingShareMintAmountBefore = getEpochRemainingShareMintAmount(epochNonce);
 
     /// @dev success conditions being verified
     require getEpochTotalDepositAmount(epochNonce) > getEpochTotalWithdrawClaimAmount(epochNonce),
         "previous epoch is a net deposit";
     require getPreviousEpochStatus() == Types.EpochStatus.EXECUTING, "previous epoch is executing";
 
+    require actualDepositAmount == getEpochTotalDepositAmount(epochNonce)
+        - getEpochTotalWithdrawClaimAmount(epochNonce), "actual deposit equals the expected amount";
+
     /// @dev ghost starting values
+    require ghost_EpochDepositReconciled_EventCount == 0, "EpochDepositReconciled event count starts at zero";
     require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
     require ghost_epoch_status_StoreCount == 0, "epoch status store count starts at zero";
 
-    completeEpochDeposit@withrevert(e, expectedEpochNonce);
+    require ghost_totalShares_StoreCount == 0, "total shares store count starts at zero";
+    require ghost_epoch_remainingShareMintAmount_StoreCount == 0,
+        "remainingShareMintAmount store count starts at zero";
+
+    completeEpochDeposit@withrevert(e, expectedEpochNonce, actualDepositAmount);
 
     assert !lastReverted;
+    assert ghost_EpochDepositReconciled_EventCount == 1;
+    assert ghost_EpochDepositReconciled_Param_epochNonce == epochNonce;
+    assert ghost_EpochDepositReconciled_Param_actualDepositAmount == actualDepositAmount;
+    assert ghost_EpochDepositReconciled_Param_shareReduction == 0;
+    assert getEpochRemainingShareMintAmount(epochNonce) == remainingShareMintAmountBefore;
     assert getEpochNonce() == currentEpochNonce;
     assert getEpochTotalDepositAmount(epochNonce) == depositAmountBefore;
     assert getEpochTotalWithdrawClaimAmount(epochNonce) == withdrawClaimAmountBefore;
     assert getTotalShares() == totalSharesBefore;
+    assert ghost_totalShares_StoreCount == 0;
+    assert ghost_epoch_remainingShareMintAmount_StoreCount == 0;
     assert getEpochStatus(epochNonce) == Types.EpochStatus.CLAIMABLE;
     assert ghost_EpochClaimable_EventCount == 1;
     assert ghost_EpochClaimable_Param_epochNonce == epochNonce;
@@ -1933,8 +2207,323 @@ rule EPOCH_014_completeEpochDeposit_Success() {
     assert ghost_epoch_status_StoredValue == Types.EpochStatus.CLAIMABLE;
 }
 
-/// ─────────────────── FINALIZE LOCAL WITHDRAW ────────────────
+/// @notice Remote deposit completion rejects a zero delivered amount.
+/// @dev Later reconciliation arithmetic is safe if the delivery guard were bypassed.
+rule EPOCH_014_completeEpochDeposit_RevertWhen_ActualDepositAmountIsZero() {
+    env e;
+    uint256 actualDepositAmount;
 
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "completeEpochDeposit is nonpayable";
+    require getEpochNonce() > 1, "at least one epoch has completed";
+    uint256 epochNonce = getPreviousEpochNonce();
+    uint256 depositAmount = getEpochTotalDepositAmount(epochNonce);
+    uint256 withdrawClaimAmount = getEpochTotalWithdrawClaimAmount(epochNonce);
+    uint256 originalShareAmount = getEpochRemainingShareMintAmount(epochNonce);
+    uint256 totalSharesBefore = getTotalShares();
+    require depositAmount > withdrawClaimAmount, "previous epoch is a net deposit";
+    mathint expectedDepositAmount = depositAmount - withdrawClaimAmount;
+
+    require getPreviousEpochStatus() == Types.EpochStatus.EXECUTING, "previous epoch is executing";
+    require withdrawClaimAmount > 0, "hypothetical adjusted shares remain nonzero";
+    require originalShareAmount == depositAmount, "pending shares make reconciliation arithmetic exact";
+    require totalSharesBefore >= originalShareAmount, "economic share reduction does not underflow";
+
+    /// @dev revert condition being verified
+    require actualDepositAmount == 0, "actual deposit is zero";
+
+    /// @dev ghost starting values
+    require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
+    require ghost_totalShares_StoreCount == 0, "total shares store count starts at zero";
+    require ghost_epoch_remainingShareMintAmount_StoreCount == 0,
+        "remainingShareMintAmount store count starts at zero";
+    require ghost_epoch_status_StoreCount == 0, "epoch status store count starts at zero";
+
+    storage before = lastStorage;
+
+    completeEpochDeposit@withrevert(e, epochNonce, actualDepositAmount);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+    assert EpochLifecycleEventCountsAreZero();
+    assert ghost_totalShares_StoreCount == 0;
+    assert ghost_epoch_remainingShareMintAmount_StoreCount == 0;
+    assert ghost_epoch_status_StoreCount == 0;
+}
+
+/// @notice Remote deposit completion rejects more delivered assets than expected.
+/// @dev Verifies atomic rejection without reconciliation or claimable events.
+rule EPOCH_014_completeEpochDeposit_RevertWhen_ActualDepositAmountExceedsExpected() {
+    env e;
+    uint256 actualDepositAmount;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "completeEpochDeposit is nonpayable";
+    require getEpochNonce() > 1, "at least one epoch has completed";
+    uint256 epochNonce = getPreviousEpochNonce();
+    uint256 depositAmount = getEpochTotalDepositAmount(epochNonce);
+    uint256 withdrawClaimAmount = getEpochTotalWithdrawClaimAmount(epochNonce);
+    uint256 originalShareAmount = getEpochRemainingShareMintAmount(epochNonce);
+    uint256 totalSharesBefore = getTotalShares();
+    require depositAmount > withdrawClaimAmount, "previous epoch is a net deposit";
+    mathint expectedDepositAmount = depositAmount - withdrawClaimAmount;
+
+    require getPreviousEpochStatus() == Types.EpochStatus.EXECUTING, "previous epoch is executing";
+
+    /// @dev revert condition being verified
+    require actualDepositAmount > expectedDepositAmount, "actual deposit exceeds the expected amount";
+
+    /// @dev ghost starting values
+    require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
+    require ghost_totalShares_StoreCount == 0, "total shares store count starts at zero";
+    require ghost_epoch_remainingShareMintAmount_StoreCount == 0,
+        "remainingShareMintAmount store count starts at zero";
+    require ghost_epoch_status_StoreCount == 0, "epoch status store count starts at zero";
+
+    storage before = lastStorage;
+
+    completeEpochDeposit@withrevert(e, epochNonce, actualDepositAmount);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+    assert EpochLifecycleEventCountsAreZero();
+    assert ghost_totalShares_StoreCount == 0;
+    assert ghost_epoch_remainingShareMintAmount_StoreCount == 0;
+    assert ghost_epoch_status_StoreCount == 0;
+}
+
+/// @notice A delivery shortfall reverts if the adjusted pending allocation is zero.
+/// @dev Verifies the zero-share guard independently of a supply subtraction failure.
+rule EPOCH_018_completeEpochDeposit_RevertWhen_AdjustedSharesAreZero() {
+    env e;
+    uint256 actualDepositAmount;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "completeEpochDeposit is nonpayable";
+    require getEpochNonce() > 1, "at least one epoch has completed";
+    uint256 epochNonce = getPreviousEpochNonce();
+    uint256 depositAmount = getEpochTotalDepositAmount(epochNonce);
+    uint256 withdrawClaimAmount = getEpochTotalWithdrawClaimAmount(epochNonce);
+    uint256 originalShareAmount = getEpochRemainingShareMintAmount(epochNonce);
+    uint256 totalSharesBefore = getTotalShares();
+    require depositAmount > withdrawClaimAmount, "previous epoch is a net deposit";
+    mathint expectedDepositAmount = depositAmount - withdrawClaimAmount;
+
+    require getPreviousEpochStatus() == Types.EpochStatus.EXECUTING, "previous epoch is executing";
+    require actualDepositAmount > 0, "actual deposit is nonzero";
+    require actualDepositAmount < expectedDepositAmount, "actual deposit is short";
+    require totalSharesBefore >= originalShareAmount, "economic share reduction does not underflow";
+
+    /// @dev revert condition being verified
+    require originalShareAmount * (withdrawClaimAmount + actualDepositAmount) / depositAmount == 0,
+        "adjusted shares round down to zero";
+
+    /// @dev ghost starting values
+    require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
+    require ghost_totalShares_StoreCount == 0, "total shares store count starts at zero";
+    require ghost_epoch_remainingShareMintAmount_StoreCount == 0,
+        "remainingShareMintAmount store count starts at zero";
+    require ghost_epoch_status_StoreCount == 0, "epoch status store count starts at zero";
+
+    storage before = lastStorage;
+
+    completeEpochDeposit@withrevert(e, epochNonce, actualDepositAmount);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+    assert EpochLifecycleEventCountsAreZero();
+    assert ghost_totalShares_StoreCount == 0;
+    assert ghost_epoch_remainingShareMintAmount_StoreCount == 0;
+    assert ghost_epoch_status_StoreCount == 0;
+}
+
+/// @notice Finalization failure rolls back a preceding share reconciliation.
+/// @dev Verifies both share writes and the reconciliation event are atomic with finalization.
+rule EPOCH_014_completeEpochDeposit_RevertWhen_ShortfallEpochIsNotExecuting() {
+    env e;
+    uint256 actualDepositAmount;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "completeEpochDeposit is nonpayable";
+    require getEpochNonce() > 1, "at least one epoch has completed";
+    uint256 epochNonce = getPreviousEpochNonce();
+    uint256 depositAmount = getEpochTotalDepositAmount(epochNonce);
+    uint256 withdrawClaimAmount = getEpochTotalWithdrawClaimAmount(epochNonce);
+    uint256 originalShareAmount = getEpochRemainingShareMintAmount(epochNonce);
+    uint256 totalSharesBefore = getTotalShares();
+    require depositAmount > withdrawClaimAmount, "previous epoch is a net deposit";
+    mathint expectedDepositAmount = depositAmount - withdrawClaimAmount;
+
+    require actualDepositAmount > 0, "actual deposit is nonzero";
+    require actualDepositAmount < expectedDepositAmount, "actual deposit is short";
+    mathint adjustedShareAmount = originalShareAmount * (withdrawClaimAmount + actualDepositAmount) / depositAmount;
+    require adjustedShareAmount > 0, "adjusted pending shares are nonzero";
+    mathint shareReduction = originalShareAmount - adjustedShareAmount;
+    require totalSharesBefore >= shareReduction, "economic share reduction does not underflow";
+
+    /// @dev revert condition being verified
+    require getPreviousEpochStatus() != Types.EpochStatus.EXECUTING, "previous epoch is not executing";
+
+    /// @dev ghost starting values
+    require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
+    require ghost_totalShares_StoreCount == 0, "total shares store count starts at zero";
+    require ghost_epoch_remainingShareMintAmount_StoreCount == 0,
+        "remainingShareMintAmount store count starts at zero";
+    require ghost_epoch_status_StoreCount == 0, "epoch status store count starts at zero";
+
+    storage before = lastStorage;
+
+    completeEpochDeposit@withrevert(e, epochNonce, actualDepositAmount);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+    assert EpochLifecycleEventCountsAreZero();
+    assert ghost_totalShares_StoreCount == 0;
+    assert ghost_epoch_remainingShareMintAmount_StoreCount == 0;
+    assert ghost_epoch_status_StoreCount == 0;
+}
+
+/// @notice A short remote deposit reduces pending and economic shares with full-precision rounding down.
+/// @dev Verifies all reconciliation writes and both reconciliation and claimable event parameters.
+rule EPOCH_014_completeEpochDeposit_Success_WhenActualDepositIsShort() {
+    env e;
+    uint256 actualDepositAmount;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "completeEpochDeposit is nonpayable";
+    require getEpochNonce() > 1, "at least one epoch has completed";
+    uint256 epochNonce = getPreviousEpochNonce();
+    uint256 depositAmount = getEpochTotalDepositAmount(epochNonce);
+    uint256 withdrawClaimAmount = getEpochTotalWithdrawClaimAmount(epochNonce);
+    uint256 originalShareAmount = getEpochRemainingShareMintAmount(epochNonce);
+    uint256 totalSharesBefore = getTotalShares();
+    require depositAmount > withdrawClaimAmount, "previous epoch is a net deposit";
+    mathint expectedDepositAmount = depositAmount - withdrawClaimAmount;
+
+    require getPreviousEpochStatus() == Types.EpochStatus.EXECUTING, "previous epoch is executing";
+    require actualDepositAmount > 0, "actual deposit is nonzero";
+    require actualDepositAmount < expectedDepositAmount, "actual deposit is short";
+    mathint adjustedShareAmount = originalShareAmount * (withdrawClaimAmount + actualDepositAmount) / depositAmount;
+    require adjustedShareAmount > 0, "adjusted pending shares are nonzero";
+    mathint shareReduction = originalShareAmount - adjustedShareAmount;
+    require totalSharesBefore >= shareReduction, "economic share reduction does not underflow";
+
+    uint256 currentEpochNonce = getEpochNonce();
+    uint256 remainingDepositClaimAmountBefore = getEpochRemainingDepositClaimAmount(epochNonce);
+    uint256 remainingShareBurnAmountBefore = getEpochRemainingShareBurnAmount(epochNonce);
+    uint256 remainingWithdrawClaimAmountBefore = getEpochRemainingWithdrawClaimAmount(epochNonce);
+
+    /// @dev ghost starting values
+    require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
+    require ghost_totalShares_StoreCount == 0, "total shares store count starts at zero";
+    require ghost_epoch_remainingShareMintAmount_StoreCount == 0,
+        "remainingShareMintAmount store count starts at zero";
+    require ghost_epoch_status_StoreCount == 0, "epoch status store count starts at zero";
+
+    completeEpochDeposit@withrevert(e, epochNonce, actualDepositAmount);
+
+    assert !lastReverted;
+    assert getEpochNonce() == currentEpochNonce;
+    assert getEpochTotalDepositAmount(epochNonce) == depositAmount;
+    assert getEpochTotalWithdrawClaimAmount(epochNonce) == withdrawClaimAmount;
+    assert getEpochRemainingDepositClaimAmount(epochNonce) == remainingDepositClaimAmountBefore;
+    assert getEpochRemainingShareBurnAmount(epochNonce) == remainingShareBurnAmountBefore;
+    assert getEpochRemainingWithdrawClaimAmount(epochNonce) == remainingWithdrawClaimAmountBefore;
+    assert getEpochRemainingShareMintAmount(epochNonce) == adjustedShareAmount;
+    assert getTotalShares() == totalSharesBefore - shareReduction;
+    assert getEpochStatus(epochNonce) == Types.EpochStatus.CLAIMABLE;
+    assert ghost_EpochDepositReconciled_EventCount == 1;
+    assert ghost_EpochDepositReconciled_Param_epochNonce == epochNonce;
+    assert ghost_EpochDepositReconciled_Param_actualDepositAmount == actualDepositAmount;
+    assert ghost_EpochDepositReconciled_Param_shareReduction == shareReduction;
+    assert ghost_EpochClaimable_EventCount == 1;
+    assert ghost_EpochClaimable_Param_epochNonce == epochNonce;
+    assert ghost_EpochDepositExecuting_EventCount == 0;
+    assert ghost_EpochWithdrawExecuting_EventCount == 0;
+    assert ghost_totalShares_StoreCount == 1;
+    assert ghost_totalShares_StoredValue == totalSharesBefore - shareReduction;
+    assert ghost_epoch_remainingShareMintAmount_StoreCount == 1;
+    assert ghost_epoch_remainingShareMintAmount_StoredKey == epochNonce;
+    assert ghost_epoch_remainingShareMintAmount_StoredValue == adjustedShareAmount;
+    assert ghost_epoch_status_StoreCount == 1;
+    assert ghost_epoch_status_StoredKey == epochNonce;
+    assert ghost_epoch_status_StoredValue == Types.EpochStatus.CLAIMABLE;
+}
+
+/// @notice Share reconciliation handles a multiplication product exceeding uint256.
+/// @dev Verifies the full-precision witness reduces the maximum pending allocation by one share.
+rule EPOCH_014_completeEpochDeposit_Success_UsesFullPrecisionForShareAdjustment() {
+    env e;
+    uint256 actualDepositAmount;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "completeEpochDeposit is nonpayable";
+    require getEpochNonce() > 1, "at least one epoch has completed";
+    uint256 epochNonce = getPreviousEpochNonce();
+    uint256 depositAmount = getEpochTotalDepositAmount(epochNonce);
+    uint256 withdrawClaimAmount = getEpochTotalWithdrawClaimAmount(epochNonce);
+    uint256 originalShareAmount = getEpochRemainingShareMintAmount(epochNonce);
+    uint256 totalSharesBefore = getTotalShares();
+    require depositAmount > withdrawClaimAmount, "previous epoch is a net deposit";
+    mathint expectedDepositAmount = depositAmount - withdrawClaimAmount;
+
+    require depositAmount == max_uint256, "full-precision denominator";
+    require withdrawClaimAmount == max_uint256 - 2, "expected remote deposit is two";
+    require originalShareAmount == max_uint256, "share adjustment product exceeds uint256";
+    require totalSharesBefore == max_uint256, "economic shares cover the reduction";
+    require actualDepositAmount == 1, "delivery shortfall is one";
+    require getPreviousEpochStatus() == Types.EpochStatus.EXECUTING, "previous epoch is executing";
+    require actualDepositAmount > 0, "actual deposit is nonzero";
+    require actualDepositAmount < expectedDepositAmount, "actual deposit is short";
+    mathint adjustedShareAmount = originalShareAmount * (withdrawClaimAmount + actualDepositAmount) / depositAmount;
+    require adjustedShareAmount > 0, "adjusted pending shares are nonzero";
+    mathint shareReduction = originalShareAmount - adjustedShareAmount;
+    require totalSharesBefore >= shareReduction, "economic share reduction does not underflow";
+
+    uint256 currentEpochNonce = getEpochNonce();
+    uint256 remainingDepositClaimAmountBefore = getEpochRemainingDepositClaimAmount(epochNonce);
+    uint256 remainingShareBurnAmountBefore = getEpochRemainingShareBurnAmount(epochNonce);
+    uint256 remainingWithdrawClaimAmountBefore = getEpochRemainingWithdrawClaimAmount(epochNonce);
+
+    /// @dev ghost starting values
+    require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
+    require ghost_totalShares_StoreCount == 0, "total shares store count starts at zero";
+    require ghost_epoch_remainingShareMintAmount_StoreCount == 0,
+        "remainingShareMintAmount store count starts at zero";
+    require ghost_epoch_status_StoreCount == 0, "epoch status store count starts at zero";
+
+    completeEpochDeposit@withrevert(e, epochNonce, actualDepositAmount);
+
+    assert !lastReverted;
+    assert getEpochNonce() == currentEpochNonce;
+    assert getEpochTotalDepositAmount(epochNonce) == depositAmount;
+    assert getEpochTotalWithdrawClaimAmount(epochNonce) == withdrawClaimAmount;
+    assert getEpochRemainingDepositClaimAmount(epochNonce) == remainingDepositClaimAmountBefore;
+    assert getEpochRemainingShareBurnAmount(epochNonce) == remainingShareBurnAmountBefore;
+    assert getEpochRemainingWithdrawClaimAmount(epochNonce) == remainingWithdrawClaimAmountBefore;
+    assert getEpochRemainingShareMintAmount(epochNonce) == adjustedShareAmount;
+    assert getTotalShares() == totalSharesBefore - shareReduction;
+    assert getEpochStatus(epochNonce) == Types.EpochStatus.CLAIMABLE;
+    assert ghost_EpochDepositReconciled_EventCount == 1;
+    assert ghost_EpochDepositReconciled_Param_epochNonce == epochNonce;
+    assert ghost_EpochDepositReconciled_Param_actualDepositAmount == actualDepositAmount;
+    assert ghost_EpochDepositReconciled_Param_shareReduction == shareReduction;
+    assert ghost_EpochClaimable_EventCount == 1;
+    assert ghost_EpochClaimable_Param_epochNonce == epochNonce;
+    assert ghost_EpochDepositExecuting_EventCount == 0;
+    assert ghost_EpochWithdrawExecuting_EventCount == 0;
+    assert ghost_totalShares_StoreCount == 1;
+    assert ghost_totalShares_StoredValue == totalSharesBefore - shareReduction;
+    assert ghost_epoch_remainingShareMintAmount_StoreCount == 1;
+    assert ghost_epoch_remainingShareMintAmount_StoredKey == epochNonce;
+    assert ghost_epoch_remainingShareMintAmount_StoredValue == adjustedShareAmount;
+    assert ghost_epoch_status_StoreCount == 1;
+    assert ghost_epoch_status_StoredKey == epochNonce;
+    assert ghost_epoch_status_StoredValue == Types.EpochStatus.CLAIMABLE;
+}
+
+
+/// ─────────────────── FINALIZE LOCAL WITHDRAW ────────────────
 /// @notice Finalizing local net-withdraw reverts when settled withdraw accounting overflows.
 /// @dev Verifies the targeted revert independently of competing conditions.
 rule finalizeLocalNetWithdraw_RevertWhen_SettledAmountOverflows() {

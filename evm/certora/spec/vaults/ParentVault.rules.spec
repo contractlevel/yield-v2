@@ -22,7 +22,7 @@ methods {
     /*//////////////////////////////////////////////////////////////
                        PARENTVAULT ENTRY POINTS
     //////////////////////////////////////////////////////////////*/
-    function initialize(BaseVault.InitParams, address, address) external;
+    function initialize(BaseVault.InitParams, address, address, address, bool) external;
     function setInitialActiveProtocolAdapter(bytes32) external;
     function setTreasury(address) external;
     function deposit(uint256) external returns (uint256);
@@ -38,7 +38,7 @@ methods {
     function forceCancelDeposit(address) external;
     function ccipReceive(Client.Any2EVMMessage) external;
     function closeEpoch(uint256, uint256) external;
-    function completeEpochDeposit(uint256) external;
+    function completeEpochDeposit(uint256, uint256) external;
     function initiateRebalance(uint256, Types.Strategy) external;
     function completeRebalance(uint256) external;
     function executeRecovery() external;
@@ -51,13 +51,16 @@ methods {
     function getEpoch(uint256) external returns (Types.Epoch) envfree;
     function getEpochNonce() external returns (uint256) envfree;
     function getTotalShares() external returns (uint256) envfree;
+    function getParentOperationalState() external returns (Types.ParentOperationalState) envfree;
     function getDepositAmount(address, uint256) external returns (uint256) envfree;
     function getWithdrawShareBurnAmount(address, uint256) external returns (uint256) envfree;
     function getInitialActiveProtocolAdapterSet() external returns (bool) envfree;
     function getTreasury() external returns (address) envfree;
     function getShare() external returns (address) envfree;
     function getSharePrecision() external returns (uint256) envfree;
-    function getMinDepositAmount() external returns (uint256) envfree;
+    function getMinAssetAmount() external returns (uint256) envfree;
+    function getAllowlistEnabled() external returns (bool) envfree;
+    function getAllowlistedUser(address) external returns (bool) envfree;
     function getSupportedProtocol(bytes32) external returns (bool) envfree;
     /// BaseVault getters this spec's rules read directly
     function getActiveProtocolAdapter() external returns (address) envfree;
@@ -103,6 +106,7 @@ methods {
     function EPOCH_OPERATOR_ROLE() external returns (bytes32) envfree;
     function REBALANCE_OPERATOR_ROLE() external returns (bytes32) envfree;
     function CANCEL_DEPOSIT_OPERATOR_ROLE() external returns (bytes32) envfree;
+    function ALLOWLIST_OPERATOR_ROLE() external returns (bytes32) envfree;
 
     /*//////////////////////////////////////////////////////////////
                          HARNESS HELPERS
@@ -147,6 +151,24 @@ methods {
 /*//////////////////////////////////////////////////////////////
                          DEFINITIONS
 //////////////////////////////////////////////////////////////*/
+// Full-precision withdrawal arithmetic; local withdrawals are exempt from the remote minimum.
+definition RemoteWithdrawMeetsMinimum(uint256 tvl) returns bool =
+    getActiveProtocolAdapter() != 0 || getTotalShares() == 0
+        || getEpoch(getEpochNonce()).totalShareBurnAmount * tvl / getTotalShares()
+            <= getEpoch(getEpochNonce()).totalDepositAmount
+        || getEpoch(getEpochNonce()).totalShareBurnAmount * tvl / getTotalShares()
+            - getEpoch(getEpochNonce()).totalDepositAmount >= getMinAssetAmount();
+
+definition EpochLifecycleEventCountsAreZero() returns bool =
+    ghost_EpochClaimable_EventCount == 0
+        && ghost_EpochDepositExecuting_EventCount == 0
+        && ghost_EpochWithdrawExecuting_EventCount == 0
+        && ghost_EpochDepositReconciled_EventCount == 0;
+
+definition EpochDepositReconciledEvent() returns bytes32 =
+// keccak256("EpochDepositReconciled(uint256,uint256,uint256)")
+    to_bytes32(0x64ff6a5ff731bc0db49a1c3c8cc6ef04e04a5d8e43403f881f8f89eb7e597156);
+
 definition DepositSubmittedEvent() returns bytes32 =
 // keccak256("DepositSubmitted(uint256,address,uint256)")
     to_bytes32(0x6dbddde512af7c9b1f7d0a592199a3c85ceac007416f229dd16872d0024343c1);
@@ -285,6 +307,26 @@ definition CCIPReceivedEvent() returns bytes32 =
 /*//////////////////////////////////////////////////////////////
                              GHOSTS
 //////////////////////////////////////////////////////////////*/
+/// @notice EventCount: track amount EpochDepositReconciled event is emitted
+ghost mathint ghost_EpochDepositReconciled_EventCount {
+    init_state axiom ghost_EpochDepositReconciled_EventCount == 0;
+}
+
+/// @notice EmittedValue: track epochNonce param emitted in EpochDepositReconciled event
+ghost uint256 ghost_EpochDepositReconciled_Param_epochNonce {
+    init_state axiom ghost_EpochDepositReconciled_Param_epochNonce == 0;
+}
+
+/// @notice EmittedValue: track actualDepositAmount param emitted in EpochDepositReconciled event
+ghost uint256 ghost_EpochDepositReconciled_Param_actualDepositAmount {
+    init_state axiom ghost_EpochDepositReconciled_Param_actualDepositAmount == 0;
+}
+
+/// @notice EmittedValue: track shareReduction param emitted in EpochDepositReconciled event
+ghost uint256 ghost_EpochDepositReconciled_Param_shareReduction {
+    init_state axiom ghost_EpochDepositReconciled_Param_shareReduction == 0;
+}
+
 
 /// ─── Event: ActiveProtocolAdapterSet ──────────────────────────
 ghost mathint ghost_ActiveProtocolAdapterSet_EventCount {
@@ -1065,6 +1107,13 @@ hook LOG3(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2) {
 
 /// LOG4 = topic0 + 3 indexed params
 hook LOG4(uint offset, uint length, bytes32 t0, bytes32 t1, bytes32 t2, bytes32 t3) {
+    if (t0 == EpochDepositReconciledEvent()) {
+        ghost_EpochDepositReconciled_EventCount = ghost_EpochDepositReconciled_EventCount + 1;
+        ghost_EpochDepositReconciled_Param_epochNonce = bytes32ToUint256(t1);
+        ghost_EpochDepositReconciled_Param_actualDepositAmount = bytes32ToUint256(t2);
+        ghost_EpochDepositReconciled_Param_shareReduction = bytes32ToUint256(t3);
+    }
+
     if (t0 == DepositSubmittedEvent()) {
         ghost_DepositSubmitted_EventCount = ghost_DepositSubmitted_EventCount + 1;
         ghost_DepositSubmitted_Param_epochNonce = bytes32ToUint256(t1);
@@ -1150,6 +1199,8 @@ rule REENT_001_initialize_RevertWhen_ReentrantCall() {
     BaseVault.InitParams params;
     address treasury;
     address cancelDepositOperator;
+    address allowlistOperator;
+    bool allowlistEnabled;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -1164,11 +1215,12 @@ rule REENT_001_initialize_RevertWhen_ReentrantCall() {
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
+    require allowlistOperator != 0, "allowlist operator should not be zero";
 
     /// @dev revert condition being verified
     require reentrancyGuardEntered(), "reentrancy guard should be entered";
 
-    initialize@withrevert(e, params, treasury, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator, allowlistOperator, allowlistEnabled);
 
     assert lastReverted;
 }
@@ -1179,6 +1231,8 @@ rule initialize_RevertWhen_AlreadyInitializing() {
     BaseVault.InitParams params;
     address treasury;
     address cancelDepositOperator;
+    address allowlistOperator;
+    bool allowlistEnabled;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -1193,11 +1247,12 @@ rule initialize_RevertWhen_AlreadyInitializing() {
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
+    require allowlistOperator != 0, "allowlist operator should not be zero";
 
     /// @dev revert condition being verified
     require isInitializing(), "contract should already be initializing";
 
-    initialize@withrevert(e, params, treasury, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator, allowlistOperator, allowlistEnabled);
 
     assert lastReverted;
 }
@@ -1208,6 +1263,8 @@ rule initialize_RevertWhen_DefaultAdminAlreadySet() {
     BaseVault.InitParams params;
     address treasury;
     address cancelDepositOperator;
+    address allowlistOperator;
+    bool allowlistEnabled;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -1222,11 +1279,12 @@ rule initialize_RevertWhen_DefaultAdminAlreadySet() {
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
+    require allowlistOperator != 0, "allowlist operator should not be zero";
 
     /// @dev revert condition being verified
     require defaultAdmin() != 0, "default admin should already be set";
 
-    initialize@withrevert(e, params, treasury, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator, allowlistOperator, allowlistEnabled);
 
     assert lastReverted;
 }
@@ -1238,6 +1296,8 @@ rule CFG_001_initialize_RevertWhen_DefaultAdminIsZeroAddress() {
     BaseVault.InitParams params;
     address treasury;
     address cancelDepositOperator;
+    address allowlistOperator;
+    bool allowlistEnabled;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -1252,11 +1312,12 @@ rule CFG_001_initialize_RevertWhen_DefaultAdminIsZeroAddress() {
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
+    require allowlistOperator != 0, "allowlist operator should not be zero";
 
     /// @dev revert condition being verified
     require params.defaultAdmin == 0, "default admin should be zero";
 
-    initialize@withrevert(e, params, treasury, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator, allowlistOperator, allowlistEnabled);
 
     assert lastReverted;
 }
@@ -1267,6 +1328,8 @@ rule CFG_001_initialize_RevertWhen_PauserIsZeroAddress() {
     BaseVault.InitParams params;
     address treasury;
     address cancelDepositOperator;
+    address allowlistOperator;
+    bool allowlistEnabled;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -1281,11 +1344,12 @@ rule CFG_001_initialize_RevertWhen_PauserIsZeroAddress() {
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
+    require allowlistOperator != 0, "allowlist operator should not be zero";
 
     /// @dev revert condition being verified
     require params.pauser == 0, "pauser should be zero";
 
-    initialize@withrevert(e, params, treasury, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator, allowlistOperator, allowlistEnabled);
 
     assert lastReverted;
 }
@@ -1296,6 +1360,8 @@ rule CFG_001_initialize_RevertWhen_UnpauserIsZeroAddress() {
     BaseVault.InitParams params;
     address treasury;
     address cancelDepositOperator;
+    address allowlistOperator;
+    bool allowlistEnabled;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -1310,11 +1376,12 @@ rule CFG_001_initialize_RevertWhen_UnpauserIsZeroAddress() {
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
+    require allowlistOperator != 0, "allowlist operator should not be zero";
 
     /// @dev revert condition being verified
     require params.unpauser == 0, "unpauser should be zero";
 
-    initialize@withrevert(e, params, treasury, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator, allowlistOperator, allowlistEnabled);
 
     assert lastReverted;
 }
@@ -1325,6 +1392,8 @@ rule CFG_001_initialize_RevertWhen_ConfigOperatorIsZeroAddress() {
     BaseVault.InitParams params;
     address treasury;
     address cancelDepositOperator;
+    address allowlistOperator;
+    bool allowlistEnabled;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -1339,11 +1408,12 @@ rule CFG_001_initialize_RevertWhen_ConfigOperatorIsZeroAddress() {
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
+    require allowlistOperator != 0, "allowlist operator should not be zero";
 
     /// @dev revert condition being verified
     require params.configOperator == 0, "config operator should be zero";
 
-    initialize@withrevert(e, params, treasury, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator, allowlistOperator, allowlistEnabled);
 
     assert lastReverted;
 }
@@ -1354,6 +1424,8 @@ rule CFG_001_initialize_RevertWhen_UpgraderIsZeroAddress() {
     BaseVault.InitParams params;
     address treasury;
     address cancelDepositOperator;
+    address allowlistOperator;
+    bool allowlistEnabled;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -1368,11 +1440,12 @@ rule CFG_001_initialize_RevertWhen_UpgraderIsZeroAddress() {
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
+    require allowlistOperator != 0, "allowlist operator should not be zero";
 
     /// @dev revert condition being verified
     require params.upgrader == 0, "upgrader should be zero";
 
-    initialize@withrevert(e, params, treasury, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator, allowlistOperator, allowlistEnabled);
 
     assert lastReverted;
 }
@@ -1383,6 +1456,8 @@ rule CFG_004_initialize_RevertWhen_InitialDefaultCcipGasLimitIsZero() {
     BaseVault.InitParams params;
     address treasury;
     address cancelDepositOperator;
+    address allowlistOperator;
+    bool allowlistEnabled;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -1397,11 +1472,12 @@ rule CFG_004_initialize_RevertWhen_InitialDefaultCcipGasLimitIsZero() {
     require params.upgrader != 0, "upgrader should not be zero";
     require treasury != 0, "treasury should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
+    require allowlistOperator != 0, "allowlist operator should not be zero";
 
     /// @dev revert condition being verified
     require params.initialDefaultCcipGasLimit == 0, "default CCIP gas limit should be zero";
 
-    initialize@withrevert(e, params, treasury, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator, allowlistOperator, allowlistEnabled);
 
     assert lastReverted;
 }
@@ -1413,6 +1489,8 @@ rule UPGRADE_002_initialize_RevertWhen_AlreadyInitialized() {
     BaseVault.InitParams params;
     address treasury;
     address cancelDepositOperator;
+    address allowlistOperator;
+    bool allowlistEnabled;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -1426,11 +1504,12 @@ rule UPGRADE_002_initialize_RevertWhen_AlreadyInitialized() {
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
+    require allowlistOperator != 0, "allowlist operator should not be zero";
 
     /// @dev revert condition being verified
     require isInitialized(), "contract should already be initialized";
 
-    initialize@withrevert(e, params, treasury, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator, allowlistOperator, allowlistEnabled);
 
     assert lastReverted;
 }
@@ -1442,6 +1521,8 @@ rule CFG_001_initialize_RevertWhen_TreasuryIsZeroAddress() {
     BaseVault.InitParams params;
     address treasury;
     address cancelDepositOperator;
+    address allowlistOperator;
+    bool allowlistEnabled;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -1456,11 +1537,12 @@ rule CFG_001_initialize_RevertWhen_TreasuryIsZeroAddress() {
     require params.upgrader != 0, "upgrader should not be zero";
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
+    require allowlistOperator != 0, "allowlist operator should not be zero";
 
     /// @dev revert condition being verified
     require treasury == 0, "treasury should be zero";
 
-    initialize@withrevert(e, params, treasury, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator, allowlistOperator, allowlistEnabled);
 
     assert lastReverted;
 }
@@ -1471,6 +1553,8 @@ rule CFG_001_initialize_RevertWhen_CancelDepositOperatorIsZeroAddress() {
     BaseVault.InitParams params;
     address treasury;
     address cancelDepositOperator;
+    address allowlistOperator;
+    bool allowlistEnabled;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -1485,22 +1569,24 @@ rule CFG_001_initialize_RevertWhen_CancelDepositOperatorIsZeroAddress() {
     require params.upgrader != 0, "upgrader should not be zero";
     require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
     require treasury != 0, "treasury should not be zero";
+    require allowlistOperator != 0, "allowlist operator should not be zero";
 
     /// @dev revert condition being verified
     require cancelDepositOperator == 0, "cancel deposit operator should be zero";
 
-    initialize@withrevert(e, params, treasury, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator, allowlistOperator, allowlistEnabled);
 
     assert lastReverted;
 }
 
-/// @notice ParentVault initialization sets up epoch 1, rebalance nonce 1, treasury, and the
-///         cancel-deposit operator role.
-rule NONCE_008_UPGRADE_003_initialize_Success() {
+/// @notice ParentVault initialization rejects the zero allowlist operator
+rule ALLOWLIST_001_CFG_001_initialize_RevertWhen_AllowlistOperatorIsZeroAddress() {
     env e;
     BaseVault.InitParams params;
     address treasury;
     address cancelDepositOperator;
+    address allowlistOperator;
+    bool allowlistEnabled;
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
@@ -1517,6 +1603,40 @@ rule NONCE_008_UPGRADE_003_initialize_Success() {
     require treasury != 0, "treasury should not be zero";
     require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
 
+    /// @dev revert condition being verified
+    require allowlistOperator == 0, "allowlist operator should be zero";
+
+    initialize@withrevert(e, params, treasury, cancelDepositOperator, allowlistOperator, allowlistEnabled);
+
+    assert lastReverted;
+}
+
+/// @notice ParentVault initialization sets up epoch 1, rebalance nonce 1, treasury, and the
+///         cancel-deposit and allowlist operator roles, and allowlist enforcement.
+rule ALLOWLIST_001_NONCE_008_UPGRADE_003_initialize_Success() {
+    env e;
+    BaseVault.InitParams params;
+    address treasury;
+    address cancelDepositOperator;
+    address allowlistOperator;
+    bool allowlistEnabled;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !isInitialized(), "contract should not be initialized";
+    require !isInitializing(), "contract should not be initializing";
+    require defaultAdmin() == 0, "default admin should not be initialized";
+    require params.defaultAdmin != 0, "default admin should not be zero";
+    require params.pauser != 0, "pauser should not be zero";
+    require params.unpauser != 0, "unpauser should not be zero";
+    require params.configOperator != 0, "config operator should not be zero";
+    require params.upgrader != 0, "upgrader should not be zero";
+    require params.initialDefaultCcipGasLimit != 0, "default CCIP gas limit should not be zero";
+    require treasury != 0, "treasury should not be zero";
+    require cancelDepositOperator != 0, "cancel deposit operator should not be zero";
+    require allowlistOperator != 0, "allowlist operator should not be zero";
+
     /// @dev set ghost starting values
     require ghost_treasury_StoreCount == 0;
     require ghost_epochNonce_StoreCount == 0;
@@ -1525,7 +1645,7 @@ rule NONCE_008_UPGRADE_003_initialize_Success() {
     require ghost_rebalance_nonce_StoreCount == 0;
     require ghost_rebalance_lastRebalanceCompletedTimestamp_StoreCount == 0;
 
-    initialize@withrevert(e, params, treasury, cancelDepositOperator);
+    initialize@withrevert(e, params, treasury, cancelDepositOperator, allowlistOperator, allowlistEnabled);
 
     assert !lastReverted;
     assert isInitialized();
@@ -1536,6 +1656,8 @@ rule NONCE_008_UPGRADE_003_initialize_Success() {
     assert getRebalance().lastRebalanceCompletedTimestamp == e.block.timestamp;
     assert getTreasury() == treasury;
     assert hasRole(CANCEL_DEPOSIT_OPERATOR_ROLE(), cancelDepositOperator);
+    assert hasRole(ALLOWLIST_OPERATOR_ROLE(), allowlistOperator);
+    assert getAllowlistEnabled() == allowlistEnabled;
 }
 
 /// ─────────────── SET INITIAL ACTIVE PROTOCOL ADAPTER ──────────
@@ -1901,6 +2023,53 @@ rule ADAPTER_003_ADAPTER_005_REBAL_008_getTVL_ReturnsZero_WhenNoActiveAdapter() 
     assert getTVL() == 0;
 }
 
+/// @notice Operational state exposes the economic share count and matches the individual state getters.
+rule getParentOperationalState_Success() {
+    /// @dev revert conditions NOT being verified
+    require getEpochNonce() > 0, "previous epoch subtraction does not underflow";
+    require getActiveProtocolAdapter() == 0 || getActiveProtocolAdapter() == adapter,
+        "active adapter is absent or the linked adapter";
+    require getActiveProtocolAdapter() == 0
+        || adapter.getTVL() <= max_uint256 - getRebalanceDepositRecovery().amount,
+        "TVL addition does not overflow";
+
+    Types.ParentOperationalState state = getParentOperationalState();
+    Types.Epoch currentEpoch = getEpoch(getEpochNonce());
+    Types.Epoch previousEpoch = getEpoch(assert_uint256(getEpochNonce() - 1));
+    Types.Rebalance rebalance = getRebalance();
+
+    assert state.paused == paused();
+    assert state.recoveryMode == getRecoveryMode();
+    assert state.currentEpochNonce == getEpochNonce();
+    assert state.totalShares == getTotalShares();
+    assert state.tvl == getTVL();
+    assert state.currentEpoch.totalDepositAmount == currentEpoch.totalDepositAmount;
+    assert state.currentEpoch.totalShareBurnAmount == currentEpoch.totalShareBurnAmount;
+    assert state.currentEpoch.totalWithdrawClaimAmount == currentEpoch.totalWithdrawClaimAmount;
+    assert state.currentEpoch.remainingDepositClaimAmount == currentEpoch.remainingDepositClaimAmount;
+    assert state.currentEpoch.remainingShareMintAmount == currentEpoch.remainingShareMintAmount;
+    assert state.currentEpoch.remainingShareBurnAmount == currentEpoch.remainingShareBurnAmount;
+    assert state.currentEpoch.remainingWithdrawClaimAmount == currentEpoch.remainingWithdrawClaimAmount;
+    assert state.currentEpoch.openedAtTimestamp == currentEpoch.openedAtTimestamp;
+    assert state.currentEpoch.status == currentEpoch.status;
+    assert state.previousEpoch.totalDepositAmount == previousEpoch.totalDepositAmount;
+    assert state.previousEpoch.totalShareBurnAmount == previousEpoch.totalShareBurnAmount;
+    assert state.previousEpoch.totalWithdrawClaimAmount == previousEpoch.totalWithdrawClaimAmount;
+    assert state.previousEpoch.remainingDepositClaimAmount == previousEpoch.remainingDepositClaimAmount;
+    assert state.previousEpoch.remainingShareMintAmount == previousEpoch.remainingShareMintAmount;
+    assert state.previousEpoch.remainingShareBurnAmount == previousEpoch.remainingShareBurnAmount;
+    assert state.previousEpoch.remainingWithdrawClaimAmount == previousEpoch.remainingWithdrawClaimAmount;
+    assert state.previousEpoch.openedAtTimestamp == previousEpoch.openedAtTimestamp;
+    assert state.previousEpoch.status == previousEpoch.status;
+    assert state.rebalance.nonce == rebalance.nonce;
+    assert state.rebalance.state == rebalance.state;
+    assert state.rebalance.activeStrategy.protocolId == rebalance.activeStrategy.protocolId;
+    assert state.rebalance.activeStrategy.chainSelector == rebalance.activeStrategy.chainSelector;
+    assert state.rebalance.pendingStrategy.protocolId == rebalance.pendingStrategy.protocolId;
+    assert state.rebalance.pendingStrategy.chainSelector == rebalance.pendingStrategy.chainSelector;
+    assert state.rebalance.lastRebalanceCompletedTimestamp == rebalance.lastRebalanceCompletedTimestamp;
+}
+
 /// @notice ParentVault TVL includes both active adapter TVL and pending rebalance deposit recovery
 /// @dev Verifies the strategy-chain path while excluding the checked-addition overflow case below
 rule ADAPTER_003_ADAPTER_005_REBAL_008_REC_006_getTVL_Success_WhenActiveAdapterIsSet() {
@@ -1944,9 +2113,19 @@ rule REENT_001_deposit_RevertWhen_ReentrantCall() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !getAllowlistEnabled() || getAllowlistedUser(e.msg.sender), "caller should pass allowlist validation";
     require !paused(), "vault should not be paused";
-    require amount >= getMinDepositAmount(), "amount should meet the minimum deposit requirement";
+    require amount >= getMinAssetAmount(), "amount should meet the minimum deposit requirement";
     require getEpoch(getEpochNonce()).status == Types.EpochStatus.OPEN, "current epoch should be open";
+
+    require e.msg.sender != currentContract, "payer should not be the vault";
+    require asset.balanceOf(e.msg.sender) >= amount, "payer should have sufficient asset balance";
+    require asset.allowance(e.msg.sender, currentContract) >= amount, "payer should have sufficient asset allowance";
+    require asset.balanceOf(currentContract) <= max_uint256 - amount, "vault asset balance should not overflow";
+    require getDepositAmount(e.msg.sender, getEpochNonce()) <= max_uint256 - amount,
+        "deposit accumulator should not overflow";
+    require getEpoch(getEpochNonce()).totalDepositAmount <= max_uint256 - amount,
+        "epoch total deposit accumulator should not overflow";
 
     /// @dev revert condition being verified
     require reentrancyGuardEntered(), "reentrancy guard should be entered";
@@ -1964,9 +2143,19 @@ rule PAUSE_003_deposit_RevertWhen_Paused() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !getAllowlistEnabled() || getAllowlistedUser(e.msg.sender), "caller should pass allowlist validation";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
-    require amount >= getMinDepositAmount(), "amount should meet the minimum deposit requirement";
+    require amount >= getMinAssetAmount(), "amount should meet the minimum deposit requirement";
     require getEpoch(getEpochNonce()).status == Types.EpochStatus.OPEN, "current epoch should be open";
+
+    require e.msg.sender != currentContract, "payer should not be the vault";
+    require asset.balanceOf(e.msg.sender) >= amount, "payer should have sufficient asset balance";
+    require asset.allowance(e.msg.sender, currentContract) >= amount, "payer should have sufficient asset allowance";
+    require asset.balanceOf(currentContract) <= max_uint256 - amount, "vault asset balance should not overflow";
+    require getDepositAmount(e.msg.sender, getEpochNonce()) <= max_uint256 - amount,
+        "deposit accumulator should not overflow";
+    require getEpoch(getEpochNonce()).totalDepositAmount <= max_uint256 - amount,
+        "epoch total deposit accumulator should not overflow";
 
     /// @dev revert condition being verified
     require paused(), "vault should be paused";
@@ -1986,12 +2175,22 @@ rule EPOCH_015_deposit_RevertWhen_AmountBelowMinimum() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !getAllowlistEnabled() || getAllowlistedUser(e.msg.sender), "caller should pass allowlist validation";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
     require !paused(), "vault should not be paused";
     require getEpoch(getEpochNonce()).status == Types.EpochStatus.OPEN, "current epoch should be open";
 
+    require e.msg.sender != currentContract, "payer should not be the vault";
+    require asset.balanceOf(e.msg.sender) >= amount, "payer should have sufficient asset balance";
+    require asset.allowance(e.msg.sender, currentContract) >= amount, "payer should have sufficient asset allowance";
+    require asset.balanceOf(currentContract) <= max_uint256 - amount, "vault asset balance should not overflow";
+    require getDepositAmount(e.msg.sender, getEpochNonce()) <= max_uint256 - amount,
+        "deposit accumulator should not overflow";
+    require getEpoch(getEpochNonce()).totalDepositAmount <= max_uint256 - amount,
+        "epoch total deposit accumulator should not overflow";
+
     /// @dev revert condition being verified
-    require amount < getMinDepositAmount(), "amount should be below the minimum deposit requirement";
+    require amount < getMinAssetAmount(), "amount should be below the minimum deposit requirement";
 
     deposit@withrevert(e, amount);
 
@@ -2004,9 +2203,19 @@ rule EPOCH_005_deposit_RevertWhen_EpochNotOpen() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !getAllowlistEnabled() || getAllowlistedUser(e.msg.sender), "caller should pass allowlist validation";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
     require !paused(), "vault should not be paused";
-    require amount >= getMinDepositAmount(), "amount should meet the minimum deposit requirement";
+    require amount >= getMinAssetAmount(), "amount should meet the minimum deposit requirement";
+
+    require e.msg.sender != currentContract, "payer should not be the vault";
+    require asset.balanceOf(e.msg.sender) >= amount, "payer should have sufficient asset balance";
+    require asset.allowance(e.msg.sender, currentContract) >= amount, "payer should have sufficient asset allowance";
+    require asset.balanceOf(currentContract) <= max_uint256 - amount, "vault asset balance should not overflow";
+    require getDepositAmount(e.msg.sender, getEpochNonce()) <= max_uint256 - amount,
+        "deposit accumulator should not overflow";
+    require getEpoch(getEpochNonce()).totalDepositAmount <= max_uint256 - amount,
+        "epoch total deposit accumulator should not overflow";
 
     /// @dev revert condition being verified
     require getEpoch(getEpochNonce()).status != Types.EpochStatus.OPEN, "current epoch should not be open";
@@ -2016,13 +2225,8 @@ rule EPOCH_005_deposit_RevertWhen_EpochNotOpen() {
     assert lastReverted;
 }
 
-/// @notice Deposit pulls the deposited amount from the depositor, accumulates the deposit and epoch
-///         totals, and emits DepositSubmitted
-/// @dev Delegates to ParentVaultUserEpochLib.deposit (DELEGATECALL). This is the same shape as
-///      _setActiveAdapter (a public library function making a nested external call - here,
-///      IERC20(asset).safeTransferFrom) - included to observe whether the same unresolved-callee
-///      havoc reproduces for this call site.
-rule EPOCH_005_deposit_Success() {
+/// @notice Deposit rejects an unallowlisted caller
+rule ALLOWLIST_002_deposit_RevertWhen_CallerNotAllowlisted() {
     env e;
     uint256 amount;
 
@@ -2030,7 +2234,46 @@ rule EPOCH_005_deposit_Success() {
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
     require !paused(), "vault should not be paused";
-    require amount >= getMinDepositAmount(), "amount should meet the minimum deposit requirement";
+    require e.msg.sender != currentContract, "payer should not be the vault";
+    require amount >= getMinAssetAmount(), "amount should meet the minimum deposit requirement";
+    require getEpoch(getEpochNonce()).status == Types.EpochStatus.OPEN, "current epoch should be open";
+    require asset.balanceOf(e.msg.sender) >= amount, "payer should have sufficient asset balance";
+    require asset.allowance(e.msg.sender, currentContract) >= amount, "payer should have sufficient asset allowance";
+    require getDepositAmount(e.msg.sender, getEpochNonce()) <= max_uint256 - amount,
+        "deposit accumulator should not overflow";
+    require getEpoch(getEpochNonce()).totalDepositAmount <= max_uint256 - amount,
+        "epoch total deposit accumulator should not overflow";
+    require asset.balanceOf(currentContract) <= max_uint256 - amount, "vault asset balance should not overflow";
+
+    /// @dev revert condition being verified
+    require getAllowlistEnabled(), "allowlist should be enabled";
+    require !getAllowlistedUser(e.msg.sender), "caller should not be allowlisted";
+
+    /// @dev ghost starting values
+    require ghost_DepositSubmitted_EventCount == 0;
+
+    deposit@withrevert(e, amount);
+
+    assert lastReverted;
+    assert ghost_DepositSubmitted_EventCount == 0;
+}
+
+/// @notice Deposit pulls the deposited amount from the depositor, accumulates the deposit and epoch
+///         totals, and emits DepositSubmitted
+/// @dev Delegates to ParentVaultUserEpochLib.deposit (DELEGATECALL). This is the same shape as
+///      _setActiveAdapter (a public library function making a nested external call - here,
+///      IERC20(asset).safeTransferFrom) - included to observe whether the same unresolved-callee
+///      havoc reproduces for this call site.
+rule ALLOWLIST_002_EPOCH_005_deposit_Success() {
+    env e;
+    uint256 amount;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !getAllowlistEnabled() || getAllowlistedUser(e.msg.sender), "caller should pass allowlist validation";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
+    require amount >= getMinAssetAmount(), "amount should meet the minimum deposit requirement";
     uint256 epochNonce = getEpochNonce();
     require getEpoch(epochNonce).status == Types.EpochStatus.OPEN, "current epoch should be open";
     require asset.balanceOf(e.msg.sender) >= amount, "depositor should have sufficient asset balance";
@@ -2899,6 +3142,14 @@ rule CCIP_001_ccipReceive_RevertWhen_CallerIsNotCCIPRouter() {
     /// @dev revert condition being verified
     require e.msg.sender != getRouter(), "caller should not be the CCIP router";
 
+    require getEpochNonce() >= 1, "epoch nonce subtraction does not underflow";
+    require epochNonce == getEpochNonce() - 1, "message identifies the previous epoch";
+    require getEpoch(epochNonce).totalDepositAmount < getEpoch(epochNonce).totalWithdrawClaimAmount,
+        "epoch is strictly a net withdrawal";
+    require getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING, "epoch is executing";
+    require getEpoch(epochNonce).totalDepositAmount <= max_uint256 - message.destTokenAmounts[0].amount,
+        "settled withdrawal addition does not overflow";
+
     ccipReceive@withrevert(e, message);
 
     assert lastReverted;
@@ -2931,6 +3182,14 @@ rule REENT_001_ccipReceive_RevertWhen_ReentrantCall() {
     /// @dev revert condition being verified
     require reentrancyGuardEntered(), "reentrancy guard should be entered";
 
+    require getEpochNonce() >= 1, "epoch nonce subtraction does not underflow";
+    require epochNonce == getEpochNonce() - 1, "message identifies the previous epoch";
+    require getEpoch(epochNonce).totalDepositAmount < getEpoch(epochNonce).totalWithdrawClaimAmount,
+        "epoch is strictly a net withdrawal";
+    require getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING, "epoch is executing";
+    require getEpoch(epochNonce).totalDepositAmount <= max_uint256 - message.destTokenAmounts[0].amount,
+        "settled withdrawal addition does not overflow";
+
     ccipReceive@withrevert(e, message);
 
     assert lastReverted;
@@ -2960,6 +3219,14 @@ rule PAUSE_003_ccipReceive_RevertWhen_Paused() {
 
     /// @dev revert condition being verified
     require paused(), "vault should be paused";
+
+    require getEpochNonce() >= 1, "epoch nonce subtraction does not underflow";
+    require epochNonce == getEpochNonce() - 1, "message identifies the previous epoch";
+    require getEpoch(epochNonce).totalDepositAmount < getEpoch(epochNonce).totalWithdrawClaimAmount,
+        "epoch is strictly a net withdrawal";
+    require getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING, "epoch is executing";
+    require getEpoch(epochNonce).totalDepositAmount <= max_uint256 - message.destTokenAmounts[0].amount,
+        "settled withdrawal addition does not overflow";
 
     ccipReceive@withrevert(e, message);
 
@@ -2991,6 +3258,14 @@ rule CCIP_001_ccipReceive_RevertWhen_SourceChainIsNotActiveStrategyChain() {
     require message.sourceChainSelector != getRebalance().activeStrategy.chainSelector,
         "source chain should not be the active strategy chain";
 
+    require getEpochNonce() >= 1, "epoch nonce subtraction does not underflow";
+    require epochNonce == getEpochNonce() - 1, "message identifies the previous epoch";
+    require getEpoch(epochNonce).totalDepositAmount < getEpoch(epochNonce).totalWithdrawClaimAmount,
+        "epoch is strictly a net withdrawal";
+    require getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING, "epoch is executing";
+    require getEpoch(epochNonce).totalDepositAmount <= max_uint256 - message.destTokenAmounts[0].amount,
+        "settled withdrawal addition does not overflow";
+
     ccipReceive@withrevert(e, message);
 
     assert lastReverted;
@@ -3021,6 +3296,14 @@ rule CCIP_001_ccipReceive_RevertWhen_SenderIsNotAllowed() {
 
     /// @dev revert condition being verified
     require sender != getCrosschainVault(message.sourceChainSelector), "sender should not be the registered vault";
+
+    require getEpochNonce() >= 1, "epoch nonce subtraction does not underflow";
+    require epochNonce == getEpochNonce() - 1, "message identifies the previous epoch";
+    require getEpoch(epochNonce).totalDepositAmount < getEpoch(epochNonce).totalWithdrawClaimAmount,
+        "epoch is strictly a net withdrawal";
+    require getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING, "epoch is executing";
+    require getEpoch(epochNonce).totalDepositAmount <= max_uint256 - message.destTokenAmounts[0].amount,
+        "settled withdrawal addition does not overflow";
 
     ccipReceive@withrevert(e, message);
 
@@ -3054,6 +3337,14 @@ rule CCIP_001_ccipReceive_RevertWhen_SenderAndRegisteredVaultAreZero() {
     require sender == 0, "sender should be zero";
     require getCrosschainVault(message.sourceChainSelector) == 0, "source chain should not have a registered vault";
 
+    require getEpochNonce() >= 1, "epoch nonce subtraction does not underflow";
+    require epochNonce == getEpochNonce() - 1, "message identifies the previous epoch";
+    require getEpoch(epochNonce).totalDepositAmount < getEpoch(epochNonce).totalWithdrawClaimAmount,
+        "epoch is strictly a net withdrawal";
+    require getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING, "epoch is executing";
+    require getEpoch(epochNonce).totalDepositAmount <= max_uint256 - message.destTokenAmounts[0].amount,
+        "settled withdrawal addition does not overflow";
+
     ccipReceive@withrevert(e, message);
 
     assert lastReverted;
@@ -3082,6 +3373,14 @@ rule CCIP_001_ccipReceive_RevertWhen_SenderEncodingIsMalformed() {
 
     /// @dev revert condition being verified
     require message.sender.length < 32, "message sender should be too short to decode";
+
+    require getEpochNonce() >= 1, "epoch nonce subtraction does not underflow";
+    require epochNonce == getEpochNonce() - 1, "message identifies the previous epoch";
+    require getEpoch(epochNonce).totalDepositAmount < getEpoch(epochNonce).totalWithdrawClaimAmount,
+        "epoch is strictly a net withdrawal";
+    require getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING, "epoch is executing";
+    require getEpoch(epochNonce).totalDepositAmount <= max_uint256 - message.destTokenAmounts[0].amount,
+        "settled withdrawal addition does not overflow";
 
     ccipReceive@withrevert(e, message);
 
@@ -3115,6 +3414,14 @@ rule REC_003_ccipReceive_RevertWhen_RecoveryAlreadyPending() {
     /// @dev revert condition being verified
     require getRecoveryMode() != Types.RecoveryMode.NONE, "recovery should be pending";
 
+    require getEpochNonce() >= 1, "epoch nonce subtraction does not underflow";
+    require epochNonce == getEpochNonce() - 1, "message identifies the previous epoch";
+    require getEpoch(epochNonce).totalDepositAmount < getEpoch(epochNonce).totalWithdrawClaimAmount,
+        "epoch is strictly a net withdrawal";
+    require getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING, "epoch is executing";
+    require getEpoch(epochNonce).totalDepositAmount <= max_uint256 - message.destTokenAmounts[0].amount,
+        "settled withdrawal addition does not overflow";
+
     ccipReceive@withrevert(e, message);
 
     assert lastReverted;
@@ -3144,6 +3451,12 @@ rule CCIP_002_ccipReceive_RevertWhen_TokenAmountsLengthIsInvalid() {
 
     /// @dev revert condition being verified
     require message.destTokenAmounts.length != 1, "token amounts length should be invalid";
+
+    require getEpochNonce() >= 1, "epoch nonce subtraction does not underflow";
+    require epochNonce == getEpochNonce() - 1, "message identifies the previous epoch";
+    require getEpoch(epochNonce).totalDepositAmount < getEpoch(epochNonce).totalWithdrawClaimAmount,
+        "epoch is strictly a net withdrawal";
+    require getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING, "epoch is executing";
 
     ccipReceive@withrevert(e, message);
 
@@ -3177,6 +3490,14 @@ rule CCIP_002_ccipReceive_RevertWhen_ReceivedTokenIsInvalid() {
     /// @dev revert condition being verified
     require message.destTokenAmounts[0].token != getAsset(), "delivered token should not be the vault asset";
 
+    require getEpochNonce() >= 1, "epoch nonce subtraction does not underflow";
+    require epochNonce == getEpochNonce() - 1, "message identifies the previous epoch";
+    require getEpoch(epochNonce).totalDepositAmount < getEpoch(epochNonce).totalWithdrawClaimAmount,
+        "epoch is strictly a net withdrawal";
+    require getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING, "epoch is executing";
+    require getEpoch(epochNonce).totalDepositAmount <= max_uint256 - message.destTokenAmounts[0].amount,
+        "settled withdrawal addition does not overflow";
+
     ccipReceive@withrevert(e, message);
 
     assert lastReverted;
@@ -3208,6 +3529,14 @@ rule CCIP_002_ccipReceive_RevertWhen_ReceivedAmountIsZero() {
 
     /// @dev revert condition being verified
     require message.destTokenAmounts[0].amount == 0, "delivered amount should be zero";
+
+    require getEpochNonce() >= 1, "epoch nonce subtraction does not underflow";
+    require epochNonce == getEpochNonce() - 1, "message identifies the previous epoch";
+    require getEpoch(epochNonce).totalDepositAmount < getEpoch(epochNonce).totalWithdrawClaimAmount,
+        "epoch is strictly a net withdrawal";
+    require getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING, "epoch is executing";
+    require getEpoch(epochNonce).totalDepositAmount <= max_uint256 - message.destTokenAmounts[0].amount,
+        "settled withdrawal addition does not overflow";
 
     ccipReceive@withrevert(e, message);
 
@@ -3380,6 +3709,12 @@ rule CCIP_004_EPOCH_014_NONCE_012_ccipReceive_EPOCH_NET_WITHDRAW_RevertWhen_Inva
     /// @dev revert condition being verified
     require epochNonce != getEpochNonce() - 1, "decoded epoch nonce should not match the previous epoch";
 
+    require getEpoch(epochNonce).totalDepositAmount < getEpoch(epochNonce).totalWithdrawClaimAmount,
+        "epoch is strictly a net withdrawal";
+    require getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING, "epoch is executing";
+    require getEpoch(epochNonce).totalDepositAmount <= max_uint256 - message.destTokenAmounts[0].amount,
+        "settled withdrawal addition does not overflow";
+
     ccipReceive@withrevert(e, message);
 
     assert lastReverted;
@@ -3387,6 +3722,102 @@ rule CCIP_004_EPOCH_014_NONCE_012_ccipReceive_EPOCH_NET_WITHDRAW_RevertWhen_Inva
 
 /// @notice CCIP epoch net withdraw reverts when the previous epoch is not executing
 /// @dev Verifies that an out-of-sequence callback leaves all vault state unchanged
+rule CCIP_004_EPOCH_014_NONCE_012_ccipReceive_EPOCH_NET_WITHDRAW_RevertWhen_EpochIsNetDeposit() {
+    env e;
+    Client.Any2EVMMessage message;
+    uint256 epochNonce;
+    address sender;
+
+    /// @dev revert conditions NOT being verified
+    require !paused(), "vault should not be paused";
+    require message.sourceChainSelector == getRebalance().activeStrategy.chainSelector,
+        "source chain should be the active strategy chain";
+    require e.msg.value == 0, "non-payable";
+    require e.msg.sender == getRouter(), "caller should be the CCIP router";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require sender != 0, "sender should not be zero";
+    require sender == getCrosschainVault(message.sourceChainSelector), "sender should be the registered vault";
+    require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
+    require message.destTokenAmounts.length == 1, "token amounts should contain one element";
+    require message.destTokenAmounts[0].token == getAsset(), "delivered token should be the vault asset";
+    require message.destTokenAmounts[0].amount != 0, "delivered amount should not be zero";
+    require message.sender == encodeAddress(sender), "message sender should encode the registered vault";
+    require message.data == encodeCcipTxData(Types.CcipTx.EPOCH_NET_WITHDRAW, encodeEpochNonce(epochNonce)),
+        "message data should encode an epoch net withdraw";
+    require getEpochNonce() >= 1, "epoch nonce should never be zero";
+    require epochNonce == getEpochNonce() - 1, "decoded epoch nonce should match the previous epoch";
+
+    require getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING, "previous epoch is executing";
+    require getEpoch(epochNonce).totalDepositAmount <= max_uint256 - message.destTokenAmounts[0].amount,
+        "settled withdrawal addition does not overflow";
+
+    /// @dev revert condition being verified
+    require getEpoch(epochNonce).totalDepositAmount > getEpoch(epochNonce).totalWithdrawClaimAmount,
+        "epoch is not a net withdrawal";
+
+    /// @dev ghost starting values
+    require EpochLifecycleEventCountsAreZero();
+    require ghost_EpochWithdrawAmountShort_EventCount == 0;
+    require ghost_CCIPReceived_EventCount == 0;
+    storage before = lastStorage;
+
+    ccipReceive@withrevert(e, message);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+    assert EpochLifecycleEventCountsAreZero();
+    assert ghost_EpochWithdrawAmountShort_EventCount == 0;
+    assert ghost_CCIPReceived_EventCount == 0;
+}
+
+rule CCIP_004_EPOCH_014_NONCE_012_ccipReceive_EPOCH_NET_WITHDRAW_RevertWhen_EpochIsNetZero() {
+    env e;
+    Client.Any2EVMMessage message;
+    uint256 epochNonce;
+    address sender;
+
+    /// @dev revert conditions NOT being verified
+    require !paused(), "vault should not be paused";
+    require message.sourceChainSelector == getRebalance().activeStrategy.chainSelector,
+        "source chain should be the active strategy chain";
+    require e.msg.value == 0, "non-payable";
+    require e.msg.sender == getRouter(), "caller should be the CCIP router";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require sender != 0, "sender should not be zero";
+    require sender == getCrosschainVault(message.sourceChainSelector), "sender should be the registered vault";
+    require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
+    require message.destTokenAmounts.length == 1, "token amounts should contain one element";
+    require message.destTokenAmounts[0].token == getAsset(), "delivered token should be the vault asset";
+    require message.destTokenAmounts[0].amount != 0, "delivered amount should not be zero";
+    require message.sender == encodeAddress(sender), "message sender should encode the registered vault";
+    require message.data == encodeCcipTxData(Types.CcipTx.EPOCH_NET_WITHDRAW, encodeEpochNonce(epochNonce)),
+        "message data should encode an epoch net withdraw";
+    require getEpochNonce() >= 1, "epoch nonce should never be zero";
+    require epochNonce == getEpochNonce() - 1, "decoded epoch nonce should match the previous epoch";
+
+    require getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING, "previous epoch is executing";
+    require getEpoch(epochNonce).totalDepositAmount <= max_uint256 - message.destTokenAmounts[0].amount,
+        "settled withdrawal addition does not overflow";
+
+    /// @dev revert condition being verified
+    require getEpoch(epochNonce).totalDepositAmount == getEpoch(epochNonce).totalWithdrawClaimAmount,
+        "epoch is not a net withdrawal";
+
+    /// @dev ghost starting values
+    require EpochLifecycleEventCountsAreZero();
+    require ghost_EpochWithdrawAmountShort_EventCount == 0;
+    require ghost_CCIPReceived_EventCount == 0;
+    storage before = lastStorage;
+
+    ccipReceive@withrevert(e, message);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+    assert EpochLifecycleEventCountsAreZero();
+    assert ghost_EpochWithdrawAmountShort_EventCount == 0;
+    assert ghost_CCIPReceived_EventCount == 0;
+}
+
 rule CCIP_004_EPOCH_014_NONCE_012_ccipReceive_EPOCH_NET_WITHDRAW_RevertWhen_EpochNotExecuting() {
     env e;
     Client.Any2EVMMessage message;
@@ -3414,6 +3845,11 @@ rule CCIP_004_EPOCH_014_NONCE_012_ccipReceive_EPOCH_NET_WITHDRAW_RevertWhen_Epoc
 
     /// @dev revert condition being verified
     require getEpoch(epochNonce).status != Types.EpochStatus.EXECUTING, "previous epoch should not be executing";
+
+    require getEpoch(epochNonce).totalDepositAmount < getEpoch(epochNonce).totalWithdrawClaimAmount,
+        "epoch is strictly a net withdrawal";
+    require getEpoch(epochNonce).totalDepositAmount <= max_uint256 - message.destTokenAmounts[0].amount,
+        "settled withdrawal addition does not overflow";
 
     ccipReceive@withrevert(e, message);
 
@@ -3459,8 +3895,8 @@ rule CCIP_003_CCIP_004_EPOCH_014_NONCE_012_ccipReceive_EPOCH_NET_WITHDRAW_Succes
     uint256 receivedAmount = message.destTokenAmounts[0].amount;
     uint256 totalDepositAmount = getEpoch(epochNonce).totalDepositAmount;
     uint256 totalWithdrawClaimAmountBefore = getEpoch(epochNonce).totalWithdrawClaimAmount;
-    require totalWithdrawClaimAmountBefore >= totalDepositAmount,
-        "total withdraw claim amount should not underflow against total deposit amount";
+    require totalWithdrawClaimAmountBefore > totalDepositAmount,
+        "epoch should be strictly a net withdrawal";
     mathint expectedWithdraw = totalWithdrawClaimAmountBefore - totalDepositAmount;
     require totalDepositAmount <= max_uint256 - receivedAmount, "total withdraw claim amount should not overflow";
 
@@ -3471,6 +3907,9 @@ rule CCIP_003_CCIP_004_EPOCH_014_NONCE_012_ccipReceive_EPOCH_NET_WITHDRAW_Succes
     require ghost_epoch_remainingWithdrawClaimAmount_StoreCount == 0;
     require ghost_epoch_status_StoreCount == 0;
     require ghost_CCIPReceived_EventCount == 0;
+
+    require getEpoch(epochNonce).totalDepositAmount < getEpoch(epochNonce).totalWithdrawClaimAmount,
+        "epoch is strictly a net withdrawal";
 
     ccipReceive@withrevert(e, message);
 
@@ -4764,6 +5203,8 @@ rule NONCE_010_closeEpoch_RevertWhen_InvalidEpochNonce() {
     require getEpoch(currentEpochNonce).totalDepositAmount != 0
         || getEpoch(currentEpochNonce).totalShareBurnAmount != 0, "current epoch should not be empty";
 
+    require RemoteWithdrawMeetsMinimum(tvl), "remote net withdrawal meets the minimum asset amount";
+
     /// @dev revert condition being verified
     require expectedEpochNonce != currentEpochNonce,
         "expected epoch nonce does not match current epoch nonce";
@@ -4805,6 +5246,8 @@ rule closeEpoch_RevertWhen_CallerDoesNotHaveEPOCH_OPERATOR_ROLE() {
     require getEpoch(epochNonce).totalDepositAmount != 0 || getEpoch(epochNonce).totalShareBurnAmount != 0,
         "epoch should not be empty";
 
+    require RemoteWithdrawMeetsMinimum(tvl), "remote net withdrawal meets the minimum asset amount";
+
     /// @dev revert condition being verified
     require !hasRole(EPOCH_OPERATOR_ROLE(), e.msg.sender);
 
@@ -4839,6 +5282,8 @@ rule REENT_001_closeEpoch_RevertWhen_ReentrantCall() {
         "minimum epoch period should have elapsed";
     require getEpoch(epochNonce).totalDepositAmount != 0 || getEpoch(epochNonce).totalShareBurnAmount != 0,
         "epoch should not be empty";
+
+    require RemoteWithdrawMeetsMinimum(tvl), "remote net withdrawal meets the minimum asset amount";
 
     /// @dev revert condition being verified
     require reentrancyGuardEntered(), "reentrancy guard should be entered";
@@ -4875,6 +5320,8 @@ rule PAUSE_003_closeEpoch_RevertWhen_Paused() {
     require getEpoch(epochNonce).totalDepositAmount != 0 || getEpoch(epochNonce).totalShareBurnAmount != 0,
         "epoch should not be empty";
 
+    require RemoteWithdrawMeetsMinimum(tvl), "remote net withdrawal meets the minimum asset amount";
+
     /// @dev revert condition being verified
     require paused(), "vault should be paused";
 
@@ -4898,6 +5345,8 @@ rule REC_003_closeEpoch_RevertWhen_RecoveryAlreadyPending() {
     require hasRole(EPOCH_OPERATOR_ROLE(), e.msg.sender);
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
     require !paused(), "vault should not be paused";
+
+    require RemoteWithdrawMeetsMinimum(tvl), "remote net withdrawal meets the minimum asset amount";
 
     /// @dev revert condition being verified
     require getRecoveryMode() != Types.RecoveryMode.NONE, "recovery should be pending";
@@ -4939,7 +5388,7 @@ rule EPOCH_004_EPOCH_014_NONCE_010_closeEpoch_DEPOSIT_TO_LOCAL_STRATEGY_Success(
     ///      ParentVaultEpochLib.spec, while this rule verifies Parent's local-deposit dispatch.
     require getSharePrecision() == 1000000000000000000, "share precision should be 1e18";
     require getAssetPrecision() == 1000000, "asset precision should be 1e6";
-    require getMinDepositAmount() == 1000000, "minimum deposit should be one asset unit";
+    require getMinAssetAmount() == 1000000, "minimum deposit should be one asset unit";
     require getTotalShares() == 0, "use bootstrap settlement";
     require depositAmount == 1000000, "use one minimum deposit";
     require depositAmount <= max_uint256 / 2, "deposit amount should fit int256";
@@ -4954,6 +5403,8 @@ rule EPOCH_004_EPOCH_014_NONCE_010_closeEpoch_DEPOSIT_TO_LOCAL_STRATEGY_Success(
     require asset.balanceOf(currentContract) == depositAmount, "vault should hold the deposit amount";
     require asset.balanceOf(adapter) == 0, "adapter asset balance should start at zero";
     require adapter.getTVL() == 0, "adapter TVL should start at zero";
+
+    require RemoteWithdrawMeetsMinimum(tvl), "remote net withdrawal meets the minimum asset amount";
 
     /// @dev set ghost starting values
     require ghost_EpochDepositToStrategySuccess_EventCount == 0;
@@ -5007,7 +5458,7 @@ rule REC_009_closeEpoch_DEPOSIT_TO_LOCAL_STRATEGY_RevertWhen_DepositFails() {
     ///      settlement arithmetic is verified parametrically in ParentVaultEpochLib.spec.
     require getSharePrecision() == 1000000000000000000, "share precision should be 1e18";
     require getAssetPrecision() == 1000000, "asset precision should be 1e6";
-    require getMinDepositAmount() == 1000000, "minimum deposit should be one asset unit";
+    require getMinAssetAmount() == 1000000, "minimum deposit should be one asset unit";
     require getTotalShares() == 0, "use bootstrap settlement";
     require depositAmount == 1000000, "use one minimum deposit";
     require depositAmount <= max_uint256 / 2, "deposit amount should fit int256";
@@ -5017,6 +5468,8 @@ rule REC_009_closeEpoch_DEPOSIT_TO_LOCAL_STRATEGY_RevertWhen_DepositFails() {
     require asset.balanceOf(currentContract) == depositAmount, "vault should hold the deposit amount";
     require asset.balanceOf(adapter) == 0, "adapter asset balance should start at zero";
     require adapter.getTVL() == 0, "adapter TVL should start at zero";
+
+    require RemoteWithdrawMeetsMinimum(tvl), "remote net withdrawal meets the minimum asset amount";
 
     /// @dev revert condition being verified
     require adapter.depositReverts(), "adapter deposit should revert";
@@ -5063,7 +5516,7 @@ rule EPOCH_004_EPOCH_014_NONCE_010_closeEpoch_SEND_DEPOSIT_TO_REMOTE_STRATEGY_Su
     ///      ParentVaultEpochLib.spec, while this rule verifies Parent's remote-send dispatch.
     require getSharePrecision() == 1000000000000000000, "share precision should be 1e18";
     require getAssetPrecision() == 1000000, "asset precision should be 1e6";
-    require getMinDepositAmount() == 1000000, "minimum deposit should be one asset unit";
+    require getMinAssetAmount() == 1000000, "minimum deposit should be one asset unit";
     require getTotalShares() == 0, "use bootstrap settlement";
     require depositAmount == 1000000, "use one minimum deposit";
     require depositAmount <= max_uint256 / 2, "deposit amount should fit int256";
@@ -5089,6 +5542,8 @@ rule EPOCH_004_EPOCH_014_NONCE_010_closeEpoch_SEND_DEPOSIT_TO_REMOTE_STRATEGY_Su
     require routerLinkBalanceBefore == 0, "router LINK balance should start at zero";
     require vaultAssetBalanceBefore == depositAmount, "vault should hold the bridge amount";
     require routerAssetBalanceBefore == 0, "router asset balance should start at zero";
+
+    require RemoteWithdrawMeetsMinimum(tvl), "remote net withdrawal meets the minimum asset amount";
 
     /// @dev set ghost starting values
     require ghost_CCIPBridged_EventCount == 0;
@@ -5166,6 +5621,8 @@ rule EPOCH_004_EPOCH_014_NONCE_010_closeEpoch_WITHDRAW_FROM_LOCAL_STRATEGY_Succe
     require asset.balanceOf(adapter) == shareBurnAmount, "adapter asset balance should cover the withdrawal";
     require asset.balanceOf(currentContract) == 0, "vault asset balance should start at zero";
 
+    require RemoteWithdrawMeetsMinimum(tvl), "remote net withdrawal meets the minimum asset amount";
+
     /// @dev set ghost starting values
     require ghost_EpochWithdrawFromStrategySuccess_EventCount == 0;
     require ghost_EpochClaimable_EventCount == 0;
@@ -5229,6 +5686,8 @@ rule REC_009_closeEpoch_WITHDRAW_FROM_LOCAL_STRATEGY_RevertWhen_WithdrawFails() 
     require shareBurnAmount <= max_uint256 / 2, "calculated total withdrawal should fit int256";
     require getActiveProtocolAdapter() == adapter, "active adapter should be the protocol adapter";
 
+    require RemoteWithdrawMeetsMinimum(tvl), "remote net withdrawal meets the minimum asset amount";
+
     /// @dev revert condition being verified
     require adapter.withdrawReverts(), "adapter withdraw should revert";
 
@@ -5266,13 +5725,14 @@ rule EPOCH_004_EPOCH_014_NONCE_010_closeEpoch_WAIT_FOR_REMOTE_WITHDRAW_Success()
     uint256 totalShares = getTotalShares();
     uint256 shareBurnAmount = getEpoch(epochNonce).totalShareBurnAmount;
 
-    /// @dev Use a concrete half-withdraw settlement; arithmetic is verified parametrically in
+    /// @dev Use a concrete minimum remote-withdraw settlement; arithmetic is verified parametrically in
     ///      ParentVaultEpochLib.spec, while this rule verifies Parent's remote-withdraw path.
     require getSharePrecision() == 1000000000000000000, "share precision should be 1e18";
-    require totalShares == 1000000, "use one whole asset unit of shares";
-    require tvl == 1000000, "use one whole asset unit of tvl";
+    require getMinAssetAmount() == 1000000, "minimum withdrawal should be one asset unit";
+    require totalShares == 2000000, "use two whole asset units of shares";
+    require tvl == 2000000, "use two whole asset units of tvl";
     require getEpoch(epochNonce).totalDepositAmount == 0, "no deposits should be made";
-    require shareBurnAmount == 500000, "withdraw half of the outstanding shares";
+    require shareBurnAmount == 1000000, "remote withdrawal meets the minimum asset amount";
     require shareBurnAmount <= max_uint256 / 2, "calculated total withdrawal should fit int256";
     require getActiveProtocolAdapter() == 0, "no active adapter on this chain (remote strategy)";
 
@@ -5287,13 +5747,68 @@ rule EPOCH_004_EPOCH_014_NONCE_010_closeEpoch_WAIT_FOR_REMOTE_WITHDRAW_Success()
     assert ghost_EpochWithdrawExecuting_EventCount == 1;
     assert ghost_EpochWithdrawExecuting_Param_epochNonce == epochNonce;
     assert ghost_EpochWithdrawExecuting_Param_amount == shareBurnAmount;
-    assert getTotalShares() == 500000;
+    assert getTotalShares() == 1000000;
     assert getEpoch(epochNonce).remainingShareBurnAmount == shareBurnAmount;
     assert getEpoch(epochNonce).totalWithdrawClaimAmount == shareBurnAmount;
     assert getEpoch(epochNonce).remainingWithdrawClaimAmount == shareBurnAmount;
     assert getEpochNonce() == epochNonce + 1;
     assert ghost_EpochOpen_EventCount == 1;
     assert ghost_EpochOpen_Param_epochNonce == epochNonce + 1;
+}
+
+rule EPOCH_015_closeEpoch_RevertWhen_RemoteNetWithdrawBelowMinimum() {
+    env e;
+    uint256 expectedEpochNonce;
+    uint256 tvl;
+
+    /// @dev revert conditions NOT being verified
+    require expectedEpochNonce == getEpochNonce(), "expected epoch nonce matches current epoch nonce";
+    require e.msg.value == 0, "non-payable";
+    require hasRole(EPOCH_OPERATOR_ROLE(), e.msg.sender);
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
+    require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
+    require getRebalance().state == Types.RebalanceState.NONE, "rebalance should not be in progress";
+    require getEpochNonce() >= 1, "epoch nonce should never be zero";
+    require getEpochNonce() != max_uint256, "epoch nonce should not overflow on open";
+    uint256 epochNonce = getEpochNonce();
+    require epochNonce == 1 || getEpoch(assert_uint256(epochNonce - 1)).status == Types.EpochStatus.CLAIMABLE,
+        "previous epoch should be claimable when required";
+    require getEpoch(epochNonce).status == Types.EpochStatus.OPEN, "epoch should be open";
+    require getEpoch(epochNonce).openedAtTimestamp <= max_uint256 - MIN_EPOCH_PERIOD(),
+        "minimum epoch period addition should not overflow";
+    require e.block.timestamp >= getEpoch(epochNonce).openedAtTimestamp + MIN_EPOCH_PERIOD(),
+        "minimum epoch period should have elapsed";
+
+    uint256 totalShares = getTotalShares();
+    uint256 shareBurnAmount = getEpoch(epochNonce).totalShareBurnAmount;
+
+    /// @dev Use a concrete half-withdraw settlement; arithmetic is verified parametrically in
+    ///      ParentVaultEpochLib.spec, while this rule verifies Parent's remote-withdraw path.
+    require getSharePrecision() == 1000000000000000000, "share precision should be 1e18";
+    require totalShares == 1000000, "use one whole asset unit of shares";
+    require tvl == 1000000, "use one whole asset unit of tvl";
+    require getEpoch(epochNonce).totalDepositAmount == 0, "no deposits should be made";
+    require shareBurnAmount == 500000, "withdraw half of the outstanding shares";
+    require shareBurnAmount <= max_uint256 / 2, "calculated total withdrawal should fit int256";
+    require getActiveProtocolAdapter() == 0, "no active adapter on this chain (remote strategy)";
+
+    /// @dev revert condition being verified
+    require shareBurnAmount < getMinAssetAmount(), "remote net withdrawal is below the minimum asset amount";
+
+    /// @dev set ghost starting values
+    require ghost_EpochWithdrawExecuting_EventCount == 0;
+    require ghost_EpochOpen_EventCount == 0;
+
+    require EpochLifecycleEventCountsAreZero();
+    storage before = lastStorage;
+
+    closeEpoch@withrevert(e, expectedEpochNonce, tvl);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+    assert EpochLifecycleEventCountsAreZero();
+    assert ghost_EpochOpen_EventCount == 0;
 }
 
 /// ───────────────────── COMPLETE EPOCH DEPOSIT ───────────────────
@@ -5324,9 +5839,15 @@ rule NONCE_012_completeEpochDeposit_RevertWhen_InvalidEpochNonce() {
     /// @dev ghost starting values
     require ghost_EpochClaimable_EventCount == 0, "EpochClaimable event count starts at zero";
 
-    completeEpochDeposit@withrevert(e, expectedEpochNonce);
+    uint256 actualDepositAmount;
+    require actualDepositAmount == getEpoch(previousEpochNonce).totalDepositAmount - getEpoch(previousEpochNonce).totalWithdrawClaimAmount,
+        "exact delivery excludes invalid amounts and shortfall arithmetic";
+    require ghost_EpochDepositReconciled_EventCount == 0, "reconciliation event count starts at zero";
+
+    completeEpochDeposit@withrevert(e, expectedEpochNonce, actualDepositAmount);
 
     assert lastReverted;
+    assert ghost_EpochDepositReconciled_EventCount == 0;
     assert getEpochNonce() == currentEpochNonce;
     assert getEpoch(previousEpochNonce).status == Types.EpochStatus.EXECUTING;
     assert ghost_EpochClaimable_EventCount == 0;
@@ -5352,9 +5873,15 @@ rule REENT_001_completeEpochDeposit_RevertWhen_ReentrantCall() {
     /// @dev revert condition being verified
     require reentrancyGuardEntered(), "reentrancy guard should be entered";
 
-    completeEpochDeposit@withrevert(e, expectedEpochNonce);
+    uint256 actualDepositAmount;
+    require actualDepositAmount == getEpoch(epochNonce).totalDepositAmount - getEpoch(epochNonce).totalWithdrawClaimAmount,
+        "exact delivery excludes invalid amounts and shortfall arithmetic";
+    require ghost_EpochDepositReconciled_EventCount == 0, "reconciliation event count starts at zero";
+
+    completeEpochDeposit@withrevert(e, expectedEpochNonce, actualDepositAmount);
 
     assert lastReverted;
+    assert ghost_EpochDepositReconciled_EventCount == 0;
 }
 
 rule completeEpochDeposit_RevertWhen_CallerDoesNotHaveEPOCH_OPERATOR_ROLE() {
@@ -5377,9 +5904,15 @@ rule completeEpochDeposit_RevertWhen_CallerDoesNotHaveEPOCH_OPERATOR_ROLE() {
     /// @dev revert condition being verified
     require !hasRole(EPOCH_OPERATOR_ROLE(), e.msg.sender);
 
-    completeEpochDeposit@withrevert(e, expectedEpochNonce);
+    uint256 actualDepositAmount;
+    require actualDepositAmount == getEpoch(epochNonce).totalDepositAmount - getEpoch(epochNonce).totalWithdrawClaimAmount,
+        "exact delivery excludes invalid amounts and shortfall arithmetic";
+    require ghost_EpochDepositReconciled_EventCount == 0, "reconciliation event count starts at zero";
+
+    completeEpochDeposit@withrevert(e, expectedEpochNonce, actualDepositAmount);
 
     assert lastReverted;
+    assert ghost_EpochDepositReconciled_EventCount == 0;
 }
 
 rule EPOCH_014_completeEpochDeposit_RevertWhen_NoCompletedEpoch() {
@@ -5398,9 +5931,17 @@ rule EPOCH_014_completeEpochDeposit_RevertWhen_NoCompletedEpoch() {
     /// @dev revert condition being verified
     require getEpochNonce() == 1, "no epoch should have completed";
 
-    completeEpochDeposit@withrevert(e, expectedEpochNonce);
+    uint256 actualDepositAmount;
+    require actualDepositAmount == 1, "delivery amount is valid";
+    require getEpoch(0).totalDepositAmount == 1, "epoch zero excludes the net-deposit guard";
+    require getEpoch(0).totalWithdrawClaimAmount == 0, "epoch zero excludes the net-deposit guard";
+    require getEpoch(0).status == Types.EpochStatus.EXECUTING, "epoch zero excludes finalization failure";
+    require ghost_EpochDepositReconciled_EventCount == 0, "reconciliation event count starts at zero";
+
+    completeEpochDeposit@withrevert(e, expectedEpochNonce, actualDepositAmount);
 
     assert lastReverted;
+    assert ghost_EpochDepositReconciled_EventCount == 0;
 }
 
 rule EPOCH_014_completeEpochDeposit_RevertWhen_PreviousEpochIsNotNetDeposit() {
@@ -5422,9 +5963,15 @@ rule EPOCH_014_completeEpochDeposit_RevertWhen_PreviousEpochIsNotNetDeposit() {
     require getEpoch(epochNonce).totalDepositAmount <= getEpoch(epochNonce).totalWithdrawClaimAmount,
         "previous epoch should not be a net deposit";
 
-    completeEpochDeposit@withrevert(e, expectedEpochNonce);
+    uint256 actualDepositAmount;
+    require actualDepositAmount == 1, "delivery is nonzero";
+    require getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING, "exclude finalization failure";
+    require ghost_EpochDepositReconciled_EventCount == 0, "reconciliation event count starts at zero";
+
+    completeEpochDeposit@withrevert(e, expectedEpochNonce, actualDepositAmount);
 
     assert lastReverted;
+    assert ghost_EpochDepositReconciled_EventCount == 0;
 }
 
 rule EPOCH_014_completeEpochDeposit_RevertWhen_PreviousEpochIsNotExecuting() {
@@ -5448,9 +5995,15 @@ rule EPOCH_014_completeEpochDeposit_RevertWhen_PreviousEpochIsNotExecuting() {
     require getEpoch(epochNonce).status != Types.EpochStatus.EXECUTING,
         "previous epoch should not be executing";
 
-    completeEpochDeposit@withrevert(e, expectedEpochNonce);
+    uint256 actualDepositAmount;
+    require actualDepositAmount == getEpoch(epochNonce).totalDepositAmount - getEpoch(epochNonce).totalWithdrawClaimAmount,
+        "exact delivery excludes invalid amounts and shortfall arithmetic";
+    require ghost_EpochDepositReconciled_EventCount == 0, "reconciliation event count starts at zero";
+
+    completeEpochDeposit@withrevert(e, expectedEpochNonce, actualDepositAmount);
 
     assert lastReverted;
+    assert ghost_EpochDepositReconciled_EventCount == 0;
 }
 
 /// @notice Completing a remote net-deposit epoch reverts while the vault is paused
@@ -5475,9 +6028,15 @@ rule PAUSE_003_completeEpochDeposit_RevertWhen_Paused() {
     /// @dev revert condition being verified
     require paused(), "vault should be paused";
 
-    completeEpochDeposit@withrevert(e, expectedEpochNonce);
+    uint256 actualDepositAmount;
+    require actualDepositAmount == getEpoch(epochNonce).totalDepositAmount - getEpoch(epochNonce).totalWithdrawClaimAmount,
+        "exact delivery excludes invalid amounts and shortfall arithmetic";
+    require ghost_EpochDepositReconciled_EventCount == 0, "reconciliation event count starts at zero";
+
+    completeEpochDeposit@withrevert(e, expectedEpochNonce, actualDepositAmount);
 
     assert lastReverted;
+    assert ghost_EpochDepositReconciled_EventCount == 0;
 }
 
 /// @notice Completing a confirmed remote net-deposit epoch marks it claimable and emits its event
@@ -5500,12 +6059,437 @@ rule EPOCH_014_completeEpochDeposit_Success() {
     require getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING, "previous epoch should be executing";
     require ghost_EpochClaimable_EventCount == 0;
 
-    completeEpochDeposit@withrevert(e, expectedEpochNonce);
+    uint256 actualDepositAmount;
+    require actualDepositAmount == getEpoch(epochNonce).totalDepositAmount - getEpoch(epochNonce).totalWithdrawClaimAmount,
+        "exact delivery excludes invalid amounts and shortfall arithmetic";
+    require ghost_EpochDepositReconciled_EventCount == 0, "reconciliation event count starts at zero";
+
+    uint256 totalSharesBefore = getTotalShares();
+    uint256 remainingShareMintAmountBefore = getEpoch(epochNonce).remainingShareMintAmount;
+    uint256 shareSupplyBefore = share.totalSupply();
+
+    completeEpochDeposit@withrevert(e, expectedEpochNonce, actualDepositAmount);
 
     assert !lastReverted;
+    assert getTotalShares() == totalSharesBefore;
+    assert getEpoch(epochNonce).remainingShareMintAmount == remainingShareMintAmountBefore;
+    assert share.totalSupply() == shareSupplyBefore;
+    assert ghost_EpochDepositReconciled_EventCount == 1;
+    assert ghost_EpochDepositReconciled_Param_epochNonce == epochNonce;
+    assert ghost_EpochDepositReconciled_Param_actualDepositAmount == actualDepositAmount;
+    assert ghost_EpochDepositReconciled_Param_shareReduction == 0;
     assert getEpoch(epochNonce).status == Types.EpochStatus.CLAIMABLE;
     assert ghost_EpochClaimable_EventCount == 1;
     assert ghost_EpochClaimable_Param_epochNonce == epochNonce;
+}
+
+/// @notice Remote deposit completion rejects a zero delivered amount without changing accounting.
+rule EPOCH_014_completeEpochDeposit_RevertWhen_ActualDepositAmountIsZero() {
+    env e;
+    uint256 actualDepositAmount;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
+    require hasRole(EPOCH_OPERATOR_ROLE(), e.msg.sender);
+    require getEpochNonce() > 1, "at least one epoch has completed";
+    uint256 epochNonce = assert_uint256(getEpochNonce() - 1);
+    uint256 depositAmount = getEpoch(epochNonce).totalDepositAmount;
+    uint256 withdrawClaimAmount = getEpoch(epochNonce).totalWithdrawClaimAmount;
+    uint256 originalShareAmount = getEpoch(epochNonce).remainingShareMintAmount;
+    uint256 totalSharesBefore = getTotalShares();
+    require depositAmount > withdrawClaimAmount, "previous epoch is a net deposit";
+    mathint expectedDepositAmount = depositAmount - withdrawClaimAmount;
+
+    require getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING, "previous epoch is executing";
+    require withdrawClaimAmount > 0, "hypothetical adjusted shares remain nonzero";
+    require originalShareAmount == depositAmount, "pending shares make reconciliation arithmetic exact";
+    require totalSharesBefore >= originalShareAmount, "economic share reduction does not underflow";
+
+    /// @dev revert condition being verified
+    require actualDepositAmount == 0, "actual deposit is zero";
+
+    /// @dev ghost starting values
+    require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
+    require ghost_totalShares_StoreCount == 0, "total shares store count starts at zero";
+    require ghost_epoch_remainingShareMintAmount_StoreCount == 0,
+        "remainingShareMintAmount store count starts at zero";
+    require ghost_epoch_status_StoreCount == 0, "epoch status store count starts at zero";
+
+    uint256 shareSupplyBefore = share.totalSupply();
+    storage before = lastStorage;
+
+    completeEpochDeposit@withrevert(e, epochNonce, actualDepositAmount);
+
+    assert lastReverted;
+    assert share.totalSupply() == shareSupplyBefore;
+    assert before[currentContract] == lastStorage[currentContract];
+    assert EpochLifecycleEventCountsAreZero();
+    assert ghost_totalShares_StoreCount == 0;
+    assert ghost_epoch_remainingShareMintAmount_StoreCount == 0;
+    assert ghost_epoch_status_StoreCount == 0;
+}
+
+rule EPOCH_014_completeEpochDeposit_RevertWhen_ActualDepositAmountExceedsExpected() {
+    env e;
+    uint256 actualDepositAmount;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
+    require hasRole(EPOCH_OPERATOR_ROLE(), e.msg.sender);
+    require getEpochNonce() > 1, "at least one epoch has completed";
+    uint256 epochNonce = assert_uint256(getEpochNonce() - 1);
+    uint256 depositAmount = getEpoch(epochNonce).totalDepositAmount;
+    uint256 withdrawClaimAmount = getEpoch(epochNonce).totalWithdrawClaimAmount;
+    uint256 originalShareAmount = getEpoch(epochNonce).remainingShareMintAmount;
+    uint256 totalSharesBefore = getTotalShares();
+    require depositAmount > withdrawClaimAmount, "previous epoch is a net deposit";
+    mathint expectedDepositAmount = depositAmount - withdrawClaimAmount;
+
+    require getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING, "previous epoch is executing";
+
+    /// @dev revert condition being verified
+    require actualDepositAmount > expectedDepositAmount, "actual deposit exceeds the expected amount";
+
+    /// @dev ghost starting values
+    require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
+    require ghost_totalShares_StoreCount == 0, "total shares store count starts at zero";
+    require ghost_epoch_remainingShareMintAmount_StoreCount == 0,
+        "remainingShareMintAmount store count starts at zero";
+    require ghost_epoch_status_StoreCount == 0, "epoch status store count starts at zero";
+
+    uint256 shareSupplyBefore = share.totalSupply();
+    storage before = lastStorage;
+
+    completeEpochDeposit@withrevert(e, epochNonce, actualDepositAmount);
+
+    assert lastReverted;
+    assert share.totalSupply() == shareSupplyBefore;
+    assert before[currentContract] == lastStorage[currentContract];
+    assert EpochLifecycleEventCountsAreZero();
+    assert ghost_totalShares_StoreCount == 0;
+    assert ghost_epoch_remainingShareMintAmount_StoreCount == 0;
+    assert ghost_epoch_status_StoreCount == 0;
+}
+
+rule EPOCH_018_completeEpochDeposit_RevertWhen_AdjustedSharesAreZero() {
+    env e;
+    uint256 actualDepositAmount;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
+    require hasRole(EPOCH_OPERATOR_ROLE(), e.msg.sender);
+    require getEpochNonce() > 1, "at least one epoch has completed";
+    uint256 epochNonce = assert_uint256(getEpochNonce() - 1);
+    uint256 depositAmount = getEpoch(epochNonce).totalDepositAmount;
+    uint256 withdrawClaimAmount = getEpoch(epochNonce).totalWithdrawClaimAmount;
+    uint256 originalShareAmount = getEpoch(epochNonce).remainingShareMintAmount;
+    uint256 totalSharesBefore = getTotalShares();
+    require depositAmount > withdrawClaimAmount, "previous epoch is a net deposit";
+    mathint expectedDepositAmount = depositAmount - withdrawClaimAmount;
+
+    require getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING, "previous epoch is executing";
+    require actualDepositAmount > 0, "actual deposit is nonzero";
+    require actualDepositAmount < expectedDepositAmount, "actual deposit is short";
+    require totalSharesBefore >= originalShareAmount, "economic share reduction does not underflow";
+
+    /// @dev revert condition being verified
+    require originalShareAmount * (withdrawClaimAmount + actualDepositAmount) / depositAmount == 0,
+        "adjusted shares round down to zero";
+
+    /// @dev ghost starting values
+    require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
+    require ghost_totalShares_StoreCount == 0, "total shares store count starts at zero";
+    require ghost_epoch_remainingShareMintAmount_StoreCount == 0,
+        "remainingShareMintAmount store count starts at zero";
+    require ghost_epoch_status_StoreCount == 0, "epoch status store count starts at zero";
+
+    uint256 shareSupplyBefore = share.totalSupply();
+    storage before = lastStorage;
+
+    completeEpochDeposit@withrevert(e, epochNonce, actualDepositAmount);
+
+    assert lastReverted;
+    assert share.totalSupply() == shareSupplyBefore;
+    assert before[currentContract] == lastStorage[currentContract];
+    assert EpochLifecycleEventCountsAreZero();
+    assert ghost_totalShares_StoreCount == 0;
+    assert ghost_epoch_remainingShareMintAmount_StoreCount == 0;
+    assert ghost_epoch_status_StoreCount == 0;
+}
+
+rule EPOCH_014_completeEpochDeposit_RevertWhen_ShortfallEpochIsNotExecuting() {
+    env e;
+    uint256 actualDepositAmount;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
+    require hasRole(EPOCH_OPERATOR_ROLE(), e.msg.sender);
+    require getEpochNonce() > 1, "at least one epoch has completed";
+    uint256 epochNonce = assert_uint256(getEpochNonce() - 1);
+    uint256 depositAmount = getEpoch(epochNonce).totalDepositAmount;
+    uint256 withdrawClaimAmount = getEpoch(epochNonce).totalWithdrawClaimAmount;
+    uint256 originalShareAmount = getEpoch(epochNonce).remainingShareMintAmount;
+    uint256 totalSharesBefore = getTotalShares();
+    require depositAmount > withdrawClaimAmount, "previous epoch is a net deposit";
+    mathint expectedDepositAmount = depositAmount - withdrawClaimAmount;
+
+    require actualDepositAmount > 0, "actual deposit is nonzero";
+    require actualDepositAmount < expectedDepositAmount, "actual deposit is short";
+    mathint adjustedShareAmount = originalShareAmount * (withdrawClaimAmount + actualDepositAmount) / depositAmount;
+    require adjustedShareAmount > 0, "adjusted pending shares are nonzero";
+    mathint shareReduction = originalShareAmount - adjustedShareAmount;
+    require totalSharesBefore >= shareReduction, "economic share reduction does not underflow";
+
+    /// @dev revert condition being verified
+    require getEpoch(epochNonce).status != Types.EpochStatus.EXECUTING, "previous epoch is not executing";
+
+    /// @dev ghost starting values
+    require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
+    require ghost_totalShares_StoreCount == 0, "total shares store count starts at zero";
+    require ghost_epoch_remainingShareMintAmount_StoreCount == 0,
+        "remainingShareMintAmount store count starts at zero";
+    require ghost_epoch_status_StoreCount == 0, "epoch status store count starts at zero";
+
+    uint256 shareSupplyBefore = share.totalSupply();
+    storage before = lastStorage;
+
+    completeEpochDeposit@withrevert(e, epochNonce, actualDepositAmount);
+
+    assert lastReverted;
+    assert share.totalSupply() == shareSupplyBefore;
+    assert before[currentContract] == lastStorage[currentContract];
+    assert EpochLifecycleEventCountsAreZero();
+    assert ghost_totalShares_StoreCount == 0;
+    assert ghost_epoch_remainingShareMintAmount_StoreCount == 0;
+    assert ghost_epoch_status_StoreCount == 0;
+}
+
+/*
+ * ParentVault.rules.conf excludes the following rules, which run in ParentVault.EpochDeposit.rules.conf:
+ * - EPOCH_014_completeEpochDeposit_Success_WhenActualDepositIsShort
+ * - EPOCH_014_completeEpochDeposit_Success_UsesFullPrecisionForShareAdjustment
+ *
+ * The dedicated target models the unchanged _mulDivDown helper's mathematical contract because native
+ * ParentVault proofs returned zero for positive quotients reproduced successfully in Foundry.
+ * These proofs verify reconciliation accounting and events conditional on that arithmetic contract.
+ * ParentVaultEpochLib.spec and the Foundry reconciliation tests exercise the native implementation separately.
+ */
+rule EPOCH_014_completeEpochDeposit_Success_WhenActualDepositIsShort() {
+    env e;
+    uint256 actualDepositAmount;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
+    require hasRole(EPOCH_OPERATOR_ROLE(), e.msg.sender);
+    require getEpochNonce() > 1, "at least one epoch has completed";
+    uint256 epochNonce = assert_uint256(getEpochNonce() - 1);
+    uint256 depositAmount = getEpoch(epochNonce).totalDepositAmount;
+    uint256 withdrawClaimAmount = getEpoch(epochNonce).totalWithdrawClaimAmount;
+    uint256 originalShareAmount = getEpoch(epochNonce).remainingShareMintAmount;
+    uint256 totalSharesBefore = getTotalShares();
+    require depositAmount > withdrawClaimAmount, "previous epoch is a net deposit";
+    mathint expectedDepositAmount = depositAmount - withdrawClaimAmount;
+
+    /// @dev A successfully closed USDC epoch uses a 1e6 minimum and safely casts gross deposits to int256.
+    require getMinAssetAmount() == 1000000, "minimum asset amount is one USDC";
+    require depositAmount <= max_uint256 / 2, "gross deposits passed closeEpoch's signed cast";
+    /// @dev closeEpoch checks pending shares times the minimum asset amount with checked multiplication.
+    require originalShareAmount * getMinAssetAmount() <= max_uint256,
+        "pending allocation passed closeEpoch's multiplication guard";
+    require originalShareAmount * getMinAssetAmount() >= depositAmount,
+        "minimum-size deposits received a nonzero share allocation";
+
+    /// @dev Deployment permanently locks the shares from at least 100 USDC of bootstrap seed (100e18).
+    ///      Exclude this executing epoch's pending mint allocation when checking the locked-share floor.
+    require to_mathint(totalSharesBefore) >= to_mathint(originalShareAmount) + 100000000000000000000,
+        "issued economic shares include the permanent seed";
+
+    require getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING, "previous epoch is executing";
+    require actualDepositAmount > 0, "actual deposit is nonzero";
+    require actualDepositAmount < expectedDepositAmount, "actual deposit is short";
+    mathint adjustedShareAmount = originalShareAmount * (withdrawClaimAmount + actualDepositAmount) / depositAmount;
+    require adjustedShareAmount > 0, "adjusted pending shares are nonzero";
+    mathint shareReduction = originalShareAmount - adjustedShareAmount;
+    require totalSharesBefore >= shareReduction, "economic share reduction does not underflow";
+
+    uint256 currentEpochNonce = getEpochNonce();
+    uint256 remainingDepositClaimAmountBefore = getEpoch(epochNonce).remainingDepositClaimAmount;
+    uint256 remainingShareBurnAmountBefore = getEpoch(epochNonce).remainingShareBurnAmount;
+    uint256 remainingWithdrawClaimAmountBefore = getEpoch(epochNonce).remainingWithdrawClaimAmount;
+
+    /// @dev ghost starting values
+    require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
+    require ghost_totalShares_StoreCount == 0, "total shares store count starts at zero";
+    require ghost_epoch_remainingShareMintAmount_StoreCount == 0,
+        "remainingShareMintAmount store count starts at zero";
+    require ghost_epoch_status_StoreCount == 0, "epoch status store count starts at zero";
+
+    uint256 shareSupplyBefore = share.totalSupply();
+
+    completeEpochDeposit@withrevert(e, epochNonce, actualDepositAmount);
+
+    assert !lastReverted;
+    assert share.totalSupply() == shareSupplyBefore;
+    assert getEpochNonce() == currentEpochNonce;
+    assert getEpoch(epochNonce).totalDepositAmount == depositAmount;
+    assert getEpoch(epochNonce).totalWithdrawClaimAmount == withdrawClaimAmount;
+    assert getEpoch(epochNonce).remainingDepositClaimAmount == remainingDepositClaimAmountBefore;
+    assert getEpoch(epochNonce).remainingShareBurnAmount == remainingShareBurnAmountBefore;
+    assert getEpoch(epochNonce).remainingWithdrawClaimAmount == remainingWithdrawClaimAmountBefore;
+    assert getEpoch(epochNonce).remainingShareMintAmount == adjustedShareAmount;
+    assert getTotalShares() == totalSharesBefore - shareReduction;
+    assert getEpoch(epochNonce).status == Types.EpochStatus.CLAIMABLE;
+    assert ghost_EpochDepositReconciled_EventCount == 1;
+    assert ghost_EpochDepositReconciled_Param_epochNonce == epochNonce;
+    assert ghost_EpochDepositReconciled_Param_actualDepositAmount == actualDepositAmount;
+    assert ghost_EpochDepositReconciled_Param_shareReduction == shareReduction;
+    assert ghost_EpochClaimable_EventCount == 1;
+    assert ghost_EpochClaimable_Param_epochNonce == epochNonce;
+    assert ghost_EpochDepositExecuting_EventCount == 0;
+    assert ghost_EpochWithdrawExecuting_EventCount == 0;
+    assert ghost_totalShares_StoreCount == 1;
+    assert ghost_totalShares_StoredValue == totalSharesBefore - shareReduction;
+    assert ghost_epoch_remainingShareMintAmount_StoreCount == 1;
+    assert ghost_epoch_remainingShareMintAmount_StoredKey == epochNonce;
+    assert ghost_epoch_remainingShareMintAmount_StoredValue == adjustedShareAmount;
+    assert ghost_epoch_status_StoreCount == 1;
+    assert ghost_epoch_status_StoredKey == epochNonce;
+    assert ghost_epoch_status_StoredValue == Types.EpochStatus.CLAIMABLE;
+}
+
+rule EPOCH_014_completeEpochDeposit_Success_UsesFullPrecisionForShareAdjustment() {
+    env e;
+    uint256 actualDepositAmount;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
+    require hasRole(EPOCH_OPERATOR_ROLE(), e.msg.sender);
+    require getEpochNonce() > 1, "at least one epoch has completed";
+    uint256 epochNonce = assert_uint256(getEpochNonce() - 1);
+    uint256 depositAmount = getEpoch(epochNonce).totalDepositAmount;
+    uint256 withdrawClaimAmount = getEpoch(epochNonce).totalWithdrawClaimAmount;
+    uint256 originalShareAmount = getEpoch(epochNonce).remainingShareMintAmount;
+    uint256 totalSharesBefore = getTotalShares();
+    require depositAmount > withdrawClaimAmount, "previous epoch is a net deposit";
+    mathint expectedDepositAmount = depositAmount - withdrawClaimAmount;
+
+    /// @dev A successfully closed USDC epoch uses a 1e6 minimum and safely casts gross deposits to int256.
+    require getMinAssetAmount() == 1000000, "minimum asset amount is one USDC";
+    require depositAmount <= max_uint256 / 2, "gross deposits passed closeEpoch's signed cast";
+    /// @dev closeEpoch checks pending shares times the minimum asset amount with checked multiplication.
+    require originalShareAmount * getMinAssetAmount() <= max_uint256,
+        "pending allocation passed closeEpoch's multiplication guard";
+    require originalShareAmount * getMinAssetAmount() >= depositAmount,
+        "minimum-size deposits received a nonzero share allocation";
+
+    /// @dev Deployment permanently locks the shares from at least 100 USDC of bootstrap seed (100e18).
+    ///      Exclude this executing epoch's pending mint allocation when checking the locked-share floor.
+    require to_mathint(totalSharesBefore) >= to_mathint(originalShareAmount) + 100000000000000000000,
+        "issued economic shares include the permanent seed";
+
+    /// @dev These amounts respect closeEpoch's accounting guards while the share-adjustment product exceeds uint256.
+    require depositAmount == 0x1000000000000000000000000000000, "gross deposit is 2^120";
+    require withdrawClaimAmount == depositAmount / 2, "half the gross deposit offsets withdrawals";
+    require originalShareAmount == 0x10000000000000000000000000000000000000000, "pending allocation is 2^160";
+    require totalSharesBefore == originalShareAmount * 3 / 2, "economic shares include the unwithdrawn old supply";
+    require actualDepositAmount == depositAmount / 4, "half the expected remote deposit is delivered";
+    require getEpoch(epochNonce).status == Types.EpochStatus.EXECUTING, "previous epoch is executing";
+    require actualDepositAmount > 0, "actual deposit is nonzero";
+    require actualDepositAmount < expectedDepositAmount, "actual deposit is short";
+    mathint adjustedShareAmount = originalShareAmount * (withdrawClaimAmount + actualDepositAmount) / depositAmount;
+    require adjustedShareAmount > 0, "adjusted pending shares are nonzero";
+    mathint shareReduction = originalShareAmount - adjustedShareAmount;
+    require totalSharesBefore >= shareReduction, "economic share reduction does not underflow";
+
+    uint256 currentEpochNonce = getEpochNonce();
+    uint256 remainingDepositClaimAmountBefore = getEpoch(epochNonce).remainingDepositClaimAmount;
+    uint256 remainingShareBurnAmountBefore = getEpoch(epochNonce).remainingShareBurnAmount;
+    uint256 remainingWithdrawClaimAmountBefore = getEpoch(epochNonce).remainingWithdrawClaimAmount;
+
+    /// @dev ghost starting values
+    require EpochLifecycleEventCountsAreZero(), "epoch lifecycle event counts start at zero";
+    require ghost_totalShares_StoreCount == 0, "total shares store count starts at zero";
+    require ghost_epoch_remainingShareMintAmount_StoreCount == 0,
+        "remainingShareMintAmount store count starts at zero";
+    require ghost_epoch_status_StoreCount == 0, "epoch status store count starts at zero";
+
+    uint256 shareSupplyBefore = share.totalSupply();
+
+    completeEpochDeposit@withrevert(e, epochNonce, actualDepositAmount);
+
+    assert !lastReverted;
+    assert share.totalSupply() == shareSupplyBefore;
+    assert getEpochNonce() == currentEpochNonce;
+    assert getEpoch(epochNonce).totalDepositAmount == depositAmount;
+    assert getEpoch(epochNonce).totalWithdrawClaimAmount == withdrawClaimAmount;
+    assert getEpoch(epochNonce).remainingDepositClaimAmount == remainingDepositClaimAmountBefore;
+    assert getEpoch(epochNonce).remainingShareBurnAmount == remainingShareBurnAmountBefore;
+    assert getEpoch(epochNonce).remainingWithdrawClaimAmount == remainingWithdrawClaimAmountBefore;
+    assert getEpoch(epochNonce).remainingShareMintAmount == adjustedShareAmount;
+    assert getTotalShares() == totalSharesBefore - shareReduction;
+    assert getEpoch(epochNonce).status == Types.EpochStatus.CLAIMABLE;
+    assert ghost_EpochDepositReconciled_EventCount == 1;
+    assert ghost_EpochDepositReconciled_Param_epochNonce == epochNonce;
+    assert ghost_EpochDepositReconciled_Param_actualDepositAmount == actualDepositAmount;
+    assert ghost_EpochDepositReconciled_Param_shareReduction == shareReduction;
+    assert ghost_EpochClaimable_EventCount == 1;
+    assert ghost_EpochClaimable_Param_epochNonce == epochNonce;
+    assert ghost_EpochDepositExecuting_EventCount == 0;
+    assert ghost_EpochWithdrawExecuting_EventCount == 0;
+    assert ghost_totalShares_StoreCount == 1;
+    assert ghost_totalShares_StoredValue == totalSharesBefore - shareReduction;
+    assert ghost_epoch_remainingShareMintAmount_StoreCount == 1;
+    assert ghost_epoch_remainingShareMintAmount_StoredKey == epochNonce;
+    assert ghost_epoch_remainingShareMintAmount_StoredValue == adjustedShareAmount;
+    assert ghost_epoch_status_StoreCount == 1;
+    assert ghost_epoch_status_StoredKey == epochNonce;
+    assert ghost_epoch_status_StoredValue == Types.EpochStatus.CLAIMABLE;
+}
+
+/// @notice Manual completion rejects a local pending rebalance without changing strategies, fees, or shares.
+rule REBAL_004_completeRebalance_RevertWhen_PendingStrategyIsLocal() {
+    env e;
+    uint256 expectedRebalanceNonce = getRebalance().nonce;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
+    require hasRole(REBALANCE_OPERATOR_ROLE(), e.msg.sender);
+    require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery is not pending";
+    require getRebalance().state == Types.RebalanceState.REBALANCING, "rebalance is in progress";
+    require expectedRebalanceNonce < max_uint256, "rebalance nonce increment does not overflow";
+    require getRebalance().lastRebalanceCompletedTimestamp <= e.block.timestamp,
+        "elapsed fee period does not underflow";
+    require getTotalShares() == 0, "zero economic shares exclude fee arithmetic and mint failures";
+
+    /// @dev revert condition being verified
+    require getRebalance().pendingStrategy.chainSelector == getThisChainSelector(), "pending strategy is local";
+
+    /// @dev ghost starting values
+    require ghost_RebalanceCompleted_EventCount == 0;
+    require ghost_ManagementFeeCollected_EventCount == 0;
+    storage before = lastStorage;
+
+    completeRebalance@withrevert(e, expectedRebalanceNonce);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+    assert before[share] == lastStorage[share];
+    assert ghost_RebalanceCompleted_EventCount == 0;
+    assert ghost_ManagementFeeCollected_EventCount == 0;
 }
 
 /// ────────────────────────── COMPLETE REBALANCE ──────────────────
@@ -5534,6 +6518,9 @@ rule NONCE_011_completeRebalance_RevertWhen_InvalidRebalanceNonce() {
     require getRebalance().lastRebalanceCompletedTimestamp <= e.block.timestamp,
         "management fee elapsed time should not underflow";
     require getTotalShares() == 0, "management fee collection should not revert";
+
+    require getRebalance().pendingStrategy.chainSelector != getThisChainSelector(),
+        "manual completion requires a remote pending strategy";
 
     /// @dev revert condition being verified
     require expectedRebalanceNonce != currentRebalanceNonce,
@@ -5567,6 +6554,9 @@ rule completeRebalance_RevertWhen_CallerDoesNotHaveREBALANCE_OPERATOR_ROLE() {
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require getRebalance().state == Types.RebalanceState.REBALANCING, "rebalance should be in progress";
 
+    require getRebalance().pendingStrategy.chainSelector != getThisChainSelector(),
+        "manual completion requires a remote pending strategy";
+
     /// @dev revert condition being verified
     require !hasRole(REBALANCE_OPERATOR_ROLE(), e.msg.sender);
 
@@ -5590,6 +6580,9 @@ rule REENT_001_completeRebalance_RevertWhen_ReentrantCall() {
     require hasRole(REBALANCE_OPERATOR_ROLE(), e.msg.sender);
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require getRebalance().state == Types.RebalanceState.REBALANCING, "rebalance should be in progress";
+
+    require getRebalance().pendingStrategy.chainSelector != getThisChainSelector(),
+        "manual completion requires a remote pending strategy";
 
     /// @dev revert condition being verified
     require reentrancyGuardEntered(), "reentrancy guard should be entered";
@@ -5615,6 +6608,9 @@ rule REC_003_completeRebalance_RevertWhen_RecoveryAlreadyPending() {
     require hasRole(REBALANCE_OPERATOR_ROLE(), e.msg.sender);
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
 
+    require getRebalance().pendingStrategy.chainSelector != getThisChainSelector(),
+        "manual completion requires a remote pending strategy";
+
     /// @dev revert condition being verified
     require getRecoveryMode() != Types.RecoveryMode.NONE, "recovery should be pending";
 
@@ -5639,6 +6635,9 @@ rule completeRebalance_RevertWhen_NoRebalanceInProgress() {
     require hasRole(REBALANCE_OPERATOR_ROLE(), e.msg.sender);
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
+
+    require getRebalance().pendingStrategy.chainSelector != getThisChainSelector(),
+        "manual completion requires a remote pending strategy";
 
     /// @dev revert condition being verified
     require getRebalance().state != Types.RebalanceState.REBALANCING, "rebalance should not be in progress";
@@ -5685,6 +6684,9 @@ rule FEE_001_FEE_002_NONCE_011_completeRebalance_Success_WhenManagementFeeShares
     require treasuryBalanceBefore < max_uint256, "treasury share balance should not overflow";
     require share.totalSupply() < max_uint256, "share total supply should not overflow";
 
+    require getRebalance().pendingStrategy.chainSelector != getThisChainSelector(),
+        "manual completion requires a remote pending strategy";
+
     /// @dev set ghost starting values
     require ghost_RebalanceCompleted_EventCount == 0;
     require ghost_ManagementFeeCollected_EventCount == 0;
@@ -5724,6 +6726,9 @@ rule PAUSE_003_completeRebalance_RevertWhen_Paused() {
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
     require getRecoveryMode() == Types.RecoveryMode.NONE, "recovery should not be pending";
     require getRebalance().state == Types.RebalanceState.REBALANCING, "rebalance should be in progress";
+
+    require getRebalance().pendingStrategy.chainSelector != getThisChainSelector(),
+        "manual completion requires a remote pending strategy";
 
     /// @dev revert condition being verified
     require paused(), "vault should be paused";
@@ -5931,10 +6936,23 @@ rule REENT_001_depositFor_RevertWhen_ReentrantCall() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !getAllowlistEnabled()
+        || (getAllowlistedUser(e.msg.sender) && getAllowlistedUser(beneficiary)),
+        "caller and beneficiary should pass allowlist validation";
     require !paused(), "vault should not be paused";
+    require beneficiary != currentContract, "beneficiary should not be this vault";
     require beneficiary != 0, "beneficiary should not be zero";
-    require amount >= getMinDepositAmount(), "amount should meet the minimum deposit requirement";
+    require amount >= getMinAssetAmount(), "amount should meet the minimum deposit requirement";
     require getEpoch(getEpochNonce()).status == Types.EpochStatus.OPEN, "current epoch should be open";
+
+    require e.msg.sender != currentContract, "payer should not be the vault";
+    require asset.balanceOf(e.msg.sender) >= amount, "payer should have sufficient asset balance";
+    require asset.allowance(e.msg.sender, currentContract) >= amount, "payer should have sufficient asset allowance";
+    require asset.balanceOf(currentContract) <= max_uint256 - amount, "vault asset balance should not overflow";
+    require getDepositAmount(beneficiary, getEpochNonce()) <= max_uint256 - amount,
+        "deposit accumulator should not overflow";
+    require getEpoch(getEpochNonce()).totalDepositAmount <= max_uint256 - amount,
+        "epoch total deposit accumulator should not overflow";
 
     /// @dev revert condition being verified
     require reentrancyGuardEntered(), "reentrancy guard should be entered";
@@ -5953,10 +6971,23 @@ rule PAUSE_003_depositFor_RevertWhen_Paused() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !getAllowlistEnabled()
+        || (getAllowlistedUser(e.msg.sender) && getAllowlistedUser(beneficiary)),
+        "caller and beneficiary should pass allowlist validation";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require beneficiary != currentContract, "beneficiary should not be this vault";
     require beneficiary != 0, "beneficiary should not be zero";
-    require amount >= getMinDepositAmount(), "amount should meet the minimum deposit requirement";
+    require amount >= getMinAssetAmount(), "amount should meet the minimum deposit requirement";
     require getEpoch(getEpochNonce()).status == Types.EpochStatus.OPEN, "current epoch should be open";
+
+    require e.msg.sender != currentContract, "payer should not be the vault";
+    require asset.balanceOf(e.msg.sender) >= amount, "payer should have sufficient asset balance";
+    require asset.allowance(e.msg.sender, currentContract) >= amount, "payer should have sufficient asset allowance";
+    require asset.balanceOf(currentContract) <= max_uint256 - amount, "vault asset balance should not overflow";
+    require getDepositAmount(beneficiary, getEpochNonce()) <= max_uint256 - amount,
+        "deposit accumulator should not overflow";
+    require getEpoch(getEpochNonce()).totalDepositAmount <= max_uint256 - amount,
+        "epoch total deposit accumulator should not overflow";
 
     /// @dev revert condition being verified
     require paused(), "vault should be paused";
@@ -5964,6 +6995,45 @@ rule PAUSE_003_depositFor_RevertWhen_Paused() {
     depositFor@withrevert(e, beneficiary, amount);
 
     assert lastReverted;
+}
+
+/// @notice On-behalf-of deposit rejects the ParentVault as beneficiary without changing tokens or epoch accounting.
+rule FOR_001_depositFor_RevertWhen_BeneficiaryIsVault() {
+    env e;
+    uint256 amount;
+    address beneficiary = currentContract;
+    uint256 epochNonce = getEpochNonce();
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !getAllowlistEnabled()
+        || (getAllowlistedUser(e.msg.sender) && getAllowlistedUser(beneficiary)),
+        "caller and beneficiary should pass allowlist validation";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
+    require beneficiary != 0, "beneficiary is nonzero";
+    require e.msg.sender != currentContract, "payer is distinct from the vault";
+    require amount >= getMinAssetAmount(), "amount meets the minimum asset requirement";
+    require getEpoch(epochNonce).status == Types.EpochStatus.OPEN, "current epoch is open";
+    require asset.balanceOf(e.msg.sender) >= amount, "payer has sufficient balance";
+    require asset.allowance(e.msg.sender, currentContract) >= amount, "payer has sufficient allowance";
+    require asset.balanceOf(currentContract) <= max_uint256 - amount, "vault balance addition does not overflow";
+    require getDepositAmount(beneficiary, epochNonce) <= max_uint256 - amount, "beneficiary position addition does not overflow";
+    require getEpoch(epochNonce).totalDepositAmount <= max_uint256 - amount, "epoch total addition does not overflow";
+
+    /// @dev revert condition being verified
+    require beneficiary == currentContract, "beneficiary is this vault";
+
+    /// @dev ghost starting values
+    require ghost_DepositSubmitted_EventCount == 0;
+    storage before = lastStorage;
+
+    depositFor@withrevert(e, beneficiary, amount);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+    assert before[asset] == lastStorage[asset];
+    assert ghost_DepositSubmitted_EventCount == 0;
 }
 
 /// @notice Deposit-for rejects the zero beneficiary
@@ -5974,10 +7044,23 @@ rule FOR_001_depositFor_RevertWhen_BeneficiaryIsZeroAddress() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !getAllowlistEnabled()
+        || (getAllowlistedUser(e.msg.sender) && getAllowlistedUser(0)),
+        "caller and beneficiary should pass allowlist validation";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
     require !paused(), "vault should not be paused";
-    require amount >= getMinDepositAmount(), "amount should meet the minimum deposit requirement";
+    require amount >= getMinAssetAmount(), "amount should meet the minimum deposit requirement";
     require getEpoch(getEpochNonce()).status == Types.EpochStatus.OPEN, "current epoch should be open";
+
+    require e.msg.sender != currentContract, "payer should not be the vault";
+    require currentContract != 0, "zero beneficiary should not be the vault";
+    require asset.balanceOf(e.msg.sender) >= amount, "payer should have sufficient asset balance";
+    require asset.allowance(e.msg.sender, currentContract) >= amount, "payer should have sufficient asset allowance";
+    require asset.balanceOf(currentContract) <= max_uint256 - amount, "vault asset balance should not overflow";
+    require getDepositAmount(0, getEpochNonce()) <= max_uint256 - amount,
+        "deposit accumulator should not overflow";
+    require getEpoch(getEpochNonce()).totalDepositAmount <= max_uint256 - amount,
+        "epoch total deposit accumulator should not overflow";
 
     /// @dev revert condition being verified
     address beneficiary = 0;
@@ -5996,13 +7079,26 @@ rule EPOCH_015_depositFor_RevertWhen_AmountBelowMinimum() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !getAllowlistEnabled()
+        || (getAllowlistedUser(e.msg.sender) && getAllowlistedUser(beneficiary)),
+        "caller and beneficiary should pass allowlist validation";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
     require !paused(), "vault should not be paused";
+    require beneficiary != currentContract, "beneficiary should not be this vault";
     require beneficiary != 0, "beneficiary should not be zero";
     require getEpoch(getEpochNonce()).status == Types.EpochStatus.OPEN, "current epoch should be open";
 
+    require e.msg.sender != currentContract, "payer should not be the vault";
+    require asset.balanceOf(e.msg.sender) >= amount, "payer should have sufficient asset balance";
+    require asset.allowance(e.msg.sender, currentContract) >= amount, "payer should have sufficient asset allowance";
+    require asset.balanceOf(currentContract) <= max_uint256 - amount, "vault asset balance should not overflow";
+    require getDepositAmount(beneficiary, getEpochNonce()) <= max_uint256 - amount,
+        "deposit accumulator should not overflow";
+    require getEpoch(getEpochNonce()).totalDepositAmount <= max_uint256 - amount,
+        "epoch total deposit accumulator should not overflow";
+
     /// @dev revert condition being verified
-    require amount < getMinDepositAmount(), "amount should be below the minimum deposit requirement";
+    require amount < getMinAssetAmount(), "amount should be below the minimum deposit requirement";
 
     depositFor@withrevert(e, beneficiary, amount);
 
@@ -6018,10 +7114,23 @@ rule EPOCH_005_depositFor_RevertWhen_EpochNotOpen() {
 
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
+    require !getAllowlistEnabled()
+        || (getAllowlistedUser(e.msg.sender) && getAllowlistedUser(beneficiary)),
+        "caller and beneficiary should pass allowlist validation";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
     require !paused(), "vault should not be paused";
+    require beneficiary != currentContract, "beneficiary should not be this vault";
     require beneficiary != 0, "beneficiary should not be zero";
-    require amount >= getMinDepositAmount(), "amount should meet the minimum deposit requirement";
+    require amount >= getMinAssetAmount(), "amount should meet the minimum deposit requirement";
+
+    require e.msg.sender != currentContract, "payer should not be the vault";
+    require asset.balanceOf(e.msg.sender) >= amount, "payer should have sufficient asset balance";
+    require asset.allowance(e.msg.sender, currentContract) >= amount, "payer should have sufficient asset allowance";
+    require asset.balanceOf(currentContract) <= max_uint256 - amount, "vault asset balance should not overflow";
+    require getDepositAmount(beneficiary, getEpochNonce()) <= max_uint256 - amount,
+        "deposit accumulator should not overflow";
+    require getEpoch(getEpochNonce()).totalDepositAmount <= max_uint256 - amount,
+        "epoch total deposit accumulator should not overflow";
 
     /// @dev revert condition being verified
     require getEpoch(getEpochNonce()).status != Types.EpochStatus.OPEN, "current epoch should not be open";
@@ -6031,9 +7140,8 @@ rule EPOCH_005_depositFor_RevertWhen_EpochNotOpen() {
     assert lastReverted;
 }
 
-/// @notice Deposit-for pulls assets only from the payer and records the position for the beneficiary
-/// @dev Verifies distinct payer/beneficiary balances, storage, aggregate accounting, return value, and event routing
-rule FOR_001_FOR_003_depositFor_Success() {
+/// @notice Deposit-for rejects an unallowlisted caller
+rule ALLOWLIST_002_depositFor_RevertWhen_CallerNotAllowlisted() {
     env e;
     address beneficiary;
     uint256 amount;
@@ -6043,10 +7151,90 @@ rule FOR_001_FOR_003_depositFor_Success() {
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
     require !paused(), "vault should not be paused";
     require beneficiary != 0, "beneficiary should not be zero";
+    require beneficiary != currentContract, "beneficiary should not be the vault";
+    require beneficiary != e.msg.sender, "beneficiary should differ from caller";
+    require e.msg.sender != currentContract, "payer should not be the vault";
+    require getAllowlistedUser(beneficiary), "beneficiary should be allowlisted";
+    require amount >= getMinAssetAmount(), "amount should meet the minimum deposit requirement";
+    require getEpoch(getEpochNonce()).status == Types.EpochStatus.OPEN, "current epoch should be open";
+    require asset.balanceOf(e.msg.sender) >= amount, "payer should have sufficient asset balance";
+    require asset.allowance(e.msg.sender, currentContract) >= amount, "payer should have sufficient asset allowance";
+    require getDepositAmount(beneficiary, getEpochNonce()) <= max_uint256 - amount,
+        "beneficiary deposit should not overflow";
+    require getEpoch(getEpochNonce()).totalDepositAmount <= max_uint256 - amount,
+        "epoch total deposit should not overflow";
+    require asset.balanceOf(currentContract) <= max_uint256 - amount, "vault asset balance should not overflow";
+
+    /// @dev revert condition being verified
+    require getAllowlistEnabled(), "allowlist should be enabled";
+    require !getAllowlistedUser(e.msg.sender), "caller should not be allowlisted";
+
+    /// @dev ghost starting values
+    require ghost_DepositSubmitted_EventCount == 0;
+
+    depositFor@withrevert(e, beneficiary, amount);
+
+    assert lastReverted;
+    assert ghost_DepositSubmitted_EventCount == 0;
+}
+
+/// @notice Deposit-for rejects an unallowlisted beneficiary
+rule ALLOWLIST_002_depositFor_RevertWhen_BeneficiaryNotAllowlisted() {
+    env e;
+    address beneficiary;
+    uint256 amount;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
+    require beneficiary != 0, "beneficiary should not be zero";
+    require beneficiary != currentContract, "beneficiary should not be the vault";
+    require beneficiary != e.msg.sender, "beneficiary should differ from caller";
+    require e.msg.sender != currentContract, "payer should not be the vault";
+    require getAllowlistedUser(e.msg.sender), "caller should be allowlisted";
+    require amount >= getMinAssetAmount(), "amount should meet the minimum deposit requirement";
+    require getEpoch(getEpochNonce()).status == Types.EpochStatus.OPEN, "current epoch should be open";
+    require asset.balanceOf(e.msg.sender) >= amount, "payer should have sufficient asset balance";
+    require asset.allowance(e.msg.sender, currentContract) >= amount, "payer should have sufficient asset allowance";
+    require getDepositAmount(beneficiary, getEpochNonce()) <= max_uint256 - amount,
+        "beneficiary deposit should not overflow";
+    require getEpoch(getEpochNonce()).totalDepositAmount <= max_uint256 - amount,
+        "epoch total deposit should not overflow";
+    require asset.balanceOf(currentContract) <= max_uint256 - amount, "vault asset balance should not overflow";
+
+    /// @dev revert condition being verified
+    require getAllowlistEnabled(), "allowlist should be enabled";
+    require !getAllowlistedUser(beneficiary), "beneficiary should not be allowlisted";
+
+    /// @dev ghost starting values
+    require ghost_DepositSubmitted_EventCount == 0;
+
+    depositFor@withrevert(e, beneficiary, amount);
+
+    assert lastReverted;
+    assert ghost_DepositSubmitted_EventCount == 0;
+}
+
+/// @notice Deposit-for pulls assets only from the payer and records the position for the beneficiary
+/// @dev Verifies distinct payer/beneficiary balances, storage, aggregate accounting, return value, and event routing
+rule ALLOWLIST_002_FOR_001_FOR_003_depositFor_Success() {
+    env e;
+    address beneficiary;
+    uint256 amount;
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !getAllowlistEnabled()
+        || (getAllowlistedUser(e.msg.sender) && getAllowlistedUser(beneficiary)),
+        "caller and beneficiary should pass allowlist validation";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
+    require beneficiary != 0, "beneficiary should not be zero";
     require beneficiary != e.msg.sender, "beneficiary should differ from payer";
     require beneficiary != currentContract, "beneficiary should not be the vault";
     require e.msg.sender != currentContract, "payer should not be the vault";
-    require amount >= getMinDepositAmount(), "amount should meet the minimum deposit requirement";
+    require amount >= getMinAssetAmount(), "amount should meet the minimum deposit requirement";
     uint256 epochNonce = getEpochNonce();
     require getEpoch(epochNonce).status == Types.EpochStatus.OPEN, "current epoch should be open";
     require asset.balanceOf(e.msg.sender) >= amount, "payer should have sufficient asset balance";
@@ -6097,6 +7285,7 @@ rule REENT_001_withdrawFor_RevertWhen_ReentrantCall() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !paused(), "vault should not be paused";
+    require beneficiary != currentContract, "beneficiary should not be this vault";
     require beneficiary != 0, "beneficiary should not be zero";
     require shareBurnAmount != 0, "share burn amount should not be zero";
     require getEpoch(getEpochNonce()).status == Types.EpochStatus.OPEN, "current epoch should be open";
@@ -6119,6 +7308,7 @@ rule PAUSE_003_withdrawFor_RevertWhen_Paused() {
     /// @dev revert conditions NOT being verified
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require beneficiary != currentContract, "beneficiary should not be this vault";
     require beneficiary != 0, "beneficiary should not be zero";
     require shareBurnAmount != 0, "share burn amount should not be zero";
     require getEpoch(getEpochNonce()).status == Types.EpochStatus.OPEN, "current epoch should be open";
@@ -6129,6 +7319,42 @@ rule PAUSE_003_withdrawFor_RevertWhen_Paused() {
     withdrawFor@withrevert(e, beneficiary, shareBurnAmount);
 
     assert lastReverted;
+}
+
+/// @notice On-behalf-of withdraw rejects the ParentVault as beneficiary without changing tokens or epoch accounting.
+rule FOR_002_withdrawFor_RevertWhen_BeneficiaryIsVault() {
+    env e;
+    uint256 shareBurnAmount;
+    address beneficiary = currentContract;
+    uint256 epochNonce = getEpochNonce();
+
+    /// @dev revert conditions NOT being verified
+    require e.msg.value == 0, "non-payable";
+    require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
+    require !paused(), "vault should not be paused";
+    require beneficiary != 0, "beneficiary is nonzero";
+    require e.msg.sender != currentContract, "payer is distinct from the vault";
+    require shareBurnAmount != 0, "share burn amount is nonzero";
+    require getEpoch(epochNonce).status == Types.EpochStatus.OPEN, "current epoch is open";
+    require share.balanceOf(e.msg.sender) >= shareBurnAmount, "payer has sufficient balance";
+    require share.allowance(e.msg.sender, currentContract) >= shareBurnAmount, "payer has sufficient allowance";
+    require share.balanceOf(currentContract) <= max_uint256 - shareBurnAmount, "vault balance addition does not overflow";
+    require getWithdrawShareBurnAmount(beneficiary, epochNonce) <= max_uint256 - shareBurnAmount, "beneficiary position addition does not overflow";
+    require getEpoch(epochNonce).totalShareBurnAmount <= max_uint256 - shareBurnAmount, "epoch total addition does not overflow";
+
+    /// @dev revert condition being verified
+    require beneficiary == currentContract, "beneficiary is this vault";
+
+    /// @dev ghost starting values
+    require ghost_WithdrawSubmitted_EventCount == 0;
+    storage before = lastStorage;
+
+    withdrawFor@withrevert(e, beneficiary, shareBurnAmount);
+
+    assert lastReverted;
+    assert before[currentContract] == lastStorage[currentContract];
+    assert before[share] == lastStorage[share];
+    assert ghost_WithdrawSubmitted_EventCount == 0;
 }
 
 /// @notice Withdraw-for rejects the zero beneficiary
@@ -6162,6 +7388,7 @@ rule EPOCH_015_withdrawFor_RevertWhen_ShareBurnAmountIsZero() {
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
     require !paused(), "vault should not be paused";
+    require beneficiary != currentContract, "beneficiary should not be this vault";
     require beneficiary != 0, "beneficiary should not be zero";
     require getEpoch(getEpochNonce()).status == Types.EpochStatus.OPEN, "current epoch should be open";
 
@@ -6184,6 +7411,7 @@ rule EPOCH_005_withdrawFor_RevertWhen_EpochNotOpen() {
     require e.msg.value == 0, "non-payable";
     require !reentrancyGuardEntered(), "reentrancy guard should not be entered";
     require !paused(), "vault should not be paused";
+    require beneficiary != currentContract, "beneficiary should not be this vault";
     require beneficiary != 0, "beneficiary should not be zero";
     require shareBurnAmount != 0, "share burn amount should not be zero";
 

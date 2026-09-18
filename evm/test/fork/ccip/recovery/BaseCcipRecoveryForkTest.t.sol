@@ -11,7 +11,7 @@ abstract contract BaseCcipRecoveryForkTest is BaseCcipForkTest {
     using stdStorage for StdStorage;
 
     RevertingProtocolAdapter internal parentFailingAdapter;
-    RevertingProtocolAdapter internal baseFailingAdapter;
+    RevertingProtocolAdapter internal arbitrumFailingAdapter;
 
     function setUp() public virtual override {
         super.setUp();
@@ -19,42 +19,42 @@ abstract contract BaseCcipRecoveryForkTest is BaseCcipForkTest {
     }
 
     function _deployFailingAdapters() internal {
-        _selectArbitrumFork();
+        _selectBaseFork();
         parentFailingAdapter = new RevertingProtocolAdapter(address(parent.vault), parent.asset);
 
-        _selectBaseFork();
-        baseFailingAdapter = new RevertingProtocolAdapter(address(baseChild.vault), baseChild.asset);
+        _selectArbitrumFork();
+        arbitrumFailingAdapter = new RevertingProtocolAdapter(address(arbitrumChild.vault), arbitrumChild.asset);
     }
 
     function _setParentActiveAdapterToAaveV3() internal {
-        _selectArbitrumFork();
+        _selectBaseFork();
         stdstore.enable_packed_slots().target(address(parent.vault)).sig("getActiveProtocolAdapter()")
             .checked_write(address(parent.aaveV3Adapter));
         assertEq(parent.vault.getActiveProtocolAdapter(), address(parent.aaveV3Adapter));
     }
 
     function _setParentActiveAdapterToFailingAdapter() internal {
-        _selectArbitrumFork();
+        _selectBaseFork();
         stdstore.enable_packed_slots().target(address(parent.vault)).sig("getActiveProtocolAdapter()")
             .checked_write(address(parentFailingAdapter));
         assertEq(parent.vault.getActiveProtocolAdapter(), address(parentFailingAdapter));
     }
 
-    function _setBaseChildActiveAdapterToFailingAdapter() internal {
-        _selectBaseFork();
-        stdstore.enable_packed_slots().target(address(baseChild.vault)).sig("getActiveProtocolAdapter()")
-            .checked_write(address(baseFailingAdapter));
-        assertEq(baseChild.vault.getActiveProtocolAdapter(), address(baseFailingAdapter));
+    function _setArbitrumChildActiveAdapterToFailingAdapter() internal {
+        _selectArbitrumFork();
+        stdstore.enable_packed_slots().target(address(arbitrumChild.vault)).sig("getActiveProtocolAdapter()")
+            .checked_write(address(arbitrumFailingAdapter));
+        assertEq(arbitrumChild.vault.getActiveProtocolAdapter(), address(arbitrumFailingAdapter));
     }
 
     function _setParentAaveV3RegistryAdapter(address adapter) internal {
-        _selectArbitrumFork();
+        _selectBaseFork();
         _setRegistryAdapter(parent.adapterRegistry, AAVE_V3_PROTOCOL_ID, adapter);
     }
 
-    function _setBaseAaveV3RegistryAdapter(address adapter) internal {
-        _selectBaseFork();
-        _setRegistryAdapter(baseChild.adapterRegistry, AAVE_V3_PROTOCOL_ID, adapter);
+    function _setArbitrumAaveV3RegistryAdapter(address adapter) internal {
+        _selectArbitrumFork();
+        _setRegistryAdapter(arbitrumChild.adapterRegistry, AAVE_V3_PROTOCOL_ID, adapter);
     }
 
     function _setRegistryAdapter(AdapterRegistry registry, bytes32 protocolId, address adapter) internal {
@@ -68,24 +68,24 @@ abstract contract BaseCcipRecoveryForkTest is BaseCcipForkTest {
         _setParentActiveAdapterToAaveV3();
     }
 
-    function _restoreBaseAaveV3Adapter() internal {
-        _setBaseAaveV3RegistryAdapter(address(baseChild.aaveV3Adapter));
-        _setBaseChildActiveAdapterToAaveV3();
+    function _restoreArbitrumAaveV3Adapter() internal {
+        _setArbitrumAaveV3RegistryAdapter(address(arbitrumChild.aaveV3Adapter));
+        _setArbitrumChildActiveAdapterToAaveV3();
     }
 
-    function _prepareParentToBaseRouting() internal {
-        _setParentRemoteStrategyToBase();
-        _restoreBaseAaveV3Adapter();
-        _selectArbitrumFork();
-    }
-
-    function _prepareBaseToParentRouting() internal {
+    function _prepareParentToArbitrumRouting() internal {
+        _setParentRemoteStrategyToArbitrum();
+        _restoreArbitrumAaveV3Adapter();
         _selectBaseFork();
-        _setCrosschainVault(baseChild.vault, arbitrumConfig.ccip.thisChainSelector, address(parent.vault));
+    }
+
+    function _prepareArbitrumToParentRouting() internal {
         _selectArbitrumFork();
-        _setCrosschainVault(parent.vault, baseConfig.ccip.thisChainSelector, address(baseChild.vault));
+        _setCrosschainVault(arbitrumChild.vault, baseConfig.ccip.thisChainSelector, address(parent.vault));
+        _selectBaseFork();
+        _setCrosschainVault(parent.vault, arbitrumConfig.ccip.thisChainSelector, address(arbitrumChild.vault));
         _restoreParentAaveV3Adapter();
-        _selectBaseFork();
+        _selectArbitrumFork();
     }
 
     function _routeUsdcMessageFromActiveForkTo(uint256 destinationForkId) internal {
@@ -160,7 +160,7 @@ abstract contract BaseCcipRecoveryForkTest is BaseCcipForkTest {
     }
 
     function _assertCompletedRebalance(bytes32 protocolId, uint64 chainSelector) internal {
-        vm.selectFork(arbitrumFork);
+        vm.selectFork(baseFork);
         Types.Rebalance memory rebalance = parent.vault.getRebalance();
         assertEq(uint256(rebalance.state), uint256(Types.RebalanceState.NONE));
         assertEq(rebalance.nonce, 2);
