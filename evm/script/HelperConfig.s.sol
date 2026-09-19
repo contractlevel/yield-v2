@@ -34,7 +34,6 @@ contract HelperConfig is Script {
                              NETWORK CONFIG
     //////////////////////////////////////////////////////////////*/
     struct NetworkConfig {
-        address initialOwner;
         address treasury;
         RolesConfig roles;
         AllowlistConfig allowlist;
@@ -129,7 +128,6 @@ contract HelperConfig is Script {
     //////////////////////////////////////////////////////////////*/
     function getArbitrumConfig() public pure returns (NetworkConfig memory networkConfig) {
         networkConfig = NetworkConfig({
-            initialOwner: DEFAULT_ADMIN,
             treasury: OPERATOR,
             allowlist: _getInitialAllowlistConfig(),
             roles: _getRolesConfig(),
@@ -156,7 +154,6 @@ contract HelperConfig is Script {
 
     function getBaseConfig() public pure returns (NetworkConfig memory networkConfig) {
         networkConfig = NetworkConfig({
-            initialOwner: DEFAULT_ADMIN,
             treasury: OPERATOR,
             allowlist: _getInitialAllowlistConfig(),
             roles: _getRolesConfig(),
@@ -183,7 +180,6 @@ contract HelperConfig is Script {
 
     function getPolygonConfig() public pure returns (NetworkConfig memory networkConfig) {
         networkConfig = NetworkConfig({
-            initialOwner: DEFAULT_ADMIN,
             treasury: OPERATOR,
             allowlist: _getInitialAllowlistConfig(),
             roles: _getRolesConfig(),
@@ -211,7 +207,6 @@ contract HelperConfig is Script {
 
     function getEthereumConfig() public pure returns (NetworkConfig memory networkConfig) {
         networkConfig = NetworkConfig({
-            initialOwner: DEFAULT_ADMIN,
             treasury: OPERATOR,
             allowlist: _getInitialAllowlistConfig(),
             roles: _getRolesConfig(),
@@ -237,7 +232,6 @@ contract HelperConfig is Script {
 
     function getAvalancheConfig() public pure returns (NetworkConfig memory networkConfig) {
         networkConfig = NetworkConfig({
-            initialOwner: DEFAULT_ADMIN,
             treasury: OPERATOR,
             allowlist: _getInitialAllowlistConfig(),
             roles: _getRolesConfig(),
@@ -263,7 +257,6 @@ contract HelperConfig is Script {
 
     function getOptimismConfig() public pure returns (NetworkConfig memory networkConfig) {
         networkConfig = NetworkConfig({
-            initialOwner: DEFAULT_ADMIN,
             treasury: OPERATOR,
             allowlist: _getInitialAllowlistConfig(),
             roles: _getRolesConfig(),
@@ -292,7 +285,6 @@ contract HelperConfig is Script {
     //////////////////////////////////////////////////////////////*/
     function getArbitrumSepoliaConfig() public pure returns (NetworkConfig memory networkConfig) {
         networkConfig = NetworkConfig({
-            initialOwner: BURNER_EOA,
             treasury: BURNER_EOA,
             allowlist: _getTestnetAllowlistConfig(),
             roles: _getTestnetRolesConfig(),
@@ -321,7 +313,6 @@ contract HelperConfig is Script {
 
     function getEthereumSepoliaConfig() public pure returns (NetworkConfig memory networkConfig) {
         networkConfig = NetworkConfig({
-            initialOwner: BURNER_EOA,
             treasury: BURNER_EOA,
             allowlist: _getTestnetAllowlistConfig(),
             roles: _getTestnetRolesConfig(),
@@ -350,7 +341,6 @@ contract HelperConfig is Script {
 
     function getBaseSepoliaConfig() public pure returns (NetworkConfig memory networkConfig) {
         networkConfig = NetworkConfig({
-            initialOwner: BURNER_EOA,
             treasury: BURNER_EOA,
             allowlist: _getTestnetAllowlistConfig(),
             roles: _getTestnetRolesConfig(),
@@ -379,7 +369,6 @@ contract HelperConfig is Script {
 
     function getOptimismSepoliaConfig() public pure returns (NetworkConfig memory networkConfig) {
         networkConfig = NetworkConfig({
-            initialOwner: BURNER_EOA,
             treasury: BURNER_EOA,
             allowlist: _getTestnetAllowlistConfig(),
             roles: _getTestnetRolesConfig(),
@@ -408,7 +397,6 @@ contract HelperConfig is Script {
 
     function getAvalancheFujiConfig() public pure returns (NetworkConfig memory networkConfig) {
         networkConfig = NetworkConfig({
-            initialOwner: BURNER_EOA,
             treasury: BURNER_EOA,
             allowlist: _getTestnetAllowlistConfig(),
             roles: _getTestnetRolesConfig(),
@@ -437,7 +425,6 @@ contract HelperConfig is Script {
 
     function getPolygonAmoyConfig() public pure returns (NetworkConfig memory networkConfig) {
         networkConfig = NetworkConfig({
-            initialOwner: BURNER_EOA,
             treasury: BURNER_EOA,
             allowlist: _getTestnetAllowlistConfig(),
             roles: _getTestnetRolesConfig(),
@@ -475,7 +462,6 @@ contract HelperConfig is Script {
         CREConfig memory cre = _getMockCreConfig();
 
         networkConfig = NetworkConfig({
-            initialOwner: address(1),
             treasury: makeAddr("treasury"),
             allowlist: _getInitialAllowlistConfig(),
             roles: _getMockRolesConfig(),
