@@ -5,6 +5,8 @@ pragma solidity 0.8.34;
 /// @notice ERC-7201 storage owned by the Allowlist module
 abstract contract AllowlistStore {
     /// @custom:storage-location erc7201:yieldcoin.storage.Allowlist
+    /// @param s_allowlistEnabled Whether the allowlist is enabled.
+    /// @param s_allowlistedUser Per-user allowlist status.
     struct AllowlistStorage {
         bool s_allowlistEnabled;
         mapping(address user => bool allowed) s_allowlistedUser;
