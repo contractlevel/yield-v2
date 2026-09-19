@@ -17,17 +17,17 @@ contract HelperConfig is Script {
                                CONSTANTS
     //////////////////////////////////////////////////////////////*/
     address internal constant BURNER_EOA = 0x7664C538C80870824738A8ADCcd92AcA244D7e69;
-    // Shared mainnet/testnet actors. @review Replace these placeholders before deployment.
+    // Shared mainnet/testnet actors.
     // The separate keystore deployer comes from the deploy script's msg.sender.
-    address internal constant DEFAULT_ADMIN = BURNER_EOA;
-    address internal constant UPGRADER = BURNER_EOA;
-    address internal constant OPERATOR = BURNER_EOA;
-    address internal constant INITIAL_USER = BURNER_EOA;
+    address internal constant DEFAULT_ADMIN = 0x2F7dE80b98481021edEF5c0e0cf899eC92d28626;
+    address internal constant UPGRADER = 0x024F55728CDd59F30730C6b1EEEB0D58ac66D523;
+    address internal constant OPERATOR = 0xe3E326C2c19c934749575631bcA9e5fBaEcc550b;
+    address internal constant INITIAL_USER = 0xde65Bc8F97667aa23D1D25eD0Ca34f052a34D428;
     uint64 internal constant BASE_CHAIN_SELECTOR = 15971525489660198786;
     uint64 internal constant BASE_SEPOLIA_CHAIN_SELECTOR = 10344971235874465080;
     uint256 internal constant INITIAL_DEFAULT_CCIP_GAS_LIMIT = 500_000;
 
-    bytes32 internal constant STAGING_WORKFLOW_ID = 0x00595be0d47f64eefceafc17f326e58805914c379e89d2a1684c3a3f786233fa;
+    bytes32 internal constant STAGING_WORKFLOW_ID = 0x004be8e51477e9feab2353f55e68260234ab8d695a83d0826e112f5fbe08c9c3;
     bytes10 internal constant STAGING_WORKFLOW_NAME = bytes10("67d6954c97");
 
     /*//////////////////////////////////////////////////////////////
@@ -251,7 +251,7 @@ contract HelperConfig is Script {
                 compoundV3CometRewards: address(0)
             }),
             ccip: CCIPConfig({
-                router: 0x27F39D0af3303703750D4001fCc1844c6491563c,
+                router: 0xF4c7E640EdA248ef95972845a62bdC74237805dB,
                 thisChainSelector: 6433500567565415381,
                 parentChainSelector: BASE_CHAIN_SELECTOR,
                 initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT

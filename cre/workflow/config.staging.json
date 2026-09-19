@@ -1,7 +1,7 @@
 {
   "rebalanceSchedule": "0 30 0,3,6,9,12,15,18,21 * * *",
   "epochSchedule": "0 0 2,5,8,11,14,17,20,23 * * *",
-  "blockNumber": -3,
+  "blockNumber": -2,
   "assetDecimals": 6,
   "defiLlama": {
     "poolIds": [

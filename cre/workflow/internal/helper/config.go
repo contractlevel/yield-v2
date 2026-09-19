@@ -12,7 +12,7 @@ type Config struct {
 	RebalanceSchedule string      `json:"rebalanceSchedule"`
 	EpochSchedule     string      `json:"epochSchedule"`
 	AssetDecimals     *uint8      `json:"assetDecimals"`
-	BlockNumber       *int64      `json:"blockNumber"` // Required: -3 finalized; -2 pending for local forks.
+	BlockNumber       *int64      `json:"blockNumber"` // Required: -3 finalized; -2 latest for testnets and local forks.
 	DefiLlama         DefiLlama   `json:"defiLlama"`
 	Evms              []EvmConfig `json:"evms"`
 }

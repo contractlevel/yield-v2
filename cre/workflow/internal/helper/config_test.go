@@ -16,7 +16,7 @@ func TestBlockNumberMustBeExplicit(t *testing.T) {
 		{"missing", `{}`, false, 0},
 		{"null", `{"blockNumber":null}`, false, 0},
 		{"finalized", `{"blockNumber":-3}`, true, -3},
-		{"pending", `{"blockNumber":-2}`, true, -2},
+		{"latest", `{"blockNumber":-2}`, true, -2},
 		{"explicit zero", `{"blockNumber":0}`, true, 0},
 		{"explicit height", `{"blockNumber":12345}`, true, 12345},
 	} {
