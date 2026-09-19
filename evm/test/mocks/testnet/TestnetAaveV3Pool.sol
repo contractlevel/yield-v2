@@ -10,6 +10,8 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 contract TestnetAaveV3Pool is TestnetProtocolAccess {
     using SafeERC20 for IERC20;
 
+    uint256 internal constant RAY = 1e27;
+
     error TestnetAaveV3Pool__AssetMismatch();
     error TestnetAaveV3Pool__InvalidPositionOwner();
 
@@ -45,5 +47,10 @@ contract TestnetAaveV3Pool is TestnetProtocolAccess {
 
     function getReserveData(address asset_) external view returns (DataTypes.ReserveDataLegacy memory data) {
         if (asset_ == asset) data.aTokenAddress = address(aToken);
+    }
+
+    function getReserveNormalizedIncome(address asset_) external view returns (uint256) {
+        if (asset_ != asset) revert TestnetAaveV3Pool__AssetMismatch();
+        return RAY;
     }
 }

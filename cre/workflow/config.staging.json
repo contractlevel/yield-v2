@@ -27,8 +27,8 @@
       "chainName": "ethereum-testnet-sepolia-base-1",
       "defiLlamaChainName": "Base",
       "chainSelector": 10344971235874465080,
-      "vaultAddress": "0xA5E7a54867abC3c1C871aeD5D11320FcC56AD8B7",
-      "workflowRouterAddress": "0x5f8191e9FE6b4164930Cdf92F6fe824aE35602e0",
+      "vaultAddress": "0x6fbB019A1d9F49BD2e667de994CC3588eDB4b09d",
+      "workflowRouterAddress": "0x7Ceeb23617a99038DADEb30566290b7442Ead006",
       "gasLimit": 1000000
     },
     {

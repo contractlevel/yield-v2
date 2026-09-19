@@ -2,6 +2,7 @@
 pragma solidity 0.8.34;
 
 import {TestnetProtocolAccess} from "./TestnetProtocolAccess.sol";
+import {TestnetAaveV4Hub} from "./TestnetAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/IAaveV4Spoke.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -16,15 +17,17 @@ contract TestnetAaveV4Spoke is TestnetProtocolAccess, IAaveV4Spoke {
     uint256 internal constant RESERVE_ID = 0;
 
     address public immutable asset;
+    TestnetAaveV4Hub public immutable hub;
     Reserve internal s_reserve;
     mapping(address account => uint256 amount) internal s_suppliedAssets;
 
     constructor(address asset_, address initialOwner) TestnetProtocolAccess(initialOwner) {
         if (asset_ == address(0)) revert TestnetProtocolAccess__NoZeroAddress();
         asset = asset_;
+        hub = new TestnetAaveV4Hub();
         s_reserve = Reserve({
             underlying: asset_,
-            hub: address(0),
+            hub: address(hub),
             assetId: 0,
             decimals: IERC20Metadata(asset_).decimals(),
             collateralRisk: 0,

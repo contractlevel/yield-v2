@@ -19,15 +19,15 @@ contract HelperConfig is Script {
     address internal constant BURNER_EOA = 0x7664C538C80870824738A8ADCcd92AcA244D7e69;
     // Shared mainnet/testnet actors.
     // The separate keystore deployer comes from the deploy script's msg.sender.
-    address internal constant DEFAULT_ADMIN = 0x2F7dE80b98481021edEF5c0e0cf899eC92d28626;
-    address internal constant UPGRADER = 0x024F55728CDd59F30730C6b1EEEB0D58ac66D523;
-    address internal constant OPERATOR = 0xe3E326C2c19c934749575631bcA9e5fBaEcc550b;
-    address internal constant INITIAL_USER = 0xde65Bc8F97667aa23D1D25eD0Ca34f052a34D428;
+    address internal constant DEFAULT_ADMIN = 0x12eEdc70d12A81C9Ac972ab0cE1efb91Ac684F84;
+    address internal constant UPGRADER = 0xB21E31f1B3f9d446bf36242D344736d877B37309;
+    address internal constant OPERATOR = 0xD22f590FE47d4F9882C68c919bE295bC42013b50;
+    address internal constant INITIAL_USER = 0xBE363128CE85D7695f931fD5B80bEcb3bec46871;
     uint64 internal constant BASE_CHAIN_SELECTOR = 15971525489660198786;
     uint64 internal constant BASE_SEPOLIA_CHAIN_SELECTOR = 10344971235874465080;
     uint256 internal constant INITIAL_DEFAULT_CCIP_GAS_LIMIT = 500_000;
 
-    bytes32 internal constant STAGING_WORKFLOW_ID = 0x004be8e51477e9feab2353f55e68260234ab8d695a83d0826e112f5fbe08c9c3;
+    bytes32 internal constant STAGING_WORKFLOW_ID = 0x000c6b4abbc8ab218cdf41a64ca706a2e8606dc00ee803461cd2b8bbd8db9358;
     bytes10 internal constant STAGING_WORKFLOW_NAME = bytes10("67d6954c97");
 
     /*//////////////////////////////////////////////////////////////
@@ -292,18 +292,18 @@ contract HelperConfig is Script {
     //////////////////////////////////////////////////////////////*/
     function getArbitrumSepoliaConfig() public pure returns (NetworkConfig memory networkConfig) {
         networkConfig = NetworkConfig({
-            initialOwner: DEFAULT_ADMIN,
-            treasury: OPERATOR,
-            allowlist: _getInitialAllowlistConfig(),
-            roles: _getRolesConfig(),
+            initialOwner: BURNER_EOA,
+            treasury: BURNER_EOA,
+            allowlist: _getTestnetAllowlistConfig(),
+            roles: _getTestnetRolesConfig(),
             tokens: TokensConfig({
                 link: 0xb1D4538B4571d411F07960EF2838Ce337FE1E80E, usdc: 0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d
             }),
             protocols: ProtocolsConfig({
-                aaveV3PoolAddressesProvider: 0x90e10d38F75ce1A871A1fDeA9bab39e8ddA4531f,
+                aaveV3PoolAddressesProvider: 0x9A142D0c5113e51D5e454bE70437B8270ee2234F,
                 aaveV4Spoke: address(0),
-                compoundV3Comet: 0xCacEf2972a46D3Ad67072c9BFc6C1157bEaf1651,
-                compoundV3CometRewards: 0xad024A165c3c973aD74F8B038D386686Ec534006
+                compoundV3Comet: 0x696957686787c4be72aa1bECb2d068150A6C7c21,
+                compoundV3CometRewards: 0xea4E6af732148c9E030b5bBb161cE236D9A9801D
             }),
             ccip: CCIPConfig({
                 router: 0x2a9C5afB0d0e4BAb2BCdaE109EC4b0c4Be15a165,
@@ -321,18 +321,18 @@ contract HelperConfig is Script {
 
     function getEthereumSepoliaConfig() public pure returns (NetworkConfig memory networkConfig) {
         networkConfig = NetworkConfig({
-            initialOwner: DEFAULT_ADMIN,
-            treasury: OPERATOR,
-            allowlist: _getInitialAllowlistConfig(),
-            roles: _getRolesConfig(),
+            initialOwner: BURNER_EOA,
+            treasury: BURNER_EOA,
+            allowlist: _getTestnetAllowlistConfig(),
+            roles: _getTestnetRolesConfig(),
             tokens: TokensConfig({
                 link: 0x779877A7B0D9E8603169DdbD7836e478b4624789, usdc: 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238
             }),
             protocols: ProtocolsConfig({
-                aaveV3PoolAddressesProvider: 0x09AddfA88e49bDf33021971e38b0BFae8715Af7A,
-                aaveV4Spoke: 0x5d1079dae90f23bbe64fAf3adC08554669D9f938,
-                compoundV3Comet: 0x8383A982dc0B844cA9200FbedEeBBE50ae4bb157,
-                compoundV3CometRewards: 0x079A90B7761FF10F455BC2188392b2ae765F8DAd
+                aaveV3PoolAddressesProvider: 0x68A4c443995389849866cA350c0A623A4a17a416,
+                aaveV4Spoke: 0x9267881460a43dA80512Ef5EE8c4CA61B1148CdB,
+                compoundV3Comet: 0x1b813d91D92dA0bF94c6cA4829E87DE325ABdD0c,
+                compoundV3CometRewards: 0x165Aa383598cb93B1e2a0E8A429b4AC46Dadf3d5
             }),
             ccip: CCIPConfig({
                 router: 0x0BF3dE8c5D3e8A2B34D2BEeB17ABfCeBaf363A59,
@@ -350,18 +350,18 @@ contract HelperConfig is Script {
 
     function getBaseSepoliaConfig() public pure returns (NetworkConfig memory networkConfig) {
         networkConfig = NetworkConfig({
-            initialOwner: DEFAULT_ADMIN,
-            treasury: OPERATOR,
-            allowlist: _getInitialAllowlistConfig(),
-            roles: _getRolesConfig(),
+            initialOwner: BURNER_EOA,
+            treasury: BURNER_EOA,
+            allowlist: _getTestnetAllowlistConfig(),
+            roles: _getTestnetRolesConfig(),
             tokens: TokensConfig({
                 link: 0xE4aB69C077896252FAFBD49EFD26B5D171A32410, usdc: 0x036CbD53842c5426634e7929541eC2318f3dCF7e
             }),
             protocols: ProtocolsConfig({
-                aaveV3PoolAddressesProvider: 0x90e10d38F75ce1A871A1fDeA9bab39e8ddA4531f,
+                aaveV3PoolAddressesProvider: 0x0d6f1cb4340d6205B64b9c6DBB6E24AeF5b01e7a,
                 aaveV4Spoke: address(0),
-                compoundV3Comet: 0xCacEf2972a46D3Ad67072c9BFc6C1157bEaf1651,
-                compoundV3CometRewards: 0xad024A165c3c973aD74F8B038D386686Ec534006
+                compoundV3Comet: 0xcc6535CCb21f9ed8a0E593dDDCd1a6faC1D6474B,
+                compoundV3CometRewards: 0x63f8cfC8A7202e2Dc1f46B23D2043C7889796b3a
             }),
             ccip: CCIPConfig({
                 router: 0xD3b06cEbF099CE7DA4AcCf578aaebFDBd6e88a93,
@@ -371,26 +371,26 @@ contract HelperConfig is Script {
             }),
             cre: _getStagingCreConfig(0xF8344CFd5c43616a4366C34E3EEE75af79a74482),
             deployed: DeployedConfig({
-                vaultProxy: 0xA5E7a54867abC3c1C871aeD5D11320FcC56AD8B7,
-                workflowRouter: 0x5f8191e9FE6b4164930Cdf92F6fe824aE35602e0
+                vaultProxy: 0x6fbB019A1d9F49BD2e667de994CC3588eDB4b09d,
+                workflowRouter: 0x7Ceeb23617a99038DADEb30566290b7442Ead006
             })
         });
     }
 
     function getOptimismSepoliaConfig() public pure returns (NetworkConfig memory networkConfig) {
         networkConfig = NetworkConfig({
-            initialOwner: DEFAULT_ADMIN,
-            treasury: OPERATOR,
-            allowlist: _getInitialAllowlistConfig(),
-            roles: _getRolesConfig(),
+            initialOwner: BURNER_EOA,
+            treasury: BURNER_EOA,
+            allowlist: _getTestnetAllowlistConfig(),
+            roles: _getTestnetRolesConfig(),
             tokens: TokensConfig({
                 link: 0xE4aB69C077896252FAFBD49EFD26B5D171A32410, usdc: 0x5fd84259d66Cd46123540766Be93DFE6D43130D7
             }),
             protocols: ProtocolsConfig({
-                aaveV3PoolAddressesProvider: 0x90e10d38F75ce1A871A1fDeA9bab39e8ddA4531f,
+                aaveV3PoolAddressesProvider: 0x4577bdfB0fD75664586f03db266413A7609B7Baa,
                 aaveV4Spoke: address(0),
-                compoundV3Comet: 0xCacEf2972a46D3Ad67072c9BFc6C1157bEaf1651,
-                compoundV3CometRewards: 0xad024A165c3c973aD74F8B038D386686Ec534006
+                compoundV3Comet: 0x5f8191e9FE6b4164930Cdf92F6fe824aE35602e0,
+                compoundV3CometRewards: 0xd08C326be60FEC778c69a0c14916B101EC40c4fA
             }),
             ccip: CCIPConfig({
                 router: 0x114A20A10b43D4115e5aeef7345a1A71d2a60C57,
@@ -408,16 +408,16 @@ contract HelperConfig is Script {
 
     function getAvalancheFujiConfig() public pure returns (NetworkConfig memory networkConfig) {
         networkConfig = NetworkConfig({
-            initialOwner: DEFAULT_ADMIN,
-            treasury: OPERATOR,
-            allowlist: _getInitialAllowlistConfig(),
-            roles: _getRolesConfig(),
+            initialOwner: BURNER_EOA,
+            treasury: BURNER_EOA,
+            allowlist: _getTestnetAllowlistConfig(),
+            roles: _getTestnetRolesConfig(),
             tokens: TokensConfig({
                 link: 0x0b9d5D9136855f6FEc3c0993feE6E9CE8a297846, usdc: 0x5425890298aed601595a70AB815c96711a31Bc65
             }),
             protocols: ProtocolsConfig({
-                aaveV3PoolAddressesProvider: 0x90e10d38F75ce1A871A1fDeA9bab39e8ddA4531f,
-                aaveV4Spoke: 0xCacEf2972a46D3Ad67072c9BFc6C1157bEaf1651,
+                aaveV3PoolAddressesProvider: 0xac9D87b3e309A201f287B2202D4b80e6750618C4,
+                aaveV4Spoke: 0x4577bdfB0fD75664586f03db266413A7609B7Baa,
                 compoundV3Comet: address(0),
                 compoundV3CometRewards: address(0)
             }),
@@ -437,15 +437,15 @@ contract HelperConfig is Script {
 
     function getPolygonAmoyConfig() public pure returns (NetworkConfig memory networkConfig) {
         networkConfig = NetworkConfig({
-            initialOwner: DEFAULT_ADMIN,
-            treasury: OPERATOR,
-            allowlist: _getInitialAllowlistConfig(),
-            roles: _getRolesConfig(),
+            initialOwner: BURNER_EOA,
+            treasury: BURNER_EOA,
+            allowlist: _getTestnetAllowlistConfig(),
+            roles: _getTestnetRolesConfig(),
             tokens: TokensConfig({
                 link: 0x0Fd9e8d3aF1aaee056EB9e802c3A762a667b1904, usdc: 0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582
             }),
             protocols: ProtocolsConfig({
-                aaveV3PoolAddressesProvider: 0x90e10d38F75ce1A871A1fDeA9bab39e8ddA4531f,
+                aaveV3PoolAddressesProvider: 0xfee8D520E51c8e8cB157ACe638bE5Bc5899cD660,
                 // @review-deploy update when aave v4 is deployed
                 aaveV4Spoke: address(0),
                 compoundV3Comet: address(0),
@@ -504,6 +504,26 @@ contract HelperConfig is Script {
             upgrader: UPGRADER,
             cancelDepositOperator: OPERATOR,
             allowlistOperator: OPERATOR
+        });
+    }
+
+    function _getTestnetAllowlistConfig() private pure returns (AllowlistConfig memory config) {
+        address[] memory users = new address[](1);
+        users[0] = BURNER_EOA;
+        config = AllowlistConfig({enabled: true, initialUsers: users});
+    }
+
+    function _getTestnetRolesConfig() private pure returns (RolesConfig memory) {
+        return RolesConfig({
+            defaultAdmin: BURNER_EOA,
+            pauser: BURNER_EOA,
+            unpauser: BURNER_EOA,
+            configOperator: BURNER_EOA,
+            linkOperator: BURNER_EOA,
+            rewardsOperator: BURNER_EOA,
+            upgrader: BURNER_EOA,
+            cancelDepositOperator: BURNER_EOA,
+            allowlistOperator: BURNER_EOA
         });
     }
 

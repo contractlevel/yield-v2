@@ -30,11 +30,14 @@ contract DeployTestnetProtocols is Script {
         address deployer = msg.sender;
 
         vm.startBroadcast(deployer);
-        deploy = deployForChain(block.chainid, networkConfig.tokens.usdc, deployer);
+        deploy = deployForChain(block.chainid, networkConfig.tokens.usdc, networkConfig.tokens.link, deployer);
         vm.stopBroadcast();
     }
 
-    function deployForChain(uint256 chainId, address asset, address owner) public returns (Deployment memory deploy) {
+    function deployForChain(uint256 chainId, address asset, address rewardToken, address owner)
+        public
+        returns (Deployment memory deploy)
+    {
         bool deployAaveV3;
         bool deployAaveV4;
         bool deployCompoundV3;
@@ -78,7 +81,7 @@ contract DeployTestnetProtocols is Script {
 
         if (deployCompoundV3) {
             deploy.compoundV3Comet = new TestnetComet(asset, owner);
-            deploy.compoundV3CometRewards = new TestnetCometRewards();
+            deploy.compoundV3CometRewards = new TestnetCometRewards(rewardToken);
         }
     }
 }
