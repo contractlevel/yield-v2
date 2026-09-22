@@ -31,15 +31,16 @@ var (
 // Each log subscription accepts two event signatures and dispatches by topic 0.
 //
 // The six logical handlers are:
-//  1. Cron → EpochInitiator // @review replace these descriptive labels with the actual handler names?
+//  1. Cron → EpochInitiator
 //  2. Cron → RebalanceInitiator
 //  3. ParentVault.RebalanceInitiated → RebalanceExecutor
 //  4. ParentVault.EpochWithdrawExecuting → EpochWithdrawExecutor
 //  5. ChildVault.RebalanceDepositSuccess → RebalanceCompleter
 //  6. ChildVault.EpochDepositToStrategySuccess → EpochDepositCompleter
 //
-// Handlers 3 and 4 share the Parent subscription. Handlers 5 and 6 share one
-// subscription per child. Six chains therefore use eight subscriptions. // @review Strictly, there are six log subscriptions and eight total triggers. The last comment uses “subscriptions” somewhat broadly.
+// Handlers 3 and 4 share the parent log subscription. Handlers 5 and 6 share
+// one log subscription per child. Six chains use six log subscriptions and,
+// together with the two cron triggers, eight triggers in total.
 func InitWorkflow(config *Config, logger *slog.Logger, _ cre.SecretsProvider) (cre.Workflow[*Config], error) {
 	return initWorkflow(config, logger, onchain.ReadSnapshot)
 }

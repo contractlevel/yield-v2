@@ -61,7 +61,7 @@ func onEpochCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, _ *c
 	if parent.Rebalance.State != onchain.RebalanceNone {
 		return workflowtypes.Noop(runtime, "rebalance in progress")
 	}
-	// @review what is epochNonce.Cmp(big.NewInt(1)) > 0 ?
+	// Epoch 1 has no previous epoch.
 	if epochNonce.Cmp(big.NewInt(1)) > 0 && parent.PreviousEpoch.Status != onchain.EpochClaimable {
 		return workflowtypes.Noop(runtime, "previous epoch not claimable")
 	}
@@ -71,7 +71,6 @@ func onEpochCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, _ *c
 	if !onchain.PeriodElapsed(epoch.OpenedAtTimestamp, snapshot.ObservedAt, minEpochPeriod) {
 		return workflowtypes.Noop(runtime, "epoch too young")
 	}
-	// @review is this tvl fetched from the active strategy?
 	tvl, err := snapshot.ActiveTVL(parentCfg.ChainSelector)
 	if err != nil {
 		return nil, err
@@ -88,7 +87,6 @@ func onEpochCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, _ *c
 		return nil, fmt.Errorf("encode closeEpoch: %w", err)
 	}
 
-	// @review if submit result == nil, do we want to fail?
 	if err := submit(runtime, parentCfg, snapshot.ObservedAt, calldata); err != nil {
 		return nil, fmt.Errorf("submit closeEpoch: %w", err)
 	}
@@ -108,11 +106,6 @@ func onEpochWithdrawExecutingWithDeps(config *helper.Config, runtime cre.Runtime
 	if err != nil {
 		return nil, fmt.Errorf("init parent vault codec: %w", err)
 	}
-	cvCodec, err := newChildCodec()
-	if err != nil {
-		return nil, fmt.Errorf("init child vault codec: %w", err)
-	}
-
 	evt, err := pvCodec.DecodeEpochWithdrawExecuting(log)
 	if err != nil {
 		return nil, fmt.Errorf("decode EpochWithdrawExecuting: %w", err)
@@ -123,7 +116,7 @@ func onEpochWithdrawExecutingWithDeps(config *helper.Config, runtime cre.Runtime
 		return nil, err
 	}
 
-	// @review what is this?
+	// Revalidate that the event came from the configured parent vault at the handler boundary.
 	if !onchain.MatchSource(config, log, sourceChain, parentCfg.ChainSelector) {
 		return workflowtypes.Noop(runtime, "wrong epoch event source")
 	}
@@ -140,12 +133,16 @@ func onEpochWithdrawExecutingWithDeps(config *helper.Config, runtime cre.Runtime
 		return workflowtypes.Noop(runtime, "epoch withdrawal amount mismatch")
 	}
 
-	// @review should this be higher up?
 	if rebalance.ActiveStrategy.ChainSelector == parentCfg.ChainSelector {
-		logger.Info("EpochWithdrawExecuting: active strategy on parent; no action required",
+		return workflowtypes.Noop(
+			runtime,
+			"active strategy on parent; no action required",
 			slog.Any("nonce", evt.EpochNonce),
 		)
-		return &workflowtypes.ExecutionResult{Result: "no-op: active strategy on parent"}, nil
+	}
+	cvCodec, err := newChildCodec()
+	if err != nil {
+		return nil, fmt.Errorf("init child vault codec: %w", err)
 	}
 
 	stratCfg, err := helper.FindEvmConfigByChainSelector(config.Evms, rebalance.ActiveStrategy.ChainSelector)
@@ -167,7 +164,6 @@ func onEpochWithdrawExecutingWithDeps(config *helper.Config, runtime cre.Runtime
 		return nil, fmt.Errorf("encode executeEpochWithdraw: %w", err)
 	}
 
-	// @review submit ==nil?
 	if err := submit(runtime, *stratCfg, snapshot.ObservedAt, calldata); err != nil {
 		return nil, fmt.Errorf("submit executeEpochWithdraw: %w", err)
 	}

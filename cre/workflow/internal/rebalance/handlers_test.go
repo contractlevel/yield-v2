@@ -131,8 +131,8 @@ func TestRebalancePoolSelectionNoopsAndErrors(t *testing.T) {
 	}{
 		{"no best", nil, nil, nil, "no approved pool"},
 		{"missing current", &offchain.Pool{Project: "compound-v3", Chain: "Arbitrum", Apy: 6}, nil, nil, "current pool missing"},
-		{"already optimal", &offchain.Pool{Project: "aave-v3", Chain: "Ethereum", Apy: 6}, nil, nil, "already optimal"},
-		{"below threshold", &offchain.Pool{Project: "compound-v3", Chain: "Arbitrum", Apy: 4.5}, &offchain.Pool{Apy: 4}, nil, "below threshold"},
+		{"already optimal", &offchain.Pool{Project: "aave-v3", Chain: "Ethereum", Apy: 6}, nil, nil, "already on optimal strategy"},
+		{"below threshold", &offchain.Pool{Project: "compound-v3", Chain: "Arbitrum", Apy: 4.5}, &offchain.Pool{Apy: 4}, nil, "APY delta below threshold"},
 		{"fetch failure", nil, nil, errors.New("relay failed"), ""},
 	} {
 		t.Run(test.name, func(t *testing.T) {

@@ -79,7 +79,6 @@ func onRebalanceCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, 
 	if !onchain.PeriodElapsed(rebalance.LastRebalanceCompletedTimestamp, snapshot.ObservedAt, minRebalanceIntervalSeconds) {
 		return workflowtypes.Noop(runtime, "rebalance cooldown active")
 	}
-	// @review will this block the first rebalance? an epoch should happen first, and that would deposit so tvl would be > 0. confirm this
 	if rebalance.ActiveStrategy.ChainSelector == parentCfg.ChainSelector && parent.Tvl.Sign() == 0 {
 		return workflowtypes.Noop(runtime, "zero local strategy TVL")
 	}
@@ -106,12 +105,12 @@ func onRebalanceCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, 
 	}
 
 	if activeStrategy.ProtocolId == bestProtocolId && activeStrategy.ChainSelector == bestChainSelector {
-		logger.Info("Already on optimal strategy; skipping rebalance",
+		return workflowtypes.Noop(
+			runtime,
+			"already on optimal strategy; no action required",
 			slog.String("project", bestPool.Project),
 			slog.String("chain", bestPool.Chain),
 		)
-		// @review should this be noop?
-		return &workflowtypes.ExecutionResult{Result: "no-op: already optimal"}, nil
 	}
 
 	if currentPool == nil {
@@ -120,12 +119,12 @@ func onRebalanceCronTriggerWithDeps(config *helper.Config, runtime cre.Runtime, 
 
 	// Check that the APY improvement exceeds the differential threshold.
 	if !NeedRebalance(bestPool, currentPool) {
-		delta := bestPool.Apy - currentPool.Apy
-		logger.Info("APY delta below threshold; skipping rebalance",
-			slog.Float64("delta", delta),
+		return workflowtypes.Noop(
+			runtime,
+			"APY delta below threshold; no action required",
+			slog.Float64("delta", bestPool.Apy-currentPool.Apy),
 			slog.Float64("threshold", DifferentialThreshold),
 		)
-		return &workflowtypes.ExecutionResult{Result: "no-op: below threshold"}, nil
 	}
 
 	// Encode and submit initiateRebalance to ParentVault.
@@ -209,10 +208,11 @@ func onRebalanceInitiatedWithDeps(config *helper.Config, runtime cre.Runtime, lo
 	}
 	// Guard: active strategy on parent chain - no remote ChildVault to drive for this step.
 	if rebalance.ActiveStrategy.ChainSelector == parentCfg.ChainSelector {
-		logger.Info("RebalanceInitiated: active strategy on parent; no action required",
+		return workflowtypes.Noop(
+			runtime,
+			"active strategy on parent; no action required",
 			slog.Any("nonce", evt.RebalanceNonce),
 		)
-		return &workflowtypes.ExecutionResult{Result: "no-op: active strategy on parent"}, nil
 	}
 
 	prevChainCfg, err := helper.FindEvmConfigByChainSelector(config.Evms, rebalance.ActiveStrategy.ChainSelector)
