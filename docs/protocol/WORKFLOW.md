@@ -155,6 +155,6 @@ The signed report payload is `abi.encodePacked(uint64 targetChainSelector, addre
 
 Runtime configuration supplies the two cron schedules, the EVM read block reference, the approved DefiLlama universe, and per-chain vault, router, selector, and gas settings. Exactly one configured chain must contain the `ParentVault`; every other entry represents a child chain.
 
-The checked-in `config.staging.json` contains the deployed staging vault and WorkflowRouter configuration and can be used for staging simulation or deployment. The checked-in `config.production.json` is a placeholder with no `evms` entries. Because `ValidateConfig` rejects an empty `evms` list, production configuration must be populated (or generated) with real per-chain values before simulation or deployment.
+The checked-in staging and production configuration files contain their deployed vault and WorkflowRouter addresses and can be used for their respective simulation or deployment targets.
 
 The workflow is intentionally limited to orchestration. It does not hold funds, calculate vault accounting, bypass contract guards, or replace CCIP recovery. Detailed recovery and execution behavior lives in the vault contracts and is documented in [PATHS.md](PATHS.md).

@@ -1,5 +1,8 @@
 {
+  "rebalanceSchedule": "0 0 0 * * *",
+  "epochSchedule": "0 0 12 * * 3",
   "blockNumber": -3,
+  "assetDecimals": 6,
   "defiLlama": {
     "poolIds": [
       "aa70268e-4b52-42bf-a116-608b370f9501",
@@ -17,5 +20,61 @@
     ],
     "projects": ["aave-v3", "compound-v3", "aave-v4"],
     "symbols": ["USDC"]
-  }
+  },
+  "evms": [
+    {
+      "isParent": true,
+      "chainName": "ethereum-mainnet-base-1",
+      "defiLlamaChainName": "Base",
+      "chainSelector": 15971525489660198786,
+      "vaultAddress": "0x664EFe3859165011b811d8AFc127872520e97079",
+      "workflowRouterAddress": "0xAAac2c5e99cBf3dBb8d9c1fe96F968ce9cC7518b",
+      "gasLimit": 1500000
+    },
+    {
+      "isParent": false,
+      "chainName": "ethereum-mainnet-arbitrum-1",
+      "defiLlamaChainName": "Arbitrum",
+      "chainSelector": 4949039107694359620,
+      "vaultAddress": "0xd2F0E776312567e3157577B429bB210a4656Fa04",
+      "workflowRouterAddress": "0xf5A044C79d1cfD1128ea082AccE8DaEd9d631045",
+      "gasLimit": 1500000
+    },
+    {
+      "isParent": false,
+      "chainName": "avalanche-mainnet",
+      "defiLlamaChainName": "Avalanche",
+      "chainSelector": 6433500567565415381,
+      "vaultAddress": "0xd2F0E776312567e3157577B429bB210a4656Fa04",
+      "workflowRouterAddress": "0xf5A044C79d1cfD1128ea082AccE8DaEd9d631045",
+      "gasLimit": 1500000
+    },
+    {
+      "isParent": false,
+      "chainName": "ethereum-mainnet",
+      "defiLlamaChainName": "Ethereum",
+      "chainSelector": 5009297550715157269,
+      "vaultAddress": "0xd2F0E776312567e3157577B429bB210a4656Fa04",
+      "workflowRouterAddress": "0x76893B35F88F1b0106eE30C75cD9C121C85A6bfc",
+      "gasLimit": 1500000
+    },
+    {
+      "isParent": false,
+      "chainName": "ethereum-mainnet-optimism-1",
+      "defiLlamaChainName": "OP Mainnet",
+      "chainSelector": 3734403246176062136,
+      "vaultAddress": "0xd2F0E776312567e3157577B429bB210a4656Fa04",
+      "workflowRouterAddress": "0xf5A044C79d1cfD1128ea082AccE8DaEd9d631045",
+      "gasLimit": 1500000
+    },
+    {
+      "isParent": false,
+      "chainName": "polygon-mainnet",
+      "defiLlamaChainName": "Polygon",
+      "chainSelector": 4051577828743386545,
+      "vaultAddress": "0xd2F0E776312567e3157577B429bB210a4656Fa04",
+      "workflowRouterAddress": "0x3445734F6a0ac10185Fe23Bb645eC45aFEa3f782",
+      "gasLimit": 1500000
+    }
+  ]
 }

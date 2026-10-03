@@ -11,10 +11,17 @@ import {HelperConfig} from "../HelperConfig.s.sol";
 contract FundVaultLink is Script {
     using SafeERC20 for IERC20;
 
+    error FundVaultLink__ZeroBalance();
+    error FundVaultLink__BalanceAboveMaximum(uint256 balance);
+
     function run() external {
         HelperConfig.NetworkConfig memory config = new HelperConfig().getActiveNetworkConfig();
+        IERC20 link = IERC20(config.tokens.link);
+        uint256 balance = link.balanceOf(msg.sender);
+        if (balance == 0) revert FundVaultLink__ZeroBalance();
+        if (balance > 10 ether) revert FundVaultLink__BalanceAboveMaximum(balance);
 
         vm.broadcast(msg.sender);
-        IERC20(config.tokens.link).safeTransfer(config.deployed.vaultProxy, 10 ether);
+        link.safeTransfer(config.deployed.vaultProxy, balance);
     }
 }

@@ -14,8 +14,8 @@ binding = "POOL_SNAPSHOTS"
 id = "44242b29df88409aba961c271a5cfe09"
 
 [triggers]
-# Refresh 10, 5, and 2 minutes before each testnet rebalance (UTC).
-crons = ["20,25,28 0,3,6,9,12,15,18,21 * * *"]
+# Refresh 10, 5, and 2 minutes before the daily production rebalance (UTC).
+crons = ["50,55,58 23 * * *"]
 
 [build]
 # Use cached Rust dependencies and skip wasm-opt's automatic download.

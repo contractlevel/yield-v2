@@ -191,7 +191,7 @@ func Test_SubmitReport_txNotSuccessWithErrorMessage(t *testing.T) {
 
 	err := SubmitReport(runtime, newTestReportTarget(), 0, []byte{1, 2, 3, 4})
 	require.Error(t, err, "expected reverted tx error")
-	require.ErrorContains(t, err, "tx not success: status=TX_STATUS_REVERTED err=reverted")
+	require.ErrorContains(t, err, "tx not success: status=TX_STATUS_REVERTED txHash=0x1234 err=reverted")
 }
 
 func Test_SubmitReport_txNotSuccessWithoutErrorMessage(t *testing.T) {
@@ -200,7 +200,7 @@ func Test_SubmitReport_txNotSuccessWithoutErrorMessage(t *testing.T) {
 
 	err := SubmitReport(runtime, newTestReportTarget(), 0, []byte{1, 2, 3, 4})
 	require.Error(t, err, "expected fatal tx error")
-	require.ErrorContains(t, err, "tx not success: status=TX_STATUS_FATAL err=unknown error")
+	require.ErrorContains(t, err, "tx not success: status=TX_STATUS_FATAL txHash=0x1234 err=unknown error")
 }
 
 func Test_SubmitReport_contractExecutionStatusMissing(t *testing.T) {
@@ -213,13 +213,28 @@ func Test_SubmitReport_contractExecutionStatusMissing(t *testing.T) {
 }
 
 func Test_SubmitReport_contractExecutionFailed(t *testing.T) {
-	runtime := newMockRuntime(t)
-	contractStatus := evm.ReceiverContractExecutionStatus_RECEIVER_CONTRACT_EXECUTION_STATUS_REVERTED
-	runtime.capabilityReply = writeReportReply(evm.TxStatus_TX_STATUS_SUCCESS, &contractStatus, "")
+	for _, test := range []struct {
+		name         string
+		errorMessage string
+		expected     string
+	}{
+		{"with error message", "receiver reverted", "err=receiver reverted"},
+		{"without error message", "", "err=unknown error"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			runtime := newMockRuntime(t)
+			contractStatus := evm.ReceiverContractExecutionStatus_RECEIVER_CONTRACT_EXECUTION_STATUS_REVERTED
+			runtime.capabilityReply = writeReportReply(evm.TxStatus_TX_STATUS_SUCCESS, &contractStatus, test.errorMessage)
 
-	err := SubmitReport(runtime, newTestReportTarget(), 0, []byte{1, 2, 3, 4})
-	require.Error(t, err, "expected contract execution error")
-	require.ErrorContains(t, err, "contract execution failed: status=RECEIVER_CONTRACT_EXECUTION_STATUS_REVERTED")
+			err := SubmitReport(runtime, newTestReportTarget(), 0, []byte{1, 2, 3, 4})
+			require.Error(t, err, "expected contract execution error")
+			require.ErrorContains(
+				t,
+				err,
+				"contract execution failed: status=RECEIVER_CONTRACT_EXECUTION_STATUS_REVERTED txHash=0x1234 "+test.expected,
+			)
+		})
+	}
 }
 
 func decodeWriteReportRequest(t *testing.T, capabilityRequest *sdkpb.CapabilityRequest) *evm.WriteReportRequest {

@@ -81,23 +81,30 @@ func submitReport(runtime cre.Runtime, evmClient reportWriter, target helper.Evm
 		return fmt.Errorf("write report: nil response")
 	}
 
+	txHash := fmt.Sprintf("0x%x", resp.TxHash)
+	errorMessage := "unknown error"
+	if resp.ErrorMessage != nil {
+		errorMessage = *resp.ErrorMessage
+	}
+
 	if resp.TxStatus != evm.TxStatus_TX_STATUS_SUCCESS {
-		msg := "unknown error"
-		if resp.ErrorMessage != nil {
-			msg = *resp.ErrorMessage
-		}
-		return fmt.Errorf("tx not success: status=%s err=%s", resp.TxStatus, msg)
+		return fmt.Errorf("tx not success: status=%s txHash=%s err=%s", resp.TxStatus, txHash, errorMessage)
 	}
 
 	if resp.ReceiverContractExecutionStatus == nil {
 		return fmt.Errorf("contract execution status missing")
 	}
 	if *resp.ReceiverContractExecutionStatus != evm.ReceiverContractExecutionStatus_RECEIVER_CONTRACT_EXECUTION_STATUS_SUCCESS {
-		return fmt.Errorf("contract execution failed: status=%s", *resp.ReceiverContractExecutionStatus)
+		return fmt.Errorf(
+			"contract execution failed: status=%s txHash=%s err=%s",
+			*resp.ReceiverContractExecutionStatus,
+			txHash,
+			errorMessage,
+		)
 	}
 
 	runtime.Logger().Info("CRE write succeeded",
-		"txHash", fmt.Sprintf("0x%x", resp.TxHash),
+		"txHash", txHash,
 		"fee", resp.TransactionFee,
 	)
 	return nil

@@ -19,16 +19,21 @@ contract HelperConfig is Script {
     address internal constant BURNER_EOA = 0x7664C538C80870824738A8ADCcd92AcA244D7e69;
     // Shared mainnet/testnet actors.
     // The separate keystore deployer comes from the deploy script's msg.sender.
-    address internal constant DEFAULT_ADMIN = 0x12eEdc70d12A81C9Ac972ab0cE1efb91Ac684F84;
+    address internal constant DEFAULT_ADMIN = 0x377a77807085675Bc8350a47eEE2F1DF457abFd7;
     address internal constant UPGRADER = 0xB21E31f1B3f9d446bf36242D344736d877B37309;
     address internal constant OPERATOR = 0xD22f590FE47d4F9882C68c919bE295bC42013b50;
     address internal constant INITIAL_USER = 0xBE363128CE85D7695f931fD5B80bEcb3bec46871;
     uint64 internal constant BASE_CHAIN_SELECTOR = 15971525489660198786;
     uint64 internal constant BASE_SEPOLIA_CHAIN_SELECTOR = 10344971235874465080;
-    uint256 internal constant INITIAL_DEFAULT_CCIP_GAS_LIMIT = 500_000;
+    uint256 internal constant MAINNET_DEFAULT_CCIP_GAS_LIMIT = 800_000;
+    uint256 internal constant TESTNET_DEFAULT_CCIP_GAS_LIMIT = 500_000;
 
-    bytes32 internal constant STAGING_WORKFLOW_ID = 0x000c6b4abbc8ab218cdf41a64ca706a2e8606dc00ee803461cd2b8bbd8db9358;
+    bytes32 internal constant STAGING_WORKFLOW_ID = 0x00e4a1f9a7887c774fc66cf87e1e8ac1c7ee3e4cbc46206afd7f4972dc8d871d;
     bytes10 internal constant STAGING_WORKFLOW_NAME = bytes10("67d6954c97");
+    bytes32 internal constant PRODUCTION_WORKFLOW_ID =
+        0x001f8a890b0e0073a7467b8dd111687c29f04ec8a99bdc5764172287c3b0083e;
+    bytes10 internal constant PRODUCTION_WORKFLOW_NAME = bytes10("ea912058cd");
+    address internal constant PRODUCTION_WORKFLOW_OWNER = 0x9b418eDbFf04DaF89Db55D9E18Af2a0E23984636;
 
     /*//////////////////////////////////////////////////////////////
                              NETWORK CONFIG
@@ -90,6 +95,7 @@ contract HelperConfig is Script {
     struct DeployedConfig {
         address vaultProxy;
         address workflowRouter;
+        address governanceTimelock;
     }
 
     NetworkConfig public activeNetworkConfig;
@@ -145,10 +151,14 @@ contract HelperConfig is Script {
                 router: 0x141fa059441E0ca23ce184B6A78bafD2A517DdE8,
                 thisChainSelector: 4949039107694359620,
                 parentChainSelector: BASE_CHAIN_SELECTOR,
-                initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
+                initialDefaultCcipGasLimit: MAINNET_DEFAULT_CCIP_GAS_LIMIT
             }),
-            cre: _getUndeployedCreConfig(0xF8344CFd5c43616a4366C34E3EEE75af79a74482),
-            deployed: DeployedConfig({vaultProxy: address(0), workflowRouter: address(0)})
+            cre: _getProductionCreConfig(0xF8344CFd5c43616a4366C34E3EEE75af79a74482),
+            deployed: DeployedConfig({
+                vaultProxy: 0xd2F0E776312567e3157577B429bB210a4656Fa04,
+                workflowRouter: 0xf5A044C79d1cfD1128ea082AccE8DaEd9d631045,
+                governanceTimelock: 0x4f412CA0158FD3DC78Aa92935258d6A444FDfD47
+            })
         });
     }
 
@@ -171,10 +181,14 @@ contract HelperConfig is Script {
                 router: 0x881e3A65B4d4a04dD529061dd0071cf975F58bCD,
                 thisChainSelector: 15971525489660198786,
                 parentChainSelector: BASE_CHAIN_SELECTOR,
-                initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
+                initialDefaultCcipGasLimit: MAINNET_DEFAULT_CCIP_GAS_LIMIT
             }),
-            cre: _getUndeployedCreConfig(0xF8344CFd5c43616a4366C34E3EEE75af79a74482),
-            deployed: DeployedConfig({vaultProxy: address(0), workflowRouter: address(0)})
+            cre: _getProductionCreConfig(0xF8344CFd5c43616a4366C34E3EEE75af79a74482),
+            deployed: DeployedConfig({
+                vaultProxy: 0x664EFe3859165011b811d8AFc127872520e97079,
+                workflowRouter: 0xAAac2c5e99cBf3dBb8d9c1fe96F968ce9cC7518b,
+                governanceTimelock: 0xA5E772329CfE6fd6c463c5D2b77815C0213E8dd2
+            })
         });
     }
 
@@ -198,10 +212,14 @@ contract HelperConfig is Script {
                 router: 0x849c5ED5a80F5B408Dd4969b78c2C8fdf0565Bfe,
                 thisChainSelector: 4051577828743386545,
                 parentChainSelector: BASE_CHAIN_SELECTOR,
-                initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
+                initialDefaultCcipGasLimit: MAINNET_DEFAULT_CCIP_GAS_LIMIT
             }),
-            cre: _getUndeployedCreConfig(0x76c9cf548b4179F8901cda1f8623568b58215E62),
-            deployed: DeployedConfig({vaultProxy: address(0), workflowRouter: address(0)})
+            cre: _getProductionCreConfig(0x76c9cf548b4179F8901cda1f8623568b58215E62),
+            deployed: DeployedConfig({
+                vaultProxy: 0xd2F0E776312567e3157577B429bB210a4656Fa04,
+                workflowRouter: 0x3445734F6a0ac10185Fe23Bb645eC45aFEa3f782,
+                governanceTimelock: 0x06411fd2Bb6f0b9AeA49054B3b01bEE5a234dCFb
+            })
         });
     }
 
@@ -223,10 +241,14 @@ contract HelperConfig is Script {
                 router: 0x80226fc0Ee2b096224EeAc085Bb9a8cba1146f7D,
                 thisChainSelector: 5009297550715157269,
                 parentChainSelector: BASE_CHAIN_SELECTOR,
-                initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
+                initialDefaultCcipGasLimit: MAINNET_DEFAULT_CCIP_GAS_LIMIT
             }),
-            cre: _getUndeployedCreConfig(0x0b93082D9b3C7C97fAcd250082899BAcf3af3885),
-            deployed: DeployedConfig({vaultProxy: address(0), workflowRouter: address(0)})
+            cre: _getProductionCreConfig(0x0b93082D9b3C7C97fAcd250082899BAcf3af3885),
+            deployed: DeployedConfig({
+                vaultProxy: 0xd2F0E776312567e3157577B429bB210a4656Fa04,
+                workflowRouter: 0x76893B35F88F1b0106eE30C75cD9C121C85A6bfc,
+                governanceTimelock: 0x2f866642a738951Fdf2578cDc66db3400C802b0e
+            })
         });
     }
 
@@ -248,10 +270,14 @@ contract HelperConfig is Script {
                 router: 0xF4c7E640EdA248ef95972845a62bdC74237805dB,
                 thisChainSelector: 6433500567565415381,
                 parentChainSelector: BASE_CHAIN_SELECTOR,
-                initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
+                initialDefaultCcipGasLimit: MAINNET_DEFAULT_CCIP_GAS_LIMIT
             }),
-            cre: _getUndeployedCreConfig(0x76c9cf548b4179F8901cda1f8623568b58215E62),
-            deployed: DeployedConfig({vaultProxy: address(0), workflowRouter: address(0)})
+            cre: _getProductionCreConfig(0x76c9cf548b4179F8901cda1f8623568b58215E62),
+            deployed: DeployedConfig({
+                vaultProxy: 0xd2F0E776312567e3157577B429bB210a4656Fa04,
+                workflowRouter: 0xf5A044C79d1cfD1128ea082AccE8DaEd9d631045,
+                governanceTimelock: 0x06411fd2Bb6f0b9AeA49054B3b01bEE5a234dCFb
+            })
         });
     }
 
@@ -273,10 +299,14 @@ contract HelperConfig is Script {
                 router: 0x3206695CaE29952f4b0c22a169725a865bc8Ce0f,
                 thisChainSelector: 3734403246176062136,
                 parentChainSelector: BASE_CHAIN_SELECTOR,
-                initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
+                initialDefaultCcipGasLimit: MAINNET_DEFAULT_CCIP_GAS_LIMIT
             }),
-            cre: _getUndeployedCreConfig(0xF8344CFd5c43616a4366C34E3EEE75af79a74482),
-            deployed: DeployedConfig({vaultProxy: address(0), workflowRouter: address(0)})
+            cre: _getProductionCreConfig(0xF8344CFd5c43616a4366C34E3EEE75af79a74482),
+            deployed: DeployedConfig({
+                vaultProxy: 0xd2F0E776312567e3157577B429bB210a4656Fa04,
+                workflowRouter: 0xf5A044C79d1cfD1128ea082AccE8DaEd9d631045,
+                governanceTimelock: 0x4f412CA0158FD3DC78Aa92935258d6A444FDfD47
+            })
         });
     }
 
@@ -301,12 +331,13 @@ contract HelperConfig is Script {
                 router: 0x2a9C5afB0d0e4BAb2BCdaE109EC4b0c4Be15a165,
                 thisChainSelector: 3478487238524512106,
                 parentChainSelector: BASE_SEPOLIA_CHAIN_SELECTOR,
-                initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
+                initialDefaultCcipGasLimit: TESTNET_DEFAULT_CCIP_GAS_LIMIT
             }),
             cre: _getStagingCreConfig(0x76c9cf548b4179F8901cda1f8623568b58215E62),
             deployed: DeployedConfig({
                 vaultProxy: 0xE995ddFe2df6fce2e3cAf4028e94e771EbE0e34b,
-                workflowRouter: 0x117D5Fec39C7209A618D71b52B834eb44C5aff7F
+                workflowRouter: 0x117D5Fec39C7209A618D71b52B834eb44C5aff7F,
+                governanceTimelock: address(0)
             })
         });
     }
@@ -329,12 +360,13 @@ contract HelperConfig is Script {
                 router: 0x0BF3dE8c5D3e8A2B34D2BEeB17ABfCeBaf363A59,
                 thisChainSelector: 16015286601757825753,
                 parentChainSelector: BASE_SEPOLIA_CHAIN_SELECTOR,
-                initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
+                initialDefaultCcipGasLimit: TESTNET_DEFAULT_CCIP_GAS_LIMIT
             }),
             cre: _getStagingCreConfig(0xF8344CFd5c43616a4366C34E3EEE75af79a74482),
             deployed: DeployedConfig({
                 vaultProxy: 0xd2c6088555AD7eAdFa602138F75AfBabeBc433B9,
-                workflowRouter: 0x5f8191e9FE6b4164930Cdf92F6fe824aE35602e0
+                workflowRouter: 0x5f8191e9FE6b4164930Cdf92F6fe824aE35602e0,
+                governanceTimelock: address(0)
             })
         });
     }
@@ -357,12 +389,13 @@ contract HelperConfig is Script {
                 router: 0xD3b06cEbF099CE7DA4AcCf578aaebFDBd6e88a93,
                 thisChainSelector: 10344971235874465080,
                 parentChainSelector: BASE_SEPOLIA_CHAIN_SELECTOR,
-                initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
+                initialDefaultCcipGasLimit: TESTNET_DEFAULT_CCIP_GAS_LIMIT
             }),
             cre: _getStagingCreConfig(0xF8344CFd5c43616a4366C34E3EEE75af79a74482),
             deployed: DeployedConfig({
                 vaultProxy: 0x6fbB019A1d9F49BD2e667de994CC3588eDB4b09d,
-                workflowRouter: 0x7Ceeb23617a99038DADEb30566290b7442Ead006
+                workflowRouter: 0x7Ceeb23617a99038DADEb30566290b7442Ead006,
+                governanceTimelock: address(0)
             })
         });
     }
@@ -385,12 +418,13 @@ contract HelperConfig is Script {
                 router: 0x114A20A10b43D4115e5aeef7345a1A71d2a60C57,
                 thisChainSelector: 5224473277236331295,
                 parentChainSelector: BASE_SEPOLIA_CHAIN_SELECTOR,
-                initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
+                initialDefaultCcipGasLimit: TESTNET_DEFAULT_CCIP_GAS_LIMIT
             }),
             cre: _getStagingCreConfig(0x76c9cf548b4179F8901cda1f8623568b58215E62),
             deployed: DeployedConfig({
                 vaultProxy: 0x66738D30269F1E88A762F421995FeeBe8E617d52,
-                workflowRouter: 0xEE4D89b06fE9082FE9A737De2a5a061e07BEF781
+                workflowRouter: 0xEE4D89b06fE9082FE9A737De2a5a061e07BEF781,
+                governanceTimelock: address(0)
             })
         });
     }
@@ -413,12 +447,13 @@ contract HelperConfig is Script {
                 router: 0xF694E193200268f9a4868e4Aa017A0118C9a8177,
                 thisChainSelector: 14767482510784806043,
                 parentChainSelector: BASE_SEPOLIA_CHAIN_SELECTOR,
-                initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
+                initialDefaultCcipGasLimit: TESTNET_DEFAULT_CCIP_GAS_LIMIT
             }),
             cre: _getStagingCreConfig(0x76c9cf548b4179F8901cda1f8623568b58215E62),
             deployed: DeployedConfig({
                 vaultProxy: 0xCD6F007979bfb9F1ea9a9df432A298d0469861d3,
-                workflowRouter: 0xdAd87492A140283Dc2C8b4A5A217A832bb31fbFE
+                workflowRouter: 0xdAd87492A140283Dc2C8b4A5A217A832bb31fbFE,
+                governanceTimelock: address(0)
             })
         });
     }
@@ -442,12 +477,13 @@ contract HelperConfig is Script {
                 router: 0x9C32fCB86BF0f4a1A8921a9Fe46de3198bb884B2,
                 thisChainSelector: 16281711391670634445,
                 parentChainSelector: BASE_SEPOLIA_CHAIN_SELECTOR,
-                initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
+                initialDefaultCcipGasLimit: TESTNET_DEFAULT_CCIP_GAS_LIMIT
             }),
             cre: _getStagingCreConfig(0x76c9cf548b4179F8901cda1f8623568b58215E62),
             deployed: DeployedConfig({
                 vaultProxy: 0xDc0239d860DC5b3356e9Ab260B56cF69e9Cfb92a,
-                workflowRouter: 0x079A90B7761FF10F455BC2188392b2ae765F8DAd
+                workflowRouter: 0x079A90B7761FF10F455BC2188392b2ae765F8DAd,
+                governanceTimelock: address(0)
             })
         });
     }
@@ -469,7 +505,9 @@ contract HelperConfig is Script {
             protocols: protocols,
             ccip: ccip,
             cre: cre,
-            deployed: DeployedConfig({vaultProxy: address(0), workflowRouter: address(0)})
+            deployed: DeployedConfig({
+                vaultProxy: address(0), workflowRouter: address(0), governanceTimelock: address(0)
+            })
         });
     }
 
@@ -549,7 +587,7 @@ contract HelperConfig is Script {
             router: address(new MockCCIPRouter(usdc)),
             thisChainSelector: 12346,
             parentChainSelector: 12345,
-            initialDefaultCcipGasLimit: INITIAL_DEFAULT_CCIP_GAS_LIMIT
+            initialDefaultCcipGasLimit: TESTNET_DEFAULT_CCIP_GAS_LIMIT
         });
     }
 
@@ -572,6 +610,15 @@ contract HelperConfig is Script {
             workflowId: STAGING_WORKFLOW_ID,
             workflowName: STAGING_WORKFLOW_NAME,
             workflowOwner: BURNER_EOA
+        });
+    }
+
+    function _getProductionCreConfig(address keystoneForwarder) private pure returns (CREConfig memory) {
+        return CREConfig({
+            keystoneForwarder: keystoneForwarder,
+            workflowId: PRODUCTION_WORKFLOW_ID,
+            workflowName: PRODUCTION_WORKFLOW_NAME,
+            workflowOwner: PRODUCTION_WORKFLOW_OWNER
         });
     }
 }

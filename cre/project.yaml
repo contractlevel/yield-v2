@@ -50,9 +50,21 @@ staging-settings:
 
 # ==========================================================================
 production-settings:
+  account:
+    workflow-owner-address: "0x9b418eDbFf04DaF89Db55D9E18Af2a0E23984636"
   rpcs:
-    - chain-name: ethereum-testnet-sepolia
-      url: https://ethereum-sepolia-rpc.publicnode.com
+    - chain-name: ethereum-mainnet-arbitrum-1
+      url: ${CRE_SECRET_RPC_ARBITRUM_MAINNET}
+    - chain-name: avalanche-mainnet
+      url: ${CRE_SECRET_RPC_AVALANCHE_MAINNET}
+    - chain-name: ethereum-mainnet
+      url: ${CRE_SECRET_RPC_MAINNET}
+    - chain-name: ethereum-mainnet-base-1
+      url: ${CRE_SECRET_RPC_BASE_MAINNET}
+    - chain-name: ethereum-mainnet-optimism-1
+      url: ${CRE_SECRET_RPC_OPTIMISM_MAINNET}
+    - chain-name: polygon-mainnet
+      url: ${CRE_SECRET_RPC_POLYGON_MAINNET}
 
 # ==========================================================================
 local-fork-settings:

@@ -245,9 +245,10 @@ Reads also check cached pool IDs against the current relay allowlist. A snapshot
 containing a removed pool returns `503 snapshot contains disallowed pools` until
 a successful refresh replaces it.
 
-The testnet schedule refreshes at `:20`, `:25`, and `:28` before each three-hourly
-`:30` rebalance, using UTC. This makes 24 refresh attempts and at most 24 KV writes
-per day. Nine DON nodes reading for eight daily rebalances make about 72 KV reads.
+The production schedule refreshes at `23:50`, `23:55`, and `23:58` before the
+daily `00:00` rebalance, using UTC. This makes three refresh attempts and at most
+three KV writes per day. Nine DON nodes reading the daily rebalance make about nine
+KV reads.
 Each request reads the saved snapshot independently; identical consensus still applies
 to the selected pools. KV propagation can temporarily expose different versions, so
 scheduled refreshes finish ahead of rebalance rather than running during it.
