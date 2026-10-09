@@ -20,7 +20,7 @@ Primary assets at risk:
 - **Underlying asset issuer.** The initial underlying asset is USDC, whose issuer can blacklist addresses or pause transfers. See [KI-002](./KNOWN_ISSUES.md#ki-002--underlying-asset-issuer-can-blacklist-or-pause-the-protocol).
 - **CRE and WorkflowRouter.** CRE supplies trusted TVL inputs and workflow-triggered actions. `WorkflowRouter` is the on-chain ingress for Keystone Forwarder reports and validates workflow metadata, the signed destination, report freshness, and selector allowlists before dispatching to the vault.
 - **CCIP.** CCIP transports messages and tokens between parent and child vaults. Vaults validate the decoded sender against the configured crosschain vault for the source chain selector.
-- **Off-chain yield data.** The DefiLlama relay informs rebalance decisions, but does not directly write on-chain state. CRE and on-chain allowlists constrain what can be executed.
+- **Off-chain yield data.** The [yield relay](../../services/relay/) serves cached base APYs derived from Aave APIs and Compound contract reads through configured RPC providers. It informs rebalance decisions but does not directly write on-chain state. CRE and on-chain allowlists constrain what can be executed.
 
 ## 3. Main threat surfaces
 
@@ -47,7 +47,9 @@ Code-level mitigations include role separation, explicit role checks, `AccessCon
 
 `ParentVault.closeEpoch(expectedEpochNonce, tvl)` validates that the supplied epoch nonce matches the current epoch, but trusts the TVL supplied through CRE. An incorrect TVL can corrupt epoch settlement once users claim against the affected epoch. CRE liveness is also required for scheduled epoch close. See [KI-007](./KNOWN_ISSUES.md#ki-007--epoch-close-depends-on-cre-workflow-execution).
 
-Rebalance decisions depend on off-chain yield data. A compromised relay or upstream data source can influence strategy selection, but cannot directly call contracts. On-chain controls still require a valid workflow report, allowlisted selector, supported protocol, registered adapter, and registered destination chain. Relay data-integrity risk is documented in [KI-011](./KNOWN_ISSUES.md#ki-011--compromised-defillama-api-or-relay-can-skew-rebalance-inputs), while relay resource-exhaustion residuals are documented in [KI-004](./KNOWN_ISSUES.md#ki-004--residual-cpumemory-dos-surface-in-defillama-relay-upstream-processing).
+Rebalance decisions depend on the relay's cached yield data. A compromised Aave API, Compound RPC provider, or relay can influence strategy selection, but cannot directly call contracts. Response validation and identical DON consensus do not prove that plausible rates are truthful. On-chain controls still require a valid workflow report, allowlisted selector, supported protocol, registered adapter, and registered destination chain. Relay data-integrity risk is documented in [KI-011](./KNOWN_ISSUES.md#ki-011--compromised-defillama-api-or-relay-can-skew-rebalance-inputs), while relay resource-exhaustion residuals are documented in [KI-004](./KNOWN_ISSUES.md#ki-004--residual-cpumemory-dos-surface-in-defillama-relay-upstream-processing).
+
+Failed provider refreshes preserve the previous snapshot; CRE rejects it once stale. KV is eventually consistent, so DON nodes can observe different snapshot versions around a successful refresh and fail identical consensus. Scheduling refreshes before the rebalance reduces this risk but does not guarantee consistent reads.
 
 ### 3.4 Underlying asset issuer controls
 

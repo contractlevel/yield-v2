@@ -29,3 +29,5 @@ cre/workflow/config.local-fork.generated.json
 .certora_internal/
 
 POST_DEPLOY_TODO.md
+
+.wrangler/

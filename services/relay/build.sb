@@ -1,0 +1,4 @@
+; macOS build sandbox: allow local compilation, deny network access.
+(version 1)
+(allow default)
+(deny network*)

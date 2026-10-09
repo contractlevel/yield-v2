@@ -1,6 +1,11 @@
 # Services
 
-All commands below run from the DefiLlama relay project root, `services/defillama-relay/`.
+All commands below run from the yield relay project root, `services/relay/`.
+
+For Node, dependency, and build-tool requirements, follow the relay's
+[Tooling Setup](../../services/relay/README.md#tooling-setup) and
+[Build network isolation](../../services/relay/README.md#build-network-isolation)
+instructions before running builds or runtime tests.
 
 ```
 cargo fmt --check
@@ -12,33 +17,33 @@ cargo deny check
 cargo audit
 ```
 
+### Runtime tests
+
+```sh
+npm run test:runtime
+```
+
+These tests build the Worker and exercise its deployment entrypoint in Miniflare,
+using fake providers and temporary local KV. They do not read `.env` or call live
+providers. The timeout case takes about 35 seconds.
+
 ### Coverage
 
-Install:
-
-```
-cargo install cargo-llvm-cov --locked
-```
+Use an approved installation of `cargo-llvm-cov`. Review its version and obtain
+installation approval before adding or updating the tool.
 
 ```
 cargo llvm-cov --html
 open target/llvm-cov/html/index.html
 ```
 
+These figures cover the Rust tests; Miniflare runtime tests are not included.
+
 ### Simulation
 
-From one terminal:
+Follow the relay's [Local Development](../../services/relay/README.md#local-development)
+instructions to configure development secrets, enable scheduled-event testing,
+trigger a refresh, and read the cached snapshot.
 
-```
-npm run dev
-```
-
-From another terminal:
-
-```
-source .env
-
-curl \
-    -H "Authorization: Bearer $RELAY_BEARER_TOKEN" \
-    http://127.0.0.1:8787/v1/defillama/pools
-```
+Unlike runtime tests, this simulation calls live providers. Its local KV is
+separate from production KV.

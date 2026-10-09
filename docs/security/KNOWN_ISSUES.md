@@ -132,52 +132,52 @@ Because this is integer division, it rounds down. For very small `shareBurnAmoun
 
 **Status:** Accepted — mitigated but not eliminated.
 
-**Last reviewed:** 2026-06-02
+**Last reviewed:** 2026-10-09
 
-**Component:** `services/defillama-relay` (`src/lib.rs`, `read_upstream_json`, `read_upstream_body`, and `parse_upstream_json` → `serde_json::from_slice::<DefiLlamaResponse>`).
+**Component:** `services/relay` (`src/lib.rs`: `post_json`, `read_bounded`, and `append_bounded`; provider JSON parsed with `serde_json::from_slice::<serde_json::Value>`).
 
-**Threat model:** A hostile or broken upstream response delivered by DefiLlama, a TLS-terminating/MITM path, or a misconfigured `DEFILLAMA_UPSTREAM_URL`.
+**Threat model:** A hostile or broken response from an Aave API or configured Compound RPC provider, including a compromised provider or TLS-terminating path.
 
 ### Summary
 
-The relay fetches DefiLlama's pool list and enforces a hard byte cap while streaming the response body. The cap prevents the relay from accumulating more than `MAX_UPSTREAM_BYTES` into its own body buffer, and oversized chunks are rejected before being copied into that buffer.
+The former DefiLlama pool-list implementation has been removed. The relay now fetches rates for a fixed catalogue of 12 pools from Aave APIs and Compound contracts through RPC. Each provider response has a streamed 64 KiB cap (`MAX_PROVIDER_BYTES`), checked before a chunk is copied into the relay-owned body buffer.
 
 Two residual resource-exhaustion surfaces remain:
 
-1. The Cloudflare Worker runtime materializes each stream chunk before application code can inspect its size. A malicious or broken upstream that causes the runtime to deliver an unusually large chunk can therefore create transient memory pressure before `read_upstream_body` can reject it.
-2. After the bounded body is read, `serde_json::from_slice` deserializes the full response into a `DefiLlamaResponse { data: Vec<Pool> }`. Filtering, allowlisting, and field bounding all happen **after** deserialization.
+1. The Worker runtime materializes stream chunks before `read_bounded` can reject them. A large chunk can create transient memory pressure before the application-level cap runs.
+2. `serde_json::from_slice` parses the bounded body into a JSON value before provider-specific validation. JSON nodes and strings require allocations in addition to the raw body buffer.
 
 This means an attacker controlling the upstream response can still force the Worker to:
 
 - Temporarily hold runtime-provided stream chunks before application-level size checks run,
-- Tokenize up to the full accepted byte cap of JSON, and
-- Allocate a `Vec<Pool>` and associated `String` fields proportional to that accepted body size,
+- Parse up to 64 KiB of JSON per accepted response, and
+- Allocate the corresponding JSON values and strings,
 
 within the Worker's CPU and memory budget for the request.
 
 ### Mitigations already in place
 
-1. **Hard accumulated-body byte cap.** `MAX_UPSTREAM_BYTES` is set to **12 MiB**, enforced by `read_upstream_body` via chunked reads. `Content-Length` is used as a cheap early reject; the streamed-read enforcement is authoritative for bytes copied into the relay-owned body buffer and handles chunked / lying upstream responses. This does not prevent the Worker runtime from transiently materializing a stream chunk before application code receives it.
-2. **Per-field byte bounds applied post-parse.** Pool IDs are length-bounded by canonical_pool_id; returned metadata fields chain, project, and symbol are trimmed and length-bounded by bounded_field.
-3. **Per-response pool cap applied post-parse.** Filtered output is capped at `MAX_RELAY_POOLS`, so even a maximally large upstream cannot push an unbounded list downstream.
-4. **Non-finite numeric rejection.** Pools with non-finite `apyBase` are dropped.
-5. **Allowlist filtering.** Only pools whose IDs are in the configured allowlist are returned to CRE; unknown pool IDs are discarded.
+1. **Streamed body cap.** Each provider body is limited to 64 KiB, independently of `Content-Length`. Oversized chunks are rejected before appending.
+2. **Fixed request and output catalogue.** A refresh makes 16 provider calls for 12 configured pools. Returned pool metadata comes from the catalogue rather than upstream strings.
+3. **Shared fetch deadline.** Provider fetches and parsing share a 30-second budget. A failure or timeout aborts outstanding requests. The subsequent KV write is outside that budget.
+4. **Strict response validation.** Aave reserve identities and Compound JSON-RPC envelopes and ABI words are checked. Base APYs must be finite and between 0 and 1000 percent.
+5. **All-or-nothing publication.** The relay writes KV only after every pool succeeds. Failed refreshes preserve the previous snapshot.
 
-The byte cap reduces parser exposure. The post-parse checks bound the CRE-facing output and downstream relay work after deserialization succeeds.
+The body cap is per response, not an aggregate Worker memory limit. Concurrent requests, runtime chunks, and parsed JSON still consume additional memory.
 
 ### Residual risk
 
 The mitigations bound the relay-owned body buffer, output size, and output shape, but they do not eliminate all upstream-triggered resource use before validation completes. Practical residual effects, if a hostile upstream response is delivered:
 
-- Transient memory pressure while the Worker runtime materializes a large stream chunk before `read_upstream_body` can reject it.
-- Elevated CPU and memory while `serde_json` parses up to 12 MiB of attacker-influenced JSON before post-parse filtering and field bounds apply.
-- Possible Worker resource-limit termination or relay error, producing a 502/504 or platform-level failure to CRE.
-- CRE's rebalance simulation / execution for that cycle fails or stalls until the next successful fetch.
+- Transient memory pressure before `read_bounded` receives a runtime chunk.
+- CPU and memory use while parsing bounded JSON across concurrent provider requests.
+- A logged refresh error or Worker resource-limit termination, leaving the previous KV snapshot unchanged.
+- A skipped or failed rebalance once the previous snapshot exceeds CRE's 15-minute freshness limit.
 
-The failure mode is **denial of service for the affected request only**:
+The failure mode is **loss of fresh yield data for an affected rebalance cycle**:
 
 - No funds are at risk — the relay holds no assets and signs no transactions.
-- No secrets are exposed — the relay has no privileged credentials beyond the outbound fetch.
+- Resource exhaustion itself does not grant access to the relay's bearer token or credential-bearing RPC URLs.
 - No on-chain state is written — the relay is read-only from CRE's perspective.
 - Accounting and on-chain protocol state are unaffected; only the data feed is degraded.
 
@@ -186,15 +186,15 @@ The failure mode is **denial of service for the affected request only**:
 Eliminating the residual would require one of:
 
 - **Platform-level chunk/read controls.** This would be needed to prevent runtime chunk materialization before application code receives each chunk. The relay currently does not have lower-level control over Cloudflare's internal chunk allocation.
-- **A bounded `serde` deserializer** (custom `SeqAccess` visitor capping pool count during parse). This is feasible with no new dependencies and would cap Pool allocation and data-array parsing after N pools, while the existing byte cap would still bound raw body buffering.
+- **A more restrictive deserializer.** It could limit JSON allocations during parsing, at the cost of additional implementation complexity.
 - **Streaming / incremental JSON parsing.** Adds meaningful complexity, and may require adapter code or additional dependencies in this Worker runtime.
-- **Further lowering the byte cap.** 12 MiB is already chosen as the smallest value that comfortably fits a legitimate DefiLlama response with margin; going lower risks rejecting valid upstream payloads.
+- **Further lowering the byte cap or limiting concurrency.** This could reduce resource use, but requires checking legitimate provider responses and refresh latency.
 
 Given:
 
 - The attack requires upstream compromise (not direct attacker access to the relay).
-- The worst case is per-request DoS of a read-only data feed, not loss of funds or state.
-- All downstream consumers (CRE, vaults) are designed to tolerate transient relay unavailability.
+- Resource exhaustion degrades freshness; it does not give the provider direct contract authority.
+- CRE rejects stale snapshots instead of executing a rebalance using expired data.
 
 The team accepts the residual as commensurate with the impact and the simplicity goals of the relay. This entry exists so that any future change increasing the relay's privilege, the underlying asset's sensitivity to the feed, or the relay's role in on-chain decisions triggers a re-evaluation.
 
@@ -202,12 +202,12 @@ The team accepts the residual as commensurate with the impact and the simplicity
 
 - The relay gains write authority or signing capability.
 - The relay's output begins driving automated on-chain actions without independent sanity checks downstream.
-- DefiLlama's response format changes in a way that makes 12 MiB an uncomfortable fit, forcing the cap upward.
+- Provider response formats or the pool catalogue require larger bodies or more concurrent requests.
 - A bounded-deserializer or streaming-parse implementation becomes cheap enough (in code complexity terms) to justify closing the residual.
 
 ### Related accepted risks
 
-This entry is limited to relay resource consumption while processing upstream responses. Incorrect or manipulated yield data from a compromised DefiLlama API, relay deployment, or relay configuration is documented separately in [KI-011](#ki-011--compromised-defillama-api-or-relay-can-skew-rebalance-inputs).
+This entry is limited to resource consumption while processing provider responses. Incorrect or manipulated yield data from a compromised provider, relay deployment, or relay configuration is documented separately in [KI-011](#ki-011--compromised-defillama-api-or-relay-can-skew-rebalance-inputs).
 
 ---
 
@@ -538,22 +538,24 @@ If the locked seed is not established, a full-supply reset can still transfer re
 
 **Status:** Accepted — bounded off-chain data-integrity dependency.
 
-**Last reviewed:** 2026-07-11
+**Last reviewed:** 2026-10-09
 
-**Component:** DefiLlama API, `services/defillama-relay`, CRE rebalance workflow, `WorkflowRouter.onReport`, `AdapterRegistry`, and rebalance execution paths.
+**Component:** Aave APIs, configured Compound RPC providers, `services/relay`, CRE rebalance workflow, `WorkflowRouter.onReport`, `AdapterRegistry`, and rebalance execution paths.
 
 ### Summary
 
-Yieldcoin v2 uses off-chain DefiLlama pool data, fetched through the `defillama-relay`, to inform rebalance decisions. The relay is a read-only data service: it fetches upstream yield data, filters it to configured pool IDs, bounds returned metadata, and serves the result to the CRE workflow.
+Yieldcoin v2 uses the yield relay's cached base APYs to inform rebalance decisions. The relay obtains Aave supply APYs from Aave APIs and calculates Compound APYs from contract reads through configured RPC providers. It validates all 12 catalogue pools before publishing a snapshot. DefiLlama is no longer a runtime data source.
 
-If the DefiLlama API, relay deployment, relay configuration, or TLS-terminating path is compromised, the CRE workflow can receive plausible but incorrect APY / yield data for otherwise allowed pools. That can cause the workflow to select a suboptimal supported strategy or to rebalance when it otherwise would not have.
+If an Aave API, Compound RPC provider, relay deployment, relay configuration, or TLS-terminating path is compromised, CRE can receive plausible but incorrect APYs for allowed pools. That can cause selection of a suboptimal supported strategy or an unnecessary rebalance. Valid response identities and envelopes do not prove that the reported rates are truthful.
 
 This is distinct from [KI-004](#ki-004--residual-cpumemory-dos-surface-in-defillama-relay-upstream-processing), which covers CPU/memory resource exhaustion while parsing upstream responses.
 
 ### Mitigations already in place
 
 - The relay does not hold funds, sign transactions, or write on-chain state.
-- The relay filters responses to configured pool IDs; arbitrary upstream pool IDs are discarded.
+- The relay queries fixed catalogue targets and attaches catalogue metadata. Aave reserve identities and Compound response envelopes and ABI words are validated.
+- Base APYs must be finite and between 0 and 1000 percent. These checks reject malformed values, not plausible false rates.
+- CRE rejects stale or future snapshots and filters the response to its configured pool universe. Identical DON consensus does not independently verify a shared provider's rates.
 - CRE reports still enter on-chain state only through `WorkflowRouter.onReport`.
 - `WorkflowRouter` validates workflow metadata, the signed destination, report freshness, and allowlisted selectors before dispatching.
 - Rebalance execution is constrained to supported protocols, registered adapters, and registered destination chains.
@@ -578,7 +580,7 @@ The current design keeps the data feed read-only and constrains the executable a
 
 - Monitor relay responses and rebalance decisions for unexpected APY jumps, missing pools, or sudden strategy changes.
 - Keep allowed pool IDs, supported protocols, adapter registrations, and destination chains under deployment/runbook review.
-- Alert on relay configuration changes, `DEFILLAMA_UPSTREAM_URL` changes, and repeated divergence from independent market/yield observations.
+- Review relay deployments, catalogue changes, and RPC-secret changes. Investigate divergence from independent market/yield observations. No automatic relay alerts are currently configured.
 - Pause rebalance execution or update relay/workflow configuration if the data source is suspected to be compromised.
 
 ### Conditions that would warrant revisiting
@@ -613,13 +615,13 @@ Separately, per the CRE architecture ("Each node in the DON executes the workflo
 ### Why this is accepted, not mitigated
 
 - `cre-sdk-go`'s own test suite (`standard_tests/secrets_fail_in_node_mode`) confirms `runtime.GetSecret()` is hard-disallowed _inside_ a node-mode callback (`NodeRuntime` does not implement `SecretsProvider`; calling it sets `modeErr = DonModeCallInNodeMode()`). Resolving the secret in DON mode and passing it into node-mode params is the straightforward SDK-supported pattern for attaching a secret-derived auth header to a node-executed HTTP request — but it is not the _only_ possible design. Alternatives not adopted include an unauthenticated relay, a static non-secret shared value, or Chainlink's **Confidential HTTP** capability (Vault DON secrets resolved via `{{.SECRET_NAME}}` templating inside an enclave, which never places the plaintext value in node WASM/host memory). The bearer-token design was a deliberate choice, not a forced default — this entry accepts that choice's consequence rather than treating it as unavoidable.
-- The token's blast radius is narrow: it only gates read access to `services/defillama-relay`, a read-only proxy in front of DefiLlama's public pools API (see [KI-011](#ki-011--compromised-defillama-api-or-relay-can-skew-rebalance-inputs)). The relay holds no funds, signs no transactions, and writes no on-chain state. Worst case, a node operator who extracts the token calls the relay directly instead of through the workflow.
+- The token's blast radius is narrow: it only gates reads of `services/relay`'s cached, public-derived yield snapshot (see [KI-011](#ki-011--compromised-defillama-api-or-relay-can-skew-rebalance-inputs)). It does not authorize refreshes or reveal RPC credentials. The relay holds no funds, signs no transactions, and writes no on-chain state. A node operator who extracts the token can call the relay directly instead of through the workflow.
 - DON node operators already hold substantially greater trust in this system: they execute the APY comparison logic and produce the consensus report that drives `ParentVault.initiateRebalance(expectedRebalanceNonce, newStrategy)`. A node operator misusing this token is a strictly smaller concern than that operator's existing role in the rebalance decision path.
-- Adopting Confidential HTTP purely to hide this token would add Vault DON provisioning and enclave-based request construction — complexity disproportionate to a token whose worst-case misuse is querying a public-data proxy.
+- Adopting Confidential HTTP purely to hide this token would add Vault DON provisioning and enclave-based request construction — complexity disproportionate to a token whose misuse grants reads of a public-derived snapshot.
 
 ### Residual risk
 
-A DON node operator (or anyone able to read that node's process memory during workflow execution) can extract the bearer token and call `services/defillama-relay` directly, outside the workflow. Given the relay is read-only and non-privileged, this does not create fund risk, write access, or a path to influence on-chain state beyond what a compromised node operator can already do through the workflow itself.
+A DON node operator (or anyone able to read that node's process memory during workflow execution) can extract the bearer token and call `services/relay` directly, outside the workflow. The token grants snapshot reads only; it cannot publish or alter the snapshot, expose RPC credentials, or authorize on-chain writes. Unwanted read traffic can still consume Worker resources.
 
 ### Conditions that would warrant revisiting
 

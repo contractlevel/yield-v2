@@ -10,7 +10,7 @@ On each rebalance run, the workflow:
 
 1. Reads the current rebalance state, including its nonce, from [`ParentVault`](../../evm/src/vaults/ParentVault.sol).
 2. Skips if a rebalance is already active or the cooldown has not elapsed.
-3. Fetches approved yield pool data through the [DefiLlama relay](../../services/defillama-relay/).
+3. Fetches a cached snapshot of base APYs for the approved pools through the [yield relay](../../services/relay/), which reads Aave APIs and Compound contracts through RPC.
 4. Selects the best approved pool and compares it with the current active strategy pool.
 5. Skips if the active strategy is already optimal or the APY improvement is below the rebalance threshold.
 6. Calls `ParentVault.initiateRebalance(expectedRebalanceNonce, newStrategy)` through the parent chain `WorkflowRouter`, passing the nonce read from ParentVault.
