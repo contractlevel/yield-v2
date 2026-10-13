@@ -1,7 +1,5 @@
 # Security Policy
 
-Yieldcoin v2 is under active development. There are no live deployments and no bug bounty program at this time.
-
 ## Reporting Vulnerabilities
 
 Please report suspected vulnerabilities to:
@@ -17,6 +15,7 @@ Please do not disclose suspected vulnerabilities publicly until the team has had
 For audit-facing security context, see:
 
 - [`security/THREAT_MODEL`](./security/THREAT_MODEL.md)
+- [`security/AUDITS`](./security/AUDITS.md)
 - [`security/ACCESS_CONTROL_MATRIX`](./security/ACCESS_CONTROL_MATRIX.md)
 - [`security/INVARIANTS`](./security/INVARIANTS.md)
 - [`security/KNOWN_ISSUES`](./security/KNOWN_ISSUES.md)
