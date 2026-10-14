@@ -24,8 +24,9 @@ abstract contract BaseVaultStore {
     /// recovery data. The singleton invariant (at most one recovery pending at a time) is enforced by
     /// `_requireNoRecovery`, which every recovery-creating call path checks before writing this field -
     /// not by storage itself.
-    /// @param s_rebalanceDepositRecovery Recovery data for a rebalance deposit that failed after funds
-    /// left the source chain. Populated on Parent (same-chain rebalance) or Child (cross-chain rebalance).
+    /// @param s_rebalanceDepositRecovery Recovery data for a failed rebalance deposit into the new strategy.
+    /// Populated on Parent when an inbound cross-chain rebalance deposit fails, or on Child when a
+    /// same-chain or inbound cross-chain rebalance deposit fails.
     struct BaseVaultStorage {
         uint256 s_defaultCcipGasLimit;
         mapping(uint64 chainSelector => uint256 gasLimit) s_ccipGasLimits;
