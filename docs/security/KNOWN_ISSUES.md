@@ -1316,4 +1316,36 @@ The impact is availability and settlement delay rather than loss of principal or
 
 ---
 
+## KI-030 — ParentVault rebalance recovery finalizes the pending strategy, not the chain that received the funds
+
+**Status:** Deferred — a fix is planned for a future upgrade; guarded off-chain until then.
+
+**Last reviewed:** 2026-10-14
+
+**Component:** `ParentVault._ccipReceive` (rebalance branch), `ParentVault.executeRecovery`, `ParentVaultCcipLib._validateRebalance`, and the CRE `RebalanceInitiated` handler.
+
+### Summary
+
+ParentVault finalizes an inbound rebalance in one of two ways. If the deposit succeeds on receipt, it records the received protocol on the Parent chain as the active strategy. If the deposit fails and `executeRecovery()` later succeeds, it records the stored `pendingStrategy`. The two agree whenever the pending strategy is on the Parent chain, which is the only route on which the protocol sends a rebalance to ParentVault.
+
+ParentVault does not check this. `_validateRebalance` checks the rebalance state, nonce and protocol ID, but not the pending strategy's chain. If a rebalance pending on a ChildVault were delivered to ParentVault instead, with a matching protocol ID, and the deposit then failed, recovery would deposit the funds into ParentVault's adapter while recording the ChildVault as the active strategy. TVL would then be read from a chain that holds no position, and later epoch and rebalance operations would target the wrong vault. Repair would require an upgrade.
+
+Reaching this requires a ChildVault to receive an `executeRebalance` target different from ParentVault's pending strategy. The CRE workflow prevents this: it submits the target only after matching the `RebalanceInitiated` event against ParentVault's live rebalance state and pending strategy. Reports are bound to their chain, router and observation time. No unprivileged path to the condition has been identified.
+
+A fix is planned for a future upgrade: finalize `REBALANCE_DEPOSIT` recovery with the pending protocol on the Parent chain, matching the receipt path, so the active strategy always records where the funds are.
+
+### Operational considerations
+
+- Keep the workflow's pending-strategy match in the `RebalanceInitiated` handler, with a regression test, until the fix ships.
+- Alert if ParentVault enters `REBALANCE_DEPOSIT` recovery while `pendingStrategy.chainSelector` is not the Parent chain. This state does not occur in normal operation.
+- On that alert, pause ParentVault before anyone calls the permissionless `executeRecovery()`, and recover through an upgrade.
+
+### Conditions that would warrant revisiting
+
+- The rebalance workflow stops deriving the ChildVault target from ParentVault's live pending strategy.
+- A new route lets ParentVault receive a rebalance for a pending strategy on another chain.
+- The fix ships: update the status to Resolved and keep the entry.
+
+---
+
 <!-- 1. workflow doesnt calculate tvl impact on APY 2. chosen strategy could be based on spiked data 3. workflow has no onchain read check for supported chain or protocol before submitting initiateRebalance-->

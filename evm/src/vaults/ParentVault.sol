@@ -581,6 +581,11 @@ contract ParentVault is BaseVault, ParentVaultStore, Allowlist, IParentVault {
         if ($_baseVault.s_recoveryMode != Types.RecoveryMode.REBALANCE_DEPOSIT) revert BaseVault__NoPendingRecovery();
         _recoverFailedRebalanceDeposit($_baseVault);
         Types.Rebalance storage s_rebalance = _parentVaultStorage().s_rebalance;
+        // @review upgrade - replace in next upgrade with:
+        // _finalizeRebalance(
+        //     s_rebalance.nonce,
+        //     Types.Strategy({protocolId: s_rebalance.pendingStrategy.protocolId, chainSelector: i_thisChainSelector})
+        // );
         _finalizeRebalance(s_rebalance.nonce, s_rebalance.pendingStrategy);
     }
 

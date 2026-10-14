@@ -176,7 +176,10 @@ contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
     function test_ParentVault_ccipReceive_Withdraw_RevertWhen_EpochIsNotNetWithdraw() public {
         _setParentEpochStatus(EPOCH_NONCE, Types.EpochStatus.EXECUTING);
         _setParentEpochWithdrawAccounting(EPOCH_NONCE);
-        stdstore.target(address(s_parentVault)).sig("getEpoch(uint256)").with_key(EPOCH_NONCE).depth(2)
+        stdstore.target(address(s_parentVault))
+            .sig("getEpoch(uint256)")
+            .with_key(EPOCH_NONCE)
+            .depth(2)
             .checked_write(TOTAL_DEPOSIT_AMOUNT);
 
         vm.expectRevert(abi.encodeWithSelector(IParentVault.ParentVault__EpochNotNetWithdraw.selector, EPOCH_NONCE));
@@ -477,11 +480,20 @@ contract ParentVault_CcipReceiveUnitTest is BaseUnitTest {
                              HELPER UTILITY
     //////////////////////////////////////////////////////////////*/
     function _setParentEpochWithdrawAccounting(uint256 epochNonce) internal {
-        stdstore.target(address(s_parentVault)).sig("getEpoch(uint256)").with_key(epochNonce).depth(0)
+        stdstore.target(address(s_parentVault))
+            .sig("getEpoch(uint256)")
+            .with_key(epochNonce)
+            .depth(0)
             .checked_write(TOTAL_DEPOSIT_AMOUNT);
-        stdstore.target(address(s_parentVault)).sig("getEpoch(uint256)").with_key(epochNonce).depth(1)
+        stdstore.target(address(s_parentVault))
+            .sig("getEpoch(uint256)")
+            .with_key(epochNonce)
+            .depth(1)
             .checked_write(SHARE_BURN_AMOUNT);
-        stdstore.target(address(s_parentVault)).sig("getEpoch(uint256)").with_key(epochNonce).depth(2)
+        stdstore.target(address(s_parentVault))
+            .sig("getEpoch(uint256)")
+            .with_key(epochNonce)
+            .depth(2)
             .checked_write(TOTAL_WITHDRAW_USDC);
     }
 

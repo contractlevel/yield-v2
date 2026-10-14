@@ -170,11 +170,20 @@ contract ParentVault_CompleteEpochDepositUnitTest is BaseUnitTest {
         _setParentEpochNonce(epochNonce + 1);
         _setParentEpochStatus(epochNonce, Types.EpochStatus.EXECUTING);
         _setParentTotalShares(maximumAmount);
-        stdstore.target(address(s_parentVault)).sig("getEpoch(uint256)").with_key(epochNonce).depth(0)
+        stdstore.target(address(s_parentVault))
+            .sig("getEpoch(uint256)")
+            .with_key(epochNonce)
+            .depth(0)
             .checked_write(maximumAmount);
-        stdstore.target(address(s_parentVault)).sig("getEpoch(uint256)").with_key(epochNonce).depth(2)
+        stdstore.target(address(s_parentVault))
+            .sig("getEpoch(uint256)")
+            .with_key(epochNonce)
+            .depth(2)
             .checked_write(maximumAmount - 2);
-        stdstore.target(address(s_parentVault)).sig("getEpoch(uint256)").with_key(epochNonce).depth(4)
+        stdstore.target(address(s_parentVault))
+            .sig("getEpoch(uint256)")
+            .with_key(epochNonce)
+            .depth(4)
             .checked_write(maximumAmount);
         uint256 shareSupplyBefore = s_yieldcoin.totalSupply();
 

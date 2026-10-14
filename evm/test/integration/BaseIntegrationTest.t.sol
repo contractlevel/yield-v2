@@ -251,7 +251,9 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
     }
 
     function _setParentRemoteStrategyToChild(bytes32 protocolId) internal {
-        stdstore.enable_packed_slots().target(address(parent.vault)).sig("getActiveProtocolAdapter()")
+        stdstore.enable_packed_slots()
+            .target(address(parent.vault))
+            .sig("getActiveProtocolAdapter()")
             .checked_write(address(0));
         stdstore.target(address(parent.vault)).sig("getRebalance()").depth(2).checked_write(protocolId);
         stdstore.target(address(parent.vault)).sig("getRebalance()").depth(3).checked_write(CHILD_CHAIN_SELECTOR);
@@ -508,13 +510,17 @@ abstract contract BaseIntegrationTest is BaseDeploymentTest {
 
     function _setChildActiveAdapter(bytes32 protocolId) internal {
         address adapter = child.adapterRegistry.getAdapter(protocolId);
-        stdstore.enable_packed_slots().target(address(child.vault)).sig("getActiveProtocolAdapter()")
+        stdstore.enable_packed_slots()
+            .target(address(child.vault))
+            .sig("getActiveProtocolAdapter()")
             .checked_write(adapter);
     }
 
     function _setRemoteChildActiveAdapter(bytes32 protocolId) internal {
         address adapter = remoteChild.adapterRegistry.getAdapter(protocolId);
-        stdstore.enable_packed_slots().target(address(remoteChild.vault)).sig("getActiveProtocolAdapter()")
+        stdstore.enable_packed_slots()
+            .target(address(remoteChild.vault))
+            .sig("getActiveProtocolAdapter()")
             .checked_write(adapter);
     }
 

@@ -28,21 +28,27 @@ abstract contract BaseCcipRecoveryForkTest is BaseCcipForkTest {
 
     function _setParentActiveAdapterToAaveV3() internal {
         _selectBaseFork();
-        stdstore.enable_packed_slots().target(address(parent.vault)).sig("getActiveProtocolAdapter()")
+        stdstore.enable_packed_slots()
+            .target(address(parent.vault))
+            .sig("getActiveProtocolAdapter()")
             .checked_write(address(parent.aaveV3Adapter));
         assertEq(parent.vault.getActiveProtocolAdapter(), address(parent.aaveV3Adapter));
     }
 
     function _setParentActiveAdapterToFailingAdapter() internal {
         _selectBaseFork();
-        stdstore.enable_packed_slots().target(address(parent.vault)).sig("getActiveProtocolAdapter()")
+        stdstore.enable_packed_slots()
+            .target(address(parent.vault))
+            .sig("getActiveProtocolAdapter()")
             .checked_write(address(parentFailingAdapter));
         assertEq(parent.vault.getActiveProtocolAdapter(), address(parentFailingAdapter));
     }
 
     function _setArbitrumChildActiveAdapterToFailingAdapter() internal {
         _selectArbitrumFork();
-        stdstore.enable_packed_slots().target(address(arbitrumChild.vault)).sig("getActiveProtocolAdapter()")
+        stdstore.enable_packed_slots()
+            .target(address(arbitrumChild.vault))
+            .sig("getActiveProtocolAdapter()")
             .checked_write(address(arbitrumFailingAdapter));
         assertEq(arbitrumChild.vault.getActiveProtocolAdapter(), address(arbitrumFailingAdapter));
     }

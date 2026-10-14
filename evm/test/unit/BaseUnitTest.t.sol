@@ -191,7 +191,10 @@ abstract contract BaseUnitTest is BaseTest {
     }
 
     function _setChildCcipSendRecoveryAmount(uint256 amount) internal {
-        stdstore.enable_packed_slots().target(address(s_childVault)).sig("getCcipSendRecovery()").depth(0)
+        stdstore.enable_packed_slots()
+            .target(address(s_childVault))
+            .sig("getCcipSendRecovery()")
+            .depth(0)
             .checked_write(amount);
     }
 
@@ -241,12 +244,18 @@ abstract contract BaseUnitTest is BaseTest {
     }
 
     function _setParentEpochStatus(uint256 epochNonce, Types.EpochStatus status) internal {
-        stdstore.target(address(s_parentVault)).sig("getEpoch(uint256)").with_key(epochNonce).depth(8)
+        stdstore.target(address(s_parentVault))
+            .sig("getEpoch(uint256)")
+            .with_key(epochNonce)
+            .depth(8)
             .checked_write(uint256(status));
     }
 
     function _setParentEpochTotalShareBurnAmount(uint256 epochNonce, uint256 totalShareBurnAmount) internal {
-        stdstore.target(address(s_parentVault)).sig("getEpoch(uint256)").with_key(epochNonce).depth(1)
+        stdstore.target(address(s_parentVault))
+            .sig("getEpoch(uint256)")
+            .with_key(epochNonce)
+            .depth(1)
             .checked_write(totalShareBurnAmount);
     }
 
@@ -271,7 +280,9 @@ abstract contract BaseUnitTest is BaseTest {
 
     function _setParentRecoveryMode(Types.RecoveryMode mode) internal {
         address activeAdapterBefore = s_parentVault.getActiveProtocolAdapter();
-        stdstore.enable_packed_slots().target(address(s_parentVault)).sig("getRecoveryMode()")
+        stdstore.enable_packed_slots()
+            .target(address(s_parentVault))
+            .sig("getRecoveryMode()")
             .checked_write(uint256(mode));
         assertEq(uint256(s_parentVault.getRecoveryMode()), uint256(mode));
         assertEq(s_parentVault.getActiveProtocolAdapter(), activeAdapterBefore);

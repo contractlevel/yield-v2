@@ -88,9 +88,15 @@ contract ParentVault_ClaimAssetUnitTest is BaseUnitTest {
 
     function test_ParentVault_claimAsset_Success_UsesTotalWithdrawClaimAmount() public {
         uint256 adjustedWithdrawClaimAmount = EXPECTED_ASSET - 1;
-        stdstore.target(address(s_parentVault)).sig("getEpoch(uint256)").with_key(WITHDRAW_EPOCH_NONCE).depth(2)
+        stdstore.target(address(s_parentVault))
+            .sig("getEpoch(uint256)")
+            .with_key(WITHDRAW_EPOCH_NONCE)
+            .depth(2)
             .checked_write(adjustedWithdrawClaimAmount);
-        stdstore.target(address(s_parentVault)).sig("getEpoch(uint256)").with_key(WITHDRAW_EPOCH_NONCE).depth(6)
+        stdstore.target(address(s_parentVault))
+            .sig("getEpoch(uint256)")
+            .with_key(WITHDRAW_EPOCH_NONCE)
+            .depth(6)
             .checked_write(adjustedWithdrawClaimAmount);
 
         uint256 withdrawAmount = s_parentVault.claimAsset(WITHDRAW_EPOCH_NONCE);

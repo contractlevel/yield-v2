@@ -149,9 +149,13 @@ contract ParentVault_BaseVaultUpgradeToAndCallUnitTest is BaseVault_UpgradeToAnd
         _setParentTotalShares(totalShares);
         _setParentPendingRebalance(COMPOUND_V3_PROTOCOL_ID, CHILD_CHAIN_SELECTOR);
         _setParentLastRebalanceCompletedTimestamp(19);
-        stdstore.target(address(s_parentVault)).sig("getRebalanceDepositRecovery()").depth(0)
+        stdstore.target(address(s_parentVault))
+            .sig("getRebalanceDepositRecovery()")
+            .depth(0)
             .checked_write(recoveryNonce);
-        stdstore.target(address(s_parentVault)).sig("getRebalanceDepositRecovery()").depth(1)
+        stdstore.target(address(s_parentVault))
+            .sig("getRebalanceDepositRecovery()")
+            .depth(1)
             .checked_write(recoveryAmount);
         _setParentRecoveryMode(Types.RecoveryMode.REBALANCE_DEPOSIT);
 
@@ -199,7 +203,9 @@ contract ChildVault_BaseVaultUpgradeToAndCallUnitTest is BaseVault_UpgradeToAndC
         stdstore.target(address(s_childVault)).sig("getLastHandledRebalanceNonce()").checked_write(rebalanceNonce);
         stdstore.target(address(s_childVault)).sig("getEpochDepositRecovery()").depth(0).checked_write(epochNonce);
         stdstore.target(address(s_childVault)).sig("getEpochDepositRecovery()").depth(1).checked_write(recoveryAmount);
-        stdstore.enable_packed_slots().target(address(s_childVault)).sig("getRecoveryMode()")
+        stdstore.enable_packed_slots()
+            .target(address(s_childVault))
+            .sig("getRecoveryMode()")
             .checked_write(uint256(Types.RecoveryMode.EPOCH_DEPOSIT));
         Types.EpochRecovery memory recoveryBefore = s_childVault.getEpochDepositRecovery();
 

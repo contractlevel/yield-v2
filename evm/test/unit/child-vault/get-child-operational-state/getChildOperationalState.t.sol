@@ -51,7 +51,9 @@ contract ChildVault_GetChildOperationalStateUnitTest is BaseUnitTest {
     }
 
     function _setChildRecoveryMode(Types.RecoveryMode mode) internal {
-        stdstore.enable_packed_slots().target(address(s_childVault)).sig("getRecoveryMode()")
+        stdstore.enable_packed_slots()
+            .target(address(s_childVault))
+            .sig("getRecoveryMode()")
             .checked_write(uint256(mode));
     }
 

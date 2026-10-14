@@ -309,39 +309,53 @@ abstract contract BaseCcipForkTest is BaseForkTest {
 
     function _setParentRemoteStrategyToArbitrum() internal {
         _selectBaseFork();
-        stdstore.enable_packed_slots().target(address(parent.vault)).sig("getActiveProtocolAdapter()")
+        stdstore.enable_packed_slots()
+            .target(address(parent.vault))
+            .sig("getActiveProtocolAdapter()")
             .checked_write(address(0));
         stdstore.target(address(parent.vault)).sig("getRebalance()").depth(2).checked_write(AAVE_V3_PROTOCOL_ID);
-        stdstore.target(address(parent.vault)).sig("getRebalance()").depth(3)
+        stdstore.target(address(parent.vault))
+            .sig("getRebalance()")
+            .depth(3)
             .checked_write(arbitrumConfig.ccip.thisChainSelector);
     }
 
     function _setParentRemoteStrategyToPolygon() internal {
         _selectBaseFork();
-        stdstore.enable_packed_slots().target(address(parent.vault)).sig("getActiveProtocolAdapter()")
+        stdstore.enable_packed_slots()
+            .target(address(parent.vault))
+            .sig("getActiveProtocolAdapter()")
             .checked_write(address(0));
         stdstore.target(address(parent.vault)).sig("getRebalance()").depth(2).checked_write(AAVE_V3_PROTOCOL_ID);
-        stdstore.target(address(parent.vault)).sig("getRebalance()").depth(3)
+        stdstore.target(address(parent.vault))
+            .sig("getRebalance()")
+            .depth(3)
             .checked_write(polygonConfig.ccip.thisChainSelector);
     }
 
     function _setArbitrumChildActiveAdapterToAaveV3() internal {
         _selectArbitrumFork();
-        stdstore.enable_packed_slots().target(address(arbitrumChild.vault)).sig("getActiveProtocolAdapter()")
+        stdstore.enable_packed_slots()
+            .target(address(arbitrumChild.vault))
+            .sig("getActiveProtocolAdapter()")
             .checked_write(address(arbitrumChild.aaveV3Adapter));
         assertEq(arbitrumChild.vault.getActiveProtocolAdapter(), address(arbitrumChild.aaveV3Adapter));
     }
 
     function _setEthereumChildActiveAdapterToAaveV3() internal {
         _selectEthereumFork();
-        stdstore.enable_packed_slots().target(address(ethereumChild.vault)).sig("getActiveProtocolAdapter()")
+        stdstore.enable_packed_slots()
+            .target(address(ethereumChild.vault))
+            .sig("getActiveProtocolAdapter()")
             .checked_write(address(ethereumChild.aaveV3Adapter));
         assertEq(ethereumChild.vault.getActiveProtocolAdapter(), address(ethereumChild.aaveV3Adapter));
     }
 
     function _setPolygonChildActiveAdapterToAaveV3() internal {
         _selectPolygonFork();
-        stdstore.enable_packed_slots().target(address(polygonChild.vault)).sig("getActiveProtocolAdapter()")
+        stdstore.enable_packed_slots()
+            .target(address(polygonChild.vault))
+            .sig("getActiveProtocolAdapter()")
             .checked_write(address(polygonChild.aaveV3Adapter));
         assertEq(polygonChild.vault.getActiveProtocolAdapter(), address(polygonChild.aaveV3Adapter));
     }
