@@ -31,7 +31,7 @@ Epoch state is read from `ParentVault.getEpoch(epochNonce)`.
 The returned `Epoch` value includes:
 
 - `totalDepositAmount` / `totalShareBurnAmount` — the epoch's total inflow and outflow, fixed at settlement.
-- `totalWithdrawClaimAmount` — the total underlying asset available for withdraw claims. Remote dust uses only Parent-held deposits. For a serviced remote net withdrawal, the value recorded at epoch close is provisional and is replaced with Parent-held deposits plus the complete amount returned through CCIP before the epoch becomes `CLAIMABLE`.
+- `totalWithdrawClaimAmount` — the total underlying asset available for withdraw claims. For a remote net withdrawal, the value recorded at epoch close is provisional and is replaced with Parent-held deposits plus the complete amount returned through CCIP before the epoch becomes `CLAIMABLE`.
 - `remainingDepositClaimAmount` / `remainingShareMintAmount` — the unclaimed portion of deposit-side settlement; both reach zero once every depositor has claimed.
 - `remainingShareBurnAmount` / `remainingWithdrawClaimAmount` — the unclaimed portion of withdraw-side settlement; both reach zero once every withdrawer has claimed.
 - `openedAtTimestamp` — when the epoch opened; used to enforce the minimum epoch period before it can close.

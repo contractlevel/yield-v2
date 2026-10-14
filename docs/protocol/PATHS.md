@@ -19,7 +19,7 @@ In remote Child paths, strategy interaction and most Child-originated CCIP send 
 | 1a Epoch, parent, net deposit     | 0              | 1                  | Fully synchronous                          |
 | 1b Epoch, parent, net withdrawal  | 0              | 1                  | Fully synchronous                          |
 | 2a Epoch, child, net deposit      | 1              | 2                  | Epoch claimable after remote settlement confirmation |
-| 2b Epoch, child, net withdrawal   | 0 or 1         | 1 or 2             | Dust settles on Parent; larger shortfalls settle after CCIP |
+| 2b Epoch, child, net withdrawal   | 1              | 2                  | Epoch claimable after CCIP settles; below the minimum, closeEpoch reverts |
 | 3a Rebalance, parent to parent    | 0              | 1                  | Fully synchronous                          |
 | 3b Rebalance, parent to child     | 1              | 2                  | Completes asynchronously                   |
 | 4a Rebalance, Child to Parent     | 1              | 2                  | Finalises in Parent ccipReceive on success |
@@ -154,11 +154,11 @@ More withdrawals than deposits. Active strategy is on a Child chain.
 
 - Withdrawers call claimAsset() on Parent. Escrowed Yieldcoin burned, asset transferred.
 
-**CCIP sends: 0 below the service threshold; 1 at or above it**
+**CCIP sends: 1**
 
-**CRE executions: 1 below the service threshold; 2 at or above it**
+**CRE executions: 2**
 
-**_Dust is claimable at close; a larger shortfall is claimable after CCIP settles_**
+**_Epoch claimable after CCIP settles; a net withdrawal below `getMinAssetAmount()` is not settled until it reaches the minimum_**
 
 # **Rebalance Flows**
 

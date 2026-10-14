@@ -5,8 +5,6 @@ receive `YieldcoinShare` tokens after epoch settlement. Capital is deployed thro
 adapters on the parent chain or through CCIP-connected `ChildVault` deployments. Chainlink CRE
 coordinates epoch settlement and rebalancing through `WorkflowRouter` contracts.
 
-The contracts are under active development and have no live production deployments.
-
 ## Quick start
 
 Install [Foundry](https://book.getfoundry.sh/getting-started/installation), then initialize the
