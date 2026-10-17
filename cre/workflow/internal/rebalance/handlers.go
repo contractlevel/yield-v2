@@ -200,10 +200,11 @@ func onRebalanceInitiatedWithDeps(config *helper.Config, runtime cre.Runtime, lo
 		return workflowtypes.Noop(runtime, "wrong rebalance event source")
 	}
 	rebalance := snapshot.Parent.Rebalance
-	if rebalance.State != onchain.Rebalancing || rebalance.Nonce.Cmp(evt.RebalanceNonce) != 0 {
+	if rebalance.Nonce.Cmp(evt.RebalanceNonce) != 0 {
 		return workflowtypes.Noop(runtime, "stale rebalance event")
 	}
-	if rebalance.PendingStrategy.ProtocolId != evt.ProtocolId || rebalance.PendingStrategy.ChainSelector != evt.ChainSelector {
+	if rebalance.State == onchain.Rebalancing &&
+		(rebalance.PendingStrategy.ProtocolId != evt.ProtocolId || rebalance.PendingStrategy.ChainSelector != evt.ChainSelector) {
 		return workflowtypes.Noop(runtime, "rebalance destination mismatch")
 	}
 	// Guard: active strategy on parent chain - no remote ChildVault to drive for this step.

@@ -45,7 +45,7 @@ contract RemoveRetiredProductionWorkflowsTest is Test {
         selectors[0] = IParentVault.closeEpoch.selector;
         router.setWorkflowSelectors(CURRENT_WORKFLOW_ID, selectors, true);
 
-        bytes32[2] memory retiredWorkflowIds = script.retiredWorkflows();
+        bytes32[3] memory retiredWorkflowIds = script.retiredWorkflows();
         for (uint256 i; i < retiredWorkflowIds.length; ++i) {
             router.setWorkflowMetadata(retiredWorkflowIds[i], WORKFLOW_NAME, WORKFLOW_OWNER);
             router.setWorkflowSelectors(retiredWorkflowIds[i], selectors, true);
@@ -57,7 +57,7 @@ contract RemoveRetiredProductionWorkflowsTest is Test {
     function test_removeRetiredWorkflows_removesRetiredWorkflowsAndPreservesCurrentWorkflow() external {
         script.removeRetiredWorkflows(router, currentWorkflow);
 
-        bytes32[2] memory retiredWorkflowIds = script.retiredWorkflows();
+        bytes32[3] memory retiredWorkflowIds = script.retiredWorkflows();
         for (uint256 i; i < retiredWorkflowIds.length; ++i) {
             IWorkflowRouter.WorkflowMetadata memory retiredMetadata = router.getWorkflowMetadata(retiredWorkflowIds[i]);
             assertEq(retiredMetadata.owner, address(0));

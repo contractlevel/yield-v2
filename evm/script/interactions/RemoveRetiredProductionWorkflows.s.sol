@@ -16,6 +16,8 @@ contract RemoveRetiredProductionWorkflows is Script {
         0x00d676aeb1c76877a05fb279b56e16dbd5a95bbc21820eca204629b97c964b76;
     bytes32 internal constant SECOND_RETIRED_WORKFLOW_ID =
         0x001f8a890b0e0073a7467b8dd111687c29f04ec8a99bdc5764172287c3b0083e;
+    bytes32 internal constant THIRD_RETIRED_WORKFLOW_ID =
+        0x00283802760d91d6997e2b9e1d48e745f87f10e4f4925b7f91de3a0babb4104d;
 
     function run() external {
         if (!_isSupportedMainnet(block.chainid)) {
@@ -32,7 +34,7 @@ contract RemoveRetiredProductionWorkflows is Script {
     function removeRetiredWorkflows(IWorkflowRouter router, HelperConfig.CREConfig memory currentWorkflow) public {
         _verifyCurrentWorkflow(router, currentWorkflow);
 
-        bytes32[2] memory retiredWorkflowIds = retiredWorkflows();
+        bytes32[3] memory retiredWorkflowIds = retiredWorkflows();
         for (uint256 i; i < retiredWorkflowIds.length; ++i) {
             bytes32 workflowId = retiredWorkflowIds[i];
             IWorkflowRouter.WorkflowMetadata memory metadata = router.getWorkflowMetadata(workflowId);
@@ -49,8 +51,8 @@ contract RemoveRetiredProductionWorkflows is Script {
         _verifyCurrentWorkflow(router, currentWorkflow);
     }
 
-    function retiredWorkflows() public pure returns (bytes32[2] memory workflowIds) {
-        workflowIds = [FIRST_RETIRED_WORKFLOW_ID, SECOND_RETIRED_WORKFLOW_ID];
+    function retiredWorkflows() public pure returns (bytes32[3] memory workflowIds) {
+        workflowIds = [FIRST_RETIRED_WORKFLOW_ID, SECOND_RETIRED_WORKFLOW_ID, THIRD_RETIRED_WORKFLOW_ID];
     }
 
     function _verifyCurrentWorkflow(IWorkflowRouter router, HelperConfig.CREConfig memory currentWorkflow)

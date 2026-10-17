@@ -154,27 +154,35 @@ func TestRebalancePoolSelectionNoopsAndErrors(t *testing.T) {
 
 func TestRebalanceInitiatedUsesEventAndSourceChild(t *testing.T) {
 	for _, test := range []struct {
-		name        string
-		nonce       int64
-		lastHandled int64
-		activeChain uint64
-		state       uint8
-		reason      string
+		name          string
+		eventNonce    int64
+		snapshotNonce int64
+		lastHandled   int64
+		activeChain   uint64
+		state         uint8
+		clearPending  bool
+		reason        string
 	}{
-		{"success with skipped child nonces", 7, 2, 2, onchain.Rebalancing, ""},
-		{"stale event", 6, 2, 2, onchain.Rebalancing, "stale"},
-		{"duplicate", 7, 7, 2, onchain.Rebalancing, "already handled"},
-		{"newer handled", 7, 8, 2, onchain.Rebalancing, "already handled"},
-		{"parent active", 7, 2, 1, onchain.Rebalancing, "active strategy on parent"},
-		{"completed", 7, 2, 2, onchain.RebalanceNone, "stale"},
+		{"post-event snapshot", 7, 7, 2, 2, onchain.Rebalancing, false, ""},
+		{"pre-event finalized snapshot", 7, 7, 2, 2, onchain.RebalanceNone, true, ""},
+		{"old event", 6, 7, 2, 2, onchain.Rebalancing, false, "stale"},
+		{"future event", 8, 7, 2, 2, onchain.Rebalancing, false, "stale"},
+		{"duplicate", 7, 7, 7, 2, onchain.Rebalancing, false, "already handled"},
+		{"newer handled", 7, 7, 8, 2, onchain.Rebalancing, false, "already handled"},
+		{"parent active", 7, 7, 2, 1, onchain.Rebalancing, false, "active strategy on parent"},
+		{"completed", 7, 8, 2, 2, onchain.RebalanceNone, true, "stale"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			config, snapshot := newTestConfig(), newTestSnapshot()
+			target := snapshot.Parent.Rebalance.PendingStrategy
+			snapshot.Parent.Rebalance.Nonce = big.NewInt(test.snapshotNonce)
 			snapshot.Parent.Rebalance.State = test.state
 			snapshot.Parent.Rebalance.ActiveStrategy.ChainSelector = test.activeChain
+			if test.clearPending {
+				snapshot.Parent.Rebalance.PendingStrategy = parent_vault.TypesStrategy{}
+			}
 			snapshot.Children[2] = child_vault.TypesChildOperationalState{LastHandledRebalanceNonce: big.NewInt(test.lastHandled)}
-			pending := snapshot.Parent.Rebalance.PendingStrategy
-			log := newTestRebalanceLog(config.Evms[0], "RebalanceInitiated(uint256,bytes32,uint64)", big.NewInt(test.nonce).Bytes(), pending.ProtocolId[:], big.NewInt(3).Bytes())
+			log := newTestRebalanceLog(config.Evms[0], "RebalanceInitiated(uint256,bytes32,uint64)", big.NewInt(test.eventNonce).Bytes(), target.ProtocolId[:], big.NewInt(3).Bytes())
 			recorder := &testReportRecorder{}
 			result, err := onRebalanceInitiatedWithDeps(config, testutils.NewRuntime(t, testutils.Secrets{}), log, snapshot, 1, recorder.submit)
 			require.NoError(t, err)
@@ -187,7 +195,7 @@ func TestRebalanceInitiatedUsesEventAndSourceChild(t *testing.T) {
 			codec, err := child_vault.NewCodec()
 			require.NoError(t, err)
 			expected, err := codec.EncodeExecuteRebalanceMethodCall(child_vault.ExecuteRebalanceInput{
-				RebalanceNonce: big.NewInt(7), NewStrategy: child_vault.TypesStrategy{ProtocolId: pending.ProtocolId, ChainSelector: 3},
+				RebalanceNonce: big.NewInt(7), NewStrategy: child_vault.TypesStrategy{ProtocolId: target.ProtocolId, ChainSelector: 3},
 			})
 			require.NoError(t, err)
 			require.Equal(t, expected, recorder.calldata)
