@@ -16,7 +16,7 @@ id = "44242b29df88409aba961c271a5cfe09"
 
 [triggers]
 # Refresh 10, 5, and 2 minutes before the daily production rebalance (UTC).
-crons = ["50,55,58 23 * * *"]
+crons = ["50,55,58 17 * * *"]
 
 [build]
 # Require locally configured tools and block build-time network access on macOS.

@@ -31,7 +31,7 @@ contract HelperConfig is Script {
     bytes32 internal constant STAGING_WORKFLOW_ID = 0x00e4a1f9a7887c774fc66cf87e1e8ac1c7ee3e4cbc46206afd7f4972dc8d871d;
     bytes10 internal constant STAGING_WORKFLOW_NAME = bytes10("67d6954c97");
     bytes32 internal constant PRODUCTION_WORKFLOW_ID =
-        0x001f8a890b0e0073a7467b8dd111687c29f04ec8a99bdc5764172287c3b0083e;
+        0x00283802760d91d6997e2b9e1d48e745f87f10e4f4925b7f91de3a0babb4104d;
     bytes10 internal constant PRODUCTION_WORKFLOW_NAME = bytes10("ea912058cd");
     address internal constant PRODUCTION_WORKFLOW_OWNER = 0x9b418eDbFf04DaF89Db55D9E18Af2a0E23984636;
 

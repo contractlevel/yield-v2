@@ -15,7 +15,7 @@ For compatibility with the deployed workflow, the Worker name, the `/v1/defillam
 
 ## How It Works
 
-**Scheduled refresh** (`23:50`, `23:55`, `23:58` UTC, before the daily `00:00` rebalance):
+**Scheduled refresh** (`17:50`, `17:55`, `17:58` UTC, before the daily `18:00` rebalance):
 
 1. Fetch the rate for every strategy in `src/config.rs::POOLS` concurrently.
 2. Validate each response:
@@ -31,7 +31,7 @@ For compatibility with the deployed workflow, the Worker name, the `/v1/defillam
 
 **All-or-nothing:** every strategy must return a valid rate. If any request fails, any rate is invalid, or the 30-second budget expires, outstanding requests are aborted, nothing is written, and the previous snapshot stays in KV. The error is logged and the next scheduled run retries.
 
-The 30-second budget matters because `fetch` has no timeout of its own and scheduled events may run for 15 minutes; without it, a hung refresh could overwrite KV during the rebalance. Refreshes are scheduled ahead of midnight to allow time for KV propagation, which can briefly expose different versions to different readers.
+The 30-second budget matters because `fetch` has no timeout of its own and scheduled events may run for 15 minutes; without it, a hung refresh could overwrite KV during the rebalance. Refreshes are scheduled before the rebalance to allow time for KV propagation, which can briefly expose different versions to different readers.
 
 **Read** (`GET /v1/defillama/pools` with `Authorization: Bearer <token>`) returns the stored snapshot and never fetches upstream:
 
@@ -222,8 +222,8 @@ Deployment runs the configured sandboxed build first. It requires macOS and
 the three exported build-tool paths described in
 [Build network isolation](#build-network-isolation).
 
-1. Set the four RPC URLs as Worker secrets. Keep the existing production `RELAY_BEARER_TOKEN` unless you are rotating it. For rotation, update both the Worker secret and CRE's `DEFILLAMA_RELAY_BEARER_TOKEN` outside the `23:50`–`00:00` UTC window, before the next workflow run. The two updates are separate operations; requests fail authentication while their values differ. Verify an authenticated read after both updates.
-2. Deploy outside the `23:50`–`00:00` UTC window:
+1. Set the four RPC URLs as Worker secrets. Keep the existing production `RELAY_BEARER_TOKEN` unless you are rotating it. For rotation, update both the Worker secret and CRE's `DEFILLAMA_RELAY_BEARER_TOKEN` outside the `17:50`–`18:00` UTC window, before the next workflow run. The two updates are separate operations; requests fail authentication while their values differ. Verify an authenticated read after both updates.
+2. Deploy outside the `17:50`–`18:00` UTC window:
 
    ```bash
    npm run deploy
@@ -241,7 +241,7 @@ the three exported build-tool paths described in
    - `401` without the token.
    - No `DefiLlama snapshot refresh failed` entries in the Worker logs, and CPU usage within limits.
 
-4. Confirm the following `00:00` rebalance run accepted the snapshot.
+4. Confirm the following `18:00` rebalance run accepted the snapshot.
 
 ## Monitoring
 

@@ -1,5 +1,5 @@
 {
-  "rebalanceSchedule": "0 0 0 * * *",
+  "rebalanceSchedule": "0 0 18 * * *",
   "epochSchedule": "0 0 12 * * 3",
   "blockNumber": -3,
   "assetDecimals": 6,

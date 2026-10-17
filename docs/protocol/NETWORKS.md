@@ -59,7 +59,7 @@
 | `WorkflowRouter`            | [`0x76893b35f88f1b0106ee30c75cd9c121c85a6bfc`](https://etherscan.io/address/0x76893b35f88f1b0106ee30c75cd9c121c85a6bfc#code) |
 | `GovernanceTimelock`        | [`0x2f866642a738951fdf2578cdc66db3400c802b0e`](https://etherscan.io/address/0x2f866642a738951fdf2578cdc66db3400c802b0e#code) |
 | Workflow owner multisig     | [`0x9b418edbff04daf89db55d9e18af2a0e23984636`](https://etherscan.io/address/0x9b418edbff04daf89db55d9e18af2a0e23984636)      |
-| CRE workflow ID             | `0x001f8a890b0e0073a7467b8dd111687c29f04ec8a99bdc5764172287c3b0083e`                                                         |
+| CRE workflow ID             | `0x00283802760d91d6997e2b9e1d48e745f87f10e4f4925b7f91de3a0babb4104d`                                                         |
 | CRE workflow name           | `ea912058cd`                                                                                                                 |
 
 ## Avalanche
