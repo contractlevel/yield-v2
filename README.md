@@ -2,6 +2,8 @@
 
 Yieldcoin v2 is crosschain yield infrastructure with Chainlink CRE & CCIP.
 
+The protocol is live at [yield.contractlevel.com](https://yield.contractlevel.com).
+
 ## License
 
 This repository is proprietary software. Copyright © 2026 Contract Level. All rights reserved.
