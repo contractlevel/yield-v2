@@ -17,13 +17,19 @@ contract ConfigureWorkflowRouter is Script {
     error ConfigureWorkflowRouter__VaultMismatch(address expected, address actual);
     error ConfigureWorkflowRouter__MetadataMismatch();
     error ConfigureWorkflowRouter__SelectorNotAllowlisted(bytes4 selector);
+    error ConfigureWorkflowRouter__RetiredWorkflowStillRegistered();
+
+    bytes32 internal constant RETIRED_PRODUCTION_WORKFLOW_ID =
+        0x00530c56f1679de74f7aef49bbcb30e6f50c5ab46e272a9959c979d9c94152e8;
 
     function run() external {
         HelperConfig.NetworkConfig memory config = new HelperConfig().getActiveNetworkConfig();
         bool isParent = config.ccip.thisChainSelector == config.ccip.parentChainSelector;
 
         vm.startBroadcast(msg.sender);
-        configure(IWorkflowRouter(config.deployed.workflowRouter), config.deployed.vaultProxy, config.cre, isParent);
+        IWorkflowRouter router = IWorkflowRouter(config.deployed.workflowRouter);
+        configure(router, config.deployed.vaultProxy, config.cre, isParent);
+        if (_isSupportedMainnet(block.chainid)) retireWorkflow(router, RETIRED_PRODUCTION_WORKFLOW_ID);
         vm.stopBroadcast();
     }
 
@@ -65,6 +71,16 @@ contract ConfigureWorkflowRouter is Script {
         }
     }
 
+    function retireWorkflow(IWorkflowRouter router, bytes32 workflowId) public {
+        IWorkflowRouter.WorkflowMetadata memory metadata = router.getWorkflowMetadata(workflowId);
+        if (metadata.owner != address(0)) router.setWorkflowMetadata(workflowId, bytes10(0), address(0));
+
+        metadata = router.getWorkflowMetadata(workflowId);
+        if (metadata.name != bytes10(0) || metadata.owner != address(0)) {
+            revert ConfigureWorkflowRouter__RetiredWorkflowStillRegistered();
+        }
+    }
+
     function _validateConfig(address router, address vault, HelperConfig.CREConfig memory creConfig) private pure {
         if (router == address(0)) revert ConfigureWorkflowRouter__ZeroRouter();
         if (vault == address(0)) revert ConfigureWorkflowRouter__ZeroVault();
@@ -87,5 +103,10 @@ contract ConfigureWorkflowRouter is Script {
                 revert ConfigureWorkflowRouter__SelectorNotAllowlisted(selectors[i]);
             }
         }
+    }
+
+    function _isSupportedMainnet(uint256 chainId) private pure returns (bool) {
+        return
+            chainId == 1 || chainId == 10 || chainId == 137 || chainId == 8453 || chainId == 42_161 || chainId == 43_114;
     }
 }

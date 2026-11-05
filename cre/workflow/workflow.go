@@ -128,16 +128,31 @@ func initWorkflow(config *Config, _ *slog.Logger, readSnapshot onchain.SnapshotR
 				Topics:     []*evm.TopicValues{{Values: signatures}},
 				Confidence: evm.ConfidenceLevel_CONFIDENCE_LEVEL_FINALIZED,
 			}),
-			withOperationalGuard(readSnapshot, onLog),
+			withEventGuard(readSnapshot, onLog),
 		))
 	}
 	return handlers, nil
 }
 
-// withOperationalGuard reads once and shares that snapshot with the handler.
-// It applies to every entrypoint, including epoch deposit completion.
+// withOperationalGuard blocks scheduled operations while any configured vault is paused or recovering.
 func withOperationalGuard[T any](
 	readSnapshot onchain.SnapshotReader,
+	handler func(*Config, cre.Runtime, *T, *onchain.Snapshot) (*ExecutionResult, error),
+) func(*Config, cre.Runtime, *T) (*ExecutionResult, error) {
+	return withSnapshotGuard(readSnapshot, (*onchain.Snapshot).BlockedReason, handler)
+}
+
+// withEventGuard allows event processing during recovery while retaining the emergency pause.
+func withEventGuard[T any](
+	readSnapshot onchain.SnapshotReader,
+	handler func(*Config, cre.Runtime, *T, *onchain.Snapshot) (*ExecutionResult, error),
+) func(*Config, cre.Runtime, *T) (*ExecutionResult, error) {
+	return withSnapshotGuard(readSnapshot, (*onchain.Snapshot).PausedReason, handler)
+}
+
+func withSnapshotGuard[T any](
+	readSnapshot onchain.SnapshotReader,
+	blockedReason func(*onchain.Snapshot, *Config) string,
 	handler func(*Config, cre.Runtime, *T, *onchain.Snapshot) (*ExecutionResult, error),
 ) func(*Config, cre.Runtime, *T) (*ExecutionResult, error) {
 	return func(config *Config, runtime cre.Runtime, payload *T) (*ExecutionResult, error) {
@@ -148,7 +163,7 @@ func withOperationalGuard[T any](
 		if snapshot == nil {
 			return nil, fmt.Errorf("read operational state: nil snapshot")
 		}
-		if reason := snapshot.BlockedReason(config); reason != "" {
+		if reason := blockedReason(snapshot, config); reason != "" {
 			return workflowtypes.Noop(runtime, reason)
 		}
 		return handler(config, runtime, payload, snapshot)

@@ -125,12 +125,18 @@ func onEpochWithdrawExecutingWithDeps(config *helper.Config, runtime cre.Runtime
 	if rebalance.State != onchain.RebalanceNone {
 		return workflowtypes.Noop(runtime, "rebalance in progress")
 	}
-	if !matchesExecutingEpoch(parent, evt.EpochNonce) {
+	epoch, amountFinalized, matches := epochForWithdrawEvent(parent, evt.EpochNonce)
+	if !matches {
 		return workflowtypes.Noop(runtime, "stale epoch event")
 	}
-	expectedAmount := new(big.Int).Sub(parent.PreviousEpoch.TotalWithdrawClaimAmount, parent.PreviousEpoch.TotalDepositAmount)
-	if expectedAmount.Sign() <= 0 || evt.Amount.Sign() <= 0 || expectedAmount.Cmp(evt.Amount) != 0 {
+	if evt.Amount.Sign() <= 0 {
 		return workflowtypes.Noop(runtime, "epoch withdrawal amount mismatch")
+	}
+	if amountFinalized {
+		expectedAmount := new(big.Int).Sub(epoch.TotalWithdrawClaimAmount, epoch.TotalDepositAmount)
+		if expectedAmount.Sign() <= 0 || expectedAmount.Cmp(evt.Amount) != 0 {
+			return workflowtypes.Noop(runtime, "epoch withdrawal amount mismatch")
+		}
 	}
 
 	if rebalance.ActiveStrategy.ChainSelector == parentCfg.ChainSelector {
@@ -234,4 +240,14 @@ func matchesExecutingEpoch(parent parent_vault.TypesParentOperationalState, even
 	return parent.CurrentEpochNonce.Cmp(big.NewInt(1)) > 0 &&
 		previousNonce.Cmp(eventNonce) == 0 &&
 		parent.PreviousEpoch.Status == onchain.EpochExecuting
+}
+
+func epochForWithdrawEvent(parent parent_vault.TypesParentOperationalState, eventNonce *big.Int) (epoch parent_vault.TypesEpoch, amountFinalized, matches bool) {
+	if parent.CurrentEpochNonce.Cmp(eventNonce) == 0 && parent.CurrentEpoch.Status == onchain.EpochOpen {
+		return parent.CurrentEpoch, false, true
+	}
+	if matchesExecutingEpoch(parent, eventNonce) {
+		return parent.PreviousEpoch, true, true
+	}
+	return parent_vault.TypesEpoch{}, false, false
 }

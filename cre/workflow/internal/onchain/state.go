@@ -118,6 +118,14 @@ func (s *Snapshot) Validate(config *helper.Config) error {
 }
 
 func (s *Snapshot) BlockedReason(config *helper.Config) string {
+	return s.blockedReason(config, true)
+}
+
+func (s *Snapshot) PausedReason(config *helper.Config) string {
+	return s.blockedReason(config, false)
+}
+
+func (s *Snapshot) blockedReason(config *helper.Config, includeRecovery bool) string {
 	for _, cfg := range config.Evms {
 		paused, recovery := s.Parent.Paused, s.Parent.RecoveryMode
 		if !cfg.IsParent {
@@ -127,7 +135,7 @@ func (s *Snapshot) BlockedReason(config *helper.Config) string {
 		if paused {
 			return fmt.Sprintf("vault paused on %s", cfg.ChainName)
 		}
-		if recovery != 0 {
+		if includeRecovery && recovery != 0 {
 			return fmt.Sprintf("recovery active on %s (mode %d)", cfg.ChainName, recovery)
 		}
 	}

@@ -186,7 +186,7 @@ func TestOperationalGuardErrors(t *testing.T) {
 	}
 }
 
-func TestEverySubscriptionAppliesOperationalGuard(t *testing.T) {
+func TestEverySubscriptionAppliesItsGuard(t *testing.T) {
 	runtime := testutils.NewRuntime(t, testutils.Secrets{})
 	config := workflowTestConfig(workflowTestEvmConfig(1, true), workflowTestEvmConfig(2, false))
 	for _, paused := range []bool{true, false} {
@@ -208,11 +208,42 @@ func TestEverySubscriptionAppliesOperationalGuard(t *testing.T) {
 			}
 			require.NoError(t, err)
 			result, err := handler.Callback()(config, runtime, payload)
-			require.NoError(t, err)
-			require.Contains(t, result.(*ExecutionResult).Result, "no-op:")
+			if paused || i < 2 {
+				require.NoError(t, err)
+				require.Contains(t, result.(*ExecutionResult).Result, "no-op:")
+			} else {
+				require.ErrorContains(t, err, "event has no signature topic")
+				require.Nil(t, result)
+			}
 		}
 		require.Equal(t, len(workflow), reads)
 	}
+}
+
+func TestEventGuardAllowsRecoveryAndBlocksPaused(t *testing.T) {
+	runtime := testutils.NewRuntime(t, testutils.Secrets{})
+	config := workflowTestConfig(workflowTestEvmConfig(1, true))
+	snapshot := &onchain.Snapshot{}
+	snapshot.Parent.RecoveryMode = 1
+	calls := 0
+	handler := withEventGuard(
+		func(*Config, cre.Runtime) (*onchain.Snapshot, error) { return snapshot, nil },
+		func(*Config, cre.Runtime, *evm.Log, *onchain.Snapshot) (*ExecutionResult, error) {
+			calls++
+			return &ExecutionResult{Result: "handled"}, nil
+		},
+	)
+
+	result, err := handler(config, runtime, &evm.Log{})
+	require.NoError(t, err)
+	require.Equal(t, "handled", result.Result)
+	require.Equal(t, 1, calls)
+
+	snapshot.Parent.Paused = true
+	result, err = handler(config, runtime, &evm.Log{})
+	require.NoError(t, err)
+	require.Contains(t, result.Result, "vault paused")
+	require.Equal(t, 1, calls)
 }
 
 func TestCombinedLogSubscriptionsDispatchAllFourEvents(t *testing.T) {

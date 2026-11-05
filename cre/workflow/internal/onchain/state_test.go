@@ -104,6 +104,7 @@ func TestUnblockedParentStrategy(t *testing.T) {
 	snapshot := &Snapshot{Parent: newTestParentState()}
 	snapshot.Parent.Rebalance.ActiveStrategy.ChainSelector = 1
 	require.Empty(t, snapshot.BlockedReason(config))
+	require.Empty(t, snapshot.PausedReason(config))
 	tvl, err := snapshot.ActiveTVL(1)
 	require.NoError(t, err)
 	require.Same(t, snapshot.Parent.Tvl, tvl)
@@ -176,6 +177,11 @@ func TestSnapshotBlocksEachChainAndRecoveryMode(t *testing.T) {
 				snapshot.Children[2] = child
 			}
 			require.NotEmpty(t, snapshot.BlockedReason(config))
+			if mode == 0 {
+				require.NotEmpty(t, snapshot.PausedReason(config))
+			} else {
+				require.Empty(t, snapshot.PausedReason(config))
+			}
 		}
 	}
 }

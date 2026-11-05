@@ -1,6 +1,6 @@
 {
   "rebalanceSchedule": "0 0 18 * * *",
-  "epochSchedule": "0 0 12 * * 3",
+  "epochSchedule": "0 0 12 * * 0",
   "blockNumber": -3,
   "assetDecimals": 6,
   "defiLlama": {

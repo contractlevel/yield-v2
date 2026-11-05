@@ -145,19 +145,26 @@ func TestEpochWithdrawEventChecksAndRecovery(t *testing.T) {
 	for _, test := range []struct {
 		name                        string
 		nonce, amount, handled, tvl int64
+		preEvent                    bool
 		reason                      string
 	}{
-		{"success", 1, 1_000_000, 0, 1_000_000, ""},
-		{"insufficient TVL still submits", 1, 1_000_000, 0, 0, ""},
-		{"duplicate", 1, 1_000_000, 1, 1_000_000, "already handled"},
-		{"stale nonce", 9, 1_000_000, 0, 1_000_000, "stale epoch"},
-		{"wrong amount", 1, 999_999, 0, 1_000_000, "amount mismatch"},
-		{"zero amount", 1, 0, 0, 1_000_000, "amount mismatch"},
+		{"success", 1, 1_000_000, 0, 1_000_000, false, ""},
+		{"pre-event finalized snapshot", 1, 1_000_000, 0, 1_000_000, true, ""},
+		{"pre-event zero amount", 1, 0, 0, 1_000_000, true, "amount mismatch"},
+		{"insufficient TVL still submits", 1, 1_000_000, 0, 0, false, ""},
+		{"duplicate", 1, 1_000_000, 1, 1_000_000, false, "already handled"},
+		{"stale nonce", 9, 1_000_000, 0, 1_000_000, false, "stale epoch"},
+		{"wrong amount", 1, 999_999, 0, 1_000_000, false, "amount mismatch"},
+		{"zero amount", 1, 0, 0, 1_000_000, false, "amount mismatch"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			config, snapshot := newTestConfig(), newTestSnapshot()
-			snapshot.Parent.PreviousEpoch.Status = onchain.EpochExecuting
-			snapshot.Parent.PreviousEpoch.TotalWithdrawClaimAmount = big.NewInt(2_000_000)
+			if test.preEvent {
+				snapshot.Parent.CurrentEpochNonce = big.NewInt(1)
+			} else {
+				snapshot.Parent.PreviousEpoch.Status = onchain.EpochExecuting
+				snapshot.Parent.PreviousEpoch.TotalWithdrawClaimAmount = big.NewInt(2_000_000)
+			}
 			snapshot.Children[2] = child_vault.TypesChildOperationalState{LastHandledEpochNonce: big.NewInt(test.handled), Tvl: big.NewInt(test.tvl)}
 			log := newTestEpochLog(config.Evms[0], "EpochWithdrawExecuting(uint256,uint256)", test.nonce, test.amount)
 			recorder := &testReportRecorder{}

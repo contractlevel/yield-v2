@@ -72,6 +72,24 @@ contract ConfigureWorkflowRouterTest is Test {
         _assertMetadata();
     }
 
+    function test_retireWorkflow() external {
+        bytes32 retiredWorkflowId = keccak256("retired-workflow-id");
+        HelperConfig.CREConfig memory retired = creConfig;
+        retired.workflowId = retiredWorkflowId;
+        script.configure(router, address(s_vault), retired, true);
+
+        script.retireWorkflow(router, retiredWorkflowId);
+
+        IWorkflowRouter.WorkflowMetadata memory metadata = router.getWorkflowMetadata(retiredWorkflowId);
+        assertEq(metadata.name, bytes10(0));
+        assertEq(metadata.owner, address(0));
+        assertFalse(router.getAllowlistedWorkflowSelector(retiredWorkflowId, IParentVault.closeEpoch.selector));
+    }
+
+    function test_retireWorkflow_isIdempotent() external {
+        script.retireWorkflow(router, keccak256("unknown-workflow-id"));
+    }
+
     function test_configure_revertsOnVaultMismatch() external {
         vm.expectRevert(
             abi.encodeWithSelector(
