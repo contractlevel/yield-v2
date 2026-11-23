@@ -2,14 +2,13 @@
 pragma solidity 0.8.34;
 
 import {BeforeAfter} from "./BeforeAfter.t.sol";
-import {Asserts} from "@chimera/Asserts.sol";
 import {Types} from "../../../src/libraries/Types.sol";
 import {BaseVault} from "../../../src/vaults/BaseVault.sol";
 import {ChildVault} from "../../../src/vaults/ChildVault.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IProtocolAdapter} from "../../../src/interfaces/adapters/IProtocolAdapter.sol";
 
-abstract contract Properties is BeforeAfter, Asserts {
+abstract contract Properties is BeforeAfter {
     /*//////////////////////////////////////////////////////////////
                          THIRD-PARTY OPERATIONS
     //////////////////////////////////////////////////////////////*/

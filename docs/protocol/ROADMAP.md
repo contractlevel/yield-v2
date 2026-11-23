@@ -13,3 +13,7 @@ Add utilization-aware strategy evaluation when protocol TVL becomes large enough
 ## Offchain Monitoring
 
 A lightweight, offchain app for monitoring crosschain LINK reserves, existent (and automating) recovery modes, and TVL.
+
+## Medusa & Recon-Fuzzer Setup
+
+Restore Medusa and Recon-fuzzer runs of the Chimera suite. Setup currently reverts because `BaseIntegrationTest._allowlistTestUsers()` uses `vm.readCallers()`, which these fuzzers do not support.

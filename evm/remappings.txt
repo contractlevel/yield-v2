@@ -14,3 +14,5 @@
 @aave/v3-origin/=lib/aave-v3-origin/
 @aave/aave-v4/=lib/aave-v4/
 @chimera/=lib/chimera/src/
+
+lib/chimera/:forge-std/=lib/forge-std/src/

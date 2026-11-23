@@ -2,9 +2,10 @@
 pragma solidity 0.8.34;
 
 import {EpochGhosts} from "./ghosts/EpochGhosts.t.sol";
+import {Asserts} from "@chimera/Asserts.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-abstract contract BeforeAfter is EpochGhosts {
+abstract contract BeforeAfter is EpochGhosts, Asserts {
     struct Vars {
         uint256 epochNonce;
         uint256 rebalanceNonce;
@@ -93,16 +94,18 @@ abstract contract BeforeAfter is EpochGhosts {
         _after.actorTargetEpochWithdrawShareBurnAmount =
             parent.vault.getWithdrawShareBurnAmount(s_currentActor, s_targetEpochNonce);
 
-        require(_before.epochNonce <= _after.epochNonce, "NONCE-009: parent epoch nonce decreased");
-        require(_before.rebalanceNonce <= _after.rebalanceNonce, "NONCE-009: parent rebalance nonce decreased");
-        require(_before.childEpochNonce <= _after.childEpochNonce, "NONCE-002: child epoch nonce decreased");
-        require(_before.childRebalanceNonce <= _after.childRebalanceNonce, "NONCE-002: child rebalance nonce decreased");
-        require(
-            _before.remoteChildEpochNonce <= _after.remoteChildEpochNonce,
+        lte(_before.epochNonce, _after.epochNonce, "NONCE-009: parent epoch nonce decreased");
+        lte(_before.rebalanceNonce, _after.rebalanceNonce, "NONCE-009: parent rebalance nonce decreased");
+        lte(_before.childEpochNonce, _after.childEpochNonce, "NONCE-002: child epoch nonce decreased");
+        lte(_before.childRebalanceNonce, _after.childRebalanceNonce, "NONCE-002: child rebalance nonce decreased");
+        lte(
+            _before.remoteChildEpochNonce,
+            _after.remoteChildEpochNonce,
             "NONCE-002: remote child epoch nonce decreased"
         );
-        require(
-            _before.remoteChildRebalanceNonce <= _after.remoteChildRebalanceNonce,
+        lte(
+            _before.remoteChildRebalanceNonce,
+            _after.remoteChildRebalanceNonce,
             "NONCE-002: remote child rebalance nonce decreased"
         );
     }
