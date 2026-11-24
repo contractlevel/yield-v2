@@ -1348,4 +1348,28 @@ A fix is planned for a future upgrade: finalize `REBALANCE_DEPOSIT` recovery wit
 
 ---
 
+## KI-031 — CCIP capacity errors can leave Parent waiting without Child recovery
+
+**Status:** Known limitation — Child rollback does not cancel Parent's pending operation.
+
+**Last reviewed:** 2026-11-24
+
+**Component:** `ChildVault._ccipSend`, `ChildVault.executeEpochWithdraw`, and `ChildVault.executeRebalance`.
+
+### Summary
+
+ChildVault rethrows CCIP's `TokenMaxCapacityExceeded` error instead of storing `CCIP_SEND` recovery. On an initial Child continuation, the transaction rolls back, including the strategy withdrawal and nonce changes, and no recovery state is created. Parent's earlier transaction is already committed: its epoch remains `EXECUTING` or its rebalance remains `REBALANCING`, blocking further settlement and rebalances.
+
+An amount above the configured capacity cannot become transferable merely by waiting for the rate-limit bucket to refill. If the capacity is increased sufficiently or the restriction is disabled by the relevant external administrator, the original Child operation can be retried through the workflow router. Calling `executeRecovery()` cannot resume an operation for which no recovery state was stored.
+
+The rollback preserves the Child's pre-call assets and accounting, but does not guarantee crosschain progress. If external configuration cannot accommodate the transfer, resolution requires administrative intervention, potentially an upgrade. There is no automatic transfer splitting or cancellation of Parent's pending operation.
+
+### Operational considerations
+
+- Monitor pending Parent operations and failed Child transactions, including when the Child reports no recovery.
+- Check the applicable outbound CCIP capacity before initiating large crosschain operations.
+- After the capacity condition is resolved, retry the original Child operation with a fresh workflow report.
+
+---
+
 <!-- 1. workflow doesnt calculate tvl impact on APY 2. chosen strategy could be based on spiked data 3. workflow has no onchain read check for supported chain or protocol before submitting initiateRebalance-->
