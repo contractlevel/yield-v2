@@ -1364,6 +1364,8 @@ An amount above the configured capacity cannot become transferable merely by wai
 
 The rollback preserves the Child's pre-call assets and accounting, but does not guarantee crosschain progress. If external configuration cannot accommodate the transfer, resolution requires administrative intervention, potentially an upgrade. There is no automatic transfer splitting or cancellation of Parent's pending operation.
 
+There is no established state-repair procedure for this case. The absence of stored recovery may make intervention more difficult than retrying a recorded operation. This handling must be revisited if an over-capacity transfer becomes realistically possible on a supported route.
+
 ### Operational considerations
 
 - Monitor pending Parent operations and failed Child transactions, including when the Child reports no recovery.
